@@ -480,7 +480,12 @@ namespace DomainService.Projects
             }
 
             project.IsDisabled = true;
+            project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            project.LastUpdatedDate = DateTime.UtcNow;
+
             await _projectRepository.UpdateProjectAsync(project);
+            await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
+
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
                 Action = "upsert",
