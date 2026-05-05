@@ -18,7 +18,7 @@ import {
 export class GithubInfoService {
   async verifyAuthorization(code: string, projectKey: string): Promise<string> {
     const url = `${CLOUD_BUILD_ENDPOINTS.ACCESS_TOKEN}?code=${encodeURIComponent(code)}&ProjectKey=${encodeURIComponent(projectKey)}`;
-    return http.get(url);
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 
   async checkAlreadyAuthorization(): Promise<{
