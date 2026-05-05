@@ -2,10 +2,10 @@ import { DEPLOYMENT_BASE_URL } from "@/constants/endpoint.constant";
 
 export const CLOUD_BUILD_ENDPOINTS = {
   // Authentication & Authorization
-  ACCESS_TOKEN: "/api/auth/accessToken",
+  ACCESS_TOKEN: `${DEPLOYMENT_BASE_URL}/api/auth/accessToken`,
   IS_AUTHORIZED: `${DEPLOYMENT_BASE_URL}/api/auth/isAuthorized`,
   REMOVE_AUTHORIZATION: `${DEPLOYMENT_BASE_URL}/api/auth/removeAuthorization`,
-  REMOVE_ACCESS_TOKEN: "/api/auth/removeAccessToken",
+  REMOVE_ACCESS_TOKEN: `${DEPLOYMENT_BASE_URL}/api/auth/removeAccessToken`,
 
   // GitHub Repositories
   GITHUB_REPOS: `${DEPLOYMENT_BASE_URL}/api/github/repos`,
