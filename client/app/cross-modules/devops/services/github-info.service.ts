@@ -32,14 +32,14 @@ export class GithubInfoService {
     isSuccess: boolean;
   }> {
     const url = CLOUD_BUILD_ENDPOINTS.REMOVE_AUTHORIZATION;
-    return http.post(url, {});
+    return http.post(url, {}, undefined, { absoluteUrl: true });
   }
 
   async removeAuthorization(): Promise<{
     isSuccess: boolean;
   }> {
     const url = CLOUD_BUILD_ENDPOINTS.REMOVE_ACCESS_TOKEN;
-    return http.post(url, {});
+    return http.post(url, {}, undefined, { absoluteUrl: true });
   }
 
   async getGithubRepos(
