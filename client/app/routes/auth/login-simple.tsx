@@ -32,6 +32,18 @@ const pillars = [
   { icon: ScrollText, label: "Logs & Tracing" },
 ];
 
+interface StackLink {
+  label: string;
+  to: string;
+}
+
+interface Stack {
+  icon: string;
+  name: string;
+  available: boolean;
+  links: StackLink[];
+}
+
 interface Service {
   icon: LucideIcon;
   badge: string;
@@ -41,6 +53,7 @@ interface Service {
   url: string;
   cta: string;
   gradient: string;
+  stacks?: Stack[];
 }
 
 const services: Service[] = [
@@ -87,6 +100,30 @@ const services: Service[] = [
     url: "https://construct.seliseblocks.com",
     cta: "Visit Construct",
     gradient: "from-orange-500 to-rose-500",
+    stacks: [
+      {
+        icon: "/assets/images/react-icon.png",
+        name: "React",
+        available: true,
+        links: [
+          { label: "npm", to: "https://www.npmjs.com/package/@seliseblocks/cli" },
+          { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct" },
+          { label: "Demo", to: "https://construct.seliseblocks.com" },
+        ],
+      },
+      { icon: "/assets/images/angular-icon.png", name: "Angular", available: false, links: [] },
+      {
+        icon: "/assets/images/dotnet-icon.png",
+        name: ".NET",
+        available: true,
+        links: [
+          { label: "NuGet", to: "https://www.nuget.org/profiles/SELISE" },
+          { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct" },
+          { label: "PyPI", to: "https://pypi.org/project/seliseblocks-lmt/" },
+        ],
+      },
+      { icon: "/assets/images/ruby-icon.png", name: "Ruby", available: false, links: [] },
+    ],
   },
 ];
 
@@ -138,12 +175,12 @@ const ServiceCarousel = () => {
   return (
     <aside className="mt-8 w-full shrink-0 lg:mt-0 lg:w-[380px] xl:w-[420px]">
       <div
-        className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] shadow-md"
+        className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
         {/* Slide area — fixed height so AnimatePresence absolute children stack correctly */}
-        <div className="relative h-[390px]">
+        <div className="relative h-[450px]">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={index}
@@ -157,7 +194,7 @@ const ServiceCarousel = () => {
             >
               {/* Gradient header */}
               <div
-                className="relative overflow-hidden bg-primary px-6 py-6"
+                className="relative overflow-hidden bg-primary px-6 py-7"
               >
                 <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5" />
                 <div className="absolute -bottom-6 right-4 h-20 w-20 rounded-full bg-white/5" />
@@ -168,7 +205,12 @@ const ServiceCarousel = () => {
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                     <service.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
-                  <h3 className="text-lg font-bold leading-tight text-primary-foreground">{service.title}</h3>
+                  <div>
+                    <h3 className="text-lg font-bold leading-tight text-primary-foreground">{service.title}</h3>
+                    {service.stacks && (
+                      <p className="mt-0.5 text-xs text-primary-foreground/70">Open-source SDKs &amp; CLI tools</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -177,16 +219,60 @@ const ServiceCarousel = () => {
                 <p className="text-sm leading-relaxed text-[hsl(var(--medium-emphasis))]">
                   {service.description}
                 </p>
-                <div className="flex flex-wrap gap-1">
-                  {service.features.map((f) => (
-                    <span
-                      key={f}
-                      className="inline-flex items-center rounded-full bg-primary/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
-                    >
-                      {f}
-                    </span>
-                  ))}
-                </div>
+                {service.stacks ? (
+                  <div className="flex flex-col divide-y divide-[hsl(var(--border-default))]">
+                    {/* Available stacks */}
+                    {service.stacks.filter(s => s.available).map((sdk) => (
+                      <div key={sdk.name} className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
+                            <img src={sdk.icon} width={16} height={16} alt={sdk.name} />
+                          </div>
+                          <span className="text-sm font-medium text-[hsl(var(--high-emphasis))]">{sdk.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          {sdk.links.map((link, i) => (
+                            <span key={link.label} className="flex items-center gap-2">
+                              {i > 0 && <span className="h-3 w-px bg-[hsl(var(--border-default))]" />}
+                              <Link to={link.to} target="_blank" className="font-medium text-primary hover:underline">
+                                {link.label}
+                              </Link>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Coming soon stacks — grouped on one row */}
+                    {service.stacks.filter(s => !s.available).length > 0 && (
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          {service.stacks.filter(s => !s.available).map((sdk) => (
+                            <div key={sdk.name} className="flex items-center gap-1.5 opacity-40">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
+                                <img src={sdk.icon} width={16} height={16} alt={sdk.name} />
+                              </div>
+                              <span className="text-sm font-medium text-[hsl(var(--low-emphasis))]">{sdk.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <span className="rounded-full bg-[hsl(var(--surface-app))] px-2.5 py-0.5 text-[10px] font-semibold text-[hsl(var(--low-emphasis))]">
+                          Coming soon
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {service.features.map((f) => (
+                      <span
+                        key={f}
+                        className="inline-flex items-center rounded-full bg-primary/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
+                      >
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-auto pt-1">
                   <Button
                     asChild
@@ -230,14 +316,14 @@ const ServiceCarousel = () => {
             <button
               onClick={prev}
               aria-label="Previous service"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] shadow-sm transition-all hover:border-primary/40 hover:text-primary"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] transition-all hover:border-primary/40 hover:text-primary"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={next}
               aria-label="Next service"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] shadow-sm transition-all hover:border-primary/40 hover:text-primary"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] transition-all hover:border-primary/40 hover:text-primary"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -331,7 +417,7 @@ export default function LoginSimplePage() {
             {pillars.map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--high-emphasis))] shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--high-emphasis))]"
               >
                 <Icon className="h-3.5 w-3.5 text-primary" />
                 {label}

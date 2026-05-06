@@ -46,6 +46,20 @@ export const navigationMenus: Menu[] = [
     id: "separator-identity",
   },
   {
+    id: "service-identity__secret-management",
+    type: "menu",
+    name: "Secrets & Configs",
+    path: "/services/secret-management",
+    icon: Lock,
+  },
+  {
+    id: "service-identity__api-settings",
+    type: "menu",
+    name: "API Settings",
+    path: "/services/api-settings",
+    icon: Settings,
+  },
+  {
     id: "service-identity__authentication",
     type: "menu",
     name: "IDP",
@@ -73,20 +87,6 @@ export const navigationMenus: Menu[] = [
   //   path: "/services/captcha",
   //   icon: ScanFace,
   // },
-  {
-    id: "service-identity__api-settings",
-    type: "menu",
-    name: "API Settings",
-    path: "/services/api-settings",
-    icon: Settings,
-  },
-  {
-    id: "service-identity__secret-management",
-    type: "menu",
-    name: "Secrets & Configs",
-    path: "/services/secret-management",
-    icon: Lock,
-  },
   {
     id: "service-identity__lmt",
     type: "menu",
