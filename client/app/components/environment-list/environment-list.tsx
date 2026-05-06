@@ -12,7 +12,6 @@ import {
 import { useGetProject, useGetProjects } from "@/hooks/use-project";
 import { IProject } from "@/models/project.model";
 import { useProjectStore } from "@/store/useProjectStore";
-
 const redirectPaths: Record<string, string> = {
   "/services/iam/user-detail/*": "/services/iam",
   "/services/iam/role-detail/*": "/services/iam?tab=roles",
@@ -20,12 +19,10 @@ const redirectPaths: Record<string, string> = {
   "/services/iam/permission-detail/*": "/services/iam",
   "/services/authentication/sso-configuration": "/services/authentication?tab=social",
 };
-
 const wildcardToRegex = (pattern: string) => {
   const escaped = pattern.replace(/[-/\\^$+?.()|[\]{}]/g, "\\$&");
   return `^${escaped.replace(/\*/g, "[^/]+")}$`;
 };
-
 export function EnvironmentList({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -33,7 +30,6 @@ export function EnvironmentList({ collapsed = false }: { collapsed?: boolean }) 
   const { selectedProject, setSelectedProject } = useProjectStore();
   const { data: projectData } = useGetProject({ projectId: selectedProject?.itemId || "" });
   const pendingProjectRef = useRef<IProject | null>(null);
-
   const redirectRegexMap = useMemo(
     () =>
       Object.entries(redirectPaths).reduce<Record<string, string>>((acc, [pattern, target]) => {
@@ -42,38 +38,31 @@ export function EnvironmentList({ collapsed = false }: { collapsed?: boolean }) 
       }, {}),
     [],
   );
-
   useEffect(() => {
     if (pendingProjectRef.current) {
       setSelectedProject(pendingProjectRef.current);
       pendingProjectRef.current = null;
     }
   }, [pathname, setSelectedProject]);
-
   useEffect(() => {
     if (projectData?.data && selectedProject?.itemId === projectData.data.itemId) {
       setSelectedProject(projectData.data);
     }
   }, [projectData, selectedProject?.itemId, setSelectedProject]);
-
   const handleProjectSelect = (project: IProject) => {
     const redirectEntry = Object.entries(redirectRegexMap).find(([regex]) =>
       new RegExp(regex).test(pathname),
     );
-
     if (redirectEntry) {
       pendingProjectRef.current = project;
       navigate(redirectEntry[1], { replace: true });
       return;
     }
-
     setSelectedProject(project);
   };
-
   const environment = projectData?.data.environment || selectedProject?.environment;
   const applicationDomain =
     projectData?.data.applicationDomain || selectedProject?.applicationDomain;
-
   const projects = useMemo(() => {
     if (!selectedProject) return [];
     const groupWithSelected = projectGroups.find((group) =>
@@ -81,7 +70,6 @@ export function EnvironmentList({ collapsed = false }: { collapsed?: boolean }) 
     );
     return groupWithSelected ? groupWithSelected.projects : [];
   }, [projectGroups, selectedProject]);
-
   return (
     <DropdownMenu>
       {collapsed ? (

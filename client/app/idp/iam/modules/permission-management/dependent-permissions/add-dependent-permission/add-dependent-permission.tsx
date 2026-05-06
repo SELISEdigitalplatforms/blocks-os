@@ -19,12 +19,10 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { useMemo, useState } from "react";
-
 type AddDependentPermissionProps = {
   permissionsResource: string[];
   onAdd: (data: IPermission[]) => void;
 };
-
 export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDependentPermissionProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
@@ -41,20 +39,17 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
     ...filter,
     projectKey: tenantId,
   });
-
   const onClickHandler = async () => {
     onAdd(selectedPermisson);
     resetFilter();
     setOpen(false);
   };
-
   const onCheckedChangeHandler = (checked: boolean, permission: IPermission) => {
     if (checked) {
       return setSelectedPermissions((prev) => [...prev, permission]);
     }
     setSelectedPermissions((prev) => prev.filter((item) => item.resource !== permission.resource));
   };
-
   const resetFilter = () => {
     setFilter({
       type: 1,
@@ -66,11 +61,9 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
     });
     setSelectedPermissions([]);
   };
-
   const selectedPermissionsResource = useMemo(() => {
     return selectedPermisson.map((item) => item.resource) || [];
   }, [selectedPermisson]);
-
   return (
     <Dialog
       open={open}
@@ -144,7 +137,6 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
             </Table>
           </CardContent>
         </Card>
-
         <div className="flex items-center justify-end">
           {!isLoading && data && data.totalCount > filter.pageSize && (
             <Pagination

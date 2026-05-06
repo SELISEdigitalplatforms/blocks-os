@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { CircleOff } from "lucide-react";
 import { ProfileMFAVerify } from "./profile-mfa-veriffy";
 import { UserMFAConfirmationDisable } from "./profile-mfa-confirmation-disable";
-
 type MethodsOptionProps = {
   method: Omit<(typeof MFA_Provider_Data)[0], "description"> & { description: ReactNode };
   selected: string;
@@ -17,10 +16,8 @@ type MethodsOptionProps = {
   activeType: string;
   isVerified: boolean;
 };
-
 const MethodsOption = ({ method, onSaveClick, activeType, isVerified }: MethodsOptionProps) => {
   const isActive = method.type.toString() === activeType;
-
   return (
     <div className="flex gap-2 border-b p-4 py-6">
       <div className="w-full">
@@ -52,27 +49,22 @@ const MethodsOption = ({ method, onSaveClick, activeType, isVerified }: MethodsO
     </div>
   );
 };
-
 export const ProfileMfaMethodSelectList = () => {
   const { userId, projectKey, showVerifyModal, setIsDisableModalOpen } =
     useContext(profileMfaContext);
   const { data } = useGetMFAConfig({ projectKey });
   const { data: userData } = useGetUserById({ id: userId, projectKey });
-
   const [type, setType] = useState<string>("");
   const availableMFaMethod = useMemo(() => {
     if (!data?.userMfaType.length) return [];
     return MFA_Provider_Data.filter((item) => data?.userMfaType.includes(item.type));
   }, [data?.userMfaType]);
-
   useEffect(() => {
     if (userData && userData.data) setType(userData.data.userMfaType.toString());
   }, [userData, userData?.data]);
-
   const saveHandler = (type: number) => {
     showVerifyModal(type);
   };
-
   return (
     <>
       <div className="rounded-sm border">
@@ -102,7 +94,6 @@ export const ProfileMfaMethodSelectList = () => {
           />
         ))}
       </div>
-
       <ProfileMFAVerify />
       <UserMFAConfirmationDisable />
     </>

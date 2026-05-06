@@ -32,7 +32,6 @@ import { transformToUniversal } from "@blocks-ai/utils/aimodel-form.utils";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useCreateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-
 const CustomAddKeyFormSchema = z.object({
   model: z.string().trim().min(1, "Model name is required"),
   providerName: z.string().trim().min(1, "Provider name is required"),
@@ -51,7 +50,6 @@ const CustomAddKeyFormSchema = z.object({
     .default([]),
 });
 type FormSchema = z.infer<typeof CustomAddKeyFormSchema>;
-
 const CustomAddKeyFormDefaultValue: FormSchema = {
   model: "",
   providerName: "Custom",
@@ -65,12 +63,10 @@ const CustomAddKeyFormDefaultValue: FormSchema = {
     { key: "", value: "" },
   ],
 };
-
 interface CustomModelAddKeyModalProps {
   addKeyModalOpen: boolean;
   setAddKeyModalOpen: Dispatch<SetStateAction<boolean>>;
 }
-
 export const CustomModelAddKeyModal = ({
   addKeyModalOpen,
   setAddKeyModalOpen,
@@ -78,20 +74,16 @@ export const CustomModelAddKeyModal = ({
   const provider = "CUSTOM";
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
-
   const form = useForm<FormSchema>({
     defaultValues: CustomAddKeyFormDefaultValue,
     resolver: zodResolver(CustomAddKeyFormSchema),
     mode: "onChange",
   });
-
   const { control, handleSubmit } = form;
-
   const { fields, append, remove } = useFieldArray({
     control,
     name: "customHeaders" as const,
   });
-
   const onSubmitHandler = async (data: FormSchema) => {
     try {
       const headersObject = Object.fromEntries(
@@ -117,7 +109,6 @@ export const CustomModelAddKeyModal = ({
       showErrorToast({ errors: err instanceof Error ? err.message : String(err) });
     }
   };
-
   return (
     <Dialog
       open={addKeyModalOpen}

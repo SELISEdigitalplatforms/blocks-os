@@ -13,7 +13,6 @@ import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/use-theme";
-
 export function SidebarMenuDesktop() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
   const { resolvedTheme } = useTheme();
@@ -21,19 +20,16 @@ export function SidebarMenuDesktop() {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
   const isProjectOverviewRoute = pathname.startsWith("/project-overview");
   const isSecretManagementRoute = pathname.startsWith("/services/secret-management");
   const isAuthenticationRoute = pathname.startsWith("/services/authentication");
   const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "infra-config" : "general");
-
   const getLogoSrc = () => {
     if (isSidebarOpen) {
       return resolvedTheme === "dark" ? "/Logo_White.svg" : "/Logo.svg";
     }
     return resolvedTheme === "dark" ? "/Icon_White.svg" : "/Icon.svg";
   };
-
   return (
     <div
       className={`hidden h-[calc(100vh)] flex-col border-r bg-background transition-all md:flex ${isSidebarOpen ? "w-60 overflow-hidden" : "w-14"}`}
@@ -77,7 +73,6 @@ export function SidebarMenuDesktop() {
               {menu.type === "menu" ? (
                 <>
                   <DesktopMenuItem menu={menu} isSidebarOpen={isSidebarOpen} />
-                  {/* Inline sub-nav for Secrets & Configs */}
                   {isSecretManagementRoute && menu.id === "service-identity__secret-management" && (
                     <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
                       {SECRET_MANAGEMENT_NAV_GROUPS.map((group) =>
@@ -113,7 +108,6 @@ export function SidebarMenuDesktop() {
                       )}
                     </div>
                   )}
-                  {/* Inline sub-nav for IDP */}
                   {isAuthenticationRoute && menu.id === "service-identity__authentication" && (
                     <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
                       {AUTHENTICATION_NAV_GROUPS.map((group) =>

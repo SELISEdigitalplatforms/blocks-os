@@ -21,10 +21,8 @@ import { useEffect } from "react";
 import { useAccountRecover } from "@blocks-idp/iam/hooks/use-account";
 import { isErrorWithErrors } from "@/lib/error";
 import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
-
 export const ForgotPasswordForm = () => {
   const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-
   const navigate = useNavigate();
   const form = useForm({
     defaultValues: forgotPasswordFormDefaultValue,
@@ -41,7 +39,6 @@ export const ForgotPasswordForm = () => {
     type: "reCaptcha-v2-checkbox",
   });
   const { isValid } = form.formState;
-
   const onSubmitHandler = async (values: z.infer<typeof forgotPasswordFormSchema>) => {
     try {
       if (!x_blocks_key) return;
@@ -61,11 +58,9 @@ export const ForgotPasswordForm = () => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   useEffect(() => {
     if (!isValid && captchaCode) resetCaptcha();
   }, [captchaCode, isValid, resetCaptcha]);
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)}>
@@ -84,13 +79,11 @@ export const ForgotPasswordForm = () => {
             )}
           />
           {isValid && <Captcha {...captcha} />}
-
           <div className="my-2 flex items-center">
             <hr className="flex-grow border-gray-300" />
             <span className="mx-2 text-xs text-gray-500">OR</span>
             <hr className="flex-grow border-gray-300" />
           </div>
-
           <Button
             type="submit"
             className="w-full rounded"

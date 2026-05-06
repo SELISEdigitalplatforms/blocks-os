@@ -5,7 +5,6 @@ import { TracingInfo } from "./tracing-info";
 import { TracingLog } from "./tracing-log";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { timelineContext } from "../trace-details";
-
 const LoadingSkelton = () => {
   return (
     <Card>
@@ -37,14 +36,11 @@ const LoadingSkelton = () => {
     </Card>
   );
 };
-
 export const TracingInsights = () => {
   const { isLoading, traceHistory } = useContext(timelineContext);
   const [tabId, setTabId] = useState("info");
   const tabChangeHandler = (value: string) => setTabId(value);
-
   if (isLoading || !traceHistory?.length) return <LoadingSkelton />;
-
   return (
     <Card className="rounded-sm shadow-none">
       <CardContent className="flex flex-col">
@@ -54,7 +50,6 @@ export const TracingInsights = () => {
               <TabsTrigger onClick={() => tabChangeHandler("info")} value="info">
                 Info
               </TabsTrigger>
-
               <TabsTrigger
                 onClick={() => tabChangeHandler("log")}
                 value="log"

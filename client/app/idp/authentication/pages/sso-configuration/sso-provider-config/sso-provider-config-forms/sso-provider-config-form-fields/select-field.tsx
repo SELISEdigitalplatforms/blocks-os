@@ -9,15 +9,12 @@ import {
 } from "@/components/ui-kits/select/select";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { SSOProviderConfigFormFieldType } from "../../sso-provider-config.type";
-
 type SelectFieldProps = {
   item: Extract<SSOProviderConfigFormFieldType, { type: "select" }>;
   field: ControllerRenderProps<FieldValues>;
 };
-
 export const SelectField: React.FC<SelectFieldProps> = ({ item, field }) => {
   const selectValue = typeof field.value === "string" ? field.value : undefined;
-
   return (
     <FormItem>
       <FormLabel>{item.label}</FormLabel>

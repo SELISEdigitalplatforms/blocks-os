@@ -16,7 +16,6 @@ import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
 import { profileMfaContext } from "../profile-mfa";
 import { RefreshCcw } from "lucide-react";
-
 export const ProfileMFAConfigManage = () => {
   const { projectKey, userId, showVerifyModal } = useContext(profileMfaContext);
   const [open, setOpen] = useState<boolean>(false);
@@ -28,7 +27,6 @@ export const ProfileMFAConfigManage = () => {
       setType(userData?.data.userMfaType);
     }
   }, [userData?.data.userMfaType]);
-
   const onClickHandler = async () => {
     if (userData?.data?.userMfaType === type) {
       if (!userData?.data.isMfaVerified) {
@@ -51,7 +49,6 @@ export const ProfileMFAConfigManage = () => {
       if (isErrorWithErrors(error)) showErrorToast({ errors: error.errors });
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -60,7 +57,6 @@ export const ProfileMFAConfigManage = () => {
           <span className="sr-only sm:not-sr-only sm:ml-2">Switch</span>
         </Button>
       </DialogTrigger>
-
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Switch MFA?</DialogTitle>

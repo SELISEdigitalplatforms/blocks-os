@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
-
 const pillars = [
   { icon: ShieldCheck, label: "Authentication" },
   { icon: KeyRound, label: "Secrets Management" },
@@ -31,19 +30,16 @@ const pillars = [
   { icon: BarChart3, label: "Usage" },
   { icon: ScrollText, label: "Logs & Tracing" },
 ];
-
 interface StackLink {
   label: string;
   to: string;
 }
-
 interface Stack {
   icon: string;
   name: string;
   available: boolean;
   links: StackLink[];
 }
-
 interface Service {
   icon: LucideIcon;
   badge: string;
@@ -55,7 +51,6 @@ interface Service {
   gradient: string;
   stacks?: Stack[];
 }
-
 const services: Service[] = [
   {
     icon: Bot,
@@ -126,7 +121,6 @@ const services: Service[] = [
     ],
   },
 ];
-
 const slideVariants = {
   enter: (dir: number) => ({
     x: dir > 0 ? 52 : -52,
@@ -140,12 +134,10 @@ const slideVariants = {
     filter: "blur(4px)",
   }),
 };
-
 const ServiceCarousel = () => {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
-
   const goTo = useCallback(
     (next: number) => {
       setDirection(next > index ? 1 : -1);
@@ -153,25 +145,20 @@ const ServiceCarousel = () => {
     },
     [index],
   );
-
   const prev = useCallback(
     () => goTo(index === 0 ? services.length - 1 : index - 1),
     [goTo, index],
   );
-
   const next = useCallback(
     () => goTo(index === services.length - 1 ? 0 : index + 1),
     [goTo, index],
   );
-
   useEffect(() => {
     if (paused) return;
     const id = setTimeout(next, 5000);
     return () => clearTimeout(id);
   }, [index, paused, next]);
-
   const service = services[index];
-
   return (
     <aside className="mt-8 w-full shrink-0 lg:mt-0 lg:w-[380px] xl:w-[420px]">
       <div
@@ -191,7 +178,6 @@ const ServiceCarousel = () => {
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-0 flex flex-col"
             >
-              {/* Gradient header */}
               <div
                 className="relative overflow-hidden bg-primary px-6 py-7"
               >
@@ -212,15 +198,12 @@ const ServiceCarousel = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Body */}
               <div className="flex flex-1 flex-col gap-4 px-6 py-5">
                 <p className="text-sm leading-relaxed text-[hsl(var(--medium-emphasis))]">
                   {service.description}
                 </p>
                 {service.stacks ? (
                   <div className="flex flex-col divide-y divide-[hsl(var(--border-default))]">
-                    {/* Available stacks */}
                     {service.stacks.filter(s => s.available).map((sdk) => (
                       <div key={sdk.name} className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-2.5">
@@ -241,7 +224,6 @@ const ServiceCarousel = () => {
                         </div>
                       </div>
                     ))}
-                    {/* Coming soon stacks — grouped on one row */}
                     {service.stacks.filter(s => !s.available).length > 0 && (
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-3">
@@ -291,10 +273,7 @@ const ServiceCarousel = () => {
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* Navigation footer */}
         <div className="flex items-center justify-between border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-app))] px-5 py-3">
-          {/* Dot / pill indicators */}
           <div className="flex items-center gap-1.5">
             {services.map((_, i) => (
               <button
@@ -309,8 +288,6 @@ const ServiceCarousel = () => {
               />
             ))}
           </div>
-
-          {/* Prev / Next */}
           <div className="flex items-center gap-1">
             <button
               onClick={prev}
@@ -332,7 +309,6 @@ const ServiceCarousel = () => {
     </aside>
   );
 };
-
 export default function LoginSimplePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [titleNumber, setTitleNumber] = useState(0);
@@ -340,18 +316,15 @@ export default function LoginSimplePage() {
     () => ["observable", "intelligent", "scalable", "resilient", "secure"],
     [],
   );
-
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setTitleNumber((prev) => (prev === titles.length - 1 ? 0 : prev + 1));
     }, 2400);
     return () => clearTimeout(timeoutId);
   }, [titleNumber, titles]);
-
   const handleLogin = () => {
     setIsLoading(true);
     const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-
     const params = new URLSearchParams({
       response_type: "code",
       client_id: "44ce2f9b-0ca4-4ad8-b8d4-bb775b61d68e",
@@ -362,25 +335,18 @@ export default function LoginSimplePage() {
       nonce: "35443",
       ...(blocksKey ? { "x-blocks-key": blocksKey } : {}),
     });
-
     window.location.href = `https://dev-idp.blocksdevelopers.com/api/Authentication/Authorize?${params.toString()}`;
   };
-
   return (
     <div className="relative flex min-h-screen flex-col bg-[hsl(var(--surface-app))]">
-      
       <header className="relative z-10 flex items-center px-6 py-5 xl:px-[154px]">
         <Logo width={120} height={52} />
         <div className="absolute right-6 top-5 xl:right-[154px]">
           <ModeToggle />
         </div>
       </header>
-
-      
       <main className="relative z-10 flex flex-1 flex-col items-start justify-center gap-16 px-6 py-12 lg:flex-row lg:items-center lg:gap-16 lg:py-0 xl:px-[154px]">
-        
         <div className="flex flex-1 flex-col items-start gap-6">
-          
           <div className="flex flex-col gap-2">
             <p className="text-sm font-semibold uppercase tracking-[0.1em] text-primary">Blocks OS Platform</p>
             <h1 className="max-w-xl text-5xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] lg:text-6xl">
@@ -404,14 +370,11 @@ export default function LoginSimplePage() {
               ))}
             </div>
           </div>
-
           <p className="max-w-lg text-lg leading-relaxed tracking-tight text-muted-foreground">
             Blocks OS is a modern platform for building and deploying secure, scalable applications with built-in observability, AI
             capabilities, and comprehensive identity management. Focus on your application logic
             while Blocks OS handles the infrastructure.
           </p>
-
-          
           <div className="flex flex-wrap gap-2">
             {pillars.map(({ icon: Icon, label }) => (
               <div
@@ -423,8 +386,6 @@ export default function LoginSimplePage() {
               </div>
             ))}
           </div>
-
-          
           <div className="flex flex-col gap-3 pt-2">
             <div className="flex flex-row gap-3">
               <Button
@@ -445,13 +406,10 @@ export default function LoginSimplePage() {
                 </Link>
               </Button>
             </div>
-          
           </div>
         </div>
-
         <ServiceCarousel />
       </main>
     </div>
   );
 }
-

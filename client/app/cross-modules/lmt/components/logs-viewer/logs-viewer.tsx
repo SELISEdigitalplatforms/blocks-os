@@ -1,5 +1,3 @@
-
-
 import { createContext, useState } from "react";
 import { LogsListHeader } from "../logs-header/logs-header";
 import { cn } from "@/lib/utils";
@@ -9,14 +7,12 @@ export interface Service {
   label: string;
   serviceName: string;
 }
-
 export interface LogFilter {
   search: string;
   startDate: string;
   endDate: string;
   level: string;
 }
-
 interface LogsViewerContextType {
   services: Service[];
   selectedService: Service | null;
@@ -28,7 +24,6 @@ interface LogsViewerContextType {
   predefinedQueries?: string[];
   serviceNames?: string[];
 }
-
 const initialContextValue: LogsViewerContextType = {
   services: [],
   selectedService: null,
@@ -39,10 +34,8 @@ const initialContextValue: LogsViewerContextType = {
   resetFilter: () => {},
   predefinedQueries: [],
 };
-
 // Create context with the initial value
 export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
-
 interface LogsViewerProps {
   services: Service[];
   startDate?: string;
@@ -51,7 +44,6 @@ interface LogsViewerProps {
   className?: string;
   predefinedQueries?: string[];
 }
-
 export const LogsViewer = ({
   pageSize = 20,
   services,
@@ -62,15 +54,12 @@ export const LogsViewer = ({
     services.length > 0 ? services[0] : null,
   );
   const [filter, setFilter] = useState<Partial<LogFilter> | null>(null);
-
   const changeService = (service: Service) => {
     setSelectedService(service);
   };
-
   const resetFilter = () => {
     setFilter(null);
   };
-
   return (
     <LogsViewerContext.Provider
       value={{

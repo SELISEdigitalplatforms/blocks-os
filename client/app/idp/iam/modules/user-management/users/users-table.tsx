@@ -26,12 +26,10 @@ import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { useUsersSortQueryParams } from "./users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
-
 type UserTableProps = {
   users: User[];
   isLoading: boolean;
 };
-
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
@@ -39,11 +37,9 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const UsersTable = ({ users, isLoading }: UserTableProps) => {
   const navigate = useNavigate();
   const { sortQueryParams, setSortQueryParams } = useUsersSortQueryParams();
-
   const columns = useMemo<ColumnDef<User>[]>(
     () => [
       {
@@ -141,11 +137,9 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
     ],
     [setSortQueryParams, sortQueryParams],
   );
-
   const handleRowClick = (itemId: string) => {
     navigate(`/services/iam/user-detail/${itemId}`);
   };
-
   const table = useReactTable({
     data: users,
     columns,

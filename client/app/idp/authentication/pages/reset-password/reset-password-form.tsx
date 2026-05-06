@@ -21,13 +21,10 @@ import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
 import { PasswordStrengthChecker } from "@blocks-idp/authentication/components/password-strength-checker/password-strength-checker";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { activationFormDefaultValue, activationFormSchema } from "../activation/utils";
-
 type ResetPasswordFormProps = {
   code: string;
 };
-
 const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-
 export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
   const navigate = useNavigate();
   const form = useForm({
@@ -37,22 +34,17 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
     resolver: zodResolver(activationFormSchema),
   });
   const [requirementsMet, setRequirementsMet] = useState(false);
-
   const googleSiteKey = getRuntimeEnv("BLOCKS_GOOGLE_SITE_KEY") || "";
   const {
     captcha,
     code: captchaCode,
     reset: resetCaptcha,
   } = useCaptcha({ siteKey: googleSiteKey, type: "reCaptcha-v2-checkbox" });
-
   const { isPending, mutateAsync } = useAccountResetPassword();
-
   const { isValid } = form.formState;
-
   useEffect(() => {
     if (!isValid && !requirementsMet && captchaCode) resetCaptcha();
   }, [captchaCode, isValid, requirementsMet, resetCaptcha]);
-
   const onSubmitHandler = async (values: z.infer<typeof activationFormSchema>) => {
     try {
       const res = await mutateAsync({
@@ -62,7 +54,6 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
         projectKey: x_blocks_key || "",
         password: values.password,
       });
-
       if (!res.isSuccess) {
         resetCaptcha();
         return showErrorToast({ errors: res.errors });
@@ -74,10 +65,8 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   const password = form.watch("password");
   const confirmPassword = form.watch("confirmPassword");
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
@@ -107,15 +96,12 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
             </FormItem>
           )}
         />
-
         <PasswordStrengthChecker
           password={password}
           confirmPassword={confirmPassword}
           onRequirementsMet={setRequirementsMet}
         />
-
         {isValid && requirementsMet && <Captcha {...captcha} />}
-
         <Button
           type="submit"
           className="w-full"

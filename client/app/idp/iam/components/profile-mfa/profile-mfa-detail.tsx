@@ -2,7 +2,6 @@ import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useContext } from "react";
 import { profileMfaContext } from "./profile-mfa";
-
 const LoadingSkelton = () => {
   return (
     <>
@@ -12,13 +11,10 @@ const LoadingSkelton = () => {
     </>
   );
 };
-
 export const ProfileMFADetails = () => {
   const { projectKey, userId } = useContext(profileMfaContext);
   const { isLoading, data } = useGetUserById({ id: userId, projectKey });
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <>
       {data?.data.mfaEnabled ? (

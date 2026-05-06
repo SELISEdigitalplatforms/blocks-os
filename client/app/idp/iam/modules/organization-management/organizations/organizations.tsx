@@ -1,5 +1,3 @@
-
-
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useGetOrganizations, useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
@@ -11,7 +9,6 @@ import {
   useOrganizationsFilterQueryParams,
   useOrganizationsSortQueryParams,
 } from "./organizations-filter-toolbar";
-
 export function Organizations() {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { queryParams, setQueryParams } = useOrganizationsFilterQueryParams();
@@ -29,11 +26,9 @@ export function Organizations() {
       page,
     }));
   };
-
   const loading = isLoading || isFetching;
   const organizationsList = data?.organizations || [];
   const totalCount = data?.totalCount || 0;
-
   return (
     <div>
       <div className="flex w-full flex-col">

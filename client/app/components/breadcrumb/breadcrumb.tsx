@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Breadcrumb,
@@ -11,7 +10,6 @@ import {
 import { Link } from "react-router-dom";
 import useRoutePathSegments from "@/hooks/use-path-segments";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
-
 const PageBreadcrumb: React.FC<{ breadcrumbIndex?: number }> = ({ breadcrumbIndex }) => {
   let breadcrumbs = useRoutePathSegments();
   if (breadcrumbIndex && breadcrumbIndex > 0) {
@@ -42,5 +40,4 @@ const PageBreadcrumb: React.FC<{ breadcrumbIndex?: number }> = ({ breadcrumbInde
     </Breadcrumb>
   );
 };
-
 export default PageBreadcrumb;

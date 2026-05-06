@@ -5,22 +5,18 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import { TraceGuideSteps } from "./trace-guideline-steps-docs";
 import { Button } from "@/components/ui-kits/button/button";
 import { TRACE_PROVIDERS } from "../../constants/trace.constant";
-
 type TraceProviderSetupGuideLineProps = {
   provider: TRACE_PROVIDERS;
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-
 export const TraceProviderSetupGuideLine = ({
   provider,
   open,
   onOpenChange,
 }: TraceProviderSetupGuideLineProps) => {
   const steps = TraceGuideSteps[provider] || null;
-
   if (!steps) return;
-
   return (
     <AnimatePresence>
       {open && (

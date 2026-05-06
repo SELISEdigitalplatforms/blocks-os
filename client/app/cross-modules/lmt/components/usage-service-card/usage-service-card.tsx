@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { abbreviateBytes, abbreviateDurationMs, abbreviateNumber } from "../../utils/usage.util";
@@ -19,7 +18,6 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Info, Logs } from "lucide-react";
 import { Link } from "react-router-dom";
-
 interface ServiceCardProps {
   isLoading: boolean;
   name: string;
@@ -29,7 +27,6 @@ interface ServiceCardProps {
     worker: UsageMatrixSummary;
   };
 }
-
 const UsageServiceCardSkelton = ({ name }: { name: string }) => (
   <Card className="border shadow-none">
     <CardContent className="p-4">
@@ -52,7 +49,6 @@ const UsageServiceCardSkelton = ({ name }: { name: string }) => (
     </CardContent>
   </Card>
 );
-
 export const UsageServiceCard: React.FC<ServiceCardProps> = ({
   name,
   logLink,
@@ -60,21 +56,16 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
   isLoading,
 }) => {
   const [selected, setSelected] = useState<"api" | "worker">("api");
-
   if (isLoading) return <UsageServiceCardSkelton name={name} />;
-
   const currentMatrix = metrics[selected];
-
   return (
     <Card className="border shadow-none transition-shadow duration-200 hover:shadow-sm">
       <CardContent className="p-4">
-        {/* Header */}
         <div className="mb-4 flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold text-high-emphasis">{name}</div>
             <div className="mt-0.5 text-xs text-medium-emphasis">Requests &amp; performance</div>
           </div>
-
           <div className="flex shrink-0 items-center gap-1.5">
             <Select value={selected} onValueChange={(v) => setSelected(v as "api" | "worker")}>
               <SelectTrigger className="h-7 w-24 rounded-lg border-border/70 bg-muted/40 px-2 text-xs shadow-none">
@@ -103,8 +94,6 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
             )}
           </div>
         </div>
-
-        {/* Primary metrics */}
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col justify-between rounded-lg bg-muted/40 p-3">
             <span className="text-xs text-medium-emphasis">API Calls</span>
@@ -154,7 +143,6 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
               )}
             </div>
           </div>
-
           <div className="flex flex-col justify-between rounded-lg bg-muted/40 p-3">
             <span className="text-xs text-medium-emphasis">Avg Duration</span>
             <div className="text-xl font-bold text-high-emphasis">
@@ -162,8 +150,6 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Secondary metrics */}
         <div className="mt-3 divide-y divide-border/50">
           {[
             { label: "Calls / min", value: String(currentMatrix.callsPerMinute) },
@@ -180,4 +166,3 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
     </Card>
   );
 };
-

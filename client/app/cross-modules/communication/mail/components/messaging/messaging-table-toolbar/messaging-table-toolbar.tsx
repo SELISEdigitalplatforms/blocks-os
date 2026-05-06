@@ -1,5 +1,3 @@
-
-
 import React, { useCallback, useEffect, useState } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
@@ -20,27 +18,20 @@ import {
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { SearchInput } from "@/components/search-input/search-input";
 import useIsServiceBarOpenComm from "@blocks-communication/mail/hooks/use-is-service-tab-open-comm";
-
 interface MessagingTableToolbarProps<TData> {
   table: Table<TData>;
 }
-
 export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarProps<TData>) {
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenComm();
-
   const textSearchColumn = table.getColumn("name");
-
   const [searchValue, setSearchValue] = useState("");
   const [isSearchVisible, setIsSearchVisible] = useState(!isMobile);
-
   const activeFiltersCount = useActiveFiltersCount(table, undefined, "name");
   const isFiltered = activeFiltersCount > 0;
-
   useEffect(() => {
     setIsSearchVisible(!isMobile);
   }, [isMobile]);
-
   const onSearchInputChange = useCallback(
     (text: string) => {
       setSearchValue(text);
@@ -48,12 +39,10 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
     },
     [textSearchColumn],
   );
-
   function resetFilters() {
     setSearchValue("");
     table.resetColumnFilters();
   }
-
   const FilterContent = () => (
     <>
       {table.getColumn("configuration") && (
@@ -72,10 +61,8 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
       )}
     </>
   );
-
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      {/* Mobile view */}
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter campaigns"
@@ -119,8 +106,6 @@ export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarPro
           </Sheet>
         )}
       </div>
-
-      {/* Desktop view */}
       <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter campaigns"

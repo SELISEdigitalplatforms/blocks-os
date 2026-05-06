@@ -1,12 +1,10 @@
 import React from "react";
 import { Loader } from "lucide-react";
-
 interface LoadingSpinnerProps {
   size?: number;
   color?: string;
   fullScreen?: boolean;
 }
-
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 100,
   color = "text-red-400",
@@ -22,5 +20,4 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     </div>
   );
 };
-
 export default LoadingSpinner;

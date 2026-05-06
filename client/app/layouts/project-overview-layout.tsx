@@ -4,7 +4,6 @@ import { ProjectOverviewSidebarMobile } from "@/layouts/project-overview-sidebar
 import { ProjectGuard } from "@/guards/project-guard";
 import { ConsoleHeader } from "@/layouts/console-header/console-header";
 import { ProtectedGuard } from "@/guards/protected-guard";
-
 export function ProjectOverviewLayout() {
   return (
     <ProtectedGuard>

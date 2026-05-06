@@ -4,16 +4,13 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
 import { getProviderDisplayName, ProviderType } from "@blocks-ai/utils/aimodel-provider.utils";
-
 const PROVIDER_PNG_MAP: Record<string, string> = {
   google: "/assets/images/google.png",
   deepseek: "/assets/images/deepseek.png",
 };
-
 const getProviderPng = (provider: string): string => {
   return PROVIDER_PNG_MAP[provider.toLowerCase()] ?? "";
 };
-
 const ProviderIconFallback = ({ provider }: { provider: string }) => {
   const initials = provider.slice(0, 2).toUpperCase();
   return (
@@ -22,15 +19,12 @@ const ProviderIconFallback = ({ provider }: { provider: string }) => {
     </span>
   );
 };
-
 export const ProviderCard = (provider: IProvider) => {
   const navigate = useNavigate();
   const pngUrl = getProviderPng(provider.Provider.toLowerCase());
-
   const handleClick = () => {
     navigate(`/services/secret-management/ai-models/${provider.Provider}`);
   };
-
   return (
     <Card
       className="w-75 group flex cursor-pointer flex-col items-start gap-4 rounded-md px-4 py-5 transition hover:bg-accent hover:shadow-sm"

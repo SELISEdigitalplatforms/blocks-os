@@ -1,18 +1,13 @@
-
-
 import { useOIDCContext } from "@/layouts/oidc-layout";
 import { Button } from "@/components/ui-kits/button/button";
 import { buildOIDCNavigationUrl } from "@blocks-idp/authentication/utils/oidc-utils";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
-
 type OidcEmailConfirmationProps = {
   email?: string;
 };
-
 function OidcEmailConfirmation({ email }: OidcEmailConfirmationProps) {
   const { themeColor } = useOIDCContext();
-
   return (
     <div className="flex min-h-screen flex-col items-center bg-background">
       <Check className="mb-6" size={40} style={{ color: themeColor }} />
@@ -34,5 +29,4 @@ function OidcEmailConfirmation({ email }: OidcEmailConfirmationProps) {
     </div>
   );
 }
-
 export { OidcEmailConfirmation };

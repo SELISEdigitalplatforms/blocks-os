@@ -6,7 +6,6 @@ import { useGetEnvRepositories, useGetProject } from "@/hooks/use-project";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Button } from "@/components/ui-kits/button/button";
 import { CopyableSnippet } from "@/components/copyable-snippet/copyable-snippet";
-
 const LoadingSkeleton = () => (
   <Card>
     <CardContent>
@@ -21,7 +20,6 @@ const LoadingSkeleton = () => (
     </CardContent>
   </Card>
 );
-
 export const GitCommandSnippet = () => {
   const { itemId } = useProjectStore().selectedProject || { itemId: "", tenantId: "" };
   const { data, isLoading } = useGetProject({ projectId: itemId });
@@ -30,7 +28,6 @@ export const GitCommandSnippet = () => {
     isLoading: isLoadingEnvRepos,
     isFetching: isFetchingEnvRepos,
   } = useGetEnvRepositories(itemId || "");
-
   if (isLoading || isLoadingEnvRepos || isFetchingEnvRepos) return <LoadingSkeleton />;
   const branchName = data?.data.environment === "prod" ? "main" : data?.data.environment;
   const repo = envRepositoriesResponse?.data?.find(
@@ -41,7 +38,6 @@ export const GitCommandSnippet = () => {
   const repoLink = repo?.repoUrl || "<your-repo-link>";
   const hasRepository = !!repo?.repoUrl;
   const gitCommands = `git remote add origin ${repoLink}\ngit branch -M ${branchName}\ngit add .\ngit commit -m "feat: initiate project"\ngit push -u origin ${branchName}`;
-
   return (
     <Card className="mb-6">
       <CardHeader>

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui-kits/button/button";
 import {
     Dialog,
@@ -12,7 +11,6 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useUpdateUser, useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { IMembership } from "@blocks-idp/iam/models/user";
-
 type RemoveMembershipProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -22,7 +20,6 @@ type RemoveMembershipProps = {
     projectKey: string;
     onSuccess?: () => void;
 };
-
 export const RemoveMembership = ({
     open,
     onOpenChange,
@@ -34,27 +31,22 @@ export const RemoveMembership = ({
 }: RemoveMembershipProps) => {
     const { data: userData } = useGetUserById({ id: userId, projectKey });
     const { mutateAsync, isPending } = useUpdateUser({ id: userId, projectKey });
-
     const existingMemberships = userData?.data?.memberships || [];
-
     const onConfirm = async () => {
         try {
             const updatedMemberships = existingMemberships.filter(
                 (m) => m.organizationId !== membership.organizationId
             );
-
             const res = await mutateAsync({
                 ...userData?.data,
                 memberships: updatedMemberships,
                 itemId: userId,
                 projectKey,
             });
-
             if (!res.isSuccess) {
                 showErrorToast({ errors: res.errors });
                 return;
             }
-
             showSuccessToast({ description: "Organization membership removed successfully" });
             onOpenChange(false);
             onSuccess?.();
@@ -66,7 +58,6 @@ export const RemoveMembership = ({
             }
         }
     };
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
@@ -77,7 +68,6 @@ export const RemoveMembership = ({
                         revoke all roles associated with this organization.
                     </DialogDescription>
                 </DialogHeader>
-
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel

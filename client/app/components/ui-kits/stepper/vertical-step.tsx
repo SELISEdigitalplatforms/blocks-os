@@ -7,11 +7,9 @@ import { StepIcon } from "./step-icon";
 import { StepLabel } from "./step-label";
 import type { StepSharedProps } from "./types";
 import { useStepper } from "./use-stepper";
-
 type VerticalStepProps = StepSharedProps & {
   children?: React.ReactNode;
 };
-
 const verticalStepVariants = cva(
   [
     "flex flex-col relative transition-all duration-200",
@@ -35,7 +33,6 @@ const verticalStepVariants = cva(
     },
   },
 );
-
 const VerticalStep = React.forwardRef<HTMLDivElement, VerticalStepProps>((props, ref) => {
   const {
     children,
@@ -51,7 +48,6 @@ const VerticalStep = React.forwardRef<HTMLDivElement, VerticalStepProps>((props,
     errorIcon: errorIconProp,
     onClickStep,
   } = props;
-
   const {
     checkIcon: checkIconContext,
     errorIcon: errorIconContext,
@@ -69,17 +65,13 @@ const VerticalStep = React.forwardRef<HTMLDivElement, VerticalStepProps>((props,
     isLastStep: isLastStepCurrentStep,
     previousActiveStep,
   } = useStepper();
-
   const opacity = hasVisited ? 1 : 0.8;
   const localIsLoading = isLoading || state === "loading";
   const localIsError = isError || state === "error";
-
   const isLastStep = index === steps.length - 1;
-
   const active = variant === "line" ? isCompletedStep || isCurrentStep : isCompletedStep;
   const checkIcon = checkIconProp || checkIconContext;
   const errorIcon = errorIconProp || errorIconContext;
-
   const renderChildren = () => {
     if (!expandVerticalSteps) {
       return (
@@ -110,7 +102,6 @@ const VerticalStep = React.forwardRef<HTMLDivElement, VerticalStepProps>((props,
     }
     return children;
   };
-
   return (
     <div
       ref={ref}

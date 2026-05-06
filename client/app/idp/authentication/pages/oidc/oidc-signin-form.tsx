@@ -15,22 +15,18 @@ import { ISigninByEmailPayload, ISigninByEmailResponse } from "@blocks-idp/authe
 import { buildOIDCNavigationUrl, getCurrentOIDCParams } from "@blocks-idp/authentication/utils/oidc-utils";
 import { PasswordInput } from "@/components/password-input";
 import { getApiUrl } from "@/lib/get-api-path";
-
 export const signinByEmail = async (
   payload: ISigninByEmailPayload & { projectKey: string }
 ): Promise<ISigninByEmailResponse> => {
   try {
     const url = getApiUrl("idp/v1", "Authentication/Login");
-
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       accept: "*/*",
     };
-
     if (payload.projectKey) {
       headers["X-Blocks-Key"] = payload.projectKey;
     }
-
     const body = JSON.stringify({
       username: payload.username,
       password: payload.password,
@@ -40,7 +36,6 @@ export const signinByEmail = async (
       state: payload.state,
       nonce: "",
     });
-
     const response = await fetch(url, {
       method: "POST",
       headers,
@@ -48,7 +43,6 @@ export const signinByEmail = async (
       credentials: "include",
       referrerPolicy: "no-referrer",
     });
-
     if (!response.ok) {
       const errorText = await response.text();
       let errorJSON: { error?: string; error_description?: string } | null = null;
@@ -62,14 +56,11 @@ export const signinByEmail = async (
       }
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-
     const text = await response.text();
-
     if (!text || text.trim() === "") {
       console.warn("Empty response from signin API, continuing with flow");
       return { access_token: "authenticated" } as ISigninByEmailResponse;
     }
-
     const parsed = JSON.parse(text);
     return parsed;
   } catch (error) {
@@ -77,25 +68,21 @@ export const signinByEmail = async (
     throw error;
   }
 };
-
 export const OidcSigninForm = () => {
   const { themeColor, projectKey, clientId, scope, state, redirectUri, nonce } = useOIDCContext();
   const navigate = useNavigate();
   const { setAuthenticated } = useAuthStore();
   const [isPending, setIsPending] = useState(false);
-
   const form = useForm({
     defaultValues: signinFormDefaultValue,
     resolver: zodResolver(signinFormSchema),
   });
-
   const onSubmitHandler = async (values: z.infer<typeof signinFormSchema>) => {
     try {
       if (!projectKey) {
         showErrorToast({ errors: "Project key is required" });
         return;
       }
-
       setIsPending(true);
       const res = await signinByEmail({
         username: values.username,
@@ -107,23 +94,18 @@ export const OidcSigninForm = () => {
         ...(redirectUri && { redirectUri }),
         ...(nonce && { nonce }),
       });
-
       if (res.enable_mfa) {
         return navigate(buildOIDCNavigationUrl(`/mfa-check?mfa_id=${res.mfaId}&mfa_type=${res.mfaType}`));
       }
-
       try {
         localStorage.setItem("oidc-auth-storage", JSON.stringify(res));
       } catch (e) {
         console.error("Failed to save token response to localStorage", e);
       }
-
       setAuthenticated();
-
       const params = getCurrentOIDCParams();
       // Add userName from the form to the params
       params.set("userName", values.username);
-
       const permissionUrl = `/oidc/permission?${params.toString()}`;
       navigate(permissionUrl);
     } catch (_error: unknown) {
@@ -139,7 +121,6 @@ export const OidcSigninForm = () => {
       setIsPending(false);
     }
   };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
@@ -169,7 +150,6 @@ export const OidcSigninForm = () => {
             </FormItem>
           )}
         />
-
         <Link
           to={buildOIDCNavigationUrl("/oidc/forgot-password")}
           className="ml-auto inline-block text-sm hover:underline"
@@ -177,7 +157,6 @@ export const OidcSigninForm = () => {
         >
           Forgot password?
         </Link>
-
         <Button
           type="submit"
           className="w-full rounded hover:opacity-90"

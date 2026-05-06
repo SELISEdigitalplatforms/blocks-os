@@ -3,20 +3,17 @@ import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Button } from "@/components/ui-kits/button/button";
 import { useCreateProject } from "@/hooks/use-project";
 import { environmentOptions } from "@/constants/environment-options";
-
 function shortGuidGenerator(length: number): string {
   const letters = "abcdefghijklmnopqrstuvwxyz";
   const bytes = crypto.getRandomValues(new Uint8Array(length));
   return Array.from(bytes, (b) => letters[b % letters.length]).join("");
 }
-
 interface AddEnvironmentModalProps {
   onClose?: (selectedEnvironments: string[]) => void | Promise<void>;
   preSelectedEnvironments?: string[];
   tenantGroupId?: string;
   projectName?: string;
 }
-
 export const AddEnvironmentModal = ({
   onClose,
   preSelectedEnvironments = [],
@@ -25,16 +22,13 @@ export const AddEnvironmentModal = ({
 }: AddEnvironmentModalProps) => {
   const { isPending, mutateAsync } = useCreateProject();
   const [selected, setSelected] = useState<string[]>([]);
-
   const availableOptions = environmentOptions.filter(
     (option) => !preSelectedEnvironments.includes(option.value),
   );
-
   const rows = [];
   for (let i = 0; i < availableOptions.length; i += 2) {
     rows.push(availableOptions.slice(i, i + 2));
   }
-
   const onSaveClick = () => {
     if (selected.length > 0 && onClose && tenantGroupId) {
       const sortedSelected = [...selected].sort((a, b) => {
@@ -58,11 +52,9 @@ export const AddEnvironmentModal = ({
         tenantGroupId: tenantGroupId || "default-tenant-group-id",
         applicationContexts: applicationContexts,
       });
-
       onClose(sortedSelected);
     }
   };
-
   return (
     <div>
       <div className="grid">

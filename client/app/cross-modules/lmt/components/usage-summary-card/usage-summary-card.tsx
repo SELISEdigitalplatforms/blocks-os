@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
 import { ElementType } from "react";
-
 type UsageSummaryCardProps = {
   title: string;
   description: string;
@@ -10,7 +9,6 @@ type UsageSummaryCardProps = {
   isLoading?: boolean;
   Icon: ElementType;
 };
-
 const UsageSummaryCardSkelton = () => (
   <Card className="border-none p-0 shadow-none">
     <CardContent className="flex items-center gap-3">
@@ -22,7 +20,6 @@ const UsageSummaryCardSkelton = () => (
     </CardContent>
   </Card>
 );
-
 export const UsageSummaryCard = ({
   title,
   description,

@@ -2,7 +2,6 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { CardHeader, CardContent } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { ArrowLeft } from "lucide-react";
-
 export const EmailTemplateDetailsSkeleton = () => {
   return (
     <div>
@@ -21,7 +20,6 @@ export const EmailTemplateDetailsSkeleton = () => {
         </div>
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Template Section */}
         <div className="rounded-sm border border-gray-200 bg-white shadow-none dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
           <CardHeader>
             <div className="flex w-full items-center justify-between px-4 pt-4">
@@ -33,8 +31,6 @@ export const EmailTemplateDetailsSkeleton = () => {
             <div className="mt-4 grid h-[60vh] w-full animate-pulse gap-1 border-t bg-gray-100 dark:bg-gray-900"></div>
           </CardContent>
         </div>
-
-        {/* Details Section */}
         <div className="rounded-sm border border-gray-200 bg-white shadow-none dark:border-gray-700 dark:bg-gray-800">
           <CardHeader>
             <div className="flex w-full items-center justify-between px-4 pt-4">
@@ -42,7 +38,6 @@ export const EmailTemplateDetailsSkeleton = () => {
               <Skeleton className="h-10 w-20" />
             </div>
           </CardHeader>
-
           <CardContent>
             <div className="border-t px-4 pt-4">
               <div className="mb-10 space-y-2">

@@ -19,45 +19,35 @@ import {
 } from "@/components/ui-kits/select/select";
 import { IGeneratePATPayload, IPATResponse } from "@blocks-idp/iam/models/user";
 import { useGeneratePats } from "@blocks-idp/iam/hooks/use-activity";
-
 interface GenerateTokenModalProps {
   isOpen: boolean;
   onClose: () => void;
   id: string;
   onSuccess?: (data: IPATResponse) => void;
 }
-
 export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateTokenModalProps) {
   const [note, setNote] = useState("");
   const [expiration, setExpiration] = useState("30");
-
   const { mutate: generateToken, isPending, isError } = useGeneratePats();
-
   const getExpirationDate = (days: number): string => {
     const date = new Date();
     date.setDate(date.getDate() + days);
-
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     });
   };
-
-
   const getExpirationLabel = (days: string): string => {
     const daysNum = parseInt(days);
     return `${days} days (${getExpirationDate(daysNum)})`;
   };
-
   const handleGenerate = () => {
     if (!note.trim()) {
       console.error("Name is required");
       return;
     }
-
     const expirationDays = parseInt(expiration);
-
     let clientIdEnvWise;
     if (import.meta.env.BLOCKS_APP_URL === "https://dev-cloud.seliseblocks.com") {
       clientIdEnvWise = "11640778-423d-41e6-acba-1cf947cecb54";
@@ -68,20 +58,16 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
     } else {
       clientIdEnvWise = "11640778-423d-41e6-acba-1cf947cecb54";
     }
-
     const payload: IGeneratePATPayload = {
       clientId: clientIdEnvWise,
       note: note || undefined,
       codeTtlInMinute: expirationDays * 24 * 60,
     };
-
     generateToken(payload, {
       onSuccess: (data) => {
         setNote("");
         setExpiration("30");
-
         onSuccess?.(data);
-
         onClose();
       },
       onError: (error) => {
@@ -89,19 +75,16 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
       },
     });
   };
-
   const handleCancel = () => {
     onClose();
     setNote("");
     setExpiration("30");
   };
-
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       handleCancel();
     }
   };
-
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -111,14 +94,12 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
             Create a secure access token for authentication and API use.
           </DialogDescription>
         </DialogHeader>
-
         <div className="space-y-4 py-4">
           {isError && (
             <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
               <p className="text-sm">Failed to generate token. Please try again.</p>
             </div>
           )}
-
           <div className="space-y-2">
             <Label htmlFor="note" className="text-sm font-medium">
               PAT Name <span className="text-error">*</span>
@@ -133,7 +114,6 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
               required
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="expiration" className="text-sm font-medium">
               Expiration
@@ -150,7 +130,6 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
             </Select>
           </div>
         </div>
-
         <DialogFooter className="flex gap-3 sm:gap-3">
           <Button
             variant="outline"

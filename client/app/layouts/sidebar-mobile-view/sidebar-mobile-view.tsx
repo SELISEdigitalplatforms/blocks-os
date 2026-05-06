@@ -18,13 +18,11 @@ import {
 } from "@/components/ui-kits/sheet/sheet";
 import { navigationMenus } from "@/constants/navigation-menus";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
-
 export function SidebarMobileView() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const allowedMenu = useFilteredMenus(navigationMenus);
   const isProjectOverviewRoute = pathname.startsWith("/project-overview");
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>

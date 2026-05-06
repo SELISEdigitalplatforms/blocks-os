@@ -1,11 +1,9 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { Logs } from "lucide-react";
 import { Link } from "react-router-dom";
-
 type LogMenuProps = {
   link: string;
 };
-
 export const LogMenu = ({ link }: LogMenuProps) => {
   return (
     <Link to={link}>

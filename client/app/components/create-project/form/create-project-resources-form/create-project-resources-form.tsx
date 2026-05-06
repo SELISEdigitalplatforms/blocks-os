@@ -25,18 +25,15 @@ import {
 } from "@/cross-modules/devops/hooks/github-info";
 import { IRepository, iconMap } from "@/cross-modules/devops/models/github-info";
 import { RepositorySelectionModal } from "@/components/repository-selection-modal/repository-selection-modal";
-
 export const CreateProjectResourcesForm = () => {
   const { nextStep } = useStepper();
   const { formData, setFormData } = useCreateProjectFormState();
   const [repositoryModalOpen, setRepositoryModalOpen] = useState(false);
   const [selectRepositoryModalOpen, setSelectRepositoryModalOpen] = useState(false);
-
   const form = useForm<{ assets: Asset[] }>({
     values: formData[1],
     resolver: zodResolver(CreateProjectResourcesFormSchema),
   });
-
   const [selectedRepositories, setSelectedRepositories] = useState<IRepository[]>(
     (formData[1]?.assets ?? []).map((asset) => ({
       id: asset.id ?? 0,
@@ -47,14 +44,11 @@ export const CreateProjectResourcesForm = () => {
   );
   const { data: _isAuthenticated, refetch: refetchAuthorization } = useValidateAuthorization();
   const { data: authAccountData } = useGetRepositoryUser(!!_isAuthenticated?.isSuccess);
-
   const onSubmitHandler = (values: typeof CreateProjectResourcesFormDefaultValue) => {
     setFormData(1, values);
     nextStep();
   };
-
   const { isValid } = form.formState;
-
   const handleAddRepositoryClick = async () => {
     try {
       const authResult = await refetchAuthorization();
@@ -68,12 +62,10 @@ export const CreateProjectResourcesForm = () => {
       setRepositoryModalOpen(true);
     }
   };
-
   const handleProviderClose = (verifyAuth?: boolean) => {
     setRepositoryModalOpen(false);
     setSelectRepositoryModalOpen(verifyAuth ? true : false);
   };
-
   const handleSelectRepository = (repo: IRepository) => {
     if (!selectedRepositories.some((r) => r.id === repo.id)) {
       const updatedRepos = [...selectedRepositories, repo];
@@ -88,9 +80,7 @@ export const CreateProjectResourcesForm = () => {
     }
     setSelectRepositoryModalOpen(false);
   };
-
   const githubIconSrc = iconMap["github"] || "/assets/github-icon.svg";
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)} className="w-full">
@@ -102,13 +92,11 @@ export const CreateProjectResourcesForm = () => {
               anytime after setup.
             </p>
           </div>
-
           <div className="rounded-md border border-gray-200 bg-card p-6 shadow-sm">
             <h4 className="mb-2 text-lg font-medium">Connect and select repositories</h4>
             <p className="mb-6 text-sm text-gray-500">
               We&apos;ll automatically detect and import resources from the repositories you select.
             </p>
-
             <div className="flex flex-col gap-6 md:flex-row">
               {authAccountData && (
                 <div className="min-w-[220px] flex-1">
@@ -132,7 +120,6 @@ export const CreateProjectResourcesForm = () => {
                   </div>
                 </div>
               )}
-
               {(selectedRepositories ?? []).length > 0 && (
                 <div className="min-w-[220px] flex-1">
                   <div className="mb-2 text-sm font-medium text-gray-600">
@@ -171,7 +158,6 @@ export const CreateProjectResourcesForm = () => {
             Continue
           </Button>
         </div>
-
         <Dialog open={repositoryModalOpen} onOpenChange={setRepositoryModalOpen}>
           <DialogContent className="w-[425px] p-6">
             <DialogHeader>
@@ -187,7 +173,6 @@ export const CreateProjectResourcesForm = () => {
             />
           </DialogContent>
         </Dialog>
-
         <RepositorySelectionModal
           open={selectRepositoryModalOpen}
           onOpenChange={setSelectRepositoryModalOpen}

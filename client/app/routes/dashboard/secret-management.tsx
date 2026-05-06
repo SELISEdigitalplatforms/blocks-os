@@ -28,9 +28,7 @@ import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
 import { cn } from "@/lib/utils";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
 import type { AddSecretPayload } from "@/cross-modules/secrets/constants/secret-key.enum"; 
-
 const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models"];
-
 export default function SecretManagementPage() {
   const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "infra-config" });
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -41,11 +39,9 @@ export default function SecretManagementPage() {
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
   const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
   const currentItem = SECRET_MANAGEMENT_NAV_GROUPS
     .flatMap((g) => g.items)
     .find((item) => item.value === (selectedTab ?? "infra-config"));
-
   const areAllProvidersConfigured = useMemo(() => {
     if (!captchaData?.configurations) return false;
     const allProviderKeys = Object.keys(CAPTCHA_PROVIDERS) as CAPTCHA_PROVIDERS_KEY[];
@@ -54,7 +50,6 @@ export default function SecretManagementPage() {
     );
     return allProviderKeys.every((key) => configuredProviders.has(key));
   }, [captchaData]);
-
   const addConfigurationHandler = (e: MouseEvent) => {
     if (areAllProvidersConfigured) {
       toast({
@@ -65,7 +60,6 @@ export default function SecretManagementPage() {
       return e.preventDefault();
     }
   };
-
   const headerActions = (
     <>
       {selectedTab === GRANT_TYPES.authorizationCode && <CreateOIDC />}
@@ -131,13 +125,10 @@ export default function SecretManagementPage() {
       )}
     </> 
   );
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {/* Page header */}
       <div className="flex shrink-0 items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          {/* Mobile sidebar trigger */}
           <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden">
@@ -188,8 +179,6 @@ export default function SecretManagementPage() {
               </div>
             </SheetContent>
           </Sheet>
-
-          {/* Page title */}
           {currentItem && (
             <div>
               <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
@@ -199,12 +188,8 @@ export default function SecretManagementPage() {
             </div>
           )}
         </div>
-
-        {/* Header actions */}
         <div className="flex items-center gap-2">{headerActions}</div>
       </div>
-
-      {/* Content body */}
       <div className="flex-1 overflow-y-auto p-6">
         {!HIDDEN_BANNER_TABS.includes(selectedTab ?? "") && (
           <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
@@ -220,7 +205,6 @@ export default function SecretManagementPage() {
             </div>
           </div>
         )}
-
         {selectedTab === "infra-config" && (
           <div className="rounded-lg border border-border bg-card p-6">
             <h3 className="text-lg font-semibold">Infra Config</h3>

@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { cn } from "@/lib/utils";
-
 interface BlocksApp {
   key: string;
   label: string;
@@ -20,7 +19,6 @@ interface BlocksApp {
   url: string;
   icon: React.ReactNode;
 }
-
 function IdpIcon() {
   return (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
@@ -35,7 +33,6 @@ function IdpIcon() {
     </svg>
   );
 }
-
 function UilmIcon() {
   return (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
@@ -54,7 +51,6 @@ function UilmIcon() {
     </svg>
   );
 }
-
 function AiIcon() {
   return (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
@@ -76,7 +72,6 @@ function AiIcon() {
     </svg>
   );
 }
-
 function DataGatewayIcon() {
   return (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
@@ -99,7 +94,6 @@ function DataGatewayIcon() {
     </svg>
   );
 }
-
 function BlocksOsIcon() {
   return (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
@@ -112,7 +106,6 @@ function BlocksOsIcon() {
     </svg>
   );
 }
-
 const SELISE_APPS: BlocksApp[] = [
   {
     key: "idp",
@@ -150,11 +143,9 @@ const SELISE_APPS: BlocksApp[] = [
     icon: <BlocksOsIcon />,
   },
 ];
-
 interface AppTileProps {
   app: BlocksApp;
 }
-
 function AppTile({ app }: AppTileProps) {
   return (
     <a
@@ -172,7 +163,6 @@ function AppTile({ app }: AppTileProps) {
     </a>
   );
 }
-
 function LauncherTriggerIcon() {
   return (
     <svg
@@ -181,7 +171,6 @@ function LauncherTriggerIcon() {
       xmlns="http://www.w3.org/2000/svg"
       className="h-5 w-5"
     >
-
       <rect x="1"  y="1"  width="5" height="5" rx="1.5" />
       <rect x="7.5" y="1"  width="5" height="5" rx="1.5" />
       <rect x="14" y="1"  width="5" height="5" rx="1.5" />
@@ -194,7 +183,6 @@ function LauncherTriggerIcon() {
     </svg>
   );
 }
-
 function EditIcon() {
   return (
     <svg
@@ -207,7 +195,6 @@ function EditIcon() {
     </svg>
   );
 }
-
 function StarIcon({ filled }: { filled: boolean }) {
   return (
     <svg
@@ -222,16 +209,13 @@ function StarIcon({ filled }: { filled: boolean }) {
     </svg>
   );
 }
-
 export function BlocksAppLauncher() {
   const [open, setOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [favouriteKeys, setFavouriteKeys] = useState<Set<string>>(new Set());
   const [isHydrated, setIsHydrated] = useState(false);
   const location = useLocation();
-
   // const isAllowedRoute = !location.pathname.includes("/console") && !location.pathname.includes("/project-overview") && !location.pathname.includes("/services/lmt/logs");
-
   useEffect(() => {
     const stored = localStorage.getItem("blocks-app-favourites");
     const keys = stored
@@ -240,12 +224,10 @@ export function BlocksAppLauncher() {
     setFavouriteKeys(keys);
     setIsHydrated(true);
   }, []);
-
   const saveFavourites = (keys: Set<string>) => {
     setFavouriteKeys(keys);
     localStorage.setItem("blocks-app-favourites", JSON.stringify(Array.from(keys)));
   };
-
   const toggleFavourite = (key: string) => {
     const newFavourites = new Set(favouriteKeys);
     if (newFavourites.has(key)) {
@@ -255,14 +237,10 @@ export function BlocksAppLauncher() {
     }
     saveFavourites(newFavourites);
   };
-
   // if (!isHydrated || !isAllowedRoute) return null;
     if (!isHydrated) return null;
-
-
   const favourites = SELISE_APPS.filter((a) => favouriteKeys.has(a.key));
   const moreApps = SELISE_APPS.filter((a) => !favouriteKeys.has(a.key));
-
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
@@ -278,7 +256,6 @@ export function BlocksAppLauncher() {
             <LauncherTriggerIcon />
           </button>
         </PopoverTrigger>
-
         <PopoverContent
           align="end"
           sideOffset={8}
@@ -294,7 +271,6 @@ export function BlocksAppLauncher() {
               <EditIcon />
             </button>
           </div>
-
           <div className="px-3 pb-2 pt-3">
             <div className="grid grid-cols-3">
               {favourites.map((app) => (
@@ -302,7 +278,6 @@ export function BlocksAppLauncher() {
               ))}
             </div>
           </div>
-
           {moreApps.length > 0 && (
             <div className="bg-muted/50 px-3 pb-4 pt-3 border-t">
               <p className="mb-2 px-1 text-[13px] font-semibold text-muted-foreground">
@@ -317,7 +292,6 @@ export function BlocksAppLauncher() {
           )}
         </PopoverContent>
       </Popover>
-
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>

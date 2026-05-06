@@ -1,5 +1,3 @@
-
-
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui-kits/button/button";
 import { getRuntimeEnv } from "@/lib/runtime-env";
@@ -18,26 +16,21 @@ import {
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActivationForm } from "./activation-form";
-
 type ActivationProps = {
   code?: string;
   lang?: string;
 };
-
 const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-
 export const Activation = ({ code }: ActivationProps) => {
   const { isPending: isActivationPending, mutateAsync: activationCodeValidation } =
     useAccountActivationCodeExpiration();
   const { mutateAsync: resendActivationLink, isPending: isResendPending } =
     useAccountResendActivation();
-
   const [isValidCode, setIsValidCode] = useState<boolean | null>(null);
   const [activationError, setActivationError] = useState<"invalid" | "expired" | null>(null);
   const [activationUserId, setActivationUserId] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resendSuccess, setResendSuccess] = useState(false);
-
   useEffect(() => {
     if (!code) {
       setActivationError("invalid");
@@ -47,14 +40,12 @@ export const Activation = ({ code }: ActivationProps) => {
       setIsValidCode(false);
       return;
     }
-
     const validateCode = async () => {
       try {
         const res = await activationCodeValidation({
           projectKey: x_blocks_key as string,
           activationCode: code,
         });
-
         if (res.errors != null) {
           // Invalid code, doesn't exist code
           setActivationError("invalid");
@@ -74,7 +65,6 @@ export const Activation = ({ code }: ActivationProps) => {
           setResendMessage(null);
           setResendSuccess(false);
         }
-
         setIsValidCode(res.isSuccess);
       } catch {
         setActivationError("invalid");
@@ -84,22 +74,17 @@ export const Activation = ({ code }: ActivationProps) => {
         setIsValidCode(false);
       }
     };
-
     validateCode();
   }, [code, activationCodeValidation]);
-
   const handleResendActivation = async () => {
     if (!activationUserId || isResendPending) return;
-
     try {
       setResendMessage(null);
       setResendSuccess(false);
-
       const response = await resendActivationLink({
         userId: activationUserId,
         projectKey: x_blocks_key as string,
       });
-
       if (response?.isSuccess) {
         setResendSuccess(true);
         setResendMessage("A new activation link has been sent to your email.");
@@ -114,7 +99,6 @@ export const Activation = ({ code }: ActivationProps) => {
       );
     }
   };
-
   if (isActivationPending || isValidCode === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -122,7 +106,6 @@ export const Activation = ({ code }: ActivationProps) => {
       </div>
     );
   }
-
   return (
     <div className="flex min-h-screen flex-col items-center bg-background">
       <Link to="/login" className="mb-4 mt-[30px] cursor-pointer p-4 hover:opacity-80 transition-opacity">
@@ -146,9 +129,7 @@ export const Activation = ({ code }: ActivationProps) => {
         <Card className="mx-auto w-full max-w-lg rounded-none border-none text-center shadow-none">
           <CardContent className="p-8">
             <AlertTriangle className="mx-auto flex h-10 w-10 items-center justify-center text-amber-600" />
-
             <h1 className="text-xl font-semibold">Invalid Activation Link</h1>
-
             <p className="mt-2 text-sm">
               The activation code is invalid. Please check the link or request a new activation
               email from your administrator.
@@ -158,17 +139,13 @@ export const Activation = ({ code }: ActivationProps) => {
       ) : (
         <Card className="mx-auto w-full max-w-lg rounded-none border-none text-center shadow-none">
           <CardContent className="p-8">
-            {/* <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border"> */}
             <AlertTriangle className="mx-auto flex h-10 w-10 items-center justify-center text-amber-600" />
             {/* </div> */}
-
             <h1 className="text-xl font-semibold">Activation Link Expired</h1>
-
             <p className="mt-2 text-sm">
               This activation link has expired and can&apos;t be used anymore. Please request a new
               link to complete your account activation.
             </p>
-
             <div className="mt-4 flex flex-col items-center gap-2">
               <Button
                 onClick={handleResendActivation}

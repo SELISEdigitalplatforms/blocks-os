@@ -5,7 +5,6 @@ import { PERMISSION_SEVERITY_OPTIONS, ResourceType } from "@blocks-idp/iam/model
 import { BadgeAlert, BadgeCheck } from "lucide-react";
 import { useMemo } from "react";
 import { PermissionState, useRoleDetailsStore } from "./role-details-state";
-
 type PermissionToggleCardProps = {
   permission: PermissionState;
   checked: boolean;
@@ -14,7 +13,6 @@ type PermissionToggleCardProps = {
   hasDependentPermissions?: boolean;
   isAllDependentPermissionsChecked?: boolean;
 };
-
 export const PermissionToggleCard = ({
   permission,
   checked,
@@ -27,7 +25,6 @@ export const PermissionToggleCard = ({
   const permissionSeverity = useMemo(() => {
     return PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === permission.permissionSeverity);
   }, [permission.permissionSeverity]);
-
   return (
     <div
       className={cn(

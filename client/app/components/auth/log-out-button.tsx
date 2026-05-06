@@ -4,14 +4,12 @@ import { useLogout } from "@/idp/authentication/hooks/use-auth";
 import { getQueryClient } from "@/providers/query-provider";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProjectStore } from "@/store/useProjectStore";
-
 export function LogOutButton() {
   const queryClient = getQueryClient();
   const { reset } = useProjectStore();
   const { setUnAuthenticated, clearTokens } = useAuthStore();
   const { resetSelectedLanguages } = useLanguageViewStore();
   const { isPending, mutateAsync } = useLogout();
-
   const handleLogout = async () => {
     try {
       await mutateAsync();
@@ -25,7 +23,6 @@ export function LogOutButton() {
       console.error(error);
     }
   };
-
   return (
     <Button
       variant="link"

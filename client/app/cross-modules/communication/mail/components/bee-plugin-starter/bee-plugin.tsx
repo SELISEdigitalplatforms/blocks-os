@@ -1,12 +1,8 @@
-
-
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import Bee from "@mailupinc/bee-plugin";
 import { IBeeConfig, IMergeTag, ISpecialLink } from "@mailupinc/bee-plugin/dist/types/bee";
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
-
 const BEE_PLUGIN_CONTAINER_ID = "bee-plugin-container";
-
 interface IBeePluginProps {
   beeUID: string;
   mergeTags?: IMergeTag[];
@@ -16,7 +12,6 @@ interface IBeePluginProps {
   onBeeTemplateLoad?: (isLoaded: boolean) => void;
   jsonFile?: any;
 }
-
 const BeePlugin = forwardRef(function Inner(
   {
     beeUID,
@@ -32,7 +27,6 @@ const BeePlugin = forwardRef(function Inner(
   const [bee, setBee] = useState<Bee | null>(null);
   const [isBeeStarted, setIsBeeStarted] = useState(false);
   const [isPreviewOn, setIsPreviewOn] = useState(false);
-
   const beeConfig: IBeeConfig = useMemo(
     () => ({
       uid: beeUID,
@@ -72,14 +66,12 @@ const BeePlugin = forwardRef(function Inner(
       bee,
     ],
   );
-
   useEffect(() => {
     const beeInstance = new Bee();
     const conf = {
       authUrl: "https://auth.getbee.io/apiauth",
       beePluginUrl: "https://app-rsrc.getbee.io/plugin/BeePlugin.js",
     };
-
     beeInstance
       .getToken("your-client-id", "your-client-secret", conf)
       .then(() => jsonFile)
@@ -91,7 +83,6 @@ const BeePlugin = forwardRef(function Inner(
       })
       .catch((error) => console.error("Error during initialization --> ", error));
   }, [beeConfig, jsonFile]);
-
   useImperativeHandle(ref, () => ({
     submit() {
       bee?.save();
@@ -101,12 +92,10 @@ const BeePlugin = forwardRef(function Inner(
       bee?.preview();
     },
   }));
-
   return (
     <>
       {isBeeStarted && <div id={BEE_PLUGIN_CONTAINER_ID} className="h-[calc(100vh-60px)] w-full" />}
     </>
   );
 });
-
 export default BeePlugin;

@@ -12,12 +12,10 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { formatDistanceToNow } from "date-fns";
 // import { Check } from "lucide-react";
 import { useMemo } from "react";
-
 type HistoryListProps = {
   isLoading: boolean;
   data: IHistories[];
 };
-
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
@@ -25,12 +23,10 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 const EVENT_TYPE = {
   issued_refresh_token: "Refresh Token Issued",
   revoke_access_by_logout: "Access Revoked (Logout)",
 };
-
 export const UserHistoryList = ({ isLoading, data }: HistoryListProps) => {
   const columns: ColumnDef<IHistories>[] = useMemo(
     () => [
@@ -43,7 +39,6 @@ export const UserHistoryList = ({ isLoading, data }: HistoryListProps) => {
         ),
         cell: ({ row }) => (
           <div className="flex w-[200px] items-center">
-            {/* <Check className="mr-2 h-5 w-5 text-success" /> */}
             <span>{EVENT_TYPE[row.getValue("Event") as keyof typeof EVENT_TYPE]}</span>
           </div>
         ),
@@ -103,13 +98,11 @@ export const UserHistoryList = ({ isLoading, data }: HistoryListProps) => {
     ],
     [],
   );
-
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) return <LoadingSkelton />;
   return (
     <Table className="text-sm">

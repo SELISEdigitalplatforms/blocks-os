@@ -1,7 +1,6 @@
 import { useGetTotp } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext } from "react";
 import { userMfaContext } from "../../user-mfa";
-
 export const UserMfaVerifyGuideLineTotp = () => {
   const { userId, projectKey } = useContext(userMfaContext);
   const { data } = useGetTotp({ id: userId, projectKey });

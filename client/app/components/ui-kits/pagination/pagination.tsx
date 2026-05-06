@@ -8,7 +8,6 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
-
 interface PaginationProps {
   onChange: (pageIndex: number) => void;
   totalCount: number;
@@ -17,7 +16,6 @@ interface PaginationProps {
   page: number;
   onPageSizeChange?: (pageSize: number) => void;
 }
-
 export function Pagination({
   page,
   onChange,
@@ -29,15 +27,12 @@ export function Pagination({
   const pageChangeHandler = (page: number) => {
     onChange(page);
   };
-
   const canGoPreviousPage = !!page;
   const totalPage = Math.ceil(totalCount / pageSize);
   const canGoNextPage = page < totalPage - 1;
-
   const onPageSizeChangeHandler = (value: string) => {
     if (onPageSizeChange) onPageSizeChange(+value);
   };
-
   return (
     <div className="flex flex-col gap-0 md:flex-row md:gap-8">
       {pageSizeOptions && pageSizeOptions?.length > 0 ? (
@@ -59,7 +54,6 @@ export function Pagination({
       ) : (
         ""
       )}
-
       <div className="mt-2 flex items-center gap-4 md:mt-0">
         <div className="flex items-center justify-center text-sm font-medium">
           Page {page + 1} of {totalPage}

@@ -1,4 +1,3 @@
-
 import { useProjectStore } from "@/store/useProjectStore";
 import { CreatePermissionPayload } from "@blocks-idp/iam/models/permission";
 import { useAddPermission } from "@blocks-idp/iam/hooks/use-permission";
@@ -9,13 +8,10 @@ import { permissionFormSchemaType } from "../permission-form/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useNavigate } from "react-router-dom";
-
 export const AddPermission = () => {
   const navigate = useNavigate();
   const selectedTenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const { isPending, mutateAsync } = useAddPermission();
-
   const onSubmit = async (data: permissionFormSchemaType) => {
     try {
       const newPermission: CreatePermissionPayload = {
@@ -34,10 +30,8 @@ export const AddPermission = () => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   BREADCRUMB_CUSTOM_TITLES["/services/iam/permission-detail"] = "Permissions";
   BREADCRUMB_CUSTOM_TITLES[`/services/iam/permission-detail/new`] = "New";
-
   return (
     <div className="px-4 pt-4 md:px-6 md:pt-6">
       <div className="hidden md:flex">

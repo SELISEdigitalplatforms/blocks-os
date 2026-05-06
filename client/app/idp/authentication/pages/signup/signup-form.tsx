@@ -1,4 +1,3 @@
-
 import { Captcha } from "@/components/captcha";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -33,7 +32,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { SsoSignin } from "../login/sso-signin";
 import { signupFormDefaultValue, signupFormSchema } from "./utils";
-
 export const SignupForm = ({
   loginOption,
   emailSignUpEnabled,
@@ -50,7 +48,6 @@ export const SignupForm = ({
     resolver: zodResolver(signupFormSchema),
   });
   const { isPending, mutateAsync } = useSignupByEmail();
-
   const googleSiteKey = getRuntimeEnv("BLOCKS_GOOGLE_SITE_KEY") || "";
   const {
     code: captchaCode,
@@ -60,9 +57,7 @@ export const SignupForm = ({
     type: "reCaptcha-v2-checkbox",
     siteKey: googleSiteKey,
   });
-
   const { isValid } = form.formState;
-
   const onSubmitHandler = async (values: z.infer<typeof signupFormSchema>) => {
     try {
       const res = await mutateAsync({
@@ -83,11 +78,9 @@ export const SignupForm = ({
       }
     }
   };
-
   useEffect(() => {
     if (!isValid && captchaCode) resetCaptcha();
   }, [captchaCode, isValid, resetCaptcha]);
-
   return (
     <Card className="w-full rounded border-solid border-background shadow-none md:border-[#95ADC4] lg:max-w-md">
       <CardHeader className="text-center">
@@ -113,7 +106,6 @@ export const SignupForm = ({
                   )}
                 />
                 {isValid && <Captcha {...captcha} />}
-
                 <div className="mt-2 flex justify-start gap-2 text-sm text-foreground">
                   <Checkbox
                     id="terms"
@@ -161,11 +153,9 @@ export const SignupForm = ({
             <hr className="flex-grow border-gray-300" />
           </div>
         )}
-
         {ssoSignUpEnabled && loginOption?.allowedGrantTypes.includes(GRANT_TYPES.social) && (
           <SsoSignin loginOption={loginOption} />
         )}
-
         <div className="mt-4 text-center text-base text-foreground">
           Already a member?{" "}
           <Link to={"/login"} className="text-primary hover:underline">
