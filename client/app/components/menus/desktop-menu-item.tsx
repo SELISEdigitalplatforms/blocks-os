@@ -38,7 +38,7 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
     "group relative flex cursor-pointer items-center transition-colors",
     isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
     // Hover effects only when not active
-    isSidebarOpen && !isActiveMenu && "hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+    !isActiveMenu && "hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
     // Base color
     isActiveMenu
       ? isSidebarOpen

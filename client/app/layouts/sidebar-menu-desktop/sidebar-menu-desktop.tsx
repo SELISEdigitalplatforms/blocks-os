@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import { navigationMenus } from "@/constants/navigation-menus";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
+import { LMT_NAV_GROUPS } from "@/constants/lmt-nav";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
 import { cn } from "@/lib/utils";
@@ -23,9 +24,11 @@ export function SidebarMenuDesktop() {
   const isProjectOverviewRoute = pathname.startsWith("/project-overview");
   const isSecretManagementRoute = pathname.startsWith("/services/secret-management");
   const isAuthenticationRoute = pathname.startsWith("/services/authentication");
+  const isLmtRoute = pathname.startsWith("/services/lmt");
   const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "infra-config" : "general");
   const [secretsOpen, setSecretsOpen] = useState(true);
   const [idpOpen, setIdpOpen] = useState(true);
+  const [lmtOpen, setLmtOpen] = useState(true);
   const getLogoSrc = () => {
     if (isSidebarOpen) {
       return resolvedTheme === "dark" ? "/Logo_White.svg" : "/Logo.svg";
@@ -68,7 +71,7 @@ export function SidebarMenuDesktop() {
           <EnvironmentList collapsed />
         </div>
       ))}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-visible">
         <nav className={cn("grid w-full items-start gap-1 pt-1 pb-3 text-sm")}>
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
@@ -85,13 +88,13 @@ export function SidebarMenuDesktop() {
                         }
                       }}
                       className={cn(
-                        "group relative flex cursor-pointer items-center transition-colors",
+                        "group relative flex cursor-pointer items-center transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
                         isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
                         isSecretManagementRoute
                           ? isSidebarOpen
                             ? "bg-primary/10 text-primary"
                             : "text-primary"
-                          : "text-[hsl(var(--low-emphasis))] hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+                          : "text-[hsl(var(--low-emphasis))]",
                       )}
                     >
                       {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
@@ -118,13 +121,13 @@ export function SidebarMenuDesktop() {
                         }
                       }}
                       className={cn(
-                        "group relative flex cursor-pointer items-center transition-colors",
+                        "group relative flex cursor-pointer items-center transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
                         isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
                         isAuthenticationRoute
                           ? isSidebarOpen
                             ? "bg-primary/10 text-primary"
                             : "text-primary"
-                          : "text-[hsl(var(--low-emphasis))] hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+                          : "text-[hsl(var(--low-emphasis))]",
                       )}
                     >
                       {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
@@ -132,6 +135,39 @@ export function SidebarMenuDesktop() {
                         <>
                           <span>{menu.name}</span>
                           <ChevronRight className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform", idpOpen && "rotate-90")} />
+                        </>
+                      )}
+                      {!isSidebarOpen && (
+                        <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                          {menu.name}
+                        </div>
+                      )}
+                    </button>
+                  ) : menu.id === "service-identity__lmt" ? (
+                    <button
+                      onClick={() => {
+                        if (!isLmtRoute) {
+                          navigate("/services/lmt?tab=usage");
+                          setLmtOpen(true);
+                        } else {
+                          setLmtOpen((v) => !v);
+                        }
+                      }}
+                      className={cn(
+                        "group relative flex cursor-pointer items-center transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+                        isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
+                        isLmtRoute
+                          ? isSidebarOpen
+                            ? "bg-primary/10 text-primary"
+                            : "text-primary"
+                          : "text-[hsl(var(--low-emphasis))]",
+                      )}
+                    >
+                      {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
+                      {isSidebarOpen && (
+                        <>
+                          <span>{menu.name}</span>
+                          <ChevronRight className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform", lmtOpen && "rotate-90")} />
                         </>
                       )}
                       {!isSidebarOpen && (
@@ -188,6 +224,41 @@ export function SidebarMenuDesktop() {
                             <div key={item.id} className="group relative">
                               <button
                                 onClick={() => navigate(`/services/authentication?tab=${item.value}`)}
+                                className={cn(
+                                  "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-sm transition-colors",
+                                  isSidebarOpen ? "px-3" : "justify-center",
+                                  isActive
+                                    ? "text-primary"
+                                    : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+                                )}
+                              >
+                                <Icon className="h-4 w-4 shrink-0" />
+                                {isSidebarOpen && <span>{item.label}</span>}
+                                {isActive && isSidebarOpen && (
+                                  <div className="absolute right-3 h-2 w-2 rounded-full bg-primary" />
+                                )}
+                              </button>
+                              {!isSidebarOpen && (
+                                <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                                  {item.label}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                  {isLmtRoute && menu.id === "service-identity__lmt" && lmtOpen && (
+                    <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
+                      {LMT_NAV_GROUPS.map((group) =>
+                        group.items.map((item) => {
+                          const Icon = item.icon;
+                          const isActive = currentTab === item.value;
+                          return (
+                            <div key={item.id} className="group relative">
+                              <button
+                                onClick={() => navigate(`/services/lmt?tab=${item.value}`)}
                                 className={cn(
                                   "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-sm transition-colors",
                                   isSidebarOpen ? "px-3" : "justify-center",
