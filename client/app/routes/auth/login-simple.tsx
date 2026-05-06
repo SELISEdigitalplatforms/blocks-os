@@ -157,18 +157,18 @@ const ServiceCarousel = () => {
             >
               {/* Gradient header */}
               <div
-                className={`relative overflow-hidden bg-gradient-to-br ${service.gradient} px-6 py-6`}
+                className="relative overflow-hidden bg-primary px-6 py-6"
               >
-                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
-                <div className="absolute -bottom-6 right-4 h-20 w-20 rounded-full bg-white/10" />
-                <span className="relative inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/90">
+                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5" />
+                <div className="absolute -bottom-6 right-4 h-20 w-20 rounded-full bg-white/5" />
+                <span className="relative inline-flex items-center rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/80">
                   {service.badge}
                 </span>
                 <div className="relative mt-3 flex items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                    <service.icon className="h-5 w-5 text-white" />
+                    <service.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
-                  <h3 className="text-lg font-bold leading-tight text-white">{service.title}</h3>
+                  <h3 className="text-lg font-bold leading-tight text-primary-foreground">{service.title}</h3>
                 </div>
               </div>
 
@@ -177,25 +177,30 @@ const ServiceCarousel = () => {
                 <p className="text-sm leading-relaxed text-[hsl(var(--medium-emphasis))]">
                   {service.description}
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1">
                   {service.features.map((f) => (
                     <span
                       key={f}
-                      className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-app))] px-2.5 py-0.5 text-[11px] font-medium text-[hsl(var(--high-emphasis))]"
+                      className="inline-flex items-center rounded-full bg-primary/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
                     >
                       {f}
                     </span>
                   ))}
                 </div>
                 <div className="mt-auto pt-1">
-                  <Link
-                    to={service.url}
-                    target="_blank"
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                  <Button
+                    asChild
+                    size="sm"
+                    className="gap-2"
                   >
-                    {service.cta}
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
+                    <Link
+                      to={service.url}
+                      target="_blank"
+                    >
+                      {service.cta}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -335,7 +340,7 @@ export default function LoginSimplePage() {
           </div>
 
           
-          <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-3 pt-2">
             <div className="flex flex-row gap-3">
               <Button
                 size="lg"
@@ -344,9 +349,15 @@ export default function LoginSimplePage() {
                 onClick={handleLogin}
               >
                 {isLoading ? "Redirecting…" : "Log in to your account"}
-                {!isLoading && (
-                  <MoveRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                )}
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+              >
+                <Link to="https://docs.seliseblocks.com/" target="_blank">
+                  Read the Docs
+                </Link>
               </Button>
             </div>
           
