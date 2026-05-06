@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ChevronsLeft, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
 import { NavGroup } from "@/constants/secret-management-nav";
 
 type PageSidebarLayoutProps = {
@@ -108,16 +108,17 @@ export function PageSidebarLayout({
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-52 p-0">
+              <SheetContent side="left" className="w-52 p-0" hideClose>
                 <div className="flex h-full flex-col">
-                  <div className="flex justify-end border-b border-border p-3">
+                  <SheetHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
+                    <SheetTitle className="text-sm font-semibold">Secrets &amp; Configs</SheetTitle>
                     <SheetClose asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <X className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="!mt-0 h-7 w-7 shrink-0">
+                        <ChevronsLeft className="h-4 w-4" />
                         <span className="sr-only">Close sidebar</span>
                       </Button>
                     </SheetClose>
-                  </div>
+                  </SheetHeader>
                   <SidebarNav showCollapse={false} />
                 </div>
               </SheetContent>
