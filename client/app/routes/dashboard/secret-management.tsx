@@ -25,6 +25,8 @@ import { DialogTrigger } from "@radix-ui/react-dialog";
 import { toast } from "@/hooks/use-toast";
 import { PageSidebarLayout } from "@/components/page-sidebar-layout/page-sidebar-layout";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
+import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
+import type { AddSecretPayload } from "@/cross-modules/secrets/constants/secret-key.enum"; 
 
 const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models"];
 
@@ -118,7 +120,10 @@ export default function SecretManagementPage() {
           </span>
         </Button>
       )}
-    </>
+      {selectedTab === "my-secret" && (
+        <AddSecretModal onSave={(payload: AddSecretPayload) => console.log("Secret payload:", payload)} />
+      )}
+    </> 
   );
 
   return (
@@ -157,11 +162,10 @@ export default function SecretManagementPage() {
         />
       )}
       {selectedTab === "my-secret" && (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="text-lg font-semibold">My Secret</h3>
-          <p className="mt-2 text-muted-foreground">Manage your secrets and credentials</p>
+        <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-center text-muted-foreground">
+          <p className="text-sm">No secrets added yet.</p>
         </div>
-      )}
+      )} 
       {selectedTab === GRANT_TYPES.social && <SSO />}
       {selectedTab === "external-idp" && <Certificates />}
       {selectedTab === "captcha" && <ConfigureCaptcha />}

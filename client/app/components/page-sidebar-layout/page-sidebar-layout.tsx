@@ -104,7 +104,7 @@ export function PageSidebarLayout({
             {/* Mobile sidebar trigger */}
             <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 lg:hidden">
+                <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden">
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
