@@ -179,9 +179,8 @@ const ServiceCarousel = () => {
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
-        {/* Slide area — fixed height so AnimatePresence absolute children stack correctly */}
         <div className="relative h-[450px]">
-          <AnimatePresence mode="wait" custom={direction}>
+          <AnimatePresence mode="popLayout" custom={direction}>
             <motion.div
               key={index}
               custom={direction}
@@ -189,7 +188,7 @@ const ServiceCarousel = () => {
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-0 flex flex-col"
             >
               {/* Gradient header */}
