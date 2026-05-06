@@ -1,5 +1,5 @@
-import { Fragment, useContext } from "react";
-import { PanelLeft } from "lucide-react";
+import { Fragment, useContext, useState } from "react";
+import { ChevronRight, PanelLeft } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { DesktopMenuItem } from "@/components/menus/desktop-menu-item";
 import { EnvironmentList } from "@/components/environment-list/environment-list";
@@ -24,6 +24,8 @@ export function SidebarMenuDesktop() {
   const isSecretManagementRoute = pathname.startsWith("/services/secret-management");
   const isAuthenticationRoute = pathname.startsWith("/services/authentication");
   const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "infra-config" : "general");
+  const [secretsOpen, setSecretsOpen] = useState(true);
+  const [idpOpen, setIdpOpen] = useState(true);
   const getLogoSrc = () => {
     if (isSidebarOpen) {
       return resolvedTheme === "dark" ? "/Logo_White.svg" : "/Logo.svg";
@@ -72,8 +74,76 @@ export function SidebarMenuDesktop() {
             <Fragment key={menu.id}>
               {menu.type === "menu" ? (
                 <>
-                  <DesktopMenuItem menu={menu} isSidebarOpen={isSidebarOpen} />
-                  {isSecretManagementRoute && menu.id === "service-identity__secret-management" && (
+                  {menu.id === "service-identity__secret-management" ? (
+                    <button
+                      onClick={() => {
+                        if (!isSecretManagementRoute) {
+                          navigate("/services/secret-management?tab=infra-config");
+                          setSecretsOpen(true);
+                        } else {
+                          setSecretsOpen((v) => !v);
+                        }
+                      }}
+                      className={cn(
+                        "group relative flex cursor-pointer items-center transition-colors",
+                        isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
+                        isSecretManagementRoute
+                          ? isSidebarOpen
+                            ? "bg-primary/10 text-primary"
+                            : "text-primary"
+                          : "text-[hsl(var(--low-emphasis))] hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+                      )}
+                    >
+                      {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
+                      {isSidebarOpen && (
+                        <>
+                          <span>{menu.name}</span>
+                          <ChevronRight className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform", secretsOpen && "rotate-90")} />
+                        </>
+                      )}
+                      {!isSidebarOpen && (
+                        <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                          {menu.name}
+                        </div>
+                      )}
+                    </button>
+                  ) : menu.id === "service-identity__authentication" ? (
+                    <button
+                      onClick={() => {
+                        if (!isAuthenticationRoute) {
+                          navigate("/services/authentication?tab=general");
+                          setIdpOpen(true);
+                        } else {
+                          setIdpOpen((v) => !v);
+                        }
+                      }}
+                      className={cn(
+                        "group relative flex cursor-pointer items-center transition-colors",
+                        isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
+                        isAuthenticationRoute
+                          ? isSidebarOpen
+                            ? "bg-primary/10 text-primary"
+                            : "text-primary"
+                          : "text-[hsl(var(--low-emphasis))] hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+                      )}
+                    >
+                      {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
+                      {isSidebarOpen && (
+                        <>
+                          <span>{menu.name}</span>
+                          <ChevronRight className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform", idpOpen && "rotate-90")} />
+                        </>
+                      )}
+                      {!isSidebarOpen && (
+                        <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                          {menu.name}
+                        </div>
+                      )}
+                    </button>
+                  ) : (
+                    <DesktopMenuItem menu={menu} isSidebarOpen={isSidebarOpen} />
+                  )}
+                  {isSecretManagementRoute && menu.id === "service-identity__secret-management" && secretsOpen && (
                     <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
                       {SECRET_MANAGEMENT_NAV_GROUPS.map((group) =>
                         group.items.map((item) => {
@@ -108,7 +178,7 @@ export function SidebarMenuDesktop() {
                       )}
                     </div>
                   )}
-                  {isAuthenticationRoute && menu.id === "service-identity__authentication" && (
+                  {isAuthenticationRoute && menu.id === "service-identity__authentication" && idpOpen && (
                     <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
                       {AUTHENTICATION_NAV_GROUPS.map((group) =>
                         group.items.map((item) => {
