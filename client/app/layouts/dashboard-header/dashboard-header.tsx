@@ -1,4 +1,5 @@
 import { useContext } from "react";
+import { useLocation } from "react-router-dom";
 import { ChevronRight, FolderOpen, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
@@ -12,10 +13,12 @@ import { cn } from "@/lib/utils";
 
 export function DashboardHeader() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
+  const { pathname } = useLocation();
   const { selectedProject } = useProjectStore();
 
   const projectName = selectedProject?.name;
   const environment = selectedProject?.environment;
+  const isProjectOverviewRoute = pathname.startsWith("/project-overview");
 
   return (
     <>
@@ -34,7 +37,7 @@ export function DashboardHeader() {
             <PanelLeft className="h-6 w-6" />
           </Button>
 
-          {!isSidebarOpen && (projectName || environment) && (
+          {!isProjectOverviewRoute && !isSidebarOpen && (projectName || environment) && (
             <div className="hidden min-w-0 items-center gap-1.5 md:flex">
               <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               {projectName && (

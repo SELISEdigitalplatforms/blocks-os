@@ -49,7 +49,7 @@ export function ConsoleHeader() {
         <div className="block sm:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline">
+              <Button variant="ghost">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>

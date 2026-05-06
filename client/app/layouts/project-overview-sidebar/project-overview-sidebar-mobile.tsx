@@ -49,7 +49,7 @@ export const ProjectOverviewSidebarMobile = () => {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="md:hidden">
+        <Button variant="ghost" size="icon" className="md:hidden">
           <MenuIcon className="h-5 w-5" />
           <span className="sr-only">Toggle project overview menu</span>
         </Button>
