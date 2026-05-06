@@ -15,12 +15,12 @@ function ChildMenuItem({ menu }: { menu: MenuItemType }) {
     <Link
       to={menu.path}
       className={cn(
-        "flex h-10 items-center px-4 py-1.5 text-base transition-colors hover:text-[hsl(var(--high-emphasis))]",
-        isActiveMenu && "!text-primary",
+        "mx-1 flex h-8 items-center rounded-md px-3 text-sm transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+        isActiveMenu ? "bg-primary/10 text-primary" : "text-[hsl(var(--low-emphasis))]",
         menu.disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
-      {menu.icon ? <menu.icon className="mr-2 h-5 w-5" /> : null}
+      {menu.icon ? <menu.icon className="mr-2 h-4 w-4" /> : null}
       <span>{menu.name}</span>
     </Link>
   );
@@ -42,15 +42,23 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
   const hasChildren = Boolean(menu.children?.length);
 
   const baseClasses = cn(
-    "relative flex h-10 cursor-pointer items-center gap-3 px-4 py-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-    isActiveMenu && "!text-primary",
+    "group relative flex cursor-pointer items-center transition-colors",
+    isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
+    // Hover effects only when not active
+    isSidebarOpen && !isActiveMenu && "hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
+    // Base color
+    isActiveMenu
+      ? isSidebarOpen
+        ? "bg-primary/10 text-primary"
+        : "text-primary"
+      : "text-[hsl(var(--low-emphasis))]",
   );
 
   if (!hasChildren) {
     return (
-      <div className={cn(baseClasses, "group justify-between")}>
-        <Link to={menu.path} className={cn("flex items-center gap-3", menu.disabled && "pointer-events-none opacity-50")}>
-          {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
+      <div className={cn(baseClasses)}>
+        <Link to={menu.path} className={cn("flex items-center gap-2.5", menu.disabled && "pointer-events-none opacity-50")}>
+          {menu.icon ? <menu.icon className="h-[18px] w-[18px] shrink-0" /> : null}
           {isSidebarOpen ? (
             <span className="relative">
               {menu.name}
@@ -70,15 +78,15 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
             {menu.name}
           </div>
         ) : null}
-        {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+        {isActiveMenu && !isSidebarOpen ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
       </div>
     );
   }
 
   return (
-    <div className={cn(baseClasses, "group")}>
-      <div className="flex items-center gap-3">
-        {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
+    <div className={cn(baseClasses)}>
+      <div className="flex items-center gap-2.5">
+        {menu.icon ? <menu.icon className="h-[18px] w-[18px] shrink-0" /> : null}
         {isSidebarOpen ? (
           <span className="relative">
             {menu.name}
@@ -98,10 +106,10 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
           <span className="whitespace-nowrap">{menu.name}</span>
         </div>
       ) : null}
-      {isSidebarOpen ? <ChevronRight className="ml-auto h-4 w-4" /> : null}
-      {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+      {isSidebarOpen ? <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" /> : null}
+      {isActiveMenu && !isSidebarOpen ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
 
-      <div className="absolute left-full top-0 z-10 hidden w-64 flex-col rounded-sm border bg-background py-2 group-hover:flex group-hover:text-[hsl(var(--low-emphasis))]">
+      <div className="absolute left-full top-0 z-10 hidden w-56 flex-col rounded-md border bg-background py-1 shadow-md group-hover:flex group-hover:text-[hsl(var(--low-emphasis))]">
         {menu.children
           ?.filter((subMenu): subMenu is MenuItemType => subMenu.type === "menu" && !subMenu.disabled)
           .map((subMenu) => <ChildMenuItem key={subMenu.id} menu={subMenu} />)}
