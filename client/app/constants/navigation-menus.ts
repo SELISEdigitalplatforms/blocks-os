@@ -88,6 +88,10 @@ export const navigationMenus: Menu[] = [
   //   icon: ScanFace,
   // },
   {
+    type: "separator",
+    id: "separator-lmt",
+  },
+  {
     id: "service-identity__lmt",
     type: "menu",
     name: "LMT",
