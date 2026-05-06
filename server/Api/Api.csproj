@@ -11,13 +11,7 @@
     <DocumentationFile>Blocks.Genesis.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="appsettings.Development.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="appsettings.Development.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="FluentValidation.AspNetCore"/>
+    <PackageReference Include="FluentValidation.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Authentication.DomainService\Authentication.DomainService.csproj" />
@@ -29,5 +23,6 @@
     <ProjectReference Include="..\Iam.DomainService\Iam.DomainService.csproj" />
     <ProjectReference Include="..\Identifier.DomainService\Identifier.DomainService.csproj" />
     <ProjectReference Include="..\Mfa.DomainService\Mfa.DomainService.csproj" />
+    <ProjectReference Include="..\Secrets.DomainService\Secrets.DomainService.csproj" />
   </ItemGroup>
 </Project>

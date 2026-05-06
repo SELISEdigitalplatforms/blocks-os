@@ -8,6 +8,7 @@
   <Project Path="Iam.DomainService/Iam.DomainService.csproj" />
   <Project Path="Identifier.DomainService/Identifier.DomainService.csproj" />
   <Project Path="Mfa.DomainService/Mfa.DomainService.csproj" />
+  <Project Path="Secrets.DomainService/Secrets.DomainService.csproj" Id="b6059ff5-9775-449c-b1ff-3a64338ee404" />
   <Project Path="Worker/Worker.csproj" />
   <Project Path="XUnitTest/XUnitTest.csproj" />
 </Solution>
