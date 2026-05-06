@@ -9,6 +9,7 @@ using Cloud.LmtService.Utilities;
 using CloudConfiguration.DomainService.Shared.Utilities;
 using Captcha.DomainService.Configuration;
 using MongoDB.Driver;
+using Secrets.DomainService.Services;
 
 var serviceName = "blocks-os-api";
 //var vaultType = ResolveVaultType();
@@ -44,6 +45,9 @@ services.AddApplicationServices();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddCloudConfigurationServices();
+services.AddSingleton<ISecretManagementService, SecretManagementService>();
+services.AddSingleton<ISecretRepository, SecretRepository>();
+
 
 var app = builder.Build();
 
