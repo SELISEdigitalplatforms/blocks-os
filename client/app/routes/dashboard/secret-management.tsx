@@ -16,15 +16,16 @@ import { AddService } from "@blocks-identifier/components/add-service/add-servic
 import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
 import NotificationConfigurationList from "@blocks-communication/notification/components/notification-configuration-list";
 import { Button } from "@/components/ui-kits/button/button";
-import { CirclePlus, Settings, Notebook, AlertCircle } from "lucide-react";
+import { CirclePlus, ChevronsLeft, Menu, Settings, Notebook, AlertCircle } from "lucide-react";
 import { MouseEvent, useMemo, useState } from "react";
 import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
 import { useProjectStore } from "@/store/useProjectStore";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import { toast } from "@/hooks/use-toast";
-import { PageSidebarLayout } from "@/components/page-sidebar-layout/page-sidebar-layout";
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui-kits/sheet/sheet";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
+import { cn } from "@/lib/utils";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
 import type { AddSecretPayload } from "@/cross-modules/secrets/constants/secret-key.enum"; 
 
@@ -39,6 +40,11 @@ export default function SecretManagementPage() {
   const [isManagedServicesGuideOpen, setIsManagedServicesGuideOpen] = useState(false);
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
   const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const currentItem = SECRET_MANAGEMENT_NAV_GROUPS
+    .flatMap((g) => g.items)
+    .find((item) => item.value === (selectedTab ?? "infra-config"));
 
   const areAllProvidersConfigured = useMemo(() => {
     if (!captchaData?.configurations) return false;
@@ -127,68 +133,136 @@ export default function SecretManagementPage() {
   );
 
   return (
-    <PageSidebarLayout
-      navGroups={SECRET_MANAGEMENT_NAV_GROUPS}
-      selectedTab={selectedTab ?? "infra-config"}
-      onTabChange={setSelectedTab}
-      headerContent={headerActions}
-    >
-      {!HIDDEN_BANNER_TABS.includes(selectedTab ?? "") && (
-        <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
-          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-500" />
-          <div className="flex-1">
-            <h4 className="font-semibold text-amber-900 dark:text-amber-100">
-              Secret values are hidden for security
-            </h4>
-            <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
-              Once you enter secret values, they won't be displayed again for security reasons. You
-              can only view and manage configurations.
-            </p>
-          </div>
-        </div>
-      )}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {/* Page header */}
+      <div className="flex shrink-0 items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-3">
+          {/* Mobile sidebar trigger */}
+          <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden">
+                <Menu className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-52 p-0" hideClose>
+              <div className="flex h-full flex-col">
+                <SheetHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
+                  <SheetTitle className="text-sm font-semibold">Secrets &amp; Configs</SheetTitle>
+                  <SheetClose asChild>
+                    <Button variant="ghost" size="icon" className="!mt-0 h-7 w-7 shrink-0">
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                  </SheetClose>
+                </SheetHeader>
+                <nav className="flex-1 overflow-y-auto py-1">
+                  {SECRET_MANAGEMENT_NAV_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {group.label}
+                      </p>
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = (selectedTab ?? "infra-config") === item.value;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => { setSelectedTab(item.value); setIsMobileSidebarOpen(false); }}
+                            className={cn(
+                              "relative flex h-10 w-full items-center gap-3 px-4 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "text-primary"
+                                : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+                            )}
+                          >
+                            <Icon className="h-5 w-5 shrink-0" />
+                            <span>{item.label}</span>
+                            {isActive && (
+                              <div className="absolute right-0 top-2.5 h-5 w-1 rounded-l-lg bg-primary" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </nav>
+              </div>
+            </SheetContent>
+          </Sheet>
 
-      {selectedTab === "infra-config" && (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="text-lg font-semibold">Infra Config</h3>
-          <p className="mt-2 text-muted-foreground">Manage your infrastructure configurations</p>
+          {/* Page title */}
+          {currentItem && (
+            <div>
+              <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
+                {currentItem.label}
+              </h1>
+              <p className="text-xs text-muted-foreground">{currentItem.desc}</p>
+            </div>
+          )}
         </div>
-      )}
-      {selectedTab === GRANT_TYPES.authorizationCode && <OIDC />}
-      {selectedTab === "managed-services" && (
-        <ManagedServices
-          guideOpen={isManagedServicesGuideOpen}
-          onGuideOpenChange={setIsManagedServicesGuideOpen}
-        />
-      )}
-      {selectedTab === "my-secret" && (
-        <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-center text-muted-foreground">
-          <p className="text-sm">No secrets added yet.</p>
-        </div>
-      )} 
-      {selectedTab === GRANT_TYPES.social && <SSO />}
-      {selectedTab === "external-idp" && <Certificates />}
-      {selectedTab === "captcha" && <ConfigureCaptcha />}
-      {selectedTab === "mfa" && <ConfigureMFA />}
-      {selectedTab === "magic-url" && (
-        <div className="rounded-lg border border-dashed bg-background p-8 text-center text-muted-foreground">
-          <p>Use the Configure button above to manage Magic URL settings.</p>
-        </div>
-      )}
-      {selectedTab === "storage" && <StorageContents />}
-      {selectedTab === "email" && (
-        <EmailConfiguration
-          addConfigOpen={isEmailConfigOpen}
-          onAddConfigOpenChange={setIsEmailConfigOpen}
-        />
-      )}
-      {selectedTab === "notification" && (
-        <NotificationConfigurationList
-          addConfigOpen={isNotificationConfigOpen}
-          onAddConfigOpenChange={setIsNotificationConfigOpen}
-        />
-      )}
-      {selectedTab === "ai-models" && <AIModels />}
-    </PageSidebarLayout>
+
+        {/* Header actions */}
+        <div className="flex items-center gap-2">{headerActions}</div>
+      </div>
+
+      {/* Content body */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {!HIDDEN_BANNER_TABS.includes(selectedTab ?? "") && (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-500" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100">
+                Secret values are hidden for security
+              </h4>
+              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
+                Once you enter secret values, they won't be displayed again for security reasons. You
+                can only view and manage configurations.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {selectedTab === "infra-config" && (
+          <div className="rounded-lg border border-border bg-card p-6">
+            <h3 className="text-lg font-semibold">Infra Config</h3>
+            <p className="mt-2 text-muted-foreground">Manage your infrastructure configurations</p>
+          </div>
+        )}
+        {selectedTab === GRANT_TYPES.authorizationCode && <OIDC />}
+        {selectedTab === "managed-services" && (
+          <ManagedServices
+            guideOpen={isManagedServicesGuideOpen}
+            onGuideOpenChange={setIsManagedServicesGuideOpen}
+          />
+        )}
+        {selectedTab === "my-secret" && (
+          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-center text-muted-foreground">
+            <p className="text-sm">No secrets added yet.</p>
+          </div>
+        )}
+        {selectedTab === GRANT_TYPES.social && <SSO />}
+        {selectedTab === "external-idp" && <Certificates />}
+        {selectedTab === "captcha" && <ConfigureCaptcha />}
+        {selectedTab === "mfa" && <ConfigureMFA />}
+        {selectedTab === "magic-url" && (
+          <div className="rounded-lg border border-dashed bg-background p-8 text-center text-muted-foreground">
+            <p>Use the Configure button above to manage Magic URL settings.</p>
+          </div>
+        )}
+        {selectedTab === "storage" && <StorageContents />}
+        {selectedTab === "email" && (
+          <EmailConfiguration
+            addConfigOpen={isEmailConfigOpen}
+            onAddConfigOpenChange={setIsEmailConfigOpen}
+          />
+        )}
+        {selectedTab === "notification" && (
+          <NotificationConfigurationList
+            addConfigOpen={isNotificationConfigOpen}
+            onAddConfigOpenChange={setIsNotificationConfigOpen}
+          />
+        )}
+        {selectedTab === "ai-models" && <AIModels />}
+      </div>
+    </div>
   );
 }
