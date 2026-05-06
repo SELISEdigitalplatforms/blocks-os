@@ -1,7 +1,6 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
 import { ILog } from "../../models/log.model";
-
 export const LogItem = ({ log }: { log: ILog }) => {
   return (
     <div className="flex flex-col">

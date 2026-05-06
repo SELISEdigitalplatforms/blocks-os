@@ -1,4 +1,3 @@
-
 import { useQueryState } from "nuqs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { getRuntimeEnv } from "@/lib/runtime-env";
@@ -8,19 +7,15 @@ import { UpdateUser } from "../update-user";
 import { UserDevices } from "../user-devices";
 import { UserHistories } from "../user-histories";
 import { UserPats } from "../user-pat";
-
 const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "";
-
 export const Profile = () => {
   const { isPending, isLoading, data } = useGetUser();
   if (isPending || isLoading) return null;
   return <UserProfile id={data?.data.itemId || ""} />;
 };
-
 export const UserProfile = ({ id }: { id: string }) => {
   const [tabId, setTabId] = useQueryState("userDetails", { defaultValue: "details" });
   const { data } = useGetUserById({ id, projectKey: x_blocks_key });
-
   return (
     <div className="">
       <div className="flex w-full flex-col px-5 pt-16 md:p-16">
@@ -50,11 +45,9 @@ export const UserProfile = ({ id }: { id: string }) => {
             </TabsList>
             {tabId === "details" && <UpdateUser id={id} projectKey={x_blocks_key} own />}
           </div>
-
           <TabsContent value="details">
             <ProfileDetails id={id} />
           </TabsContent>
-
           <TabsContent value="devices">
             <UserDevices id={id} projectKey={x_blocks_key} />
           </TabsContent>

@@ -4,13 +4,10 @@ import { Link, useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
 import { Menu } from "@/models/menu-models";
-
 type MenuItemType = Extract<Menu, { type: "menu" }>;
-
 function ChildMenuItem({ menu }: { menu: MenuItemType }) {
   const { pathname } = useLocation();
   const isActiveMenu = pathname.startsWith(menu.path);
-
   return (
     <Link
       to={menu.path}
@@ -25,10 +22,8 @@ function ChildMenuItem({ menu }: { menu: MenuItemType }) {
     </Link>
   );
 }
-
 export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; isSidebarOpen: boolean }) {
   const { pathname } = useLocation();
-
   const isActiveMenu = useMemo(() => {
     const allPaths = [menu.path];
     if (menu.children) {
@@ -38,9 +33,7 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
     }
     return allPaths.some((item) => pathname.startsWith(item));
   }, [menu.children, menu.path, pathname]);
-
   const hasChildren = Boolean(menu.children?.length);
-
   const baseClasses = cn(
     "group relative flex cursor-pointer items-center transition-colors",
     isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
@@ -53,7 +46,6 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
         : "text-primary"
       : "text-[hsl(var(--low-emphasis))]",
   );
-
   if (!hasChildren) {
     return (
       <div className={cn(baseClasses)}>
@@ -82,7 +74,6 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
       </div>
     );
   }
-
   return (
     <div className={cn(baseClasses)}>
       <div className="flex items-center gap-2.5">
@@ -108,7 +99,6 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
       ) : null}
       {isSidebarOpen ? <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" /> : null}
       {isActiveMenu && !isSidebarOpen ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
-
       <div className="absolute left-full top-0 z-10 hidden w-56 flex-col rounded-md border bg-background py-1 shadow-md group-hover:flex group-hover:text-[hsl(var(--low-emphasis))]">
         {menu.children
           ?.filter((subMenu): subMenu is MenuItemType => subMenu.type === "menu" && !subMenu.disabled)

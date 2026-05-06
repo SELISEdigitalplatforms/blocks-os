@@ -1,5 +1,3 @@
-
-
 import { useQueryState } from "nuqs";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
@@ -20,7 +18,6 @@ import { UserHistories } from "../user-histories";
 import { UserMemberships } from "../user-memberships";
 // import { UserRoles } from "../user-roles";
 // import { UserPermissions } from "../user-permssions";
-
 const Menu = [
   {
     id: 1,
@@ -38,12 +35,10 @@ const Menu = [
     value: "history",
   },
 ];
-
 export const User = ({ id }: { id: string }) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [tabId, setTabId] = useQueryState("userDetails", { defaultValue: "details" });
   const { data } = useGetUserById({ id, projectKey: tenantId });
-
   BREADCRUMB_CUSTOM_TITLES["/services/iam/user-detail"] = "Users";
   BREADCRUMB_CUSTOM_TITLES[`/services/iam/user-detail/${data?.data?.itemId}`] =
     data?.data.lastName ?? null;
@@ -59,7 +54,6 @@ export const User = ({ id }: { id: string }) => {
               {data?.data.firstName} {data?.data.lastName}
             </h3>
           </div>
-
           {/* mobile view */}
           <div className="md:hidden">
             <div className="mb-5 mt-6 flex items-center justify-between rounded text-base">
@@ -78,7 +72,6 @@ export const User = ({ id }: { id: string }) => {
               {tabId === "details" ? <UserActionMenu id={id} projectKey={tenantId} /> : null}
             </div>
           </div>
-
           {/* desktop view */}
           <div className="hidden md:block">
             <Tabs value={tabId} onValueChange={setTabId}>
@@ -94,7 +87,6 @@ export const User = ({ id }: { id: string }) => {
               </div>
             </Tabs>
           </div>
-
           <>
             {tabId === "details" ?
               (

@@ -1,5 +1,4 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-
 import {
   Tooltip,
   TooltipContent,
@@ -7,11 +6,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { cn, formatDate, parseDateString } from "@/lib/utils";
-
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { timelineContext } from "../trace-details";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
-
 const LoadingSkelton = () => {
   return (
     <div>
@@ -19,17 +16,13 @@ const LoadingSkelton = () => {
     </div>
   );
 };
-
 const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
   const { selectedTrace } = useContext(timelineContext);
-
   const divRef = useRef<HTMLDivElement>(null);
   const [totalWidth, setTotalWidth] = useState(0);
-
   useEffect(() => {
     const element = divRef.current;
     if (!element) return;
-
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setTotalWidth(entry.contentRect.width);
@@ -40,7 +33,6 @@ const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
       observer.disconnect();
     };
   }, [divRef]);
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const getTimeLine = (item: TraceTree, unitWidth: number, startTime: string) => {
     return {
@@ -53,18 +45,14 @@ const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
       marginLeft: (Number(new Date(item.startTime)) - Number(new Date(startTime))) * unitWidth,
     };
   };
-
   const timeLines = useMemo(() => {
     if (!trace) return [];
     const unitWidth = totalWidth / trace.duration;
-
     const root = getTimeLine(trace, unitWidth, trace.startTime);
     const child =
       trace?.subEntries?.map((item) => getTimeLine(item, unitWidth, trace.startTime)) || [];
-
     return [root, ...child];
   }, [getTimeLine, totalWidth, trace]);
-
   const timeSlices = useMemo(() => {
     const arr = [];
     for (let stop = 0; stop <= trace.duration; stop += trace.duration / 5) {
@@ -72,7 +60,6 @@ const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
     }
     return arr;
   }, [trace]);
-
   return (
     <div className="flex min-w-full flex-col overflow-auto bg-slate-100 dark:bg-slate-900">
       <div className="mb-1 flex h-10 w-full" ref={divRef}>
@@ -148,12 +135,10 @@ const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
     </div>
   );
 };
-
 export const TracingDistributedTimeline = () => {
   const { traceHistory, isLoading } = useContext(timelineContext);
   if (isLoading) return <LoadingSkelton />;
   if (!traceHistory.length) return <LoadingSkelton />;
-
   const trace = traceHistory[traceHistory?.length - 1].current;
   return (
     <>

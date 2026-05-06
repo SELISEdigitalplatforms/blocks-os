@@ -1,5 +1,3 @@
-
-
 import { Button } from "@/components/ui-kits/button/button";
 import { CardContent } from "@/components/ui-kits/card/card";
 import {
@@ -36,13 +34,11 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { isErrorWithErrors } from "@/lib/error";
 import { useSaveMailTemplate } from "../../../../hooks/use-email-template";
-
 interface EditCommunicationProps {
   dialogTitle: string;
   templateData: IEmailTemplate;
   onClose: () => void;
 }
-
 const EditCommunication = (props: EditCommunicationProps) => {
   const { isLoading, data } = useGetEmailConfigs(0, 100);
   // const { saveEmailTemplate, isPending } = useSaveEmailTemplate();
@@ -62,7 +58,6 @@ const EditCommunication = (props: EditCommunicationProps) => {
       .max(150, { message: "Subject must be less than 150 characters" }),
   });
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-
   const form = useForm<IEmailTemplate>({
     values: props.templateData
       ? {
@@ -76,7 +71,6 @@ const EditCommunication = (props: EditCommunicationProps) => {
       : undefined,
     resolver: zodResolver(schema),
   });
-
   const formSubmitHandler = async (data: any) => {
     try {
       const payload = {
@@ -243,5 +237,4 @@ const EditCommunication = (props: EditCommunicationProps) => {
     </DialogContent>
   );
 };
-
 export default EditCommunication;

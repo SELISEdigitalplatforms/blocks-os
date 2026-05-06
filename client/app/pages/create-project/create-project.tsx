@@ -10,13 +10,11 @@ import { useCreateProjectFormState } from "@/components/create-project/utils";
 import { CreateProjectNamingForm } from "@/components/create-project/form/create-project-naming-form/create-project-naming-form";
 import { CreateProjectResourcesForm } from "@/components/create-project/form/create-project-resources-form/create-project-resources-form";
 import { CreateProjectEnvironmentsForm } from "@/components/create-project/form/create-project-environments-form/create-project-environments-form";
-
 const stepData: Steps = [
   { id: 1, title: "Name your project" },
   { id: 2, title: "Add resources" },
   { id: 3, title: "Configure environments" },
 ];
-
 export const CreateProjectWrapper = () => {
   return (
     <StepperProvider steps={stepData}>
@@ -24,12 +22,10 @@ export const CreateProjectWrapper = () => {
     </StepperProvider>
   );
 };
-
 const CreateProject = () => {
   const { resetFormData } = useCreateProjectFormState();
   const [tab, setTab] = useQueryState("tab", { defaultValue: "1" });
   const { currentStep, goToStep, setCompletedSteps } = useStepper();
-
   useEffect(() => {
     if (tab) {
       const step = parseInt(tab, 10);
@@ -40,7 +36,6 @@ const CreateProject = () => {
       }
     }
   }, [tab, goToStep, setCompletedSteps, setTab]);
-
   return (
     <>
       {/* mobile design */}

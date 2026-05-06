@@ -5,7 +5,6 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Play, Pause, Loader2 } from "lucide-react";
 import { AIModelRowActionsDropdown } from "./aimodel-action-dropdown";
 import { IModelInfo } from "@blocks-ai/types/aimodel.service.type";
-
 type TableColumnsOptions = {
   onEdit: (model: IModelInfo) => void;
   onDelete: (model: IModelInfo) => void;
@@ -14,7 +13,6 @@ type TableColumnsOptions = {
   validatingRowId?: string | null;
   onRowMenuOpenChange?: (rowId: string, open: boolean) => void;
 };
-
 export const tableColumns = (
   custom: boolean,
   {
@@ -36,7 +34,6 @@ export const tableColumns = (
       </div>
     ),
   };
-
   const columns: ColumnDef<IModelInfo>[] = [
     {
       id: "model",
@@ -136,6 +133,5 @@ export const tableColumns = (
       ),
     },
   ];
-
   return columns;
 };

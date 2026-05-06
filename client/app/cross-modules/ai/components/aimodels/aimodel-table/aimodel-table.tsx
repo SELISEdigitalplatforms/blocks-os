@@ -22,13 +22,11 @@ import { ModelEditKeyModal } from "@blocks-ai/components/aimodels/modals/aimodel
 import { CustomModelEditKeyModal } from "@blocks-ai/components/aimodels/modals/aimodel-editkey-modal-custom/aimodel-editkey-modal-custom";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useValidateModel } from "@blocks-ai/hooks/use-aimodel";
-
 type AIModelsTableProps = {
   custom: boolean;
   models: IModelInfo[];
   isLoading: boolean;
 };
-
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -36,25 +34,20 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
 export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps) => {
   const [deleteTarget, setDeleteTarget] = useState<IModelInfo | null>(null);
   const [editTarget, setEditTarget] = useState<IModelInfo | null>(null);
   const [editKeyModalOpen, setEditKeyModalOpen] = useState(false);
   const [actionMenuRowId, setActionMenuRowId] = useState<string | null>(null);
   const [validatingRowId, setValidatingRowId] = useState<string | null>(null);
-
   const { mutate: validateModel, isPending: isValidating } = useValidateModel();
-
   const handleDeleteClick = useCallback((model: IModelInfo) => {
     setDeleteTarget(model);
   }, []);
-
   const handleEditClick = useCallback((model: IModelInfo) => {
     setEditTarget(model);
     setEditKeyModalOpen(true);
   }, []);
-
   const handleValidateClick = useCallback(
     (model: IModelInfo) => {
       setValidatingRowId(model._id);
@@ -79,7 +72,6 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
     },
     [validateModel],
   );
-
   const columns = useMemo<ColumnDef<IModelInfo>[]>(
     () =>
       tableColumns(custom, {
@@ -94,7 +86,6 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
       }),
     [custom, handleEditClick, handleDeleteClick, handleValidateClick, isValidating, validatingRowId],
   );
-
   const table = useReactTable({
     data: models,
     columns,
@@ -102,14 +93,11 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
   });
-
   if (isLoading) return <LoadingSkeleton />;
-
   const getClass = (columnId: string): string => {
     if (columnId === "actions" || columnId === "validate") return "w-[10%]";
     return "w-[20%]";
   };
-
   return (
     <div>
       <Table className="w-full table-fixed">
@@ -148,7 +136,6 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
           )}
         </TableBody>
       </Table>
-
       {deleteTarget && (
         <DeleteModel
           modelId={deleteTarget._id}
@@ -158,7 +145,6 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
           }}
         />
       )}
-
       {editTarget &&
         (custom ? (
           <CustomModelEditKeyModal

@@ -1,6 +1,5 @@
 import { Bell } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
-
 export function Notification() {
   return (
     <Popover>

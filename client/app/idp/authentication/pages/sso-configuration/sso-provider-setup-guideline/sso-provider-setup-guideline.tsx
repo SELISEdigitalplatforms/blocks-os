@@ -5,18 +5,14 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import { SSOSetupGuideSteps } from "./sso-setup-guideline-steps-docs";
 import { Button } from "@/components/ui-kits/button/button";
 import { SSO_PROVIDERS } from "@blocks-idp/authentication/constants/sso-providers.constant";
-
 type SSoProviderSetupGuideLineProps = {
   provider: SSO_PROVIDERS;
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-
 export const SSoProviderSetupGuideLine = ({ provider, open, onOpenChange }: SSoProviderSetupGuideLineProps) => {
   const steps = SSOSetupGuideSteps[provider] || null;
-
   if (!steps) return;
-
   return (
     <AnimatePresence>
       {open && (

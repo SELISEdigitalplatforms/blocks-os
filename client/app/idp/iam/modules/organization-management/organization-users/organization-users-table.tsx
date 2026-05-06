@@ -26,12 +26,10 @@ import { useMemo } from "react";
 import { useOrganizationUsersSortQueryParams } from "./organization-users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
 import { useNavigate } from "react-router-dom";
-
 type OrganizationUsersTableProps = {
   users: User[];
   isLoading: boolean;
 };
-
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
@@ -39,11 +37,9 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const OrganizationUsersTable = ({ users, isLoading }: OrganizationUsersTableProps) => {
   const navigate = useNavigate();
   const { sortQueryParams, setSortQueryParams } = useOrganizationUsersSortQueryParams();
-
   const columns = useMemo<ColumnDef<User>[]>(
     () => [
       {
@@ -141,7 +137,6 @@ export const OrganizationUsersTable = ({ users, isLoading }: OrganizationUsersTa
     ],
     [setSortQueryParams, sortQueryParams],
   );
-
   const handleRowClick = (itemId: string) => {
     navigate(`/services/iam/user-detail/${itemId}`);
   };
@@ -156,9 +151,7 @@ export const OrganizationUsersTable = ({ users, isLoading }: OrganizationUsersTa
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <Table>
       <TableHeader>

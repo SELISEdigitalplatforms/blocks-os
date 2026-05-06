@@ -8,7 +8,6 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useDisableProject } from "@/hooks/use-project";
 import { isErrorWithErrors } from "@/lib/error";
-
 export const ArchivedProject = () => {
   const navigate = useNavigate();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";

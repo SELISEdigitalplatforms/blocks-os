@@ -1,9 +1,6 @@
-
-
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { PERMISSION_SEVERITY_OPTIONS, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-
 export const usePermissionsFilterQuaryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     search: parseAsString.withDefault(""),
@@ -17,10 +14,8 @@ export const usePermissionsFilterQuaryParams = () => {
 };
 export const usePermissionsSortQuaryParams = () =>
   useSortQueryParams({ initial: { property: "Name", isDescending: false } });
-
 export function PermissionsFilterToolbar() {
   const { queryParams, setQueryParams } = usePermissionsFilterQuaryParams();
-
   const changeHandler = (key: string, value: unknown) => {
     setQueryParams((prev) => ({
       ...prev,
@@ -28,9 +23,7 @@ export function PermissionsFilterToolbar() {
       page: 0,
     }));
   };
-
   const resetHandler = () => setQueryParams(null);
-
   return (
     <FilterToolbar
       filters={[

@@ -1,5 +1,3 @@
-
-
 import { useMemo, useState } from "react";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
@@ -28,13 +26,11 @@ import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Link } from "react-router-dom";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-
 type MethodInfo = {
   enable: boolean;
   name: string;
   type: number | null;
 };
-
 const LoadingSkelton = () => {
   return (
     <div className="grid gap-2">
@@ -44,18 +40,15 @@ const LoadingSkelton = () => {
     </div>
   );
 };
-
 export const ConfigureMFA = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { isLoading, isFetching, data } = useGetMFAConfig({ projectKey: tenantId });
   const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
-
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
     enable: false,
     name: "",
     type: null,
   });
-
   const columns: ColumnDef<(typeof MFA_Provider_Data)[number]>[] = useMemo(
     () => [
       {
@@ -99,7 +92,6 @@ export const ConfigureMFA = () => {
                     </Link>
                   </DropdownMenuItem>
                 )}
-
                 <DropdownMenuItem
                   onClick={async (e) => {
                     e.stopPropagation();
@@ -121,15 +113,11 @@ export const ConfigureMFA = () => {
     ],
     [data?.mfaTemplate.templateId, data?.userMfaType],
   );
-
   const { isPending, mutateAsync } = useSaveMFAConfig();
-
   const onSaveHandler = async (methodInfo: MethodInfo) => {
     const userMfaTypes = new Set(data?.userMfaType || []);
     const { type, enable } = methodInfo;
-
     if (!type) return;
-
     if (!enable) {
       if (userMfaTypes.has(type)) {
         userMfaTypes.delete(type);
@@ -137,13 +125,11 @@ export const ConfigureMFA = () => {
     } else {
       userMfaTypes.add(type);
     }
-
     const payload = {
       projectKey: tenantId,
       enableMfa: !!userMfaTypes.size,
       userMfaType: Array.from(userMfaTypes),
     };
-
     const res = await mutateAsync(payload);
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });
     showSuccessToast({
@@ -151,20 +137,16 @@ export const ConfigureMFA = () => {
     });
     setOpenEnableDisableModal(false);
   };
-
   const mfaConfigData = useMemo(() => {
     if (!data) return [];
     return MFA_Provider_Data;
   }, [data]);
-
   const table = useReactTable({
     data: mfaConfigData,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   const loading = isLoading || isFetching;
-
   return (
     <>
       <div>

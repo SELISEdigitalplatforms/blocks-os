@@ -1,4 +1,3 @@
-
 import { useOIDCContext } from "@/layouts/oidc-layout";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -11,21 +10,16 @@ import { buildOIDCNavigationUrl } from "@blocks-idp/authentication/utils/oidc-ut
 import { AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
-
 const formatErrorCode = (code: string): string =>
   code
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
-
 export const OIDCErrorScreen = () => {
   const { themeColor } = useOIDCContext();
   const [searchParams] = useSearchParams();
-
   const errorCode = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
-
   const hasApiError = !!errorCode || !!errorDescription;
-
   return (
     <Card className="flex h-full flex-col rounded border-solid border-background shadow-none md:min-w-[448px] md:border-[#95ADC4] lg:max-w-md">
       <CardHeader className="flex flex-col items-center gap-3 pb-2 text-center">

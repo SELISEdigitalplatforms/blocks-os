@@ -30,7 +30,6 @@ import { IRepository } from "@/cross-modules/devops/models/github-info";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { RepositorySelectionModal } from "@/components/repository-selection-modal/repository-selection-modal";
 import ProviderButtons from "@/cross-modules/devops/components/deployment-steps/render-repos/render-provider";
-
 const RepositoriesLoading = () => (
   <main className="p-6">
     <div className="flex flex-row justify-between md:items-center">
@@ -53,31 +52,25 @@ const RepositoriesLoading = () => (
     </div>
   </main>
 );
-
 export const RepositoriesPage = () => {
   const groupId = useProjectStore().selectedTenantGroup;
   const [pageNumber, setPageNumber] = useState(0);
   const [pageSize] = useState(12);
   const [searchText, setSearchText] = useState("");
   const debouncedSearchText = useDebounce(searchText, 500);
-
   const {
     data: resourcesResponse,
     isLoading: isLoadingAssets,
     isFetching: isFetchingAssets,
     refetch,
   } = useGetAssets(groupId ?? "", pageNumber, pageSize, debouncedSearchText);
-
   useEffect(() => {
     setPageNumber(0);
   }, [debouncedSearchText]);
-
   const [repositoryModalOpen, setRepositoryModalOpen] = useState(false);
   const [selectRepositoryModalOpen, setSelectRepositoryModalOpen] = useState(false);
-
   const { data: _isAuthenticated, refetch: refetchAuthorization } = useValidateAuthorization();
   const { mutateAsync } = useAddAssets();
-
   // Handler for Add Repository button click
   const handleAddRepositoryClick = async () => {
     try {
@@ -92,18 +85,15 @@ export const RepositoriesPage = () => {
       setRepositoryModalOpen(true);
     }
   };
-
   const handleProviderClose = (verifyAuth?: boolean) => {
     setRepositoryModalOpen(false);
     if (verifyAuth) {
       setSelectRepositoryModalOpen(true);
     }
   };
-
   const onAddRepo = async (repo: IRepository) => {
     try {
       setSelectRepositoryModalOpen(false);
-
       await mutateAsync({
         tenantGroupId: groupId ?? "",
         resource: {
@@ -112,13 +102,11 @@ export const RepositoriesPage = () => {
           link: repo.html_url,
         },
       });
-
       toast({
         title: "Success",
         description: "Repository added successfully",
         variant: "success",
       });
-
       refetch();
     } catch (error) {
       toast({
@@ -129,7 +117,6 @@ export const RepositoriesPage = () => {
       setSelectRepositoryModalOpen(false);
     }
   };
-
   const columns = useMemo<ColumnDef<IResource>[]>(
     () => [
       {
@@ -179,17 +166,14 @@ export const RepositoriesPage = () => {
     ],
     [],
   );
-
   const table = useReactTable({
     data: resourcesResponse?.assets?.resources ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   const onPageChangeHandler = (page: number) => {
     setPageNumber(page);
   };
-
   return (
     <main className="p-6">
       <div className="flex flex-row justify-between md:items-center">
@@ -204,7 +188,6 @@ export const RepositoriesPage = () => {
           <span>Add</span>
         </Button>
       </div>
-
       <div className="mt-4">
         <Card>
           <CardHeader>
@@ -279,8 +262,6 @@ export const RepositoriesPage = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Provider Connection Dialog */}
       <Dialog open={repositoryModalOpen} onOpenChange={setRepositoryModalOpen}>
         <DialogContent className="w-[calc(100%-2rem)] rounded-lg border p-6 shadow-lg md:w-[425px]">
           <DialogHeader>
@@ -292,8 +273,6 @@ export const RepositoriesPage = () => {
           <ProviderButtons destination="/intermediate-page" onClose={handleProviderClose} />
         </DialogContent>
       </Dialog>
-
-      {/* Repository Selection Modal */}
       <RepositorySelectionModal
         open={selectRepositoryModalOpen}
         onOpenChange={setSelectRepositoryModalOpen}
@@ -304,4 +283,3 @@ export const RepositoriesPage = () => {
     </main>
   );
 };
-

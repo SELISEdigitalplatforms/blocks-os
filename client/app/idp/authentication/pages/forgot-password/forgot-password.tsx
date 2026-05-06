@@ -1,4 +1,3 @@
-
 import { Logo } from "@/components/logo";
 import {
   Card,
@@ -8,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui-kits/card/card";
 import { ForgotPasswordForm } from "./forgot-password-form";
-
 export const ForgotPassword = () => {
   return (
     <div className="flex min-h-screen flex-col items-center bg-background">

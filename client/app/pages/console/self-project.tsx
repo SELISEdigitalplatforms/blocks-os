@@ -4,7 +4,6 @@ import ConsoleCreateProject from "@/components/console-create/console-create";
 import { ProjectCard } from "@/components/project-card/project-card";
 import { ProjectCardLoading } from "@/components/project-card/loading";
 import { AddProjectCard } from "@/components/project-card/add-project-card";
-
 const cardVariants = {
   hidden: { opacity: 0, y: 20, scale: 0.97 },
   visible: (i: number) => ({
@@ -14,7 +13,6 @@ const cardVariants = {
     transition: { delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   }),
 };
-
 const SelfProjectLoading = () => {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -26,14 +24,11 @@ const SelfProjectLoading = () => {
     </div>
   );
 };
-
 export const SelfProject = () => {
   const { data, isLoading, isFetching } = useGetProjects();
-
   if (isLoading || isFetching) return <SelfProjectLoading />;
   const projectGroups = data || [];
   if (!projectGroups.length) return <ConsoleCreateProject />;
-
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">

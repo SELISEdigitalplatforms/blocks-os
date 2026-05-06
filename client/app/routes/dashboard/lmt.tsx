@@ -30,7 +30,6 @@ import {
 import { TracesOverview } from "@blocks-lmt/components/traces-overview/traces-overview";
 import { PageSidebarLayout } from "@/components/page-sidebar-layout/page-sidebar-layout";
 import { LMT_NAV_GROUPS } from "@/constants/lmt-nav";
-
 export default function LmtPage() {
 	const tenantId = useProjectStore().selectedProject?.tenantId || "";
 	const [activeTab, setActiveTab] = useQueryState("tab", parseAsString.withDefault("usage"));
@@ -39,12 +38,10 @@ export default function LmtPage() {
 		timeRange,
 		projectKey: tenantId,
 	});
-
 	const defaultUsageData = {
 		api: defaultUsagesMetrics,
 		worker: defaultUsagesMetrics,
 	};
-
 	const headerActions = (
 		<>
 			{activeTab === "usage" && (
@@ -86,7 +83,6 @@ export default function LmtPage() {
 			)}
 		</>
 	);
-
 	return (
 		<PageSidebarLayout
 			navGroups={LMT_NAV_GROUPS}
@@ -130,7 +126,6 @@ export default function LmtPage() {
 							/>
 						</CardContent>
 					</Card>
-
 					{tenantId ? (
 						<>
 							<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -144,7 +139,6 @@ export default function LmtPage() {
 									/>
 								))}
 							</div>
-
 							{data && (
 								<div className="border-t pt-4 text-center text-xs text-medium-emphasis">
 									Last updated: {new Date(data.endTime).toLocaleDateString()} at{" "}
@@ -161,7 +155,6 @@ export default function LmtPage() {
 					)}
 				</div>
 			)}
-
 			{activeTab === "tracing" && (
 				tenantId ? (
 					<TracesOverview projectKey={tenantId} />

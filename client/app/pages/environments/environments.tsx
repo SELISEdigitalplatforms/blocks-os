@@ -18,7 +18,6 @@ import { ProjectCardLoading } from "@/components/project-card/loading";
 import { useNavigate } from "react-router-dom";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
-
 const ProjectGroupLoading = () => (
   <main className="flex flex-1 flex-col gap-4 p-4 sm:mx-10 md:gap-6">
     <div className="mt-4">
@@ -39,7 +38,6 @@ const ProjectGroupLoading = () => (
     </div>
   </main>
 );
-
 export const EnvironmentsPage = () => {
   const groupId = useProjectStore().selectedTenantGroup;
   const { data: environmentList, isLoading, isFetching } = useGetProjects(groupId ?? "");
@@ -47,31 +45,24 @@ export const EnvironmentsPage = () => {
   const isViewerOwner = peopleData?.isOwner ?? false;
   const [addEnvModalOpen, setAddEnvModalOpen] = useState(false);
   const navigate = useNavigate();
-
   const { data: migrationStatus, refetch: refetchMigrationStatus } = useGetMigrationStatus(
     groupId as string,
   );
-
   const handleMigrationNotification = useCallback(
     (_: unknown) => {
       void refetchMigrationStatus();
     },
     [refetchMigrationStatus],
   );
-
   useNotificationListener("EnvironmentDataMigration", handleMigrationNotification);
-
   const handleAddEnvModalClose = () => {
     setAddEnvModalOpen(false);
   };
-
   if (isLoading || isFetching || !environmentList || !environmentList[0]?.projects[0]) {
     return <ProjectGroupLoading />;
   }
-
   const canAddEnvironment =
     environmentList && environmentList[0]?.projects?.length < 8 && isViewerOwner;
-
   return (
     <main className="flex flex-1 flex-col gap-4 p-6 md:gap-6">
       <div>
@@ -100,7 +91,6 @@ export const EnvironmentsPage = () => {
             )}
           </div>
         </div>
-
         {environmentList[0]?.isShared && (
           <div className="mb-4 mt-6 border-b-2 border-border pb-2">
             <h5 className="text-sm font-medium text-muted-foreground">Shared with you</h5>
@@ -120,7 +110,6 @@ export const EnvironmentsPage = () => {
             />
           ))}
         </div>
-
         {environmentList[0]?.isShared && environmentList[0]?.nonSharedProject?.length > 0 && (
           <>
             <div className="mb-4 mt-8 border-b-2 border-border pb-2">
@@ -146,7 +135,6 @@ export const EnvironmentsPage = () => {
           </>
         )}
       </div>
-
       <Dialog open={addEnvModalOpen} onOpenChange={setAddEnvModalOpen}>
         <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border p-6 shadow-lg md:max-h-[85vh] md:w-[500px]">
           <DialogHeader className="mb-4">

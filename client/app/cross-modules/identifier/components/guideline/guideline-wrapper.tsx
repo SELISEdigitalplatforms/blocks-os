@@ -3,22 +3,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GuideLine } from "./guideline";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { Button } from "@/components/ui-kits/button/button";
-
 type Step = {
   id: string;
   description: React.ReactNode;
 };
-
 type GuideLineWrapperProps = {
   title: string;
   content: Step[];
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-
 export const GuideLineWrapper = ({ title, content, open, onOpenChange }: GuideLineWrapperProps) => {
   if (!content) return null;
-
   return (
     <AnimatePresence>
       {open && (

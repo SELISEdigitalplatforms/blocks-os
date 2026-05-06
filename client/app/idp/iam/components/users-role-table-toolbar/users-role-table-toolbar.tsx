@@ -20,11 +20,9 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import { SearchInput } from "@/components/search-input/search-input";
 import useIsServiceBarOpenLocal from "@blocks-localization/hooks/use-is-service-tab-open-local";
-
 interface UsersRoleTableToolbarProps<TData> {
   table: Table<TData>;
 }
-
 export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarProps<TData>) {
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenLocal();
@@ -32,14 +30,11 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [searchValue, setSearchValue] = useState("");
   const [isSearchVisible, setIsSearchVisible] = useState(!isMobile);
-
   const activeFiltersCount = useActiveFiltersCount(table, dateRange, "name");
   const isFiltered = activeFiltersCount > 0;
-
   useEffect(() => {
     setIsSearchVisible(!isMobile);
   }, [isMobile]);
-
   const onSearchInputChange = useCallback(
     (text: string) => {
       setSearchValue(text);
@@ -47,14 +42,11 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
     },
     [textSearchColumn]
   );
-
   function resetFilters() {
     setSearchValue("");
-
     setDateRange(undefined);
     table.resetColumnFilters();
   }
-
   const FilterContent = () => (
     <>
       {table.getColumn("lastLogin") && (
@@ -70,10 +62,8 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
       )}
     </>
   );
-
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      {/* Mobile view */}
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter users by name or email"
@@ -117,8 +107,6 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
           </Sheet>
         )}
       </div>
-
-      {/* Desktop view */}
       <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter users by name or email"

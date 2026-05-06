@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from "react";
-
 interface AnnotationBarProps {
   annotationDuration: number;
 }
-
 const AnnotationBar = ({ annotationDuration }: AnnotationBarProps) => {
   const [annotation, setAnnotation] = useState<number[]>([]);
-
   useEffect(() => {
     if (annotationDuration) {
       const duration = annotationDuration;
-
       const annotationArr = [];
       for (let stop = 0; stop <= duration; stop += duration / 5) {
         annotationArr.push(parseFloat(stop.toFixed(3)));
@@ -18,7 +14,6 @@ const AnnotationBar = ({ annotationDuration }: AnnotationBarProps) => {
       setAnnotation(annotationArr);
     }
   }, [annotationDuration]);
-
   return (
     <div className="flex w-full flex-col items-center overflow-y-auto bg-slate-100 dark:bg-slate-900">
       <div className="mb-1 flex w-full justify-between border-b">
@@ -40,5 +35,4 @@ const AnnotationBar = ({ annotationDuration }: AnnotationBarProps) => {
     </div>
   );
 };
-
 export default AnnotationBar;

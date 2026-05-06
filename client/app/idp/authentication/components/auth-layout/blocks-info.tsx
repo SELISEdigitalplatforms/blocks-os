@@ -3,7 +3,6 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { BookOpenText } from "lucide-react";
 // import { BookOpenText, Component } from "lucide-react";
 import { Link } from "react-router-dom";
-
 export const BlockInfo = () => {
   return (
     <div className="mt-[24px] w-full p-4 shadow-none md:p-0 lg:mt-0 lg:max-w-md">

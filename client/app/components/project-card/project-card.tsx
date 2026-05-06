@@ -11,30 +11,24 @@ import {
 import { environmentOptions } from "@/constants/environment-options";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ChevronRight, Settings2 } from "lucide-react";
-
 type ProjectCardProps = {
   project: IProject;
   projects: IProject[];
 };
-
-
 export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
   const navigate = useNavigate();
   const { setTennantGroup, setSelectedProject } = useProjectStore();
-
   const onConfigureClick = () => {
     setTennantGroup(project.tenantGroupId);
     setSelectedProject(project);
     navigate("/project-overview/environments");
   };
-
   const onEnvBadgeClick = (e: React.MouseEvent, envProject: IProject) => {
     e.stopPropagation();
     setTennantGroup(envProject.tenantGroupId);
     setSelectedProject(envProject);
     navigate("/dashboard");
   };
-
   const renderEnvChip = (env: string, envProject: IProject) => {
     const label = environmentOptions.find((o) => o.value === env)?.label;
     return (
@@ -48,9 +42,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
       </button>
     );
   };
-
   const envList = projects.map((p) => p.environment);
-
   return (
     <Card className="group flex h-[160px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md">
       <div className="relative flex items-start justify-between gap-2">
@@ -75,7 +67,6 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
           </TooltipProvider>
         </div>
       </div>
-
       <div className="mt-auto">
         {envList.length === 0 ? (
           <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-xs text-muted-foreground">

@@ -16,7 +16,6 @@ import { useState } from "react";
 import { Captcha } from "@/components/captcha";
 import { useTheme } from "@/hooks/use-theme";
 import { isErrorWithErrors } from "@/lib/error";
-
 export const SigninForm = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -31,13 +30,11 @@ export const SigninForm = () => {
     try {
       const res = await mutateAsync(values);
       if (res.enable_mfa) return navigate(`/mfa-check?mfa_id=${res.mfaId}&mfa_type=${res.mfaType}`);
-
       // For localhost, save tokens in store for Authorization Bearer
       const isLocalhost = getRuntimeEnv("BLOCKS_API_BASE_URL")?.includes("localhost");
       if (isLocalhost && res.access_token && res.refresh_token) {
         setTokens(res.access_token, res.refresh_token);
       }
-
       setAuthenticated();
       navigate("/console");
     } catch (error: unknown) {
@@ -53,7 +50,6 @@ export const SigninForm = () => {
   } = form;
   const googleSiteKey = getRuntimeEnv("BLOCKS_GOOGLE_SITE_KEY") || "";
   const isTokenNeed = submitCount >= 3;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
@@ -83,7 +79,6 @@ export const SigninForm = () => {
             </FormItem>
           )}
         />
-
         <Link to="/forgot-password" className="ml-auto inline-block text-sm text-primary">
           Forgot password?
         </Link>
@@ -97,7 +92,6 @@ export const SigninForm = () => {
             onError={() => setToken("")}
           />
         )}
-
         <Button type="submit" className="w-full rounded" disabled={isPending || (isTokenNeed && !token)}>
           Log in
         </Button>

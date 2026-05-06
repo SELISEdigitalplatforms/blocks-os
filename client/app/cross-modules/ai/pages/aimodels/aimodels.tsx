@@ -9,7 +9,6 @@ import {
   ProviderToPlatformMap,
   ServicePlatform,
 } from "@blocks-ai/utils/aimodel-provider.utils";
-
 const ProviderGridSkeleton = () => {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -37,38 +36,28 @@ const ProviderGridSkeleton = () => {
     </div>
   );
 };
-
 export const AIModels = () => {
   const { data: providers, isLoading } = useSeedProviders();
-
   const allProviders = [...(Array.isArray(providers) ? providers : []), createCustomProvider()];
-
   const officialApiModels = allProviders.filter((p) => {
     if (!p || !p.Provider) return false;
     return ProviderToPlatformMap[p.Provider.toLowerCase()] === ServicePlatform.OFFICIAL_API;
   });
-
   const openDeploymentModels = allProviders.filter((p) => {
     if (!p || !p.Provider) return false;
     return ProviderToPlatformMap[p.Provider.toLowerCase()] !== ServicePlatform.OFFICIAL_API;
   });
-
   const { queryParams } = useAIModelsQueryParams();
   const search = queryParams.search.toLowerCase();
   const selectedTypes = queryParams.types;
-
   const matchSearch = (p: IProvider) => p.Provider.toLowerCase().includes(search);
-
   const shouldShowOfficial = selectedTypes.length === 0 || selectedTypes.includes("official");
   const shouldShowOpen = selectedTypes.length === 0 || selectedTypes.includes("open");
-
   const filteredOfficial = officialApiModels.filter(matchSearch);
   const filteredOpen = openDeploymentModels.filter(matchSearch);
-
   return (
     <Card className="flex flex-col gap-5 p-5">
       <AIModelsFilterToolbar />
-
       {isLoading ? (
         <div className="flex flex-col gap-5">
           {shouldShowOfficial && (

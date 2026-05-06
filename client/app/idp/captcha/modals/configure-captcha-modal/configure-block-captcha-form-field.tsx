@@ -15,11 +15,9 @@ import {
 } from "@/components/ui-kits/select/select";
 import { ConfigureCaptchaFormDefaultValue } from "./utils";
 import { CAPTCHA_GENERATOR_TYPE } from "../../models/captcha";
-
 type ConfigureBlockCaptchaFormProps = {
   form: UseFormReturn<typeof ConfigureCaptchaFormDefaultValue>;
 };
-
 export const ConfigureBlockCaptchaFormField = ({ form }: ConfigureBlockCaptchaFormProps) => {
   return (
     <>
@@ -50,5 +48,4 @@ export const ConfigureBlockCaptchaFormField = ({ form }: ConfigureBlockCaptchaFo
     </>
   );
 };
-
 ConfigureBlockCaptchaFormField.displayName = "Blocks";

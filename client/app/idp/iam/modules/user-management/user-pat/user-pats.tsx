@@ -1,5 +1,3 @@
-
-
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { useGetPats } from "@blocks-idp/iam/hooks/use-activity";
 import { UserPATList } from "./user-pats-list";
@@ -8,12 +6,9 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Sailboat } from "lucide-react";
 import { useState } from "react";
 import { GenerateTokenModal } from "./generate-pat-modal";
-
 export const UserPats = ({ id }: { id: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const { isLoading, isFetching, data } = useGetPats();
-
   return (
     <div className="flex w-full flex-col">
       <Card>

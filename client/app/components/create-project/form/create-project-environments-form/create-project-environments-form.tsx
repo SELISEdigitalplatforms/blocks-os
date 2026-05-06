@@ -18,7 +18,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui-kits/button/button";
 import { useCreateProjectFormState } from "../../utils";
 import { useProjectForm } from "@/hooks/use-project";
-
 export const CreateProjectEnvironmentsForm = () => {
   const { isPending, saveProject } = useProjectForm();
   const { formData, setFormData } = useCreateProjectFormState();
@@ -26,7 +25,6 @@ export const CreateProjectEnvironmentsForm = () => {
     defaultValues: formData[2],
     resolver: zodResolver(createProjectEnvironmentFormSchema),
   });
-
   const onSubmitHandler = (values: typeof createProjectEnvironmentFormDefaultValue) => {
     const sortedEnvironments = [...values.environments].sort(
       (a: { value: string }, b: { value: string }) => {
@@ -38,9 +36,7 @@ export const CreateProjectEnvironmentsForm = () => {
     setFormData(2, { ...values, environments: sortedEnvironments });
     saveProject();
   };
-
   const { isValid } = form.formState;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)}>

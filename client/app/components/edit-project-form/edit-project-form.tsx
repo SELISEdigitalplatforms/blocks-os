@@ -27,19 +27,15 @@ import {
   CardTitle,
 } from "@/components/ui-kits/card/card";
 import { InfoIcon } from "lucide-react";
-
 type EditProjectFormProps = {
   onAfterSubmit: () => void;
 };
-
 export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
   const { itemId } = useProjectStore().selectedProject || { itemId: "", tenantId: "" };
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { data } = useGetProject({ projectId: itemId });
   const { mutateAsync, isPending } = useUpdateProject({ projectKey });
-
   const [customDomainTooltipOpen, setCustomDomainTooltipOpen] = useState(false);
-
   const form = useForm({
     defaultValues: editProjectFormDefaultValue,
     values: data?.data
@@ -55,7 +51,6 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
       : undefined,
     resolver: zodResolver(editProjectFormSchema),
   });
-
   const onSubmitHandler = async (values: typeof editProjectFormDefaultValue) => {
     try {
       if (!itemId || !projectKey) return;
@@ -76,10 +71,8 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
       }
     }
   };
-
   const cookieDomainName = form.watch("cookieDomain");
   const { isValid } = form.formState;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
@@ -87,7 +80,6 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
           <div className="text-sm font-medium">Application Domain</div>
           <div className="text-sm text-muted-foreground">{data?.data.applicationDomain}</div>
         </div>
-
         <FormField
           control={form.control}
           name="useCustomDomain"
@@ -103,7 +95,6 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
             </FormItem>
           )}
         />
-
         {form.watch("useCustomDomain") && (
           <FormField
             control={form.control}
@@ -139,7 +130,6 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
             )}
           />
         )}
-
         <DialogFooter className="flex flex-row justify-end gap-2">
           <DialogClose asChild>
             <Button variant="outline" className="w-20">
@@ -154,7 +144,6 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
     </Form>
   );
 };
-
 const CNameInstruction = ({
   cookieDomainName,
   customDomain,

@@ -7,12 +7,10 @@ import { MFA_Provider_Data } from "@blocks-idp/mfa/utils/mfa-config";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useContext, useMemo } from "react";
 import { profileMfaContext } from "../profile-mfa";
-
 type UserMFAMethodListProps = {
   selected: number;
   setSelected: (selected: number) => void;
 };
-
 export const ProfileMFAMethodList = ({ selected, setSelected }: UserMFAMethodListProps) => {
   const { userId, projectKey } = useContext(profileMfaContext);
   const { isLoading, isFetching, data } = useGetMFAConfig({ projectKey });

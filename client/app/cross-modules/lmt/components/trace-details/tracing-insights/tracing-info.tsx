@@ -5,13 +5,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui-kits/accordion/accordion";
 import { Separator } from "@/components/ui-kits/separator/separator";
-
 import { formatDate, parseDateString } from "@/lib/utils";
 import { useContext } from "react";
-
 import AnnotationBar from "../annotation-bar/annotation-bar";
 import { timelineContext } from "../trace-details";
-
 export const TracingInfo = () => {
   const { selectedTrace: trace } = useContext(timelineContext);
   if (!trace) return null;

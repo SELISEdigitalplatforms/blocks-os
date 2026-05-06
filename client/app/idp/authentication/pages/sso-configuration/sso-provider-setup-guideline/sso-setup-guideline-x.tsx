@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-
 export const xStepupDocs = [
   {
     id: "0",

@@ -6,7 +6,6 @@ import { Toaster } from "./components/ui-kits/toaster/toaster";
 import QueryProvider from "./providers/query-provider";
 import { router } from "./router";
 import "./styles/globals.css";
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
