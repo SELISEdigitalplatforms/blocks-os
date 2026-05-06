@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { ChevronsLeft, Menu, X } from "lucide-react";
+import { ChevronsLeft, Menu } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
+import { cn } from "@/lib/utils";
 import { NavGroup } from "@/constants/secret-management-nav";
 
 type PageSidebarLayoutProps = {
@@ -38,26 +39,11 @@ export function PageSidebarLayout({
   const SidebarNav = ({ showCollapse = false }: { showCollapse?: boolean }) => (
     <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto py-1">
-        {navGroups.map((group, idx) => (
+        {navGroups.map((group) => (
           <div key={group.label}>
-            <div className="flex items-center justify-between px-4 pb-1 pt-3">
-              <div className="flex items-center gap-1.5">
-                {group.icon && <group.icon className="h-3.5 w-3.5 text-muted-foreground/50" />}
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">
-                  {group.label}
-                </p>
-              </div>
-              {showCollapse && idx === 0 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  onClick={() => setIsDesktopSidebarOpen(false)}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+            <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {group.label}
+            </p>
             {group.items.map((item) => {
               const Icon = item.icon;
               const isActive = selectedTab === item.value;
@@ -65,11 +51,12 @@ export function PageSidebarLayout({
                 <button
                   key={item.id}
                   onClick={() => handleTabChange(item.value)}
-                  className={`relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-sm transition-colors ${
+                  className={cn(
+                    "relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-sm transition-colors",
                     isActive
                       ? "text-primary"
                       : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]"
-                  }`}
+                  )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>

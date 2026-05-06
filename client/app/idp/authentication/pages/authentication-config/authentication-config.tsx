@@ -11,11 +11,12 @@ import { Permissions } from "@blocks-idp/iam/modules/permission-management";
 import { AddRole, Roles } from "@blocks-idp/iam/modules/role-management";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { Link } from "react-router-dom";
-import { CirclePlus, Settings, X } from "lucide-react";
+import { CirclePlus, Settings, X, ChevronsLeft, Menu } from "lucide-react";
 import { EmailServiceTable, EmailConfiguration, EmailCommunicationDetails } from "@blocks-communication/mail";
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui-kits/dialog/dialog";
-import { Sheet, SheetContent } from "@/components/ui-kits/sheet/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
+import { cn } from "@/lib/utils";
 import StepperProvider, { useStepper } from "@/components/stepper/stepper-provider";
 import StepVerticalTrackBar from "@/components/stepper/vertical-track-bar";
 import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";
@@ -25,7 +26,6 @@ import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-
 import { useProjectStore } from "@/store/useProjectStore";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
-import { PageSidebarLayout } from "@/components/page-sidebar-layout/page-sidebar-layout";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
 
 const NEW_COMMUNICATION_STEPS = [
@@ -154,7 +154,12 @@ export const AuthenticationConfig = () => {
   const [configureOpen, setConfigureOpen] = useState(false);
   const [addTemplateOpen, setAddTemplateOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+
+  const currentItem = AUTHENTICATION_NAV_GROUPS
+    .flatMap((g) => g.items)
+    .find((item) => item.value === (selectedTab ?? "general"));
 
   const handleTemplateCreated = (id: string) => {
     setAddTemplateOpen(false);
@@ -196,12 +201,79 @@ export const AuthenticationConfig = () => {
 
   return (
     <>
-      <PageSidebarLayout
-        navGroups={AUTHENTICATION_NAV_GROUPS}
-        selectedTab={selectedTab ?? "general"}
-        onTabChange={setSelectedTab}
-        headerContent={headerActions}
-      >
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        {/* Page header */}
+        <div className="flex shrink-0 items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            {/* Mobile sidebar trigger */}
+            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-52 p-0" hideClose>
+              <div className="flex h-full flex-col">
+                <SheetHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
+                  <SheetTitle className="text-sm font-semibold">IDP</SheetTitle>
+                  <SheetClose asChild>
+                    <Button variant="ghost" size="icon" className="!mt-0 h-7 w-7 shrink-0">
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                  </SheetClose>
+                </SheetHeader>
+                <nav className="flex-1 overflow-y-auto py-1">
+                  {AUTHENTICATION_NAV_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {group.label}
+                      </p>
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = (selectedTab ?? "general") === item.value;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => { setSelectedTab(item.value); setIsMobileSidebarOpen(false); }}
+                            className={cn(
+                              "relative flex h-10 w-full items-center gap-3 px-4 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "text-primary"
+                                : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+                            )}
+                          >
+                            <Icon className="h-5 w-5 shrink-0" />
+                            <span>{item.label}</span>
+                            {isActive && (
+                              <div className="absolute right-0 top-2.5 h-5 w-1 rounded-l-lg bg-primary" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </nav>
+              </div>
+            </SheetContent>
+            </Sheet>
+
+            {/* Page title */}
+            {currentItem && (
+              <div>
+                <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
+                  {currentItem.label}
+                </h1>
+                <p className="text-xs text-muted-foreground">{currentItem.desc}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Header actions */}
+          <div className="flex items-center gap-2">{headerActions}</div>
+        </div>
+
+        {/* Content body */}
+        <div className="flex-1 overflow-y-auto p-6">
         {selectedTab === "general" && (
           <div className="grid grid-cols-1 gap-6">
             <GeneralSettings />
@@ -238,27 +310,28 @@ export const AuthenticationConfig = () => {
         )}
         {selectedTab === "roles" && <Roles />}
         {selectedTab === "permissions" && <Permissions />}
-      </PageSidebarLayout>
+      </div>
+    </div>
 
-      <Dialog open={configureOpen} onOpenChange={setConfigureOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Email Configuration</DialogTitle>
-          </DialogHeader>
-          <EmailConfiguration />
-        </DialogContent>
-      </Dialog>
+    <Dialog open={configureOpen} onOpenChange={setConfigureOpen}>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Email Configuration</DialogTitle>
+        </DialogHeader>
+        <EmailConfiguration />
+      </DialogContent>
+    </Dialog>
 
-      <Sheet open={addTemplateOpen} onOpenChange={setAddTemplateOpen}>
-        <SheetContent side="right" className="flex h-full w-full max-w-full flex-col overflow-hidden p-0 sm:max-w-full" hideClose>
-          <StepperProvider steps={NEW_COMMUNICATION_STEPS}>
-            <NewCommunicationContent
-              onClose={() => setAddTemplateOpen(false)}
-              onCreated={handleTemplateCreated}
-            />
-          </StepperProvider>
-        </SheetContent>
-      </Sheet>
+    <Sheet open={addTemplateOpen} onOpenChange={setAddTemplateOpen}>
+      <SheetContent side="right" className="flex h-full w-full max-w-full flex-col overflow-hidden p-0 sm:max-w-full" hideClose>
+        <StepperProvider steps={NEW_COMMUNICATION_STEPS}>
+          <NewCommunicationContent
+            onClose={() => setAddTemplateOpen(false)}
+            onCreated={handleTemplateCreated}
+          />
+        </StepperProvider>
+      </SheetContent>
+    </Sheet>
     </>
   );
 };

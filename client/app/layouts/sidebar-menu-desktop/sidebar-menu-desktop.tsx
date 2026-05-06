@@ -1,12 +1,14 @@
 import { Fragment, useContext } from "react";
 import { PanelLeft } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { DesktopMenuItem } from "@/components/menus/desktop-menu-item";
 import { EnvironmentList } from "@/components/environment-list/environment-list";
 import { Button } from "@/components/ui-kits/button/button";
 import { ProjectList } from "@/components/project-list/project-list";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { navigationMenus } from "@/constants/navigation-menus";
+import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
+import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
 import { cn } from "@/lib/utils";
@@ -17,8 +19,13 @@ export function SidebarMenuDesktop() {
   const { resolvedTheme } = useTheme();
   const allowedMenu = useFilteredMenus(navigationMenus);
   const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const isProjectOverviewRoute = pathname.startsWith("/project-overview");
+  const isSecretManagementRoute = pathname.startsWith("/services/secret-management");
+  const isAuthenticationRoute = pathname.startsWith("/services/authentication");
+  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "infra-config" : "general");
 
   const getLogoSrc = () => {
     if (isSidebarOpen) {
@@ -68,7 +75,81 @@ export function SidebarMenuDesktop() {
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
               {menu.type === "menu" ? (
-                <DesktopMenuItem menu={menu} isSidebarOpen={isSidebarOpen} />
+                <>
+                  <DesktopMenuItem menu={menu} isSidebarOpen={isSidebarOpen} />
+                  {/* Inline sub-nav for Secrets & Configs */}
+                  {isSecretManagementRoute && menu.id === "service-identity__secret-management" && (
+                    <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
+                      {SECRET_MANAGEMENT_NAV_GROUPS.map((group) =>
+                        group.items.map((item) => {
+                          const Icon = item.icon;
+                          const isActive = currentTab === item.value;
+                          return (
+                            <div key={item.id} className="group relative">
+                              <button
+                                onClick={() => navigate(`/services/secret-management?tab=${item.value}`)}
+                                className={cn(
+                                  "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-sm transition-colors",
+                                  isSidebarOpen ? "px-3" : "justify-center",
+                                  isActive
+                                    ? "text-primary"
+                                    : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+                                )}
+                              >
+                                <Icon className="h-4 w-4 shrink-0" />
+                                {isSidebarOpen && <span>{item.label}</span>}
+                                {isActive && isSidebarOpen && (
+                                  <div className="absolute right-3 h-2 w-2 rounded-full bg-primary" />
+                                )}
+                              </button>
+                              {!isSidebarOpen && (
+                                <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                                  {item.label}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                  {/* Inline sub-nav for IDP */}
+                  {isAuthenticationRoute && menu.id === "service-identity__authentication" && (
+                    <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
+                      {AUTHENTICATION_NAV_GROUPS.map((group) =>
+                        group.items.map((item) => {
+                          const Icon = item.icon;
+                          const isActive = currentTab === item.value;
+                          return (
+                            <div key={item.id} className="group relative">
+                              <button
+                                onClick={() => navigate(`/services/authentication?tab=${item.value}`)}
+                                className={cn(
+                                  "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-sm transition-colors",
+                                  isSidebarOpen ? "px-3" : "justify-center",
+                                  isActive
+                                    ? "text-primary"
+                                    : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+                                )}
+                              >
+                                <Icon className="h-4 w-4 shrink-0" />
+                                {isSidebarOpen && <span>{item.label}</span>}
+                                {isActive && isSidebarOpen && (
+                                  <div className="absolute right-3 h-2 w-2 rounded-full bg-primary" />
+                                )}
+                              </button>
+                              {!isSidebarOpen && (
+                                <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                                  {item.label}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="mx-3 mt-0.5">
                   <Separator />
