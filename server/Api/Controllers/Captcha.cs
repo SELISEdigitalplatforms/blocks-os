@@ -44,6 +44,7 @@ namespace Api.Controllers
         {
             return _captchaService.VerifyCaptchaAsync(query);
         }
+
         #region Cloud Configuration
         [ProtectedEndPoint]
         [HttpPost]
