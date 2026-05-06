@@ -1,6 +1,5 @@
 import * as React from "react";
 import type { StepperProps } from "./types";
-
 interface StepperContextValue extends StepperProps {
   clickable?: boolean;
   isError?: boolean;
@@ -11,12 +10,10 @@ interface StepperContextValue extends StepperProps {
   activeStep: number;
   initialStep: number;
 }
-
 type StepperContextProviderProps = {
   value: Omit<StepperContextValue, "activeStep">;
   children: React.ReactNode;
 };
-
 const StepperContext = React.createContext<
   StepperContextValue & {
     nextStep: () => void;
@@ -34,29 +31,22 @@ const StepperContext = React.createContext<
   resetSteps: () => {},
   setStep: () => {},
 });
-
 const StepperProvider = ({ value, children }: StepperContextProviderProps) => {
   const isError = value.state === "error";
   const isLoading = value.state === "loading";
-
   const [activeStep, setActiveStep] = React.useState(value.initialStep);
-
   const nextStep = () => {
     setActiveStep((prev) => prev + 1);
   };
-
   const prevStep = () => {
     setActiveStep((prev) => prev - 1);
   };
-
   const resetSteps = () => {
     setActiveStep(value.initialStep);
   };
-
   const setStep = (step: number) => {
     setActiveStep(step);
   };
-
   return (
     <StepperContext.Provider
       value={{
@@ -74,5 +64,4 @@ const StepperProvider = ({ value, children }: StepperContextProviderProps) => {
     </StepperContext.Provider>
   );
 };
-
 export { StepperContext, StepperProvider };

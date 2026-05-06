@@ -22,24 +22,18 @@ import {
 import { useProjectStore } from "@/store/useProjectStore";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Plus, ArrowLeft } from "lucide-react";
-
 const PROVIDER_PNG_MAP: Record<string, string> = {
   google: "/assets/images/google.png",
   deepseek: "/assets/images/deepseek.png",
 };
-
 type AIModelSelectedPageProps = {
   provider: string;
 };
-
 export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
   const navigate = useNavigate();
   const project_key = useProjectStore().selectedProject?.tenantId || "";
-
   const { data: providers } = useSeedProviders();
-
   const servicePlatform = ProviderToPlatformMap[provider.toLowerCase()] as ServicePlatform;
-
   const description =
     providers && Array.isArray(providers) && provider
       ? provider.toLowerCase() === ProviderType.CUSTOM
@@ -47,22 +41,18 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
         : (providers.find((p) => p.Provider && p.Provider.toLowerCase() === provider.toLowerCase())
             ?.Description ?? "")
       : "";
-
   const { data: seedModels, isLoading: isSeedLoading } = useSeedModelsByProvider(provider);
   const baseUrl = seedModels && seedModels.length > 0 ? seedModels[0].DefaultBaseUrl || "" : "";
-
   type ModelOption = { model: string; goodName: string };
   const modelOptions: ModelOption[] =
     seedModels?.map((m) => ({
       model: m.Model,
       goodName: m.ModelGoodName ?? m.Model,
     })) ?? [];
-
   const {
     queryParams: { search, page, page_size },
     setQueryParams,
   } = useAIModelsQueryParams();
-
   const {
     data: models,
     isLoading: isModelsLoading,
@@ -76,15 +66,11 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
     },
     project_key,
   );
-
   const loading = isModelsLoading || isModelsFetching;
   const totalCount: number = models?.total ?? 0;
   const currentPage: number = page ?? models?.page ?? 1;
-
   const pngUrl = PROVIDER_PNG_MAP[provider.toLowerCase()] ?? "";
-
   const [addKeyModalOpen, setAddKeyModalOpen] = useState(false);
-
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center gap-2">
@@ -98,7 +84,6 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
           Back
         </Button>
       </div>
-
       <div className="my-4 flex flex-row">
         <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-sm border p-2">
           {pngUrl ? (
@@ -114,7 +99,6 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
           <p className="text-medium-emphasis">{description}</p>
         </div>
       </div>
-
       <div className="flex flex-row gap-5">
         <Card className="flex w-full flex-col gap-5 p-5">
           <CardHeader className="mb-0 flex w-full flex-row justify-between p-0">
@@ -132,18 +116,15 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
               Add Model
             </Button>
           </CardHeader>
-
           <CardContent className="p-0">
             <div className="mb-4">
               <AIModelsSelectedPageFilterToolbar />
             </div>
-
             <AIModelsTable
               custom={provider.toLowerCase() === ProviderType.CUSTOM}
               models={models?.models || []}
               isLoading={loading}
             />
-
             {!loading && totalCount > page_size && (
               <div className="mt-4 flex items-center justify-end">
                 <Pagination
@@ -163,7 +144,6 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
           </CardContent>
         </Card>
       </div>
-
       {provider.toLowerCase() === ProviderType.CUSTOM ? (
         <CustomModelAddKeyModal
           addKeyModalOpen={addKeyModalOpen}

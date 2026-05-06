@@ -1,8 +1,5 @@
-
-
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { AddEditProviderModal } from "./add-edit-provider-modal";
-
 export const EmptyConfiguration = () => {
   return (
     <Card>

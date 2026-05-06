@@ -1,4 +1,3 @@
-
 import { OidcForgotPasswordForm } from "./oidc-forgot-password-form";
 import {
   Card,
@@ -7,7 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui-kits/card/card";
-
 export const OidcForgotPassword = () => {
   return (
     <Card className="flex h-full flex-col rounded border-solid border-background py-6 shadow-none md:min-w-[448px] md:border-[#95ADC4] md:py-4 lg:max-w-md">

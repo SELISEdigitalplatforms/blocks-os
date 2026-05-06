@@ -14,7 +14,6 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useStepper } from "@/components/stepper/stepper-provider";
 import { useCreateProjectFormState } from "../../utils";
 import { Input } from "@/components/ui-kits/input/input";
-
 export const CreateProjectNamingForm = () => {
   const { formData, setFormData } = useCreateProjectFormState();
   const { nextStep } = useStepper();
@@ -22,13 +21,11 @@ export const CreateProjectNamingForm = () => {
     values: formData[0],
     resolver: zodResolver(createProjectNamingFormSchema),
   });
-
   const onSubmitHandler = (values: typeof createProjectNamingFormDefaultValue) => {
     setFormData(0, values);
     nextStep();
   };
   const { isValid } = form.formState;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)}>

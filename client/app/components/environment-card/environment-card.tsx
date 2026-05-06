@@ -13,13 +13,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { environmentOptions } from "@/constants/environment-options";
-
 type EnvironmentCardProps = {
   project: IProject;
   isMigrationOngoing?: boolean;
   className?: string;
 };
-
 export const EnvironmentCard = ({
   project,
   isMigrationOngoing,
@@ -28,12 +26,10 @@ export const EnvironmentCard = ({
   const navigate = useNavigate();
   const { setSelectedProject } = useProjectStore();
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-
   const onClickHandler = (): void => {
     setSelectedProject(project);
     navigate("/dashboard");
   };
-
   const handleCardClick = (): void => {
     if (isMigrationOngoing) {
       setIsConfirmationOpen(true);
@@ -41,12 +37,10 @@ export const EnvironmentCard = ({
     }
     onClickHandler();
   };
-
   const handleConfirm = (): void => {
     setIsConfirmationOpen(false);
     onClickHandler();
   };
-
   return (
     <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
       <Card

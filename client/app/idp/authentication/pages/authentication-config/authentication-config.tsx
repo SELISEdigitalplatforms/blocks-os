@@ -1,4 +1,3 @@
-
 import { LogMenu } from "@blocks-lmt/components";
 import { useQueryState } from "nuqs";
 import { GrantTypes } from "./general/grant-types";
@@ -27,17 +26,14 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
-
 const NEW_COMMUNICATION_STEPS = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Template" },
 ];
-
 interface NewCommunicationContentProps {
   onClose: () => void;
   onCreated: (id: string) => void;
 }
-
 function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContentProps) {
   const { currentStep, nextStep } = useStepper();
   const [templateData, setTemplateData] = useState<IEmailTemplate>({ itemId: "" });
@@ -46,7 +42,6 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
   const ref = useRef<{ submit: () => void; isValid: boolean }>(null);
   const beeRef = useRef<{ submit: () => void; preview: () => void }>(null);
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-
   const formSubmitHandler = async (data: IEmailTemplate) => {
     try {
       data.itemId = templateData?.itemId || "";
@@ -58,7 +53,6 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
       console.log(error);
     }
   };
-
   const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
     try {
       const res = await saveTemplate({
@@ -74,10 +68,8 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
       console.log(error);
     }
   };
-
   return (
     <div className="flex h-full">
-      {/* Sidebar (desktop) */}
       <div className="hidden min-h-full w-64 flex-shrink-0 flex-col gap-5 border-r bg-background p-5 pt-10 md:flex">
         <div className="mx-2 my-3">
           <div className="flex items-center gap-2">
@@ -90,10 +82,7 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
         </div>
         <StepVerticalTrackBar />
       </div>
-
-      {/* Main content */}
       <div className="flex-1 overflow-auto p-6">
-        {/* Mobile header */}
         <div className="mb-4 flex flex-col items-center justify-center md:hidden">
           <div className="flex items-center gap-2">
             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onClose}>
@@ -106,7 +95,6 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
             <StepHorizontalTrackBar />
           </div>
         </div>
-
         {currentStep === 1 ? (
           <div className="[&>main]:mt-0 [&>main]:sm:mt-0">
             <BasicInformation
@@ -132,7 +120,6 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
             <BeePluginStarter ref={beeRef} onBeeSave={handleBeePluginData} jsonFile={blankTemplate} />
           </div>
         )}
-
         {currentStep === 1 && (
           <div className="mt-10">
             <Button
@@ -148,7 +135,6 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
     </div>
   );
 }
-
 export const AuthenticationConfig = () => {
   const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "general" });
   const [configureOpen, setConfigureOpen] = useState(false);
@@ -156,16 +142,13 @@ export const AuthenticationConfig = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const currentItem = AUTHENTICATION_NAV_GROUPS
     .flatMap((g) => g.items)
     .find((item) => item.value === (selectedTab ?? "general"));
-
   const handleTemplateCreated = (id: string) => {
     setAddTemplateOpen(false);
     setSelectedTemplateId(id);
   };
-
   const headerActions = (
     <>
       {selectedTab === "roles" && <AddRole />}
@@ -198,14 +181,11 @@ export const AuthenticationConfig = () => {
       )}
     </>
   );
-
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        {/* Page header */}
         <div className="flex shrink-0 items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            {/* Mobile sidebar trigger */}
             <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden">
@@ -256,8 +236,6 @@ export const AuthenticationConfig = () => {
               </div>
             </SheetContent>
             </Sheet>
-
-            {/* Page title */}
             {currentItem && (
               <div>
                 <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
@@ -267,12 +245,8 @@ export const AuthenticationConfig = () => {
               </div>
             )}
           </div>
-
-          {/* Header actions */}
           <div className="flex items-center gap-2">{headerActions}</div>
         </div>
-
-        {/* Content body */}
         <div className="flex-1 overflow-y-auto p-6">
         {selectedTab === "general" && (
           <div className="grid grid-cols-1 gap-6">
@@ -312,7 +286,6 @@ export const AuthenticationConfig = () => {
         {selectedTab === "permissions" && <Permissions />}
       </div>
     </div>
-
     <Dialog open={configureOpen} onOpenChange={setConfigureOpen}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
@@ -321,7 +294,6 @@ export const AuthenticationConfig = () => {
         <EmailConfiguration />
       </DialogContent>
     </Dialog>
-
     <Sheet open={addTemplateOpen} onOpenChange={setAddTemplateOpen}>
       <SheetContent side="right" className="flex h-full w-full max-w-full flex-col overflow-hidden p-0 sm:max-w-full" hideClose>
         <StepperProvider steps={NEW_COMMUNICATION_STEPS}>

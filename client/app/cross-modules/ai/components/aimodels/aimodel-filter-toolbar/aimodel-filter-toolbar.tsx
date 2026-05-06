@@ -1,18 +1,14 @@
 import { FilterToolbar } from "@/components/filter-toolbar";
 import { useAIModelsQueryParams } from "@blocks-ai/hooks/use-aimodel";
-
 export function AIModelsFilterToolbar() {
   const { queryParams, setQueryParams } = useAIModelsQueryParams();
-
   const changeHandler = (key: string, value: unknown) => {
     setQueryParams((prev) => ({
       ...prev,
       [key]: value,
     }));
   };
-
   const resetHandler = () => setQueryParams(null);
-
   return (
     <FilterToolbar
       filters={[

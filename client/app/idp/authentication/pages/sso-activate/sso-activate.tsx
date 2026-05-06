@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiUrl } from "@/lib/get-api-path";
@@ -17,54 +15,43 @@ import {
 import { oauthService } from "@blocks-idp/authentication/services/oauth.service";
 import { sanitizeProviderUrl } from "@blocks-idp/authentication/utils/sanitize-provider-url.util";
 import { Link } from "react-router-dom";
-
 type SsoActivateProps = {
   oauthParams: { code: string; username: string };
 };
-
 export const SsoActivate = ({ oauthParams }: SsoActivateProps) => {
   const { setAuthenticated, setTokens } = useAuthStore();
   const [isChecked, setIsChecked] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [providerKey, setProviderKey] = useState<string | null>(null);
   const navigate = useNavigate();
-
   useEffect(() => {
     setProviderKey(sessionStorage.getItem("clicked_sso_provider"));
   }, []);
-
   const { config, providerLabel } = useMemo(() => {
     if (!providerKey) return { config: null, providerLabel: "" };
-
     const conf = SOCIAL_AUTH_PROVIDERS_CONFIG[providerKey as SSO_PROVIDERS];
     const label = providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
-
     return { config: conf, providerLabel: label };
   }, [providerKey]);
-
   const handleUseDifferentAccount = async () => {
     const audience = sessionStorage.getItem("clicked_sso_audience");
     if (!providerKey || !audience) {
       return showErrorToast({ errors: "Something went wrong" });
     }
-
     try {
       const res = await oauthService.getSocialLoginEndpoint({
         provider: providerKey as SSO_PROVIDERS,
         audience: audience,
         sendAsResponse: true,
       });
-
       if (res.error) return showErrorToast({ errors: res.error });
       if (!res.providerUrl) return showErrorToast({ errors: "No redirect URL provided." });
-
       window.location.href = sanitizeProviderUrl(res.providerUrl);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   const handleActivate = async () => {
     if (!oauthParams?.code) return showErrorToast({ errors: "Code is missing" });
     setIsPending(true);
@@ -72,11 +59,9 @@ export const SsoActivate = ({ oauthParams }: SsoActivateProps) => {
       const key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
       const appUrl = import.meta.env.BLOCKS_APP_URL;
       const isLocalhost = getRuntimeEnv("BLOCKS_API_BASE_URL")?.includes("localhost");
-
       const body = new URLSearchParams();
       body.append("code", oauthParams.code);
       body.append("grant_type", "sso_consent");
-
       const res = await fetch(
         getApiUrl("idp/v1", "Authentication/Token"),
         {
@@ -90,18 +75,14 @@ export const SsoActivate = ({ oauthParams }: SsoActivateProps) => {
           credentials: isLocalhost ? "same-origin" : "include",
         },
       );
-
       const data = await res.json();
-
       if (res.ok) {
         sessionStorage.removeItem("clicked_sso_provider");
         sessionStorage.removeItem("clicked_sso_audience");
-        
         // For localhost, save tokens for Authorization Bearer
         if (isLocalhost && data.access_token && data.refresh_token) {
           setTokens(data.access_token, data.refresh_token);
         }
-        
         setAuthenticated();
         navigate("/console");
       } else {
@@ -119,7 +100,6 @@ export const SsoActivate = ({ oauthParams }: SsoActivateProps) => {
       setIsPending(false);
     }
   };
-
   return (
     <Card className="w-full rounded border-solid border-background shadow-none md:border-[#95ADC4] lg:max-w-md">
       <CardHeader className="text-center">
@@ -145,7 +125,6 @@ export const SsoActivate = ({ oauthParams }: SsoActivateProps) => {
             </div>
           </>
         )}
-
         <div className="mt-2 flex justify-start gap-2 text-sm text-foreground">
           <Checkbox
             id="terms"

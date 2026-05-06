@@ -11,7 +11,6 @@ import {
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { MobileMenuItem } from "@/components/menus/mobile-menu-item";
 import { Menu } from "@/models/menu-models";
-
 const projectOverviewMenuItems: Menu[] = [
   {
     id: "environments",
@@ -42,10 +41,8 @@ const projectOverviewMenuItems: Menu[] = [
     icon: Settings,
   },
 ];
-
 export const ProjectOverviewSidebarMobile = () => {
   const [open, setOpen] = useState(false);
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>

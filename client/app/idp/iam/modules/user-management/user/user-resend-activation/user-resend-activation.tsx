@@ -3,13 +3,11 @@ import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account";
-
 type UserResendActivationMailProps = {
   userId: string;
   open: boolean;
   setOpen: (open: boolean) => void;
 };
-
 export const UserResendActivationMail = ({
   userId,
   open,
@@ -37,7 +35,6 @@ export const UserResendActivationMail = ({
       setOpen(false);
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <ConfirmationModal

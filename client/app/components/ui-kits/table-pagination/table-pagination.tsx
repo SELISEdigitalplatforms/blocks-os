@@ -9,14 +9,12 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
-
 interface TablePaginationProps<TData> {
   table: Table<TData>;
   // eslint-disable-next-line no-unused-vars
   onPageChange?: (pageIndex: number) => void;
   totalCount?: number;
 }
-
 export function TablePagination<TData>({
   table,
   onPageChange,
@@ -25,11 +23,9 @@ export function TablePagination<TData>({
   const pageSize = 10;
   const totalDataLength = table.getFilteredRowModel().rows.length;
   const rowPerPage = [];
-
   for (let i = pageSize; i < totalDataLength + pageSize; i += pageSize) {
     rowPerPage.push(i);
   }
-
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <div className="flex-1 pl-4 text-sm text-muted-foreground">
@@ -118,5 +114,4 @@ export function TablePagination<TData>({
     </div>
   );
 }
-
 export default TablePagination;

@@ -15,12 +15,10 @@ import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useState } from "react";
 import { useGetMFAConfig, useSaveMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email-template";
-
 type ChooseEmailTemplateProps = {
   open: boolean;
   setOpen: (value: boolean) => void;
 };
-
 const LoadingSkelton = () => {
   return (
     <>
@@ -34,7 +32,6 @@ const LoadingSkelton = () => {
     </>
   );
 };
-
 export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: mfaConfigData } = useGetMFAConfig({ projectKey: tenantId });
@@ -42,7 +39,6 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
   const { data, isLoading, isFetching } = useGetEmailTemplates(filter.page, filter.pageSize, "", "Name", false, "", "");
   const { isPending, mutateAsync } = useSaveMFAConfig();
   const [seletedTemplate, setSelectedTemplate] = useState<IEmailTemplate | null>(null);
-
   const onSaveHandler = async () => {
     try {
       const userMfaTypes = mfaConfigData?.userMfaType ? [...mfaConfigData.userMfaType] : [];
@@ -73,7 +69,6 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
       });
     }
   };
-
   const loading = isLoading || isFetching;
   return (
     <Dialog
@@ -87,7 +82,6 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
         <DialogHeader>
           <DialogTitle>Choose a template </DialogTitle>
         </DialogHeader>
-
         <div className="mt-4 grid grid-cols-5 gap-4">
           {loading ? (
             <LoadingSkelton />
@@ -107,7 +101,6 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
                 >
                   <img
                     src={`/assets/images/services/email/email-template-sample-1.png`}
-                   
                     alt="email-template"
                   />
                 </div>
@@ -120,7 +113,6 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
                   >
                     <img
                       src={`/assets/images/services/email/email-template-sample-1.png`}
-                     
                       alt="email-template"
                     />
                   </div>
@@ -150,7 +142,6 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
                 Cancel
               </Button>
             </DialogTrigger>
-
             <Button
               className="ml-2 min-w-[80px]"
               size="default"

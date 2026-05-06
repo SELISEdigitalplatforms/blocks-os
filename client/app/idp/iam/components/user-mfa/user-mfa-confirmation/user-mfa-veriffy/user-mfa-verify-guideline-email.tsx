@@ -1,13 +1,10 @@
 import { useContext } from "react";
 import { userMfaContext } from "../../user-mfa";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
-
 const imageUrl = "/assets/images/mail-sent.png";
-
 export const UserMfaVerifyGuideLineEmail = () => {
   const { userId, projectKey } = useContext(userMfaContext);
   const { data } = useGetUserById({ id: userId, projectKey });
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-center">

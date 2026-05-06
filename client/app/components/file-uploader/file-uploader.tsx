@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
 import {
@@ -17,9 +16,7 @@ import { toast } from "sonner";
 import { Trash2 as RemoveIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui-kits/button/button";
 import { showErrorToast } from "@/hooks/use-toast";
-
 type DirectionOptions = "rtl" | "ltr" | undefined;
-
 type FileUploaderContextType = {
   dropzoneState: DropzoneState;
   isLOF: boolean;
@@ -31,9 +28,7 @@ type FileUploaderContextType = {
   orientation: "horizontal" | "vertical";
   direction: DirectionOptions;
 };
-
 const FileUploaderContext = createContext<FileUploaderContextType | null>(null);
-
 export const useFileUpload = () => {
   const context = useContext(FileUploaderContext);
   if (!context) {
@@ -41,7 +36,6 @@ export const useFileUpload = () => {
   }
   return context;
 };
-
 type FileUploaderProps = {
   value: File[] | null;
   reSelect?: boolean;
@@ -50,7 +44,6 @@ type FileUploaderProps = {
   dropzoneOptions: DropzoneOptions;
   orientation?: "horizontal" | "vertical";
 };
-
 export const FileUploader = forwardRef<
   HTMLDivElement,
   // eslint-disable-next-line no-undef
@@ -81,10 +74,8 @@ export const FileUploader = forwardRef<
       maxSize = 4 * 1024 * 1024,
       multiple = true,
     } = dropzoneOptions;
-
     const reSelectAll = maxFiles === 1 ? true : reSelect;
     const direction: DirectionOptions = dir === "rtl" ? "rtl" : "ltr";
-
     const removeFileFromSet = useCallback(
       (i: number) => {
         if (!value) return;
@@ -93,45 +84,37 @@ export const FileUploader = forwardRef<
       },
       [value, onValueChange],
     );
-
     useEffect(() => {
       if (isFileTooBig) {
         showErrorToast({ errors: "The file size is more than 5MB" });
       }
     }, [isFileTooBig]);
-
     const handleKeyDown = useCallback(
       // eslint-disable-next-line no-undef
       (e: React.KeyboardEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
-
         if (!value) return;
-
         const moveNext = () => {
           const nextIndex = activeIndex + 1;
           setActiveIndex(nextIndex > value.length - 1 ? 0 : nextIndex);
         };
-
         const movePrev = () => {
           const nextIndex = activeIndex - 1;
           setActiveIndex(nextIndex < 0 ? value.length - 1 : nextIndex);
         };
-
         const prevKey =
           orientation === "horizontal"
             ? direction === "ltr"
               ? "ArrowLeft"
               : "ArrowRight"
             : "ArrowUp";
-
         const nextKey =
           orientation === "horizontal"
             ? direction === "ltr"
               ? "ArrowRight"
               : "ArrowLeft"
             : "ArrowDown";
-
         if (e.key === nextKey) {
           moveNext();
         } else if (e.key === prevKey) {
@@ -156,30 +139,23 @@ export const FileUploader = forwardRef<
       // eslint-disable-next-line react-hooks/exhaustive-deps
       [value, activeIndex, removeFileFromSet],
     );
-
     const onDrop = useCallback(
       (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
         const files = acceptedFiles;
-
         if (!files) {
           toast.error("file error , probably too big");
           return;
         }
-
         const newValues: File[] = value ? [...value] : [];
-
         if (reSelectAll) {
           newValues.splice(0, newValues.length);
         }
-
         files.forEach((file) => {
           if (newValues.length < maxFiles) {
             newValues.push(file);
           }
         });
-
         onValueChange(newValues);
-
         if (rejectedFiles.length > 0) {
           for (let i = 0; i < rejectedFiles.length; i++) {
             if (rejectedFiles[i].errors[0]?.code === "file-too-large") {
@@ -208,7 +184,6 @@ export const FileUploader = forwardRef<
       // eslint-disable-next-line react-hooks/exhaustive-deps
       [reSelectAll, value],
     );
-
     useEffect(() => {
       if (!value) return;
       if (value.length === maxFiles) {
@@ -217,16 +192,13 @@ export const FileUploader = forwardRef<
       }
       setIsLOF(false);
     }, [value, maxFiles]);
-
     const opts = dropzoneOptions ? dropzoneOptions : { accept, maxFiles, maxSize, multiple };
-
     const dropzoneState = useDropzone({
       ...opts,
       onDrop,
       // onDropRejected: () => setIsFileTooBig(true),
       onDropAccepted: () => setIsFileTooBig(false),
     });
-
     return (
       <FileUploaderContext.Provider
         value={{
@@ -256,15 +228,12 @@ export const FileUploader = forwardRef<
     );
   },
 );
-
 FileUploader.displayName = "FileUploader";
-
 // eslint-disable-next-line no-undef
 export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ children, className, ...props }, ref) => {
     const { orientation } = useFileUpload();
     const containerRef = useRef<HTMLDivElement>(null);
-
     return (
       // eslint-disable-next-line jsx-a11y/aria-props
       <div className={cn("w-full px-1")} ref={containerRef} aria-description="content file holder">
@@ -283,9 +252,7 @@ export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttribut
     );
   },
 );
-
 FileUploaderContent.displayName = "FileUploaderContent";
-
 export const FileUploaderItem = forwardRef<
   HTMLDivElement,
   // eslint-disable-next-line no-undef
@@ -318,9 +285,7 @@ export const FileUploaderItem = forwardRef<
     </div>
   );
 });
-
 FileUploaderItem.displayName = "FileUploaderItem";
-
 // eslint-disable-next-line no-undef
 export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => {
@@ -357,5 +322,4 @@ export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
     );
   },
 );
-
 FileInput.displayName = "FileInput";

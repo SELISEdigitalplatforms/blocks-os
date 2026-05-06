@@ -7,14 +7,12 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { EllipsisVertical } from "lucide-react";
 import { IModelInfo } from "@blocks-ai/types/aimodel.service.type";
-
 type AIModelRowActionsDropdownProps = {
   model: IModelInfo;
   onEdit: (model: IModelInfo) => void;
   onDelete: (model: IModelInfo) => void;
   onOpenChange?: (open: boolean) => void;
 };
-
 export const AIModelRowActionsDropdown = ({
   model,
   onEdit,

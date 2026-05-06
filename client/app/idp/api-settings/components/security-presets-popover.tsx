@@ -5,12 +5,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui-kits/popover/popover";
 import { Shield, ShieldCheck } from "lucide-react";
-
 type SecurityPresetsPopoverProps = {
   onEnableAllMfa: () => void;
   onEnableAllCaptcha: () => void;
 };
-
 export const SecurityPresetsPopover = ({
   onEnableAllMfa,
   onEnableAllCaptcha,

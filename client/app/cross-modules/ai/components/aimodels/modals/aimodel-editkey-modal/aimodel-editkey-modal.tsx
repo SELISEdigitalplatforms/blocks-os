@@ -27,14 +27,12 @@ import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.servic
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useProjectStore } from "@/store/useProjectStore";
-
 interface ModelEditKeyModalProps {
   modelOptions: { model: string; goodName: string }[];
   editKeyModalOpen: boolean;
   setEditKeyModalOpen: (open: boolean) => void;
   model: IModelInfo;
 }
-
 type DefaultValuesWithKnownKeys = {
   model?: string;
   url?: string;
@@ -42,7 +40,6 @@ type DefaultValuesWithKnownKeys = {
   projectId?: string;
   deploymentName?: string;
 };
-
 export const ModelEditKeyModal = ({
   modelOptions,
   editKeyModalOpen,
@@ -51,7 +48,6 @@ export const ModelEditKeyModal = ({
 }: ModelEditKeyModalProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
-
   const {
     schema: baseSchema,
     defaultValues,
@@ -65,12 +61,10 @@ export const ModelEditKeyModal = ({
       ),
     [model.Provider, model.ServicePlatform, modelOptions],
   );
-
   const schema = useMemo(
     () => (baseSchema as z.AnyZodObject).extend({ apiKey: z.string().optional() }),
     [baseSchema],
   );
-
   const initialValues = useMemo(() => {
     const defaults = defaultValues as DefaultValuesWithKnownKeys;
     return {
@@ -83,13 +77,11 @@ export const ModelEditKeyModal = ({
       deploymentName: model.DeploymentName ?? defaults.deploymentName ?? "",
     };
   }, [defaultValues, model, modelOptions]);
-
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: initialValues as z.infer<typeof schema>,
     mode: "onChange",
   });
-
   const originalApiKey = model.ApiKey ?? "";
   const [apiKeyEditable, setApiKeyEditable] = useState(false);
   const maskKey = (key: string) => {
@@ -97,12 +89,10 @@ export const ModelEditKeyModal = ({
     if (key.length <= 6) return key;
     return key.slice(0, 5) + "•••••" + key.slice(-3);
   };
-
   const onSubmitHandler = async (data: z.infer<typeof schema>) => {
     try {
       const rawApiKey = (data.apiKey ?? "") as string;
       const trimmedApiKey = rawApiKey.trim();
-
       const payload: IUpdateModelPayload & { model_name: string } = {
         project_key,
         display_name: model.DisplayName,
@@ -114,9 +104,7 @@ export const ModelEditKeyModal = ({
         api_version: model.ApiVersion,
         model_name: model.ModelName ?? "",
       };
-
       if (trimmedApiKey && trimmedApiKey !== originalApiKey) payload.api_key = trimmedApiKey;
-
       const res = await mutateAsync({ modelId: model._id, payload });
       if (res.is_success) showSuccessToast({ description: "Model updated successfully." });
       else showErrorToast({ errors: res.detail });
@@ -125,14 +113,12 @@ export const ModelEditKeyModal = ({
       showErrorToast({ errors: err instanceof Error ? err.message : String(err) });
     }
   };
-
   const selectedModel = form.watch("model");
   const selectedGoodName =
     modelOptions.find((o) => o.model === selectedModel)?.goodName ??
     modelOptions[0]?.goodName ??
     selectedModel ??
     "";
-
   return (
     <Dialog
       open={editKeyModalOpen}

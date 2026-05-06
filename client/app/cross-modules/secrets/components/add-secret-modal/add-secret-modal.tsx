@@ -38,9 +38,7 @@ import {
   type OIDCSecretValue,
   type SSOSecretValue,
 } from "../../constants/secret-key.enum";
-
 // ─── Schemas ────────────────────────────────────────────────────────────────
-
 const oidcSchema = z.object({
   clientDisplayName: z.string().min(1, "Client name is required"),
   redirectUri: z.string().url("Must be a valid URL"),
@@ -48,14 +46,12 @@ const oidcSchema = z.object({
   clientBrandColor: z.string().default("#124091"),
   clientLogoUrl: z.string().optional().default(""),
 });
-
 const captchaSchema = z.object({
   captchaProvider: z.string().min(1, "Provider is required"),
   captchaSiteKey: z.string().min(1, "Site key is required"),
   captchaSecretKey: z.string().min(1, "Secret key is required"),
   captchaGeneratorType: z.string().min(1, "Generator type is required"),
 });
-
 const ssoSchema = z.object({
   clientId: z.string().min(1, "Client ID is required"),
   clientSecret: z.string().min(1, "Client secret is required"),
@@ -63,7 +59,6 @@ const ssoSchema = z.object({
   audience: z.string().optional().default(""),
   wellKnownUrl: z.string().url("Must be a valid URL"),
 });
-
 const externalIdpSchema = z.object({
   providerName: z.string().min(1, "Provider name is required"),
   url: z.string().optional().default(""),
@@ -71,9 +66,7 @@ const externalIdpSchema = z.object({
   audiences: z.string().optional().default(""),
   password: z.string().optional().default(""),
 });
-
 // ─── Sub-form: OIDC ─────────────────────────────────────────────────────────
-
 function OIDCForm({
   submitRef,
   onSubmit,
@@ -82,11 +75,9 @@ function OIDCForm({
   onSubmit: (v: OIDCSecretValue) => void;
 }) {
   const form = useForm({ resolver: zodResolver(oidcSchema), defaultValues: { clientDisplayName: "", redirectUri: "", audience: "", clientBrandColor: "#124091", clientLogoUrl: "" } });
-
   const handle = form.handleSubmit((data) => {
     onSubmit({ ClientDisplayName: data.clientDisplayName, RedirectUri: data.redirectUri, Audience: data.audience, ClientBrandColor: data.clientBrandColor, ClientLogoUrl: data.clientLogoUrl ?? "" });
   });
-
   return (
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
@@ -125,9 +116,7 @@ function OIDCForm({
     </Form>
   );
 }
-
 // ─── Sub-form: Captcha ───────────────────────────────────────────────────────
-
 function CaptchaForm({
   submitRef,
   onSubmit,
@@ -136,11 +125,9 @@ function CaptchaForm({
   onSubmit: (v: CaptchaSecretValue) => void;
 }) {
   const form = useForm({ resolver: zodResolver(captchaSchema), defaultValues: { captchaProvider: "", captchaSiteKey: "", captchaSecretKey: "", captchaGeneratorType: "" } });
-
   const handle = form.handleSubmit((data) => {
     onSubmit({ CaptchaProvider: data.captchaProvider, CaptchaSiteKey: data.captchaSiteKey, CaptchaSecretKey: data.captchaSecretKey, CaptchaGeneratorType: data.captchaGeneratorType });
   });
-
   return (
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
@@ -187,9 +174,7 @@ function CaptchaForm({
     </Form>
   );
 }
-
 // ─── Sub-form: SSO ──────────────────────────────────────────────────────────
-
 function SSOForm({
   submitRef,
   onSubmit,
@@ -199,11 +184,9 @@ function SSOForm({
 }) {
   const [showSecret, setShowSecret] = useState(false);
   const form = useForm({ resolver: zodResolver(ssoSchema), defaultValues: { clientId: "", clientSecret: "", redirectUrl: "", audience: "", wellKnownUrl: "" } });
-
   const handle = form.handleSubmit((data) => {
     onSubmit({ ClientId: data.clientId, ClientSecret: data.clientSecret, RedirectUrl: data.redirectUrl, Audience: data.audience, WellKnownUrl: data.wellKnownUrl });
   });
-
   return (
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
@@ -238,9 +221,7 @@ function SSOForm({
     </Form>
   );
 }
-
 // ─── Sub-form: External IdP ─────────────────────────────────────────────────
-
 function ExternalIdPForm({
   submitRef,
   onSubmit,
@@ -250,12 +231,10 @@ function ExternalIdPForm({
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const form = useForm({ resolver: zodResolver(externalIdpSchema), defaultValues: { providerName: "", url: "", issuer: "", audiences: "", password: "" } });
-
   const handle = form.handleSubmit((data) => {
     const isJwks = data.url?.startsWith("https://") && !data.url?.endsWith(".crt") && !data.url?.endsWith(".pem");
     onSubmit({ ProviderName: data.providerName, JwksUrl: isJwks ? (data.url ?? "") : "", PublicCertificatePath: isJwks ? "" : (data.url ?? ""), Issuer: data.issuer ?? "", Audiences: data.audiences ?? "", Password: data.password ?? "" });
   });
-
   return (
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
@@ -303,52 +282,41 @@ function ExternalIdPForm({
     </Form>
   );
 }
-
 // ─── Main Modal ──────────────────────────────────────────────────────────────
-
 type AddSecretModalProps = {
   onSave?: (payload: AddSecretPayload) => void;
 };
-
 export function AddSecretModal({ onSave }: AddSecretModalProps) {
   const [open, setOpen] = useState(false);
   const [secretType, setSecretType] = useState<SecretType>(SecretType.Captcha);
   const submitRef = useRef<HTMLButtonElement>(null);
-
   const handleSecretTypeChange = (value: SecretType) => {
     setSecretType(value);
   };
-
   const handleSubFormSubmit = (value: AddSecretPayload["Value"]) => {
     const payload = { SecretType: secretType, Value: value } as AddSecretPayload;
     onSave?.(payload);
     setOpen(false);
     setSecretType(SecretType.Captcha);
   };
-
   const handleSave = () => {
     submitRef.current?.click();
   };
-
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) setSecretType(SecretType.Captcha);
     setOpen(isOpen);
   };
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button size="sm" onClick={() => setOpen(true)}>
         <Plus className="aspect-square w-4" />
         <span className="ml-2">Add Secret</span>
       </Button>
-
       <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-lg flex-col sm:w-full">
         <DialogHeader>
           <DialogTitle>Add Secret</DialogTitle>
         </DialogHeader>
-
         <div className="flex-1 space-y-5 overflow-y-auto px-1 pb-1">
-          {/* Secret Type Selector */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium leading-none">Secret Type</label>
             <Select value={secretType} onValueChange={handleSecretTypeChange}>
@@ -364,8 +332,6 @@ export function AddSecretModal({ onSave }: AddSecretModalProps) {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Dynamic form content */}
           {secretType === SecretType.OIDC && (
             <OIDCForm key="oidc" submitRef={submitRef} onSubmit={handleSubFormSubmit} />
           )}
@@ -379,7 +345,6 @@ export function AddSecretModal({ onSave }: AddSecretModalProps) {
             <ExternalIdPForm key="extidp" submitRef={submitRef} onSubmit={handleSubFormSubmit} />
           )}
         </div>
-
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui-kits/button/button";
@@ -37,19 +36,15 @@ import {
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
 import { ChevronsUpDown, Check, Settings } from "lucide-react";
-
 interface OrganizationConfigProps {
   configData: IOrganizationConfigResponse | null | undefined;
   isLoading: boolean;
 }
-
 export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfigProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const { mutateAsync, isPending } = useSaveOrganizationConfig();
-
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
     projectKey: tenantId,
     page: 0,
@@ -57,24 +52,19 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
   });
-
   const roles = rolesData?.data || [];
   const roleOptions = roles.map((role) => ({
     label: role.name,
     value: role.slug,
   }));
-
   const form = useForm<IOrganizationConfigForm>({
     defaultValues: organizationConfigFormDefaultValues,
     resolver: zodResolver(organizationConfigFormSchema),
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const isMultiOrgEnabled = form.watch("isMultiOrgEnabled");
-
   const handleModalOpenChange = (value: boolean) => {
     if (!value) {
       form.reset({
@@ -86,7 +76,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
     }
     setIsModalOpen(value);
   };
-
   // Populate form when config data is loaded
   useEffect(() => {
     if (configData) {
@@ -98,7 +87,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
       setSelectedRoles(configData.roles ?? []);
     }
   }, [configData, form]);
-
   // Reset dependent fields when isMultiOrgEnabled is toggled off
   useEffect(() => {
     if (!isMultiOrgEnabled) {
@@ -106,7 +94,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
       form.setValue("allowCreationFromConstruct", false);
     }
   }, [isMultiOrgEnabled, form]);
-
   const onSubmit: SubmitHandler<IOrganizationConfigForm> = async (data) => {
     try {
       const res = await mutateAsync({
@@ -131,7 +118,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
       }
     }
   };
-
   return (
     <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
       <DialogTrigger asChild>
@@ -166,7 +152,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
                   </FormItem>
                 )}
               />
-
               {isMultiOrgEnabled && (
                 <div className="ml-6 flex flex-col gap-3 pl-4">
                   <FormField
@@ -185,7 +170,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     name="allowCreationFromConstruct"
                     control={form.control}
@@ -203,7 +187,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
                       </FormItem>
                     )}
                   />
-
                   {form.watch("allowCreationFromConstruct") && (
                     <div className="mt-3 space-y-2">
                       <label className="text-sm font-medium">Default Roles</label>
@@ -280,7 +263,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
                   )}
                 </div>
               )}
-
               <DialogFooter className="mt-6">
                 <DialogClose asChild>
                   <Button className="min-w-[80px]" variant="outline" disabled={isPending}>

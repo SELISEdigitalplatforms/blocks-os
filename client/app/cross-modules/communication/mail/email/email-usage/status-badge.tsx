@@ -1,14 +1,11 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { MailStatus } from "@blocks-communication/mail/models/email";
-
 interface StatusBadgeProps {
   status: string;
 }
-
 export const StatusBadge = ({ status }: StatusBadgeProps) => {
   let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "error" | "info" =
     "outline";
-
   switch (status) {
     case MailStatus.Delivered:
       variant = "success";
@@ -24,7 +21,6 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
     default:
       variant = "info";
   }
-
   return (
     <Badge variant={variant} className="w-24 whitespace-nowrap rounded-full">
       {status}

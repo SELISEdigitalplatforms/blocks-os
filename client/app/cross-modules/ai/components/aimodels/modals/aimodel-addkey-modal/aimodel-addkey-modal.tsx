@@ -33,7 +33,6 @@ import { resolveModelConfig, transformToUniversal } from "@blocks-ai/utils/aimod
 import { useCreateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useProjectStore } from "@/store/useProjectStore";
-
 interface ModelAddKeyModalProps {
   provider: string;
   baseUrl: string;
@@ -42,7 +41,6 @@ interface ModelAddKeyModalProps {
   addKeyModalOpen: boolean;
   setAddKeyModalOpen: (open: boolean) => void;
 }
-
 export const ModelAddKeyModal = ({
   provider,
   baseUrl,
@@ -53,9 +51,7 @@ export const ModelAddKeyModal = ({
 }: ModelAddKeyModalProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
-
   const { schema, defaultValues, fields } = resolveModelConfig(provider, servicePlatform, modelOptions);
-
   type AllFormValues = {
     url: string;
     model: string;
@@ -64,7 +60,6 @@ export const ModelAddKeyModal = ({
     projectId?: string;
     deploymentName?: string;
   };
-
   const form = useForm<AllFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -73,13 +68,11 @@ export const ModelAddKeyModal = ({
     } as AllFormValues,
     mode: "onChange",
   });
-
   const selectedModel = form.watch("model");
   const selectedGoodName =
     modelOptions.find((o) => o.model === selectedModel)?.goodName ??
     modelOptions[0]?.goodName ??
     "";
-
   const onSubmitHandler = async (data: z.infer<typeof schema>) => {
     try {
       const payload = transformToUniversal(
@@ -102,7 +95,6 @@ export const ModelAddKeyModal = ({
       showErrorToast({ errors: err instanceof Error ? err.message : String(err) });
     }
   };
-
   return (
     <Dialog
       open={addKeyModalOpen}

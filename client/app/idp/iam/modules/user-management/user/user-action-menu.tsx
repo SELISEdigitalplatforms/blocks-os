@@ -13,19 +13,16 @@ import { UserDeactivate } from "./user-deactivate/user-deactivate";
 import { UpdateUser } from "../update-user";
 import { UserDisableMFA } from "./user-disable-mfa";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
-
 type UserActionMenuProps = {
   id: string;
   projectKey: string;
 };
-
 export const UserActionMenu = ({ id, projectKey }: UserActionMenuProps) => {
   const { data } = useGetUserById({ id, projectKey });
   const [isResendActivationModalOpen, setIsResendActivationModalOpen] = useState<boolean>(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState<boolean>(false);
   const [isDisableMFAModalOpen, setIsDisableMFAModalOpen] = useState<boolean>(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState<boolean>(false);
-
   return (
     <>
       <div className="flex items-center gap-2">

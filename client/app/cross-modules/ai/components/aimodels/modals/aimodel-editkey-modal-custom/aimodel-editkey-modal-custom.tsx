@@ -32,7 +32,6 @@ import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.servic
 import { useProjectStore } from "@/store/useProjectStore";
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-
 const CustomEditKeyFormSchema = z.object({
   model: z.string().trim().min(1, "Model name is required"),
   providerName: z.string().trim().min(1, "Provider name is required"),
@@ -50,15 +49,12 @@ const CustomEditKeyFormSchema = z.object({
     )
     .default([]),
 });
-
 type FormSchema = z.infer<typeof CustomEditKeyFormSchema>;
-
 interface CustomModelEditKeyModalProps {
   editKeyModalOpen: boolean;
   setEditKeyModalOpen: Dispatch<SetStateAction<boolean>>;
   model: IModelInfo;
 }
-
 export const CustomModelEditKeyModal = ({
   editKeyModalOpen,
   setEditKeyModalOpen,
@@ -66,7 +62,6 @@ export const CustomModelEditKeyModal = ({
 }: CustomModelEditKeyModalProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useUpdateModel();
-
   const initialValues: FormSchema = useMemo(() => {
     const customParams = (model.CustomParameters ?? {}) as Record<string, unknown>;
     const defaultTemp = typeof customParams.DefaultTemp === "number" ? customParams.DefaultTemp : 0.3;
@@ -76,7 +71,6 @@ export const CustomModelEditKeyModal = ({
       headerEntries.length > 0
         ? headerEntries.map(([key, value]) => ({ key, value }))
         : [{ key: "", value: "" }];
-
     return {
       model: model.ModelName || "",
       providerName: model.Provider || "",
@@ -88,27 +82,22 @@ export const CustomModelEditKeyModal = ({
       customHeaders: headerArray,
     };
   }, [model]);
-
   const form = useForm<FormSchema>({
     defaultValues: initialValues,
     resolver: zodResolver(CustomEditKeyFormSchema),
     mode: "onChange",
   });
-
   const { control, handleSubmit } = form;
-
   const { fields, append, remove } = useFieldArray({
     control,
     name: "customHeaders" as const,
   });
-
   const [apiKeyEditable, setApiKeyEditable] = useState(false);
   const maskKey = (key: string) => {
     if (!key) return "";
     if (key.length <= 6) return key;
     return key.slice(0, 5) + "•••••" + key.slice(-3);
   };
-
   const onSubmitHandler = async (data: FormSchema) => {
     try {
       const trimmedApiKey = (data.apiKey ?? "").trim();
@@ -143,7 +132,6 @@ export const CustomModelEditKeyModal = ({
       showErrorToast({ errors: err instanceof Error ? err.message : String(err) });
     }
   };
-
   return (
     <Dialog
       open={editKeyModalOpen}

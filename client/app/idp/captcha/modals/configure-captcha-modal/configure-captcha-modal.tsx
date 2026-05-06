@@ -6,9 +6,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-
 import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY, ICaptchaConfig } from "../../models/captcha";
-
 import { ConfigureGeneralCaptchaFormField } from "./configure-general-captcha-from-field";
 import { ConfigureBlockCaptchaFormField } from "./configure-block-captcha-form-field";
 import { useGetCaptchaConfigs, useSaveCaptcha } from "../../hooks/use-captcha-config";
@@ -35,17 +33,14 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-
 type ConfigureCaptchaModalProps = {
   configuration?: ICaptchaConfig | null;
   children: ReactNode;
 };
-
 export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCaptchaModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { isLoading, isFetching, data } = useGetCaptchaConfigs({ projectKey: tenantId });
-
   const form = useForm({
     defaultValues: configuration || ConfigureCaptchaFormDefaultValue,
     resolver: zodResolver(ConfigureCaptchaFormSchema),
@@ -54,11 +49,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     formState: { isDirty },
   } = form;
   const { mutateAsync, isPending } = useSaveCaptcha();
-
   const unConfiguredProviders = useMemo(() => {
     if (configuration) return [CAPTCHA_PROVIDERS[configuration.provider]];
     if (!data?.configurations) return Object.values(CAPTCHA_PROVIDERS);
-
     return Object.keys(CAPTCHA_PROVIDERS)
       .filter(
         (item) =>
@@ -66,7 +59,6 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       )
       .map((item) => CAPTCHA_PROVIDERS[item as CAPTCHA_PROVIDERS_KEY]);
   }, [data]);
-
   useEffect(() => {
     if (configuration) {
       form.setValue("provider", configuration.provider);
@@ -75,7 +67,6 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       form.setValue("provider", unConfiguredProviders[0].value);
     }
   }, [unConfiguredProviders]);
-
   const onSubmitHandler = async (values: typeof ConfigureCaptchaFormDefaultValue) => {
     try {
       const payload = {
@@ -96,11 +87,8 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       }
     }
   };
-
   const selectedProvider = form.watch("provider");
-
   const ConfigureFormField = ConfigureGeneralCaptchaFormField;
-
   return (
     <Dialog
       open={open}
@@ -110,7 +98,6 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       }}
     >
       {children}
-
       <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>
@@ -158,7 +145,6 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                     Cancel
                   </Button>
                 </DialogTrigger>
-
                 <Button
                   size="sm"
                   disabled={isPending || isLoading || isFetching || !isDirty}

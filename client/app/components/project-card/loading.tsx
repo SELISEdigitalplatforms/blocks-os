@@ -1,6 +1,5 @@
 import { Card } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-
 export const ProjectCardLoading = () => {
   return (
     <Card className="flex flex-col overflow-hidden rounded-xl border border-border/60 p-4 shadow-sm h-[160px]">

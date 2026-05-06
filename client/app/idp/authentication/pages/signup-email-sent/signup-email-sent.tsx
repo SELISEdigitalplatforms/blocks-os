@@ -1,10 +1,8 @@
 import { Logo } from "@/components/logo";
 import { Check } from "lucide-react";
-
 type SignupEmailSentProps = {
   email: string;
 };
-
 export const SignupEmailSent = ({ email }: SignupEmailSentProps) => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { CaptchaRef, ReCaptchaProps } from "./index.type";
-
 declare global {
   interface Window {
     grecaptcha?: {
@@ -18,17 +17,13 @@ declare global {
     };
   }
 }
-
 const isReady = () => typeof window !== "undefined" && !!window.grecaptcha;
-
 const SCRIPT_ID = "blocks-recaptcha-script";
 const SCRIPT_SRC = "https://www.google.com/recaptcha/api.js?render=explicit";
-
 export const ReCaptcha = forwardRef<CaptchaRef, ReCaptchaProps>(
   ({ siteKey, theme = "light", onVerify, onExpired, onError, size = "normal" }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<number | null>(null);
-
     useImperativeHandle(ref, () => ({
       reset: () => {
         if (widgetIdRef.current !== null && window.grecaptcha) {
@@ -36,7 +31,6 @@ export const ReCaptcha = forwardRef<CaptchaRef, ReCaptchaProps>(
         }
       },
     }));
-
     const renderReCaptcha = useCallback(() => {
       if (!containerRef.current) return;
       window.grecaptcha?.ready(() => {
@@ -51,10 +45,8 @@ export const ReCaptcha = forwardRef<CaptchaRef, ReCaptchaProps>(
         });
       });
     }, [siteKey, theme, size, onVerify, onExpired, onError]);
-
     const loadScript = () => {
       if (document.getElementById(SCRIPT_ID)) return;
-
       const script = document.createElement("script");
       script.id = SCRIPT_ID;
       script.src = SCRIPT_SRC;
@@ -62,24 +54,19 @@ export const ReCaptcha = forwardRef<CaptchaRef, ReCaptchaProps>(
       script.defer = true;
       document.body.appendChild(script);
     };
-
     useEffect(() => {
       if (isReady()) {
         renderReCaptcha();
         return;
       }
-
       loadScript();
       const scriptNode = document.getElementById(SCRIPT_ID);
       scriptNode?.addEventListener("load", renderReCaptcha);
-
       return () => {
         scriptNode?.removeEventListener("load", renderReCaptcha);
       };
     }, [renderReCaptcha]);
-
     return <div ref={containerRef} />;
   },
 );
-
 ReCaptcha.displayName = "ReCaptcha";

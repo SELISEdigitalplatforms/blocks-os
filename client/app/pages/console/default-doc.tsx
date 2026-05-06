@@ -1,13 +1,11 @@
 import { ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
-
 type DocCardProps = {
   label: string;
   imageUri: string;
   description: string;
   url: string;
 };
-
 const DocCard = ({ label, imageUri, description, url }: DocCardProps) => {
   return (
     <motion.a
@@ -30,7 +28,6 @@ const DocCard = ({ label, imageUri, description, url }: DocCardProps) => {
           className="relative object-contain drop-shadow-sm transition-transform duration-500 group-hover:scale-105"
         />
       </div>
-
       <div className="flex flex-1 flex-col gap-2 p-5">
         <div className="flex items-start justify-between gap-2">
           <h4 className="text-base font-semibold text-[hsl(var(--high-emphasis))]">{label}</h4>
@@ -44,7 +41,6 @@ const DocCard = ({ label, imageUri, description, url }: DocCardProps) => {
     </motion.a>
   );
 };
-
 const data = [
   {
     label: "Docs",
@@ -67,7 +63,6 @@ const data = [
     url: "https://selisegroup.com/blocks/",
   },
 ];
-
 export const DefaultDoc = () => {
   return (
     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

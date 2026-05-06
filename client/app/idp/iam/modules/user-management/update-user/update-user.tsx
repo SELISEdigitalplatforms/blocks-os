@@ -27,24 +27,20 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { inviteUserFormDefaultValue, inviteUserFormSchema } from "./utils";
-
 type UpdateUserProps = {
   id: string;
   projectKey: string;
   own?: boolean;
 };
-
 export const UpdateUser = ({ id, projectKey, own = false }: UpdateUserProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { data, isLoading, isFetching } = useGetUserById({ id, projectKey });
   const { isPending, mutateAsync } = useUpdateUser({ id, projectKey, own });
-
   const form = useForm({
     defaultValues: inviteUserFormDefaultValue,
     resolver: zodResolver(inviteUserFormSchema),
     values: data?.data,
   });
-
   const {
     formState: { isDirty },
   } = form;
@@ -65,7 +61,6 @@ export const UpdateUser = ({ id, projectKey, own = false }: UpdateUserProps) => 
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   return (
     <Dialog
       open={open}

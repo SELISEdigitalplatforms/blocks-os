@@ -2,7 +2,6 @@ import { Fragment } from "react";
 import { Settings, Users, BookMinus, Package } from "lucide-react";
 import { DesktopMenuItem } from "@/components/menus/desktop-menu-item";
 import { Menu } from "@/models/menu-models";
-
 const projectOverviewMenuItems: Menu[] = [
   {
     id: "environments",
@@ -33,7 +32,6 @@ const projectOverviewMenuItems: Menu[] = [
     icon: Settings,
   },
 ];
-
 export const ProjectOverviewSidebarDesktop = () => {
   return (
     <aside className="sticky top-0 hidden h-full w-60 shrink-0 border-r bg-background md:block">

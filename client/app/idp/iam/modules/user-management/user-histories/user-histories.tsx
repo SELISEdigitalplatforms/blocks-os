@@ -1,16 +1,12 @@
-
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { useGetHistories } from "@blocks-idp/iam/hooks/use-activity";
 import { UserHistoryList } from "./user-history-list";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-
 type HistoriesProps = {
   id: string;
   projectKey: string;
 };
-
 export const UserHistories = ({ id, projectKey }: HistoriesProps) => {
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, filter: { UserId: id } });
   const { isLoading, isFetching, data } = useGetHistories({

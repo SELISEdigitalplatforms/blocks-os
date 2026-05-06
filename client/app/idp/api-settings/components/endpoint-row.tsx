@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { Lock } from "lucide-react";
 import { MethodBadge } from "./method-badge";
 import { IApiEndpoint } from "../models/api-endpoint.model";
-
 type EndpointRowProps = {
   endpoint: IApiEndpoint;
   isSelected: boolean;
@@ -12,7 +11,6 @@ type EndpointRowProps = {
   onToggleMfa: (endpoint: IApiEndpoint, value: boolean) => void;
   onToggleCaptcha: (endpoint: IApiEndpoint, value: boolean) => void;
 };
-
 export const EndpointRow = ({
   endpoint,
   isSelected,
@@ -21,10 +19,8 @@ export const EndpointRow = ({
   onToggleCaptcha,
 }: EndpointRowProps) => {
   const isCritical = (endpoint.method ?? "").toUpperCase() === "DELETE";
-
   return (
     <div className="group flex flex-col gap-2.5 rounded-lg border border-border bg-background px-3 py-3 transition-colors hover:bg-accent/20 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-      {/* Left: checkbox + method badge + path + description */}
       <div className="flex min-w-0 flex-1 items-start gap-2.5">
         <Checkbox
           checked={isSelected}
@@ -53,8 +49,6 @@ export const EndpointRow = ({
           )}
         </div>
       </div>
-
-      {/* Right: MFA + Captcha toggles */}
       <div className="flex shrink-0 items-center gap-3 pl-[52px] sm:gap-4 sm:pl-0">
         <div className="flex items-center gap-1.5">
           <Switch
@@ -69,9 +63,7 @@ export const EndpointRow = ({
             } />
           </span>
         </div>
-
         <div className="h-3.5 w-px bg-border" />
-
         <div className="flex items-center gap-1.5">
           <Switch
             size="sm"

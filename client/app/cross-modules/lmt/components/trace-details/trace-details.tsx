@@ -6,7 +6,6 @@ import { ArrowLeft, Download, PanelRightClose, PanelRightOpen } from "lucide-rea
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import useIsMobile from "@/hooks/use-is-mobile";
-
 import { useProjectStore } from "@/store/useProjectStore";
 import { useGetTraceById } from "@blocks-lmt/hooks/use-trace";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -15,7 +14,6 @@ import { TracingInsights } from "./tracing-insights/tracing-insights";
 import { TracingDistributedTimeline } from "./tracing-distributed-timeline/tracing-distributed-timeline";
 import { ActivityLogs } from "./activity-logs/activity-logs";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
-
 export const timelineContext = createContext<{
   traceHistory: {
     rootId: string;
@@ -43,7 +41,6 @@ export const timelineContext = createContext<{
   isPanelOpen: true,
   isLoading: false,
 });
-
 export const TraceDetails = ({ id }: { id: string }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -56,11 +53,8 @@ export const TraceDetails = ({ id }: { id: string }) => {
       root: TraceTree;
     }[]
   >([]);
-
   const { isLoading, isFetching, data } = useGetTraceById({ traceId: id, projectKey: tenantId });
-
   const [selectedTrace, setSelectedTrace] = useState<TraceTree | null>(null);
-
   useEffect(() => {
     if (data?.data) {
       const trace = data.data;
@@ -74,27 +68,20 @@ export const TraceDetails = ({ id }: { id: string }) => {
       setSelectedTrace(trace);
     }
   }, [data?.data]);
-
   const downloadJSONFile = () => {
     if (!data?.data) return;
-
     const jsonString = JSON.stringify(data.data, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `tracing-details-${data.data.traceId}.json`;
-
     document.body.appendChild(link);
     link.click();
-
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
   };
-
   BREADCRUMB_CUSTOM_TITLES["/tracing/timeline"] = "Tracing";
-
   const selectedTraceHistory = traceHistory[traceHistory?.length - 1];
-
   return (
     <timelineContext.Provider
       value={{
@@ -151,7 +138,6 @@ export const TraceDetails = ({ id }: { id: string }) => {
                 <CardTitle className="text-xl">
                   {isLoading || isFetching ? <Skeleton className="h-6 w-28" /> : "Timeline"}
                 </CardTitle>
-
                 {isLoading || isFetching ? (
                   <Skeleton className="h-6 w-64" />
                 ) : (
@@ -173,7 +159,6 @@ export const TraceDetails = ({ id }: { id: string }) => {
                   </div>
                 )}
               </div>
-
               <div></div>
               <TracingListBreadCrumb />
             </CardHeader>
@@ -215,5 +200,4 @@ export const TraceDetails = ({ id }: { id: string }) => {
     </timelineContext.Provider>
   );
 };
-
 export default TraceDetails;

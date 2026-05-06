@@ -3,7 +3,6 @@ import { useContext } from "react";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { timelineContext } from "../trace-details";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
-
 const LoadingSkelton = () => {
   return (
     <div className="flex flex-col gap-1">
@@ -14,7 +13,6 @@ const LoadingSkelton = () => {
     </div>
   );
 };
-
 const ActivityLogsContent = ({ trace }: { trace: TraceTree }) => {
   const { setSelectedTrace, selectedTrace } = useContext(timelineContext);
   const isSelected = trace.spanId === selectedTrace?.spanId;
@@ -44,13 +42,10 @@ const ActivityLogsContent = ({ trace }: { trace: TraceTree }) => {
     </>
   );
 };
-
 export const ActivityLogs = () => {
   const { traceHistory, isLoading } = useContext(timelineContext);
-
   if (isLoading) return <LoadingSkelton />;
   if (!traceHistory.length) return <LoadingSkelton />;
   const trace = traceHistory[traceHistory?.length - 1].current;
-
   return <ActivityLogsContent trace={trace} />;
 };

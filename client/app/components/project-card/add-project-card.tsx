@@ -1,10 +1,8 @@
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-
 export const AddProjectCard = () => {
   const navigate = useNavigate();
-
   return (
     <Card
       onClick={() => navigate("/create-project")}

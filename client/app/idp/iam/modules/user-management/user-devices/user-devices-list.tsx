@@ -12,12 +12,10 @@ import { IDeviceSession } from "@blocks-idp/iam/models/user";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { formatDistanceToNow } from "date-fns";
 import { useMemo } from "react";
-
 type DeviceListProps = {
   isLoading: boolean;
   data: IDeviceSession[];
 };
-
 const LoadingSkelton = () => (
   <div className="grid gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
@@ -25,7 +23,6 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const UserDevicesList = ({ isLoading, data }: DeviceListProps) => {
   const columns: ColumnDef<IDeviceSession>[] = useMemo(
     () => [
@@ -97,15 +94,12 @@ export const UserDevicesList = ({ isLoading, data }: DeviceListProps) => {
     ],
     [],
   );
-
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <>
       <Table className="text-sm">

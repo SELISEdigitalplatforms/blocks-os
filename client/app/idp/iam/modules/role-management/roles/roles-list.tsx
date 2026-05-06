@@ -17,12 +17,10 @@ import { useNavigate } from "react-router-dom";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { FilterControls, SortValue } from "@/components/filter-toolbar";
 import { useRolesSortQueryParams } from "./roles-filter-toolbar";
-
 type RolesTableProps = {
   roles: IRole[];
   isLoading: boolean;
 };
-
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -30,19 +28,16 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
   const { sortQueryParams, setSortQueryParams } = useRolesSortQueryParams();
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
   const navigate = useNavigate();
-
   const sortHandler = useCallback(
     (value: SortValue) => {
       setSortQueryParams(value);
     },
     [setSortQueryParams],
   );
-
   const columns = useMemo<ColumnDef<IRole>[]>(
     () => [
       {
@@ -124,19 +119,15 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
     ],
     [sortHandler, sortQueryParams],
   );
-
   const table = useReactTable({
     data: roles,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   const onRowClickHandler = (itemId: number | string) => {
     navigate(`/services/iam/role-detail/${itemId}`);
   };
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <>
       <Table>

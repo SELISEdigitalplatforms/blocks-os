@@ -4,17 +4,14 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useDeleteModel } from "@blocks-ai/hooks/use-aimodel";
-
 type DeleteModelProps = {
   modelId: string;
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-
 export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync } = useDeleteModel();
-
   const confirmHandler = async () => {
     try {
       if (!modelId) {
@@ -34,7 +31,6 @@ export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) =
       return showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={(value) => { if (!value) onOpenChange(false); }}>
       <ConfirmationModal

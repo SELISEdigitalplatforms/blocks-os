@@ -8,16 +8,13 @@ import {
   useOrganizationUsersFilterQueryParams,
   useOrganizationUsersSortQueryParams,
 } from "./organization-users-filter-toolbar";
-
 interface OrganizationUsersProps {
   organizationId: string;
 }
-
 export const OrganizationUsers = ({ organizationId }: OrganizationUsersProps) => {
   const { queryParams, setQueryParams } = useOrganizationUsersFilterQueryParams();
   const { sortQueryParams } = useOrganizationUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const { isLoading, isFetching, data } = useGetUsers({
     page: queryParams.page,
     pageSize: queryParams.pageSize,
@@ -29,19 +26,15 @@ export const OrganizationUsers = ({ organizationId }: OrganizationUsersProps) =>
     },
     sort: sortQueryParams,
   });
-
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
-
   const isUserLoading = isLoading || isFetching;
-
   return (
     <Card>
       <CardHeader>
         <OrganizationUsersFilterToolbar />
       </CardHeader>
-
       <CardContent>
         <OrganizationUsersTable users={data?.data || []} isLoading={isUserLoading} />
         {!isUserLoading && data && data.totalCount > queryParams.pageSize && (

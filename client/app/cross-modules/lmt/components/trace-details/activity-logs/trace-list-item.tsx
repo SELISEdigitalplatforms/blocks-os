@@ -2,9 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { useContext } from "react";
 import { timelineContext } from "../trace-details";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
-
 type TraceListItemProps = { trace: TraceTree };
-
 export const TraceListItem = ({ trace }: TraceListItemProps) => {
   const { setTraceHistory, setSelectedTrace, selectedTrace } = useContext(timelineContext);
   const setTraceHistoryHandler = () => {

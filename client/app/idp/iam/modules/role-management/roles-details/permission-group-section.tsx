@@ -6,37 +6,31 @@ import { useMemo } from "react";
 import { PermissionSelectionRow } from "./permission-selection-row";
 import { isChecked } from "./permission-selection-utils";
 import { PermissionGroup, useRoleDetailsStore } from "./role-details-state";
-
 type PermissionGroupSectionProps = {
   group: PermissionGroup;
   onTrigger: () => void;
 };
-
 export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSectionProps) => {
   const changePermissionGroupSelection = useRoleDetailsStore(
     (state) => state.changePermissionGroupSelection,
   );
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
-
   const checkedPermissions = useMemo(() => {
     return group.permissions.filter((perm) => isChecked(perm.resource, permissionMap));
   }, [group.permissions, permissionMap]);
-
   const isAllDependencyPermissionsChecked = useMemo(() => {
     return checkedPermissions.every((perm) => {
       if (!perm.dependentPermissions || perm.dependentPermissions.length === 0) return true;
       return perm.dependentPermissions.every((dp) => isChecked(dp, permissionMap));
     });
   }, [checkedPermissions, permissionMap]);
-
   const checked =
     checkedPermissions.length === group.permissions.length
       ? true
       : checkedPermissions.length === 0
         ? false
         : "indeterminate";
-
   return (
     <AccordionItem
       value={group.name}
@@ -82,7 +76,6 @@ export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSect
               </span>
             </div>
           </div>
-
           <span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-medium uppercase text-foreground">
             {checkedPermissions.length} selected
           </span>

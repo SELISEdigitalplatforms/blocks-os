@@ -1,5 +1,3 @@
-
-
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
@@ -15,7 +13,6 @@ import {
   useTemplatesFilterQueryParams,
   useTemplatesSortQueryParams,
 } from "./template-filter-toolbar";
-
 const LoadingSkelton = () => {
   return (
     <div className="grid gap-2">
@@ -25,11 +22,9 @@ const LoadingSkelton = () => {
     </div>
   );
 };
-
 interface EmailServiceTableProps {
   onRowClick?: (id: string | number) => void;
 }
-
 export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
   const { queryParams, setQueryParams } = useTemplatesFilterQueryParams();
   const { sortQueryParams } = useTemplatesSortQueryParams();
@@ -45,14 +40,12 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
   const { isLoading: isConfigsLoading, data: emailConfigsData } = useGetEmailConfigs(0, 100);
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const navigate = useNavigate();
-
   const onPageChangeHandler = (pageNumber: number) => {
     setQueryParams((prev) => ({
       ...prev,
       pageNumber,
     }));
   };
-
   const handleRowClick = (emailId: number | string) => {
     if (onRowClick) {
       onRowClick(emailId);
@@ -60,12 +53,10 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
       navigate(`/utilities/email/communications/${emailId}`);
     }
   };
-
   const tableData = useMemo(() => {
     if (!data?.templates) return [];
     return data.templates;
   }, [data]);
-
   return (
     <main className="flex flex-col">
       <Card className="rounded shadow-none">

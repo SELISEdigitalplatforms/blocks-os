@@ -14,27 +14,22 @@ import { PERMISSION_SEVERITY_OPTIONS, ResourceType } from "@blocks-idp/iam/model
 import { useMemo } from "react";
 import { PermissionDialogProps } from "./permission-selection-utils";
 import { useRoleDetailsStore } from "./role-details-state";
-
 export const AffectedPermissionsDialog = ({ permission, onOpenChange, open }: PermissionDialogProps) => {
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
   const title = `Review Permission Changes`;
   const description = `The following permissions depend on this permission. Changing it may impact their functionality. Please review carefully`;
-
   const permissionSeverity = useMemo(() => {
     return PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === permission.permissionSeverity);
   }, [permission.permissionSeverity]);
-
   const onSaveClick = () => {
     changePermissionSelection([{ permissionResource: permission.resource, isChecked: false }]);
     onOpenChange(false);
   };
-
   const parentPermissions = useMemo(
     () => permission.parents.map((parent) => permissionMap.get(parent)) || [],
     [permission.parents, permissionMap]
   );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent aria-describedby={undefined}>

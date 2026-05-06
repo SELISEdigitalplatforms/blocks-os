@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
-
 interface SearchInputProps {
   // eslint-disable-next-line no-unused-vars
   onSearch: (value: string) => void;
@@ -14,7 +13,6 @@ interface SearchInputProps {
   // eslint-disable-next-line no-unused-vars
   setIsVisible: (isVisible: boolean) => void;
 }
-
 export const SearchInput: React.FC<SearchInputProps> = ({
   onSearch,
   placeholder = "Search...",
@@ -25,19 +23,15 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   setIsVisible,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (isVisible && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isVisible]);
-
   const toggleSearch = () => setIsVisible(!isVisible);
-
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);
   };
-
   const handleClear = () => {
     onSearch("");
     if (toggleable) {
@@ -46,7 +40,6 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       inputRef.current.focus();
     }
   };
-
   if (toggleable && !isVisible) {
     return (
       <Button variant="ghost" size="sm" className="p-0 px-2" onClick={toggleSearch}>
@@ -54,7 +47,6 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       </Button>
     );
   }
-
   return (
     <div className="relative">
       <Input

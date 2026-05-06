@@ -20,19 +20,15 @@ import { isErrorWithErrors } from "@/lib/error";
 import { useOIDCContext } from "@/layouts/oidc-layout";
 import { buildOIDCNavigationUrl } from "@blocks-idp/authentication/utils/oidc-utils";
 import { accountRecover } from "@blocks-idp/authentication/services/oidc-auth-flow.service";
-
 export const OidcForgotPasswordForm = () => {
   const { themeColor, projectKey } = useOIDCContext();
   const [isPending, setIsPending] = useState(false);
-
   const navigate = useNavigate();
   const form = useForm({
     defaultValues: forgotPasswordFormDefaultValue,
     resolver: zodResolver(forgotPasswordFormSchema),
   });
-
   const { isValid } = form.formState;
-
   const onSubmitHandler = async (values: z.infer<typeof forgotPasswordFormSchema>) => {
     try {
       if (!projectKey) return;
@@ -54,7 +50,6 @@ export const OidcForgotPasswordForm = () => {
       setIsPending(false);
     }
   };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)}>
@@ -72,7 +67,6 @@ export const OidcForgotPasswordForm = () => {
               </FormItem>
             )}
           />
-
           <Button
             type="submit"
             className="w-full rounded"

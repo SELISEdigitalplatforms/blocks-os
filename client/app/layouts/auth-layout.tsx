@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { PublicGuard } from "@/guards/public-guard";
 import { Logo } from "@/components/logo";
 import { BlockInfo } from "@blocks-idp/authentication/components/auth-layout/blocks-info";
-
 export function AuthLayout() {
   return (
     <Suspense>

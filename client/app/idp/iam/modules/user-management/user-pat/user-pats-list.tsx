@@ -18,13 +18,11 @@ import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/cop
 import useIsMobile from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-
 type PATListProps = {
   isLoading: boolean;
   data: IPATResponse[];
   id: string;
 };
-
 const LoadingSkelton = () => (
   <div className="grid gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
@@ -32,10 +30,8 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
   const isMobile = useIsMobile();
-
   const columns: ColumnDef<IPATResponse>[] = useMemo(
     () => [
       {
@@ -137,16 +133,13 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
     ],
     [isMobile],
   );
-
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <>
       <div className="mb-5 flex items-center justify-between text-lg font-bold text-high-emphasis">
@@ -155,7 +148,6 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
           Generate PAT
         </Button>
       </div>
-
       <Table className="text-sm">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -197,7 +189,6 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
           )}
         </TableBody>
       </Table>
-
       <GenerateTokenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} id={id} />
     </>
   );

@@ -1,5 +1,3 @@
-
-
 import { Button } from "@/components/ui-kits/button/button";
 import {
   DialogClose,
@@ -27,25 +25,20 @@ import { useEffect } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 import { updateOrganizationFormSchema } from "./utils";
-
 type UpdateOrganizationProps = {
   organization: IOrganization;
   isOpen: boolean;
 };
-
 export const UpdateOrganization = ({ organization, isOpen }: UpdateOrganizationProps) => {
   const { mutateAsync, isPending } = useSaveOrganization();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const form = useForm({
     defaultValues: { name: organization.name },
     resolver: zodResolver(updateOrganizationFormSchema),
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const onSubmit: SubmitHandler<z.infer<typeof updateOrganizationFormSchema>> = async (data) => {
     try {
       const res = await mutateAsync({
@@ -65,13 +58,11 @@ export const UpdateOrganization = ({ organization, isOpen }: UpdateOrganizationP
       }
     }
   };
-
   useEffect(() => {
     if (!isOpen) {
       form.reset({ name: organization.name });
     }
   }, [isOpen, organization.name, form]);
-
   return (
     <DialogContent>
       <DialogHeader className="mb-4">

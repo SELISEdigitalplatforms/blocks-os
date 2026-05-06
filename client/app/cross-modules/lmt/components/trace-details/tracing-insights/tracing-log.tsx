@@ -13,7 +13,6 @@ import { timelineContext } from "../trace-details";
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
 import { ILog } from "@blocks-lmt/models/log.model";
 import { FilterControls } from "@/components/filter-toolbar";
-
 const LoadingSkelton = () => (
   <>
     {Array.from({ length: 10 }).map((_, index) => (
@@ -25,7 +24,6 @@ const LoadingSkelton = () => (
     ))}
   </>
 );
-
 const columns: ColumnDef<ILog>[] = [
   {
     id: "Trace",
@@ -52,7 +50,6 @@ const columns: ColumnDef<ILog>[] = [
     },
   },
 ];
-
 export const TracingLog = () => {
   const { traceHistory } = useContext(timelineContext);
   const {
@@ -60,7 +57,6 @@ export const TracingLog = () => {
   } = traceHistory[traceHistory?.length - 1];
   const [search, setSearch] = useState<string>("");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const { isLoading, isFetching, data } = useGetLogs({
     page: 0,
     pageSize: 200,
@@ -71,24 +67,20 @@ export const TracingLog = () => {
       spanId: spanId,
     },
   });
-
   const logs = useMemo(() => {
     if (!data) return [];
     return data.data.filter((item: ILog) => item.message.toLowerCase().includes(search));
   }, [data, search]);
-
   const table = useReactTable({
     data: logs,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
   });
-
   if (isLoading || isFetching) return <LoadingSkelton />;
   if (data?.data.length == 0)
     return <div className="flex h-64 items-center justify-center border">No data</div>;
   if (!data) return null;
-
   return (
     <div>
       <FilterControls.SearchInput

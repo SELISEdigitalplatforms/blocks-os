@@ -11,14 +11,12 @@ import {
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useDisableMfa } from "@blocks-idp/mfa/hooks/use-mfa-config";
-
 type UserDisableMFAProps = {
   projectKey: string;
   userId: string;
   open: boolean;
   setOpen: (open: boolean) => void;
 };
-
 export const UserDisableMFA = ({ userId, projectKey, open, setOpen }: UserDisableMFAProps) => {
   const { isPending, mutateAsync } = useDisableMfa({ id: userId, projectKey });
   const onClickHandler = async () => {
@@ -36,7 +34,6 @@ export const UserDisableMFA = ({ userId, projectKey, open, setOpen }: UserDisabl
       }
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>

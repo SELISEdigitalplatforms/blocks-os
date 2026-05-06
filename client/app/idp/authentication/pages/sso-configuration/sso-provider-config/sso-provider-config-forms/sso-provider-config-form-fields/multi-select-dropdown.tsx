@@ -12,7 +12,6 @@ import {
 } from "@/components/ui-kits/command/command";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 type MultiSelectDropdownProps = {
   disabled?: boolean;
   options: { label: string; value: string }[];
@@ -20,7 +19,6 @@ type MultiSelectDropdownProps = {
   value: string[];
   onChange: (values: string[]) => void;
 };
-
 export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   disabled,
   options,
@@ -29,12 +27,10 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   onChange,
 }) => {
   const [open, setOpen] = useState(false);
-
   const selectedLabels = useMemo(
     () => options.filter((option) => value.includes(option.value)).map((option) => option.label),
     [options, value],
   );
-
   const handleToggle = (optionValue: string) => {
     const isSelected = value.includes(optionValue);
     const next = isSelected
@@ -43,14 +39,11 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
     const ordered = options.map((option) => option.value).filter((option) => next.includes(option));
     onChange(ordered);
   };
-
   const handleClear = () => {
     onChange([]);
   };
-
   const displayText = selectedLabels.join(", ");
   const fallbackPlaceholder = placeholder || "Select options";
-
   return (
     <Popover open={open} onOpenChange={(nextOpen) => !disabled && setOpen(nextOpen)}>
       <PopoverTrigger asChild>
@@ -82,7 +75,6 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = value.includes(option.value);
-
                 return (
                   <CommandItem
                     key={option.value}

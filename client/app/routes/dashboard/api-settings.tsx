@@ -12,7 +12,6 @@ import {
   useBulkUpdateApiEndpoints,
 } from "@blocks-idp/api-settings/hooks/use-api-settings";
 import { IApiEndpoint } from "@blocks-idp/api-settings/models/api-endpoint.model";
-
 /** ─── Loading skeleton ──────────────────────────────────────────────────────── */
 const ServiceGroupSkeleton = () => (
   <div className="rounded-lg border border-border bg-card p-4">
@@ -28,18 +27,14 @@ const ServiceGroupSkeleton = () => (
     </div>
   </div>
 );
-
 /** ─── Page component ────────────────────────────────────────────────────────── */
 export default function ApiSettingsPage() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading } = useGetApiEndpoints({ projectKey: tenantId, page: 0, pageSize: 100 });
   const { mutateAsync: updateEndpoint } = useUpdateApiEndpoint();
   const { mutateAsync: bulkUpdate } = useBulkUpdateApiEndpoints();
-
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
   const endpoints = data?.data ?? [];
-
   // Group endpoints: service → controller (nested)
   const serviceGroups = useMemo(() => {
     const byService: Record<string, Record<string, IApiEndpoint[]>> = {};
@@ -72,7 +67,6 @@ export default function ApiSettingsPage() {
                 const aMethod = methodOrder[aMethodKey] ?? 999;
                 const bMethod = methodOrder[bMethodKey] ?? 999;
                 if (aMethod !== bMethod) return aMethod - bMethod;
-
                 // Sort by controller for stable sorting
                 const aPath = a.controller || a.method || "";
                 const bPath = b.controller || b.method || "";
@@ -82,7 +76,6 @@ export default function ApiSettingsPage() {
         };
       });
   }, [endpoints]);
-
   // ── Selection handlers ──────────────────────────────────────────────────────
   const handleSelectEndpoint = useCallback((id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -91,7 +84,6 @@ export default function ApiSettingsPage() {
       return next;
     });
   }, []);
-
   const handleSelectGroup = useCallback((ids: string[], checked: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -99,9 +91,7 @@ export default function ApiSettingsPage() {
       return next;
     });
   }, []);
-
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-
   // ── Toggle handlers ────────────────────────────────────────────────────────
   const handleToggleMfa = useCallback(
     async (ep: IApiEndpoint, value: boolean) => {
@@ -128,7 +118,6 @@ export default function ApiSettingsPage() {
     },
     [tenantId, updateEndpoint],
   );
-
   const handleToggleCaptcha = useCallback(
     async (ep: IApiEndpoint, value: boolean) => {
       try {
@@ -154,7 +143,6 @@ export default function ApiSettingsPage() {
     },
     [tenantId, updateEndpoint],
   );
-
   // ── Bulk handlers (group presets) ─────────────────────────────────────────
   const handleBulkGroupMfa = useCallback(
     async (ids: string[], value: boolean) => {
@@ -169,7 +157,6 @@ export default function ApiSettingsPage() {
                 ? false // default to false if mixed states
                 : false
             : false;
-
         const result = await bulkUpdate({
           projectKey: tenantId,
           itemIds: ids,
@@ -187,7 +174,6 @@ export default function ApiSettingsPage() {
     },
     [tenantId, endpoints, bulkUpdate],
   );
-
   const handleBulkGroupCaptcha = useCallback(
     async (ids: string[], value: boolean) => {
       try {
@@ -201,7 +187,6 @@ export default function ApiSettingsPage() {
                 ? false // default to false if mixed states
                 : false
             : false;
-
         const result = await bulkUpdate({
           projectKey: tenantId,
           itemIds: ids,
@@ -219,7 +204,6 @@ export default function ApiSettingsPage() {
     },
     [tenantId, endpoints, bulkUpdate],
   );
-
   const handleBulkGroupDisableAll = useCallback(
     async (ids: string[]) => {
       try {
@@ -234,10 +218,8 @@ export default function ApiSettingsPage() {
     },
     [tenantId, bulkUpdate],
   );
-
   // ── Bulk bar actions ───────────────────────────────────────────────────────
   const selectedArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
-
   const handleBulkMfa = useCallback(async () => {
     try {
       // Preserve current Captcha state when enabling MFA
@@ -250,7 +232,6 @@ export default function ApiSettingsPage() {
               ? false // default to false if mixed states
               : false
           : false;
-
       const result = await bulkUpdate({
         projectKey: tenantId,
         itemIds: selectedArray,
@@ -267,7 +248,6 @@ export default function ApiSettingsPage() {
       showErrorToast({ errors: error instanceof Error ? error.message : "Failed to enable MFA" });
     }
   }, [tenantId, endpoints, selectedArray, bulkUpdate, clearSelection]);
-
   const handleBulkCaptcha = useCallback(async () => {
     try {
       // Preserve current MFA state when enabling Captcha
@@ -280,7 +260,6 @@ export default function ApiSettingsPage() {
               ? false // default to false if mixed states
               : false
           : false;
-
       const result = await bulkUpdate({
         projectKey: tenantId,
         itemIds: selectedArray,
@@ -297,18 +276,14 @@ export default function ApiSettingsPage() {
       showErrorToast({ errors: error instanceof Error ? error.message : "Failed to enable Captcha" });
     }
   }, [tenantId, endpoints, selectedArray, bulkUpdate, clearSelection]);
-
   return (
     <main className="flex flex-col gap-6 p-6 pb-24">
-      {/* Header */}
       <div>
         <h1 className="text-xl font-semibold md:text-2xl">API Settings</h1>
         <p className="text-muted-foreground">
           Configure security policies for your API endpoints — enable MFA, Captcha, and manage access controls.
         </p>
       </div>
-
-      {/* Service groups */}
       {isLoading ? (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -323,7 +298,6 @@ export default function ApiSettingsPage() {
         <div className="flex flex-col gap-8">
           {serviceGroups.map(({ service, swaggerJsonUrl, swaggerUiUrl, controllers }) => (
             <div key={service} className="flex flex-col gap-3">
-              {/* Service section header */}
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <h2 className="text-lg font-bold capitalize">{service}</h2>
@@ -348,7 +322,6 @@ export default function ApiSettingsPage() {
                   <span>API Docs</span>
                 </Button>
               </div>
-              {/* Controller cards */}
               <div className="flex flex-col gap-3">
                 {controllers.map(([controller, eps]) => (
                   <ServiceGroupCard
@@ -369,8 +342,6 @@ export default function ApiSettingsPage() {
           ))}
         </div>
       )}
-
-      {/* Bulk action bar */}
       <BulkActionBar
         selectedCount={selectedIds.size}
         onEnableMfa={handleBulkMfa}

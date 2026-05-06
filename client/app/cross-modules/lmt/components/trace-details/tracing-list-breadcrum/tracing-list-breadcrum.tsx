@@ -8,11 +8,9 @@ import {
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Fragment, useContext } from "react";
 import { timelineContext } from "../trace-details";
-
 const LoadingSkelton = () => {
   return <Skeleton className="h-7 w-1/2" />;
 };
-
 export const TracingListBreadCrumb = () => {
   const {
     traceHistory: history,
@@ -20,13 +18,11 @@ export const TracingListBreadCrumb = () => {
     setSelectedTrace,
     isLoading,
   } = useContext(timelineContext);
-
   const onChange = (index: number) => {
     const sliced = history?.slice(0, index + 1);
     setTraceHistory(sliced);
     setSelectedTrace(() => sliced[sliced.length - 1].current);
   };
-
   if (isLoading) return <LoadingSkelton />;
   if (!history) return <LoadingSkelton />;
   return (

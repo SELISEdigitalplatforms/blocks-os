@@ -1,5 +1,3 @@
-
-
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import { 
@@ -16,24 +14,19 @@ import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Wrench } from "lucide-react";
 import { useGetSignUpSetting, useSaveSignUpSetting } from "@blocks-idp/iam/hooks/use-user";
 import { useProjectStore } from "@/store/useProjectStore";
-
 export const SignupSettings = () => {
   const [open, setOpen] = useState(false);
   const [allowSignup, setAllowSignup] = useState(false);
   const [emailPassword, setEmailPassword] = useState(false);
   const [sso, setSso] = useState(false);
   const initializedRef = useRef(false);
-
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const { data: signUpSettingData } = useGetSignUpSetting({
     projectKey: tenantId
   }, {
     enabled: !!tenantId,
   });
-
   const { mutateAsync: saveSignUpSetting, isPending } = useSaveSignUpSetting();
-
   useEffect(() => {
     if (signUpSettingData && !initializedRef.current) {
       initializedRef.current = true;
@@ -44,7 +37,6 @@ export const SignupSettings = () => {
       setAllowSignup(ep || ssoEnabled);
     }
   }, [signUpSettingData]);
-
   const handleAllowSignupChange = (checked: boolean) => {
     setAllowSignup(checked);
     if (!checked) {
@@ -52,9 +44,7 @@ export const SignupSettings = () => {
       setSso(false);
     }
   };
-
   const isSaveDisabled = isPending || (allowSignup && !emailPassword && !sso);
-
   const submitHandler = async () => {
     await saveSignUpSetting({
       isEmailPasswordSignUpEnabled: allowSignup && emailPassword,
@@ -64,7 +54,6 @@ export const SignupSettings = () => {
     });
     setOpen(false);
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -80,7 +69,6 @@ export const SignupSettings = () => {
             Configure signup settings for users.
           </DialogDescription>
         </DialogHeader>
-
         <div className="flex flex-col gap-4 py-4">
           <div className="flex items-center space-x-2">
             <Checkbox 
@@ -95,8 +83,6 @@ export const SignupSettings = () => {
               Allow signup
             </label>
           </div>
-          
-          
             <div className="ml-6 flex flex-col gap-3">
               <div className="flex items-center space-x-2">
                 <Checkbox 
@@ -131,9 +117,7 @@ export const SignupSettings = () => {
                 </label>
               </div>
             </div>
-          
         </div>
-
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>

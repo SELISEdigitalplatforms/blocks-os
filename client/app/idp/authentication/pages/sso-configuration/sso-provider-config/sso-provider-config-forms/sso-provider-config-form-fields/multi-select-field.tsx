@@ -3,15 +3,12 @@ import { FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { SSOProviderConfigFormFieldType } from "../../sso-provider-config.type";
 import { MultiSelectDropdown } from "./multi-select-dropdown";
-
 type MultiSelectFieldProps = {
   item: Extract<SSOProviderConfigFormFieldType, { type: "multi-select" }>;
   field: ControllerRenderProps<FieldValues>;
 };
-
 export const MultiSelectField: React.FC<MultiSelectFieldProps> = ({ item, field }) => {
   const selectedValues = Array.isArray(field.value) ? field.value : [];
-
   return (
     <FormItem>
       <FormLabel>{item.label}</FormLabel>

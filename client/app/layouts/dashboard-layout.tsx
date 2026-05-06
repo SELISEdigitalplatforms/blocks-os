@@ -3,7 +3,6 @@ import { DashboardLayoutProvider } from "@/contexts/dashboard-layout-provider";
 import { ProtectedGuard } from "@/guards/protected-guard";
 import { SidebarMenuDesktop } from "@/layouts/sidebar-menu-desktop/sidebar-menu-desktop";
 import { DashboardHeader } from "@/layouts/dashboard-header/dashboard-header";
-
 export function DashboardLayout() {
 	return (
 		<ProtectedGuard>
