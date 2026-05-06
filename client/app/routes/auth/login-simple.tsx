@@ -1,134 +1,242 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui-kits/button/button";
 import { Logo } from "@/components/logo";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import {
-  ShieldCheck,
-  Users,
+  BarChart3,
+  Bot,
+  ChevronLeft,
+  ChevronRight,
+  Cloud,
+  Code2,
+  Database,
+  ExternalLink,
   KeyRound,
-  Puzzle,
-  BookOpenText,
-  BrainCircuit,
-  Activity,
-  ArrowRight,
   MoveRight,
-  Github,
+  ScrollText,
+  Settings2,
+  ShieldCheck,
+  Sliders,
+  type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 
 const pillars = [
-  { icon: ShieldCheck, label: "Identity & MFA", desc: "Passkeys, OAuth 2.0, OIDC" },
-  { icon: Users, label: "User Management", desc: "Roles, teams & access control" },
-  { icon: BrainCircuit, label: "AI Agents", desc: "Embedded intelligence" },
-  { icon: Activity, label: "Observability", desc: "Logs, metrics & tracing" },
-  { icon: KeyRound, label: "Secrets & Auth", desc: "Secure credential vaults" },
-  { icon: Puzzle, label: "Modular SDKs", desc: "Plug-in what you need" },
+  { icon: ShieldCheck, label: "Authentication" },
+  { icon: KeyRound, label: "Secrets Management" },
+  { icon: Sliders, label: "Configuration" },
+  { icon: Settings2, label: "API Console" },
+  { icon: BarChart3, label: "Usage" },
+  { icon: ScrollText, label: "Logs & Tracing" },
 ];
 
-const ResourcesPanel = () => {
-  const constructUrl = getRuntimeEnv("BLOCKS_CONSTRUCT_URL") || "https://construct.seliseblocks.com";
+interface Service {
+  icon: LucideIcon;
+  badge: string;
+  title: string;
+  description: string;
+  features: string[];
+  url: string;
+  cta: string;
+  gradient: string;
+}
 
-  const sdks = [
-    {
-      icon: "/assets/images/react-icon.png",
-      name: "React",
-      available: true,
-      links: [
-        { label: "npm", to: "https://www.npmjs.com/package/@seliseblocks/cli" },
-        { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct" },
-        { label: "Demo", to: constructUrl },
-      ],
+const services: Service[] = [
+  {
+    icon: Bot,
+    badge: "AI & Knowledge Bases",
+    title: "Blocks Agent Platform",
+    description:
+      "Integrate intelligent agents into any frontend with a single script. Enable advanced use cases with support for RAG pipelines, MCP, and custom LLM integrations.",
+    features: ["RAG Pipelines", "MCP Support", "Custom LLM", "Knowledge Bases"],
+    url: "https://dev-agent.blocksdevelopers.com",
+    cta: "Visit Agent Platform",
+    gradient: "from-violet-600 to-indigo-600",
+  },
+  {
+    icon: Cloud,
+    badge: "Deployments & CI/CD",
+    title: "Blocks Cloud Build",
+    description:
+      "Build, deploy, and scale your applications with automated CI/CD pipelines. Connect your GitHub repositories and go live in minutes.",
+    features: ["Auto CI/CD", "GitHub Integration", "Multi-env", "Build Logs"],
+    url: "https://dev-deployment.blocksdevelopers.com",
+    cta: "Visit Cloud Build",
+    gradient: "from-sky-500 to-cyan-500",
+  },
+  {
+    icon: Database,
+    badge: "Database Management",
+    title: "Blocks Data Service",
+    description:
+      "Provision and manage databases with automatic scaling, backups, and real-time monitoring. Full control without the operational overhead.",
+    features: ["Auto Backups", "Auto Scaling", "Query Console", "Monitoring"],
+    url: "https://dev-uds.blocksdevelopers.com",
+    cta: "Visit Data Service",
+    gradient: "from-emerald-600 to-teal-500",
+  },
+  {
+    icon: Code2,
+    badge: "Developer SDK & CLI",
+    title: "Blocks Construct",
+    description:
+      "Open-source SDKs and CLI tools for React, .NET and more. Scaffold and integrate Blocks services into your projects in minutes.",
+    features: ["React SDK", ".NET SDK", "CLI Tooling", "Starter Templates"],
+    url: "https://construct.seliseblocks.com",
+    cta: "Visit Construct",
+    gradient: "from-orange-500 to-rose-500",
+  },
+];
+
+const slideVariants = {
+  enter: (dir: number) => ({
+    x: dir > 0 ? 52 : -52,
+    opacity: 0,
+    filter: "blur(4px)",
+  }),
+  center: { x: 0, opacity: 1, filter: "blur(0px)" },
+  exit: (dir: number) => ({
+    x: dir > 0 ? -52 : 52,
+    opacity: 0,
+    filter: "blur(4px)",
+  }),
+};
+
+const ServiceCarousel = () => {
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const [paused, setPaused] = useState(false);
+
+  const goTo = useCallback(
+    (next: number) => {
+      setDirection(next > index ? 1 : -1);
+      setIndex(next);
     },
-    { icon: "/assets/images/angular-icon.png", name: "Angular", available: false, links: [] },
-    {
-      icon: "/assets/images/dotnet-icon.png",
-      name: ".NET",
-      available: true,
-      links: [
-        { label: "NuGet", to: "https://www.nuget.org/profiles/SELISE" },
-        { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct" },
-        { label: "PyPI", to: "https://pypi.org/project/seliseblocks-lmt/" },
-      ],
-    },
-    { icon: "/assets/images/ruby-icon.png", name: "Ruby", available: false, links: [] },
-  ];
+    [index],
+  );
+
+  const prev = useCallback(
+    () => goTo(index === 0 ? services.length - 1 : index - 1),
+    [goTo, index],
+  );
+
+  const next = useCallback(
+    () => goTo(index === services.length - 1 ? 0 : index + 1),
+    [goTo, index],
+  );
+
+  useEffect(() => {
+    if (paused) return;
+    const id = setTimeout(next, 5000);
+    return () => clearTimeout(id);
+  }, [index, paused, next]);
+
+  const service = services[index];
 
   return (
     <aside className="mt-8 w-full shrink-0 lg:mt-0 lg:w-[380px] xl:w-[420px]">
-      <div className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] shadow-md">
-        
-        <div className="relative overflow-hidden bg-primary px-6 py-6">
-          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5" />
-          <div className="absolute -bottom-6 -right-2 h-20 w-20 rounded-full bg-white/5" />
-          <p className="relative text-[10px] font-semibold uppercase tracking-[0.15em] text-primary-foreground/60">
-            Developer Resources
-          </p>
-          <h3 className="relative mt-1 text-xl font-bold text-primary-foreground">
-            Build with Blocks
-          </h3>
-          <p className="relative mt-1.5 text-sm text-primary-foreground/70">
-            Open-source SDKs and CLI tools to accelerate your integration.
-          </p>
-          <Link
-            to="https://docs.seliseblocks.com/"
-            target="_blank"
-            className="relative mt-4 inline-flex items-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25"
-          >
-            <BookOpenText className="h-3.5 w-3.5" />
-            Read the Docs
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-
-        
-        <div className="divide-y divide-[hsl(var(--border-default))]">
-          {sdks.map((sdk) => (
-            <div key={sdk.name} className="flex items-center justify-between px-6 py-3.5">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] shadow-sm ${!sdk.available ? "opacity-35" : ""}`}
-                >
-                  <img src={sdk.icon} width={18} height={18} alt={sdk.name} />
-                </div>
-                <span
-                  className={`text-sm font-medium ${sdk.available ? "text-[hsl(var(--high-emphasis))]" : "text-[hsl(var(--low-emphasis))]"}`}
-                >
-                  {sdk.name}
+      <div
+        className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] shadow-md"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
+        {/* Slide area — fixed height so AnimatePresence absolute children stack correctly */}
+        <div className="relative h-[390px]">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={index}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 flex flex-col"
+            >
+              {/* Gradient header */}
+              <div
+                className={`relative overflow-hidden bg-gradient-to-br ${service.gradient} px-6 py-6`}
+              >
+                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
+                <div className="absolute -bottom-6 right-4 h-20 w-20 rounded-full bg-white/10" />
+                <span className="relative inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/90">
+                  {service.badge}
                 </span>
+                <div className="relative mt-3 flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                    <service.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold leading-tight text-white">{service.title}</h3>
+                </div>
               </div>
-              {sdk.available ? (
-                <div className="flex items-center gap-2.5 text-xs">
-                  {sdk.links.map((link, i) => (
-                    <span key={link.label} className="flex items-center gap-2.5">
-                      {i > 0 && <span className="h-3 w-px bg-[hsl(var(--border-default))]" />}
-                      <Link to={link.to} target="_blank" className="font-medium text-primary hover:underline">
-                        {link.label}
-                      </Link>
+
+              {/* Body */}
+              <div className="flex flex-1 flex-col gap-4 px-6 py-5">
+                <p className="text-sm leading-relaxed text-[hsl(var(--medium-emphasis))]">
+                  {service.description}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {service.features.map((f) => (
+                    <span
+                      key={f}
+                      className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-app))] px-2.5 py-0.5 text-[11px] font-medium text-[hsl(var(--high-emphasis))]"
+                    >
+                      {f}
                     </span>
                   ))}
                 </div>
-              ) : (
-                <span className="rounded-full bg-[hsl(var(--neutral-50))] px-2.5 py-0.5 text-[11px] font-medium text-[hsl(var(--low-emphasis))]">
-                  Coming soon
-                </span>
-              )}
-            </div>
-          ))}
+                <div className="mt-auto pt-1">
+                  <Link
+                    to={service.url}
+                    target="_blank"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                  >
+                    {service.cta}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        
-        <div className="flex items-center justify-between bg-[hsl(var(--surface-app))] px-6 py-3.5">
-          <span className="text-xs text-[hsl(var(--medium-emphasis))]">Fully open source</span>
-          <Link
-            to="https://github.com/SELISEdigitalplatforms"
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--high-emphasis))] shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-          >
-            <Github className="h-4 w-4" />
-            View on GitHub
-          </Link>
+        {/* Navigation footer */}
+        <div className="flex items-center justify-between border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-app))] px-5 py-3">
+          {/* Dot / pill indicators */}
+          <div className="flex items-center gap-1.5">
+            {services.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`rounded-full transition-all duration-300 ${
+                  i === index
+                    ? "h-2 w-5 bg-primary"
+                    : "h-2 w-2 bg-[hsl(var(--border-default))] hover:bg-primary/40"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Prev / Next */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={prev}
+              aria-label="Previous service"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] shadow-sm transition-all hover:border-primary/40 hover:text-primary"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={next}
+              aria-label="Next service"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] shadow-sm transition-all hover:border-primary/40 hover:text-primary"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </aside>
@@ -245,7 +353,7 @@ export default function LoginSimplePage() {
           </div>
         </div>
 
-        <ResourcesPanel />
+        <ServiceCarousel />
       </main>
     </div>
   );
