@@ -54,6 +54,19 @@ export type SecretValueMap = {
 };
 
 export type AddSecretPayload<K extends SecretType = SecretType> = {
-  SecretType: K;
-  Value: SecretValueMap[K];
+  secretKey: K;
+  keyValuePairs: SecretValueMap[K];
 };
+
+export interface SaveSecretRequest {
+  secretKey: string;
+  keyValuePairs: Record<string, string>;
+}
+
+export interface SecretItem {
+  itemId: string;
+  secretKey: string;
+  keyValuePairs: Record<string, string>;
+  createdAt?: string;
+  updatedAt?: string;
+}
