@@ -1,18 +1,26 @@
 import { ReactNode, useState } from "react";
 import { useQueryState } from "nuqs";
-import { KeyRound, Pencil } from "lucide-react";
+import { KeyRound, Pencil, Power } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { MaskedText } from "@/components/masked-text";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { format } from "date-fns";
 import { getApiUrl } from "@/lib/get-api-path";
 import { useProjectStore } from "@/store/useProjectStore";
 import { CAPTCHA_PROVIDERS } from "@blocks-idp/captcha/models/captcha";
+import { AddSecretModal } from "../add-secret-modal/add-secret-modal";
 import { SecretType, SECRET_TYPE_OPTIONS, type SecretItem } from "../../constants/secret-key.enum";
-import { useGetSecrets } from "../../hooks/use-secrets";
+import { useGetSecrets, useSaveSecret } from "../../hooks/use-secrets";
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 const LoadingSkeleton = () => (
@@ -151,7 +159,7 @@ const OIDCSecretCard = ({ item }: { item: SecretItem }) => {
                 <span className="font-mono">{brandColor || "N/A"}</span>
               </div>
             </Item>
-            <div className="md:col-span-2\">
+            <div className="md:col-span-2">
               <Item label="Well Known URL">
                 <CopyToClipboardButton textToCopy={wellKnownUrl}>
                   <span className="break-all">{wellKnownUrl}</span>
@@ -162,12 +170,23 @@ const OIDCSecretCard = ({ item }: { item: SecretItem }) => {
         </div>
       </CardContent>
     </Card>
+    <AddSecretModal
+      mode="edit"
+      editItem={item}
+      defaultSecretType={SecretType.OIDC}
+      open={showEditModal}
+      onOpenChange={setShowEditModal}
+      hideTrigger
+    />
     </>
   );
 };
 
 // ─── Captcha Card ─────────────────────────────────────────────────────────────
 const CaptchaSecretCard = ({ item }: { item: SecretItem }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isTogglingEnable, setIsTogglingEnable] = useState(false);
+  const { mutate: saveSecret } = useSaveSecret();
   const pairs = item.keyValuePairs ?? {};
   const provider = kv(pairs, "provider") as keyof typeof CAPTCHA_PROVIDERS;
   const providerLabel = CAPTCHA_PROVIDERS[provider]?.label ?? provider;
@@ -176,32 +195,83 @@ const CaptchaSecretCard = ({ item }: { item: SecretItem }) => {
   const captchaSecret = kv(pairs, "captchaSecret");
   const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd/MM/yyyy HH:mm") : null;
 
+  const handleToggleEnable = () => {
+    setIsTogglingEnable(true);
+    saveSecret(
+      {
+        secretKey: SecretType.Captcha,
+        keyValuePairs: {
+          ...pairs,
+          isEnable: (!isEnable).toString(),
+        },
+        itemId: item.itemId,
+      },
+      {
+        onSuccess: () => {
+          setIsTogglingEnable(false);
+        },
+        onError: () => {
+          setIsTogglingEnable(false);
+        },
+      },
+    );
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex-row justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <CardTitle>{providerLabel || "Captcha"}</CardTitle>
+    <>
+      <Card>
+        <CardHeader className="flex-row items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <CardTitle>{providerLabel || "Captcha"}</CardTitle>
+              {isEnable && (
+                <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100 h-fit">
+                  Active
+                </Badge>
+              )}
+            </div>
             {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created {createdAt}</p>}
           </div>
-          <Badge variant={isEnable ? "success" : "secondary"}>{isEnable ? "Enable" : "Disable"}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Item label="Site Key">
-            <CopyToClipboardButton textToCopy={captchaKey}>
-              <MaskedText text={captchaKey} length={30} />
-            </CopyToClipboardButton>
-          </Item>
-          <Item label="Secret Key">
-            <CopyToClipboardButton textToCopy={captchaSecret}>
-              <MaskedText text={captchaSecret} length={30} />
-            </CopyToClipboardButton>
-          </Item>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleToggleEnable}
+              disabled={isTogglingEnable}
+              className={`inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9 transition-colors ${
+                isEnable ? "text-green-700" : "text-muted-foreground"
+              } disabled:opacity-50`}
+              title={isEnable ? "Disable" : "Enable"}
+            >
+              <Power className="h-4 w-4" />
+            </button>
+            <button onClick={() => setShowEditModal(true)} className="inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9">
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Item label="Site Key">
+              <CopyToClipboardButton textToCopy={captchaKey}>
+                <MaskedText text={captchaKey} length={30} />
+              </CopyToClipboardButton>
+            </Item>
+            <Item label="Secret Key">
+              <CopyToClipboardButton textToCopy={captchaSecret}>
+                <MaskedText text={captchaSecret} length={30} />
+              </CopyToClipboardButton>
+            </Item>
+          </div>
+        </CardContent>
+      </Card>
+      <AddSecretModal
+        mode="edit"
+        editItem={item}
+        defaultSecretType={SecretType.Captcha}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        hideTrigger
+      />
+    </>
   );
 };
 
@@ -343,19 +413,38 @@ export function SecretsList({ onTypeChange }: { onTypeChange?: (type: SecretType
   };
 
   return (
-    <Tabs value={activeType} onValueChange={handleChange}>
-      <TabsList className="mb-4">
+    <Tabs value={activeType} onValueChange={handleChange} className="flex flex-col min-h-0">
+      {/* Dropdown for small screens */}
+      <div className="mb-4 block md:hidden">
+        <Select value={activeType} onValueChange={handleChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select secret type" />
+          </SelectTrigger>
+          <SelectContent>
+            {SECRET_TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* TabsList for larger screens */}
+      <TabsList className="mb-4 w-fit bg-slate-200 border-b border-border shrink-0 hidden md:flex">
         {SECRET_TYPE_OPTIONS.map((opt) => (
           <TabsTrigger key={opt.value} value={opt.value}>
             {opt.label}
           </TabsTrigger>
         ))}
       </TabsList>
-      {SECRET_TYPE_OPTIONS.map((opt) => (
-        <TabsContent key={opt.value} value={opt.value}>
-          <SecretTypeList secretKey={opt.value} label={opt.label} />
-        </TabsContent>
-      ))}
+      <div className="flex-1 overflow-y-auto">
+        {SECRET_TYPE_OPTIONS.map((opt) => (
+          <TabsContent key={opt.value} value={opt.value}>
+            <SecretTypeList secretKey={opt.value} label={opt.label} />
+          </TabsContent>
+        ))}
+      </div>
     </Tabs>
   );
 }
