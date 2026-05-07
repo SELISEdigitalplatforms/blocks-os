@@ -15,11 +15,14 @@ export const SECRET_TYPE_OPTIONS = [
 // ----- Payload Value types per SecretKey -----
 
 export interface OIDCSecretValue {
-  ClientDisplayName: string;
-  RedirectUri: string;
-  Audience: string;
-  ClientBrandColor: string;
-  ClientLogoUrl: string;
+  clientDisplayName: string;
+  redirectUri: string;
+  audience: string;
+  scope: string;
+  isAutoRedirect: string;
+  clientBrandColor: string;
+  clientLogoUrl: string;
+  clientSecret: string;
 }
 
 export interface CaptchaSecretValue {
@@ -61,12 +64,18 @@ export type AddSecretPayload<K extends SecretType = SecretType> = {
 export interface SaveSecretRequest {
   secretKey: string;
   keyValuePairs: Record<string, string>;
+  projectKey?: string;
 }
 
 export interface SecretItem {
   itemId: string;
   secretKey: string;
   keyValuePairs: Record<string, string>;
-  createdAt?: string;
-  updatedAt?: string;
+  createdDate?: string;
+  lastUpdatedDate?: string;
+  createdBy?: string;
+  lastUpdatedBy?: string;
+  organizationIds?: string[];
+  tags?: string[];
+  language?: string | null;
 }
