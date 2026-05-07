@@ -24,10 +24,16 @@ import {
 } from "@/components/ui-kits/select/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Plus } from "lucide-react";
+import { Camera, Eye, EyeOff, Plus, Pencil } from "lucide-react";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
+import { storageService } from "@blocks-storage/services/storage.service";
+import { ModuleName } from "@/constants/modules.constants";
+import { useProjectStore } from "@/store/useProjectStore";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
 import { CAPTCHA_GENERATOR_TYPE, CAPTCHA_PROVIDERS } from "@blocks-idp/captcha/models/captcha";
 import { providers } from "@blocks-idp/authentication/constants/authentication.constant";
 import {
@@ -44,8 +50,10 @@ const oidcSchema = z.object({
   clientDisplayName: z.string().min(1, "Client name is required"),
   redirectUri: z.string().url("Must be a valid URL"),
   audience: z.string().url("Must be a valid URL"),
+  scope: z.string().min(1, "Scope is required").default("openid"),
+  isAutoRedirect: z.string().default("false"),
   clientBrandColor: z.string().default("#124091"),
-  clientLogoUrl: z.string().optional().default(""),
+  clientSecret: z.string().optional().default(""),
 });
 const captchaSchema = z.object({
   isEnable: z.string().default("false"),
@@ -76,21 +84,117 @@ function OIDCForm({
   submitRef: React.RefObject<HTMLButtonElement>;
   onSubmit: (v: Record<string, string>) => void;
 }) {
-  const form = useForm({ resolver: zodResolver(oidcSchema), defaultValues: { clientDisplayName: "", redirectUri: "", audience: "", clientBrandColor: "#124091", clientLogoUrl: "" } });
+  const [showSecret, setShowSecret] = useState(false);
+  const tenantId = useProjectStore().selectedProject?.tenantId ?? "";
+  const [clientLogoUrl, setClientLogoUrl] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { mutateAsync: getPreSign } = useGetPreSignedUrlForUpload();
+  const { mutateAsync: uploadFile } = useUploadFile();
+  const MAX_LOGO_FILE_SIZE = 5 * 1024 * 1024;
+
+  const form = useForm({ resolver: zodResolver(oidcSchema), defaultValues: { clientDisplayName: "", redirectUri: "", audience: "", scope: "openid", isAutoRedirect: "false", clientBrandColor: "#124091", clientSecret: "" } });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+    const allowedExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+    if (!allowedTypes.includes(file.type) && !allowedExts.some((ext) => file.name.toLowerCase().endsWith(ext))) {
+      showErrorToast({ errors: "Invalid file type. Only JPG, PNG, GIF, WEBP, SVG allowed." });
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_LOGO_FILE_SIZE) {
+      showErrorToast({ errors: "Image size must be under 5 MB." });
+      e.target.value = "";
+      return;
+    }
+    try {
+      setIsUploadingImage(true);
+      const preSign = await getPreSign({ accessModifier: "Public", configurationName: "Default", name: file.name, projectKey: tenantId, tags: "", metaData: "", parentDirectoryId: "", moduleName: ModuleName.IAMCloud });
+      if (!preSign.isSuccess) throw new Error("Failed to get upload URL");
+      await uploadFile({ url: preSign.uploadUrl, file });
+      const fileInfo = await storageService.file.getFileByFileId({ itemId: preSign.fileId, projectKey: tenantId });
+      setClientLogoUrl(fileInfo.url);
+      showSuccessToast({ description: "Logo uploaded successfully" });
+    } catch (err: unknown) {
+      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
+      showErrorToast({ errors: "Something went wrong uploading logo" });
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = "";
+    }
+  };
+
   const handle = form.handleSubmit((data) => {
-    onSubmit({ ClientDisplayName: data.clientDisplayName, RedirectUri: data.redirectUri, Audience: data.audience, ClientBrandColor: data.clientBrandColor, ClientLogoUrl: data.clientLogoUrl ?? "" } satisfies OIDCSecretValue as unknown as Record<string, string>);
+    onSubmit({ clientDisplayName: data.clientDisplayName, redirectUri: data.redirectUri, audience: data.audience, scope: data.scope, isAutoRedirect: data.isAutoRedirect, clientBrandColor: data.clientBrandColor, clientLogoUrl: clientLogoUrl, clientSecret: data.clientSecret } satisfies OIDCSecretValue as unknown as Record<string, string>);
   });
   return (
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
+        {/* Logo Upload */}
+        <div className="flex items-center gap-4">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dashed border-border bg-muted">
+            {clientLogoUrl ? (
+              <img src={clientLogoUrl} alt="Client Logo" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <Camera className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            {isUploadingImage && <div className="absolute inset-0 flex items-center justify-center bg-muted/60 text-xs text-muted-foreground">...</div>}
+          </div>
+          <div className="flex flex-col gap-2">
+            <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" onChange={handleImageUpload} className="hidden" />
+            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage}>Upload Logo</Button>
+            {clientLogoUrl && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setClientLogoUrl("")}>Remove</Button>
+            )}
+          </div>
+        </div>
         <FormField control={form.control} name="clientDisplayName" render={({ field }) => (
           <FormItem><FormLabel>Client Name</FormLabel><FormControl><Input placeholder="Enter client name" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="clientSecret" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client Secret</FormLabel>
+            <FormControl>
+              <div className="relative">
+                <Input type={showSecret ? "text" : "password"} placeholder="Enter client secret" {...field} />
+                <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowSecret(!showSecret)}>
+                  {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )} />
         <FormField control={form.control} name="redirectUri" render={({ field }) => (
           <FormItem><FormLabel>Redirect URL</FormLabel><FormControl><Input placeholder="https://example.com/oidc" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="audience" render={({ field }) => (
           <FormItem><FormLabel>Audience</FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="isAutoRedirect" render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <div className="flex items-center gap-6">
+                <FormLabel className="mb-0">Auto Redirect</FormLabel>
+                <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-6">
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="true" id="oidc-autoredirect-yes" />
+                    <label htmlFor="oidc-autoredirect-yes" className="cursor-pointer text-sm font-medium">Yes</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="false" id="oidc-autoredirect-no" />
+                    <label htmlFor="oidc-autoredirect-no" className="cursor-pointer text-sm font-medium">No</label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )} />
         <FormField control={form.control} name="clientBrandColor" render={({ field }) => (
           <FormItem>
@@ -100,15 +204,6 @@ function OIDCForm({
                 <input type="color" value={field.value} onChange={(e) => field.onChange(e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-input bg-transparent p-1" />
                 <Input placeholder="#124091" value={field.value} onChange={field.onChange} className="flex-1" />
               </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
-        <FormField control={form.control} name="clientLogoUrl" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Logo URL (Optional)</FormLabel>
-            <FormControl>
-              <Input type="url" placeholder="https://example.com/logo.png" value={field.value} onChange={field.onChange} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -315,9 +410,9 @@ function ExternalIdPForm({
   );
 }
 // ─── Main Modal ──────────────────────────────────────────────────────────────
-export function AddSecretModal() {
+export function AddSecretModal({ defaultSecretType }: { defaultSecretType?: SecretType }) {
   const [open, setOpen] = useState(false);
-  const [secretType, setSecretType] = useState<SecretType>(SecretType.Captcha);
+  const [secretType, setSecretType] = useState<SecretType>(defaultSecretType ?? SecretType.Captcha);
   const submitRef = useRef<HTMLButtonElement>(null);
   const { mutate: saveSecret, isPending } = useSaveSecret();
   const handleSecretTypeChange = (value: SecretType) => {
@@ -329,7 +424,7 @@ export function AddSecretModal() {
       {
         onSuccess: () => {
           setOpen(false);
-          setSecretType(SecretType.Captcha);
+          setSecretType(defaultSecretType ?? SecretType.Captcha);
         },
       },
     );
@@ -338,7 +433,7 @@ export function AddSecretModal() {
     submitRef.current?.click();
   };
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) setSecretType(SecretType.Captcha);
+    if (!isOpen) setSecretType(defaultSecretType ?? SecretType.Captcha);
     setOpen(isOpen);
   };
   return (

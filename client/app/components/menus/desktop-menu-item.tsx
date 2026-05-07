@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
@@ -49,10 +49,10 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
   if (!hasChildren) {
     return (
       <div className={cn(baseClasses)}>
-        <Link to={menu.path} className={cn("flex items-center gap-2.5", menu.disabled && "pointer-events-none opacity-50")}>
+        <Link to={menu.path} className={cn("flex min-w-0 items-center gap-2.5", menu.disabled && "pointer-events-none opacity-50")}>
           {menu.icon ? <menu.icon className="h-[18px] w-[18px] shrink-0" /> : null}
           {isSidebarOpen ? (
-            <span className="relative">
+            <span className="relative min-w-0 truncate">
               {menu.name}
               {menu.badge ? (
                 <Badge
@@ -76,10 +76,10 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
   }
   return (
     <div className={cn(baseClasses)}>
-      <div className="flex items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2.5">
         {menu.icon ? <menu.icon className="h-[18px] w-[18px] shrink-0" /> : null}
         {isSidebarOpen ? (
-          <span className="relative">
+          <span className="relative min-w-0 truncate">
             {menu.name}
             {menu.badge ? (
               <Badge
@@ -97,7 +97,7 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
           <span className="whitespace-nowrap">{menu.name}</span>
         </div>
       ) : null}
-      {isSidebarOpen ? <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" /> : null}
+      {isSidebarOpen ? <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 -rotate-90 text-muted-foreground transition-transform duration-200 group-hover:rotate-0" /> : null}
       {isActiveMenu && !isSidebarOpen ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
       <div className="absolute left-full top-0 z-10 hidden w-56 flex-col rounded-md border bg-background py-1 shadow-md group-hover:flex group-hover:text-[hsl(var(--low-emphasis))]">
         {menu.children
