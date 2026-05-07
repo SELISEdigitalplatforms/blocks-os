@@ -65,6 +65,7 @@ export interface SaveSecretRequest {
   secretKey: string;
   keyValuePairs: Record<string, string>;
   projectKey?: string;
+  itemId?: string;
 }
 
 export interface SecretItem {
