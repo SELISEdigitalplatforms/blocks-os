@@ -25,7 +25,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera, Eye, EyeOff, Plus, Pencil } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
@@ -42,9 +42,27 @@ import {
   type CaptchaSecretValue,
   type ExternalIdPSecretValue,
   type OIDCSecretValue,
+  type SecretItem,
   type SSOSecretValue,
 } from "../../constants/secret-key.enum";
 import { useSaveSecret } from "../../hooks/use-secrets";
+
+const getInitialValue = (initialValues: Record<string, string> | undefined, ...keys: string[]) => {
+  if (!initialValues) return "";
+  for (const key of keys) {
+    if (initialValues[key] !== undefined) return initialValues[key];
+    const lowerCased = key.charAt(0).toLowerCase() + key.slice(1);
+    if (initialValues[lowerCased] !== undefined) return initialValues[lowerCased];
+  }
+  return "";
+};
+
+const resolveSecretType = (value?: string): SecretType => {
+  const matched = Object.values(SecretType).find(
+    (type) => type.toLowerCase() === (value ?? "").toLowerCase(),
+  );
+  return matched ?? SecretType.Captcha;
+};
 // ─── Schemas ────────────────────────────────────────────────────────────────
 const oidcSchema = z.object({
   clientDisplayName: z.string().min(1, "Client name is required"),
@@ -80,20 +98,38 @@ const externalIdpSchema = z.object({
 function OIDCForm({
   submitRef,
   onSubmit,
+  initialValues,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
   onSubmit: (v: Record<string, string>) => void;
+  initialValues?: Record<string, string>;
 }) {
   const [showSecret, setShowSecret] = useState(false);
   const tenantId = useProjectStore().selectedProject?.tenantId ?? "";
-  const [clientLogoUrl, setClientLogoUrl] = useState("");
+  const [clientLogoUrl, setClientLogoUrl] = useState(getInitialValue(initialValues, "clientLogoUrl"));
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { mutateAsync: getPreSign } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadFile } = useUploadFile();
   const MAX_LOGO_FILE_SIZE = 5 * 1024 * 1024;
 
-  const form = useForm({ resolver: zodResolver(oidcSchema), defaultValues: { clientDisplayName: "", redirectUri: "", audience: "", scope: "openid", isAutoRedirect: "false", clientBrandColor: "#124091", clientSecret: "" } });
+  const form = useForm({
+    resolver: zodResolver(oidcSchema),
+    defaultValues: {
+      clientDisplayName: getInitialValue(initialValues, "clientDisplayName"),
+      redirectUri: getInitialValue(initialValues, "redirectUri"),
+      audience: getInitialValue(initialValues, "audience"),
+      scope: getInitialValue(initialValues, "scope") || "openid",
+      isAutoRedirect: getInitialValue(initialValues, "isAutoRedirect") || "false",
+      clientBrandColor: getInitialValue(initialValues, "clientBrandColor") || "#124091",
+      clientSecret: getInitialValue(initialValues, "clientSecret"),
+    },
+  });
+
+  useEffect(() => {
+    if (!initialValues) return;
+    setClientLogoUrl(getInitialValue(initialValues, "clientLogoUrl"));
+  }, [initialValues]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -133,26 +169,6 @@ function OIDCForm({
   return (
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
-        {/* Logo Upload */}
-        <div className="flex items-center gap-4">
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dashed border-border bg-muted">
-            {clientLogoUrl ? (
-              <img src={clientLogoUrl} alt="Client Logo" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <Camera className="h-4 w-4 text-muted-foreground" />
-              </div>
-            )}
-            {isUploadingImage && <div className="absolute inset-0 flex items-center justify-center bg-muted/60 text-xs text-muted-foreground">...</div>}
-          </div>
-          <div className="flex flex-col gap-2">
-            <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" onChange={handleImageUpload} className="hidden" />
-            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage}>Upload Logo</Button>
-            {clientLogoUrl && (
-              <Button type="button" variant="outline" size="sm" onClick={() => setClientLogoUrl("")}>Remove</Button>
-            )}
-          </div>
-        </div>
         <FormField control={form.control} name="clientDisplayName" render={({ field }) => (
           <FormItem><FormLabel>Client Name</FormLabel><FormControl><Input placeholder="Enter client name" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
@@ -176,6 +192,44 @@ function OIDCForm({
         <FormField control={form.control} name="audience" render={({ field }) => (
           <FormItem><FormLabel>Audience</FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Logo Upload */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Client Logo</label>
+            <div className="flex items-center gap-4">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dashed border-border bg-muted">
+                {clientLogoUrl ? (
+                  <img src={clientLogoUrl} alt="Client Logo" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+                {isUploadingImage && <div className="absolute inset-0 flex items-center justify-center bg-muted/60 text-xs text-muted-foreground">...</div>}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" onChange={handleImageUpload} className="hidden" />
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage}>Upload</Button>
+                {clientLogoUrl && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setClientLogoUrl("")}>Remove</Button>
+                )}
+              </div>
+            </div>
+          </div>
+          {/* Brand Color */}
+          <FormField control={form.control} name="clientBrandColor" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Brand Color</FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={field.value} onChange={(e) => field.onChange(e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-input bg-transparent p-1" />
+                  <Input placeholder="#124091" value={field.value} onChange={field.onChange} className="flex-1" />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+        </div>
         <FormField control={form.control} name="isAutoRedirect" render={({ field }) => (
           <FormItem>
             <FormControl>
@@ -196,18 +250,6 @@ function OIDCForm({
             <FormMessage />
           </FormItem>
         )} />
-        <FormField control={form.control} name="clientBrandColor" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Brand Color</FormLabel>
-            <FormControl>
-              <div className="flex items-center gap-2">
-                <input type="color" value={field.value} onChange={(e) => field.onChange(e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-input bg-transparent p-1" />
-                <Input placeholder="#124091" value={field.value} onChange={field.onChange} className="flex-1" />
-              </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
         <button ref={submitRef} type="submit" className="hidden" />
       </form>
     </Form>
@@ -217,11 +259,22 @@ function OIDCForm({
 function CaptchaForm({
   submitRef,
   onSubmit,
+  initialValues,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
   onSubmit: (v: Record<string, string>) => void;
+  initialValues?: Record<string, string>;
 }) {
-  const form = useForm({ resolver: zodResolver(captchaSchema), defaultValues: { isEnable: "false", captchaProvider: "", captchaSiteKey: "", captchaSecretKey: "", captchaGeneratorType: "" } });
+  const form = useForm({
+    resolver: zodResolver(captchaSchema),
+    defaultValues: {
+      isEnable: getInitialValue(initialValues, "isEnable") || "false",
+      captchaProvider: getInitialValue(initialValues, "provider"),
+      captchaSiteKey: getInitialValue(initialValues, "captchaKey"),
+      captchaSecretKey: getInitialValue(initialValues, "captchaSecret"),
+      captchaGeneratorType: getInitialValue(initialValues, "captchaGenerator"),
+    },
+  });
   const handle = form.handleSubmit((data) => {
     onSubmit({
       isEnable: data.isEnable,
@@ -305,12 +358,23 @@ function CaptchaForm({
 function SSOForm({
   submitRef,
   onSubmit,
+  initialValues,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
   onSubmit: (v: Record<string, string>) => void;
+  initialValues?: Record<string, string>;
 }) {
   const [showSecret, setShowSecret] = useState(false);
-  const form = useForm({ resolver: zodResolver(ssoSchema), defaultValues: { clientId: "", clientSecret: "", redirectUrl: "", audience: "", wellKnownUrl: "" } });
+  const form = useForm({
+    resolver: zodResolver(ssoSchema),
+    defaultValues: {
+      clientId: getInitialValue(initialValues, "clientId", "ClientId"),
+      clientSecret: getInitialValue(initialValues, "clientSecret", "ClientSecret"),
+      redirectUrl: getInitialValue(initialValues, "redirectUrl", "RedirectUrl"),
+      audience: getInitialValue(initialValues, "audience", "Audience"),
+      wellKnownUrl: getInitialValue(initialValues, "wellKnownUrl", "WellKnownUrl"),
+    },
+  });
   const handle = form.handleSubmit((data) => {
     onSubmit({ ClientId: data.clientId, ClientSecret: data.clientSecret, RedirectUrl: data.redirectUrl, Audience: data.audience, WellKnownUrl: data.wellKnownUrl } satisfies SSOSecretValue as unknown as Record<string, string>);
   });
@@ -352,12 +416,25 @@ function SSOForm({
 function ExternalIdPForm({
   submitRef,
   onSubmit,
+  initialValues,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
   onSubmit: (v: Record<string, string>) => void;
+  initialValues?: Record<string, string>;
 }) {
   const [showPassword, setShowPassword] = useState(false);
-  const form = useForm({ resolver: zodResolver(externalIdpSchema), defaultValues: { providerName: "", url: "", issuer: "", audiences: "", password: "" } });
+  const form = useForm({
+    resolver: zodResolver(externalIdpSchema),
+    defaultValues: {
+      providerName: getInitialValue(initialValues, "providerName", "ProviderName"),
+      url:
+        getInitialValue(initialValues, "jwksUrl", "JwksUrl") ||
+        getInitialValue(initialValues, "publicCertificatePath", "PublicCertificatePath"),
+      issuer: getInitialValue(initialValues, "issuer", "Issuer"),
+      audiences: getInitialValue(initialValues, "audiences", "Audiences"),
+      password: getInitialValue(initialValues, "password", "Password"),
+    },
+  });
   const handle = form.handleSubmit((data) => {
     const isJwks = data.url?.startsWith("https://") && !data.url?.endsWith(".crt") && !data.url?.endsWith(".pem");
     onSubmit({ ProviderName: data.providerName, JwksUrl: isJwks ? (data.url ?? "") : "", PublicCertificatePath: isJwks ? "" : (data.url ?? ""), Issuer: data.issuer ?? "", Audiences: data.audiences ?? "", Password: data.password ?? "" } satisfies ExternalIdPSecretValue as unknown as Record<string, string>);
@@ -410,20 +487,60 @@ function ExternalIdPForm({
   );
 }
 // ─── Main Modal ──────────────────────────────────────────────────────────────
-export function AddSecretModal({ defaultSecretType }: { defaultSecretType?: SecretType }) {
-  const [open, setOpen] = useState(false);
-  const [secretType, setSecretType] = useState<SecretType>(defaultSecretType ?? SecretType.Captcha);
+export function AddSecretModal({
+  defaultSecretType,
+  mode = "create",
+  editItem,
+  open,
+  onOpenChange,
+  hideTrigger = false,
+}: {
+  defaultSecretType?: SecretType;
+  mode?: "create" | "edit";
+  editItem?: SecretItem;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
+  const isEditMode = mode === "edit";
+  const initialType = resolveSecretType(editItem?.secretKey) || defaultSecretType || SecretType.Captcha;
+  const [secretType, setSecretType] = useState<SecretType>(initialType);
   const submitRef = useRef<HTMLButtonElement>(null);
   const { mutate: saveSecret, isPending } = useSaveSecret();
+
+  useEffect(() => {
+    if (isEditMode && editItem?.secretKey) {
+      setSecretType(resolveSecretType(editItem.secretKey));
+      return;
+    }
+    if (!isOpen) {
+      setSecretType(defaultSecretType ?? SecretType.Captcha);
+    }
+  }, [isEditMode, editItem?.secretKey, defaultSecretType, isOpen]);
+
+  const setModalOpen = (value: boolean) => {
+    if (open === undefined) {
+      setInternalOpen(value);
+    }
+    onOpenChange?.(value);
+  };
+
   const handleSecretTypeChange = (value: SecretType) => {
     setSecretType(value);
   };
+
   const handleSubFormSubmit = (value: Record<string, string>) => {
     saveSecret(
-      { secretKey: secretType, keyValuePairs: value },
+      {
+        secretKey: secretType,
+        keyValuePairs: value,
+        ...(isEditMode && editItem?.itemId ? { itemId: editItem.itemId } : {}),
+      },
       {
         onSuccess: () => {
-          setOpen(false);
+          setModalOpen(false);
           setSecretType(defaultSecretType ?? SecretType.Captcha);
         },
       },
@@ -433,23 +550,27 @@ export function AddSecretModal({ defaultSecretType }: { defaultSecretType?: Secr
     submitRef.current?.click();
   };
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) setSecretType(defaultSecretType ?? SecretType.Captcha);
-    setOpen(isOpen);
+    if (!isOpen) {
+      setSecretType(isEditMode && editItem?.secretKey ? resolveSecretType(editItem.secretKey) : (defaultSecretType ?? SecretType.Captcha));
+    }
+    setModalOpen(isOpen);
   };
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus className="aspect-square w-4" />
-        <span className="ml-2">Add Secret</span>
-      </Button>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      {!hideTrigger && (
+        <Button size="sm" onClick={() => setModalOpen(true)}>
+          <Plus className="aspect-square w-4" />
+          <span className="ml-2">Add Secret</span>
+        </Button>
+      )}
       <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-lg flex-col sm:w-full">
         <DialogHeader>
-          <DialogTitle>Add Secret</DialogTitle>
+          <DialogTitle>{isEditMode ? "Edit Secret" : "Add Secret"}</DialogTitle>
         </DialogHeader>
         <div className="flex-1 space-y-5 overflow-y-auto px-1 pb-1">
           <div className="space-y-1.5">
             <label className="text-sm font-medium leading-none">Secret Type</label>
-            <Select value={secretType} onValueChange={handleSecretTypeChange}>
+            <Select value={secretType} onValueChange={handleSecretTypeChange} disabled={isEditMode}>
               <SelectTrigger>
                 <SelectValue placeholder="Select secret type" />
               </SelectTrigger>
@@ -463,16 +584,16 @@ export function AddSecretModal({ defaultSecretType }: { defaultSecretType?: Secr
             </Select>
           </div>
           {secretType === SecretType.OIDC && (
-            <OIDCForm key="oidc" submitRef={submitRef} onSubmit={handleSubFormSubmit} />
+            <OIDCForm key={`oidc-${editItem?.itemId ?? "new"}`} submitRef={submitRef} onSubmit={handleSubFormSubmit} initialValues={editItem?.keyValuePairs} />
           )}
           {secretType === SecretType.Captcha && (
-            <CaptchaForm key="captcha" submitRef={submitRef} onSubmit={handleSubFormSubmit} />
+            <CaptchaForm key={`captcha-${editItem?.itemId ?? "new"}`} submitRef={submitRef} onSubmit={handleSubFormSubmit} initialValues={editItem?.keyValuePairs} />
           )}
           {secretType === SecretType.SSO && (
-            <SSOForm key="sso" submitRef={submitRef} onSubmit={handleSubFormSubmit} />
+            <SSOForm key={`sso-${editItem?.itemId ?? "new"}`} submitRef={submitRef} onSubmit={handleSubFormSubmit} initialValues={editItem?.keyValuePairs} />
           )}
           {secretType === SecretType.ExternalIdP && (
-            <ExternalIdPForm key="extidp" submitRef={submitRef} onSubmit={handleSubFormSubmit} />
+            <ExternalIdPForm key={`extidp-${editItem?.itemId ?? "new"}`} submitRef={submitRef} onSubmit={handleSubFormSubmit} initialValues={editItem?.keyValuePairs} />
           )}
         </div>
         <DialogFooter>
