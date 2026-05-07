@@ -28,10 +28,15 @@ import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
 import { cn } from "@/lib/utils";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
 import { SecretsList } from "@/cross-modules/secrets/components/secrets-list/secrets-list";
+import { SecretType } from "@/cross-modules/secrets/constants/secret-key.enum";
 
 const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models"];
 export default function SecretManagementPage() {
   const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "infra-config" });
+  const [secretType, setSecretType] = useQueryState("secretType", {
+    defaultValue: SecretType.OIDC,
+    parse: (v) => (Object.values(SecretType).includes(v as SecretType) ? (v as SecretType) : SecretType.OIDC),
+  });
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
   const { mutateAsync: saveMagicUrlConfig } = useSaveMagicUrlConfig();
@@ -122,7 +127,7 @@ export default function SecretManagementPage() {
         </Button>
       )}
       {selectedTab === "my-secret" && (
-        <AddSecretModal />
+        <AddSecretModal defaultSecretType={secretType} />
       )}
     </> 
   );
@@ -219,7 +224,7 @@ export default function SecretManagementPage() {
             onGuideOpenChange={setIsManagedServicesGuideOpen}
           />
         )}
-        {selectedTab === "my-secret" && <SecretsList />}
+        {selectedTab === "my-secret" && <SecretsList onTypeChange={(t) => void setSecretType(t)} />}
         {selectedTab === GRANT_TYPES.social && <SSO />}
         {selectedTab === "external-idp" && <Certificates />}
         {selectedTab === "captcha" && <ConfigureCaptcha />}

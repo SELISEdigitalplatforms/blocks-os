@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { secretsService } from "@/services/secrets.service";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { useProjectStore } from "@/store/useProjectStore";
 import type { SaveSecretRequest } from "@/cross-modules/secrets/constants/secret-key.enum";
 
 export const useGetSecrets = (secretKey: string, enabled = true) => {
@@ -20,9 +21,11 @@ export const useGetSecret = (itemId: string, enabled = true) => {
 };
 
 export const useSaveSecret = () => {
+  const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: SaveSecretRequest) => secretsService.save(payload),
+    mutationFn: (payload: SaveSecretRequest) =>
+      secretsService.save({ ...payload, projectKey }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["secrets", "list", variables.secretKey] });
       showSuccessToast({ description: "Secret saved successfully." });
