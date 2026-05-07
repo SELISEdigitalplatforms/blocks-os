@@ -131,7 +131,7 @@ function OIDCForm({
       scope: getInitialValue(initialValues, "scope") || "openid",
       isAutoRedirect: getInitialValue(initialValues, "isAutoRedirect") || "false",
       clientBrandColor: getInitialValue(initialValues, "clientBrandColor") || "#124091",
-      clientSecret: getInitialValue(initialValues, "clientSecret"),
+      clientSecret: getInitialValue(initialValues, "clientSecret", "ClientSecret"),
     },
   });
 
@@ -179,11 +179,11 @@ function OIDCForm({
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
         <FormField control={form.control} name="clientDisplayName" render={({ field }) => (
-          <FormItem><FormLabel>Client Name</FormLabel><FormControl><Input placeholder="Enter client name" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Client Name <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="Enter client name" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="clientSecret" render={({ field }) => (
           <FormItem>
-            <FormLabel>Client Secret</FormLabel>
+            <FormLabel>Client Secret <span className="text-red-500">*</span></FormLabel>
             <FormControl>
               <div className="relative">
                 <Input type={showSecret ? "text" : "password"} placeholder="Enter client secret" {...field} />
@@ -196,10 +196,10 @@ function OIDCForm({
           </FormItem>
         )} />
         <FormField control={form.control} name="redirectUri" render={({ field }) => (
-          <FormItem><FormLabel>Redirect URL</FormLabel><FormControl><Input placeholder="https://example.com/oidc" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Redirect URL <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="https://example.com/oidc" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="audience" render={({ field }) => (
-          <FormItem><FormLabel>Audience</FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Audience <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Logo Upload */}
@@ -298,7 +298,7 @@ function CaptchaForm({
       <form id="secret-form" onSubmit={handle} className="space-y-4">
         <FormField control={form.control} name="captchaProvider" render={({ field }) => (
           <FormItem>
-            <FormLabel>Captcha Provider</FormLabel>
+            <FormLabel>Captcha Provider <span className="text-red-500">*</span></FormLabel>
             <FormControl>
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
@@ -313,14 +313,14 @@ function CaptchaForm({
           </FormItem>
         )} />
         <FormField control={form.control} name="captchaSiteKey" render={({ field }) => (
-          <FormItem><FormLabel>Site Key</FormLabel><FormControl><Input placeholder="Enter site key" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Site Key <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="Enter site key" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="captchaSecretKey" render={({ field }) => (
-          <FormItem><FormLabel>Secret Key</FormLabel><FormControl><Input placeholder="Enter secret key" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Secret Key <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="Enter secret key" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="captchaGeneratorType" render={({ field }) => (
           <FormItem>
-            <FormLabel>CAPTCHA Generator Type</FormLabel>
+            <FormLabel>CAPTCHA Generator Type <span className="text-red-500">*</span></FormLabel>
             <FormControl>
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
@@ -391,11 +391,11 @@ function SSOForm({
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
         <FormField control={form.control} name="clientId" render={({ field }) => (
-          <FormItem><FormLabel>Client ID</FormLabel><FormControl><Input placeholder="Enter client ID" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Client ID <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="Enter client ID" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="clientSecret" render={({ field }) => (
           <FormItem>
-            <FormLabel>Client Secret</FormLabel>
+            <FormLabel>Client Secret <span className="text-red-500">*</span></FormLabel>
             <FormControl>
               <div className="relative">
                 <Input type={showSecret ? "text" : "password"} placeholder="Enter client secret" {...field} />
@@ -408,13 +408,13 @@ function SSOForm({
           </FormItem>
         )} />
         <FormField control={form.control} name="redirectUrl" render={({ field }) => (
-          <FormItem><FormLabel>Redirect URL</FormLabel><FormControl><Input placeholder="https://example.com/callback" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Redirect URL <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="https://example.com/callback" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="audience" render={({ field }) => (
-          <FormItem><FormLabel>Audience (Optional)</FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Audience</FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="wellKnownUrl" render={({ field }) => (
-          <FormItem><FormLabel>Well Known URL</FormLabel><FormControl><Input placeholder="https://example.com/.well-known/openid-configuration" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Well Known URL <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="https://example.com/.well-known/openid-configuration" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <button ref={submitRef} type="submit" className="hidden" />
       </form>
@@ -457,14 +457,14 @@ function OwnSSOForm({
     <Form {...form}>
       <form id="secret-form" onSubmit={handle} className="space-y-4">
         <FormField control={form.control} name="provider" render={({ field }) => (
-          <FormItem><FormLabel>Provider Name</FormLabel><FormControl><Input placeholder="Enter provider name" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Provider Name <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="Enter provider name" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="clientId" render={({ field }) => (
-          <FormItem><FormLabel>Client ID</FormLabel><FormControl><Input placeholder="Enter client ID" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Client ID <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="Enter client ID" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="clientSecret" render={({ field }) => (
           <FormItem>
-            <FormLabel>Client Secret</FormLabel>
+            <FormLabel>Client Secret <span className="text-red-500">*</span></FormLabel>
             <FormControl>
               <div className="relative">
                 <Input type={showSecret ? "text" : "password"} placeholder="Enter client secret" {...field} />
@@ -477,13 +477,13 @@ function OwnSSOForm({
           </FormItem>
         )} />
         <FormField control={form.control} name="redirectUrl" render={({ field }) => (
-          <FormItem><FormLabel>Redirect URL</FormLabel><FormControl><Input placeholder="https://example.com/callback" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Redirect URL <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="https://example.com/callback" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="audience" render={({ field }) => (
-          <FormItem><FormLabel>Audience</FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Audience <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="wellKnownUrl" render={({ field }) => (
-          <FormItem><FormLabel>Well Known URL</FormLabel><FormControl><Input placeholder="https://example.com/.well-known/openid-configuration" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Well Known URL <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="https://example.com/.well-known/openid-configuration" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <button ref={submitRef} type="submit" className="hidden" />
       </form>
@@ -522,7 +522,7 @@ function ExternalIdPForm({
       <form id="secret-form" onSubmit={handle} className="space-y-4">
         <FormField control={form.control} name="providerName" render={({ field }) => (
           <FormItem>
-            <FormLabel>Provider</FormLabel>
+            <FormLabel>Provider <span className="text-red-500">*</span></FormLabel>
             <FormControl>
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
@@ -537,17 +537,17 @@ function ExternalIdPForm({
           </FormItem>
         )} />
         <FormField control={form.control} name="url" render={({ field }) => (
-          <FormItem><FormLabel>JWKS / Certificate URL (Optional)</FormLabel><FormControl><Input placeholder="Enter JWKS or certificate URL" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>JWKS / Certificate URL</FormLabel><FormControl><Input placeholder="Enter JWKS or certificate URL" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="issuer" render={({ field }) => (
-          <FormItem><FormLabel>Issuer (Optional)</FormLabel><FormControl><Input placeholder="Enter issuer" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Issuer</FormLabel><FormControl><Input placeholder="Enter issuer" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="audiences" render={({ field }) => (
-          <FormItem><FormLabel>Audience (Optional)</FormLabel><FormControl><Input placeholder="Enter audience (comma-separated)" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Audience</FormLabel><FormControl><Input placeholder="Enter audience (comma-separated)" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="password" render={({ field }) => (
           <FormItem>
-            <FormLabel>Password (Optional)</FormLabel>
+            <FormLabel>Password</FormLabel>
             <FormControl>
               <div className="relative">
                 <Input type={showPassword ? "text" : "password"} placeholder="********" {...field} />

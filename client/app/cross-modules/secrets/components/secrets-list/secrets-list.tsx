@@ -1,17 +1,8 @@
 import { ReactNode, useState } from "react";
-import { useQueryState } from "nuqs";
 import { KeyRound, Pencil, Power } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui-kits/select/select";
 import { MaskedText } from "@/components/masked-text";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { format } from "date-fns";
@@ -45,14 +36,6 @@ const LoadingSkeleton = () => (
         </CardContent>
       </Card>
     ))}
-  </div>
-);
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
-const EmptyState = ({ label }: { label: string }) => (
-  <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-card text-center text-muted-foreground">
-    <KeyRound className="h-8 w-8 opacity-40" />
-    <p className="text-sm">No {label} secrets found.</p>
   </div>
 );
 
@@ -92,18 +75,25 @@ const OIDCSecretCard = ({ item }: { item: SecretItem }) => {
     <>
       <Card className="py-6">
       <CardHeader>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             {logoUrl && (
               <div className="relative h-12 w-12 overflow-hidden rounded-lg">
                 <img src={logoUrl} alt="OIDC Logo" className="object-cover" />
               </div>
             )}
-            <CardTitle>{displayName}</CardTitle>
+            <div>
+              <div className="relative inline-block pr-8">
+                <CardTitle>{displayName}</CardTitle>
+                <Badge variant="secondary" className="absolute -top-2 right-0 text-[9px] px-1 py-0 h-4 font-medium tracking-wide">OIDC</Badge>
+              </div>
+            </div>
           </div>
-          <button onClick={() => setShowEditModal(true)} className="inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9">
-            <Pencil className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setShowEditModal(true)} className="inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9">
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -222,17 +212,18 @@ const CaptchaSecretCard = ({ item }: { item: SecretItem }) => {
       <Card>
         <CardHeader className="flex-row items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="relative inline-block pr-12">
               <CardTitle>{providerLabel || "Captcha"}</CardTitle>
-              {isEnable && (
-                <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100 h-fit">
-                  Active
-                </Badge>
-              )}
+              <Badge variant="secondary" className="absolute -top-2 right-0 text-[9px] px-1 py-0 h-4 font-medium tracking-wide">Captcha</Badge>
             </div>
-            {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created {createdAt}</p>}
+            {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created on {createdAt}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {isEnable && (
+              <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] px-1.5 py-0 h-5 font-medium tracking-wide">
+                Active
+              </Badge>
+            )}
             <button
               onClick={handleToggleEnable}
               disabled={isTogglingEnable}
@@ -277,6 +268,7 @@ const CaptchaSecretCard = ({ item }: { item: SecretItem }) => {
 
 // ─── External IdP Card ────────────────────────────────────────────────────────
 const ExternalIdPSecretCard = ({ item }: { item: SecretItem }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
   const pairs = item.keyValuePairs ?? {};
   const providerName = kv(pairs, "providerName", "ProviderName");
   const jwksUrl = kv(pairs, "jwksUrl", "JwksUrl");
@@ -287,32 +279,52 @@ const ExternalIdPSecretCard = ({ item }: { item: SecretItem }) => {
   const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd/MM/yyyy HH:mm") : null;
 
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle>{providerName || "External IdP"}</CardTitle>
-          {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created {createdAt}</p>}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row md:gap-8">
-          <div className="flex-1">
-            <label className="mb-2 block text-sm text-low-emphasis">URL</label>
-            <div className="break-all text-sm font-medium text-high-emphasis">{url || "-"}</div>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="relative inline-block pr-20">
+                <CardTitle>{providerName || "External IdP"}</CardTitle>
+                <Badge variant="secondary" className="absolute -top-2 right-0 text-[9px] px-1 py-0 h-4 font-medium tracking-wide">External IdP</Badge>
+              </div>
+              {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created on {createdAt}</p>}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setShowEditModal(true)} className="inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9">
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-col gap-4 md:flex-row md:gap-8">
-          <div className="md:w-[30%]">
-            <label className="mb-2 block text-sm text-low-emphasis">Issuer</label>
-            <div className="break-all text-sm font-medium text-high-emphasis">{issuer || "-"}</div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:gap-8">
+            <div className="flex-1">
+              <label className="mb-2 block text-sm text-low-emphasis">URL</label>
+              <div className="break-all text-sm font-medium text-high-emphasis">{url || "-"}</div>
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="mb-2 block text-sm text-low-emphasis">Audience</label>
-            <div className="break-all text-sm font-medium text-high-emphasis">{audiences || "-"}</div>
+          <div className="flex flex-col gap-4 md:flex-row md:gap-8">
+            <div className="md:w-[30%]">
+              <label className="mb-2 block text-sm text-low-emphasis">Issuer</label>
+              <div className="break-all text-sm font-medium text-high-emphasis">{issuer || "-"}</div>
+            </div>
+            <div className="flex-1">
+              <label className="mb-2 block text-sm text-low-emphasis">Audience</label>
+              <div className="break-all text-sm font-medium text-high-emphasis">{audiences || "-"}</div>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <AddSecretModal
+        mode="edit"
+        editItem={item}
+        defaultSecretType={SecretType.ExternalIdP}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        hideTrigger
+      />
+    </>
   );
 };
 
@@ -329,13 +341,18 @@ const SSOSecretCard = ({ item }: { item: SecretItem }) => {
   return (
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle>
-            <CopyToClipboardButton textToCopy={clientId}>
-              <MaskedText text={clientId} length={20} showFirstN={4} showLastN={4} />
-            </CopyToClipboardButton>
-          </CardTitle>
-          {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created {createdAt}</p>}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="relative inline-block pr-10">
+              <CardTitle>
+                <CopyToClipboardButton textToCopy={clientId}>
+                  <MaskedText text={clientId} length={20} showFirstN={4} showLastN={4} />
+                </CopyToClipboardButton>
+              </CardTitle>
+              <Badge variant="secondary" className="absolute -top-2 right-0 text-[9px] px-1 py-0 h-4 font-medium tracking-wide">SSO</Badge>
+            </div>
+            {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created on {createdAt}</p>}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -389,14 +406,19 @@ const OwnSSOSecretCard = ({ item }: { item: SecretItem }) => {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <CardTitle>{provider || "Own SSO"}</CardTitle>
-              {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created {createdAt}</p>}
+              <div className="relative inline-block pr-24">
+                <CardTitle>{provider || "Own SSO"}</CardTitle>
+                <Badge variant="secondary" className="absolute -top-2 right-0 text-[9px] px-1 py-0 h-4 font-medium tracking-wide">Bring your own SSO</Badge>
+              </div>
+              {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created on {createdAt}</p>}
             </div>
-            <button onClick={() => setShowEditModal(true)} className="inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9">
-              <Pencil className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setShowEditModal(true)} className="inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9">
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -455,68 +477,38 @@ const SecretCard = ({ item }: { item: SecretItem }) => {
   }
 };
 
-// ─── Per-Type List ────────────────────────────────────────────────────────────
-function SecretTypeList({ secretKey, label }: { secretKey: string; label: string }) {
-  const { data, isLoading } = useGetSecrets(secretKey);
+// ─── Main Component ───────────────────────────────────────────────────────────
+export function SecretsList() {
+  const oidc = useGetSecrets(SecretType.OIDC);
+  const captcha = useGetSecrets(SecretType.Captcha);
+  const ownSso = useGetSecrets(SecretType.OwnSSO);
+  const externalIdp = useGetSecrets(SecretType.ExternalIdP);
+  const sso = useGetSecrets(SecretType.SSO);
+
+  const isLoading = oidc.isLoading || captcha.isLoading || ownSso.isLoading || externalIdp.isLoading || sso.isLoading;
+  const allItems = [
+    ...(oidc.data ?? []),
+    ...(captcha.data ?? []),
+    ...(ownSso.data ?? []),
+    ...(externalIdp.data ?? []),
+    ...(sso.data ?? []),
+  ];
 
   if (isLoading) return <LoadingSkeleton />;
-  if (!data?.length) return <EmptyState label={label} />;
+
+  if (!allItems.length) return (
+    <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-card text-center text-muted-foreground">
+      <KeyRound className="h-8 w-8 opacity-40" />
+      <p className="text-sm">No secrets found.</p>
+    </div>
+  );
 
   return (
     <div className="grid gap-4">
-      {data.map((item) => (
+      {allItems.map((item) => (
         <SecretCard key={item.itemId} item={item} />
       ))}
     </div>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-export function SecretsList({ onTypeChange }: { onTypeChange?: (type: SecretType) => void }) {
-  const [activeType, setActiveType] = useQueryState("secretType", {
-    defaultValue: SecretType.OIDC,
-    parse: (v) => (Object.values(SecretType).includes(v as SecretType) ? (v as SecretType) : SecretType.OIDC),
-  });
-
-  const handleChange = (v: string) => {
-    void setActiveType(v as SecretType);
-    onTypeChange?.(v as SecretType);
-  };
-
-  return (
-    <Tabs value={activeType} onValueChange={handleChange} className="flex flex-col min-h-0">
-      {/* Dropdown for small screens */}
-      <div className="mb-4 block md:hidden">
-        <Select value={activeType} onValueChange={handleChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select secret type" />
-          </SelectTrigger>
-          <SelectContent>
-            {SECRET_TYPE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* TabsList for larger screens */}
-      <TabsList className="mb-4 w-fit bg-slate-200 border-b border-border shrink-0 hidden md:flex">
-        {SECRET_TYPE_OPTIONS.map((opt) => (
-          <TabsTrigger key={opt.value} value={opt.value}>
-            {opt.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      <div className="flex-1 overflow-y-auto">
-        {SECRET_TYPE_OPTIONS.map((opt) => (
-          <TabsContent key={opt.value} value={opt.value}>
-            <SecretTypeList secretKey={opt.value} label={opt.label} />
-          </TabsContent>
-        ))}
-      </div>
-    </Tabs>
   );
 }
 

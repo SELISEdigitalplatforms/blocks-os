@@ -224,7 +224,7 @@ export default function SecretManagementPage() {
             onGuideOpenChange={setIsManagedServicesGuideOpen}
           />
         )}
-        {selectedTab === "my-secret" && <SecretsList onTypeChange={(t) => void setSecretType(t)} />}
+        {selectedTab === "my-secret" && <SecretsList />}
         {selectedTab === GRANT_TYPES.social && <SSO />}
         {selectedTab === "external-idp" && <Certificates />}
         {selectedTab === "captcha" && <ConfigureCaptcha />}
