@@ -373,6 +373,76 @@ const SSOSecretCard = ({ item }: { item: SecretItem }) => {
   );
 };
 
+// ─── Own SSO Card ─────────────────────────────────────────────────────────────
+const OwnSSOSecretCard = ({ item }: { item: SecretItem }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const pairs = item.keyValuePairs ?? {};
+  const provider = kv(pairs, "provider", "Provider");
+  const clientId = kv(pairs, "clientId", "ClientId");
+  const clientSecret = kv(pairs, "clientSecret", "ClientSecret");
+  const redirectUrl = kv(pairs, "redirectUrl", "RedirectUrl");
+  const audience = kv(pairs, "audience", "Audience");
+  const wellKnownUrl = kv(pairs, "wellKnownUrl", "WellKnownUrl");
+  const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd/MM/yyyy HH:mm") : null;
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <CardTitle>{provider || "Own SSO"}</CardTitle>
+              {createdAt && <p className="mt-0.5 text-xs text-muted-foreground">Created {createdAt}</p>}
+            </div>
+            <button onClick={() => setShowEditModal(true)} className="inline-flex items-center justify-center rounded-md hover:bg-accent h-9 w-9">
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Item label="Client ID">
+              <CopyToClipboardButton textToCopy={clientId}>
+                <MaskedText text={clientId} length={30} showFirstN={4} showLastN={4} />
+              </CopyToClipboardButton>
+            </Item>
+            <Item label="Client Secret">
+              <CopyToClipboardButton textToCopy={clientSecret}>
+                <MaskedText text={clientSecret} length={30} showFirstN={4} showLastN={4} />
+              </CopyToClipboardButton>
+            </Item>
+            <Item label="Redirect URL">
+              <CopyToClipboardButton textToCopy={redirectUrl}>
+                <span className="break-all">{redirectUrl || "N/A"}</span>
+              </CopyToClipboardButton>
+            </Item>
+            <Item label="Audience">
+              <CopyToClipboardButton textToCopy={audience}>
+                <span className="break-all">{audience || "N/A"}</span>
+              </CopyToClipboardButton>
+            </Item>
+            <div className="md:col-span-2">
+              <Item label="Well Known URL">
+                <CopyToClipboardButton textToCopy={wellKnownUrl}>
+                  <span className="break-all">{wellKnownUrl || "N/A"}</span>
+                </CopyToClipboardButton>
+              </Item>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <AddSecretModal
+        mode="edit"
+        editItem={item}
+        defaultSecretType={SecretType.OwnSSO}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        hideTrigger
+      />
+    </>
+  );
+};
+
 // ─── Card Dispatcher ──────────────────────────────────────────────────────────
 const SecretCard = ({ item }: { item: SecretItem }) => {
   switch (item.secretKey.toLowerCase()) {
@@ -380,6 +450,7 @@ const SecretCard = ({ item }: { item: SecretItem }) => {
     case SecretType.Captcha.toLowerCase(): return <CaptchaSecretCard item={item} />;
     case SecretType.ExternalIdP.toLowerCase(): return <ExternalIdPSecretCard item={item} />;
     case SecretType.SSO.toLowerCase(): return <SSOSecretCard item={item} />;
+    case SecretType.OwnSSO.toLowerCase(): return <OwnSSOSecretCard item={item} />;
     default: return null;
   }
 };

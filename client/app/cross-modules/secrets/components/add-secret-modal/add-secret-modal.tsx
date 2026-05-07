@@ -42,6 +42,7 @@ import {
   type CaptchaSecretValue,
   type ExternalIdPSecretValue,
   type OIDCSecretValue,
+  type OwnSSOSecretValue,
   type SecretItem,
   type SSOSecretValue,
 } from "../../constants/secret-key.enum";
@@ -85,6 +86,14 @@ const ssoSchema = z.object({
   clientSecret: z.string().min(1, "Client secret is required"),
   redirectUrl: z.string().url("Must be a valid URL"),
   audience: z.string().optional().default(""),
+  wellKnownUrl: z.string().url("Must be a valid URL"),
+});
+const ownSsoSchema = z.object({
+  provider: z.string().min(1, "Provider name is required"),
+  clientId: z.string().min(1, "Client ID is required"),
+  clientSecret: z.string().min(1, "Client secret is required"),
+  redirectUrl: z.string().url("Must be a valid URL"),
+  audience: z.string().url("Must be a valid URL"),
   wellKnownUrl: z.string().url("Must be a valid URL"),
 });
 const externalIdpSchema = z.object({
@@ -412,6 +421,75 @@ function SSOForm({
     </Form>
   );
 }
+// ─── Sub-form: Own SSO ──────────────────────────────────────────────────────
+function OwnSSOForm({
+  submitRef,
+  onSubmit,
+  initialValues,
+}: {
+  submitRef: React.RefObject<HTMLButtonElement>;
+  onSubmit: (v: Record<string, string>) => void;
+  initialValues?: Record<string, string>;
+}) {
+  const [showSecret, setShowSecret] = useState(false);
+  const form = useForm({
+    resolver: zodResolver(ownSsoSchema),
+    defaultValues: {
+      provider: getInitialValue(initialValues, "provider", "Provider"),
+      clientId: getInitialValue(initialValues, "clientId", "ClientId"),
+      clientSecret: getInitialValue(initialValues, "clientSecret", "ClientSecret"),
+      redirectUrl: getInitialValue(initialValues, "redirectUrl", "RedirectUrl"),
+      audience: getInitialValue(initialValues, "audience", "Audience"),
+      wellKnownUrl: getInitialValue(initialValues, "wellKnownUrl", "WellKnownUrl"),
+    },
+  });
+  const handle = form.handleSubmit((data) => {
+    onSubmit({ 
+      provider: data.provider, 
+      clientId: data.clientId, 
+      clientSecret: data.clientSecret, 
+      redirectUrl: data.redirectUrl, 
+      audience: data.audience, 
+      wellKnownUrl: data.wellKnownUrl,
+    } satisfies OwnSSOSecretValue as unknown as Record<string, string>);
+  });
+  return (
+    <Form {...form}>
+      <form id="secret-form" onSubmit={handle} className="space-y-4">
+        <FormField control={form.control} name="provider" render={({ field }) => (
+          <FormItem><FormLabel>Provider Name</FormLabel><FormControl><Input placeholder="Enter provider name" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="clientId" render={({ field }) => (
+          <FormItem><FormLabel>Client ID</FormLabel><FormControl><Input placeholder="Enter client ID" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="clientSecret" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client Secret</FormLabel>
+            <FormControl>
+              <div className="relative">
+                <Input type={showSecret ? "text" : "password"} placeholder="Enter client secret" {...field} />
+                <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowSecret(!showSecret)}>
+                  {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <FormField control={form.control} name="redirectUrl" render={({ field }) => (
+          <FormItem><FormLabel>Redirect URL</FormLabel><FormControl><Input placeholder="https://example.com/callback" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="audience" render={({ field }) => (
+          <FormItem><FormLabel>Audience</FormLabel><FormControl><Input placeholder="https://example.com" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="wellKnownUrl" render={({ field }) => (
+          <FormItem><FormLabel>Well Known URL</FormLabel><FormControl><Input placeholder="https://example.com/.well-known/openid-configuration" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <button ref={submitRef} type="submit" className="hidden" />
+      </form>
+    </Form>
+  );
+}
 // ─── Sub-form: External IdP ─────────────────────────────────────────────────
 function ExternalIdPForm({
   submitRef,
@@ -591,6 +669,9 @@ export function AddSecretModal({
           )}
           {secretType === SecretType.SSO && (
             <SSOForm key={`sso-${editItem?.itemId ?? "new"}`} submitRef={submitRef} onSubmit={handleSubFormSubmit} initialValues={editItem?.keyValuePairs} />
+          )}
+          {secretType === SecretType.OwnSSO && (
+            <OwnSSOForm key={`ownsso-${editItem?.itemId ?? "new"}`} submitRef={submitRef} onSubmit={handleSubFormSubmit} initialValues={editItem?.keyValuePairs} />
           )}
           {secretType === SecretType.ExternalIdP && (
             <ExternalIdPForm key={`extidp-${editItem?.itemId ?? "new"}`} submitRef={submitRef} onSubmit={handleSubFormSubmit} initialValues={editItem?.keyValuePairs} />

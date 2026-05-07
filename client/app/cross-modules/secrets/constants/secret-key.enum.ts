@@ -2,13 +2,14 @@ export enum SecretType {
   OIDC = "OIDC",
   Captcha = "Captcha",
   SSO = "SSO",
+  OwnSSO = "OwnSSO",
   ExternalIdP = "ExternalIdP",
 }
 
 export const SECRET_TYPE_OPTIONS = [
   { value: SecretType.OIDC, label: "OIDC" },
   { value: SecretType.Captcha, label: "Captcha" },
-  { value: SecretType.SSO, label: "Bring your own SSO" },
+  { value: SecretType.OwnSSO, label: "Bring your own SSO" },
   { value: SecretType.ExternalIdP, label: "External IdP" },
 ] as const;
 
@@ -40,6 +41,15 @@ export interface SSOSecretValue {
   WellKnownUrl: string;
 }
 
+export interface OwnSSOSecretValue {
+  provider: string;
+  audience: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUrl: string;
+  wellKnownUrl: string;
+}
+
 export interface ExternalIdPSecretValue {
   ProviderName: string;
   JwksUrl: string;
@@ -53,6 +63,7 @@ export type SecretValueMap = {
   [SecretType.OIDC]: OIDCSecretValue;
   [SecretType.Captcha]: CaptchaSecretValue;
   [SecretType.SSO]: SSOSecretValue;
+  [SecretType.OwnSSO]: OwnSSOSecretValue;
   [SecretType.ExternalIdP]: ExternalIdPSecretValue;
 };
 
