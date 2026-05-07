@@ -27,7 +27,8 @@ import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
 import { cn } from "@/lib/utils";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
-import type { AddSecretPayload } from "@/cross-modules/secrets/constants/secret-key.enum"; 
+import { SecretsList } from "@/cross-modules/secrets/components/secrets-list/secrets-list";
+
 const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models"];
 export default function SecretManagementPage() {
   const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "infra-config" });
@@ -121,7 +122,7 @@ export default function SecretManagementPage() {
         </Button>
       )}
       {selectedTab === "my-secret" && (
-        <AddSecretModal onSave={(payload: AddSecretPayload) => console.log("Secret payload:", payload)} />
+        <AddSecretModal />
       )}
     </> 
   );
@@ -218,11 +219,7 @@ export default function SecretManagementPage() {
             onGuideOpenChange={setIsManagedServicesGuideOpen}
           />
         )}
-        {selectedTab === "my-secret" && (
-          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-center text-muted-foreground">
-            <p className="text-sm">No secrets added yet.</p>
-          </div>
-        )}
+        {selectedTab === "my-secret" && <SecretsList />}
         {selectedTab === GRANT_TYPES.social && <SSO />}
         {selectedTab === "external-idp" && <Certificates />}
         {selectedTab === "captcha" && <ConfigureCaptcha />}
