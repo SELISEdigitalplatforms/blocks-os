@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Plus } from "lucide-react";
 import { useRef, useState } from "react";
@@ -32,12 +33,12 @@ import { providers } from "@blocks-idp/authentication/constants/authentication.c
 import {
   SecretType,
   SECRET_TYPE_OPTIONS,
-  type AddSecretPayload,
   type CaptchaSecretValue,
   type ExternalIdPSecretValue,
   type OIDCSecretValue,
   type SSOSecretValue,
 } from "../../constants/secret-key.enum";
+import { useSaveSecret } from "../../hooks/use-secrets";
 // ─── Schemas ────────────────────────────────────────────────────────────────
 const oidcSchema = z.object({
   clientDisplayName: z.string().min(1, "Client name is required"),
@@ -47,6 +48,7 @@ const oidcSchema = z.object({
   clientLogoUrl: z.string().optional().default(""),
 });
 const captchaSchema = z.object({
+  isEnable: z.string().default("false"),
   captchaProvider: z.string().min(1, "Provider is required"),
   captchaSiteKey: z.string().min(1, "Site key is required"),
   captchaSecretKey: z.string().min(1, "Secret key is required"),
@@ -72,11 +74,11 @@ function OIDCForm({
   onSubmit,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
-  onSubmit: (v: OIDCSecretValue) => void;
+  onSubmit: (v: Record<string, string>) => void;
 }) {
   const form = useForm({ resolver: zodResolver(oidcSchema), defaultValues: { clientDisplayName: "", redirectUri: "", audience: "", clientBrandColor: "#124091", clientLogoUrl: "" } });
   const handle = form.handleSubmit((data) => {
-    onSubmit({ ClientDisplayName: data.clientDisplayName, RedirectUri: data.redirectUri, Audience: data.audience, ClientBrandColor: data.clientBrandColor, ClientLogoUrl: data.clientLogoUrl ?? "" });
+    onSubmit({ ClientDisplayName: data.clientDisplayName, RedirectUri: data.redirectUri, Audience: data.audience, ClientBrandColor: data.clientBrandColor, ClientLogoUrl: data.clientLogoUrl ?? "" } satisfies OIDCSecretValue as unknown as Record<string, string>);
   });
   return (
     <Form {...form}>
@@ -122,11 +124,17 @@ function CaptchaForm({
   onSubmit,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
-  onSubmit: (v: CaptchaSecretValue) => void;
+  onSubmit: (v: Record<string, string>) => void;
 }) {
-  const form = useForm({ resolver: zodResolver(captchaSchema), defaultValues: { captchaProvider: "", captchaSiteKey: "", captchaSecretKey: "", captchaGeneratorType: "" } });
+  const form = useForm({ resolver: zodResolver(captchaSchema), defaultValues: { isEnable: "false", captchaProvider: "", captchaSiteKey: "", captchaSecretKey: "", captchaGeneratorType: "" } });
   const handle = form.handleSubmit((data) => {
-    onSubmit({ CaptchaProvider: data.captchaProvider, CaptchaSiteKey: data.captchaSiteKey, CaptchaSecretKey: data.captchaSecretKey, CaptchaGeneratorType: data.captchaGeneratorType });
+    onSubmit({
+      isEnable: data.isEnable,
+      provider: data.captchaProvider,
+      captchaKey: data.captchaSiteKey,
+      captchaSecret: data.captchaSecretKey,
+      captchaGenerator: data.captchaGeneratorType,
+    });
   });
   return (
     <Form {...form}>
@@ -169,6 +177,30 @@ function CaptchaForm({
             <FormMessage />
           </FormItem>
         )} />
+        <FormField control={form.control} name="isEnable" render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <div className="flex items-center gap-6">
+                <FormLabel className="mb-0">Enable Captcha</FormLabel>
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="true" id="captcha-enable-yes" />
+                    <label htmlFor="captcha-enable-yes" className="cursor-pointer text-sm font-medium">Yes</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="false" id="captcha-enable-no" />
+                    <label htmlFor="captcha-enable-no" className="cursor-pointer text-sm font-medium">No</label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
         <button ref={submitRef} type="submit" className="hidden" />
       </form>
     </Form>
@@ -180,12 +212,12 @@ function SSOForm({
   onSubmit,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
-  onSubmit: (v: SSOSecretValue) => void;
+  onSubmit: (v: Record<string, string>) => void;
 }) {
   const [showSecret, setShowSecret] = useState(false);
   const form = useForm({ resolver: zodResolver(ssoSchema), defaultValues: { clientId: "", clientSecret: "", redirectUrl: "", audience: "", wellKnownUrl: "" } });
   const handle = form.handleSubmit((data) => {
-    onSubmit({ ClientId: data.clientId, ClientSecret: data.clientSecret, RedirectUrl: data.redirectUrl, Audience: data.audience, WellKnownUrl: data.wellKnownUrl });
+    onSubmit({ ClientId: data.clientId, ClientSecret: data.clientSecret, RedirectUrl: data.redirectUrl, Audience: data.audience, WellKnownUrl: data.wellKnownUrl } satisfies SSOSecretValue as unknown as Record<string, string>);
   });
   return (
     <Form {...form}>
@@ -227,13 +259,13 @@ function ExternalIdPForm({
   onSubmit,
 }: {
   submitRef: React.RefObject<HTMLButtonElement>;
-  onSubmit: (v: ExternalIdPSecretValue) => void;
+  onSubmit: (v: Record<string, string>) => void;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const form = useForm({ resolver: zodResolver(externalIdpSchema), defaultValues: { providerName: "", url: "", issuer: "", audiences: "", password: "" } });
   const handle = form.handleSubmit((data) => {
     const isJwks = data.url?.startsWith("https://") && !data.url?.endsWith(".crt") && !data.url?.endsWith(".pem");
-    onSubmit({ ProviderName: data.providerName, JwksUrl: isJwks ? (data.url ?? "") : "", PublicCertificatePath: isJwks ? "" : (data.url ?? ""), Issuer: data.issuer ?? "", Audiences: data.audiences ?? "", Password: data.password ?? "" });
+    onSubmit({ ProviderName: data.providerName, JwksUrl: isJwks ? (data.url ?? "") : "", PublicCertificatePath: isJwks ? "" : (data.url ?? ""), Issuer: data.issuer ?? "", Audiences: data.audiences ?? "", Password: data.password ?? "" } satisfies ExternalIdPSecretValue as unknown as Record<string, string>);
   });
   return (
     <Form {...form}>
@@ -283,21 +315,24 @@ function ExternalIdPForm({
   );
 }
 // ─── Main Modal ──────────────────────────────────────────────────────────────
-type AddSecretModalProps = {
-  onSave?: (payload: AddSecretPayload) => void;
-};
-export function AddSecretModal({ onSave }: AddSecretModalProps) {
+export function AddSecretModal() {
   const [open, setOpen] = useState(false);
   const [secretType, setSecretType] = useState<SecretType>(SecretType.Captcha);
   const submitRef = useRef<HTMLButtonElement>(null);
+  const { mutate: saveSecret, isPending } = useSaveSecret();
   const handleSecretTypeChange = (value: SecretType) => {
     setSecretType(value);
   };
-  const handleSubFormSubmit = (value: AddSecretPayload["Value"]) => {
-    const payload = { SecretType: secretType, Value: value } as AddSecretPayload;
-    onSave?.(payload);
-    setOpen(false);
-    setSecretType(SecretType.Captcha);
+  const handleSubFormSubmit = (value: Record<string, string>) => {
+    saveSecret(
+      { secretKey: secretType, keyValuePairs: value },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          setSecretType(SecretType.Captcha);
+        },
+      },
+    );
   };
   const handleSave = () => {
     submitRef.current?.click();
@@ -349,8 +384,8 @@ export function AddSecretModal({ onSave }: AddSecretModalProps) {
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
-            Save
+          <Button onClick={handleSave} disabled={isPending}>
+            {isPending ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>
