@@ -34,6 +34,16 @@ namespace Secrets.DomainService.Services
             return await _secretRepository.GetSecretByIdAsync(itemId);
         }
 
+        public async Task<BaseResponse> DeleteSecretAsync(DeleteSecretRequest deleteSecretRequest)
+        {
+            await _secretRepository.DeleteSecretAsync(deleteSecretRequest.ItemId);
+
+            return new BaseResponse
+            {
+                IsSuccess = true
+            };
+        }
+
         private async Task<Secret?> MapAsync(SaveSecretRequest saveSecretRequest)
         {
             var secret = await _secretRepository.GetSecretByIdAsync(saveSecretRequest.ItemId) ?? new Secret
