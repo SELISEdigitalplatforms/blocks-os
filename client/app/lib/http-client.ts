@@ -2,6 +2,7 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { getQueryClient } from "@/providers/query-provider";
 import { useAuthStore } from "@/store/useAuthStore";
+import { IDP_BASE_URL } from "@/constants/endpoint.constant";
 
 class HttpError extends Error {
   status: number;
@@ -134,7 +135,7 @@ class HttpClient {
       useProjectStore.getState().reset();
       queryClient.cancelQueries();
       queryClient.clear();
-      window.location.href = "/login";
+      window.location.href = `${IDP_BASE_URL}/login`;
     } finally {
       isRefreshing = false;
       requestQueue = [];
