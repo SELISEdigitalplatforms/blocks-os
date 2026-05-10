@@ -127,7 +127,7 @@ export default function SecretManagementPage() {
         </Button>
       )}
       {selectedTab === "my-secret" && (
-        <AddSecretModal defaultSecretType={secretType} />
+        <AddSecretModal />
       )}
     </> 
   );
