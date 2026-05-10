@@ -93,9 +93,9 @@ export function EnvironmentList({ collapsed = false }: { collapsed?: boolean }) 
                   <span className="shrink-0 rounded-sm bg-[hsl(var(--blocks-primary-50))] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[hsl(var(--high-emphasis))]">
                     {environment}
                   </span>
-                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                  {/* <span className="min-w-0 truncate text-xs text-muted-foreground">
                     {applicationDomain || ""}
-                  </span>
+                  </span> */}
                 </div>
               ) : (
                 <span className="text-sm leading-tight">Select an Environment</span>
