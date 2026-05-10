@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useImpersonateStore } from "@/store/useImpersonateStore";
+import { useStartImpersonation, useStopImpersonation } from "@/hooks/use-impersonation";
 import { useAppState } from "./public-guard";
 import { IDP_BASE_URL } from "@/constants/endpoint.constant";
 import { useGetUser } from "@/idp/iam/hooks/use-user";
@@ -29,5 +31,21 @@ export function UserChecker({ children }: { children: React.ReactNode }) {
     }, [loggedInUser, navigate, setUser]);
 
     if(isLoading) return null;
+  return <>{children}</>;
+}
+
+export function ImpersonateGuard({ children }: { children: React.ReactNode }) {
+  const { isImpersonated, impersonatedTenantId } = useImpersonateStore();
+  const { mutate: startImpersonation } = useStartImpersonation();
+  const { mutate: stopImpersonation } = useStopImpersonation();
+
+  if (isImpersonated && impersonatedTenantId) {
+    return (
+      <>
+        {children}
+      </>
+    );
+  }
+
   return <>{children}</>;
 }
