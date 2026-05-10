@@ -89,11 +89,11 @@ export function EnvironmentList({ collapsed = false }: { collapsed?: boolean }) 
             <div className="flex min-w-0 flex-1 flex-col items-start">
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Environment</div>
               {environment ? (
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-1 leading-tight">
+                <div className="flex min-w-0 items-center gap-1 leading-tight">
                   <span className="shrink-0 rounded-sm bg-[hsl(var(--blocks-primary-50))] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[hsl(var(--high-emphasis))]">
                     {environment}
                   </span>
-                  <span className="min-w-0 break-all text-xs text-muted-foreground">
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
                     {applicationDomain || ""}
                   </span>
                 </div>
