@@ -42,5 +42,13 @@ namespace Secrets.DomainService.Services
 
             return await (await collection.FindAsync(filter)).ToListAsync();
         }
+
+        public async Task DeleteSecretAsync(string itemId)
+        {
+            var collection = _dbContextProvider.GetCollection<Secret>(_collectionName);
+            var filter = Builders<Secret>.Filter.Eq(s => s.ItemId, itemId);
+
+            await collection.DeleteOneAsync(filter);
+        }
     }
 }

@@ -9,5 +9,6 @@ namespace Secrets.DomainService.Services
         Task<List<Secret>> GetSecretAsync(string secretKey);
         Task<BaseResponse> SaveSecretAsync(SaveSecretRequest saveSecretRequest);
         Task<Secret> SecretAsync(string itemId);
+        Task<BaseResponse> DeleteSecretAsync(DeleteSecretRequest deleteSecretRequest);
     }
 }
