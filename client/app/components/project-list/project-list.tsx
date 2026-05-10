@@ -72,7 +72,7 @@ export function ProjectList({ collapsed = false }: { collapsed?: boolean }) {
             <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Project</div>
-              <div className="truncate text-sm font-medium leading-tight">{name || "Select a Project"}</div>
+              <div className="break-all text-sm font-medium leading-tight">{name || "Select a Project"}</div>
             </div>
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </div>
