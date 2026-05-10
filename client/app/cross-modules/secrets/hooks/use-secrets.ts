@@ -33,3 +33,18 @@ export const useSaveSecret = () => {
     },
   });
 };
+
+export const useDeleteSecret = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      secretsService.delete(itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["secrets", "list"] });
+      showSuccessToast({ description: "Secret deleted successfully." });
+    },
+    onError: (error) => {
+      showErrorToast({ errors: error });
+    },
+  });
+};

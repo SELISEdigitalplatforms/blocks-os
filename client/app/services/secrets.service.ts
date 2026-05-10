@@ -21,6 +21,10 @@ export class SecretsService {
   get(itemId: string): Promise<SecretItem> {
     return http.get(`${SECRETS_ENDPOINTS.GET}?ItemId=${itemId}`);
   }
+
+  delete(itemId: string): Promise<void> {
+    return http.delete(`${SECRETS_ENDPOINTS.GET}?ItemId=${itemId}`);
+  }
 }
 
 export const secretsService = new SecretsService();
