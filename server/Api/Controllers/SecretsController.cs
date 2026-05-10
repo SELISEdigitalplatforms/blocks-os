@@ -46,5 +46,13 @@ namespace BlocksTemplate.Api.Controllers
             _changeControllerContext.ChangeContext(request);
             return await _secretManagementService.SecretAsync(request.ItemId);
         }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<BaseResponse> Delete([FromBody] DeleteSecretRequest request)
+        {
+            _changeControllerContext.ChangeContext(request);
+            return await _secretManagementService.DeleteSecretAsync(request);
+        }
     }
 }
