@@ -7,6 +7,8 @@ export const SECRETS_ENDPOINTS = {
   SAVE: `${SECRETS_BASE}/Save`,
   GETS: `${SECRETS_BASE}/Gets`,
   GET: `${SECRETS_BASE}/Get`,
+    DELETE: `${SECRETS_BASE}/Delete`,
+
 } as const;
 
 export class SecretsService {
@@ -23,7 +25,7 @@ export class SecretsService {
   }
 
   delete(itemId: string): Promise<void> {
-    return http.delete(`${SECRETS_ENDPOINTS.GET}?ItemId=${itemId}`);
+    return http.post(SECRETS_ENDPOINTS.DELETE, { itemId });
   }
 }
 
