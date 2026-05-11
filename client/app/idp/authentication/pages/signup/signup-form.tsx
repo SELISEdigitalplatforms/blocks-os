@@ -30,7 +30,6 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { SsoSignin } from "../login/sso-signin";
 import { signupFormDefaultValue, signupFormSchema } from "./utils";
 export const SignupForm = ({
   loginOption,
@@ -146,16 +145,6 @@ export const SignupForm = ({
             )}
           </form>
         </Form>
-        {ssoSignUpEnabled && emailSignUpEnabled && (
-          <div className="my-2 flex items-center">
-            <hr className="flex-grow border-gray-300" />
-            <span className="mx-2 text-xs text-gray-500">OR</span>
-            <hr className="flex-grow border-gray-300" />
-          </div>
-        )}
-        {ssoSignUpEnabled && loginOption?.allowedGrantTypes.includes(GRANT_TYPES.social) && (
-          <SsoSignin loginOption={loginOption} />
-        )}
         <div className="mt-4 text-center text-base text-foreground">
           Already a member?{" "}
           <Link to={"/login"} className="text-primary hover:underline">

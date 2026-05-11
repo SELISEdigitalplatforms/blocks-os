@@ -14,7 +14,6 @@ import { useGetSignUpSetting } from "@blocks-idp/iam/hooks/use-user";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import { SigninForm } from "./signin-form";
-import { SsoSignin } from "./sso-signin";
 type SigninProps = {
   ssoError?: string;
 };
@@ -79,16 +78,6 @@ export const Signin = ({ ssoError }: SigninProps) => {
       <CardContent className="flex flex-1 flex-col justify-between">
         <div className="flex flex-1 flex-col justify-center">
           {loginOption?.allowedGrantTypes.includes(GRANT_TYPES.password) && <SigninForm />}
-          {loginOption?.allowedGrantTypes.includes(GRANT_TYPES.password) && (
-            <div className="my-2 mt-4 flex items-center">
-              <hr className="flex-grow border" />
-              <span className="mx-2 text-xs text-low-emphasis">OR</span>
-              <hr className="flex-grow border" />
-            </div>
-          )}
-          {loginOption?.allowedGrantTypes.includes(GRANT_TYPES.social) && (
-            <SsoSignin loginOption={loginOption} />
-          )}
         </div>
         {showSignUp && (
           <div className="flex items-center justify-center">

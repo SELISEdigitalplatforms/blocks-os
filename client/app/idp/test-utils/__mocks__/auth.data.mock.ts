@@ -6,10 +6,6 @@ import type {
 } from "../../authentication/models/auth.model";
 import type { IVerifyMfaPayload, IVerifyMfaResponse } from "../../authentication/models/auth.model";
 import type {
-  IGetSocialLoginEndpointPayload,
-  ISigninBySSOPayload,
-} from "../../authentication/models/oauth.model";
-import type {
   IAuthConfigPayload,
   ISaveAuthConfigPayload,
   IAuthConfiguration,
@@ -85,36 +81,6 @@ export const mockVerifyMfaResponse: IVerifyMfaResponse = {
   token_type: "Bearer",
   expires_in: 3600,
   refresh_token: "mock-refresh-token-after-mfa",
-};
-
-// ─── OAuth / SSO Mocks ───────────────────────────────────────────────────────
-
-export const mockGetSocialLoginPayload: IGetSocialLoginEndpointPayload = {
-  provider: "google" as never,
-  audience: "blocks-cloud",
-  sendAsResponse: false,
-};
-
-export const mockGetSocialLoginResponse = {
-  error: null,
-  isAResponse: false,
-  providerUrl: "https://accounts.google.com/o/oauth2/v2/auth?client_id=123",
-};
-
-export const mockSigninBySSOPayload: ISigninBySSOPayload = {
-  code: "sso-auth-code",
-  state: "sso-state-token",
-};
-
-export const mockSigninBySSOResponse = {
-  access_token: "mock-sso-access-token",
-  expires_in: 3600,
-  refresh_token: "mock-sso-refresh-token",
-  token_type: "Bearer",
-  enable_mfa: false,
-  message: "",
-  mfaId: "",
-  mfaType: "",
 };
 
 // ─── Client Credentials Mocks ────────────────────────────────────────────────
