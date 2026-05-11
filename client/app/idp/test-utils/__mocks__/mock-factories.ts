@@ -71,13 +71,6 @@ export const mockJwtClaimServiceFactory = () => ({
   },
 });
 
-export const mockOAuthServiceFactory = () => ({
-  oauthService: {
-    getSocialLoginEndpoint: vi.fn(),
-    signinBySSO: vi.fn(),
-  },
-});
-
 export const mockSsoServiceFactory = () => ({
   ssoService: {
     getSsoCredentials: vi.fn(),

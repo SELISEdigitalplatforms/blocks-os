@@ -3,28 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import {
   mockAuthServiceFactory,
-  mockOAuthServiceFactory,
   mockSigninPayload,
   mockSigninResponse,
   mockSignupPayload,
   mockSignupResponse,
   mockVerifyMfaPayload,
   mockVerifyMfaResponse,
-  mockSigninBySSOPayload,
-  mockSigninBySSOResponse,
 } from "../../test-utils/__mocks__";
 import { authService } from "@blocks-idp/authentication/services/auth.service";
-import { oauthService } from "@blocks-idp/authentication/services/oauth.service";
 import {
   useSigninByEmail,
-  useSigninBySSO,
   useVerifyMfa,
   useLogout,
   useSignupByEmail,
 } from "./use-auth";
 
 vi.mock("@blocks-idp/authentication/services/auth.service", () => mockAuthServiceFactory());
-vi.mock("@blocks-idp/authentication/services/oauth.service", () => mockOAuthServiceFactory());
 
 describe("use-auth hooks", () => {
   beforeEach(() => {
@@ -41,19 +35,6 @@ describe("use-auth hooks", () => {
       result.current.mutate(mockSigninPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(authService.signinByEmail).toHaveBeenCalledWith(mockSigninPayload);
-    });
-  });
-
-  describe("useSigninBySSO", () => {
-    it("should call oauthService.signinBySSO", async () => {
-      vi.mocked(oauthService.signinBySSO).mockResolvedValue(mockSigninBySSOResponse);
-      const { result } = renderHook(() => useSigninBySSO(), {
-        wrapper: createWrapper(),
-      });
-
-      result.current.mutate(mockSigninBySSOPayload);
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(oauthService.signinBySSO).toHaveBeenCalledWith(mockSigninBySSOPayload);
     });
   });
 
