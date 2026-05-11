@@ -98,7 +98,7 @@ class HttpClient {
       const refreshToken = isLocalhost ? (authStore.refreshToken || '""') : '""';
       formData.append("refresh_token", refreshToken);
       
-      const url = `${this.baseURL}/api/Authentication/Token`;
+      const url = `${IDP_BASE_URL}/api/Authentication/Token`;
       
       const response = await fetch(url, {
         method: "POST",

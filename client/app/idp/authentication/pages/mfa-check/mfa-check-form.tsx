@@ -10,7 +10,6 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui-kits/inpu
 import { showErrorToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useVerifyMfa } from "@blocks-idp/authentication/hooks/use-auth";
 import { useResendOtp } from "@blocks-idp/mfa/hooks/use-resend-otp";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -35,7 +34,6 @@ export const MfaCheckFrom = () => {
     mfa_id: parseAsString.withDefault(""),
     mfa_type: parseAsInteger.withDefault(0),
   });
-  const { isPending } = useVerifyMfa();
   const { setAuthenticated } = useAuthStore();
   const { remainingTime, resend } = useResendOtp({ mfaId: mfa_id });
   const form = useForm<{ code: string }>({
@@ -98,7 +96,7 @@ export const MfaCheckFrom = () => {
           </div>
         )}
         <div className="mt-4">
-          <Button className="w-full" disabled={!isValid || isPending}>
+          <Button className="w-full" disabled={!isValid}>
             Verify
           </Button>
         </div>

@@ -1,7 +1,5 @@
 import { http, HttpResponse, type JsonBodyType } from "msw";
 import {
-  mockSigninResponse,
-  mockSignupResponse,
   mockClientCredentialsResponse,
   mockOidcCredentialsResponse,
   mockOidcCredentialResponse,
@@ -18,14 +16,10 @@ import {
   SSO_ENDPOINTS,
   OIDC_FLOW_ENDPOINTS,
 } from "../../authentication/constants/endpoint.constant";
-import { PEOPLE_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
-
 // ─── Endpoint Patterns ────────────────────────────────────────────────────────
 
 // Auth
-const TOKEN_PATTERN = new RegExp(AUTH_ENDPOINTS.TOKEN);
 const LOGOUT_PATTERN = new RegExp(AUTH_ENDPOINTS.LOGOUT);
-const SIGNUP_PATTERN = new RegExp(PEOPLE_ENDPOINTS.SIGNUP);
 
 // Client Credentials
 const GET_CLIENT_CREDENTIALS_PATTERN = new RegExp(AUTH_CLIENT_ENDPOINTS.GET_CLIENT_CREDENTIALS);
@@ -56,9 +50,7 @@ const USER_ACKNOWLEDGEMENT_PATTERN = new RegExp(OIDC_FLOW_ENDPOINTS.USER_ACKNOWL
 
 export const authHandlers = [
   // Auth
-  http.post(TOKEN_PATTERN, () => HttpResponse.json(mockSigninResponse)),
   http.post(LOGOUT_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
-  http.post(SIGNUP_PATTERN, () => HttpResponse.json(mockSignupResponse)),
 
   // Client Credentials
   http.get(GET_CLIENT_CREDENTIALS_PATTERN, () => HttpResponse.json(mockClientCredentialsResponse)),
@@ -89,23 +81,6 @@ export const authHandlers = [
 ];
 
 // ─── Per-Test Override Factories ──────────────────────────────────────────────
-
-// Auth
-export const signinHandler = (response: JsonBodyType = mockSigninResponse) =>
-  http.post(TOKEN_PATTERN, () => HttpResponse.json(response));
-
-export const signinErrorHandler = (status = 500) =>
-  http.post(TOKEN_PATTERN, () =>
-    HttpResponse.json({ message: "Internal server error" }, { status }),
-  );
-
-export const signupHandler = (response: JsonBodyType = mockSignupResponse) =>
-  http.post(SIGNUP_PATTERN, () => HttpResponse.json(response));
-
-export const signupErrorHandler = (status = 500) =>
-  http.post(SIGNUP_PATTERN, () =>
-    HttpResponse.json({ message: "Internal server error" }, { status }),
-  );
 
 // Client Credentials
 export const getClientCredentialsHandler = (

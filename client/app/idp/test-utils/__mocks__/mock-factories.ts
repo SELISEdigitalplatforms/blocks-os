@@ -21,9 +21,6 @@ import { vi } from "vitest";
 
 export const mockAuthServiceFactory = () => ({
   authService: {
-    signinByEmail: vi.fn(),
-    verifyMfa: vi.fn(),
-    signupByEmail: vi.fn(),
     logout: vi.fn(),
   },
 });

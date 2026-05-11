@@ -1,5 +1,6 @@
 import { showErrorToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import { IDP_BASE_URL } from "@/constants/endpoint.constant";
 import {
   AUTH_ENDPOINTS,
   AUTH_OIDC_ENDPOINTS,
@@ -71,7 +72,7 @@ export const refreshAccessToken = async (projectKey: string): Promise<string | n
     body.append("grant_type", "refresh_token");
     body.append("refresh_token", refreshToken);
 
-    const url = `${getRuntimeEnv("BLOCKS_API_BASE_URL")}${AUTH_ENDPOINTS.TOKEN}`;
+    const url = `${IDP_BASE_URL}${AUTH_ENDPOINTS.TOKEN}`;
 
     const response = await fetch(url, {
       method: "POST",
