@@ -7,7 +7,7 @@ import {
 } from "@/hooks/use-impersonation";
 import { useAppState } from "./public-guard";
 import { IDP_BASE_URL } from "@/constants/endpoint.constant";
-import { useGetUser } from "@/idp/iam/hooks/use-user";
+import { useGetUserInfo } from "@/idp/iam/hooks/use-user";
 import { useImpersonateStore } from "@/store/impersonate-store";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ImpersonationRequest } from "@/services/impersonation.service";
@@ -29,15 +29,15 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
 
 export function UserChecker({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const { data: loggedInUser, isLoading } = useGetUser();
+  const { data: userInfo, isLoading } = useGetUserInfo();
   const { setUser } = useAuthStore();
   const { isMounted } = useAppState();
 
   useEffect(() => {
-    if (!loggedInUser?.data)
+    if (!userInfo)
       return navigate(`${IDP_BASE_URL}/login`, { replace: true });
-    setUser(loggedInUser.data);
-  }, [loggedInUser, navigate, setUser]);
+    setUser(userInfo);
+  }, [userInfo, navigate, setUser]);
 
   if (isLoading || !isMounted) return null;
   return <>{children}</>;
