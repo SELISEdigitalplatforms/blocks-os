@@ -34,10 +34,20 @@ import { SettingsPage } from "./pages/settings/settings";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import CallbackPage from "./routes/callback/callback";
 import { ProjectOverviewLayout } from "./layouts/project-overview-layout";
+import LoginCallbackPage from "./routes/auth/callback";
 
 export const router = createBrowserRouter([
+
+   // ── IDP service login (initiates OIDC flow + handles callback) ──
   
-  { path: "/login", element: <LoginSimplePage /> },
+  
+  {
+    path: "/login",
+    children: [
+      { index: true, element: <LoginSimplePage /> },
+      { path: "callback", element: <LoginCallbackPage /> },
+    ],
+  },
 
   // ── Console layout (profile, console pages without sidebar) ──
   {
