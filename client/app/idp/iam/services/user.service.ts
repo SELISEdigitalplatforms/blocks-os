@@ -48,6 +48,14 @@ export class UserService {
     );
   }
 
+  getUserInfo(): Promise<User> {
+    return http.get(
+      `${IDP_BASE_URL}${USER_ENDPOINTS.USER_INFO}`,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
   getUserById(payload: IGetUserByIdPayload): Promise<IGetUserByIdResponse> {
     return http.get(
       `${IDP_BASE_URL}${USER_ENDPOINTS.GET_USER}?id=${payload.id}&ProjectKey=${payload.projectKey}`,

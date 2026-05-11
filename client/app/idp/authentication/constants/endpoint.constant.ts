@@ -1,4 +1,4 @@
-import { API_BASES } from "@/constants/endpoint.constant";
+import { API_BASES, IDP_BASE_URL } from "@/constants/endpoint.constant";
 
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 
@@ -8,6 +8,7 @@ const AUTH_SUBPATH = "/Authentication";
 
 export const AUTH_ENDPOINTS = {
   TOKEN: `${API_BASES.IDP}${AUTH_SUBPATH}/Token`,
+  USER_INFO: `${IDP_BASE_URL}/api/idp/UserInfo`,
   LOGOUT: `${API_BASES.IDP}${AUTH_SUBPATH}/Logout`,
 } as const;
 
