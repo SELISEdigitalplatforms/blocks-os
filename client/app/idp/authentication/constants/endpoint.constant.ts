@@ -9,7 +9,6 @@ const AUTH_SUBPATH = "/Authentication";
 export const AUTH_ENDPOINTS = {
   TOKEN: `${API_BASES.IDP}${AUTH_SUBPATH}/Token`,
   LOGOUT: `${API_BASES.IDP}${AUTH_SUBPATH}/Logout`,
-  GET_LOGIN_OPTIONS: `${API_BASES.IDP}${AUTH_SUBPATH}/GetLoginOptions`,
 } as const;
 
 // ─── Client credential endpoints (auth-clients.service) ─────────────────────
