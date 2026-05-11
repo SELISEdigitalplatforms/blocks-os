@@ -17,36 +17,25 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
-import { showErrorToast } from "@/hooks/use-toast";
-import { isErrorWithErrors } from "@/lib/error";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication.constant";
-import { useSignupByEmail } from "@blocks-idp/authentication/hooks/use-auth";
-import { LoginOption } from "@blocks-idp/authentication/models/auth-configuration.model";
 import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { signupFormDefaultValue, signupFormSchema } from "./utils";
+
 export const SignupForm = ({
-  loginOption,
   emailSignUpEnabled,
-  ssoSignUpEnabled,
 }: {
-  loginOption: LoginOption;
   emailSignUpEnabled: boolean;
-  ssoSignUpEnabled: boolean;
 }) => {
   const [isChecked, setIsChecked] = useState(false);
-  const navigate = useNavigate();
   const form = useForm({
     defaultValues: signupFormDefaultValue,
     resolver: zodResolver(signupFormSchema),
   });
-  const { isPending, mutateAsync } = useSignupByEmail();
   const googleSiteKey = getRuntimeEnv("BLOCKS_GOOGLE_SITE_KEY") || "";
   const {
     code: captchaCode,
@@ -57,26 +46,7 @@ export const SignupForm = ({
     siteKey: googleSiteKey,
   });
   const { isValid } = form.formState;
-  const onSubmitHandler = async (values: z.infer<typeof signupFormSchema>) => {
-    try {
-      const res = await mutateAsync({
-        ...values,
-        captchaCode,
-      });
-      if (!res.isSuccess) {
-        resetCaptcha();
-        return showErrorToast({ errors: res.errors });
-      }
-      navigate(`/signup-email-sent?email=${values.email}`);
-    } catch (error) {
-      resetCaptcha();
-      if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors });
-      } else {
-        showErrorToast({ errors: "Something went wrong" });
-      }
-    }
-  };
+  const onSubmitHandler = async (_values: z.infer<typeof signupFormSchema>) => {};
   useEffect(() => {
     if (!isValid && captchaCode) resetCaptcha();
   }, [captchaCode, isValid, resetCaptcha]);
@@ -137,7 +107,7 @@ export const SignupForm = ({
                 <Button
                   type="submit"
                   className="w-full rounded"
-                  disabled={isPending || !isValid || !captchaCode || !isChecked}
+                  disabled={!isValid || !captchaCode || !isChecked}
                 >
                   Continue
                 </Button>
