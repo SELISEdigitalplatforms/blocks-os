@@ -12,7 +12,6 @@ import { useImpersonateStore } from "@/store/impersonate-store";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ImpersonationRequest } from "@/services/impersonation.service";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { useUserStore } from "@/store/user-store";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -32,7 +31,7 @@ export function UserChecker({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { data: loggedInUser, isLoading } = useGetUser();
   const { setUser } = useAuthStore();
-  // const {} = useUserStore();
+  const { isMounted } = useAppState();
 
   useEffect(() => {
     if (!loggedInUser?.data)
@@ -40,7 +39,7 @@ export function UserChecker({ children }: { children: React.ReactNode }) {
     setUser(loggedInUser.data);
   }, [loggedInUser, navigate, setUser]);
 
-  if (isLoading) return null;
+  if (isLoading || !isMounted) return null;
   return <>{children}</>;
 }
 
