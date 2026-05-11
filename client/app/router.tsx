@@ -1,6 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { DashboardLayout } from "./layouts/dashboard-layout";
-import { ProjectDashboardLayout } from "./layouts/project-dashboard-layout";
 import { ConsoleLayout } from "./layouts/console-layout";
 import LoginSimplePage from "./routes/auth/login-simple";
 
@@ -34,6 +33,7 @@ import { RepositoriesPage } from "./pages/repositories/repositories";
 import { SettingsPage } from "./pages/settings/settings";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import CallbackPage from "./routes/callback/callback";
+import { ProjectOverviewLayout } from "./layouts/project-overview-layout";
 
 export const router = createBrowserRouter([
   
@@ -49,9 +49,9 @@ export const router = createBrowserRouter([
       { path: "/callback", element: <CallbackPage /> },
     ],
   },
-  // ── Project dashboard layout (dashboard overview + project overview pages) ──
+  // ── Project overview layout ( project overview pages) ──
   {
-    element: <ProjectDashboardLayout />,
+    element: <ProjectOverviewLayout />,
     children: [
       { path: "/dashboard", element: <DashboardOverview /> },
       { path: "/project-overview", element: <Navigate to="/project-overview/environments" replace /> },
@@ -61,7 +61,7 @@ export const router = createBrowserRouter([
       { path: "/project-overview/settings", element: <SettingsPage /> },
     ],
   },
-  // ── Dashboard layout (protected routes) ──
+  // ── Dashboard layout (protected routes + future impersonated pages) ──
   {
     element: <DashboardLayout />,
     children: [
