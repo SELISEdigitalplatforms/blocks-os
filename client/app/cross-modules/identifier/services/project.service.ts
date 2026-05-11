@@ -118,9 +118,7 @@ export class ProjectService {
     return http.post(PROJECT_ENDPOINTS.DISABLE, payload);
   }
 
-  getProjectLoginOption(): Promise<IGetProjectLoginOptionResponse> {
-    return http.get(PROJECT_ENDPOINTS.GET_LOGIN_OPTIONS);
-  }
+
 
   // Data Migration Methods
   initiateMigration(payload: IMigrationRequest): Promise<IMigrationInitiateResponse> {

@@ -87,6 +87,7 @@ describe("use-organization hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(iamService.organization.saveOrganization).toHaveBeenCalledWith(
         mockSaveOrganizationPayload,
+        expect.anything(),
       );
     });
   });

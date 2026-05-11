@@ -3,6 +3,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { getQueryClient } from "@/providers/query-provider";
 import { useAuthStore } from "@/store/useAuthStore";
 import { IDP_BASE_URL } from "@/constants/endpoint.constant";
+import { AUTH_ENDPOINTS } from "@/idp/authentication/constants/endpoint.constant";
 
 class HttpError extends Error {
   status: number;
@@ -98,7 +99,7 @@ class HttpClient {
       const refreshToken = isLocalhost ? (authStore.refreshToken || '""') : '""';
       formData.append("refresh_token", refreshToken);
       
-      const url = `${IDP_BASE_URL}/api/Authentication/Token`;
+      const url = `${IDP_BASE_URL}${AUTH_ENDPOINTS.TOKEN}`;
       
       const response = await fetch(url, {
         method: "POST",
