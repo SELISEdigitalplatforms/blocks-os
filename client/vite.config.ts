@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
-import type { UserConfig } from "vitest/config";
+import type { InlineConfig } from "vitest/node";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "BLOCKS_");
@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
         "@blocks-utilities": path.resolve(__dirname, "./app/cross-modules/utilities"),
         "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
       },
-    } as UserConfig["test"],
+    } as InlineConfig,
     server: {
       host: true, // Listen on all addresses (0.0.0.0)
       port: 4000,
