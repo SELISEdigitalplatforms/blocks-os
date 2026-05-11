@@ -1,33 +1,9 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { AuthLayout } from "./layouts/auth-layout";
-import { PublicLayout } from "./layouts/public-layout";
-import { OidcLayout } from "./layouts/oidc-layout";
 import { DashboardLayout } from "./layouts/dashboard-layout";
 import { ProjectDashboardLayout } from "./layouts/project-dashboard-layout";
 import { ConsoleLayout } from "./layouts/console-layout";
-import { ProjectOverviewLayout } from "./layouts/project-overview-layout";
-// Auth routes (public, with auth layout)
-import LoginPage from "./routes/auth/login";
 import LoginSimplePage from "./routes/auth/login-simple";
-import SignupPage from "./routes/auth/signup";
-import SsoActivatePage from "./routes/auth/sso-activate";
-// Public routes (with public guard only)
-import ActivatePage from "./routes/auth/activate";
-import ForgotPasswordPage from "./routes/auth/forgot-password";
-import ResetPasswordPage from "./routes/auth/resetpassword";
-import ActivateSuccessPage from "./routes/auth/activate-success";
-import ForgotEmailSentPage from "./routes/auth/forgot-email-sent";
-import SignupEmailSentPage from "./routes/auth/signup-email-sent";
-import MfaCheckPage from "./routes/auth/mfa-check";
-import ResetPasswordSuccessPage from "./routes/auth/reset-password-success";
-// OIDC routes (un-guarded)
-import OidcIndexPage from "./routes/oidc/index";
-import OidcLoginPage from "./routes/oidc/login";
-import OidcPermissionPage from "./routes/oidc/permission";
-import OidcErrorPage from "./routes/oidc/error";
-import OidcForgotPasswordPage from "./routes/oidc/forgot-password";
-import OidcEmailSentConfirmationPage from "./routes/oidc/email-sent-confirmation";
-// Dashboard routes (protected)
+
 import IamPage from "./routes/dashboard/iam";
 import IamUserDetailPage from "./routes/dashboard/iam-user-detail";
 import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
@@ -50,7 +26,6 @@ import SecretManagementPage from "./routes/dashboard/secret-management";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
 import ProfilePage from "./routes/dashboard/profile";
-// Console pages
 import { Console } from "./pages/console/console";
 import { DashboardOverview } from "./pages/dashboard/dashboard-overview";
 import { EnvironmentsPage } from "./pages/environments/environments";
@@ -59,6 +34,7 @@ import { RepositoriesPage } from "./pages/repositories/repositories";
 import { SettingsPage } from "./pages/settings/settings";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import CallbackPage from "./routes/callback/callback";
+
 export const router = createBrowserRouter([
   // ── Auth layout (login, signup, sso-activate) ──
   // {
@@ -70,7 +46,6 @@ export const router = createBrowserRouter([
   //   ],
   // },
   // ── Simple login (no guards, no API calls) ──
-  { path: "/login", element: <LoginSimplePage /> },
 
   // ── Public layout (other public pages with PublicGuard) ──
   // {
@@ -99,6 +74,11 @@ export const router = createBrowserRouter([
   //     { path: "email-sent-confirmation", element: <OidcEmailSentConfirmationPage /> },
   //   ],
   // },
+
+
+
+  { path: "/login", element: <LoginSimplePage /> },
+
   // ── Console layout (profile, console pages without sidebar) ──
   {
     element: <ConsoleLayout />,
