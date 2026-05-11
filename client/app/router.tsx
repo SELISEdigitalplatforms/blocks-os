@@ -36,47 +36,7 @@ import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import CallbackPage from "./routes/callback/callback";
 
 export const router = createBrowserRouter([
-  // ── Auth layout (login, signup, sso-activate) ──
-  // {
-  //   element: <AuthLayout />,
-  //   children: [
-  //     { path: "/login-classic", element: <LoginPage /> },
-  //     { path: "/signup", element: <SignupPage /> },
-  //     { path: "/sso-activate", element: <SsoActivatePage /> },
-  //   ],
-  // },
-  // ── Simple login (no guards, no API calls) ──
-
-  // ── Public layout (other public pages with PublicGuard) ──
-  // {
-  //   element: <PublicLayout />,
-  //   children: [
-  //     { path: "/activate", element: <ActivatePage /> },
-  //     { path: "/forgot-password", element: <ForgotPasswordPage /> },
-  //     { path: "/resetpassword", element: <ResetPasswordPage /> },
-  //     { path: "/activate-success", element: <ActivateSuccessPage /> },
-  //     { path: "/forgot-email-sent", element: <ForgotEmailSentPage /> },
-  //     { path: "/signup-email-sent", element: <SignupEmailSentPage /> },
-  //     { path: "/mfa-check", element: <MfaCheckPage /> },
-  //     { path: "/reset-password-success", element: <ResetPasswordSuccessPage /> },
-  //   ],
-  // },
-  // ── OIDC layout (un-guarded, themed) ──
-  // {
-  //   path: "/oidc",
-  //   element: <OidcLayout />,
-  //   children: [
-  //     { index: true, element: <OidcIndexPage /> },
-  //     { path: "login", element: <OidcLoginPage /> },
-  //     { path: "permission", element: <OidcPermissionPage /> },
-  //     { path: "error", element: <OidcErrorPage /> },
-  //     { path: "forgot-password", element: <OidcForgotPasswordPage /> },
-  //     { path: "email-sent-confirmation", element: <OidcEmailSentConfirmationPage /> },
-  //   ],
-  // },
-
-
-
+  
   { path: "/login", element: <LoginSimplePage /> },
 
   // ── Console layout (profile, console pages without sidebar) ──
