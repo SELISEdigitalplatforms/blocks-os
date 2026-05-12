@@ -18,8 +18,12 @@ export default function LoginCallbackPage() {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
 
-    const apiBaseUrl = getRuntimeEnv("BLOCKS_API_BASE_URL") || "http://localhost:5000";
+    // const apiBaseUrl = getRuntimeEnv("BLOCKS_API_BASE_URL") || "http://localhost:7000";
+        const apiBaseUrl =  "http://localhost:7000"; //idp backend is on localhost:7000
+
     const callbackUrl = new URL("/api/idp/callback", apiBaseUrl);
+
+    console.log(apiBaseUrl, callbackUrl.toString(), { code, state, error, tenantId });
 
     // Forward the callback parameters to backend
     if (code) callbackUrl.searchParams.set("code", code);

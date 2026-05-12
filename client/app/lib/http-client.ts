@@ -66,12 +66,12 @@ class HttpClient {
     });
 
     // Add Authorization Bearer token for localhost
-    if (this.isLocalhost()) {
-      const accessToken = useAuthStore.getState().accessToken;
-      if (accessToken) {
-        normalizedHeaders.set("Authorization", `Bearer ${accessToken}`);
-      }
-    }
+    // if (this.isLocalhost()) {
+    //   const accessToken = useAuthStore.getState().accessToken;
+    //   if (accessToken) {
+    //     normalizedHeaders.set("Authorization", `Bearer ${accessToken}`);
+    //   }
+    // }
 
     if (headers) {
       if (headers instanceof Headers) {
@@ -90,14 +90,14 @@ class HttpClient {
     if (isRefreshing) return;
     isRefreshing = true;
     try {
-      const isLocalhost = this.isLocalhost();
+      // const isLocalhost = this.isLocalhost();
       const authStore = useAuthStore.getState();
       const formData = new URLSearchParams();
       formData.append("grant_type", "refresh_token");
       
       // For localhost, use stored refresh token; for remote, use empty string (cookie-based)
-      const refreshToken = isLocalhost ? (authStore.refreshToken || '""') : '""';
-      formData.append("refresh_token", refreshToken);
+      // const refreshToken = isLocalhost ? (authStore.refreshToken || '""') : '""';
+      formData.append("refresh_token", '""');
       
       const url = `${IDP_BASE_URL}${AUTH_ENDPOINTS.TOKEN}`;
       
@@ -107,11 +107,11 @@ class HttpClient {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "X-Blocks-Key": this.BLOCKS_KEY,
-          ...(isLocalhost && authStore.accessToken && {
-            Authorization: `Bearer ${authStore.accessToken}`,
-          }),
+          // ...(isLocalhost && authStore.accessToken && {
+          //   Authorization: `Bearer ${authStore.accessToken}`,
+          // }),
         },
-        credentials: isLocalhost ? "same-origin" : "include",
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -119,12 +119,12 @@ class HttpClient {
       }
 
       // For localhost, save the new tokens
-      if (isLocalhost) {
-        const data = await response.json();
-        if (data.access_token && data.refresh_token) {
-          authStore.setTokens(data.access_token, data.refresh_token);
-        }
-      }
+      // if (isLocalhost) {
+      //   const data = await response.json();
+      //   if (data.access_token && data.refresh_token) {
+      //     authStore.setTokens(data.access_token, data.refresh_token);
+      //   }
+      // }
 
       while (requestQueue.length > 0) {
         const { url, requestOption, resolve, reject } = requestQueue.shift()!;
@@ -156,11 +156,11 @@ class HttpClient {
     const fullUrl = absoluteUrl ? url : `${this.baseURL}${url}`;
     const normalizedHeaders = this.normalizeHeaders(headers, skipBlocksKey);
     // Use same-origin for localhost (token in header), include for remote (cookie-based)
-    const credentialsMode = this.isLocalhost() ? "same-origin" : (withCredentials ? "include" : "same-origin");
+    // const credentialsMode = this.isLocalhost() ? "same-origin" : (withCredentials ? "include" : "same-origin");
     const config: RequestInit = {
       method,
       headers: normalizedHeaders,
-      credentials: credentialsMode,
+      credentials: "include" ,
     };
 
     if (body) {
@@ -280,12 +280,12 @@ class HttpClient {
     const fullUrl = absoluteUrl ? url : `${this.baseURL}${url}`;
     const normalizedHeaders = this.normalizeHeaders(headers, skipBlocksKey);
     // Use same-origin for localhost (token in header), include for remote (cookie-based)
-    const credentialsMode = this.isLocalhost() ? "same-origin" : (withCredentials ? "include" : "same-origin");
+    // const credentialsMode = this.isLocalhost() ? "same-origin" : (withCredentials ? "include" : "same-origin");
 
     const response = await fetch(fullUrl, {
       method: "POST",
       headers: normalizedHeaders,
-      credentials: credentialsMode,
+      credentials: "include",
       body: JSON.stringify(body),
     });
 
