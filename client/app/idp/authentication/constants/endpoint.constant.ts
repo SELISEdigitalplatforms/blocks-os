@@ -1,14 +1,15 @@
-import { API_BASES, IDP_BASE_URL } from "@/constants/endpoint.constant";
+import { API_BASES } from "@/constants/endpoint.constant";
 
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 
 const AUTH_SUBPATH = "/Authentication";
+const AUTH_OIDC_SUBPATH = "/oidc";
 
 // ─── Auth endpoints (auth.service) ───────────────────────────────────────────
 
 export const AUTH_ENDPOINTS = {
   TOKEN: `${API_BASES.IDP}${AUTH_SUBPATH}/Token`,
-  USER_INFO: `${IDP_BASE_URL}/api/idp/UserInfo`,
+  USER_INFO: `${API_BASES.IDP}/idp/UserInfo`,
   LOGOUT: `${API_BASES.IDP}${AUTH_SUBPATH}/Logout`,
 } as const;
 
@@ -27,6 +28,7 @@ export const AUTH_OIDC_ENDPOINTS = {
   GET_OIDC_CLIENT: `${API_BASES.IDP}${AUTH_SUBPATH}/GetOIDCClient`,
   SAVE_OIDC_CLIENT: `${API_BASES.IDP}${AUTH_SUBPATH}/SaveOIDCClient`,
   DELETE_OIDC_CLIENT: `${API_BASES.IDP}${AUTH_SUBPATH}/DeleteOIDCClient`,
+  OIDC_TOKEN: `${API_BASES.IDP}${AUTH_OIDC_SUBPATH}/token`,
 } as const;
 
 // ─── Auth configuration endpoints (auth-config.service) ─────────────────────
@@ -51,4 +53,3 @@ export const SSO_ENDPOINTS = {
 export const OIDC_FLOW_ENDPOINTS = {
   USER_ACKNOWLEDGEMENT: `${API_BASES.IDP}${AUTH_SUBPATH}/UserAcknowledgement`,
 } as const;
-
