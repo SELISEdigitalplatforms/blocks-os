@@ -1,4 +1,7 @@
-export const IDP_BASE_URL = "https://dev-idp.blocksdevelopers.com";
+// export const IDP_BASE_URL = "https://dev-idp.blocksdevelopers.com";
+
+export const IDP_BASE_URL = "http://localhost:7000";
+
 export const DEPLOYMENT_BASE_URL = "https://dev-deployment.blocksdevelopers.com";
 
 export const API_BASES = {

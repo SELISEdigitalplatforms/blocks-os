@@ -330,10 +330,13 @@ export default function LoginSimplePage() {
 
       const search = new URLSearchParams(window.location.search);
       const blocksKey = search.get("x-blocks-key") || getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-      const apiBaseUrl = getRuntimeEnv("BLOCKS_API_BASE_URL") || "http://localhost:5000";
+      // const apiBaseUrl = getRuntimeEnv("BLOCKS_API_BASE_URL") || "http://localhost:5000";
+
+            // const apiBaseUrl =  "http://localhost:7000";
+   
 
       // const initiateUrl = new URL("/api/idp/initiate", apiBaseUrl);
-            const initiateUrl = new URL("http://localhost:5000"+ "/api/idp/initiate", apiBaseUrl);
+      const initiateUrl = new URL("http://localhost:7000"+ "/api/idp/initiate"); //idp backend is on localhost:7000
 
       if (blocksKey) initiateUrl.searchParams.set("x-blocks-key", blocksKey);
 
