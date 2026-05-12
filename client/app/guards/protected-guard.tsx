@@ -6,40 +6,24 @@ import {
   useStopImpersonation,
 } from "@/hooks/use-impersonation";
 import { useAppState } from "./public-guard";
-import { IDP_BASE_URL } from "@/constants/endpoint.constant";
-import { useGetUserInfo } from "@/idp/iam/hooks/use-user";
+import { useGetUser } from "@/idp/iam/hooks/use-user";
 import { useImpersonateStore } from "@/store/impersonate-store";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ImpersonationRequest } from "@/services/impersonation.service";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
   const { isMounted } = useAppState();
+  const { data } = useGetUser();
+  const { setUser } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!isMounted) return;
-    if (!isAuthenticated)
-      return navigate(`${IDP_BASE_URL}/login`, { replace: true });
-  }, [isAuthenticated, isMounted, navigate]);
-  if (!isMounted || !isAuthenticated) return null;
-  return <>{children}</>;
-}
-
-export function UserChecker({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-  const { data: userInfo, isLoading } = useGetUserInfo();
-  const { setUser } = useAuthStore();
-  const { isMounted } = useAppState();
-
-  useEffect(() => {
-    if (!userInfo)
-      return navigate(`${IDP_BASE_URL}/login`, { replace: true });
-    setUser(userInfo);
-  }, [userInfo, navigate, setUser]);
-
-  if (isLoading || !isMounted) return null;
+    if (!data) return navigate(`/login`, { replace: true });
+    setUser(data.data);
+  }, [data, navigate, setUser]);
+  if (!isMounted || !data) return null;
   return <>{children}</>;
 }
 
