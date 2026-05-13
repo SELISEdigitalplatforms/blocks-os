@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
+import { API_BASES } from "@/constants/endpoint.constant";
 const pillars = [
   { icon: ShieldCheck, label: "Authentication" },
   { icon: KeyRound, label: "Secrets Management" },
@@ -102,23 +103,42 @@ const services: Service[] = [
         name: "React",
         available: true,
         links: [
-          { label: "npm", to: "https://www.npmjs.com/package/@seliseblocks/cli" },
-          { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct" },
+          {
+            label: "npm",
+            to: "https://www.npmjs.com/package/@seliseblocks/cli",
+          },
+          {
+            label: "GitHub",
+            to: "https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct",
+          },
           { label: "Demo", to: "https://construct.seliseblocks.com" },
         ],
       },
-      { icon: "/assets/images/angular-icon.png", name: "Angular", available: false, links: [] },
+      {
+        icon: "/assets/images/angular-icon.png",
+        name: "Angular",
+        available: false,
+        links: [],
+      },
       {
         icon: "/assets/images/dotnet-icon.png",
         name: ".NET",
         available: true,
         links: [
           { label: "NuGet", to: "https://www.nuget.org/profiles/SELISE" },
-          { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct" },
+          {
+            label: "GitHub",
+            to: "https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct",
+          },
           { label: "PyPI", to: "https://pypi.org/project/seliseblocks-lmt/" },
         ],
       },
-      { icon: "/assets/images/ruby-icon.png", name: "Ruby", available: false, links: [] },
+      {
+        icon: "/assets/images/ruby-icon.png",
+        name: "Ruby",
+        available: false,
+        links: [],
+      },
     ],
   },
 ];
@@ -179,9 +199,7 @@ const ServiceCarousel = () => {
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-0 flex flex-col"
             >
-              <div
-                className="relative overflow-hidden bg-primary px-6 py-7"
-              >
+              <div className="relative overflow-hidden bg-primary px-6 py-7">
                 <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5" />
                 <div className="absolute -bottom-6 right-4 h-20 w-20 rounded-full bg-white/5" />
                 <span className="relative inline-flex items-center rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/80">
@@ -192,9 +210,13 @@ const ServiceCarousel = () => {
                     <service.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold leading-tight text-primary-foreground">{service.title}</h3>
+                    <h3 className="text-lg font-bold leading-tight text-primary-foreground">
+                      {service.title}
+                    </h3>
                     {service.stacks && (
-                      <p className="mt-0.5 text-xs text-primary-foreground/70">Open-source SDKs &amp; CLI tools</p>
+                      <p className="mt-0.5 text-xs text-primary-foreground/70">
+                        Open-source SDKs &amp; CLI tools
+                      </p>
                     )}
                   </div>
                 </div>
@@ -205,37 +227,70 @@ const ServiceCarousel = () => {
                 </p>
                 {service.stacks ? (
                   <div className="flex flex-col divide-y divide-[hsl(var(--border-default))]">
-                    {service.stacks.filter(s => s.available).map((sdk) => (
-                      <div key={sdk.name} className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
-                            <img src={sdk.icon} width={16} height={16} alt={sdk.name} />
-                          </div>
-                          <span className="text-sm font-medium text-[hsl(var(--high-emphasis))]">{sdk.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          {sdk.links.map((link, i) => (
-                            <span key={link.label} className="flex items-center gap-2">
-                              {i > 0 && <span className="h-3 w-px bg-[hsl(var(--border-default))]" />}
-                              <Link to={link.to} target="_blank" className="font-medium text-primary hover:underline">
-                                {link.label}
-                              </Link>
+                    {service.stacks
+                      .filter((s) => s.available)
+                      .map((sdk) => (
+                        <div
+                          key={sdk.name}
+                          className="flex items-center justify-between py-2"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
+                              <img
+                                src={sdk.icon}
+                                width={16}
+                                height={16}
+                                alt={sdk.name}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-[hsl(var(--high-emphasis))]">
+                              {sdk.name}
                             </span>
-                          ))}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            {sdk.links.map((link, i) => (
+                              <span
+                                key={link.label}
+                                className="flex items-center gap-2"
+                              >
+                                {i > 0 && (
+                                  <span className="h-3 w-px bg-[hsl(var(--border-default))]" />
+                                )}
+                                <Link
+                                  to={link.to}
+                                  target="_blank"
+                                  className="font-medium text-primary hover:underline"
+                                >
+                                  {link.label}
+                                </Link>
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    {service.stacks.filter(s => !s.available).length > 0 && (
+                      ))}
+                    {service.stacks.filter((s) => !s.available).length > 0 && (
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-3">
-                          {service.stacks.filter(s => !s.available).map((sdk) => (
-                            <div key={sdk.name} className="flex items-center gap-1.5 opacity-40">
-                              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
-                                <img src={sdk.icon} width={16} height={16} alt={sdk.name} />
+                          {service.stacks
+                            .filter((s) => !s.available)
+                            .map((sdk) => (
+                              <div
+                                key={sdk.name}
+                                className="flex items-center gap-1.5 opacity-40"
+                              >
+                                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
+                                  <img
+                                    src={sdk.icon}
+                                    width={16}
+                                    height={16}
+                                    alt={sdk.name}
+                                  />
+                                </div>
+                                <span className="text-sm font-medium text-[hsl(var(--low-emphasis))]">
+                                  {sdk.name}
+                                </span>
                               </div>
-                              <span className="text-sm font-medium text-[hsl(var(--low-emphasis))]">{sdk.name}</span>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                         <span className="rounded-full bg-[hsl(var(--surface-app))] px-2.5 py-0.5 text-[10px] font-semibold text-[hsl(var(--low-emphasis))]">
                           Coming soon
@@ -256,15 +311,8 @@ const ServiceCarousel = () => {
                   </div>
                 )}
                 <div className="mt-auto pt-1">
-                  <Button
-                    asChild
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Link
-                      to={service.url}
-                      target="_blank"
-                    >
+                  <Button asChild size="sm" className="gap-2">
+                    <Link to={service.url} target="_blank">
                       {service.cta}
                       <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
@@ -328,18 +376,8 @@ export default function LoginSimplePage() {
       if (isStarting) return;
       setIsStarting(true);
 
-      const search = new URLSearchParams(window.location.search);
-      const blocksKey = search.get("x-blocks-key") || getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-      // const apiBaseUrl = getRuntimeEnv("BLOCKS_API_BASE_URL") || "http://localhost:5000";
-
-            // const apiBaseUrl =  "http://localhost:7000";
-   
-
-      // const initiateUrl = new URL("/api/idp/initiate", apiBaseUrl);
-      const initiateUrl = new URL("http://localhost:7000"+ "/api/idp/initiate"); //idp backend is on localhost:7000
-
-      if (blocksKey) initiateUrl.searchParams.set("x-blocks-key", blocksKey);
-
+      const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+      const initiateUrl = `${API_BASES.IDP}/idp/initiate?x-blocks-key=${blocksKey}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
 
@@ -352,7 +390,8 @@ export default function LoginSimplePage() {
         showErrorToast({ errors: "Failed to get authorization URL" });
         setIsStarting(false);
       }
-    } catch {
+    } catch (errors) {
+      console.error("Login initiation error:", errors);
       showErrorToast({ errors: "Unable to start login. Please try again." });
       setIsStarting(false);
     }
@@ -368,7 +407,9 @@ export default function LoginSimplePage() {
       <main className="relative z-10 flex flex-1 flex-col items-start justify-center gap-16 px-6 py-12 lg:flex-row lg:items-center lg:gap-16 lg:py-0 xl:px-[154px]">
         <div className="flex flex-1 flex-col items-start gap-6">
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.1em] text-primary">Blocks OS Platform</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.1em] text-primary">
+              Blocks OS Platform
+            </p>
             <h1 className="max-w-xl text-5xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] lg:text-6xl">
               Backends that are
             </h1>
@@ -382,7 +423,11 @@ export default function LoginSimplePage() {
                   animate={
                     titleNumber === index
                       ? { y: 0, opacity: 1, filter: "blur(0px)" }
-                      : { y: titleNumber > index ? -28 : 28, opacity: 0, filter: "blur(6px)" }
+                      : {
+                          y: titleNumber > index ? -28 : 28,
+                          opacity: 0,
+                          filter: "blur(6px)",
+                        }
                   }
                 >
                   {title}.
@@ -391,9 +436,10 @@ export default function LoginSimplePage() {
             </div>
           </div>
           <p className="max-w-lg text-lg leading-relaxed tracking-tight text-muted-foreground">
-            Blocks OS is a modern platform for building and deploying secure, scalable applications with built-in observability, AI
-            capabilities, and comprehensive identity management. Focus on your application logic
-            while Blocks OS handles the infrastructure.
+            Blocks OS is a modern platform for building and deploying secure,
+            scalable applications with built-in observability, AI capabilities,
+            and comprehensive identity management. Focus on your application
+            logic while Blocks OS handles the infrastructure.
           </p>
           <div className="flex flex-wrap gap-2">
             {pillars.map(({ icon: Icon, label }) => (
@@ -416,11 +462,7 @@ export default function LoginSimplePage() {
               >
                 {isStarting ? "Redirecting…" : "Log in to your account"}
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-              >
+              <Button size="lg" variant="outline" asChild>
                 <Link to="https://docs.seliseblocks.com/" target="_blank">
                   Read the Docs
                 </Link>
