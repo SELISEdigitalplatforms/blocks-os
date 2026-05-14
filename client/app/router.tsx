@@ -63,7 +63,6 @@ export const router = createBrowserRouter([
   {
     element: <ProjectOverviewLayout />,
     children: [
-      { path: "/dashboard", element: <DashboardOverview /> },
       { path: "/project-overview", element: <Navigate to="/project-overview/environments" replace /> },
       { path: "/project-overview/environments", element: <EnvironmentsPage /> },
       { path: "/project-overview/people", element: <PeopleManagement /> },
@@ -75,6 +74,7 @@ export const router = createBrowserRouter([
   {
     element: <DashboardLayout />,
     children: [
+      { path: "/dashboard", element: <DashboardOverview /> },
       { path: "/services/iam", element: <IamPage /> },
       { path: "/services/iam/user-detail/:id", element: <IamUserDetailPage /> },
       { path: "/services/iam/role-detail/:id", element: <IamRoleDetailPage /> },
