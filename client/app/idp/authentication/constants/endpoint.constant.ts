@@ -2,7 +2,7 @@ import { API_BASES } from "@/constants/endpoint.constant";
 
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 
-const AUTH_SUBPATH = "/Authentication";
+const AUTH_SUBPATH = "/auth";
 const AUTH_OIDC_SUBPATH = "/oidc";
 
 // ─── Auth endpoints (auth.service) ───────────────────────────────────────────
