@@ -1,13 +1,16 @@
 import { showErrorToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { IDP_BASE_URL } from "@/constants/endpoint.constant";
+// import { IDP_BASE_URL } from "@/constants/endpoint.constant";
 import {
   AUTH_ENDPOINTS,
   AUTH_OIDC_ENDPOINTS,
   OIDC_FLOW_ENDPOINTS,
 } from "../constants/endpoint.constant";
 import { ACCOUNT_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
-export { redirectToLogin, buildNavigationUrl } from "../utils/oidc-navigation.util";
+export {
+  redirectToLogin,
+  buildNavigationUrl,
+} from "../utils/oidc-navigation.util";
 
 interface IGetOidcPayload {
   projectKey: string;
@@ -52,7 +55,9 @@ interface IAccountRecoverResponse {
   [key: string]: any;
 }
 
-export const refreshAccessToken = async (projectKey: string): Promise<string | null> => {
+export const refreshAccessToken = async (
+  projectKey: string,
+): Promise<string | null> => {
   try {
     const oidcAuthStorage = localStorage.getItem("oidc-auth-storage");
     if (!oidcAuthStorage) {
@@ -72,7 +77,7 @@ export const refreshAccessToken = async (projectKey: string): Promise<string | n
     body.append("grant_type", "refresh_token");
     body.append("refresh_token", refreshToken);
 
-    const url = `${IDP_BASE_URL}${AUTH_ENDPOINTS.TOKEN}`;
+    const url = `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}${AUTH_ENDPOINTS.TOKEN}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -97,7 +102,9 @@ export const refreshAccessToken = async (projectKey: string): Promise<string | n
         newTokens.error,
         newTokens.error_description,
       );
-      showErrorToast({ errors: newTokens.error_description || newTokens.error });
+      showErrorToast({
+        errors: newTokens.error_description || newTokens.error,
+      });
       return null;
     }
 
@@ -105,7 +112,9 @@ export const refreshAccessToken = async (projectKey: string): Promise<string | n
     return newTokens.access_token || null;
   } catch (error) {
     console.error("[Refresh Token] Error:", error);
-    showErrorToast({ errors: "Failed to refresh token. Please try again from the start." });
+    showErrorToast({
+      errors: "Failed to refresh token. Please try again from the start.",
+    });
     setTimeout(() => {
       window.history.go(-2);
     }, 2000);
@@ -164,7 +173,9 @@ export const getOidcCredential = async (
     }
 
     if (!response.ok) {
-      showErrorToast({ errors: "Failed to fetch OIDC credential. Please try again." });
+      showErrorToast({
+        errors: "Failed to fetch OIDC credential. Please try again.",
+      });
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
@@ -211,7 +222,9 @@ export const userAcknowledgement = async (
     return await response.json();
   } catch (error) {
     console.error("[User Acknowledgement] Error:", error);
-    showErrorToast({ errors: "Failed to process permission. Please try again." });
+    showErrorToast({
+      errors: "Failed to process permission. Please try again.",
+    });
     throw error;
   }
 };

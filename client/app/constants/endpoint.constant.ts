@@ -1,8 +1,9 @@
 // export const IDP_BASE_URL = "https://dev-idp.blocksdevelopers.com";
 
-export const IDP_BASE_URL = "http://localhost:7000";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
-export const DEPLOYMENT_BASE_URL = "https://dev-deployment.blocksdevelopers.com";
+export const DEPLOYMENT_BASE_URL =
+  "https://dev-deployment.blocksdevelopers.com";
 
 export const API_BASES = {
   COMMUNICATION: "/api",
@@ -11,7 +12,7 @@ export const API_BASES = {
   UILM: "/api",
   UTILITIES: "/api",
   CLOUD_BUILD: "/api",
-  IDP: "/api",
+  IDP: getRuntimeEnv("BLOCKS_IDP_BASE_URL") + "/api",
   IDENTIFIER: "/api",
   LMT: "/api",
   MFA: "/api",
