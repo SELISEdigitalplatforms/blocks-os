@@ -18,8 +18,8 @@ export const USER_ENDPOINTS = {
   SAVE_ROLES_AND_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles-permissions`,
 
 
-  GET_USER_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/roles`,
-  GET_USER_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/permissions`,
+  GET_USER_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles`,
+  GET_USER_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/permissions`,
   DEACTIVATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/deactivate`,
 } as const;
 
@@ -36,7 +36,7 @@ export const ACCOUNT_ENDPOINTS = {
 // ─── Role endpoints (role.service) ──────────────────────────────────────────
 
 export const ROLE_ENDPOINTS = {
-  GET_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/roles`,
+  GET_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles`,
   GET_ROLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/role`,
   CREATE_ROLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles/create`,
   UPDATE_ROLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles/update`,
