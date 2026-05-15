@@ -59,3 +59,13 @@ export const IMPERSONATE_ENDPOINTS = {
   IMPERSONATE: `/api${AUTH_SUBPATH}/impersonate`,
   STOP_IMPERSONATION: `/api${AUTH_SUBPATH}/impersonation/stop`,
 } as const;
+
+// ─── Identity Provider endpoints (identity-provider.service) ─────────────────
+
+export const IDENTITY_PROVIDER_ENDPOINTS = {
+  GET_ALL: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  GET_BY_ID: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  CREATE: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  UPDATE: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  UPDATE_STATUS: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+} as const;
