@@ -35,8 +35,8 @@ export const AUTH_OIDC_ENDPOINTS = {
 // ─── Auth configuration endpoints (auth-config.service) ─────────────────────
 
 export const AUTH_CONFIG_ENDPOINTS = {
-  GET_CONFIG: `/api${AUTH_SUBPATH}/Get`,
-  UPDATE_CONFIG: `/api${AUTH_SUBPATH}/Update`,
+  GET_CONFIG: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/Get`,
+  UPDATE_CONFIG: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/Update`,
 } as const;
 
 // ─── SSO endpoints (social.service) ─────────────────────────────────────────
