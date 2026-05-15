@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
-import { API_BASES } from "@/constants/endpoint.constant";
 const pillars = [
   { icon: ShieldCheck, label: "Authentication" },
   { icon: KeyRound, label: "Secrets Management" },
@@ -378,7 +377,7 @@ export default function LoginSimplePage() {
 
       const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
       const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID");
-      const initiateUrl = `${API_BASES.IDP}/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}`;
+      const initiateUrl = `/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
 
