@@ -3,7 +3,6 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 const BLOCKS_IDP_BASE_URL = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
 const IAM_SUBPATH = "/iam";
-const IAM_CONFIG_SUBPATH = "/IAM";
 
 // ─── User endpoints (user.service) ──────────────────────────────────────────
 
@@ -11,15 +10,15 @@ export const USER_ENDPOINTS = {
   GET_USERS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users`,
   GET_USER: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user`,
   USER_INFO: `${BLOCKS_IDP_BASE_URL}/api/idp/UserInfo`,
-  CREATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/Create`,
-  UPDATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/Update`,
+  CREATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/create`,
+  UPDATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/update`,
   GET_SIGNUP_SETTING: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/signup-settings`,
   SAVE_SIGNUP_SETTING: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/signup-settings`,
   SAVE_ROLES_AND_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles-permissions`,
 
 
-  GET_USER_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles`,
-  GET_USER_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/permissions`,
+  GET_USER_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/roles`,
+  GET_USER_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/permissions`,
   DEACTIVATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/deactivate`,
 } as const;
 
@@ -67,6 +66,6 @@ export const ORGANIZATION_ENDPOINTS = {
 // ─── IAM configuration endpoints (configuration.service) ───────────────────
 
 export const IAM_CONFIGURATION_ENDPOINTS = {
-  GET: `${BLOCKS_IDP_BASE_URL}/api${IAM_CONFIG_SUBPATH}/Get`,
-  SAVE: `${BLOCKS_IDP_BASE_URL}/api${IAM_CONFIG_SUBPATH}/Save`,
+  GET: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/config`,
+  SAVE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/config`,
 } as const;
