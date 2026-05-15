@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Loader } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 export default function LoginCallbackPage() {
   const [searchParams] = useSearchParams();
   const hasProcessed = useRef(false);
@@ -16,7 +17,8 @@ export default function LoginCallbackPage() {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
 
-    const callbackUrl = new URL("/api/idp/callback");
+    const idpBaseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
+    const callbackUrl = new URL(`${idpBaseUrl}/api/idp/callback`);
     // Forward the callback parameters to backend
     if (code) callbackUrl.searchParams.set("code", code);
     if (state) callbackUrl.searchParams.set("state", state);
