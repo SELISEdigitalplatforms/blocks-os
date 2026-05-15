@@ -4,6 +4,13 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 const BLOCKS_IDP_BASE_URL = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
 const IAM_SUBPATH = "/iam";
 
+// ─── Activity endpoints (activity.service) ─────────────────────────────────
+
+export const ACTIVITY_ENDPOINTS = {
+  GET_SESSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/sessions`,
+  GET_HISTORIES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/history`,
+} as const;
+
 // ─── User endpoints (user.service) ──────────────────────────────────────────
 
 export const USER_ENDPOINTS = {
@@ -19,7 +26,14 @@ export const USER_ENDPOINTS = {
 
   GET_USER_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/roles`,
   GET_USER_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/permissions`,
+  GET_USER_TIMELINES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/timelines`,
   DEACTIVATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/deactivate`,
+  UPDATE_ACCOUNT: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/update`,
+  GET_ACCOUNTS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/accounts`,
+  GET_ACCOUNT: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account`,
+  GET_ACCOUNT_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/roles`,
+  GET_ACCOUNT_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/permissions`,
+  GET_EMAIL_AVAILABLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/email/available`,
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────
@@ -56,6 +70,7 @@ export const PERMISSION_ENDPOINTS = {
 // ─── Organization endpoints (organization.service) ─────────────────────────
 
 export const ORGANIZATION_ENDPOINTS = {
+  CREATE_ORGANIZATION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organizations/create`,
   GET_ORGANIZATIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organizations`,
   GET_ORGANIZATION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organization`,
   SAVE_ORGANIZATION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organizations`,

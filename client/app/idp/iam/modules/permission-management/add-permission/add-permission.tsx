@@ -24,7 +24,7 @@ export const AddPermission = () => {
       const res = await mutateAsync(newPermission);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Permission created successfully" });
-      navigate(`/services/iam?tab=permissions`);
+      navigate(`/services/authentication?tab=permissions`);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
