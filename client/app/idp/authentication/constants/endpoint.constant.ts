@@ -2,7 +2,7 @@ import { API_BASES } from "@/constants/endpoint.constant";
 
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 
-const AUTH_SUBPATH = "/Authentication";
+const AUTH_SUBPATH = "/auth";
 const AUTH_OIDC_SUBPATH = "/oidc";
 
 // ─── Auth endpoints (auth.service) ───────────────────────────────────────────
@@ -52,4 +52,9 @@ export const SSO_ENDPOINTS = {
 
 export const OIDC_FLOW_ENDPOINTS = {
   USER_ACKNOWLEDGEMENT: `${API_BASES.IDP}${AUTH_SUBPATH}/UserAcknowledgement`,
+} as const;
+
+export const IMPERSONATE_ENDPOINTS = {
+  IMPERSONATE: `${API_BASES.IDP}${AUTH_SUBPATH}/impersonate`,
+  STOP_IMPERSONATION: `${API_BASES.IDP}${AUTH_SUBPATH}/impersonation/stop`,
 } as const;
