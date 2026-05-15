@@ -12,6 +12,7 @@ import {
   Bell,
   Database,
   BrainCircuit,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication.constant";
@@ -43,6 +44,7 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
     label: "Authentication",
     items: [
       { id: GRANT_TYPES.authorizationCode, label: "OIDC", value: GRANT_TYPES.authorizationCode, icon: ShieldCheck, desc: "OpenID Connect configuration" },
+      { id: "identity-providers", label: "Identity Provider", value: "identity-providers", icon: Building2, desc: "Federated external identity providers" },
       { id: GRANT_TYPES.social, label: "SSO", value: GRANT_TYPES.social, icon: Users, desc: "Single sign-on providers" },
       { id: "external-idp", label: "External IdP", value: "external-idp", icon: Globe, desc: "External identity providers & certificates" },
       { id: "captcha", label: "Captcha", value: "captcha", icon: ShieldAlert, desc: "Bot protection configuration" },
