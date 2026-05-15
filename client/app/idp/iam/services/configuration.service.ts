@@ -9,11 +9,13 @@ export class ConfigurationService {
   getIamConfiguration(projectKey: string) {
     return http.get<IIAMConfigurationGetResponse>(
       `${IAM_CONFIGURATION_ENDPOINTS.GET}?ProjectKey=${projectKey}`,
+      undefined,
+      { absoluteUrl: true },
     );
   }
 
   saveIamConfiguration(payload: IIAMConfigurationSavePayload) {
-    return http.post<[]>(IAM_CONFIGURATION_ENDPOINTS.SAVE, { ...payload });
+    return http.post<[]>(IAM_CONFIGURATION_ENDPOINTS.SAVE, { ...payload }, undefined, { absoluteUrl: true });
   }
 }
 
