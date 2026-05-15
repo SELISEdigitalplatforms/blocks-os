@@ -46,6 +46,7 @@ export default function SecretManagementPage() {
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
   const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isAddIdpOpen, setIsAddIdpOpen] = useState(false);
   const currentItem = SECRET_MANAGEMENT_NAV_GROUPS
     .flatMap((g) => g.items)
     .find((item) => item.value === (selectedTab ?? "infra-config"));
@@ -70,6 +71,14 @@ export default function SecretManagementPage() {
   const headerActions = (
     <>
       {selectedTab === GRANT_TYPES.authorizationCode && <CreateOIDC />}
+      {selectedTab === "identity-providers" && (
+        <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
+          <CirclePlus className="h-5 w-5" />
+          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+            Add Identity Provider
+          </span>
+        </Button>
+      )}
       {selectedTab === "captcha" && (
         <ConfigureCaptchaModal>
           <DialogTrigger asChild>
@@ -219,7 +228,9 @@ export default function SecretManagementPage() {
           </div>
         )}
         {selectedTab === GRANT_TYPES.authorizationCode && <OIDC />}
-        {selectedTab === "identity-providers" && <IdentityProviders />}
+        {selectedTab === "identity-providers" && (
+          <IdentityProviders addOpen={isAddIdpOpen} onAddOpenChange={setIsAddIdpOpen} />
+        )}
         {selectedTab === "managed-services" && (
           <ManagedServices
             guideOpen={isManagedServicesGuideOpen}
