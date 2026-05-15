@@ -370,32 +370,7 @@ export default function LoginSimplePage() {
     }, 2400);
     return () => clearTimeout(timeoutId);
   }, [titleNumber, titles]);
-  // const startLogin = async () => {
-  //   try {
-  //     if (isStarting) return;
-  //     setIsStarting(true);
-
-  //     const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-  //     const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID");
-  //     const initiateUrl = `/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}`;
-  //     const headers: Record<string, string> = {};
-  //     if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
-
-  //     const response = await fetch(initiateUrl.toString(), { headers });
-  //     const data = await response.json();
-
-  //     if (data.redirect_uri) {
-  //       window.location.href = data.redirect_uri;
-  //     } else {
-  //       showErrorToast({ errors: "Failed to get authorization URL" });
-  //       setIsStarting(false);
-  //     }
-  //   } catch (errors) {
-  //     console.error("Login initiation error:", errors);
-  //     showErrorToast({ errors: "Unable to start login. Please try again." });
-  //     setIsStarting(false);
-  //   }
-  // };
+  
 
   const startLogin = async () => {
     try {
