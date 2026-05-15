@@ -4,7 +4,6 @@ import { ConsoleLayout } from "./layouts/console-layout";
 import LoginSimplePage from "./routes/auth/login-simple";
 
 import IamPage from "./routes/dashboard/iam";
-import IamUserDetailPage from "./routes/dashboard/iam-user-detail";
 import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
 import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
@@ -76,7 +75,6 @@ export const router = createBrowserRouter([
     children: [
       { path: "/dashboard", element: <DashboardOverview /> },
       { path: "/services/iam", element: <IamPage /> },
-      { path: "/services/iam/user-detail/:id", element: <IamUserDetailPage /> },
       { path: "/services/iam/role-detail/:id", element: <IamRoleDetailPage /> },
       { path: "/services/iam/permission-detail/new", element: <IamAddPermissionPage /> },
       { path: "/services/iam/permission-detail/:id", element: <IamPermissionDetailPage /> },

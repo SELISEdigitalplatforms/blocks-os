@@ -1,27 +1,24 @@
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 
 const IAM_SUBPATH = "/iam";
-const AUTH_SUBPATH = "/auth";
 const IAM_CONFIG_SUBPATH = "/IAM";
 
 // ─── User endpoints (user.service) ──────────────────────────────────────────
 
 export const USER_ENDPOINTS = {
-  GET_USERS: `/api${IAM_SUBPATH}/GetUsers`,
+  GET_USERS: `/api${IAM_SUBPATH}/users`,
   GET_USER: `/api${IAM_SUBPATH}/user`,
   USER_INFO: `/api/idp/UserInfo`,
   CREATE: `/api${IAM_SUBPATH}/Create`,
   UPDATE: `/api${IAM_SUBPATH}/Update`,
-  GET_SIGNUP_SETTING: `/api${IAM_SUBPATH}/GetSignUpSetting`,
-  SAVE_SIGNUP_SETTING: `/api${IAM_SUBPATH}/SaveSignUpSetting`,
-  SAVE_ROLES_AND_PERMISSIONS: `/api${IAM_SUBPATH}/SaveRolesAndPermissions`,
-  GET_SESSIONS: `/api${IAM_SUBPATH}/GetSessions`,
-  GET_HISTORIES: `/api${IAM_SUBPATH}/GetHistories`,
-  GET_USER_CODES: `/api${AUTH_SUBPATH}/GetUserCodes`,
-  GENERATE_USER_CODE: `/api${AUTH_SUBPATH}/GenerateUserCode`,
-  GET_USER_ROLES: `/api${IAM_SUBPATH}/GetUserRoles`,
-  GET_USER_PERMISSIONS: `/api${IAM_SUBPATH}/GetUserPermissions`,
-  DEACTIVATE: `/api${IAM_SUBPATH}/Deactivate`,
+  GET_SIGNUP_SETTING: `/api${IAM_SUBPATH}/signup-settings`,
+  SAVE_SIGNUP_SETTING: `/api${IAM_SUBPATH}/signup-settings`,
+  SAVE_ROLES_AND_PERMISSIONS: `/api${IAM_SUBPATH}/roles-permissions`,
+
+
+  GET_USER_ROLES: `/api${IAM_SUBPATH}/user/roles`,
+  GET_USER_PERMISSIONS: `/api${IAM_SUBPATH}/user/permissions`,
+  DEACTIVATE: `/api${IAM_SUBPATH}/users/deactivate`,
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────
