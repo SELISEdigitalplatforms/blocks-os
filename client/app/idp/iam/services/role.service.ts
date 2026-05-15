@@ -13,15 +13,15 @@ import { ROLE_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class RoleService {
   getRoles(payload: GetRolesPayload): Promise<GetRolesResponse> {
-    return http.post(ROLE_ENDPOINTS.GET_ROLES, payload, undefined, { absoluteUrl: true });
+    return http.post(ROLE_ENDPOINTS.GET_ROLES, payload);
   }
 
   getRoleById(payload: IGetRolePayload): Promise<IGetRoleResponse> {
-    return http.get(`${ROLE_ENDPOINTS.GET_ROLE}?projectKey=${payload.projectKey}&id=${payload.id}`, undefined, { absoluteUrl: true });
+    return http.get(`${ROLE_ENDPOINTS.GET_ROLE}?projectKey=${payload.projectKey}&id=${payload.id}`);
   }
 
   addRole(payload: CreateRolePayload): Promise<IRole> {
-    return http.post(ROLE_ENDPOINTS.CREATE_ROLE, payload, undefined, { absoluteUrl: true });
+    return http.post(ROLE_ENDPOINTS.CREATE_ROLE, payload);
   }
 
   updateRole(payload: UpdateRolePayload) {
@@ -29,11 +29,11 @@ export class RoleService {
       errors: unknown;
       isSuccess: boolean;
       itemId: string;
-    }>(ROLE_ENDPOINTS.UPDATE_ROLE, payload, undefined, { absoluteUrl: true });
+    }>(ROLE_ENDPOINTS.UPDATE_ROLE, payload);
   }
 
   setRoles(addSetRolesPayload: SetRoles): Promise<SetRoles> {
-    return http.post<SetRoles>(ROLE_ENDPOINTS.SET_ROLES, { ...addSetRolesPayload }, undefined, { absoluteUrl: true });
+    return http.post<SetRoles>(ROLE_ENDPOINTS.SET_ROLES, { ...addSetRolesPayload });
   }
 }
 

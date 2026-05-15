@@ -1,5 +1,4 @@
 import { http } from "@/lib/http-client";
-import { API_BASES } from "@/constants/endpoint.constant";
 import { AI_ENDPOINTS } from "@blocks-ai/constants/endpoint.constant";
 import {
   ICreateModelPayload,
@@ -16,12 +15,12 @@ import {
 
 export class ModelService {
   createModel(payload: ICreateModelPayload): Promise<IModelResponse> {
-    return http.post(`${API_BASES.AI}${AI_ENDPOINTS.MODELS}/`, payload);
+    return http.post(`/api${AI_ENDPOINTS.MODELS}/`, payload);
   }
 
   getModels(payload: IModelListPayload, project_key: string): Promise<IModelListResponse> {
     return http.get(
-      `${API_BASES.AI}${AI_ENDPOINTS.MODELS}/?provider=${payload.provider}&search=${payload.search ?? ""}&page=${payload.page}&page_size=${payload.page_size}&project_key=${project_key}`,
+      `/api${AI_ENDPOINTS.MODELS}/?provider=${payload.provider}&search=${payload.search ?? ""}&page=${payload.page}&page_size=${payload.page_size}&project_key=${project_key}`,
     );
   }
 
@@ -44,44 +43,44 @@ export class ModelService {
     params.append("project_key", project_key);
 
     const queryString = params.toString();
-    const url = `${API_BASES.AI}${AI_ENDPOINTS.MODELS}/${queryString ? `?${queryString}` : ""}`;
+    const url = `/api${AI_ENDPOINTS.MODELS}/${queryString ? `?${queryString}` : ""}`;
 
     return http.get(url);
   }
 
   getModelById(modelId: string, project_key: string): Promise<IModelInfo> {
     return http.get(
-      `${API_BASES.AI}${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${project_key}`,
+      `/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${project_key}`,
     );
   }
 
   updateModel(modelId: string, payload: IUpdateModelPayload): Promise<IModelResponse> {
     return http.post(
-      `${API_BASES.AI}${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}`,
+      `/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}`,
       payload,
     );
   }
 
   deleteModel(modelId: string, project_key: string): Promise<IModelResponse> {
     return http.delete(
-      `${API_BASES.AI}${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${project_key}`,
+      `/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}?project_key=${project_key}`,
     );
   }
 
   validateModel(modelId: string, project_key: string): Promise<IValidateModelResponse> {
     return http.post(
-      `${API_BASES.AI}${AI_ENDPOINTS.MODEL_VALIDATE.replace(":id", modelId)}?project_key=${project_key}`,
+      `/api${AI_ENDPOINTS.MODEL_VALIDATE.replace(":id", modelId)}?project_key=${project_key}`,
       "",
     );
   }
 
   getSeedProviders(): Promise<IProvider[]> {
-    return http.get(`${API_BASES.AI}${AI_ENDPOINTS.MODEL_SEED_PROVIDERS}`);
+    return http.get(`/api${AI_ENDPOINTS.MODEL_SEED_PROVIDERS}`);
   }
 
   getSeedModelsByProvider(provider: string): Promise<ISeedModelInfo[]> {
     return http.get(
-      `${API_BASES.AI}${AI_ENDPOINTS.MODEL_SEED_BY_PROVIDER.replace(":provider", provider)}`,
+      `/api${AI_ENDPOINTS.MODEL_SEED_BY_PROVIDER.replace(":provider", provider)}`,
     );
   }
 }
