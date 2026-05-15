@@ -2,8 +2,6 @@ import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Loader } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { API_BASES } from "@/constants/endpoint.constant";
-
 export default function LoginCallbackPage() {
   const [searchParams] = useSearchParams();
   const hasProcessed = useRef(false);
@@ -17,9 +15,8 @@ export default function LoginCallbackPage() {
   useEffect(() => {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
-    const apiBaseUrl = API_BASES.IDP;
 
-    const callbackUrl = new URL("/api/idp/callback", apiBaseUrl);
+    const callbackUrl = new URL("/api/idp/callback", window.location.origin);
     // Forward the callback parameters to backend
     if (code) callbackUrl.searchParams.set("code", code);
     if (state) callbackUrl.searchParams.set("state", state);
