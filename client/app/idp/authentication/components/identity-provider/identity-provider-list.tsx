@@ -56,7 +56,7 @@ export function IdentityProviderList() {
         <div>
           <p className="text-sm font-medium">No identity providers configured</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Click "Add Identity Provider" to connect an external IdP.
+            Click "Add Identity Provider" to connect.
           </p>
         </div>
       </div>
