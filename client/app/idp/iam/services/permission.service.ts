@@ -20,34 +20,36 @@ export class PermissionService {
   getPermissions(
     payload: IGetPermissionsPayload,
   ): Promise<IAPIResponse<IPermission[]> & { totalCount: number }> {
-    return http.post(PERMISSION_ENDPOINTS.GET_PERMISSIONS, payload);
+    return http.post(PERMISSION_ENDPOINTS.GET_PERMISSIONS, payload, undefined, { absoluteUrl: true });
   }
 
   getPermissionsSeverity(
     payload: IGetPermissionsSeverityRequestPayload,
   ): Promise<IGetPermissionsSeverityResponse> {
     const url = `${PERMISSION_ENDPOINTS.GET_PERMISSIONS_GROUP_BY_SEVERITY}?ProjectKey=${payload.projectKey}`;
-    return http.get(url);
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 
   getPermissionById(payload: IGetPermissionByIdPayload): Promise<IGetPermissionByIdResponse> {
     return http.get(
       `${PERMISSION_ENDPOINTS.GET_PERMISSION}?Id=${payload.id}&ProjectKey=${payload.projectKey}`,
+      undefined,
+      { absoluteUrl: true },
     );
   }
 
   addPermission = (
     addPermissionPayload: CreatePermissionPayload,
   ): Promise<CreatePermissionResponse> => {
-    return http.post(PERMISSION_ENDPOINTS.CREATE_PERMISSION, addPermissionPayload);
+    return http.post(PERMISSION_ENDPOINTS.CREATE_PERMISSION, addPermissionPayload, undefined, { absoluteUrl: true });
   };
 
   updatePermission = (payload: UpdatePermissionPayload): Promise<UpdatePermissionResponse> => {
-    return http.post(PERMISSION_ENDPOINTS.UPDATE_PERMISSION, payload);
+    return http.post(PERMISSION_ENDPOINTS.UPDATE_PERMISSION, payload, undefined, { absoluteUrl: true });
   };
 
   getResourceGroup(payload: IGetResourceGroupPayload): Promise<IGetResourceGroupResponse> {
-    return http.get(`${PERMISSION_ENDPOINTS.GET_RESOURCE_GROUPS}?ProjectKey=${payload.projectKey}`);
+    return http.get(`${PERMISSION_ENDPOINTS.GET_RESOURCE_GROUPS}?ProjectKey=${payload.projectKey}`, undefined, { absoluteUrl: true });
   }
 }
 

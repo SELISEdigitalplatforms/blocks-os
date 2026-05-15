@@ -31,7 +31,7 @@ export const SelfProject = () => {
   if (!projectGroups.length) return <ConsoleCreateProject />;
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <h2 className="shrink-0 text-base font-semibold text-[hsl(var(--high-emphasis))]">
             Your Blocks Projects
@@ -41,7 +41,7 @@ export const SelfProject = () => {
           </span>
         </div>
         {projectGroups.length > 9 && (
-          <span className="shrink-0 text-sm text-[hsl(var(--medium-emphasis))]">
+          <span className="text-sm text-[hsl(var(--medium-emphasis))]">
             Please delete an existing project to create a new one.
           </span>
         )}
