@@ -3,6 +3,7 @@ import { SSO } from "@blocks-idp/authentication/pages/authentication-config/sso"
 import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication.constant";
 import { AIModels } from "@blocks-ai/pages/aimodels";
 import { OIDC } from "@blocks-idp/authentication/components/oidc";
+import { IdentityProviders } from "@blocks-idp/authentication/components/identity-provider";
 import { Certificates } from "@blocks-idp/authentication/pages/authentication-config/general/certificates/certificates";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
@@ -218,6 +219,7 @@ export default function SecretManagementPage() {
           </div>
         )}
         {selectedTab === GRANT_TYPES.authorizationCode && <OIDC />}
+        {selectedTab === "identity-providers" && <IdentityProviders />}
         {selectedTab === "managed-services" && (
           <ManagedServices
             guideOpen={isManagedServicesGuideOpen}
