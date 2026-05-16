@@ -8,7 +8,9 @@ type RuntimeKey =
   | "BLOCKS_GITHUB_SSO_CLIENT_ID"
   | "BLOCKS_IDP_BASE_URL"
   | "BLOCKS_OIDC_CLIENT_ID"
-  | "BLOCKS_BASE_DOMAIN";
+  | "BLOCKS_BASE_DOMAIN"
+  | "BLOCKS_LOGIC_BASE_URL"
+  | "BLOCKS_OIDC_CLIENT_ID";
 
 declare global {
   interface Window {

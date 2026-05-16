@@ -42,11 +42,11 @@ export class SSOService {
   }
 
   saveBlocksSsoCredential(payload: unknown): Promise<ISaveSsoCredentialResponse> {
-    return http.post(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload);
+    return http.post(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload, undefined, { absoluteUrl: true });
   }
 
-  getBlocksSsoCredential(projectKey: string): Promise<IGetOIDCCredentialResponse> {
-    return http.get(`${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}?ProjectKey=${projectKey}`);
+  getBlocksSsoCredential(_projectKey: string): Promise<IGetOIDCCredentialResponse> {
+    return http.get(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS, undefined, { absoluteUrl: true });
   }
 }
 

@@ -1,5 +1,8 @@
+import { getRuntimeEnv } from "@/lib/runtime-env";
+
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 
+const BLOCKS_IDP_BASE_URL = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
 const AUTH_SUBPATH = "/auth";
 const AUTH_OIDC_SUBPATH = "/oidc";
 
@@ -22,18 +25,18 @@ export const AUTH_CLIENT_ENDPOINTS = {
 // ─── OIDC client endpoints (auth-clients-oidc.service) ──────────────────────
 
 export const AUTH_OIDC_ENDPOINTS = {
-  GET_OIDC_CLIENTS: `/api${AUTH_SUBPATH}/GetOIDCClients`,
-  GET_OIDC_CLIENT: `/api${AUTH_SUBPATH}/GetOIDCClient`,
-  SAVE_OIDC_CLIENT: `/api${AUTH_SUBPATH}/SaveOIDCClient`,
-  DELETE_OIDC_CLIENT: `/api${AUTH_SUBPATH}/DeleteOIDCClient`,
+  GET_OIDC_CLIENTS: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
+  GET_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
+  SAVE_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
+  DELETE_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
   OIDC_TOKEN: `/api${AUTH_OIDC_SUBPATH}/token`,
 } as const;
 
 // ─── Auth configuration endpoints (auth-config.service) ─────────────────────
 
 export const AUTH_CONFIG_ENDPOINTS = {
-  GET_CONFIG: `/api${AUTH_SUBPATH}/Get`,
-  UPDATE_CONFIG: `/api${AUTH_SUBPATH}/Update`,
+  GET_CONFIG: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/Get`,
+  UPDATE_CONFIG: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/Update`,
 } as const;
 
 // ─── SSO endpoints (social.service) ─────────────────────────────────────────
@@ -55,4 +58,14 @@ export const OIDC_FLOW_ENDPOINTS = {
 export const IMPERSONATE_ENDPOINTS = {
   IMPERSONATE: `/api${AUTH_SUBPATH}/impersonate`,
   STOP_IMPERSONATION: `/api${AUTH_SUBPATH}/impersonation/stop`,
+} as const;
+
+// ─── Identity Provider endpoints (identity-provider.service) ─────────────────
+
+export const IDENTITY_PROVIDER_ENDPOINTS = {
+  GET_ALL: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  GET_BY_ID: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  CREATE: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  UPDATE: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
+  UPDATE_STATUS: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
 } as const;
