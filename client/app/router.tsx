@@ -38,8 +38,8 @@ import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-u
 
 export const router = createBrowserRouter([
 
-  // ── Unprotected preview routes (must be BEFORE layout routes with guards) ──
-  { path: "/subscription-usage", element: <SubscriptionUsagePage /> },
+        { path: "/subscription-usage", element: <SubscriptionUsagePage /> },
+
 
   // ── IDP service login (initiates OIDC flow + handles callback) ──
   {
@@ -69,6 +69,7 @@ export const router = createBrowserRouter([
       { path: "/project-overview/people", element: <PeopleManagement /> },
       { path: "/project-overview/repositories", element: <RepositoriesPage /> },
       { path: "/project-overview/settings", element: <SettingsPage /> },
+      // { path: "/project-overview/subscription-usage", element: <SubscriptionUsagePage /> },
     ],
   },
   // ── Dashboard layout (protected routes + future impersonated pages) ──
