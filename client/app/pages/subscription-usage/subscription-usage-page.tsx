@@ -16,8 +16,6 @@ import {
   CheckCircle2,
   Layers,
 } from "lucide-react";
-import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
-import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
@@ -474,32 +472,7 @@ export function SubscriptionUsagePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--surface-app))]">
-      {/* ── Sticky Nav ── */}
-      <nav className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-[59px] max-w-[1400px] items-center justify-between gap-4 px-6 sm:px-10">
-          {/* Brand */}
-          <Link to="/console" className="flex items-center gap-3">
-            <Logo width={96} height={32} className="h-8 w-auto" />
-            <div className="hidden flex-col sm:flex">
-              <span className="text-[11px] text-[hsl(var(--low-emphasis))]">Subscription Usage</span>
-            </div>
-          </Link>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-3">
-            <ModeToggle />
-            <div className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs font-medium text-[hsl(var(--success))]">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[hsl(var(--success))] opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[hsl(var(--success))]" />
-              </span>
-              All systems operational
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div>
       {/* ── Content ── */}
       <div className="mx-auto max-w-[1400px] px-6 pb-16 sm:px-10">
         {/* ── Page Hero ── */}

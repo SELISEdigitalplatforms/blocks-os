@@ -1,5 +1,5 @@
 import { Menu } from "@/models/menu-models";
-import { Home, Package, Users, BookMinus, Settings, Shield, Key, ShieldCheck, ScanFace, Lock, Zap, Gauge } from "lucide-react";
+import { Home, Package, Users, BookMinus, Settings, Shield, Key, ShieldCheck, ScanFace, Lock, Zap, Gauge, CreditCard } from "lucide-react";
 
 export const navigationMenus: Menu[] = [
   {
@@ -40,6 +40,13 @@ export const navigationMenus: Menu[] = [
     name: "Project Settings",
     path: "/project-overview/settings",
     icon: Settings,
+  },
+  {
+    id: "subscription-usage",
+    type: "menu",
+    name: "Subscription Usage",
+    path: "/project-overview/subscription-usage",
+    icon: CreditCard,
   },
   {
     type: "separator",
