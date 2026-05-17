@@ -50,6 +50,7 @@ export default defineConfig(({ mode }) => {
         "dev-cloud.seliseblocks.com",
         "localhost",
         ".seliseblocks.com",
+        ".blocksdevelopers.com",
       ],
       proxy: {
           "/dev-idp-proxy": {
