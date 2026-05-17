@@ -16,13 +16,13 @@ export const ACTIVITY_ENDPOINTS = {
 export const USER_ENDPOINTS = {
   GET_USERS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users`,
   GET_USER: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user`,
+  ME: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/me`,
   USER_INFO: `${BLOCKS_IDP_BASE_URL}/api/idp/UserInfo`,
   CREATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/create`,
   UPDATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/update`,
   GET_SIGNUP_SETTING: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/signup-settings`,
   SAVE_SIGNUP_SETTING: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/signup-settings`,
   SAVE_ROLES_AND_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles-permissions`,
-
 
   GET_USER_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/roles`,
   GET_USER_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/permissions`,

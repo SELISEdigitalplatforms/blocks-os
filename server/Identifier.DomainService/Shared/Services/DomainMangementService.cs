@@ -81,7 +81,8 @@ namespace DomainService.Shared
 
             if (project is not null)
             {
-                project.IsDomainVerified = status;
+                //TODO: need to dicide later
+                // project.IsDomainVerified = status;
                 await _projectRepository.UpdateProjectAsync(project);
                 await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
                 {

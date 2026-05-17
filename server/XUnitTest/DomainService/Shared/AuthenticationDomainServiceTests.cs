@@ -428,7 +428,6 @@ namespace XUnitTest.DomainService.Shared
             var request = new SaveClientCredentialRequest { Name = "Test Client", Roles = new List<string> { "role1" } };
             var tenant = new Tenant
             {
-                ApplicationDomain = "test-domain.com",
                 DbConnectionString = "test-connection-string",
                 JwtTokenParameters = new JwtTokenParameters
                 {

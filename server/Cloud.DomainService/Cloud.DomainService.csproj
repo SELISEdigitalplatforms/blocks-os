@@ -2,7 +2,7 @@
 
 
   <ItemGroup>
-    <PackageReference Include="MongoDB.Driver" />
+    <!--<PackageReference Include="MongoDB.Driver" />-->
     <PackageReference Include="SeliseBlocks.Genesis" />
   </ItemGroup>
 

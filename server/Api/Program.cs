@@ -11,7 +11,7 @@ using Captcha.DomainService.Configuration;
 using MongoDB.Driver;
 using Secrets.DomainService.Services;
 
-var serviceName = "blocks-os-api";
+var serviceName = "blocks-os";
 //var vaultType = ResolveVaultType();
 //Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, VaultType.Azure);
@@ -28,7 +28,7 @@ var services = builder.Services;
 
 services.AddHealthChecks();
 
-ApplicationConfigurations.ConfigureApi(services);
+ApplicationConfigurations.ConfigureApi(services, serviceName);
 
 builder.Services.Configure<MvcOptions>(options =>
 {
@@ -67,16 +67,16 @@ if (File.Exists(indexHtml))
         var tenant = tenantService.GetTenantByApplicationDomain(host);
         var database = dbContext.GetDatabase(tenant.TenantId);
         var captcheSetting = await (await database.GetCollection<CaptchaConfiguration>("CaptchaConfigurations").FindAsync(Builders<CaptchaConfiguration>.Filter.Eq(mc => mc.IsEnable, true))).FirstOrDefaultAsync();
-        ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath,  tenant.TenantId, captcheSetting.CaptchaKey);
+        ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath, tenant.TenantId, captcheSetting.CaptchaKey);
 
-        context.Response.Cookies.Append("x-blocks-key", tenant.TenantId, new CookieOptions
-        {
-            Domain = tenant.CookieDomain,
-            HttpOnly = true,
-            Secure = true,
-            SameSite =  SameSiteMode.None,
-            Path = "/"
-        });
+        //context.Response.Cookies.Append("x-blocks-key", tenant.TenantId, new CookieOptions
+        //{
+        //    Domain = tenant.CookieDomain,
+        //    HttpOnly = true,
+        //    Secure = true,
+        //    SameSite = SameSiteMode.None,
+        //    Path = "/"
+        //});
 
         await context.Response.SendFileAsync(indexHtml);
 
@@ -113,7 +113,7 @@ await app.RunAsync();
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath, string blocksKey, string googleSiteKey)
 {
-  //  var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+    //  var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
     //var section = configuration.GetSection("FrontendRuntime");
     //var replacements = new Dictionary<string, string?>
     //{
@@ -125,12 +125,12 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
 
     DotNetEnv.Env.Load();
 
-    blocksKey = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BLOCKS_X_BLOCKS_KEY"))? Environment.GetEnvironmentVariable("BLOCKS_X_BLOCKS_KEY") : blocksKey;
+    blocksKey = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BLOCKS_X_BLOCKS_KEY")) ? Environment.GetEnvironmentVariable("BLOCKS_X_BLOCKS_KEY") : blocksKey;
     googleSiteKey = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BLOCKS_GOOGLE_SITE_KEY")) ? Environment.GetEnvironmentVariable("BLOCKS_GOOGLE_SITE_KEY") : googleSiteKey;
 
     var replacements = new Dictionary<string, string?>
     {
-       // ["__BLOCKS_API_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_API_BASE_URL"),
+        // ["__BLOCKS_API_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_API_BASE_URL"),
         ["__BLOCKS_X_BLOCKS_KEY__"] = blocksKey,
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = googleSiteKey,
         ["__BLOCKS_CONSTRUCT_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_CONSTRUCT_URL"),

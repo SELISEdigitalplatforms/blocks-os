@@ -424,9 +424,8 @@ namespace DomainService.People
                 ? user.Email
                 : $"{user.FirstName} {user.LastName}".Trim();
 
-            var projectName = string.IsNullOrWhiteSpace(project.Name)
-                ? project.ApplicationDomain
-                : project.Name;
+            var projectName = project.Name;
+
 
             return new SendMail
             {
