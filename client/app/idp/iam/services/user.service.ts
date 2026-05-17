@@ -36,11 +36,19 @@ export class UserService {
   constructor(public account: UserAccountService) {}
 
   getUsers(payload: IGetUsersPayload): Promise<IGetUsersResponse> {
-    return http.post(USER_ENDPOINTS.GET_USERS, payload, undefined, { absoluteUrl: true });
+    return http.post(USER_ENDPOINTS.GET_USERS, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   getUser(): Promise<{ data: User }> {
     return http.get(`${USER_ENDPOINTS.GET_USER}`, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  me(): Promise<{ data: User }> {
+    return http.get(`${USER_ENDPOINTS.ME}`, undefined, {
       absoluteUrl: true,
     });
   }
@@ -60,11 +68,15 @@ export class UserService {
   }
 
   addUser(createPayload: ICreateUserPayload): Promise<ICreateUserResponse> {
-    return http.post(USER_ENDPOINTS.CREATE, createPayload, undefined, { absoluteUrl: true });
+    return http.post(USER_ENDPOINTS.CREATE, createPayload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   updateUser(payload: IUpdateUserPayload): Promise<IUpdateUserResponse> {
-    return http.post(USER_ENDPOINTS.UPDATE, payload, undefined, { absoluteUrl: true });
+    return http.post(USER_ENDPOINTS.UPDATE, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   getSignUpSetting(
@@ -80,18 +92,21 @@ export class UserService {
   saveSignUpSetting(
     payload: ISaveSignUpSettingPayload,
   ): Promise<ISaveSignUpSettingResponse> {
-    return http.post(USER_ENDPOINTS.SAVE_SIGNUP_SETTING, payload, undefined, { absoluteUrl: true });
+    return http.post(USER_ENDPOINTS.SAVE_SIGNUP_SETTING, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   saveRolesAndPermissions(
     payload: ISaveRolesAndPermissionsPayload,
   ): Promise<ISaveRolesAndPermissionsResponse> {
-    return http.post(USER_ENDPOINTS.SAVE_ROLES_AND_PERMISSIONS, payload, undefined, { absoluteUrl: true });
+    return http.post(
+      USER_ENDPOINTS.SAVE_ROLES_AND_PERMISSIONS,
+      payload,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
-
-
-  
-
 
   getUserRoles(payload: IGetUserRolesPayload): Promise<IGetUserRolesResponse> {
     return http.get(
@@ -114,7 +129,9 @@ export class UserService {
   accountDeactivate(
     payload: IAccountResendActivationPayload,
   ): Promise<IAccountResendActivationResponse> {
-    return http.post(USER_ENDPOINTS.DEACTIVATE, payload, undefined, { absoluteUrl: true });
+    return http.post(USER_ENDPOINTS.DEACTIVATE, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 
