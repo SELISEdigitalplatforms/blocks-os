@@ -10,11 +10,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-import { useGetUser } from "@/idp/iam/hooks/use-user";
+import { useGetMe } from "@/idp/iam/hooks/use-user";
 function UserDropdownMenuLogo() {
-  const { data } = useGetUser({ enabled: true });
-  const userData = data?.data || { firstName: "", lastName: "", profileImageUrl: "" };
-  const initials = `${userData.firstName?.[0] || ""}${userData.lastName?.[0] || ""}`.toUpperCase();
+  const { data } = useGetMe();
+  const userData = data?.data || {
+    firstName: "",
+    lastName: "",
+    profileImageUrl: "",
+  };
+  const initials =
+    `${userData.firstName?.[0] || ""}${userData.lastName?.[0] || ""}`.toUpperCase();
   if (userData.profileImageUrl) {
     return (
       <img

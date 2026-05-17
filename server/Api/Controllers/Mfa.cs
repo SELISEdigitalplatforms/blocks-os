@@ -18,47 +18,41 @@ namespace Api.Controllers
     {
         private readonly IMfaManagementService _mfaManagementService;
         private readonly TotpService _totpService;
-        private readonly ChangeControllerContext _changeControllerContext;
         private readonly IConfigurationService _configurationService;
         public MfaController(IMfaManagementService mfaManagementService,
                             TotpService totpService,
-                            ChangeControllerContext changeControllerContext, IConfigurationService configurationService)
+                            IConfigurationService configurationService)
         {
-            _changeControllerContext = changeControllerContext;
             _mfaManagementService = mfaManagementService;
             _totpService = totpService;
             _configurationService = configurationService;
         }
 
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::mfa::generate-otp")]
         [HttpPost]
         public async Task<OtpGenerationResponse> GenerateOTP([FromBody] OtpGenerationRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _mfaManagementService.GenerateOTPAsync(request);
         }
 
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::mfa::verify-otp")]
         [HttpPost]
         public async Task<OtpVerificationResponse> VerifyOTP([FromBody] VerifyOtpRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _mfaManagementService.VerifyOTPAsync(request);
         }
 
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::mfa::disable-user-mfa")]
         [HttpPost]
         public async Task<BaseResponse> DisableUserMfa([FromBody] DisableUserMfaRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _mfaManagementService.DisableUserMfa(request);
         }
 
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::mfa::setup-totp")]
         [HttpGet]
         public async Task<SetUpUserTotpResponse> SetUpTotp([FromQuery] SetUpUserTotpRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
 
             if (string.IsNullOrWhiteSpace(request.UserId))
                 return new SetUpUserTotpResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "empty_user_id", "User id should not be empty" } } };
@@ -66,7 +60,7 @@ namespace Api.Controllers
             return await _totpService.GenerateTotpImageByUserAsync(request.UserId);
         }
 
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::mfa::resend-otp")]
         [HttpPost]
         public async Task<OtpGenerationResponse> ResendOtp([FromBody] ResendOtpRequest request)
         {
@@ -76,18 +70,16 @@ namespace Api.Controllers
         }
         #region Cloud Configuration
         [HttpPost]
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::mfa::save-configuration")]
         public async Task<BaseResponse> Save(SaveMfaConfigurationRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _configurationService.SaveMfaConfigurationAsync(request);
         }
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::mfa::get-configuration")]
         public async Task<GetMfaConfigurationResponse> Get([FromQuery] GetAuthenticationConfigurationRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _configurationService.GetMfaConfigurationAsync();
         }
         #endregion

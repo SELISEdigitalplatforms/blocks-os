@@ -3,7 +3,7 @@
   <PropertyGroup>
   </PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="MongoDB.Driver" />
+		<!--<PackageReference Include="MongoDB.Driver" />-->
 		<PackageReference Include="SeliseBlocks.Genesis" />
 		<PackageReference Include="FluentValidation" />
 	</ItemGroup>
