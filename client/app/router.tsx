@@ -34,12 +34,14 @@ import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import CallbackPage from "./routes/callback/callback";
 import { ProjectOverviewLayout } from "./layouts/project-overview-layout";
 import LoginCallbackPage from "./routes/auth/callback";
+import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-usage-page";
 
 export const router = createBrowserRouter([
 
-   // ── IDP service login (initiates OIDC flow + handles callback) ──
-  
-  
+  // ── Unprotected preview routes (must be BEFORE layout routes with guards) ──
+  { path: "/subscription-usage", element: <SubscriptionUsagePage /> },
+
+  // ── IDP service login (initiates OIDC flow + handles callback) ──
   {
     path: "/login",
     children: [
