@@ -13,13 +13,10 @@ namespace BlocksTemplate.Api.Controllers
     public class SecretsController : ControllerBase
     {
         private readonly ISecretManagementService _secretManagementService;
-        private readonly ChangeControllerContext _changeControllerContext;
 
-        public SecretsController(ISecretManagementService secretManagementService,
-                                ChangeControllerContext changeControllerContext)
+        public SecretsController(ISecretManagementService secretManagementService)
         {
             _secretManagementService = secretManagementService;
-            _changeControllerContext = changeControllerContext;
         }
 
 
@@ -27,7 +24,6 @@ namespace BlocksTemplate.Api.Controllers
         [HttpPost]
         public async Task<BaseResponse> Save([FromBody] SaveSecretRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _secretManagementService.SaveSecretAsync(request);
         }
 
@@ -35,7 +31,6 @@ namespace BlocksTemplate.Api.Controllers
         [HttpGet]
         public async Task<List<Secret>> Gets([FromQuery] GetSecretsRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _secretManagementService.GetSecretAsync(request.SecretKey.ToLower());
         }
 
@@ -43,7 +38,6 @@ namespace BlocksTemplate.Api.Controllers
         [HttpGet]
         public async Task<Secret> Get([FromQuery] GetSecretRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _secretManagementService.SecretAsync(request.ItemId);
         }
 
@@ -51,7 +45,6 @@ namespace BlocksTemplate.Api.Controllers
         [HttpPost]
         public async Task<BaseResponse> Delete([FromBody] DeleteSecretRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _secretManagementService.DeleteSecretAsync(request);
         }
     }

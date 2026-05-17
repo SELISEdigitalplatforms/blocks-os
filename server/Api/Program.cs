@@ -11,7 +11,7 @@ using Captcha.DomainService.Configuration;
 using MongoDB.Driver;
 using Secrets.DomainService.Services;
 
-var serviceName = "blocks-os-api";
+var serviceName = "blocks-os";
 //var vaultType = ResolveVaultType();
 //Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, VaultType.Azure);
@@ -28,7 +28,7 @@ var services = builder.Services;
 
 services.AddHealthChecks();
 
-ApplicationConfigurations.ConfigureApi(services);
+ApplicationConfigurations.ConfigureApi(services, serviceName);
 
 builder.Services.Configure<MvcOptions>(options =>
 {

@@ -1,7 +1,6 @@
 ﻿using DomainService.ManagedService;
 using DomainService.ManagedService.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using Blocks.Genesis;
 
 namespace Api.Controllers
@@ -17,7 +16,7 @@ namespace Api.Controllers
             _serviceManagement = serviceManagement;
         }
 
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::service::register")  ]
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterServiceRequest request)
         {
@@ -30,7 +29,7 @@ namespace Api.Controllers
             return BadRequest(response);
         }
 
-        [ProtectedEndPoint]
+        [ProtectedEndPoint("blocks-os::service::get-all")]
         [HttpPost]
         public async Task<GetAllServiceResponse> GetAll([FromBody] GetAllServiceRequest request)
         {
