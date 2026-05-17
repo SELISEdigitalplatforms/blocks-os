@@ -77,7 +77,7 @@ if (File.Exists(indexHtml))
         //    SameSite = SameSiteMode.None,
         //    Path = "/"
         //});
-
+        context.Response.ContentType = "text/html; charset=utf-8";
         await context.Response.SendFileAsync(indexHtml);
 
     });
