@@ -2,7 +2,7 @@
 
 namespace DomainService.Projects
 {
-    public class DisableProjectRequest : IProjectKey
+    public class DisableProjectRequest 
     {
         public string ProjectKey { get ; set  ; }
     }
