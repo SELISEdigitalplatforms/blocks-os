@@ -90,16 +90,6 @@ if (File.Exists(indexHtml))
 
 }
 
-var contentSecurityPolicy = BuildContentSecurityPolicy(builder.Configuration);
-app.Use(async (context, next) =>
-{
-    context.Response.OnStarting(() =>
-    {
-        context.Response.Headers["Content-Security-Policy"] = contentSecurityPolicy;
-        return Task.CompletedTask;
-    });
-    await next();
-});
 
 ApplicationConfigurations.ConfigureMiddleware(app);
 
@@ -178,42 +168,4 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
             File.WriteAllText(filePath, updated);
         }
     }
-}
-static string BuildContentSecurityPolicy(IConfiguration configuration)
-{
-    static string? ResolveEnvOrConfig(IConfiguration config, string key) =>
-        Environment.GetEnvironmentVariable(key) ?? config[$"FrontendRuntime:{key}"];
-
-    string[] urlKeys =
-    [
-        "BLOCKS_IDP_BASE_URL",
-        "BLOCKS_API_BASE_URL",
-        "BLOCKS_CONSTRUCT_URL",
-        "BLOCKS_LOGIC_APP_URL",
-        "BLOCKS_APP_URL"
-    ];
-
-    var origins = new List<string>();
-    foreach (var key in urlKeys)
-    {
-        var value = ResolveEnvOrConfig(configuration, key);
-        if (string.IsNullOrWhiteSpace(value)) continue;
-
-        if (Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri))
-        {
-            var origin = uri.IsDefaultPort
-                ? $"{uri.Scheme}://{uri.Host}"
-                : $"{uri.Scheme}://{uri.Host}:{uri.Port}";
-            if (!origins.Contains(origin, StringComparer.OrdinalIgnoreCase))
-            {
-                origins.Add(origin);
-            }
-        }
-    }
-
-    var connectSrc = origins.Count > 0
-        ? $"connect-src 'self' {string.Join(' ', origins)}"
-        : "connect-src 'self'";
-
-    return $"default-src 'self'; frame-ancestors 'none'; {connectSrc}";
 }
