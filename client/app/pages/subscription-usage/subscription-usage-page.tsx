@@ -1,23 +1,24 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Users,
-  HardDrive,
+  ArrowUp,
   Bot,
-  Shield,
-  Database,
+  ChevronDown,
+  Clock,
   CloudUpload,
+  CreditCard,
+  Database,
+  HardDrive,
   Mail,
   Share2,
-  ChevronDown,
-  Star,
-  Clock,
-  ArrowUp,
-  CheckCircle2,
-  Layers,
+  Shield,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Button } from "@/components/ui-kits/button/button";
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { Card } from "@/components/ui-kits/card/card";
+import { Progress } from "@/components/ui-kits/progress/progress";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,11 +61,10 @@ function pct(total: number, limit: number): number {
   return Math.round((total / limit) * 100);
 }
 
-function barColor(p: number): string {
-  if (p >= 90) return "#ef4444";
-  if (p >= 75) return "#8b5cf6";
-  if (p >= 50) return "#f59e0b";
-  return "hsl(var(--primary))";
+function progressIndicator(p: number): string {
+  if (p >= 90) return "bg-destructive";
+  if (p >= 75) return "bg-purple-500";
+  return "";
 }
 
 // ─── Mock Data (replace with API response once endpoint is ready) ────────────
@@ -255,30 +255,17 @@ const TIME_RANGES = ["Last 7 days", "Last 30 days", "Last 90 days", "This billin
 function EnvBreakdown({ envData }: { envData: EnvData }) {
   const max = Math.max(...Object.values(envData), 1);
   return (
-    <div className="grid grid-cols-2 gap-2 pb-1 pt-4 sm:grid-cols-4 xl:grid-cols-7">
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
       {ENV_LABELS.map((env) => {
         const val = envData[env];
         const p = Math.round((val / max) * 100);
         return (
-          <div
-            key={env}
-            className="flex flex-col gap-1.5 rounded-md border bg-background p-2.5 transition-colors hover:bg-[hsl(var(--surface-app))]"
-          >
-            <span className="text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--low-emphasis))]">
+          <div key={env} className="rounded-sm border bg-muted/30 p-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {env}
-            </span>
-            <div className="flex items-baseline justify-between gap-1">
-              <span className="text-sm font-bold tabular-nums text-[hsl(var(--high-emphasis))]">
-                {fmt(val)}
-              </span>
-              <span className="text-[10px] tabular-nums text-[hsl(var(--low-emphasis))]">{p}%</span>
-            </div>
-            <div className="h-[3px] overflow-hidden rounded-full bg-border">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${p}%`, background: "hsl(var(--primary))" }}
-              />
-            </div>
+            </p>
+            <p className="mt-1 text-sm font-bold tabular-nums">{fmt(val)}</p>
+            <Progress value={p} className="mt-1.5 h-1" />
           </div>
         );
       })}
@@ -296,38 +283,35 @@ function UsageRow({
   onToggle: () => void;
 }) {
   const p = pct(row.total, row.limit);
-  const fillColor = barColor(p);
 
   return (
     <div className="border-b py-3.5 last:border-0">
-      <div className="grid grid-cols-[1fr_auto] items-start gap-4">
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-[hsl(var(--high-emphasis))]">{row.label}</span>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-border">
-            <motion.div
-              className="h-full rounded-full"
-              style={{ background: fillColor }}
-              initial={{ width: 0 }}
-              animate={{ width: `${p}%` }}
-              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-            />
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-medium">{row.label}</span>
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              {fmt(row.total)} / {fmt(row.limit)}
+            </span>
           </div>
-          <span className="text-xs tabular-nums text-[hsl(var(--medium-emphasis))]">
-            <span className="font-semibold text-[hsl(var(--high-emphasis))]">{fmt(row.total)}</span>
-            {" / "}
-            {fmt(row.limit)}
-            <span className="ml-2 text-[hsl(var(--low-emphasis))]">({p}%)</span>
-          </span>
+          <Progress
+            value={p}
+            className="mt-2 h-1.5"
+            indicatorClassName={progressIndicator(p) || undefined}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">{p}% utilized</p>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mt-0.5 h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
           onClick={onToggle}
-          className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border bg-background text-[hsl(var(--medium-emphasis))] transition-all hover:border-input hover:bg-[hsl(var(--surface-app))] hover:text-[hsl(var(--high-emphasis))]"
           aria-label={expanded ? "Collapse breakdown" : "Expand breakdown"}
         >
           <ChevronDown
-            className={cn("h-3.5 w-3.5 transition-transform duration-250", expanded && "rotate-180")}
+            className={cn("h-4 w-4 transition-transform duration-200", expanded && "rotate-180")}
           />
-        </button>
+        </Button>
       </div>
       <AnimatePresence>
         {expanded && (
@@ -336,11 +320,11 @@ function UsageRow({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 border-t pt-1">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--low-emphasis))]">
+            <div className="mt-2 border-t pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Environment Breakdown
               </p>
               <EnvBreakdown envData={row.envData} />
@@ -356,34 +340,22 @@ function ServiceCard({
   service,
   expandedRows,
   onToggleRow,
-  index,
 }: {
   service: ServiceConfig;
   expandedRows: Set<string>;
   onToggleRow: (id: string) => void;
-  index: number;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.35 + index * 0.065, ease: [0.16, 1, 0.3, 1] }}
-      className="overflow-hidden rounded-[14px] border bg-card transition-colors hover:border-input"
-    >
-      {/* card header */}
-      <div className="flex items-center gap-3.5 border-b px-5 py-4">
+    <Card>
+      <div className="mb-4 flex items-center gap-3 border-b pb-4">
         <div className="text-muted-foreground">{service.icon}</div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-[hsl(var(--high-emphasis))]">{service.name}</p>
-          <p className="text-xs text-[hsl(var(--medium-emphasis))]">{service.summary}</p>
+          <p className="text-sm font-semibold">{service.name}</p>
+          <p className="text-xs text-muted-foreground">{service.summary}</p>
         </div>
-        <span className="rounded-full border bg-secondary px-2 py-1 text-[10px] font-semibold text-secondary-foreground">
-          {service.badge}
-        </span>
+        <Badge variant="secondary">{service.badge}</Badge>
       </div>
-
-      {/* card body */}
-      <div className="px-5 pb-1">
+      <div>
         {service.rows.map((row) => (
           <UsageRow
             key={row.id}
@@ -393,7 +365,7 @@ function ServiceCard({
           />
         ))}
       </div>
-    </motion.div>
+    </Card>
   );
 }
 
@@ -402,39 +374,27 @@ function StatCard({
   value,
   trend,
   icon,
-  delay,
 }: {
   label: string;
   value: string;
   trend: string;
   icon: React.ReactNode;
-  delay: number;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
-      className="group relative overflow-hidden rounded-[14px] border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-input"
-    >
-      {/* subtle top shimmer */}
-      <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-widest text-[hsl(var(--low-emphasis))]">
+    <Card>
+      <div className="flex items-start justify-between">
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
-        <div className="text-[hsl(var(--medium-emphasis))]">{icon}</div>
+        <div className="text-muted-foreground">{icon}</div>
       </div>
-      <p className="mb-2 text-3xl font-bold tabular-nums tracking-tight text-[hsl(var(--high-emphasis))]">
-        {value}
-      </p>
-      <div className="flex items-center gap-1 text-xs font-semibold text-[hsl(var(--success))]">
+      <p className="mt-3 text-2xl font-bold tabular-nums tracking-tight">{value}</p>
+      <div className="mt-1.5 flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
         <ArrowUp className="h-3 w-3" />
-        {trend}
-        <span className="font-normal text-[hsl(var(--low-emphasis))]">vs last month</span>
+        <span>{trend}</span>
+        <span className="font-normal text-muted-foreground">vs last month</span>
       </div>
-    </motion.div>
+    </Card>
   );
 }
 
@@ -472,135 +432,91 @@ export function SubscriptionUsagePage() {
   }
 
   return (
-    <div>
-      {/* ── Content ── */}
-      <div className="mx-auto max-w-[1400px] px-6 pb-16 sm:px-10">
-        {/* ── Page Hero ── */}
-        <header className="py-10 sm:py-12">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-3">
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-primary"
-              >
-                <Layers className="h-3 w-3" />
-                Subscription Dashboard
-              </motion.div>
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.05 }}
-                className="text-3xl font-bold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-4xl xl:text-5xl"
-              >
-                Usage Overview
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.1 }}
-                className="max-w-md text-[15px] text-[hsl(var(--medium-emphasis))]"
-              >
-                Track your platform consumption across all services for the current billing period.
-              </motion.p>
-            </div>
-
-            {/* Time range picker */}
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.1 }}
-              onClick={() => setTimeRangeIdx((i) => (i + 1) % TIME_RANGES.length)}
-              className="flex w-fit items-center gap-2 rounded-[10px] border bg-card px-4 py-2.5 text-sm font-medium text-[hsl(var(--high-emphasis))] transition-colors hover:border-input hover:bg-[hsl(var(--surface-app))]"
-            >
-              <Clock className="h-4 w-4 text-[hsl(var(--medium-emphasis))]" />
-              <span className="font-mono text-sm">{TIME_RANGES[timeRangeIdx]}</span>
-              <ChevronDown className="h-4 w-4 text-[hsl(var(--low-emphasis))]" />
-            </motion.button>
-          </div>
-        </header>
-
-        {/* ── Plan Card ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-          className="relative mb-8 overflow-hidden rounded-[14px] border bg-card p-5 transition-colors hover:border-input sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-6"
-        >
-          {/* top accent */}
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
-
-          <div className="mb-4 flex flex-col gap-1 sm:mb-0">
-            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
-              <Star className="h-3 w-3" />
-              Current Plan
-            </div>
-            <p className="text-lg font-bold tracking-tight text-[hsl(var(--high-emphasis))]">
-              {plan.name}
-            </p>
-            <p className="text-sm text-[hsl(var(--medium-emphasis))]">
-              {plan.description}
-            </p>
-            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-[hsl(var(--low-emphasis))]">
-              <span className="font-semibold text-[hsl(var(--high-emphasis))]">{plan.capacityUsedPct}%</span>
-              user capacity utilized
-              <span className="mx-1">·</span>
-              Renews {plan.renewsAt}
-            </div>
-          </div>
-
-          <button className="w-full rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all sm:w-auto">
-            Manage Package
-          </button>
-        </motion.div>
-
-        {/* ── Stats Grid ── */}
-        <div className="mb-10 grid grid-cols-2 gap-4 xl:grid-cols-4">
-          {stats.map((s, i) => (
-            <StatCard
-              key={s.label}
-              label={s.label}
-              value={s.value}
-              trend={s.trend}
-              delay={0.15 + i * 0.05}
-              icon={<StatIcon icon={s.icon} />}
-            />
-          ))}
+    <main className="flex flex-col gap-6 p-6">
+      {/* ── Page header ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h4 className="text-lg font-semibold md:text-xl">Subscription Usage</h4>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Track platform consumption across all services for the current billing period.
+          </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-fit gap-2"
+          onClick={() => setTimeRangeIdx((i) => (i + 1) % TIME_RANGES.length)}
+        >
+          <Clock className="h-4 w-4" />
+          {TIME_RANGES[timeRangeIdx]}
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </Button>
+      </div>
 
-        {/* ── Services ── */}
-        <div className="mb-6 flex items-center gap-3">
-          <h2 className="text-base font-semibold text-[hsl(var(--high-emphasis))]">Services</h2>
+      {/* ── Plan Card ── */}
+      <Card>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <CreditCard className="h-[18px] w-[18px]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">{plan.name}</p>
+                <Badge variant="secondary" className="text-[10px]">
+                  Active
+                </Badge>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{plan.description}</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{plan.capacityUsedPct}%</span>{" "}
+                capacity utilized · Renews {plan.renewsAt}
+              </p>
+            </div>
+          </div>
+          <Button  size="sm" className="shrink-0">
+            Manage Package
+          </Button>
+        </div>
+      </Card>
+
+      {/* ── Stats Grid ── */}
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {stats.map((s) => (
+          <StatCard
+            key={s.label}
+            label={s.label}
+            value={s.value}
+            trend={s.trend}
+            icon={<StatIcon icon={s.icon} />}
+          />
+        ))}
+      </div>
+
+      {/* ── Services ── */}
+      <div>
+        <div className="mb-4 flex items-center gap-3">
+          <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Services
+          </h5>
           <div className="h-px flex-1 bg-border" />
         </div>
-
         <div className="flex flex-col gap-4">
-          {services.map((service, i) => (
+          {services.map((service) => (
             <ServiceCard
               key={service.id}
               service={service}
-              index={i}
               expandedRows={expandedRows}
               onToggleRow={toggleRow}
             />
           ))}
         </div>
-
-        {/* ── Footer ── */}
-        <footer className="mt-10 flex flex-col items-center justify-between gap-2 border-t pt-6 text-xs text-[hsl(var(--low-emphasis))] sm:flex-row">
-          <span>
-            Data refreshed every 5 minutes ·{" "}
-            <Link to="#" className="underline-offset-2 hover:text-[hsl(var(--medium-emphasis))] hover:underline">
-              Next billing: Jun 14, 2026
-            </Link>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
-            Selise Blocks · Enterprise Cloud OS
-          </span>
-        </footer>
       </div>
-    </div>
+
+      {/* ── Footer ── */}
+      <p className="text-xs text-muted-foreground">
+        Data refreshed every 5 minutes · Next billing: Jun 14, 2026
+      </p>
+    </main>
   );
 }
