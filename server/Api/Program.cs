@@ -61,22 +61,22 @@ if (File.Exists(indexHtml))
 
     app.MapFallback(async context =>
     {
-        // var tenantService = context.RequestServices.GetRequiredService<ITenants>();
-        // var dbContext = context.RequestServices.GetRequiredService<IDbContextProvider>();
-        // var host = context.Request.Host.Value;
-        // var tenant = tenantService.GetTenantByApplicationDomain(host);
-        // var database = dbContext.GetDatabase(tenant.TenantId);
-        // var captcheSetting = await (await database.GetCollection<CaptchaConfiguration>("CaptchaConfigurations").FindAsync(Builders<CaptchaConfiguration>.Filter.Eq(mc => mc.IsEnable, true))).FirstOrDefaultAsync();
-        // ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath,  tenant.TenantId, captcheSetting.CaptchaKey);
+        var tenantService = context.RequestServices.GetRequiredService<ITenants>();
+        var dbContext = context.RequestServices.GetRequiredService<IDbContextProvider>();
+        var host = context.Request.Host.Value;
+        var tenant = tenantService.GetTenantByApplicationDomain(host);
+        var database = dbContext.GetDatabase(tenant.TenantId);
+        var captcheSetting = await (await database.GetCollection<CaptchaConfiguration>("CaptchaConfigurations").FindAsync(Builders<CaptchaConfiguration>.Filter.Eq(mc => mc.IsEnable, true))).FirstOrDefaultAsync();
+        ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath, tenant.TenantId, captcheSetting.CaptchaKey);
 
-        // context.Response.Cookies.Append("x-blocks-key", tenant.TenantId, new CookieOptions
-        // {
-        //     Domain = tenant.CookieDomain,
-        //     HttpOnly = true,
-        //     Secure = true,
-        //     SameSite =  SameSiteMode.None,
-        //     Path = "/"
-        // });
+        //context.Response.Cookies.Append("x-blocks-key", tenant.TenantId, new CookieOptions
+        //{
+        //    Domain = tenant.CookieDomain,
+        //    HttpOnly = true,
+        //    Secure = true,
+        //    SameSite = SameSiteMode.None,
+        //    Path = "/"
+        //});
 
         await context.Response.SendFileAsync(indexHtml);
 
