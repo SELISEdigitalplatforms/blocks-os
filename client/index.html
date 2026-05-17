@@ -7,6 +7,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
     <title>Blocks OS</title>
+  </head>
+  <body class="min-h-screen bg-background font-sans text-foreground antialiased">
+    <div id="root"></div>
+    <div id="portal-root"></div>
     <script>
       window.__BLOCKS_ENV__ = {
         BLOCKS_API_BASE_URL: "https://dev-os.blocksdevelopers.com",
@@ -19,10 +23,6 @@
         BLOCKS_BASE_DOMAIN: "blocksdevelopers.com"
       };
     </script>
-  </head>
-  <body class="min-h-screen bg-background font-sans text-foreground antialiased">
-    <div id="root"></div>
-    <div id="portal-root"></div>
     <script type="module" src="/app/main.tsx"></script>
   </body>
 </html>
