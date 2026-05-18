@@ -11,7 +11,7 @@ const AUTH_OIDC_SUBPATH = "/oidc";
 export const AUTH_ENDPOINTS = {
   TOKEN: `/api${AUTH_SUBPATH}/Token`,
   USER_INFO: `/api/idp/UserInfo`,
-  LOGOUT: `/api${AUTH_SUBPATH}/Logout`,
+  LOGOUT: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/Logout`,
 } as const;
 
 // ─── Client credential endpoints (auth-clients.service) ─────────────────────
@@ -29,7 +29,7 @@ export const AUTH_OIDC_ENDPOINTS = {
   GET_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
   SAVE_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
   DELETE_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
-  OIDC_TOKEN: `/api${AUTH_OIDC_SUBPATH}/token`,
+  OIDC_TOKEN: `${BLOCKS_IDP_BASE_URL}/api${AUTH_OIDC_SUBPATH}/token`,
 } as const;
 
 // ─── Auth configuration endpoints (auth-config.service) ─────────────────────
