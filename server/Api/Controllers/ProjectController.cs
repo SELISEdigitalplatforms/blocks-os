@@ -28,7 +28,8 @@ namespace Api.Controllers
             _updateProjectValidator = updateProjectValidator;
         }
 
-        [ProtectedEndPoint("blocks-os::create-project")]
+        //[ProtectedEndPoint("blocks-os::create-project")]
+        [Authorize]
         [HttpPost]
         public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
         {
@@ -44,7 +45,8 @@ namespace Api.Controllers
 
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::get-projects")]
+        //[ProtectedEndPoint("blocks-os::get-projects")]
+        [Authorize]
         public async Task<List<GroupedProjectsDto>> Gets([FromQuery] GetProjectsRequest request)
         {
             return await _projectManagementService.GetAllAsync(request);
@@ -57,8 +59,9 @@ namespace Api.Controllers
             return await _projectManagementService.RestoreProjectAsync(restoreProjectRequest);
         }
 
-        [ProtectedEndPoint("blocks-os::get-project")]
+        //[ProtectedEndPoint("blocks-os::get-project")]
         [HttpGet]
+        [Authorize] 
         public async Task<GetProjectResponse> Get([FromQuery] string projectId)
         {
             if (string.IsNullOrWhiteSpace(projectId))
