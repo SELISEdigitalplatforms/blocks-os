@@ -31,7 +31,7 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 /noconfig
 /unsafe-
 /checked-
-/nowarn:1701,1702,1701,1702
+/nowarn:1701,1702,1701,1702,8002
 /fullpaths
 /nostdlib+
 /errorreport:prompt
@@ -45,8 +45,8 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 /debug:portable
 /filealign:512
 /optimize-
-/out:obj\Debug\net10.0\Api.dll
-/refout:obj\Debug\net10.0\refint\Api.dll
+/out:obj/Debug/net10.0/Api.dll
+/refout:obj/Debug/net10.0/refint/Api.dll
 /target:exe
 /warnaserror-
 /utf8output
@@ -93,7 +93,7 @@ Program.cs
  Identifier.DomainService/obj/Debug/net10.0/ref/Identifier.DomainService.dll
  Mfa.DomainService/obj/Debug/net10.0/ref/Mfa.DomainService.dll
  Secrets.DomainService/obj/Debug/net10.0/ref/Secrets.DomainService.dll
-<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.3/ref/net10.0/
+<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.5/ref/net10.0/
  Microsoft.AspNetCore.Antiforgery.dll
  Microsoft.AspNetCore.Authentication.Abstractions.dll
  Microsoft.AspNetCore.Authentication.BearerToken.dll
@@ -234,7 +234,7 @@ Program.cs
  System.Formats.Cbor.dll
  System.Security.Cryptography.Xml.dll
  System.Threading.RateLimiting.dll
-<DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.3/ref/net10.0/
+<DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.5/ref/net10.0/
  Microsoft.CSharp.dll
  Microsoft.VisualBasic.Core.dll
  Microsoft.VisualBasic.dll
@@ -403,109 +403,111 @@ Program.cs
  System.Xml.XPath.XDocument.dll
  WindowsBase.dll
 <NUGET>/
+ aspnetcore.healthchecks.mongodb/9.0.0/lib/net8.0/HealthChecks.MongoDb.dll
+ aspnetcore.healthchecks.redis/9.0.0/lib/net8.0/HealthChecks.Redis.dll
  awssdk.core/3.7.400.64/lib/net8.0/AWSSDK.Core.dll
  awssdk.s3/3.7.410.6/lib/net8.0/AWSSDK.S3.dll
  azure.core.amqp/1.3.1/lib/netstandard2.0/Azure.Core.Amqp.dll
- azure.core/1.49.0/lib/net8.0/Azure.Core.dll
- azure.identity/1.17.0/lib/net8.0/Azure.Identity.dll
+ azure.core/1.54.0/lib/net10.0/Azure.Core.dll
+ azure.identity/1.21.0/lib/net10.0/Azure.Identity.dll
  azure.messaging.servicebus/7.20.1/lib/net8.0/Azure.Messaging.ServiceBus.dll
  azure.resourcemanager.servicebus/1.1.0/lib/net8.0/Azure.ResourceManager.ServiceBus.dll
  azure.resourcemanager/1.13.0/lib/netstandard2.0/Azure.ResourceManager.dll
  azure.security.keyvault.certificates/4.8.0/lib/net8.0/Azure.Security.KeyVault.Certificates.dll
- azure.security.keyvault.secrets/4.8.0/lib/net8.0/Azure.Security.KeyVault.Secrets.dll
+ azure.security.keyvault.secrets/4.11.0/lib/net10.0/Azure.Security.KeyVault.Secrets.dll
  azure.storage.blobs/12.22.2/lib/net6.0/Azure.Storage.Blobs.dll
  azure.storage.common/12.21.1/lib/net6.0/Azure.Storage.Common.dll
  bouncycastle.cryptography/2.4.0/lib/net6.0/BouncyCastle.Cryptography.dll
  devicedetector.net/6.4.2/lib/net9.0/DeviceDetector.NET.dll
  dnsclient/1.6.1/lib/net5.0/DnsClient.dll
- dotnetenv/3.1.1/lib/netstandard1.3/DotNetEnv.dll
+ dotnetenv/3.2.0/lib/netstandard2.0/DotNetEnv.dll
  fluentvalidation.aspnetcore/11.3.0/lib/net6.0/FluentValidation.AspNetCore.dll
  fluentvalidation.dependencyinjectionextensions/11.5.1/lib/netstandard2.1/FluentValidation.DependencyInjectionExtensions.dll
  fluentvalidation/12.0.0/lib/net8.0/FluentValidation.dll
- google.protobuf/3.32.1/lib/net5.0/Google.Protobuf.dll
- grpc.aspnetcore.server.clientfactory/2.71.0/lib/net9.0/Grpc.AspNetCore.Server.ClientFactory.dll
- grpc.aspnetcore.server/2.71.0/lib/net9.0/Grpc.AspNetCore.Server.dll
- grpc.core.api/2.71.0/lib/netstandard2.1/Grpc.Core.Api.dll
- grpc.net.client/2.71.0/lib/net8.0/Grpc.Net.Client.dll
- grpc.net.clientfactory/2.71.0/lib/net8.0/Grpc.Net.ClientFactory.dll
- grpc.net.common/2.71.0/lib/net8.0/Grpc.Net.Common.dll
+ google.protobuf/3.34.1/lib/net5.0/Google.Protobuf.dll
+ grpc.aspnetcore.server.clientfactory/2.80.0/lib/net10.0/Grpc.AspNetCore.Server.ClientFactory.dll
+ grpc.aspnetcore.server/2.80.0/lib/net10.0/Grpc.AspNetCore.Server.dll
+ grpc.core.api/2.80.0/lib/netstandard2.1/Grpc.Core.Api.dll
+ grpc.net.client/2.80.0/lib/net10.0/Grpc.Net.Client.dll
+ grpc.net.clientfactory/2.80.0/lib/net10.0/Grpc.Net.ClientFactory.dll
+ grpc.net.common/2.80.0/lib/net10.0/Grpc.Net.Common.dll
  handlebars.net/2.1.6/lib/net6.0/Handlebars.dll
  litedb/5.0.21/lib/netstandard2.0/LiteDB.dll
- microsoft.aspnetcore.authentication.jwtbearer/9.0.9/lib/net9.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+ microsoft.aspnetcore.authentication.jwtbearer/10.0.7/lib/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
  microsoft.azure.amqp/2.7.0/lib/net8.0/Microsoft.Azure.Amqp.dll
- microsoft.bcl.asyncinterfaces/8.0.0/lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll
- microsoft.extensions.dependencymodel/9.0.0/lib/net9.0/Microsoft.Extensions.DependencyModel.dll
- microsoft.identity.client.extensions.msal/4.76.0/lib/net8.0/Microsoft.Identity.Client.Extensions.Msal.dll
- microsoft.identity.client/4.76.0/lib/net8.0/Microsoft.Identity.Client.dll
- microsoft.identitymodel.abstractions/8.9.0/lib/net9.0/Microsoft.IdentityModel.Abstractions.dll
+ microsoft.bcl.asyncinterfaces/10.0.3/lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll
+ microsoft.extensions.dependencymodel/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyModel.dll
+ microsoft.identity.client.extensions.msal/4.83.1/lib/net8.0/Microsoft.Identity.Client.Extensions.Msal.dll
+ microsoft.identity.client/4.83.1/lib/net8.0/Microsoft.Identity.Client.dll
+ microsoft.identitymodel.abstractions/8.14.0/lib/net9.0/Microsoft.IdentityModel.Abstractions.dll
  microsoft.identitymodel.jsonwebtokens/8.9.0/lib/net9.0/Microsoft.IdentityModel.JsonWebTokens.dll
  microsoft.identitymodel.logging/8.9.0/lib/net9.0/Microsoft.IdentityModel.Logging.dll
  microsoft.identitymodel.protocols.openidconnect/8.0.1/lib/net9.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
  microsoft.identitymodel.protocols/8.0.1/lib/net9.0/Microsoft.IdentityModel.Protocols.dll
  microsoft.identitymodel.tokens/8.9.0/lib/net9.0/Microsoft.IdentityModel.Tokens.dll
- microsoft.openapi/1.6.25/lib/netstandard2.0/Microsoft.OpenApi.dll
+ microsoft.openapi/2.4.1/lib/net8.0/Microsoft.OpenApi.dll
  microsoft.win32.systemevents/8.0.0/lib/net8.0/Microsoft.Win32.SystemEvents.dll
- mongodb.bson/3.5.0/lib/net6.0/MongoDB.Bson.dll
- mongodb.driver/3.5.0/lib/net6.0/MongoDB.Driver.dll
+ mongodb.bson/3.8.0/lib/net6.0/MongoDB.Bson.dll
+ mongodb.driver/3.8.0/lib/net6.0/MongoDB.Driver.dll
  newtonsoft.json/13.0.3/lib/net6.0/Newtonsoft.Json.dll
- opentelemetry.api.providerbuilderextensions/1.13.1/lib/net9.0/OpenTelemetry.Api.ProviderBuilderExtensions.dll
- opentelemetry.api/1.13.1/lib/net9.0/OpenTelemetry.Api.dll
- opentelemetry.extensions.hosting/1.13.1/lib/net9.0/OpenTelemetry.Extensions.Hosting.dll
- opentelemetry.instrumentation.aspnetcore/1.12.0/lib/net8.0/OpenTelemetry.Instrumentation.AspNetCore.dll
- opentelemetry.instrumentation.http/1.12.0/lib/net8.0/OpenTelemetry.Instrumentation.Http.dll
+ opentelemetry.api.providerbuilderextensions/1.15.3/lib/net10.0/OpenTelemetry.Api.ProviderBuilderExtensions.dll
+ opentelemetry.api/1.15.3/lib/net10.0/OpenTelemetry.Api.dll
+ opentelemetry.extensions.hosting/1.15.3/lib/net10.0/OpenTelemetry.Extensions.Hosting.dll
+ opentelemetry.instrumentation.aspnetcore/1.15.2/lib/net10.0/OpenTelemetry.Instrumentation.AspNetCore.dll
+ opentelemetry.instrumentation.http/1.15.1/lib/net10.0/OpenTelemetry.Instrumentation.Http.dll
  opentelemetry.instrumentation.process/1.12.0-beta.1/lib/netstandard2.0/OpenTelemetry.Instrumentation.Process.dll
- opentelemetry.instrumentation.runtime/1.12.0/lib/net8.0/OpenTelemetry.Instrumentation.Runtime.dll
- opentelemetry/1.13.1/lib/net9.0/OpenTelemetry.dll
+ opentelemetry.instrumentation.runtime/1.15.1/lib/net10.0/OpenTelemetry.Instrumentation.Runtime.dll
+ opentelemetry/1.15.3/lib/net10.0/OpenTelemetry.dll
  otp.net/1.4.0/lib/net8.0/Otp.NET.dll
  pipelines.sockets.unofficial/2.2.8/lib/net5.0/Pipelines.Sockets.Unofficial.dll
- polly.core/8.6.4/lib/net8.0/Polly.Core.dll
- polly/8.6.4/lib/net6.0/Polly.dll
+ polly.core/8.6.6/lib/net8.0/Polly.Core.dll
+ polly/8.6.6/lib/net6.0/Polly.dll
  qrcoder/1.6.0/lib/net6.0/QRCoder.dll
- rabbitmq.client/7.1.2/lib/net8.0/RabbitMQ.Client.dll
- seliseblocks.genesis/9.0.48-preview.1/lib/net9.0/Blocks.Genesis.dll
- seliseblocks.lmt.client/9.0.3/lib/net9.0/Blocks.LMT.Client.dll
+ rabbitmq.client/7.2.1/lib/net8.0/RabbitMQ.Client.dll
+ seliseblocks.genesis/10.0.7/lib/net10.0/Blocks.Genesis.dll
+ seliseblocks.lmt.client/10.0.1/lib/net10.0/Blocks.LMT.Client.dll
  seliseblocks.maildriver/9.0.0-preview.15/lib/net9.0/
   Mail.DomainService.dll
   Mail.Driver.dll
  seliseblocks.storagedriver/9.0.0-preview.16/lib/net9.0/
   Storage.DomainService.dll
   Storage.Driver.dll
- serilog.aspnetcore/9.0.0/lib/net9.0/Serilog.AspNetCore.dll
+ serilog.aspnetcore/10.0.0/lib/net10.0/Serilog.AspNetCore.dll
  serilog.enrichers.environment/3.0.1/lib/net8.0/Serilog.Enrichers.Environment.dll
- serilog.enrichers.httpcontext/8.0.9/lib/net8.0/Serilog.Enrichers.HttpContext.dll
+ serilog.enrichers.httpcontext/8.3.0/lib/net10.0/Serilog.Enrichers.HttpContext.dll
  serilog.enrichers.opentelemetry/1.0.1/lib/net7.0/Serilog.Enrichers.OpenTelemetry.dll
- serilog.extensions.hosting/9.0.0/lib/net9.0/Serilog.Extensions.Hosting.dll
- serilog.extensions.logging/9.0.0/lib/net9.0/Serilog.Extensions.Logging.dll
+ serilog.extensions.hosting/10.0.0/lib/net10.0/Serilog.Extensions.Hosting.dll
+ serilog.extensions.logging/10.0.0/lib/net10.0/Serilog.Extensions.Logging.dll
  serilog.formatting.compact/3.0.0/lib/net8.0/Serilog.Formatting.Compact.dll
- serilog.settings.configuration/9.0.0/lib/net9.0/Serilog.Settings.Configuration.dll
- serilog.sinks.console/6.0.0/lib/net8.0/Serilog.Sinks.Console.dll
+ serilog.settings.configuration/10.0.0/lib/net10.0/Serilog.Settings.Configuration.dll
+ serilog.sinks.console/6.1.1/lib/net8.0/Serilog.Sinks.Console.dll
  serilog.sinks.debug/3.0.0/lib/net8.0/Serilog.Sinks.Debug.dll
- serilog.sinks.file/6.0.0/lib/net8.0/Serilog.Sinks.File.dll
- serilog.sinks.mongodb/7.1.0/lib/net6.0/Serilog.Sinks.MongoDB.dll
+ serilog.sinks.file/7.0.0/lib/net9.0/Serilog.Sinks.File.dll
+ serilog.sinks.mongodb/7.2.0/lib/net6.0/Serilog.Sinks.MongoDB.dll
  serilog.sinks.periodicbatching/3.1.0/lib/netstandard2.1/Serilog.Sinks.PeriodicBatching.dll
- serilog/4.3.0/lib/net9.0/Serilog.dll
- sharpcompress/0.30.1/lib/net5.0/SharpCompress.dll
+ serilog/4.3.1/lib/net10.0/Serilog.dll
+ sharpcompress/0.48.0/lib/net10.0/SharpCompress.dll
  sixlabors.fonts/2.1.2/lib/net6.0/SixLabors.Fonts.dll
  sixlabors.imagesharp.drawing/2.1.5/lib/net6.0/SixLabors.ImageSharp.Drawing.dll
  sixlabors.imagesharp/3.1.11/lib/net6.0/SixLabors.ImageSharp.dll
- snappier/1.0.0/lib/net5.0/Snappier.dll
- sprache/2.3.1/lib/netstandard2.1/Sprache.dll
+ snappier/1.3.1/lib/net8.0/Snappier.dll
  ssh.net/2024.2.0/lib/net8.0/Renci.SshNet.dll
- stackexchange.redis/2.9.25/lib/net8.0/StackExchange.Redis.dll
- swashbuckle.aspnetcore.swagger/9.0.6/lib/net9.0/Swashbuckle.AspNetCore.Swagger.dll
- swashbuckle.aspnetcore.swaggergen/9.0.6/lib/net9.0/Swashbuckle.AspNetCore.SwaggerGen.dll
- swashbuckle.aspnetcore.swaggerui/9.0.6/lib/net9.0/Swashbuckle.AspNetCore.SwaggerUI.dll
- system.clientmodel/1.7.0/lib/net9.0/System.ClientModel.dll
+ stackexchange.redis/2.12.14/lib/net10.0/StackExchange.Redis.dll
+ superpower/3.0.0/lib/net5.0/Superpower.dll
+ swashbuckle.aspnetcore.swagger/10.1.7/lib/net10.0/Swashbuckle.AspNetCore.Swagger.dll
+ swashbuckle.aspnetcore.swaggergen/10.1.7/lib/net10.0/Swashbuckle.AspNetCore.SwaggerGen.dll
+ swashbuckle.aspnetcore.swaggerui/10.1.7/lib/net10.0/Swashbuckle.AspNetCore.SwaggerUI.dll
+ system.clientmodel/1.10.0/lib/net10.0/System.ClientModel.dll
  system.drawing.common/8.0.13/lib/net8.0/System.Drawing.Common.dll
  system.identitymodel.tokens.jwt/8.9.0/lib/net9.0/System.IdentityModel.Tokens.Jwt.dll
- system.io.hashing/6.0.0/lib/net6.0/System.IO.Hashing.dll
- system.memory.data/8.0.1/lib/net8.0/System.Memory.Data.dll
+ system.io.hashing/10.0.2/lib/net10.0/System.IO.Hashing.dll
+ system.memory.data/10.0.3/lib/net10.0/System.Memory.Data.dll
  system.security.cryptography.protecteddata/4.5.0/ref/netstandard2.0/System.Security.Cryptography.ProtectedData.dll
  yamldotnet/16.2.1/lib/net8.0/YamlDotNet.dll
  zstdsharp.port/0.7.3/lib/net7.0/ZstdSharp.dll
 
 [analyzerReferences]
-<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.3/analyzers/dotnet/cs/
+<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.5/analyzers/dotnet/cs/
  Microsoft.AspNetCore.App.Analyzers.dll
  Microsoft.AspNetCore.App.CodeFixes.dll
  Microsoft.AspNetCore.App.SourceGenerators.dll
@@ -513,28 +515,28 @@ Program.cs
  Microsoft.Extensions.Logging.Generators.dll
  Microsoft.Extensions.Options.SourceGeneration.dll
  Microsoft.Extensions.Validation.ValidationsGenerator.dll
-<DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.3/analyzers/dotnet/cs/
+<DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.5/analyzers/dotnet/cs/
  Microsoft.Interop.ComInterfaceGenerator.dll
  Microsoft.Interop.JavaScript.JSImportGenerator.dll
  Microsoft.Interop.LibraryImportGenerator.dll
  Microsoft.Interop.SourceGeneration.dll
  System.Text.Json.SourceGeneration.dll
  System.Text.RegularExpressions.Generator.dll
-<DOTNET>/sdk/10.0.103/Sdks/Microsoft.NET.Sdk.Razor/source-generators/
+<DOTNET>/sdk/10.0.201/Sdks/Microsoft.NET.Sdk.Razor/source-generators/
  Microsoft.AspNetCore.Razor.Utilities.Shared.dll
  Microsoft.CodeAnalysis.Razor.Compiler.dll
  Microsoft.Extensions.ObjectPool.dll
-<DOTNET>/sdk/10.0.103/Sdks/Microsoft.NET.Sdk.Web/analyzers/cs/
+<DOTNET>/sdk/10.0.201/Sdks/Microsoft.NET.Sdk.Web/analyzers/cs/
  Microsoft.AspNetCore.Analyzers.dll
  Microsoft.AspNetCore.Mvc.Analyzers.dll
-<DOTNET>/sdk/10.0.103/Sdks/Microsoft.NET.Sdk/analyzers/
+<DOTNET>/sdk/10.0.201/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
 <NUGET>/awssdk.s3/3.7.410.6/analyzers/dotnet/cs/
  AWSSDK.S3.CodeAnalysis.dll
  SharedAnalysisCode.dll
-<NUGET>/system.clientmodel/1.7.0/analyzers/dotnet/cs/System.ClientModel.SourceGeneration.dll
+<NUGET>/system.clientmodel/1.10.0/analyzers/dotnet/cs/System.ClientModel.SourceGeneration.dll
 
 [analyzerConfigFiles]
-<DOTNET>/sdk/10.0.103/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_10_default.globalconfig
+<DOTNET>/sdk/10.0.201/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_10_default.globalconfig
 obj/Debug/net10.0/Api.GeneratedMSBuildEditorConfig.editorconfig
