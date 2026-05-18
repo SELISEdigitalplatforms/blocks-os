@@ -147,7 +147,6 @@ class HttpClient {
       method,
       headers: normalizedHeaders,
       credentials: "include",
-      referrerPolicy: "no-referrer",
     };
 
     if (body) {
