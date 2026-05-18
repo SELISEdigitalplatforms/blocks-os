@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import {
   AUTH_ENDPOINTS,
   AUTH_OIDC_ENDPOINTS,
+  EXECUTION_CONTEXT_ENDPOINTS,
   IMPERSONATE_ENDPOINTS,
 } from "@/idp/authentication/constants/endpoint.constant";
 import { useExecutionContextStore } from "@/store/execution-context-store";
@@ -253,7 +254,7 @@ class HttpClient {
   private async getExecutionContext(tenant: string): Promise<string> {
     try {
       const response = await fetch(
-        `${IMPERSONATE_ENDPOINTS.IMPERSONATE}/${tenant}`,
+        `${EXECUTION_CONTEXT_ENDPOINTS.CONTEXT}/${tenant}`,
         {
           method: "GET",
           headers: {
@@ -263,7 +264,7 @@ class HttpClient {
         },
       );
 
-      if (!response.ok) throw new Error("Failed to fetch impersonation token");
+      if (!response.ok) throw new Error("Failed to fetch execution context");
 
       const data: { isSuccess: boolean; contextId: string; error: null } =
         await response.json();
