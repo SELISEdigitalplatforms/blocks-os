@@ -141,8 +141,11 @@ class HttpClient {
       skipTokenRotation = false,
     } = requestOption;
     const fullUrl = absoluteUrl ? url : `${this.baseURL}${url}`;
+    const needExecutionContext = this.isExecutionContextNeeded();
+
     const executionContextId = this.resolveExecutionContext();
-    if (!executionContextId) {
+
+    if (!executionContextId && needExecutionContext) {
       return new Promise<T>((resolve, reject) => {
         changeImpersonationRequestQueue.push({
           url,
@@ -157,7 +160,7 @@ class HttpClient {
     const normalizedHeaders = this.normalizeHeaders(
       headers,
       skipBlocksKey,
-      executionContextId,
+      executionContextId || "",
     );
     const config: RequestInit = {
       method,
@@ -182,7 +185,7 @@ class HttpClient {
     try {
       const response = await fetch(fullUrl, config);
 
-      if (response.status === 412) {
+      if (response.status === 412 && needExecutionContext) {
         return new Promise<T>((resolve, reject) => {
           changeImpersonationRequestQueue.push({
             url,
@@ -241,6 +244,12 @@ class HttpClient {
         errors: { general: "Something went wrong" },
       });
     }
+  }
+
+  private isExecutionContextNeeded(): boolean {
+    const { selectedProject } = useProjectStore.getState();
+    if (!selectedProject) return false;
+    return true;
   }
 
   private resolveExecutionContext(): string | null {
