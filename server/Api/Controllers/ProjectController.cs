@@ -28,7 +28,8 @@ namespace Api.Controllers
             _updateProjectValidator = updateProjectValidator;
         }
 
-        [ProtectedEndPoint("blocks-os::create-project")]
+        //[ProtectedEndPoint("blocks-os::create-project")]
+        [Authorize]
         [HttpPost]
         public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
         {
