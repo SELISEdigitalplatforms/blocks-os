@@ -69,3 +69,7 @@ export const IDENTITY_PROVIDER_ENDPOINTS = {
   UPDATE: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
   UPDATE_STATUS: `${BLOCKS_IDP_BASE_URL}/api/identity-providers`,
 } as const;
+
+export const EXECUTION_CONTEXT_ENDPOINTS = {
+  CONTEXT: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/context`,
+};
