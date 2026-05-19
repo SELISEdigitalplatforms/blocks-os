@@ -370,48 +370,40 @@ namespace DomainService.Projects
             return new RestoreProjectResponse { IsSuccess = true };
         }
 
-        public async Task<GetProjectResponse> GetAsync(string projectId)
+        public async Task<GetProjectResponse> GetAsync()
         {
-            return await MapIntoProjectAsync(projectId);
-        }
-
-        private async Task<GetProjectResponse> MapIntoProjectAsync(string projectId)
-        {
-            var repoProject = await _projectRepository.GetByIdAsync(projectId);
-
-            if (repoProject == null)
-            {
-                return new GetProjectResponse { Errors = new Dictionary<string, string> { { "project_not_exist", $"project_with_id_{projectId}_not_exist_into_our_system" } } };
-            }
+           var tenant = await _projectRepository.GetByTenantIdAsync(BlocksContext.GetContext()?.TenantId);
 
             string tenantSlug = string.Empty;
-            var blocksGuid = await _projectRepository.GetBlocksGuidAsync(repoProject.TenantGroupId);
+            var blocksGuid = await _projectRepository.GetBlocksGuidAsync(tenant.TenantGroupId);
+
             if (blocksGuid is not null)
             {
-                tenantSlug = $"{IdentifierHelper.EnvironmentMapper(repoProject.Environment)}{blocksGuid.EncodedValue}";
+                tenantSlug = $"{IdentifierHelper.EnvironmentMapper(tenant.Environment)}{blocksGuid.EncodedValue}";
             }
 
             var project = new GetProjectResponseData
             {
-                Name = repoProject.Name,
-                ApplicationDomain = repoProject.Applications.FirstOrDefault()?.Domain ?? "",
-                ItemId = repoProject.ItemId,
-                CreatedDate = repoProject.CreatedDate,
-                LastUpdatedDate = repoProject.LastUpdatedDate,
-                LastUpdatedBy = repoProject.LastUpdatedBy,
-                OrganizationIds = repoProject.OrganizationIds,
-                CreatedBy = repoProject.CreatedBy,
-                Tags = repoProject.Tags,
-                TenantId = repoProject.TenantId,
-                IsDomainVerified = repoProject.Applications.FirstOrDefault()?.IsDomainVerified ?? false,
-                CookieDomain = repoProject.Applications.FirstOrDefault()?.CookieDomain ?? "",
-                IsDisabled = repoProject.IsDisabled,
-                Environment = repoProject.Environment,
-                TenantGroupId = repoProject.TenantGroupId,
+                Name = tenant.Name,
+                ApplicationDomain = tenant.Applications.FirstOrDefault()?.Domain ?? "",
+                ItemId = tenant.ItemId,
+                CreatedDate = tenant.CreatedDate,
+                LastUpdatedDate = tenant.LastUpdatedDate,
+                LastUpdatedBy = tenant.LastUpdatedBy,
+                OrganizationIds = tenant.OrganizationIds,
+                CreatedBy = tenant.CreatedBy,
+                Tags = tenant.Tags,
+                TenantId = tenant.TenantId,
+                IsDomainVerified = tenant.Applications.FirstOrDefault()?.IsDomainVerified ?? false,
+                CookieDomain = tenant.Applications.FirstOrDefault()?.CookieDomain ?? "",
+                IsDisabled = tenant.IsDisabled,
+                Environment = tenant.Environment,
+                TenantGroupId = tenant.TenantGroupId,
                 TenantSlug = tenantSlug
             };
 
             return new GetProjectResponse { Data = project };
+
         }
 
         public async Task<BaseResponse> UpdateProjectAsync(UpdateProjectRequest request)
