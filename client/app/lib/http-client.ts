@@ -141,7 +141,7 @@ class HttpClient {
       skipTokenRotation = false,
     } = requestOption;
     const fullUrl = absoluteUrl ? url : `${this.baseURL}${url}`;
-    const needExecutionContext = this.isExecutionContextNeeded();
+    const needExecutionContext = this.isExecutionContextNeeded(fullUrl);
 
     const executionContextId = this.resolveExecutionContext();
 
@@ -246,8 +246,12 @@ class HttpClient {
     }
   }
 
-  private isExecutionContextNeeded(): boolean {
+  private isExecutionContextNeeded(url: string): boolean {
     const { selectedProject } = useProjectStore.getState();
+    const restricedEndpoints = [
+      "https://dev-idp.blocksdevelopers.com/api/iam/me",
+    ];
+    if (restricedEndpoints.includes(url)) return false;
     if (!selectedProject) return false;
     return true;
   }
