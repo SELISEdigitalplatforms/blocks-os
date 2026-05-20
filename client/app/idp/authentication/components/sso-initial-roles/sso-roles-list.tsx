@@ -12,12 +12,10 @@ import { useNavigate } from "react-router-dom";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteSSORole } from "./delete-sso-role";
-
 type SSORolesListProps = {
   roles: IRole[];
   onDelete: (role: IRole) => void;
 };
-
 export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
   const navigate = useNavigate();
   const columns = useMemo<ColumnDef<IRole>[]>(
@@ -63,17 +61,14 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
     ],
     [onDelete],
   );
-
   const table = useReactTable({
     data: roles,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   const onRowClickHandler = (itemId: number | string) => {
     navigate(`/services/iam/role-detail/${itemId}`);
   };
-
   return (
     <>
       <Table>

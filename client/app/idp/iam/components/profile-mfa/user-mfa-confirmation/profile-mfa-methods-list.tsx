@@ -4,19 +4,17 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/rad
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { MFA_Provider_Data } from "@blocks-idp/mfa/utils/mfa-config";
-import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
 import { useContext, useMemo } from "react";
 import { profileMfaContext } from "../profile-mfa";
-
 type UserMFAMethodListProps = {
   selected: number;
   setSelected: (selected: number) => void;
 };
-
 export const ProfileMFAMethodList = ({ selected, setSelected }: UserMFAMethodListProps) => {
   const { userId, projectKey } = useContext(profileMfaContext);
   const { isLoading, isFetching, data } = useGetMFAConfig({ projectKey });
-  const { data: userData } = useGetUserById({ id: userId, projectKey });
+  const { data: userData } = useGetMe();
   const availableMFaMethod = useMemo(() => {
     if (!data?.userMfaType.length) return [];
     return MFA_Provider_Data.filter((item) => data?.userMfaType.includes(item.type));

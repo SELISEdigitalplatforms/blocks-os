@@ -1,5 +1,3 @@
-
-
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useGetOrganizationById } from "@blocks-idp/iam/hooks/use-organization";
@@ -9,15 +7,12 @@ import {
   OrganizationUsers,
   InviteOrganizationUser,
 } from "@blocks-idp/iam/modules/organization-management/organization-users";
-
 export const OrganizationDetail = ({ id }: { id: string }) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading } = useGetOrganizationById({ itemId: id, projectKey: tenantId });
-
   BREADCRUMB_CUSTOM_TITLES["/services/iam/organization-detail"] = "Organizations";
   BREADCRUMB_CUSTOM_TITLES[`/services/iam/organization-detail/${id}`] =
     data?.organization?.name ?? null;
-
   return (
     <main className="flex flex-col">
       <div className="hidden md:flex">

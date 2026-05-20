@@ -20,7 +20,6 @@ import {
 } from "@radix-ui/react-select";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
 type MembershipPermissionsTabProps = {
   isEditing: boolean;
   permissionsSearch: string;
@@ -36,7 +35,6 @@ type MembershipPermissionsTabProps = {
   totalPermissionPages: number;
   onPermissionToggle: (permissionName: string) => void;
 };
-
 export const MembershipPermissionsTab = ({
   isEditing,
   permissionsSearch,

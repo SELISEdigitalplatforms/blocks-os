@@ -1,6 +1,5 @@
 import React from "react";
 import { useForm } from "react-hook-form";
-
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Form, FormField } from "@/components/ui-kits/form/form";
@@ -12,9 +11,7 @@ import { createCommonOAuthFields } from "../sso-provider-config-field-factory.ut
 import { ssoOAuthProviderSchema } from "../sso-provider-config.schema";
 import { SSOProviderConfigFormField } from "./sso-provider-config-form-fields";
 import { SsoConfigForms } from "./sso-provider-config-forms";
-
 const SSOLinkedInFormFields = createCommonOAuthFields();
-
 export const SSOProviderConfigLinkedINForm: React.FC<SsoConfigForms> = ({
   save,
   configuration,
@@ -67,7 +64,6 @@ export const SSOProviderConfigLinkedINForm: React.FC<SsoConfigForms> = ({
             )}
           />
         </div>
-
         <div className="flex items-center justify-end gap-2">
           <Button type="submit">Save</Button>
         </div>

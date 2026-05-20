@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import { Pencil, Trash } from "lucide-react";
 import DeleteEmailConfig from "@blocks-communication/mail/components/email-service/modals/delete-email-config/delete-email-config";
@@ -17,28 +15,22 @@ import { cn } from "@/lib/utils";
 import { IEmailConfig, MailServiceProvider } from "@blocks-communication/mail/models/email";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-
 interface EmailConfigurationProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
 }
-
 export function EmailConfiguration({ addConfigOpen, onAddConfigOpenChange }: EmailConfigurationProps = {}) {
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
   const open = addConfigOpen !== undefined ? addConfigOpen : internalOpen;
   const setOpen = onAddConfigOpenChange || setInternalOpen;
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
-
   const isMediumScreen = useMediaQuery(`(max-width: 1180px)`);
   const isMobileScreen = useMediaQuery(`(max-width: 768px)`);
-
   const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
   const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
-
   // const [loading, setLoading] = useState(true);
   // const [error, setError] = useState<string | null>(null);
-
   // useEffect(() => {
   //   const fetchData = async () => {
   //     try {
@@ -68,7 +60,6 @@ export function EmailConfiguration({ addConfigOpen, onAddConfigOpenChange }: Ema
   //     fetchData();
   //   }
   // }, [tenantId]);
-
   if (isLoading) {
     return (
       <div className="grid gap-2">
@@ -78,7 +69,6 @@ export function EmailConfiguration({ addConfigOpen, onAddConfigOpenChange }: Ema
       </div>
     );
   }
-
   // if (error) {
   //   return (
   //     <div className="p-4">
@@ -89,7 +79,6 @@ export function EmailConfiguration({ addConfigOpen, onAddConfigOpenChange }: Ema
   //     </div>
   //   );
   // }
-
   return (
     <div>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -103,45 +92,49 @@ export function EmailConfiguration({ addConfigOpen, onAddConfigOpenChange }: Ema
               value={config.itemId}
               className={`rounded-sm border bg-background px-4 ${index > 0 ? "mt-6" : ""}`}
             >
-              <AccordionTrigger className="text-xl font-semibold">{config.name}</AccordionTrigger>
-              <AccordionContent>
-                <div className="flex gap-1">
-
-                  {!config.isDefault && (<Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-9 gap-2 px-4 py-1">
-                        <Pencil className="h-3.5 w-3.5" />
-                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
-                      </Button>
-                    </DialogTrigger>
-                    <NewConfiguration
-                      dialogTitle="Edit Configuration"
-                      previousData={config}
-                      isEdit={true}
-                      onClose={() => setIsEditOpen(false)}
-                    />
-                  </Dialog>)}
-                  {!config.isDefault && (
-                    <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+              <AccordionTrigger className="text-xl font-semibold hover:no-underline">
+                <div className="flex items-center justify-between w-full pr-8">
+                  <span>{config.name}</span>
+                  <div className="flex gap-1">
+                    {!config.isDefault && (<Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                       <DialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-9 gap-2 px-4 py-1 text-red-500 hover:bg-red-400 hover:text-white"
-                        >
-                          <Trash className="h-3.5 w-3.5" />
-                          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                            Delete
-                          </span>
+                        <Button size="sm" variant="outline" className="h-9 gap-2 px-4 py-1" onClick={(e) => e.stopPropagation()}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
                         </Button>
                       </DialogTrigger>
-                      <DeleteEmailConfig
-                        configId={config.itemId}
-                        onClose={() => setDeleteModalOpen(false)}
+                      <NewConfiguration
+                        dialogTitle="Edit Configuration"
+                        previousData={config}
+                        isEdit={true}
+                        onClose={() => setIsEditOpen(false)}
                       />
-                    </Dialog>
-                  )}
+                    </Dialog>)}
+                    {!config.isDefault && (
+                      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 gap-2 px-4 py-1 text-red-500 hover:bg-red-400 hover:text-white"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                              Delete
+                            </span>
+                          </Button>
+                        </DialogTrigger>
+                        <DeleteEmailConfig
+                          configId={config.itemId}
+                          onClose={() => setDeleteModalOpen(false)}
+                        />
+                      </Dialog>
+                    )}
+                  </div>
                 </div>
+              </AccordionTrigger>
+              <AccordionContent>
                 <div
                   className={cn(
                     "mt-5 grid grid-cols-3 space-y-2",
@@ -215,7 +208,6 @@ export function EmailConfiguration({ addConfigOpen, onAddConfigOpenChange }: Ema
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Account Password</p>
-                      {/* <p className="trucate break-all text-base">{config.accountPassword}</p> */}
                       <p className="trucate break-all text-base">*********************</p>
                     </div>
                   </div>

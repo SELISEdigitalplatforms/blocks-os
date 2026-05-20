@@ -1,5 +1,3 @@
-
-
 import { Button } from "@/components/ui-kits/button/button";
 // import BeePlugin from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
@@ -12,7 +10,6 @@ import {
   useSaveEmailTemplate,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-
 export function EditEmailTemplate({ params }: { params: { id: string } }) {
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
@@ -23,14 +20,12 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     itemId: "",
   });
   const navigate = useNavigate();
-
   useEffect(() => {
     if (id) {
       const email = data;
       setEmailDetails(email || null);
     }
   }, [id, data]);
-
   if (!emailDetails || isLoading || isFetching) {
     return (
       <div>
@@ -53,7 +48,6 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
       </div>
     );
   }
-
   const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
     console.log("newsletter-template.html", data.htmlFile);
     console.log("newsletter-template.json", data.jsonFile);
@@ -66,7 +60,6 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     setTemplateData(currentData);
     navigate(`/utilities/email/communications/${emailDetails.itemId}`);
   };
-
   return (
     <div>
       <div className="hidden md:flex">

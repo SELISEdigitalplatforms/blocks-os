@@ -20,7 +20,6 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { useProjectStore } from "@/store/useProjectStore";
 import { EditDomainForm } from "@/components/edit-domain-form/edit-domain-form";
-
 export const ProjectRepoList = ({
   project,
   isLoading,
@@ -45,14 +44,12 @@ export const ProjectRepoList = ({
     project?.applicationDomain || "",
   );
   const [customDomain, setCustomDomain] = useState<string>("");
-
   const confirmationModalData = {
     dialogTitle: "Set as application domain?",
     dialogSubtitle: "Are you sure you want to set it as the application domain?",
     confirmButton: "Set",
     cancelButton: "Cancel",
   };
-
   const saveApplicationDomain = async () => {
     try {
       if (!project?.itemId || !projectKey || !applicationDomain || applicationDomain === "") return;
@@ -75,7 +72,6 @@ export const ProjectRepoList = ({
       }
     }
   };
-
   if (isLoading || isLoadingEnvRepos || isFetchingEnvRepos) {
     return (
       <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
@@ -90,13 +86,12 @@ export const ProjectRepoList = ({
       </div>
     );
   }
-
   return (
     <Card className="mt-6 border bg-card px-4 py-4 shadow-sm md:mt-0">
       <div className="mt-2 flex items-center justify-between">
         <CardTitle>Repositories</CardTitle>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger>
+          <DialogTrigger asChild>
             <Button
               disabled={
                 !envRepositoriesResponse?.data?.length ||
@@ -129,7 +124,6 @@ export const ProjectRepoList = ({
         envRepositoriesResponse.data &&
         envRepositoriesResponse.data.length > 0 ? (
           <>
-            {/* Mobile & Tablet Card Layout */}
             <div className="lg:hidden">
               {envRepositoriesResponse.data.map((repo, index) => {
                 const isDefaultDate = repo.lastDeploymentDate === "0001-01-01T00:00:00";
@@ -198,7 +192,6 @@ export const ProjectRepoList = ({
                 );
               })}
             </div>
-            {/* Desktop Grid Layout */}
             <div className="hidden lg:block">
               <div className="mt-2 grid grid-cols-6 gap-2">
                 <div className="col-span-2 text-sm font-medium">Name</div>

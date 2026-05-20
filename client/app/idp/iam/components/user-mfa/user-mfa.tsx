@@ -7,13 +7,11 @@ import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui-kits/button/button";
 import { createContext, useContext, useState } from "react";
-
 type UserMFAProps = {
   userId: string;
   projectKey: string;
   enableTotpModal?: boolean;
 };
-
 export const UserConfigMFA = () => {
   const { projectKey, userId } = useContext(userMfaContext);
   const { isLoading, isFetching, data } = useGetUserById({ id: userId, projectKey });
@@ -27,7 +25,6 @@ export const UserConfigMFA = () => {
             <Skeleton className="h-6 w-1/6" />
           ) : (
             <>
-              {/* {!data?.data?.mfaEnabled && <UserMFAConfirmationEnable />} */}
               {data?.data?.mfaEnabled && <UserMFAConfirmationDisable />}
             </>
           )}
@@ -35,12 +32,10 @@ export const UserConfigMFA = () => {
       </CardHeader>
       <CardContent>
         <UserMFADetails />
-        {/* {data?.data?.mfaEnabled && <UserMFAConfigManage />} */}
       </CardContent>
     </Card>
   );
 };
-
 export const ProjectMFA = () => {
   return (
     <Card>
@@ -64,7 +59,6 @@ export const ProjectMFA = () => {
     </Card>
   );
 };
-
 const LoadingSkelton = () => {
   return (
     <Card className="rounded shadow-none">
@@ -82,7 +76,6 @@ const LoadingSkelton = () => {
     </Card>
   );
 };
-
 export const userMfaContext = createContext<
   UserMFAProps & {
     isTotpModalOpen: boolean;
@@ -99,7 +92,6 @@ export const userMfaContext = createContext<
   showTotpModal: () => {},
   mfaMethodType: 0,
 });
-
 export const UserMFA = (props: UserMFAProps) => {
   const { projectKey } = props;
   const [isTotpModalOpen, setIsTotpModalOpen] = useState<boolean>(false);
@@ -107,12 +99,10 @@ export const UserMFA = (props: UserMFAProps) => {
   const { isLoading, data } = useGetMFAConfig({ projectKey });
   if (isLoading) return <LoadingSkelton />;
   if (!data?.enableMfa) return <ProjectMFA />;
-
   const showTotpModal = (type: number) => {
     setMfaMethodType(type);
     setIsTotpModalOpen(true);
   };
-
   return (
     <userMfaContext.Provider
       value={{ ...props, isTotpModalOpen, setIsTotpModalOpen, showTotpModal, mfaMethodType }}

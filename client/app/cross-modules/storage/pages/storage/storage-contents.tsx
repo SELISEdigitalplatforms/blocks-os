@@ -8,13 +8,11 @@ import { StorageFiltersToolbar } from "./components/storage-filters-toolbar";
 import { IStorageConfiguration } from "@blocks-storage/models/storage.model";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { StorageDetailsDrawer } from "./components/storage-details-drawer";
-
 type FilterValues = {
   search: string;
   providers: string[];
   types: string[];
 };
-
 const mapConfigurationToCardData = (config: IStorageConfiguration): StorageCardData => ({
   id: config.itemId,
   provider: config.storageStrategy,
@@ -30,7 +28,6 @@ const mapConfigurationToCardData = (config: IStorageConfiguration): StorageCardD
           ? "AWS S3 Compatible"
           : "SFTP",
 });
-
 export function StorageContents() {
   const [open, setOpen] = useState<boolean>(false);
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
@@ -40,11 +37,8 @@ export function StorageContents() {
     providers: [],
     types: [],
   });
-
   const { data, isLoading, isFetching } = useGetStorageConfigurations();
-
   const loading = isLoading || isFetching;
-
   const configurations = useMemo(() => {
     if (!data) return [];
     const index = data.findIndex((item) => item.name === "Default");
@@ -56,17 +50,13 @@ export function StorageContents() {
     }
     return data;
   }, [data]);
-
   const storageCards = useMemo(() => configurations.map(mapConfigurationToCardData), [configurations]);
-
   const onChange: FilterChangeHandler<FilterValues> = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
-
   const onReset = () => {
     setFilters({ search: "", providers: [], types: [] });
   };
-
   const filteredData = useMemo(() => {
     return storageCards.filter((item) => {
       const matchesSearch = item.title.toLowerCase().includes(filters.search.toLowerCase());
@@ -75,7 +65,6 @@ export function StorageContents() {
       return matchesSearch && matchesProvider;
     });
   }, [storageCards, filters]);
-
   const handleViewDetails = (id: string) => {
     const storage = configurations.find((config) => config.itemId === id);
     if (storage) {
@@ -83,7 +72,6 @@ export function StorageContents() {
       setDetailsOpen(true);
     }
   };
-
   return (
     <div className="flex flex-col">
       <div className="mt-2 rounded-sm border bg-card p-6">
@@ -93,7 +81,6 @@ export function StorageContents() {
           onReset={onReset}
           onAddConfiguration={() => setOpen(true)}
         />
-
         {loading ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(4)].map((_, index) => (
@@ -128,11 +115,9 @@ export function StorageContents() {
           </div>
         )}
       </div>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <SaveStorageConfiguration onClose={setOpen} />
       </Dialog>
-
       <StorageDetailsDrawer
         open={detailsOpen}
         onOpenChange={setDetailsOpen}

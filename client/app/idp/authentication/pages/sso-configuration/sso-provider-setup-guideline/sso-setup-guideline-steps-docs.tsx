@@ -5,12 +5,10 @@ import { microsoftStepupDocs } from "./sso-setup-guideline-microsoft";
 import { githubStepupDocs } from "./sso-setup-guideline-github";
 import { linkedinStepupDocs } from "./sso-setup-guideline-linkedin";
 import { xStepupDocs } from "./sso-setup-guideline-x";
-
 export type Step = {
   id: string;
   description: ReactNode;
 };
-
 export const SSOSetupGuideSteps: Record<SSO_PROVIDERS, Step[]> = {
   google: googleStepupDocs,
   github: githubStepupDocs,

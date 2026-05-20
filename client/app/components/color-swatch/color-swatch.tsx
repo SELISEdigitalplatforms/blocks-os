@@ -1,13 +1,11 @@
 import React, { useRef } from "react";
 import { cn } from "@/lib/utils";
-
 interface ColorSwatchProps {
   value?: string;
   onChange?: (hex: string) => void;
   className?: string;
   hasError?: boolean;
 }
-
 export const ColorSwatch: React.FC<ColorSwatchProps> = ({
   value = "#FFFFFF",
   onChange,
@@ -15,23 +13,19 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
   hasError = false,
 }) => {
   const colorInputRef = useRef<HTMLInputElement>(null);
-
   const handleColorPickerClick = () => {
     colorInputRef.current?.click();
   };
-
   const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = e.target.value.toUpperCase();
     newValue = newValue.replace(/[^#0-9A-F]/g, "");
     if (newValue.includes("#")) newValue = "#" + newValue.replace(/#/g, "");
     onChange?.(newValue);
   };
-
   const handleColorPickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVal = e.target.value.toUpperCase();
     onChange?.(newVal);
   };
-
   return (
     <div className={cn("flex w-full flex-col gap-1", className)}>
       <div
@@ -68,5 +62,4 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
     </div>
   );
 };
-
 export const validHexaColorReg = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;

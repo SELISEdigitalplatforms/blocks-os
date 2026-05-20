@@ -1,74 +1,87 @@
-import { API_BASES } from "@/constants/endpoint.constant";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
+const BLOCKS_IDP_BASE_URL = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
+const IAM_SUBPATH = "/iam";
 
-const IAM_SUBPATH = "/Iam";
-const AUTH_SUBPATH = "/Authentication";
-const IAM_CONFIG_SUBPATH = "/IAM";
+
 
 // ─── User endpoints (user.service) ──────────────────────────────────────────
 
 export const USER_ENDPOINTS = {
-  GET_USERS: `${API_BASES.IDP}${IAM_SUBPATH}/GetUsers`,
-  GET_USER: `${API_BASES.IDP}${IAM_SUBPATH}/GetUser`,
-  CREATE: `${API_BASES.IDP}${IAM_SUBPATH}/Create`,
-  UPDATE: `${API_BASES.IDP}${IAM_SUBPATH}/Update`,
-  GET_SIGNUP_SETTING: `${API_BASES.IDP}${IAM_SUBPATH}/GetSignUpSetting`,
-  SAVE_SIGNUP_SETTING: `${API_BASES.IDP}${IAM_SUBPATH}/SaveSignUpSetting`,
-  SAVE_ROLES_AND_PERMISSIONS: `${API_BASES.IDP}${IAM_SUBPATH}/SaveRolesAndPermissions`,
-  GET_SESSIONS: `${API_BASES.IDP}${IAM_SUBPATH}/GetSessions`,
-  GET_HISTORIES: `${API_BASES.IDP}${IAM_SUBPATH}/GetHistories`,
-  GET_USER_CODES: `${API_BASES.IDP}${AUTH_SUBPATH}/GetUserCodes`,
-  GENERATE_USER_CODE: `${API_BASES.IDP}${AUTH_SUBPATH}/GenerateUserCode`,
-  GET_USER_ROLES: `${API_BASES.IDP}${IAM_SUBPATH}/GetUserRoles`,
-  GET_USER_PERMISSIONS: `${API_BASES.IDP}${IAM_SUBPATH}/GetUserPermissions`,
-  DEACTIVATE: `${API_BASES.IDP}${IAM_SUBPATH}/Deactivate`,
+  GET_USERS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users`,
+  GET_USER: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user`,
+  ME: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/me`,
+  USER_INFO: `${BLOCKS_IDP_BASE_URL}/api/idp/UserInfo`,
+  CREATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/create`,
+  UPDATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/update`,
+  GET_SIGNUP_SETTING: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/signup-settings`,
+  SAVE_SIGNUP_SETTING: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/signup-settings`,
+  SAVE_ROLES_AND_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles-permissions`,
+
+  GET_USER_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/roles`,
+  GET_USER_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/permissions`,
+  GET_USER_TIMELINES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/user/timelines`,
+  DEACTIVATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/users/deactivate`,
+  UPDATE_ACCOUNT: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/update`,
+  GET_ACCOUNTS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/accounts`,
+  GET_ACCOUNT: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account`,
+  GET_ACCOUNT_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/roles`,
+  GET_ACCOUNT_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/permissions`,
+  GET_EMAIL_AVAILABLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/email/available`,
+
+  GET_SESSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/sessions`,
+  GET_HISTORIES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/history`,
+  GET_USER_CODES: `${BLOCKS_IDP_BASE_URL}/api/auth/GetUserCodes`,
+  GENERATE_USER_CODE: `${BLOCKS_IDP_BASE_URL}/api/auth/GenerateUserCode`,
+
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────
 
 export const ACCOUNT_ENDPOINTS = {
-  ACTIVATE: `${API_BASES.IDP}${IAM_SUBPATH}/Activate`,
-  RESEND_ACTIVATION: `${API_BASES.IDP}${IAM_SUBPATH}/ResendActivation`,
-  RECOVER: `${API_BASES.IDP}${IAM_SUBPATH}/Recover`,
-  RESET_PASSWORD: `${API_BASES.IDP}${IAM_SUBPATH}/ResetPassword`,
-  VALIDATE_ACTIVATION_CODE: `${API_BASES.IDP}${IAM_SUBPATH}/ValidateActivationCode`,
+  ACTIVATE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/Activate`,
+  RESEND_ACTIVATION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/ResendActivation`,
+  RECOVER: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/Recover`,
+  RESET_PASSWORD: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/ResetPassword`,
+  VALIDATE_ACTIVATION_CODE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/ValidateActivationCode`,
 } as const;
 
 // ─── Role endpoints (role.service) ──────────────────────────────────────────
 
 export const ROLE_ENDPOINTS = {
-  GET_ROLES: `${API_BASES.IDP}${IAM_SUBPATH}/GetRoles`,
-  GET_ROLE: `${API_BASES.IDP}${IAM_SUBPATH}/GetRole`,
-  CREATE_ROLE: `${API_BASES.IDP}${IAM_SUBPATH}/CreateRole`,
-  UPDATE_ROLE: `${API_BASES.IDP}${IAM_SUBPATH}/UpdateRole`,
-  SET_ROLES: `${API_BASES.IDP}${IAM_SUBPATH}/SetRoles`,
+  GET_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles`,
+  GET_ROLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/role`,
+  CREATE_ROLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles/create`,
+  UPDATE_ROLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles/update`,
+  SET_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/roles/assign`,
 } as const;
 
 // ─── Permission endpoints (permission.service) ─────────────────────────────
 
 export const PERMISSION_ENDPOINTS = {
-  GET_PERMISSIONS: `${API_BASES.IDP}${IAM_SUBPATH}/GetPermissions`,
-  GET_PERMISSION: `${API_BASES.IDP}${IAM_SUBPATH}/GetPermission`,
-  GET_PERMISSIONS_GROUP_BY_SEVERITY: `${API_BASES.IDP}${IAM_SUBPATH}/GetPermissionsGroupBySeverity`,
-  CREATE_PERMISSION: `${API_BASES.IDP}${IAM_SUBPATH}/CreatePermission`,
-  UPDATE_PERMISSION: `${API_BASES.IDP}${IAM_SUBPATH}/UpdatePermission`,
-  GET_RESOURCE_GROUPS: `${API_BASES.IDP}${IAM_SUBPATH}/GetResourceGroups`,
+  GET_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/permissions`,
+  GET_PERMISSION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/permission`,
+  GET_PERMISSIONS_GROUP_BY_SEVERITY: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/permissions/by-severity`,
+  CREATE_PERMISSION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/permissions/create`,
+  UPDATE_PERMISSION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/permissions/update`,
+  GET_RESOURCE_GROUPS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/resource-groups`,
 } as const;
 
 // ─── Organization endpoints (organization.service) ─────────────────────────
 
 export const ORGANIZATION_ENDPOINTS = {
-  GET_ORGANIZATIONS: `${API_BASES.IDP}${IAM_SUBPATH}/GetOrganizations`,
-  GET_ORGANIZATION: `${API_BASES.IDP}${IAM_SUBPATH}/GetOrganization`,
-  SAVE_ORGANIZATION: `${API_BASES.IDP}${IAM_SUBPATH}/SaveOrganization`,
-  GET_ORGANIZATION_CONFIG: `${API_BASES.IDP}${IAM_SUBPATH}/GetOrganizationConfig`,
-  SAVE_ORGANIZATION_CONFIG: `${API_BASES.IDP}${IAM_SUBPATH}/SaveOrganizationConfig`,
+  CREATE_ORGANIZATION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organizations/create`,
+  GET_ORGANIZATIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organizations`,
+  GET_ORGANIZATION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organization`,
+  SAVE_ORGANIZATION: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organizations`,
+  GET_ORGANIZATION_CONFIG: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organization/config`,
+  SAVE_ORGANIZATION_CONFIG: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/organization/config`,
 } as const;
 
 // ─── IAM configuration endpoints (configuration.service) ───────────────────
 
 export const IAM_CONFIGURATION_ENDPOINTS = {
-  GET: `${API_BASES.CLOUD_CONFIGURATION}${IAM_CONFIG_SUBPATH}/Get`,
-  SAVE: `${API_BASES.CLOUD_CONFIGURATION}${IAM_CONFIG_SUBPATH}/Save`,
+  GET: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/config`,
+  SAVE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/config`,
 } as const;

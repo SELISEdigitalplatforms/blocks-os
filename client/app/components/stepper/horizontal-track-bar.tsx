@@ -2,7 +2,6 @@ import { useStepper } from "@/components/stepper/stepper-provider";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
-
 const StepHorizontalTrackBar = () => {
   const { currentStep, completedSteps, goToStep, getSteps } = useStepper();
   const steps = getSteps();
@@ -40,5 +39,4 @@ const StepHorizontalTrackBar = () => {
     </div>
   );
 };
-
 export default StepHorizontalTrackBar;

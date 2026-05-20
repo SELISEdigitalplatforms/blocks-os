@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui-kits/button/button";
 import {
   DialogContent,
@@ -12,24 +11,20 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useProjectStore } from "@/store/useProjectStore";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
 import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
-
 type ToggleOrganizationStatusProps = {
   organization: IOrganization;
   onClose: () => void;
 };
-
 export const ToggleOrganizationStatus = ({
   organization,
   onClose,
 }: ToggleOrganizationStatusProps) => {
   const { mutateAsync, isPending } = useSaveOrganization();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const isEnabling = !organization.isEnable;
   const action = isEnabling ? "enable" : "disable";
   const actionLabel = isEnabling ? "Enable" : "Disable";
   const actioningLabel = isEnabling ? "Enabling..." : "Disabling...";
-
   const handleConfirm = async () => {
     try {
       const res = await mutateAsync({
@@ -52,7 +47,6 @@ export const ToggleOrganizationStatus = ({
       }
     }
   };
-
   return (
     <DialogContent>
       <DialogHeader className="mb-4">

@@ -1,10 +1,8 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { MouseEventHandler } from "react";
-
 type ClearButtonProps = {
   onClear: MouseEventHandler<HTMLButtonElement>;
 };
-
 export const ClearButton = ({ onClear }: ClearButtonProps) => {
   return (
     <div className="p-1">

@@ -20,7 +20,7 @@ import { MFA_CONFIG_ENDPOINTS, MFA_ENDPOINTS } from "../constants/endpoint.const
 
 export class MFAService {
   getConfigurations(payload: IGetConfigurationPayload): Promise<IGetConfigurationResponse> {
-    return http.get(`${MFA_CONFIG_ENDPOINTS.GET}?ProjectKey=${payload.projectKey}`);
+    return http.get(`${MFA_CONFIG_ENDPOINTS.GET}?ProjectKey=${payload.projectKey}`, undefined, { absoluteUrl: true });
   }
 
   saveMFAConfiguration(

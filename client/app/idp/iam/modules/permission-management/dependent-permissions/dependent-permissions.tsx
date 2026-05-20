@@ -1,15 +1,11 @@
-
-
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { AddDependentPermission } from "./add-dependent-permission";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { X } from "lucide-react";
-
 type SSOInitialPermissionsProps = {
   permissionsResource: string[];
   onChange: (data: string[]) => void;
 };
-
 export function DependentPermissions({
   permissionsResource,
   onChange,

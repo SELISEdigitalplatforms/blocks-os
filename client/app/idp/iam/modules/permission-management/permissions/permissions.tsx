@@ -1,5 +1,3 @@
-
-
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
@@ -10,9 +8,7 @@ import {
   usePermissionsFilterQuaryParams,
   usePermissionsSortQuaryParams,
 } from "./permissions-filter-toolbar";
-
 import { PermissionsGroupBySeverity } from "./permissions-group-severity";
-
 export function Permissions() {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { queryParams, setQueryParams } = usePermissionsFilterQuaryParams();
@@ -25,14 +21,12 @@ export function Permissions() {
     projectKey: tenantId,
     roles: [],
   });
-
   const onPageChangeHandler = (page: number) => {
     setQueryParams((prev) => ({
       ...prev,
       page,
     }));
   };
-
   const onPageSizeChangeHandler = (pageSize: number) => {
     setQueryParams((prev) => ({
       ...prev,
@@ -40,11 +34,9 @@ export function Permissions() {
       page: 0,
     }));
   };
-
   const loading = isLoading || isFetching;
   const permissionsList = data?.data || [];
   const totalCount = data?.totalCount || 0;
-
   return (
     <div className=" grid gap-4">
       <PermissionsGroupBySeverity />

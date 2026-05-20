@@ -8,12 +8,10 @@ import {
   useUsersFilterQueryParams,
   useUsersSortQueryParams,
 } from "./users-filter-toolbar";
-
 export const Users = () => {
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
   const { sortQueryParams } = useUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const { isLoading, isFetching, data } = useGetUsers({
     page: queryParams.page,
     pageSize: queryParams.pageSize,
@@ -21,19 +19,15 @@ export const Users = () => {
     filter: { email: queryParams.email, name: queryParams.name },
     sort: sortQueryParams,
   });
-
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
-
   const isUserLoading = isLoading || isFetching;
-
   return (
     <Card>
       <CardHeader>
         <UsersFilterToolbar />
       </CardHeader>
-
       <CardContent>
         <UsersTable users={data?.data || []} isLoading={isUserLoading} />
         {!isUserLoading && data && data.totalCount > queryParams.pageSize && (

@@ -306,7 +306,6 @@ namespace XUnitTest.DomainService.OAuth
         {
             TenantId = "8656D85F-C3E0-48AA-9505-654505096AEC",
             ItemId = "item-456",
-            ApplicationDomain = "test.example.com",
             DbConnectionString = "test-connection-string",
             JwtTokenParameters = new JwtTokenParameters
             {

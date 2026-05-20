@@ -5,21 +5,17 @@ import { permissionService } from "@blocks-idp/iam/services/permission.service";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState } from "react";
 import { createStore, useStore } from "zustand";
-
 type RoleDetailsStore = ReturnType<typeof createRoleDetailsStore>;
-
 export type PermissionState = IPermission & {
   modified: boolean;
   isInitiallyAssigned: boolean;
   changeState: "added" | "removed" | null;
   parents: string[];
 };
-
 export type PermissionGroup = {
   name: string;
   permissions: PermissionState[];
 };
-
 export type PermissionMap = Map<string, PermissionState>;
 interface RoleDetailsState {
   role: IRole;
@@ -33,7 +29,6 @@ interface RoleDetailsState {
   changeEditMode: (isEditMode: boolean) => void;
   discardChanges: () => void;
 }
-
 const createRoleDetailsStore = () => {
   return createStore<RoleDetailsState>()((set, get) => ({
     role: {} as IRole,
@@ -46,11 +41,9 @@ const createRoleDetailsStore = () => {
       const { role } = get();
       const permissionMap: PermissionMap = new Map();
       const pendingParents = new Map<string, string[]>();
-
       for (const p of permissions) {
         const isInitiallyAssigned = p.roles.includes(role.slug);
         const parents = pendingParents.get(p.resource) || [];
-
         permissionMap.set(p.resource, {
           ...p,
           modified: false,
@@ -58,7 +51,6 @@ const createRoleDetailsStore = () => {
           isInitiallyAssigned,
           parents: [...parents],
         });
-
         // register this permission as a parent for its dependents
         for (const depResource of p.dependentPermissions) {
           if (permissionMap.has(depResource)) {
@@ -70,7 +62,6 @@ const createRoleDetailsStore = () => {
           }
         }
       }
-
       set({
         permissions,
         permissionMap,
@@ -78,7 +69,6 @@ const createRoleDetailsStore = () => {
         isEditMode: false,
       });
     },
-
     changePermissionSelection(changes: { permissionResource: string; isChecked: boolean }[]) {
       const { permissionMap } = get();
       for (const { permissionResource, isChecked } of changes) {
@@ -91,7 +81,6 @@ const createRoleDetailsStore = () => {
       }
       set({ permissionMap: new Map(permissionMap) });
     },
-
     changePermissionGroupSelection(permissions: PermissionState[], isChecked: boolean) {
       const { changePermissionSelection } = get();
       changePermissionSelection(permissions.map((p) => ({ permissionResource: p.resource, isChecked })));
@@ -114,9 +103,7 @@ const createRoleDetailsStore = () => {
     },
   }));
 };
-
 const RoleDetailsContext = createContext<RoleDetailsStore | null>(null);
-
 export const RoleDetailsProvider = ({
   children,
   id,
@@ -143,22 +130,18 @@ export const RoleDetailsProvider = ({
       }),
     refetchOnMount: "always",
   });
-
   // initilize store when role data changes
   useEffect(() => {
     if (!role?.data) return;
     store.setState((state) => ({ ...state, role: role.data }));
   }, [role?.data, store]);
-
   // initilize store when permissions data changes
   useEffect(() => {
     if (!permissionsData?.data || !role?.data) return;
     store.getState().initializeStore(permissionsData.data);
   }, [permissionsData?.data, role?.data, store]);
-
   return <RoleDetailsContext.Provider value={store}>{children}</RoleDetailsContext.Provider>;
 };
-
 export const useRoleDetailsStore = <T,>(selector: (state: RoleDetailsState) => T): T => {
   const store = useContext(RoleDetailsContext);
   if (!store) {

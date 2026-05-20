@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Pencil, Send } from "lucide-react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -22,8 +20,7 @@ import {
   useSendTestMail,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { EmailTemplateDetailsSkeleton } from "./email-template-details-skeleton";
-
-export function EmailCommunicationDetails({ params }: { params: { id: string } }) {
+export function EmailCommunicationDetails({ params, onBack }: { params: { id: string }; onBack?: () => void }) {
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
   const { data: loggedInUser } = useGetUser();
@@ -38,25 +35,21 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
   const navigate = useNavigate();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSendTestEmailModalOpen, setIsSendTestEmailModalOpen] = useState(false);
-
   const sendTestEmailModalOpen = () => {
     setIsSendTestEmailModalOpen(true);
   };
-
   useEffect(() => {
     if (id) {
       const email = data;
       setEmailDetails(email || null);
     }
   }, [id, data]);
-
   if (!emailDetails || isLoading || isFetching || isConfigsLoading || isConfigsFetching) {
     return <EmailTemplateDetailsSkeleton />;
   }
   BREADCRUMB_CUSTOM_TITLES["/utilities/email/communications"] = "Email Templates";
   BREADCRUMB_CUSTOM_TITLES["/utilities/email/communications/" + emailDetails?.itemId] =
     emailDetails?.name ? emailDetails.name : "";
-
   const confirmationModalData = {
     dialogTitle: "Send test email",
     dialogSubtitle: "Are you sure you want to send a test email?",
@@ -82,7 +75,6 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
     generatedBy: "",
   };
   const editData = emailDetails ? emailDetails : dat;
-
   const sendTestEmail = async () => {
     try {
       console.log(emailDetails);
@@ -99,7 +91,6 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
           title: "Success",
           description: "Sent test email successfully",
         });
-
         setIsSendTestEmailModalOpen(false);
       } else {
         toast({
@@ -107,7 +98,6 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
           title: "Error",
           description: JSON.stringify(res?.errors),
         });
-
         setIsSendTestEmailModalOpen(false);
       }
     } catch (error) {
@@ -116,11 +106,9 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
         title: "Error",
         description: JSON.stringify(error),
       });
-
       setIsSendTestEmailModalOpen(false);
     }
   };
-
   return (
     <div>
       <div className="hidden md:flex">
@@ -128,7 +116,7 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
       </div>
       <div className="mt-5 flex items-center justify-between">
         <div className="item-center flex gap-2">
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(-1)}>
+          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onBack ? onBack() : navigate(-1)}>
             <ArrowLeft className="h-6 w-6" />
           </Button>
           <h1 className="text-lg font-semibold md:text-2xl">{emailDetails.name}</h1>
@@ -211,7 +199,6 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
               </Dialog>
             </div>
           </CardHeader>
-
           <CardContent>
             <div className="border-t px-4 pt-4">
               <div className="mb-10">
@@ -242,7 +229,6 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
                       !checkValidDate(emailDetails.createdDate)
                       ? "-"
                       : formatFullDate(parseDateString(emailDetails.createdDate))}
-                    {/* {formatDate(emailDetails?.createdDate? new Date(emailDetails?.createdDate) : new Date(), true)} */}
                   </p>
                 </div>
               </div>
@@ -261,7 +247,6 @@ export function EmailCommunicationDetails({ params }: { params: { id: string } }
                   <div className="grid gap-1">
                     <h3 className="text-sm font-medium text-low-emphasis">Last modified</h3>
                     <p className="text-base font-normal text-high-emphasis">
-                      {/* {formatDate(emailDetails?.lastUpdatedDate? new Date(emailDetails?.lastUpdatedDate) : new Date(), false)} */}
                       {!emailDetails ||
                         !emailDetails.lastUpdatedDate ||
                         !checkValidDate(emailDetails.lastUpdatedDate)

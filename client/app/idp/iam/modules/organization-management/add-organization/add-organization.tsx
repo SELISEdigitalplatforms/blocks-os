@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui-kits/button/button";
@@ -28,25 +27,20 @@ import { z } from "zod";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
 import { Plus } from "lucide-react";
-
 interface AddOrganizationProps {
   disabled?: boolean;
 }
-
 export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { mutateAsync, isPending } = useSaveOrganization();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const form = useForm({
     defaultValues: addOrganizationFormDefaultValue,
     resolver: zodResolver(addOrganizationFormSchema),
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const onSubmit: SubmitHandler<z.infer<typeof addOrganizationFormSchema>> = async (data) => {
     try {
       const res = await mutateAsync({
@@ -68,14 +62,12 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
       }
     }
   };
-
   const handleModalOpenChange = (value: boolean) => {
     if (!value) {
       form.reset();
     }
     setIsModalOpen(value);
   };
-
   return (
     <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
       <DialogTrigger asChild>

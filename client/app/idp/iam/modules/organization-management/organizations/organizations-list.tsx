@@ -1,5 +1,3 @@
-
-
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
   Table,
@@ -27,12 +25,10 @@ import { EllipsisVertical, Pencil, Power, PowerOff } from "lucide-react";
 import { UpdateOrganization } from "../update-organization";
 import { ToggleOrganizationStatus } from "../toggle-organization-status";
 import { useNavigate } from "react-router-dom";
-
 type OrganizationTableProps = {
   organizations: IOrganization[];
   isLoading: boolean;
 };
-
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -40,19 +36,15 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
 type OrganizationActionsProps = {
   organization: IOrganization;
 };
-
 const OrganizationActions = ({ organization }: OrganizationActionsProps) => {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [isToggleStatusModalOpen, setIsToggleStatusModalOpen] = useState(false);
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
-
   return (
     <div onClick={handleClick}>
       <DropdownMenu>
@@ -93,17 +85,14 @@ const OrganizationActions = ({ organization }: OrganizationActionsProps) => {
     </div>
   );
 };
-
 export const OrganizationsList = ({ organizations, isLoading }: OrganizationTableProps) => {
   const { sortQueryParams, setSortQueryParams } = useOrganizationsSortQueryParams();
   const navigate = useNavigate();
-
   const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>, itemId: string) => {
     const target = e.target as HTMLElement;
     if (target.closest("[data-actions]")) return;
     navigate(`/services/iam/organization-detail/${itemId}`);
   };
-
   const columns = useMemo<ColumnDef<IOrganization>[]>(
     () => [
       {
@@ -162,17 +151,14 @@ export const OrganizationsList = ({ organizations, isLoading }: OrganizationTabl
     ],
     [sortQueryParams, setSortQueryParams],
   );
-
   const table = useReactTable({
     data: organizations,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) {
     return <LoadingSkeleton />;
   }
-
   if (organizations.length === 0) {
     return (
       <div className="flex h-[200px] items-center justify-center text-medium-emphasis">
@@ -180,7 +166,6 @@ export const OrganizationsList = ({ organizations, isLoading }: OrganizationTabl
       </div>
     );
   }
-
   return (
     <Table>
       <TableHeader>

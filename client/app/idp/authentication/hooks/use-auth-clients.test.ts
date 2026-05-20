@@ -57,6 +57,7 @@ describe("use-auth-clients hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(authClientService.clients.saveClientCredential).toHaveBeenCalledWith(
         mockSaveClientPayload,
+        expect.anything(),
       );
     });
   });
@@ -75,6 +76,7 @@ describe("use-auth-clients hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(authClientService.clients.deleteClientCredential).toHaveBeenCalledWith(
         mockDeleteClientPayload,
+        expect.anything(),
       );
     });
   });

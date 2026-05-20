@@ -21,9 +21,6 @@ import { vi } from "vitest";
 
 export const mockAuthServiceFactory = () => ({
   authService: {
-    signinByEmail: vi.fn(),
-    verifyMfa: vi.fn(),
-    signupByEmail: vi.fn(),
     logout: vi.fn(),
   },
 });
@@ -68,13 +65,6 @@ export const mockAuthenticationServiceFactory = () => ({
 export const mockJwtClaimServiceFactory = () => ({
   jwtClaimServices: {
     addJwtClaim: vi.fn(),
-  },
-});
-
-export const mockOAuthServiceFactory = () => ({
-  oauthService: {
-    getSocialLoginEndpoint: vi.fn(),
-    signinBySSO: vi.fn(),
   },
 });
 

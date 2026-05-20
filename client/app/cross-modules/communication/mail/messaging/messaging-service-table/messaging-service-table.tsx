@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -46,21 +44,16 @@ import {
 } from "@blocks-communication/mail/constants/messaging";
 import { MessagingTableToolbar } from "@blocks-communication/mail/components/messaging/messaging-table-toolbar/messaging-table-toolbar";
 import TablePagination from "@/components/ui-kits/table-pagination/table-pagination";
-
 const data = messagingServiceData;
-
 export function MessagingServiceTable() {
   const navigate = useNavigate();
-
   const [sorting, setSorting] = useState<SortingState>([{ id: "lastModified", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
-
   const handleRowClick = (messageId: number | string) => {
     navigate(`/utilities/messaging/campaigns/${messageId}`);
   };
-
   const columns: ColumnDef<IMessagingServiceData>[] = [
     {
       accessorKey: "name",
@@ -96,11 +89,9 @@ export function MessagingServiceTable() {
         const configuration = configurations.find(
           (configuration) => configuration.value === row.getValue("configuration"),
         );
-
         if (!configuration) {
           return null;
         }
-
         return (
           <div className="ml-2 flex items-center sm:ml-0 sm:w-[250px]">
             <span>{configuration.label}</span>
@@ -126,11 +117,9 @@ export function MessagingServiceTable() {
       },
       cell: ({ row }) => {
         const protocol = protocols.find((protocol) => protocol.value === row.getValue("protocol"));
-
         if (!protocol) {
           return null;
         }
-
         return (
           <div className="ml-2 flex items-center sm:ml-0">
             <span>{protocol.label}</span>
@@ -226,7 +215,6 @@ export function MessagingServiceTable() {
       handleRowClick,
     },
   });
-
   return (
     <main className="flex flex-col">
       <div className="flex w-full flex-col">
