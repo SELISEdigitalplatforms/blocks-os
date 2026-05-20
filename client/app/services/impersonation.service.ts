@@ -16,6 +16,12 @@ export interface ImpersonationState {
   startedAtUtc: string;
 }
 
+export interface ImpersonationStatusResponse {
+  impersonated: boolean;
+  originalTenantId: string;
+  impersonatedTenantId: string | null;
+}
+
 class ImpersonationService {
   startImpersonation(
     request: ImpersonationRequest,
@@ -31,6 +37,15 @@ class ImpersonationService {
   stopImpersonation(): Promise<void> {
     return http.post(
       `${IMPERSONATE_ENDPOINTS.STOP_IMPERSONATION}`,
+      null,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  impersonationStatus(): Promise<ImpersonationStatusResponse> {
+    return http.post(
+      `${IMPERSONATE_ENDPOINTS.IMPERSONATION_STATUS}`,
       null,
       undefined,
       { absoluteUrl: true },

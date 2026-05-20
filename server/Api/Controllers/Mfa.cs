@@ -7,6 +7,7 @@ using Mfa.DomainService.Services;
 using Mfa.DomainService.Shared;
 using Mfa.DomainService.Shared.RequestModel;
 using Mfa.DomainService.TOTP;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -28,28 +29,32 @@ namespace Api.Controllers
             _configurationService = configurationService;
         }
 
-        [ProtectedEndPoint("blocks-os::mfa::generate-otp")]
+        [Authorize]
+      //  [ProtectedEndPoint("blocks-os::mfa::generate-otp")]
         [HttpPost]
         public async Task<OtpGenerationResponse> GenerateOTP([FromBody] OtpGenerationRequest request)
         {
             return await _mfaManagementService.GenerateOTPAsync(request);
         }
 
-        [ProtectedEndPoint("blocks-os::mfa::verify-otp")]
+        [Authorize]
+       // [ProtectedEndPoint("blocks-os::mfa::verify-otp")]
         [HttpPost]
         public async Task<OtpVerificationResponse> VerifyOTP([FromBody] VerifyOtpRequest request)
         {
             return await _mfaManagementService.VerifyOTPAsync(request);
         }
 
-        [ProtectedEndPoint("blocks-os::mfa::disable-user-mfa")]
+        [Authorize]
+       // [ProtectedEndPoint("blocks-os::mfa::disable-user-mfa")]
         [HttpPost]
         public async Task<BaseResponse> DisableUserMfa([FromBody] DisableUserMfaRequest request)
         {
             return await _mfaManagementService.DisableUserMfa(request);
         }
 
-        [ProtectedEndPoint("blocks-os::mfa::setup-totp")]
+        [Authorize]
+       // [ProtectedEndPoint("blocks-os::mfa::setup-totp")]
         [HttpGet]
         public async Task<SetUpUserTotpResponse> SetUpTotp([FromQuery] SetUpUserTotpRequest request)
         {
@@ -60,7 +65,8 @@ namespace Api.Controllers
             return await _totpService.GenerateTotpImageByUserAsync(request.UserId);
         }
 
-        [ProtectedEndPoint("blocks-os::mfa::resend-otp")]
+        [Authorize]
+       // [ProtectedEndPoint("blocks-os::mfa::resend-otp")]
         [HttpPost]
         public async Task<OtpGenerationResponse> ResendOtp([FromBody] ResendOtpRequest request)
         {
@@ -69,6 +75,8 @@ namespace Api.Controllers
             return await _mfaManagementService.ResendOtpAsync(request.MfaId, request.SendPhoneNumberAsEmailDomain);
         }
         #region Cloud Configuration
+
+        [Authorize]
         [HttpPost]
         [ProtectedEndPoint("blocks-os::mfa::save-configuration")]
         public async Task<BaseResponse> Save(SaveMfaConfigurationRequest request)
@@ -76,8 +84,9 @@ namespace Api.Controllers
             return await _configurationService.SaveMfaConfigurationAsync(request);
         }
 
+        [Authorize]
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::mfa::get-configuration")]
+       // [ProtectedEndPoint("blocks-os::mfa::get-configuration")]
         public async Task<GetMfaConfigurationResponse> Get([FromQuery] GetAuthenticationConfigurationRequest request)
         {
             return await _configurationService.GetMfaConfigurationAsync();

@@ -58,6 +58,7 @@ export const OIDC_FLOW_ENDPOINTS = {
 export const IMPERSONATE_ENDPOINTS = {
   IMPERSONATE: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/impersonate`,
   STOP_IMPERSONATION: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/impersonation/stop`,
+  IMPERSONATION_STATUS: `${BLOCKS_IDP_BASE_URL}/api${AUTH_SUBPATH}/impersonation/status`,
 } as const;
 
 // ─── Identity Provider endpoints (identity-provider.service) ─────────────────
