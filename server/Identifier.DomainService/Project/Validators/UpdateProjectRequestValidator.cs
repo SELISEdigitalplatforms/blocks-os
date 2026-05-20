@@ -17,11 +17,11 @@ namespace DomainService.Projects
                .NotEmpty()
                .NotNull();
 
-            RuleFor(x => x.ApplicationDomain)
-                .Cascade(CascadeMode.Stop)
-                .Must(IdentifierHelper.BeAValidUrl).WithMessage("ApplicationDomain is not in a valid format.")
-                .MustAsync(IsUniqueDomain).WithMessage("ApplicationDomain must be unique")
-                .WhenAsync((x, ct) => IsDomainUpdated(x.ApplicationDomain, x.ProjectKey, ct));
+            //RuleFor(x => x.ApplicationDomain)
+            //    .Cascade(CascadeMode.Stop)
+            //    .Must(IdentifierHelper.BeAValidUrl).WithMessage("ApplicationDomain is not in a valid format.")
+            //    .MustAsync(IsUniqueDomain).WithMessage("ApplicationDomain must be unique")
+            //    .WhenAsync((x, ct) => IsDomainUpdated(x.ApplicationDomain, x.ProjectKey, ct));
 
             RuleFor(x => x.CustomDomain)
                 .Cascade(CascadeMode.Stop)
@@ -29,11 +29,11 @@ namespace DomainService.Projects
                 .When(x => !string.IsNullOrWhiteSpace(x.CustomDomain));
         }
 
-        private async Task<bool> IsDomainUpdated(string applicationDomain, string projectId, CancellationToken _)
-        {
-            var project = await _repository.GetByTenantIdAsync(projectId);
-            return project?.ApplicationDomain != applicationDomain;
-        }
+        //private async Task<bool> IsDomainUpdated(string applicationDomain, string projectId, CancellationToken _)
+        //{
+        //    var project = await _repository.GetByTenantIdAsync(projectId);
+        //    return project?.ApplicationDomain != applicationDomain;
+        //}
 
         private async Task<bool> IsUniqueDomain(string applicationDomain, CancellationToken _)
         {

@@ -1,18 +1,14 @@
 import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 export interface PasswordInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {}
-
 export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
   ({ className, ...props }, ref) => {
     const [open, setOpen] = useState(false);
-
     const toggleVisibility = () => {
       setOpen((prev) => !prev);
     };
-
     return (
       <div className="relative">
         <input
@@ -35,5 +31,4 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
     );
   },
 );
-
 PasswordInput.displayName = "Password Input";

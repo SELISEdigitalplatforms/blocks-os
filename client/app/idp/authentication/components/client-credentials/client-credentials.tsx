@@ -3,13 +3,10 @@ import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication
 import { useGetAuthConfig } from "@blocks-idp/authentication/hooks/use-auth-config";
 import { ClientCredentialList } from "./client-credentials-list";
 import { cn } from "@/lib/utils";
-
 export const ClientCredentials = () => {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { data: authConfig, isLoading } = useGetAuthConfig({ projectKey: tenantId });
-
   const isClientCredentialAllowed = authConfig?.allowedGrantTypes?.includes(GRANT_TYPES.clientCredential);
-
   return (
     <div>
       {!isLoading && !isClientCredentialAllowed && (
@@ -17,7 +14,6 @@ export const ClientCredentials = () => {
           Please select the &apos;Client Credential&apos; grant type to configure client credentials.
         </div>
       )}
-
       <div className="relative">
         <ClientCredentialList />
         <div

@@ -19,17 +19,14 @@ import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
 import { CirclePlus } from "lucide-react";
 import { useState } from "react";
-
 type AddUserRoleProps = {
   userId: string;
   projectKey: string;
 };
-
 export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [selectedRolos, setSelectedRoles] = useState<string[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
-
   const { data, isLoading } = useGetRoles({
     page: filter.page,
     pageSize: filter.pageSize,
@@ -40,7 +37,6 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
     },
   });
   const { isPending, addRoles, slugs } = useUserRoles({ id: userId, projectKey });
-
   const onClickHandler = async () => {
     try {
       const res = await addRoles(selectedRolos);
@@ -53,7 +49,6 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   const onCheckedChangeHandler = (checked: boolean, slug: string) => {
     if (checked) {
       return setSelectedRoles((roles) => [...roles, slug]);
@@ -61,14 +56,11 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
     selectedRolos.splice(selectedRolos.indexOf(slug), 1);
     setSelectedRoles(() => [...selectedRolos]);
   };
-
   const pageChangeHandler = (page: number) => setFilter((prev) => ({ ...prev, page }));
-
   const reset = () => {
     setSelectedRoles([]);
     setFilter({ page: 0, pageSize: 10, search: "" });
   };
-
   return (
     <Dialog
       open={open}

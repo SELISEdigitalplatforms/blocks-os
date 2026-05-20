@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { X } from "lucide-react";
-
 import { IRole } from "@blocks-idp/iam/models/role";
-
 type UserRolesListProps = {
   roles: IRole[];
   isLoading: boolean;
@@ -10,7 +8,6 @@ type UserRolesListProps = {
   projectKey: string;
   onRemoveRole: (slug: string) => void;
 };
-
 const LoadingSkelton = () => (
   <div className="grid w-full grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -28,7 +25,6 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const UserRolesList = ({
   roles,
   isLoading,
@@ -37,7 +33,6 @@ export const UserRolesList = ({
   onRemoveRole,
 }: UserRolesListProps) => {
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">

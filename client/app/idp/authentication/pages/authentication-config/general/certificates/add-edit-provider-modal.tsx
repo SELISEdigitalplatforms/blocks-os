@@ -1,5 +1,3 @@
-
-
 import {
   FileInput,
   FileUploader,
@@ -33,23 +31,18 @@ import { Eye, Paperclip, Plus, Pencil, UploadCloud } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
 interface AddEditProviderModalProps {
   existingData?: IGetPublicCertificateResponse | null;
 }
-
 const formSchema = z.object({
   url: z.string().trim().optional().or(z.literal("")),
   password: z.string().trim().optional().or(z.literal("")),
   issuer: z.string().trim().optional().or(z.literal("")),
   audience: z.string().trim().optional().or(z.literal("")),
 });
-
 type FormData = z.infer<typeof formSchema>;
-
 export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps) => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
-
   const [open, setOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState("Keycloak");
   const [certificateMethod, setCertificateMethod] = useState("public-url");
@@ -69,7 +62,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
       audience: existingData?.audiences?.join(", ") || "",
     },
   });
-
   const resetForm = (data?: IGetPublicCertificateResponse | null) => {
     form.reset({
       url: data?.jwksUrl || data?.publicCertificatePath || "",
@@ -82,12 +74,10 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
     setShowPassword(false);
     setSelectedProvider(data?.providerName || "Keycloak");
   };
-
   const {
     register,
     formState: { errors, isDirty },
   } = form;
-
   // Update form when existingData changes
   useEffect(() => {
     if (existingData) {
@@ -97,20 +87,16 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
         issuer: existingData.issuer || "",
         audience: existingData.audiences?.join(", ") || "",
       });
-
       // Set provider based on existing data
       if (existingData.providerName) {
         setSelectedProvider(existingData.providerName);
       }
-
       // Always select public-url in edit mode
       setCertificateMethod("public-url");
     }
   }, [existingData, form]);
-
   // Reset certificate method to public-url when switching from "others" to another provider
   const prevProviderRef = useRef(selectedProvider);
-
   useEffect(() => {
     if (prevProviderRef.current === "Others" && selectedProvider !== "Others") {
       setCertificateMethod("public-url");
@@ -118,19 +104,16 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
     }
     prevProviderRef.current = selectedProvider;
   }, [selectedProvider]);
-
   const handleSubmit = async () => {
     // Validate based on certificate method first
     if (certificateMethod === "public-url") {
       const urlValue = form.getValues("url");
-
       // Skip URL validation if "Others" provider is selected
       if (selectedProvider !== "Others") {
         if (!urlValue || urlValue.trim().length === 0) {
           form.setError("url", { message: "JWKS URL is required" });
           return;
         }
-
         // Validate JWKS URL by making HTTP call
         const validationResult = await validateJwksUrl(urlValue);
         if (!validationResult.isValid) {
@@ -145,7 +128,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
         showErrorToast({ errors: "Please upload a certificate file" });
         return;
       }
-
       const allowedExtensions = [".crt", ".der", ".pfx", ".p12"];
       const hasInvalidFile = certificateFiles.some((file) => {
         const fileName = file.name.toLowerCase();
@@ -158,28 +140,22 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
         return;
       }
     }
-
     // Trigger form validation and submit
     const isValid = await form.trigger();
     if (!isValid) return;
-
     const data = form.getValues();
     const { url, audience, issuer, password } = data;
-
     const audiences = audience
       ? audience
           .split(",")
           .map((value) => value.trim())
           .filter((value) => value.length > 0)
       : [];
-
     setIsSubmitting(true);
-
     if (certificateMethod === "public-url") {
       try {
         let jwksUrl = "";
         let publicCertificatePath = "";
-
         // For "Others" provider, determine if URL is JWKS or certificate path.
         if (selectedProvider === "Others" && url) {
           // Check if the URL is a JWKS URL by attempting validation.
@@ -198,7 +174,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
           // For other providers, always use jwksUrl
           jwksUrl = url || "";
         }
-
         const res = await savePublicCertificates({
           projectKey,
           publicCertificatePassword: password || "",
@@ -208,7 +183,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
           jwksUrl,
           providerName: selectedProvider,
         });
-
         if (res?.isSuccess) {
           showSuccessToast({ description: "Public certificate saved successfully." });
           setOpen(false);
@@ -220,26 +194,21 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
       } finally {
         setIsSubmitting(false);
       }
-
       return;
     }
-
     const certificate = certificateFiles?.[0];
     if (!certificate) {
       showErrorToast({ errors: "No certificate file selected" });
       setIsSubmitting(false);
       return;
     }
-
     try {
       const uploadResponse = await uploadFileMutate({ TenantId: projectKey, file: certificate });
-
       if (!uploadResponse || !uploadResponse.downloadUrl) {
         showErrorToast({ errors: "Failed to get upload URL" });
         setIsSubmitting(false);
         return;
       }
-
       const res = await savePublicCertificates({
         projectKey,
         publicCertificatePassword: password || "",
@@ -249,7 +218,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
         jwksUrl: "",
         providerName: selectedProvider,
       });
-
       if (res?.isSuccess) {
         showSuccessToast({ description: "Public certificate saved successfully." });
         setOpen(false);
@@ -262,18 +230,15 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
       setIsSubmitting(false);
     }
   };
-
   const handleCancel = () => {
     setOpen(false);
   };
-
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       resetForm(existingData);
     }
     setOpen(isOpen);
   };
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -294,9 +259,7 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
           <DialogTitle>{existingData ? "Edit provider" : "Add provider"}</DialogTitle>
           <DialogDescription>Configure your identity provider</DialogDescription>
         </DialogHeader>
-
         <div className="flex-1 space-y-6 overflow-y-auto px-2 pb-1">
-          {/* Provider Selection */}
           <div className="space-y-3">
             <RadioGroup value={selectedProvider} onValueChange={setSelectedProvider}>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -322,8 +285,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
               </div>
             </RadioGroup>
           </div>
-
-          {/* Certificate Method Selection */}
           <div className="space-y-3">
             <Label className="text-sm sm:text-base">
               Choose how you want to add the certificate
@@ -343,7 +304,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
                     Public URL
                   </Label>
                 </div>
-
                 {selectedProvider == "Others" && (
                   <div
                     className={`flex cursor-pointer items-center space-x-2 rounded-md border p-3 ${
@@ -362,8 +322,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
               </div>
             </RadioGroup>
           </div>
-
-          {/* Form Fields */}
           <div className="space-y-4">
             {certificateMethod === "upload-file" && (
               <div className="space-y-2">
@@ -408,7 +366,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
                 </FileUploader>
               </div>
             )}
-
             {certificateMethod === "public-url" && (
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
@@ -427,7 +384,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
                 {errors.url && <p className="text-sm text-destructive">{errors.url.message}</p>}
               </div>
             )}
-
             {selectedProvider === "Others" && (
               <div className="space-y-2">
                 <Label htmlFor="password">Password (Optional)</Label>
@@ -454,13 +410,11 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
                 )}
               </div>
             )}
-
             <div className="space-y-2">
               <Label htmlFor="issuer">Issuer (Optional)</Label>
               <Input id="issuer" placeholder="Enter issuer" {...register("issuer")} />
               {errors.issuer && <p className="text-sm text-destructive">{errors.issuer.message}</p>}
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="audience">Audience (Optional)</Label>
               <Input
@@ -474,8 +428,6 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
             </div>
           </div>
         </div>
-
-        {/* Action Buttons - Fixed at bottom */}
         <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end sm:gap-3">
           <DialogClose>
             <Button

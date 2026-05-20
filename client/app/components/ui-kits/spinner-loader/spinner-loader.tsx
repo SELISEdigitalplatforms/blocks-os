@@ -1,5 +1,4 @@
 import React from "react";
-
 const SpinnerLoader = () => {
   return (
     <div
@@ -10,5 +9,4 @@ const SpinnerLoader = () => {
     </div>
   );
 };
-
 export default SpinnerLoader;

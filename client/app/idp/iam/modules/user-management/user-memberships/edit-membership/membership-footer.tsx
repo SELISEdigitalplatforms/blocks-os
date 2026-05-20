@@ -1,6 +1,5 @@
 import { SheetFooter } from "@/components/ui-kits/sheet/sheet";
 import { Button } from "@/components/ui-kits/button/button";
-
 type MembershipFooterProps = {
   isEditing: boolean;
   isPending: boolean;
@@ -9,7 +8,6 @@ type MembershipFooterProps = {
   onEdit: () => void;
   onUnassign: () => void;
 };
-
 export const MembershipFooter = ({
   isEditing,
   isPending,

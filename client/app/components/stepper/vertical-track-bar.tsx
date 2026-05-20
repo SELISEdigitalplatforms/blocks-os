@@ -2,7 +2,6 @@ import { useStepper } from "@/components/stepper/stepper-provider";
 import { Button } from "@/components/ui-kits/button/button";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 const StepVerticalTrackBar = () => {
   const { currentStep, totalSteps, goToStep, completedSteps, getSteps } = useStepper();
   const steps = getSteps();

@@ -1,5 +1,3 @@
-
-
 import React, { useEffect } from "react";
 import { Input } from "@/components/ui-kits/input/input";
 import {
@@ -34,14 +32,12 @@ import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { showErrorToast, toast } from "@/hooks/use-toast";
 import { useProjectStore } from "@/store/useProjectStore";
 import { isErrorWithErrors } from "@/lib/error";
-
 interface NewConfigurationProps {
   dialogTitle: string;
   onClose: () => void;
   previousData?: IEmailConfig;
   isEdit?: boolean;
 }
-
 const schema = z
   .object({
     configurationName: z
@@ -112,13 +108,11 @@ const schema = z
       }
     }
   });
-
 const INBOUND_PROVIDERS = [{ value: MailServiceProvider.Zoho, label: "Zoho" }];
 const OUTBOUND_PROVIDERS = [
   { value: MailServiceProvider.AmazonSes, label: "Amazon SES" },
   { value: MailServiceProvider.Zoho, label: "Zoho" },
 ];
-
 const NewConfiguration: React.FC<NewConfigurationProps> = ({
   dialogTitle,
   onClose,
@@ -128,7 +122,6 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   // const { saveEmailConfig, isPending } = useSaveEmailConfig();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { isPending, mutateAsync } = useSaveEmailConfig();
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const form = useForm<IEmailConfig>({
     defaultValues:
@@ -163,19 +156,15 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
     resolver: zodResolver(schema),
     mode: "onChange",
   });
-
   const isInbound = form.watch("isInbound");
-
   useEffect(() => {
     if (isInbound && form.getValues("provider") === MailServiceProvider.AmazonSes) {
       form.setValue("provider", MailServiceProvider.Zoho);
     }
   }, [isInbound, form]);
-
   if (isEdit && previousData?.itemId == "") {
     return <div>loading</div>;
   }
-
   const formSubmitHandler = async (data: IEmailConfig) => {
     try {
       data.configurationId = isEdit && previousData?.itemId ? previousData?.itemId : "";
@@ -205,7 +194,6 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
       }
     }
   };
-
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <Form {...form}>
@@ -318,7 +306,6 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     name="port"
                     control={form.control}
@@ -341,7 +328,6 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     )}
                   />
                 </div>
-
                 {!isInbound && (
                   <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
@@ -459,7 +445,6 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
               </div>
             </DialogDescription>
           </DialogHeader>
-
           <div className="flex justify-end">
             <div className="flex flex-row justify-end gap-2">
               <DialogTrigger asChild>
@@ -477,5 +462,4 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
     </DialogContent>
   );
 };
-
 export default NewConfiguration;

@@ -1,11 +1,8 @@
-
-
 import React from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-
 const templateData = [
   {
     id: "1",
@@ -68,7 +65,6 @@ const templateData = [
     description: "This is the third template.",
   },
 ];
-
 const EmailTemplates = () => {
   return (
     <div>
@@ -133,5 +129,4 @@ const EmailTemplates = () => {
     </div>
   );
 };
-
 export default EmailTemplates;

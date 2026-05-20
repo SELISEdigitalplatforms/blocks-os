@@ -4,7 +4,6 @@ import { CheckIcon, Loader2, X } from "lucide-react";
 import * as React from "react";
 import type { IconType } from "./types";
 import { useStepper } from "./use-stepper";
-
 interface StepIconProps {
 	isCompletedStep?: boolean;
 	isCurrentStep?: boolean;
@@ -16,7 +15,6 @@ interface StepIconProps {
 	checkIcon?: IconType;
 	errorIcon?: IconType;
 }
-
 const iconVariants = cva("", {
 	variants: {
 		size: {
@@ -29,11 +27,9 @@ const iconVariants = cva("", {
 		size: "md",
 	},
 });
-
 const StepIcon = React.forwardRef<HTMLDivElement, StepIconProps>(
 	(props, ref) => {
 		const { size } = useStepper();
-
 		const {
 			isCompletedStep,
 			isCurrentStep,
@@ -45,22 +41,18 @@ const StepIcon = React.forwardRef<HTMLDivElement, StepIconProps>(
 			checkIcon: CustomCheckIcon,
 			errorIcon: CustomErrorIcon,
 		} = props;
-
 		const Icon = React.useMemo(
 			() => (CustomIcon ? CustomIcon : null),
 			[CustomIcon],
 		);
-
 		const ErrorIcon = React.useMemo(
 			() => (CustomErrorIcon ? CustomErrorIcon : null),
 			[CustomErrorIcon],
 		);
-
 		const Check = React.useMemo(
 			() => (CustomCheckIcon ? CustomCheckIcon : CheckIcon),
 			[CustomCheckIcon],
 		);
-
 		return React.useMemo(() => {
 			if (isCompletedStep) {
 				if (isError && isKeepError) {
@@ -128,7 +120,5 @@ const StepIcon = React.forwardRef<HTMLDivElement, StepIconProps>(
 		]);
 	},
 );
-
 StepIcon.displayName = "StepIcon";
-
 export { StepIcon };

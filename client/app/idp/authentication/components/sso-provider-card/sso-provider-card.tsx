@@ -14,11 +14,9 @@ import { Link } from "react-router-dom";
 import { SSoProviderStatusToggle } from "../sso-provider-status-toggle";
 import { useMemo, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
-
 type SSOProviderCardProps = {
   configuration: ISsoProviderConfigurationWithMeta;
 };
-
 export const SSOProviderCardSkelton = () => {
   return (
     <Card>
@@ -63,7 +61,6 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                         Active
                       </Badge>
                     )}
-
                   {!configuration.isAvailable && (
                     <Badge variant="info" className="h-fit text-xs">
                       Coming soon

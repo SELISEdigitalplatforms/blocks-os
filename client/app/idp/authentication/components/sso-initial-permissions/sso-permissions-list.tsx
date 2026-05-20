@@ -1,4 +1,3 @@
-
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
   Table,
@@ -11,12 +10,10 @@ import {
 import { useMemo } from "react";
 import { DeleteSSOPermission } from "./delete-sso-permission";
 import { IPermission } from "@blocks-idp/iam/models/permission";
-
 interface SSOPermissionsListProps {
   permissions: IPermission[];
   onDelete: (data: IPermission) => void;
 }
-
 export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsListProps) => {
   const columns = useMemo<ColumnDef<IPermission>[]>(
     () => [
@@ -69,13 +66,11 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
     ],
     [onDelete],
   );
-
   const table = useReactTable({
     data: permissions,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   return (
     <Table className="text-sm">
       <TableHeader>

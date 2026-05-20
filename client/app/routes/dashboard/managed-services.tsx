@@ -1,5 +1,4 @@
 import { ManagedServices } from "@blocks-identifier/pages/services/managed-services";
-
 export default function ManagedServicesPage() {
   return (
     <main className="flex flex-col gap-6 p-6">

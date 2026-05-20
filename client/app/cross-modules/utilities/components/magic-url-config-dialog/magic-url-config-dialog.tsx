@@ -15,7 +15,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { getDefaultShortUrlBase, isValidUrl } from "@blocks-utilities/utils/url.util";
 import { Loader2 } from "lucide-react";
-
 interface MagicUrlConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,7 +22,6 @@ interface MagicUrlConfigDialogProps {
   onSave?: (config: ISaveMagicUrlConfigPayload) => Promise<void>;
   projectKey?: string;
 }
-
 export const MagicUrlConfigDialog = ({
   open,
   onOpenChange,
@@ -35,12 +33,10 @@ export const MagicUrlConfigDialog = ({
   const [shortUrlBase, setShortUrlBase] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({ contextName: "", shortUrlBase: "" });
-
   const queryClient = useQueryClient();
   const { data: configData, isLoading: isConfigLoading } = useGetMagicUrlConfig(projectKey || "", {
     enabled: open && !!projectKey,
   });
-
   useEffect(() => {
     if (open && configData) {
       if (configData.config) {
@@ -53,14 +49,11 @@ export const MagicUrlConfigDialog = ({
       setErrors({ contextName: "", shortUrlBase: "" });
     }
   }, [open, configData]);
-
   const validateFields = (): boolean => {
     const newErrors = { contextName: "", shortUrlBase: "" };
-
     if (!contextName.trim()) {
       newErrors.contextName = "Context name is required";
     }
-
     if (!shortUrlBase.trim()) {
       newErrors.shortUrlBase = "Short URL base is required";
     } else if (!isValidUrl(shortUrlBase)) {
@@ -68,28 +61,21 @@ export const MagicUrlConfigDialog = ({
     } else if (!shortUrlBase.endsWith("/")) {
       newErrors.shortUrlBase = "URL must end with a forward slash (/)";
     }
-
     setErrors(newErrors);
     return !newErrors.contextName && !newErrors.shortUrlBase;
   };
-
   const handleSave = async () => {
     if (!projectKey) return;
     if (!validateFields()) return;
-
     setIsLoading(true);
     try {
       const payload: ISaveMagicUrlConfigPayload = { contextName, shortUrlBase, projectKey };
-
       if (onSave) {
         await onSave(payload);
       }
-
       await queryClient.invalidateQueries({ queryKey: ["magic-url-config", projectKey] });
-
       if (!configData?.isSuccess) return showErrorToast({ errors: configData?.errorMessage });
       showSuccessToast({ description: "Configuration updated successfully" });
-
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save config:", error);
@@ -97,11 +83,9 @@ export const MagicUrlConfigDialog = ({
       setIsLoading(false);
     }
   };
-
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen);
   };
-
   return (
     <>
       {trigger && (
@@ -114,7 +98,6 @@ export const MagicUrlConfigDialog = ({
           <DialogHeader>
             <DialogTitle>Configure Magic URL</DialogTitle>
           </DialogHeader>
-
           {isConfigLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -139,7 +122,6 @@ export const MagicUrlConfigDialog = ({
                   />
                   {errors.contextName && <p className="text-sm text-error">{errors.contextName}</p>}
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="shortUrlBase">
                     Short URL Base <span className="text-error">*</span>
@@ -160,7 +142,6 @@ export const MagicUrlConfigDialog = ({
                   )}
                 </div>
               </div>
-
               <DialogFooter>
                 <Button
                   variant="outline"

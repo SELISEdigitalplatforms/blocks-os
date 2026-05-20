@@ -1,5 +1,4 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-
 export default function RateLimiterPage() {
 	return (
 		<main className="flex flex-col gap-6 p-6">
@@ -7,7 +6,6 @@ export default function RateLimiterPage() {
 				<h1 className="text-xl font-semibold md:text-2xl">Rate Limiter</h1>
 				<p className="text-muted-foreground">Configure rate limiting policies for your API</p>
 			</div>
-
 			<Card>
 				<CardHeader>
 					{/* <CardTitle>Rate Limiter</CardTitle>

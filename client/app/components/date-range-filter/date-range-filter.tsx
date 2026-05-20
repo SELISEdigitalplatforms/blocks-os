@@ -8,7 +8,6 @@ import { DateRange } from "react-day-picker";
 import { formatDate } from "@/lib/utils";
 import { Separator } from "../ui-kits/separator/separator";
 import useIsMobile from "@/hooks/use-is-mobile";
-
 interface DateRangeFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title: string;
@@ -16,7 +15,6 @@ interface DateRangeFilterProps<TData, TValue> {
   // eslint-disable-next-line no-unused-vars
   onDateChange: (date: DateRange | undefined) => void;
 }
-
 export function DateRangeFilter<TData, TValue>({
   column,
   title,
@@ -24,7 +22,6 @@ export function DateRangeFilter<TData, TValue>({
   onDateChange,
 }: DateRangeFilterProps<TData, TValue>) {
   const isMobile = useIsMobile();
-
   const handleDateSelect = (selectedDateRange: DateRange | undefined) => {
     onDateChange(selectedDateRange);
     if (selectedDateRange?.from && selectedDateRange?.to) {
@@ -33,7 +30,6 @@ export function DateRangeFilter<TData, TValue>({
       column?.setFilterValue(undefined);
     }
   };
-
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -46,7 +42,6 @@ export function DateRangeFilter<TData, TValue>({
             {date?.from && (
               <>
                 <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
-
                 {formatDate(date.from, true)}
                 {date.to && (
                   <>

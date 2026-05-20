@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -35,17 +34,14 @@ import {
 } from "@/components/ui-kits/command/command";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui-kits/badge/badge";
-
 type AssignOrganizationProps = {
   userId: string;
   projectKey: string;
 };
-
 export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationProps) => {
   const [open, setOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-
   const { data: userData } = useGetUserById({ id: userId, projectKey });
   const { data: orgsData, isLoading: isOrgsLoading } = useGetOrganizations({
     projectKey,
@@ -59,51 +55,41 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
   });
-
   const { mutateAsync, isPending } = useUpdateUser({ id: userId, projectKey });
-
   const existingMemberships = userData?.data?.memberships || [];
   const organizations = orgsData?.organizations || [];
   const roles = rolesData?.data || [];
-
   // Filter out organizations that are already assigned or disabled
   const availableOrgs = organizations.filter(
     (org) => org.isEnable && !existingMemberships.some((m) => m.organizationId === org.itemId),
   );
-
   // Convert roles to options format for MultiSelect
   const roleOptions = roles.map((role) => ({
     label: role.name,
     value: role.slug,
   }));
-
   const onConfirm = async () => {
     if (!selectedOrgId || selectedRoles.length === 0) {
       showErrorToast({ errors: "Please select an organization and at least one role" });
       return;
     }
-
     try {
       const newMembership: IMembership = {
         organizationId: selectedOrgId,
         roles: selectedRoles,
         permissions: [],
       };
-
       const updatedMemberships = [...existingMemberships, newMembership];
-
       const res = await mutateAsync({
         ...userData?.data,
         memberships: updatedMemberships,
         itemId: userId,
         projectKey,
       });
-
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
         return;
       }
-
       showSuccessToast({ description: "Organization assigned successfully" });
       reset();
       setOpen(false);
@@ -115,12 +101,10 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
       }
     }
   };
-
   const reset = () => {
     setSelectedOrgId("");
     setSelectedRoles([]);
   };
-
   return (
     <Dialog
       open={open}
@@ -140,7 +124,6 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
           <DialogTitle>Assign organization</DialogTitle>
           <DialogDescription></DialogDescription>
         </DialogHeader>
-
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Organization name</label>
@@ -167,7 +150,6 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium">Select at least one role to assign</label>
             {isRolesLoading ? (
@@ -235,7 +217,6 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
             )}
           </div>
         </div>
-
         <DialogFooter>
           <Button
             variant="outline"

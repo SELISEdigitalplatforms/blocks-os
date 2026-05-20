@@ -12,17 +12,15 @@ import { BackToConsoleNavigator } from "@/components/back-to-console-navigator/b
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui-kits/sheet/sheet";
 import { Logo } from "@/components/logo";
+import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
-
 export function ConsoleHeader() {
   const context = useContext(SidebarContext);
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
   const [isScrolled, setIsScrolled] = useState(false);
-
   const isConsoleButtonVisible = pathname === "/profile" || pathname.startsWith("/project-overview");
-
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 25);
@@ -30,7 +28,6 @@ export function ConsoleHeader() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   return (
     <div
       className={`fixed left-0 right-0 top-0 z-40 ${isScrolled || isConsoleButtonVisible ? "border-b bg-background" : "bg-transparent"}`}
@@ -48,7 +45,7 @@ export function ConsoleHeader() {
         <div className="block sm:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline">
+              <Button variant="ghost">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -65,6 +62,7 @@ export function ConsoleHeader() {
               <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3">
                 <ModeToggle />
                 <Notification />
+                <BlocksAppLauncher />
                 <UserDropdownMenu />
               </div>
             </SheetContent>
@@ -74,6 +72,7 @@ export function ConsoleHeader() {
           {isConsoleButtonVisible && <BackToConsoleNavigator />}
           <ModeToggle />
           <Notification />
+          <BlocksAppLauncher />
           <UserDropdownMenu />
         </div>
       </header>

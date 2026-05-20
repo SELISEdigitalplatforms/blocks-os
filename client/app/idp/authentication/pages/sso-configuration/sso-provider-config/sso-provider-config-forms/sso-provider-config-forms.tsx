@@ -16,12 +16,10 @@ export type SsoConfigFormsProps = {
   provider: SSO_PROVIDERS;
   id: string;
 };
-
 export type SsoConfigForms = {
   configuration: ISsoProviderConfiguration | null;
   save: (data: unknown) => void;
 };
-
 export const SsoProviderConfigForms = ({ provider, id }: SsoConfigFormsProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const navigate = useNavigate();
@@ -29,9 +27,7 @@ export const SsoProviderConfigForms = ({ provider, id }: SsoConfigFormsProps) =>
     itemId: id,
     projectKey: tenantId,
   });
-
   const { mutateAsync } = useSaveSsoCredential();
-
   const saveHandler = async (data: ISsoProviderConfiguration) => {
     try {
       const res = await mutateAsync({
@@ -71,7 +67,6 @@ export const SsoProviderConfigForms = ({ provider, id }: SsoConfigFormsProps) =>
         return null;
     }
   }, [provider]);
-
   if (!CurrentForm) return null;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   //@ts-expect-error

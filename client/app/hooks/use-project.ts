@@ -163,7 +163,7 @@ export const useProjectForm = () => {
     try {
       const environments = formData[2]?.environments || [];
       const shortGuid = shortGuidGenerator(5);
-      const baseDomain = import.meta.env.BLOCKS_BASE_DOMAIN || "seliseblocks.com";
+      const baseDomain = import.meta.env.BLOCKS_BASE_DOMAIN || "blocksdevelopers.com";
       const applicationContexts =
         environments.map((env: { value: string }) => ({
           environment: env.value,

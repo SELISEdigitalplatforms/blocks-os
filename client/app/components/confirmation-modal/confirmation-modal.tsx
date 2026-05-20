@@ -8,7 +8,6 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
-
 interface ConfirmationModalProps {
   data: {
     dialogTitle: string;
@@ -22,7 +21,6 @@ interface ConfirmationModalProps {
     confirm: { disable: boolean };
   };
 }
-
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ data, onConfirm, buttonState }) => (
   <DialogContent className="mr-4 w-full max-w-[425px] rounded-md">
     <DialogHeader>
@@ -39,12 +37,10 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ data, onConfirm, 
           {data.cancelButton || "Cancel"}
         </Button>
       </DialogTrigger>
-
       <Button size="sm" onClick={onConfirm} disabled={buttonState?.confirm.disable}>
         {data.confirmButton || "Yes"}
       </Button>
     </DialogFooter>
   </DialogContent>
 );
-
 export default ConfirmationModal;

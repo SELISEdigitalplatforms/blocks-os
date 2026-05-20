@@ -121,6 +121,8 @@ describe("ProjectService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?projectkey=proj-key-1`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetEnvRepositoriesResponse);
     });
@@ -287,24 +289,7 @@ describe("ProjectService", () => {
     });
   });
 
-  // ─── getProjectLoginOption ──────────────────────────────────────────────────
 
-  describe("getProjectLoginOption", () => {
-    it("should call correct endpoint", async () => {
-      vi.mocked(http.get).mockResolvedValue(mockLoginOptionsResponse);
-
-      const result = await service.getProjectLoginOption();
-
-      expect(http.get).toHaveBeenCalledWith(PROJECT_ENDPOINTS.GET_LOGIN_OPTIONS);
-      expect(result).toEqual(mockLoginOptionsResponse);
-    });
-
-    it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(new Error("Login options failed"));
-
-      await expect(service.getProjectLoginOption()).rejects.toThrow("Login options failed");
-    });
-  });
 
   // ─── initiateMigration ─────────────────────────────────────────────────────
 

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Form,
@@ -11,15 +10,12 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui-kits/inpu
 import { showErrorToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useVerifyMfa } from "@blocks-idp/authentication/hooks/use-auth";
 import { useResendOtp } from "@blocks-idp/mfa/hooks/use-resend-otp";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
 const CustomInputOTPSlot = ({ index }: { index: number }) => {
   return (
     <InputOTPSlot
@@ -38,17 +34,14 @@ export const MfaCheckFrom = () => {
     mfa_id: parseAsString.withDefault(""),
     mfa_type: parseAsInteger.withDefault(0),
   });
-  const { isPending } = useVerifyMfa();
   const { setAuthenticated } = useAuthStore();
   const { remainingTime, resend } = useResendOtp({ mfaId: mfa_id });
-
   const form = useForm<{ code: string }>({
     resolver: zodResolver(getFormSchema(mfa_type)),
     defaultValues: {
       code: "",
     },
   });
-
   const submitHandler = async ({ code }: { code: string }) => {
     try {
       setAuthenticated();
@@ -62,9 +55,7 @@ export const MfaCheckFrom = () => {
       }
     }
   };
-
   const { isValid } = form.formState;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submitHandler)}>
@@ -104,9 +95,8 @@ export const MfaCheckFrom = () => {
             </Button>
           </div>
         )}
-
         <div className="mt-4">
-          <Button className="w-full" disabled={!isValid || isPending}>
+          <Button className="w-full" disabled={!isValid}>
             Verify
           </Button>
         </div>

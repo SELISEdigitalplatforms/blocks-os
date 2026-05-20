@@ -1,5 +1,5 @@
 import { Menu } from "@/models/menu-models";
-import { Home, Package, Users, BookMinus, Settings, Shield, Key, ShieldCheck, ScanFace, Lock, LayoutDashboard, Zap, Gauge } from "lucide-react";
+import { Home, Package, Users, BookMinus, Settings, Shield, Key, ShieldCheck, ScanFace, Lock, Zap, Gauge, CreditCard } from "lucide-react";
 
 export const navigationMenus: Menu[] = [
   {
@@ -42,8 +42,29 @@ export const navigationMenus: Menu[] = [
     icon: Settings,
   },
   {
+    id: "subscription-usage",
+    type: "menu",
+    name: "Subscription Usage",
+    path: "/project-overview/subscription-usage",
+    icon: CreditCard,
+  },
+  {
     type: "separator",
     id: "separator-identity",
+  },
+  {
+    id: "service-identity__secret-management",
+    type: "menu",
+    name: "Secrets & Configs",
+    path: "/services/secret-management",
+    icon: Lock,
+  },
+  {
+    id: "service-identity__api-settings",
+    type: "menu",
+    name: "API Settings",
+    path: "/services/api-settings",
+    icon: Settings,
   },
   {
     id: "service-identity__authentication",
@@ -74,18 +95,8 @@ export const navigationMenus: Menu[] = [
   //   icon: ScanFace,
   // },
   {
-    id: "service-identity__api-settings",
-    type: "menu",
-    name: "API Settings",
-    path: "/services/api-settings",
-    icon: Settings,
-  },
-  {
-    id: "service-identity__secret-management",
-    type: "menu",
-    name: "Secrets & Configs",
-    path: "/services/secret-management",
-    icon: Lock,
+    type: "separator",
+    id: "separator-lmt",
   },
   {
     id: "service-identity__lmt",
@@ -93,12 +104,5 @@ export const navigationMenus: Menu[] = [
     name: "LMT",
     path: "/services/lmt",
     icon: Zap,
-  },
-  {
-    id: "service-identity__apps",
-    type: "menu",
-    name: "Apps",
-    path: "/services/apps",
-    icon: LayoutDashboard,
   },
 ];

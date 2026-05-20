@@ -1,15 +1,11 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { AddSSOPermission } from "./add-sso-permission";
 import { SSOPermissionsList } from "./sso-permissions-list";
-
 type SSOInitialPermissionsProps = {
   permissions: IPermission[];
   onChange: (data: IPermission[]) => void;
 };
-
 export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermissionsProps) {
   const onAddHandler = (newPermissions: IPermission[]) => {
     onChange([...permissions, ...newPermissions]);

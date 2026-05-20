@@ -6,31 +6,25 @@ import { formatDate } from "@/lib/utils";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { MouseEvent, useEffect, useState } from "react";
-
 type DateRangeType = { from?: Date; to?: Date } | null;
-
 interface DateRangeFilterProps {
   label: string;
   value: DateRangeType;
   onChange: (date: DateRangeType) => void;
 }
-
 export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState<boolean>(false);
   const [date, setDate] = useState<DateRangeType>(value);
-
   useEffect(() => {
     if (!open) {
       setDate(value);
     }
   }, [open, value]);
-
   const handleDateSelect = (selectedDateRange: DateRangeType | undefined) => {
     if (!selectedDateRange) return setDate(null);
     setDate(selectedDateRange);
   };
-
   const resetBtnHandler = (event: MouseEvent) => {
     event.stopPropagation();
     setDate(null);
@@ -40,7 +34,6 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
     onChange(date);
     setOpen(false);
   };
-
   return (
     <Popover
       open={open}
@@ -59,7 +52,6 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
             {date?.from && (
               <>
                 <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
-
                 {formatDate(date.from, true)}
                 {date.to && (
                   <>

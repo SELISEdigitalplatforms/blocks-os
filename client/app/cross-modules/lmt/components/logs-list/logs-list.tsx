@@ -1,4 +1,3 @@
-
 import { Loader } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -9,7 +8,6 @@ import { LogsViewerContext } from "../logs-viewer";
 import { useLogs } from "../../hooks/use-logs";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
 import { ILog } from "../../models/log.model";
-
 // UI: New Data Available Indicator
 const NewDataAvailableIndicator = ({ onBottomClick }: { onBottomClick: () => void }) => (
   <div
@@ -22,14 +20,12 @@ const NewDataAvailableIndicator = ({ onBottomClick }: { onBottomClick: () => voi
     New logs available
   </div>
 );
-
 // UI: Loading Indicator for Older Data
 const OldDataFetchingIndicator = () => (
   <div className="flex w-full items-center justify-center py-4">
     <Loader size={80} className="animate-spin text-gray-400" />
   </div>
 );
-
 export const LogsList = () => {
   const { selectedService, filter, pageSize } = useContext(LogsViewerContext);
   const { level, startDate, endDate, search } = filter || {
@@ -38,11 +34,8 @@ export const LogsList = () => {
     endDate: "",
     search: "",
   };
-
   const { serviceName } = selectedService || { serviceName: "" };
-
   const initialTimeStamp = endDate ? endDate : new Date().toISOString();
-
   const { initialLogs, isLoading, hasTopMore, fetchOldLogs, fetchNewLogs } = useLogs({
     serviceName,
     search: search,
@@ -51,12 +44,10 @@ export const LogsList = () => {
     endDate: initialTimeStamp,
     pageSize,
   });
-
   const fetchNewLogsHandler = async (lastItemTimestamp: string = initialTimeStamp) => {
     if (search || level || startDate || endDate) return [];
     return await fetchNewLogs(lastItemTimestamp);
   };
-
   return (
     <Card className="relative">
       <CardHeader>

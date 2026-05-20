@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 import { activationFormDefaultValue, activationFormSchema } from "./utils";
 import {
   Form,
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui-kits/button/button";
 import { PasswordInput } from "@/components/password-input";
 import { z } from "zod";
 import { Input } from "@/components/ui-kits/input/input";
-
 import { useNavigate } from "react-router-dom";
 import { showErrorToast } from "@/hooks/use-toast";
 import { useAccountActivation } from "@blocks-idp/iam/hooks/use-account";
@@ -22,13 +22,10 @@ import { Captcha } from "@/components/captcha";
 import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
 import { PasswordStrengthChecker } from "../../components/password-strength-checker/password-strength-checker";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 type ActivationFormProps = {
   code: string;
 };
-
-const x_blocks_key = import.meta.env.BLOCKS_X_BLOCKS_KEY;
-
+const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
 export const ActivationForm = ({ code }: ActivationFormProps) => {
   const navigate = useNavigate();
   const form = useForm({
@@ -38,8 +35,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
     resolver: zodResolver(activationFormSchema),
   });
   const [requirementsMet, setRequirementsMet] = useState(false);
-
-  const googleSiteKey = import.meta.env.BLOCKS_GOOGLE_SITE_KEY || "";
+  const googleSiteKey = getRuntimeEnv("BLOCKS_GOOGLE_SITE_KEY") || "";
   const {
     captcha,
     code: captchaCode,
@@ -49,15 +45,12 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
     type: "reCaptcha-v2-checkbox",
   });
   const { isPending, mutateAsync } = useAccountActivation();
-
   useEffect(() => {
     if (!requirementsMet && captchaCode) resetCaptcha();
   }, [captchaCode, requirementsMet, resetCaptcha]);
-
   useEffect(() => {
     if (!code) return navigate("/login");
   }, [code, navigate]);
-
   const onSubmitHandler = async (values: z.infer<typeof activationFormSchema>) => {
     try {
       // console.log("captchaCode", captchaCode);
@@ -70,7 +63,6 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
         firstname: values.firstname,
         lastname: values.lastname,
         captchaCode,
-
       });
       if (!res.isSuccess) {
         resetCaptcha();
@@ -87,11 +79,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
       }
     }
   };
-
   const password = form.watch("password");
   const confirmPassword = form.watch("confirmPassword");
   const { isValid } = form.formState;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
@@ -108,7 +98,6 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="lastname"
@@ -122,9 +111,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
             </FormItem>
           )}
         />
-
         <FormField
-
           control={form.control}
           name="password"
           render={({ field }) => (
@@ -137,7 +124,6 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="confirmPassword"
@@ -151,13 +137,11 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
             </FormItem>
           )}
         />
-
         <PasswordStrengthChecker
           password={password}
           confirmPassword={confirmPassword}
           onRequirementsMet={setRequirementsMet}
         />
-
         {requirementsMet && isValid && <Captcha {...captcha} />}
         <Button
           type="submit"

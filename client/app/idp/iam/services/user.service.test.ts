@@ -4,6 +4,7 @@ import { http } from "@/lib/http-client";
 import { UserService } from "./user.service";
 import { UserAccountService } from "./account.service";
 import { USER_ENDPOINTS } from "../constants/endpoint.constant";
+import { IDP_BASE_URL } from "@/constants/endpoint.constant";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import {
   mockGetUsersPayload,
@@ -68,7 +69,11 @@ describe("UserService", () => {
 
       const result = await service.getUser();
 
-      expect(http.get).toHaveBeenCalledWith(USER_ENDPOINTS.GET_USER);
+      expect(http.get).toHaveBeenCalledWith(
+        `${IDP_BASE_URL}${USER_ENDPOINTS.GET_USER}`,
+        undefined,
+        { absoluteUrl: true },
+      );
       expect(result).toEqual(mockResponse);
     });
 
@@ -88,7 +93,9 @@ describe("UserService", () => {
       const result = await service.getUserById(payload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${USER_ENDPOINTS.GET_USER}?id=${payload.id}&ProjectKey=${payload.projectKey}`,
+        `${IDP_BASE_URL}${USER_ENDPOINTS.GET_USER}?id=${payload.id}&ProjectKey=${payload.projectKey}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual({ data: mockUser });
     });

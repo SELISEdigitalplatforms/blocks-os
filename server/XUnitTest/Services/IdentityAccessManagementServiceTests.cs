@@ -98,7 +98,6 @@ namespace XUnitTest.Services
                 TenantSalt = tenantSalt,
                 IsRootTenant = isRootTenant,
                 Name = name,
-                ApplicationDomain = "test-domain",
                 DbConnectionString = "mongodb://localhost",
                 JwtTokenParameters = new JwtTokenParameters
                 {

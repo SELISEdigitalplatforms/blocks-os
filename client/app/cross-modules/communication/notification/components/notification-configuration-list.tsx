@@ -25,7 +25,6 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
-
 const columns = [
   { key: "name", label: "Name" },
   { key: "channelToNotify", label: "Channel" },
@@ -33,12 +32,10 @@ const columns = [
   { key: "enablePersistence", label: "Persistence" },
   { key: "actions", label: "" },
 ];
-
 interface NotificationConfigurationListProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
 }
-
 const NotificationConfigurationList: React.FC<NotificationConfigurationListProps> = ({
   addConfigOpen,
   onAddConfigOpenChange,
@@ -48,27 +45,21 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedConfigData, setSelectedConfigData] = useState<INotificationConfig | null>(null);
-
   const internalOpen = addConfigOpen ?? false;
   const setOpen = onAddConfigOpenChange ?? (() => {});
-
   const { isPending: isDeletePending, mutateAsync: deleteNotificationConfig } =
     useDeleteNotificationConfig();
-
   const onPageChangeHandler = (page: number) => {
     setFilterData((filter) => ({ ...filter, page }));
   };
-
   const onEditNotificationConfig = (rowData: INotificationConfig) => {
     setSelectedConfigData(rowData);
     setIsEditOpen(true);
   };
-
   const onDeleteNotificationConfig = (rowData: INotificationConfig) => {
     setSelectedConfigData(rowData);
     setIsDeleteDialogOpen(true);
   };
-
   const onConfirmDeleteConfig = async () => {
     try {
       const res = await deleteNotificationConfig({
@@ -97,10 +88,8 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
       });
     }
   };
-
   return (
     <div className="flex flex-col gap-6">
-      {/* Add Configuration dialog (controlled externally) */}
       <Dialog open={internalOpen} onOpenChange={setOpen}>
         <NewNotificationConfiguration
           key={internalOpen ? "open" : "closed"}
@@ -109,7 +98,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
           isEdit={false}
         />
       </Dialog>
-
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Configurations</CardTitle>
@@ -187,8 +175,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               )}
             </TableBody>
           </Table>
-
-          {/* Delete confirmation */}
           <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             {!isLoading && selectedConfigData && (
               <ConfirmationModal
@@ -202,8 +188,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               />
             )}
           </Dialog>
-
-          {/* Edit dialog */}
           <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
             {selectedConfigData && (
               <NewNotificationConfiguration
@@ -215,7 +199,6 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
               />
             )}
           </Dialog>
-
           {!isLoading && data && data.totalCount > filterData.pageSize && (
             <div className="mt-5 flex items-center md:justify-end">
               <Pagination
@@ -232,5 +215,4 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
     </div>
   );
 };
-
 export default NotificationConfigurationList;
