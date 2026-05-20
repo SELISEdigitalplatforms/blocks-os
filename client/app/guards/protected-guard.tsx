@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
+  useImpersonationStatusChecker,
   useStartImpersonation,
   useStopImpersonation,
 } from "@/hooks/use-impersonation";
@@ -27,65 +28,91 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function ImpersonateGuard({ children }: { children: React.ReactNode }) {
-  const { startImpersonation, stopImpersonation } = useImpersonateStore();
-  const { mutate: startImpersonationMutate } = useStartImpersonation();
-  const { mutate: stopImpersonationMutate } = useStopImpersonation();
+export const ImpersonationChecker = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const { data, isLoading, isSuccess } = useImpersonationStatusChecker();
+  const { setImpersonation, isInitialized, setInitialized } =
+    useImpersonateStore();
+
+  useEffect(() => {
+    if (!data) return;
+    setImpersonation(
+      data.impersonated,
+      data.originalTenantId,
+      data.impersonated ? data.impersonatedTenantId : null,
+    );
+    setInitialized(true);
+  }, [data, setImpersonation, setInitialized]);
+  if (isLoading || !isSuccess || !isInitialized) return null;
+  return <>{children}</>;
+};
+
+export function ImpersonationTerminator({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { terminate, isImpersonated } = useImpersonateStore();
+  const { mutateAsync } = useStopImpersonation();
+  const isTriggering = useRef(false);
+
+  useEffect(() => {
+    if (isTriggering.current || !isImpersonated) return;
+    isTriggering.current = true;
+    mutateAsync(undefined)
+      .then(() => {
+        terminate(getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"));
+        isTriggering.current = false;
+      })
+      .catch(() => {
+        isTriggering.current = false;
+      });
+  }, [mutateAsync, terminate, isImpersonated, isTriggering]);
+
+  if (isImpersonated || isTriggering.current) return null;
+  return <>{children}</>;
+}
+
+export function ImpersonationSynchronizer({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { impersonate, isImpersonated, impersonatedTenantId } =
+    useImpersonateStore();
+  const { mutateAsync } = useStartImpersonation();
 
   const { selectedProject } = useProjectStore();
-
-  const [ready, setReady] = useState(false);
-  const impersonateRef = useRef({
-    hasStarted: false,
-    isCompleted: false,
-  });
+  const isTriggering = useRef(false);
 
   useEffect(() => {
     if (!selectedProject?.tenantId) return;
-    if (impersonateRef.current.hasStarted) return;
+    if (selectedProject.tenantId === impersonatedTenantId) return;
+    if (isTriggering.current) return;
 
-    impersonateRef.current.hasStarted = true;
-
+    isTriggering.current = true;
     const payload: ImpersonationRequest = {
       targetTenantId: selectedProject.tenantId,
     };
-
-    startImpersonationMutate(payload, {
-      onSuccess: () => {
-        startImpersonation(
-          payload.targetTenantId,
+    mutateAsync(payload)
+      .then(() => {
+        impersonate(
+          selectedProject.tenantId,
           getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"),
         );
-
-        impersonateRef.current.isCompleted = true;
-        setReady(true);
-      },
-      onError: () => {
-        impersonateRef.current.hasStarted = false;
-      },
-    });
-
-    return () => {
-      if (!impersonateRef.current.isCompleted) return;
-
-      stopImpersonationMutate(undefined, {
-        onSuccess: () => {
-          stopImpersonation();
-          impersonateRef.current.hasStarted = false;
-          impersonateRef.current.isCompleted = false;
-          setReady(false);
-        },
-      });
-    };
+        isTriggering.current = false;
+      })
+      .catch(() => {});
   }, [
     selectedProject?.tenantId,
-    startImpersonationMutate,
-    stopImpersonationMutate,
-    startImpersonation,
-    stopImpersonation,
+    mutateAsync,
+    impersonate,
+    impersonatedTenantId,
+    isTriggering,
   ]);
-
-  if (!ready) return null;
-
+  if (!isImpersonated || isTriggering.current) return null;
   return <>{children}</>;
 }
