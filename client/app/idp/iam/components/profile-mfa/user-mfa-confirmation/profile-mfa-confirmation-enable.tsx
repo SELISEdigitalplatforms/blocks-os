@@ -12,7 +12,7 @@ import { showErrorToast, showSuccessToast, toast } from "@/hooks/use-toast";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useState } from "react";
 import { ProfileMFAMethodList } from "./profile-mfa-methods-list";
-import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
 import { profileMfaContext } from "../profile-mfa";
 export const UserMFAConfirmationEnable = () => {
@@ -20,7 +20,7 @@ export const UserMFAConfirmationEnable = () => {
   const [open, setOpen] = useState<boolean>(false);
   const [type, setType] = useState(0);
   const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
-  const { data: userData, isLoading, isFetching } = useGetUserById({ id: userId, projectKey });
+  const { data: userData, isLoading, isFetching } = useGetMe();
   const onClickHandler = async () => {
     try {
       const res = await mutateAsync({
