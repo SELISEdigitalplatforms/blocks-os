@@ -1,8 +1,5 @@
-
-
 import { FilterChangeHandler, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-
 export const useTemplatesFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     pageNumber: parseAsInteger.withDefault(0),
@@ -15,7 +12,6 @@ export const useTemplatesFilterQueryParams = () => {
 };
 export const useTemplatesSortQueryParams = () =>
   useSortQueryParams({ initial: { property: "Name", isDescending: false } });
-
 export function TemplateFilterToolbar({
   emailConfigsData,
   languageListData,

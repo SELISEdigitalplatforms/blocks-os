@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import React from "react";
 import { useForm } from "react-hook-form";
-
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Form, FormField } from "@/components/ui-kits/form/form";
@@ -13,13 +12,11 @@ import { createCommonOAuthFields } from "../sso-provider-config-field-factory.ut
 import { ssoOAuthProviderSchema } from "../sso-provider-config.schema";
 import { SSOProviderConfigFormField } from "./sso-provider-config-form-fields";
 import { SsoConfigForms } from "./sso-provider-config-forms";
-
 const SSOMicrosoftFormFields = createCommonOAuthFields({
   clientId: {
     description: (
       <Link
         to="https://marketplace.auth0.com/integrations/microsoft-account-social-connection"
-       
         target="_blank"
       >
         <Button variant="link" className="h-fit !p-0" type="button">
@@ -29,7 +26,6 @@ const SSOMicrosoftFormFields = createCommonOAuthFields({
     ),
   },
 });
-
 export const SSOProviderConfigMicrosoftForm: React.FC<SsoConfigForms> = ({
   save,
   configuration,
@@ -82,7 +78,6 @@ export const SSOProviderConfigMicrosoftForm: React.FC<SsoConfigForms> = ({
             )}
           />
         </div>
-
         <div className="flex items-center justify-end gap-2">
           <Button type="submit">Save</Button>
         </div>

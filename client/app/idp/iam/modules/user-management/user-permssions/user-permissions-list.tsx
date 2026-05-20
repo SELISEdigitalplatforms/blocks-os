@@ -1,8 +1,6 @@
-
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
-
 interface UserPermissionsListProps {
   permissions: IPermission[];
   isLoading: boolean;
@@ -26,7 +24,6 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const UserPermissionsList = ({
   permissions,
   isLoading,
@@ -36,7 +33,6 @@ export const UserPermissionsList = ({
   if (isLoading) {
     return <LoadingSkelton />;
   }
-
   return (
     <>
       {permissions && permissions.length > 0 ? (

@@ -19,21 +19,18 @@ import { LMTQueryAgentChatItem } from "./lmt-query-agent-chat-item";
 import { LMTQueryAgentChatInput } from "./lmt-query-agent-chat-input";
 import { EmptyConversations } from "@blocks-ai/shared/components/chat/empty-conversation/empty-conversation";
 import { ChatItemSuggestions } from "@blocks-ai/shared/components/chat/chat-item-suggestions/chat-item-suggestions";
-
 interface ConversationMessage {
   type: "bot" | "human";
   message: string;
   time: string;
   id?: string;
 }
-
 interface LMTQueryAgentProps {
   agentName: string;
   onClose?: () => void;
   questions?: string[];
   description?: string;
 }
-
 export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
   agentName,
   onClose,
@@ -45,18 +42,14 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
   const [conversations, setConversations] = useState<ConversationMessage[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [currentEvent, setCurrentEvent] = useState<{ message: string } | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { streamQuery } = useLMTQueryAgentSSE();
-
   const form = useForm<LmtQueryAgentForm>({
     defaultValues: lmtQueryAgentFormDefaultValue,
     resolver: zodResolver(lmtQueryAgentSchema),
   });
-
   const addMessage = useCallback(
     (type: ConversationMessage["type"], message: string, time?: string) => {
       setConversations((prev) => [
@@ -71,11 +64,9 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
     },
     [],
   );
-
   const handleStreamEvent = useCallback(
     (eventType: string, eventData: Record<string, unknown>) => {
       if (eventType === "start" && eventData.session_id) setSession(eventData.session_id as string);
-
       handleAgentEvent(
         { type: eventType, ...eventData },
         {
@@ -96,7 +87,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
           },
         },
       );
-
       if (eventType === "complete") {
         setCurrentEvent(null);
         setIsThinking(false);
@@ -104,7 +94,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
     },
     [addMessage],
   );
-
   const handleSubmit = useCallback(
     async (formData: LmtQueryAgentForm) => {
       if (!formData.query?.trim()) return;
@@ -148,7 +137,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
     },
     [addMessage, form, handleStreamEvent, session, streamQuery, tenantId],
   );
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -158,13 +146,11 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
     },
     [form, handleSubmit],
   );
-
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
   }, [conversations, isThinking]);
-
   return (
     <div className="flex h-full w-full flex-col items-start">
       <Card className="sticky top-0 z-10 flex w-full shrink-0 flex-row items-center justify-between rounded-none border-b border-border/50 bg-background/80 px-6 py-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] backdrop-blur-xl">
@@ -186,7 +172,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
           </Button>
         )}
       </Card>
-
       <div
         ref={containerRef}
         className="flex min-h-0 w-full flex-1 flex-col gap-8 overflow-y-auto border-l border-r px-6 py-2 pb-1.5 text-base font-normal"
@@ -221,7 +206,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
           </div>
         )}
       </div>
-
       <LMTQueryAgentChatInput
         ref={textareaRef}
         form={form}

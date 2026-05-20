@@ -10,12 +10,10 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@radix-ui/react-dialog";
-
 interface MessageConfigurationProps {
   dialogTitle: string;
   data?: string[];
 }
-
 const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle }) => (
   <DialogContent className="rounded-md sm:max-w-[700px]">
     <DialogHeader>
@@ -120,7 +118,6 @@ const MessageConfiguration: React.FC<MessageConfigurationProps> = ({ dialogTitle
         </div>
       </DialogDescription>
     </DialogHeader>
-
     <DialogFooter className="flex flex-row gap-2">
       <DialogTrigger asChild>
         <Button variant="outline" size="default">

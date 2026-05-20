@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useNavigate } from "react-router-dom";
 import { RegisteredService } from "@blocks-identifier/models/service.model";
 import { Button } from "@/components/ui-kits/button/button";
@@ -22,10 +23,8 @@ import { showSuccessToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { AccordionTrigger } from "@/components/ui-kits/accordion/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
-
 const ServiceCardCopiedItem = ({ label, value }: { label: string; value: string }) => {
   const { copy } = useCopyToClipboard();
-
   return (
     <div className="text-sm">
       <div className="text-low-emphasis">{label}</div>
@@ -45,7 +44,6 @@ const ServiceCardCopiedItem = ({ label, value }: { label: string; value: string 
     </div>
   );
 };
-
 const LinkButton = ({
   onClick,
   children,
@@ -61,14 +59,11 @@ const LinkButton = ({
     {children}
   </button>
 );
-
 export const ServiceCard = ({ service }: { service: RegisteredService }) => {
   const [showAllTags, setShowAllTags] = useState(false);
   const navigate = useNavigate();
-
-  const swaggerUrl = `${import.meta.env.BLOCKS_API_BASE_URL}/identifier/v1/swagger/index.html`;
+  const swaggerUrl = `${getRuntimeEnv("BLOCKS_API_BASE_URL")}/identifier/v1/swagger/index.html`;
   const docsUrl = "https://docs.seliseblocks.com/";
-
   return (
     <>
       <AccordionTrigger className="overflow-hidden p-4 hover:no-underline">
@@ -81,7 +76,6 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               {service.serviceType || "backend"}
             </Badge>
           </div>
-
           <div className="flex shrink-0 items-center gap-2">
             <LinkButton
               onClick={() =>
@@ -93,7 +87,6 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               <FileText className="h-4 w-4" />
               <span className="sr-only sm:not-sr-only sm:ml-2">Logs</span>
             </LinkButton>
-
             <LinkButton
               onClick={() =>
                 navigate(`/services/lmt?tab=tracing&services=${service.serviceId}`)
@@ -102,7 +95,6 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               <Activity className="h-4 w-4" />
               <span className="sr-only sm:not-sr-only sm:ml-2">Traces</span>
             </LinkButton>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm p-0 hover:bg-accent hover:text-accent-foreground">
@@ -127,7 +119,6 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
           </div>
         </div>
       </AccordionTrigger>
-
       <AccordionContent className="p-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <ServiceCardCopiedItem label="Service ID" value={service.serviceId} />
@@ -139,14 +130,12 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
           )}
           <ServiceCardCopiedItem label="X-Blocks-Key" value={service.tenantId} />
         </div>
-
         {service.description && (
           <div className="mt-3 text-sm">
             <h3 className="text-low-emphasis">Description</h3>
             <p className="break-words text-high-emphasis">{service.description}</p>
           </div>
         )}
-
         {service.tags?.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
             {(showAllTags ? service.tags : service.tags.slice(0, 4)).map((tag, index) => (

@@ -10,29 +10,23 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetAuthConfig, useSaveAuthConfig } from "@blocks-idp/authentication/hooks/use-auth-config";
-
 export const SelfSignup = () => {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "", itemId: "" };
   const { data, isLoading } = useGetAuthConfig({ projectKey: tenantId });
-
   const { mutateAsync, isPending } = useSaveAuthConfig({ projectKey: tenantId });
-
   const form = useForm<SelfSignUpFormType>({
     defaultValues: selfSignUpFormDefaultValues,
     values: data,
     resolver: zodResolver(selfSignUpFormSchema),
   });
-
   const submitHandler = async (values: SelfSignUpFormType) => {
     try {
       if (!tenantId || !data) return showErrorToast({ errors: "Something went wrong" });
-
       const res = await mutateAsync({
         ...data,
         ...values,
         projectKey: tenantId,
       });
-
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Self sign-up settings updated successfully" });
     } catch (error) {
@@ -40,9 +34,7 @@ export const SelfSignup = () => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   const { isValid, isDirty } = form.formState;
-
   return (
     <Card>
       <CardHeader>

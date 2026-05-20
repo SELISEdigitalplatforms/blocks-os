@@ -27,23 +27,18 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { useUpdateRole } from "@blocks-idp/iam/hooks/use-roles";
 import { isErrorWithErrors } from "@/lib/error";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
-
 type UpdateRoleProps = { role: IRole; isOpen: boolean; onClose: () => void };
-
 export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
   const { toast } = useToast();
   const { mutateAsync, isPending } = useUpdateRole();
   const tenantId = useProjectStore().selectedProject?.itemId || "";
-
   const form = useForm({
     defaultValues: role,
     resolver: zodResolver(updateRoleFormSchema),
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const onSubmit: SubmitHandler<z.infer<typeof updateRoleFormSchema>> = async (data) => {
     const newRole = {
       ...data,
@@ -66,11 +61,9 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
       }
     }
   };
-
   useEffect(() => {
     if (!isOpen) form.reset(role);
   }, [role, form, isOpen]);
-
   return (
     <DialogContent>
       <DialogHeader className="mb-4">

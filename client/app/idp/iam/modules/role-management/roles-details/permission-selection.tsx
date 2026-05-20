@@ -17,13 +17,11 @@ import {
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-
 interface PermissionSelectionProps {
   // removed isBuiltIn prop
   slug: string;
   resourceGroups: IGetResourceGroupResponse;
 }
-
 export const PermissionSelection = forwardRef(function PermissionSelection(
   { slug, resourceGroups }: PermissionSelectionProps,
   ref,
@@ -48,19 +46,14 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       }),
     enabled: !!slug,
   });
-
   // Track selected permissions (itemId)
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
-
   // Track initial permissions for comparison when saving
   const [initialPermissions, setInitialPermissions] = useState<string[]>([]);
-
   const [openGroup, setOpenGroup] = useState<string | null>(null);
-
   const [groupedPermissionListCache, setGroupedPermissionListCache] = useState<{
     [key: string]: IPermission[];
   }>({});
-
   // Fetch permissions for the open group using the hook at the top level
   const { data: groupedPermissionList, isLoading: isGroupedPermissionLoading } = useGetPermissions({
     page: 0,
@@ -71,18 +64,15 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
     resourceGroup: openGroup ? openGroup : "",
     projectKey: tenantId,
   });
-
   // Expose handleSave to parent via ref
   const handleSave = () => {
     // Return all selected permissions from all groups
     const allSelectedPermissions: IPermission[] = [];
-
     // Gather all permissions from cache that are selected
     Object.values(groupedPermissionListCache).forEach((groupPermissions) => {
       const selected = groupPermissions.filter((perm) => selectedPermissions.includes(perm.itemId));
       allSelectedPermissions.push(...selected);
     });
-
     // Add selected permissions from currently fetched role permissions that might not be in cache
     if (permissions) {
       const selectedFromRoles = permissions.data.filter(
@@ -92,23 +82,19 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       );
       allSelectedPermissions.push(...selectedFromRoles);
     }
-
     // Calculate added and removed permissions
     const allPermissionsInCache: IPermission[] = [];
     Object.values(groupedPermissionListCache).forEach((perms) => {
       allPermissionsInCache.push(...perms);
     });
-
     // Find permissions that were added (in selectedPermissions but not in initialPermissions)
     const addedPermissions = allSelectedPermissions.filter(
       (perm) => !initialPermissions.includes(perm.itemId),
     );
-
     // Find permissions that were removed (in initialPermissions but not in selectedPermissions)
     const removedPermissionIds = initialPermissions.filter(
       (id) => !selectedPermissions.includes(id),
     );
-
     // Find the full permission objects for removed permissions
     const removedPermissions: IPermission[] = [];
     if (permissions) {
@@ -118,7 +104,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
         }
       });
     }
-
     // Also check cache for removed permissions
     allPermissionsInCache.forEach((perm) => {
       if (
@@ -128,17 +113,14 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
         removedPermissions.push(perm);
       }
     });
-
     return {
       addedPermissions,
       removedPermissions,
     };
   };
-
   useImperativeHandle(ref, () => ({
     handleSave,
   }));
-
   // Initialize selectedPermissions from fetched permissions
   useEffect(() => {
     if (permissions && permissions.data) {
@@ -147,7 +129,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       setInitialPermissions(permissionIds); // Store initial state for later comparison
     }
   }, [permissions]);
-
   // Update cache when new group data is fetched
   useEffect(() => {
     if (groupedPermissionList && groupedPermissionList.data && openGroup) {
@@ -157,7 +138,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       }));
     }
   }, [groupedPermissionList, openGroup]);
-
   if (isPermissionLoading || isPermissionFetching) {
     return (
       <div className="mt-4">
@@ -183,16 +163,13 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       </div>
     );
   }
-
   // Function to get permissions for a specific group from cache
   const getGroupPermissions = (groupName: string) => {
     return groupedPermissionListCache[groupName] || [];
   };
-
   // For each group, build FE Action hierarchy for the current group's permissions
   const buildGroupPermissionData = (groupName: string) => {
     const perms = getGroupPermissions(groupName);
-
     // Skip processing if no permissions are loaded for this group
     if (perms.length === 0) {
       return {
@@ -202,16 +179,13 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
         allIds: [],
       };
     }
-
     // Create permission and resource maps
     const permissionMap: Record<string, IPermission> = {};
     const resourceMap: Record<string, IPermission> = {};
-
     perms.forEach((perm) => {
       permissionMap[perm.itemId] = perm;
       resourceMap[perm.resource] = perm;
     });
-
     // Find FE Actions
     const feActions = perms.filter((p) => p.type === 2);
     const feActionsWithDependents = feActions.map((fa) => ({
@@ -220,17 +194,14 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
         .map((depResource) => resourceMap[depResource])
         .filter(Boolean) as IPermission[],
     }));
-
     // Gather all dependent itemIds
     const allDepIdsInGroup = feActionsWithDependents.flatMap((fa) =>
       fa.dependents.map((d) => d.itemId),
     );
-
     // Exclude those dependent itemIds from independents
     const independentPerms = perms.filter(
       (p) => p.type !== 2 && !allDepIdsInGroup.includes(p.itemId),
     );
-
     // Combine IDs
     const allIds = [
       ...feActionsWithDependents.map((fa) => fa.itemId),
@@ -238,7 +209,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       ...independentPerms.map((p) => p.itemId),
     ];
     const uniqueIds = Array.from(new Set(allIds));
-
     return {
       group: groupName,
       feActions: feActionsWithDependents,
@@ -246,28 +216,23 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       allIds: uniqueIds,
     };
   };
-
   // Handle permission checkbox toggle (with FE Action logic)
   const handleToggle = (perm: IPermission, parent?: IPermission) => {
     setSelectedPermissions((prev) => {
       let next = [...prev];
-
       // Get all permissions for current group to build resource map
       const groupPerms = getGroupPermissions(perm.resourceGroup);
       const resourceMap: Record<string, IPermission> = {};
       groupPerms.forEach((p) => {
         resourceMap[p.resource] = p;
       });
-
       if (perm.type === 2 && perm.dependentPermissions?.length) {
         // FE Action: toggle itself and all dependents
         const allDependents = perm.dependentPermissions
           .map((depRes) => resourceMap[depRes]?.itemId)
           .filter(Boolean);
-
         const allIds = [perm.itemId, ...allDependents];
         const isAllSelected = allIds.every((id) => prev.includes(id));
-
         if (isAllSelected) {
           // Unselect FE Action and all dependents
           next = next.filter((id) => !allIds.includes(id));
@@ -282,7 +247,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
         const allDependents = parent.dependentPermissions
           .map((depRes) => resourceMap[depRes]?.itemId)
           .filter(Boolean);
-
         if (prev.includes(perm.itemId)) {
           // Unselect dependent
           next = next.filter((id) => id !== perm.itemId);
@@ -309,7 +273,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       return next;
     });
   };
-
   // Handle group checkbox toggle
   const handleGroupToggle = (groupObj: ReturnType<typeof buildGroupPermissionData>) => {
     setSelectedPermissions((prev) => {
@@ -325,14 +288,12 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
       }
     });
   };
-
   // Check if all permissions in group are selected
   const isGroupAllSelected = (groupObj: ReturnType<typeof buildGroupPermissionData>) => {
     return (
       groupObj.allIds.length > 0 && groupObj.allIds.every((id) => selectedPermissions.includes(id))
     );
   };
-
   // Get selected count for a group - use cache if available, otherwise use permissions
   const getSelectedCount = (groupName: string) => {
     // If we have cached data for this group, use it to calculate selected count
@@ -341,17 +302,14 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
         selectedPermissions.includes(perm.itemId),
       ).length;
     }
-
     // Otherwise fall back to permissions data
     if (!permissions || !permissions.data) return 0;
     return permissions.data.filter((perm) => perm.resourceGroup === groupName).length;
   };
-
   // Function to call when a group is opened
   const getGroupData = (group: string) => {
     setOpenGroup(group);
   };
-
   return (
     <div>
       <div className="mt-4">
@@ -367,7 +325,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
             const groupName = groupResource.resourceGroup;
             const groupObj = buildGroupPermissionData(groupName);
             const isLoading = openGroup === groupName && isGroupedPermissionLoading;
-
             return (
               <AccordionItem
                 key={groupName}
@@ -397,7 +354,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
                     <div className="py-4 text-center">Click to load permissions for this group</div>
                   ) : (
                     <ul className="ml-4">
-                      {/* FE Actions with dependents */}
                       {groupObj.feActions.map((fa) => (
                         <li key={fa.itemId} className="mb-2">
                           <div className="flex items-center gap-2">
@@ -416,7 +372,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
                               FE Action
                             </span>
                           </div>
-                          {/* Render dependents */}
                           {fa.dependents.length > 0 && (
                             <ul className="ml-8 mt-1">
                               {fa.dependents.map((dep) => (
@@ -440,7 +395,6 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
                           )}
                         </li>
                       ))}
-                      {/* Independent permissions */}
                       {groupObj.independentPerms.map((perm) => (
                         <li key={perm.itemId} className="mb-2 flex items-center gap-2">
                           <Checkbox

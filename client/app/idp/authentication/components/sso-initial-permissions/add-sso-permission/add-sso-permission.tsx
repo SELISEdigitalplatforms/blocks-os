@@ -28,12 +28,10 @@ import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus } from "lucide-react";
 import { useMemo, useState } from "react";
-
 type AddSSOPermissionProps = {
   permissions: IPermission[];
   onAdd: (data: IPermission[]) => void;
 };
-
 export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
@@ -49,27 +47,23 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
     ...filter,
     projectKey: tenantId,
   });
-
   const onClickHandler = async () => {
     onAdd(selectedPermission);
     resetFilter();
     setOpen(false);
   };
-
   const onCheckedChangeHandler = (checked: boolean, permission: IPermission) => {
     if (checked) {
       return setSelectedPermissions((prev) => [...prev, permission]);
     }
     setSelectedPermissions((prev) => prev.filter((item) => item.resource !== permission.resource));
   };
-
   const handlePermissionCheckboxChange = (checked: boolean, permission: IPermission) => {
     if (checked && permissionsResource.length + selectedPermission.length >= 5) {
       return;
     }
     onCheckedChangeHandler(checked, permission);
   };
-
   const resetFilter = () => {
     setFilter({
       page: 0,
@@ -80,15 +74,12 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
     });
     setSelectedPermissions([]);
   };
-
   const permissionsResource = useMemo(() => {
     return permissions.map((item) => item.resource) || [];
   }, [permissions]);
-
   const selectedPermissionsResource = useMemo(() => {
     return selectedPermission.map((item) => item.resource) || [];
   }, [selectedPermission]);
-
   return (
     <Dialog
       open={open}
@@ -171,7 +162,6 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
             </Table>
           </CardContent>
         </Card>
-
         <div className="flex items-center justify-end">
           {!isLoading && data && data.totalCount > filter.pageSize && (
             <Pagination

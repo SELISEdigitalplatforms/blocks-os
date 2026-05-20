@@ -5,20 +5,16 @@ import { LogsViewer } from "@blocks-lmt/components";
 import { SERVICES } from "@blocks-lmt/constants/services.constant";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
-
 export default function LmtServiceLogsPage() {
   const { serviceName } = useParams<{ serviceName: string }>();
-
   const service = useMemo(
     () => SERVICES.find((item) => item.name === serviceName && item.showInLogs),
     [serviceName],
   );
-
   BREADCRUMB_CUSTOM_TITLES["/services/lmt"] = "LMT";
   if (serviceName) {
     BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}`] = service?.label || "Logs";
   }
-
   if (!service) {
     return (
       <main className="flex flex-col gap-6 p-6">
@@ -31,7 +27,6 @@ export default function LmtServiceLogsPage() {
       </main>
     );
   }
-
   return (
     <main className="flex flex-col gap-6 p-6">
       <PageBreadcrumb breadcrumbIndex={2} />

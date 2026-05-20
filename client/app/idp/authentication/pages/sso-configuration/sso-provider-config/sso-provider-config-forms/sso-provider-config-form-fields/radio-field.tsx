@@ -5,15 +5,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/rad
 import { cn } from "@/lib/utils";
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { SSOProviderConfigFormFieldType } from "../../sso-provider-config.type";
-
 type RadioFieldProps = {
   item: Extract<SSOProviderConfigFormFieldType, { type: "radio" }>;
   field: ControllerRenderProps<FieldValues>;
 };
-
 export const RadioField: React.FC<RadioFieldProps> = ({ item, field }) => {
   const radioValue = typeof field.value === "string" ? field.value : "";
-
   return (
     <FormItem>
       <FormLabel>{item.label}</FormLabel>
@@ -29,7 +26,6 @@ export const RadioField: React.FC<RadioFieldProps> = ({ item, field }) => {
         >
           {item.options.map((option) => {
             const optionId = `${item.name}-${option.value}`;
-
             return (
               <div key={option.value} className="flex items-center space-x-2">
                 <RadioGroupItem id={optionId} value={option.value} disabled={item.isDisabled} />

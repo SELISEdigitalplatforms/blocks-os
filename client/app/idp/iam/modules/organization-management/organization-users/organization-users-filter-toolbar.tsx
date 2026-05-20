@@ -1,12 +1,9 @@
-
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { Mail, User } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-
 type OrganizationUsersFilter = {
   search: {};
 };
-
 export const useOrganizationUsersFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),
@@ -17,15 +14,12 @@ export const useOrganizationUsersFilterQueryParams = () => {
   });
   return { queryParams, setQueryParams };
 };
-
 export const useOrganizationUsersSortQueryParams = () =>
   useSortQueryParams({
     initial: { property: "FirstName", isDescending: false },
   });
-
 export const OrganizationUsersFilterToolbar = () => {
   const { queryParams, setQueryParams } = useOrganizationUsersFilterQueryParams();
-
   const changeHandler = (key: string, value: unknown) => {
     if (key === "search") {
       const val = value as { selected: "name" | "email"; value: string };
@@ -37,7 +31,6 @@ export const OrganizationUsersFilterToolbar = () => {
         page: 0,
       }));
     }
-
     setQueryParams((params) => ({
       ...params,
       [key]: value,
@@ -47,7 +40,6 @@ export const OrganizationUsersFilterToolbar = () => {
   const resetHandler = () => {
     setQueryParams(null);
   };
-
   return (
     <FilterToolbar<OrganizationUsersFilter>
       filters={[

@@ -16,7 +16,6 @@ import {
   FileUploaderItem,
   FileInput,
 } from "@/components/file-uploader/file-uploader";
-
 const FileSvgDraw = () => {
   return (
     <>
@@ -31,16 +30,13 @@ const FileSvgDraw = () => {
     </>
   );
 };
-
 export default function ImportCommunications() {
   const [files, setFiles] = useState<File[] | null>(null);
-
   const dropZoneConfig = {
     maxFiles: 5,
     maxSize: 1024 * 1024 * 4,
     multiple: true,
   };
-
   return (
     <DialogContent className="rounded-md sm:max-w-[450px]">
       <DialogHeader>
@@ -71,7 +67,6 @@ export default function ImportCommunications() {
           </FileUploader>
         </DialogDescription>
       </DialogHeader>
-
       <DialogFooter className="mr-1 grid grid-cols-2 gap-2">
         <div className="mt-2 flex flex-row gap-2 text-primary">
           <ArrowDownToLine size={20} />

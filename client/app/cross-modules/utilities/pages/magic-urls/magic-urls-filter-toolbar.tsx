@@ -1,6 +1,5 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-
 type MagicUrlFilter = {
   search: string;
   expiryDate: { from?: Date | string; to?: Date | string };
@@ -8,7 +7,6 @@ type MagicUrlFilter = {
   requestMethod: string;
   type: string;
 };
-
 export const useMagicUrlsFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     search: parseAsString.withDefault(""),
@@ -22,18 +20,14 @@ export const useMagicUrlsFilterQueryParams = () => {
   });
   return { queryParams, setQueryParams };
 };
-
 export const useMagicUrlSortQueryParams = () =>
   useSortQueryParams({ initial: { property: "OperationName", isDescending: false } });
-
 export function MagicUrlsFilterToolBar() {
   const { queryParams, setQueryParams } = useMagicUrlsFilterQueryParams();
-
   const updateExpiryDate = (value: { from?: Date; to?: Date } | null) => {
     const { from, to } = value || {};
     const startDate = from || to;
     const endDate = to || from;
-
     setQueryParams((params) => ({
       ...params,
       expiryStartDate: startDate ? startDate.toISOString() : "",
@@ -41,7 +35,6 @@ export function MagicUrlsFilterToolBar() {
       page: 0,
     }));
   };
-
   const changeHandler = (key: string, value: unknown) => {
     if (key === "expiryDate") return updateExpiryDate(value as { from?: Date; to?: Date });
     setQueryParams((params) => ({
@@ -50,9 +43,7 @@ export function MagicUrlsFilterToolBar() {
       page: 0,
     }));
   };
-
   const resetHandler = () => setQueryParams(null);
-
   return (
     <FilterToolbar<MagicUrlFilter>
       filters={[
