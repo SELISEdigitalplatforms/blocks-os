@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { githubInfoService } from "@/cross-modules/devops/services/github-info.service";
-import { Loader } from "lucide-react";
+import LogoLoadingSpinner from "@/components/loader-spinner/loader-spinner";
 export default function CallbackPage() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
@@ -27,11 +27,7 @@ export default function CallbackPage() {
     }
   }, [isSuccess]);
   if (isLoading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-        <Loader className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <LogoLoadingSpinner />;
   }
   if (isSuccess) {
     return null;
