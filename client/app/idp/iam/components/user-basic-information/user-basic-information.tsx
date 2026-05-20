@@ -28,7 +28,7 @@ export const UserBasicInformation = ({
   own?: boolean;
 }) => {
   const meQuery = useGetMe({ enabled: own });
-  const byIdQuery = useGetUserById({ id, projectKey });
+  const byIdQuery = useGetUserById({ id, projectKey, enabled: !own });
   const { isLoading, data } = own ? meQuery : byIdQuery;
   if (!isLoading && !data) return null;
   const { data: user } = data || { user: {} };
