@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import LogoLoadingSpinner from "@/components/loader-spinner/loader-spinner";
 export default function LoginCallbackPage() {
   const [searchParams] = useSearchParams();
   const hasProcessed = useRef(false);
@@ -44,9 +44,5 @@ export default function LoginCallbackPage() {
       });
   }, [code, state, error, tenantId, setAuthenticated]);
 
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Loader className="h-12 w-12 animate-spin text-gray-500" />
-    </div>
-  );
+  return <LogoLoadingSpinner />;
 }
