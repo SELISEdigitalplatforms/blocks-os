@@ -1,6 +1,4 @@
-import {
-  AUTH_OIDC_ENDPOINTS
-} from "@/idp/authentication/constants/endpoint.constant";
+import { AUTH_OIDC_ENDPOINTS } from "@/idp/authentication/constants/endpoint.constant";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { getQueryClient } from "@/providers/query-provider";
 import { useAuthStore } from "@/store/useAuthStore";

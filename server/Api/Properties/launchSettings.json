@@ -5,10 +5,12 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "launchUrl": "http://localhost:5001",
-      "applicationUrl": "http://localhost:5001",
+      "launchUrl": "https://dev-os.blocksdevelopers.com:5000",
+      "applicationUrl": "https://dev-os.blocksdevelopers.com:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_Kestrel__Certificates__Default__Path": "/home/uday/Dev/selise/fullstack/blocks-os/dev-os.blocksdevelopers.com.pfx",
+        "ASPNETCORE_Kestrel__Certificates__Default__Password": "12345"
       }
     }
   }
