@@ -1,5 +1,3 @@
-
-
 import { Button } from "@/components/ui-kits/button/button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -12,7 +10,6 @@ import { MaskedText } from "@/components/masked-text";
 import { ReactNode } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { ToggleCaptchaStatusModal } from "@blocks-idp/captcha/modals/toggle-captcha-status-modal";
-
 const LoadingSkelton = () => {
   return (
     <div className="grid gap-2">
@@ -37,16 +34,13 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
     </div>
   );
 };
-
 type ConfigureCaptchaListProps = {
   isLoading: boolean;
   configurations: ICaptchaConfig[];
 };
-
 export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCaptchaListProps) => {
   if (isLoading) return <LoadingSkelton />;
   if (!configurations.length) return <EmptyCaptchaConfig />;
-
   return (
     <>
       <div className="grid gap-4">
@@ -71,7 +65,6 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
                     <ToggleCaptchaStatusModal configuration={configuration} />
                   </div>
                 </CardHeader>
-
                 <CardContent>
                   <div className="flex flex-col gap-4">
                     <div className="flex gap-4 sm:hidden">
@@ -85,7 +78,6 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
                       </ConfigureCaptchaModal>
                       <ToggleCaptchaStatusModal configuration={configuration} />
                     </div>
-
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <Item label="Site Key">
                         <CopyToClipboardButton textToCopy={configuration.captchaKey}>

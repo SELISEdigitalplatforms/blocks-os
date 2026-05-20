@@ -1,5 +1,3 @@
-
-
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Drawer,
@@ -32,20 +30,15 @@ import { JwtClaimPayload } from "@blocks-idp/authentication/models/jwt.claim.mod
 import { jwtDecode } from "jwt-decode";
 import { X } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
-
 interface DecodedJwt {
   [key: string]: unknown;
 }
-
 interface MapJwtClaimModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
 type RequiredProperty = "userId" | "email" | "name" | "userName" | "roles";
-
 const REQUIRED_PROPERTIES: RequiredProperty[] = ["userId", "email", "name", "userName", "roles"];
-
 const PROPERTY_LABELS: Record<RequiredProperty, string> = {
   userId: "User Id",
   email: "Email",
@@ -53,7 +46,6 @@ const PROPERTY_LABELS: Record<RequiredProperty, string> = {
   userName: "User Name",
   roles: "Roles",
 };
-
 // JWT Input Section Component
 interface JwtInputSectionProps {
   jwtToken: string;
@@ -61,7 +53,6 @@ interface JwtInputSectionProps {
   validationError: string;
   onDecode: () => void;
 }
-
 const JwtInputSection: React.FC<JwtInputSectionProps> = ({
   jwtToken,
   onTokenChange,
@@ -82,7 +73,6 @@ const JwtInputSection: React.FC<JwtInputSectionProps> = ({
     </Button>
   </div>
 );
-
 // Mapping Table Section Component
 interface MappingTableSectionProps {
   hasDecodedJwt: boolean;
@@ -92,7 +82,6 @@ interface MappingTableSectionProps {
   mapping: Record<RequiredProperty, string>;
   onMappingChange: (property: RequiredProperty, value: string) => void;
 }
-
 const MappingTableSection: React.FC<MappingTableSectionProps> = ({
   hasDecodedJwt,
   hasExistingData,
@@ -105,11 +94,9 @@ const MappingTableSection: React.FC<MappingTableSectionProps> = ({
     const values = Object.values(mapping).filter((value) => value !== "");
     return Array.from(new Set(values));
   }, [mapping]);
-
   return (
     <div className="flex min-h-0 flex-1 flex-col space-y-3">
       <p className="border-t pt-3 text-sm font-medium text-foreground">Mapping Table</p>
-
       {!hasDecodedJwt && !hasExistingData && (
         <div className="flex flex-1 items-center justify-center py-10">
           <p className="text-sm text-muted-foreground">
@@ -117,7 +104,6 @@ const MappingTableSection: React.FC<MappingTableSectionProps> = ({
           </p>
         </div>
       )}
-
       {(hasDecodedJwt || hasExistingData) && (
         <div className="flex-1 overflow-y-auto rounded-md">
           <Table className="min-w-full text-sm">
@@ -131,7 +117,6 @@ const MappingTableSection: React.FC<MappingTableSectionProps> = ({
                 </TableHead>
               </TableRow>
             </TableHeader>
-
             <TableBody>
               {requiredProperties.map((property) => (
                 <TableRow key={property}>
@@ -164,7 +149,6 @@ const MappingTableSection: React.FC<MappingTableSectionProps> = ({
     </div>
   );
 };
-
 // Modal Footer Component
 interface ModalFooterProps {
   onCancel: () => void;
@@ -172,7 +156,6 @@ interface ModalFooterProps {
   isSaveDisabled: boolean;
   isLoading: boolean;
 }
-
 const ModalFooter: React.FC<ModalFooterProps> = ({
   onCancel,
   onSave,
@@ -192,7 +175,6 @@ const ModalFooter: React.FC<ModalFooterProps> = ({
     </Button>
   </div>
 );
-
 const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange }) => {
   const [jwtToken, setJwtToken] = useState<string>("");
   const [decodedJwt, setDecodedJwt] = useState<string[]>([]);
@@ -204,10 +186,8 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
     roles: "",
   });
   const [validationError, setValidationError] = useState<string>("");
-
   const { mutateAsync: saveJWTClaim, isPending: isLoading } = useAddJwtClaim();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   const { data: existingJwtClaim, isLoading: isJwtClaimLoading } = useGetJwtClaim(
     {
       projectKey,
@@ -215,7 +195,6 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
     },
     open,
   );
-
   useEffect(() => {
     if (existingJwtClaim) {
       setMapping({
@@ -227,7 +206,6 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
       });
     }
   }, [existingJwtClaim]);
-
   const hasDecodedJwt = useMemo(() => decodedJwt.length > 0, [decodedJwt.length]);
   const hasExistingData = useMemo(() => !!existingJwtClaim?.itemId, [existingJwtClaim]);
   const hasAtLeastOneFieldMapped = useMemo(
@@ -238,18 +216,15 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
     () => isLoading || (!hasExistingData && (!hasDecodedJwt || !hasAtLeastOneFieldMapped)),
     [isLoading, hasExistingData, hasDecodedJwt, hasAtLeastOneFieldMapped],
   );
-
   const handleDecode = useCallback(() => {
     if (!jwtToken.trim()) {
       setValidationError("JWT is required.");
       setDecodedJwt([]);
       return;
     }
-
     try {
       const result = jwtDecode<DecodedJwt>(jwtToken);
       const jwtKeys: string[] = [];
-
       const extractKeys = (
         obj: Record<string, unknown>,
         prefix: string = "",
@@ -258,7 +233,6 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
         Object.keys(obj).forEach((key) => {
           const fullKey = prefix ? `${prefix}.${key}` : key;
           const value = obj[key];
-
           if (depth < 2 && value !== null && typeof value === "object" && !Array.isArray(value)) {
             extractKeys(value as Record<string, unknown>, fullKey, depth + 1);
           } else {
@@ -266,15 +240,12 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
           }
         });
       };
-
       extractKeys(result);
-
       if (jwtKeys.length === 0) {
         setValidationError("Invalid JWT Token: No properties found.");
         setDecodedJwt([]);
         return;
       }
-
       setDecodedJwt(jwtKeys);
       setValidationError("");
       showSuccessToast({
@@ -286,14 +257,12 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
       setDecodedJwt([]);
     }
   }, [jwtToken]);
-
   const handleMappingChange = useCallback((property: RequiredProperty, value: string) => {
     setMapping((prev) => ({
       ...prev,
       [property]: value,
     }));
   }, []);
-
   const handleSubmit = useCallback(async () => {
     try {
       const payload: JwtClaimPayload = {
@@ -305,9 +274,7 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
         projectKey,
         ...(existingJwtClaim?.itemId && { itemId: existingJwtClaim.itemId }),
       };
-
       const res = await saveJWTClaim(payload);
-
       if (res?.isSuccess) {
         showSuccessToast({ description: "JWT Claim Saved Successfully" });
         onOpenChange(false);
@@ -318,11 +285,9 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
       showErrorToast({ errors: error });
     }
   }, [mapping, projectKey, existingJwtClaim, saveJWTClaim, onOpenChange]);
-
   const handleCancel = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
-
   return (
     <Drawer direction="right" open={open} onOpenChange={onOpenChange} handleOnly>
       <DrawerContent
@@ -347,7 +312,6 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
               </button>
             </DrawerClose>
           </div>
-
           {isJwtClaimLoading ? (
             <div className="mt-6 flex min-h-0 flex-1 flex-col space-y-6">
               <div className="space-y-3">
@@ -372,7 +336,6 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
                 validationError={validationError}
                 onDecode={handleDecode}
               />
-
               <MappingTableSection
                 hasDecodedJwt={hasDecodedJwt}
                 hasExistingData={hasExistingData}
@@ -383,7 +346,6 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
               />
             </div>
           )}
-
           <ModalFooter
             onCancel={handleCancel}
             onSave={handleSubmit}
@@ -395,5 +357,4 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
     </Drawer>
   );
 };
-
 export default MapJwtClaimModal;

@@ -1,14 +1,11 @@
 import * as React from "react";
-
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
 import type { StepSharedProps } from "./types";
 import { useStepper } from "./use-stepper";
-
 type StepButtonContainerProps = StepSharedProps & {
   children?: React.ReactNode;
 };
-
 const StepButtonContainer = ({
   isCurrentStep,
   isCompletedStep,
@@ -18,15 +15,11 @@ const StepButtonContainer = ({
   onClickStep,
 }: StepButtonContainerProps) => {
   const { clickable, isLoading: isLoadingContext, variant, styles } = useStepper();
-
   const currentStepClickable = clickable || !!onClickStep;
-
   const isLoading = isLoadingProp || isLoadingContext;
-
   if (variant === "line") {
     return null;
   }
-
   return (
     <Button
       variant="ghost"
@@ -54,5 +47,4 @@ const StepButtonContainer = ({
     </Button>
   );
 };
-
 export { StepButtonContainer };

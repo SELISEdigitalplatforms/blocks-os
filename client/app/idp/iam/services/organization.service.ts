@@ -18,29 +18,31 @@ export class OrganizationService {
   getOrganizations(params: IGetOrganizationsParams): Promise<IGetOrganizationsResponse> {
     let url = `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${params.projectKey}&page=${params.page}&pageSize=${params.pageSize}`;
     params.searchText ? (url += `&SearchText=${params.searchText}`) : null;
-    return http.get(url);
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 
   getOrganizationById(params: IGetOrganizationByIdParams): Promise<IGetOrganizationByIdResponse> {
     return http.get(
       `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}?ProjectKey=${params.projectKey}&ItemId=${params.itemId}`,
+      undefined,
+      { absoluteUrl: true },
     );
   }
 
   saveOrganization = (
     payload: ICreateOrUpdateOrganizationPayload,
   ): Promise<ICreateOrUpdateOrganizationResponse> => {
-    return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION, payload);
+    return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION, payload, undefined, { absoluteUrl: true });
   };
 
   getOrganizationConfig(projectKey: string): Promise<IOrganizationConfigResponse | null> {
-    return http.get(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG}?projectKey=${projectKey}`);
+    return http.get(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG}?projectKey=${projectKey}`, undefined, { absoluteUrl: true });
   }
 
   saveOrganizationConfig = (
     payload: IOrganizationConfigPayload,
   ): Promise<IOrganizationConfigSaveResponse> => {
-    return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG, payload);
+    return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG, payload, undefined, { absoluteUrl: true });
   };
 }
 

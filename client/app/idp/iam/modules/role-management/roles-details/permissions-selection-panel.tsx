@@ -3,13 +3,10 @@ import { useMemo, useState } from "react";
 import { PermissionGroupSection } from "./permission-group-section";
 import { PermissionGroup, useRoleDetailsStore } from "./role-details-state";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-
 type GroupedPermissions = Record<string, PermissionGroup>;
-
 export const PermissionsSelectionPanel = () => {
   const [accordionValue, setAccordionValue] = useState<string>("");
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
-
   const groupedPermissions = useMemo(() => {
     const groups: GroupedPermissions = {};
     permissionMap.forEach((permission) => {
@@ -21,11 +18,9 @@ export const PermissionsSelectionPanel = () => {
     });
     return Object.values(groups);
   }, [permissionMap]);
-
   const onTriggerHandler = (groupName: string) => {
     setAccordionValue((prev) => (prev === groupName ? "" : groupName));
   };
-
   return (
     <Card>
       <CardContent>

@@ -35,12 +35,10 @@ import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hook
 import { storageService } from "@blocks-storage/services/storage.service";
 import { ColorSwatch } from "@/components/color-swatch/color-swatch";
 import { ModuleName } from "@/constants/modules.constants";
-
 type CreateOIDCProps = {
   itemId?: string;
   triggerVariant?: "default" | "ghost" | "outline";
 };
-
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [clientLogoUrl, setClientLogoUrl] = useState<string>("");
@@ -55,23 +53,19 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   );
   const { mutateAsync: getPreSign } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadFile } = useUploadFile();
-
   const form = useForm({
     resolver: zodResolver(createOidcSchema),
     mode: "all",
     defaultValues: createOIDCFormDefaultValue,
   });
-
   const {
     formState: { isDirty, isValid },
   } = form;
-
   const isEditMode = !!itemId;
   const dialogTitle = isEditMode ? "Edit OIDC Client" : "New OIDC Client";
   const dialogDescription = isEditMode
     ? "Update OIDC client details"
     : "Enter details to create a new key";
-
   useEffect(() => {
     if (isEditMode && existingOidc?.oIDCClientCredential && open) {
       const credential = existingOidc.oIDCClientCredential;
@@ -91,11 +85,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       setClientLogoUrl("");
     }
   }, [existingOidc, isEditMode, open, form]);
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const allowedImageTypes = [
       "image/jpeg",
       "image/png",
@@ -105,7 +97,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
     ];
     const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
     const fileName = file.name.toLowerCase();
-
     if (
       !allowedImageTypes.includes(file.type) &&
       !allowedExtensions.some((ext) => fileName.endsWith(ext))
@@ -116,16 +107,13 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       e.target.value = "";
       return;
     }
-
     if (file.size > MAX_LOGO_FILE_SIZE) {
       showErrorToast({ errors: "Image size must be under 5 MB." });
       e.target.value = "";
       return;
     }
-
     try {
       setIsUploadingImage(true);
-
       const preSign = await getPreSign({
         accessModifier: "Public",
         configurationName: "Default",
@@ -136,18 +124,13 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         parentDirectoryId: "",
         moduleName: ModuleName.IAMCloud,
       });
-
       if (!preSign.isSuccess) throw new Error("Failed to get upload URL");
-
       await uploadFile({ url: preSign.uploadUrl, file });
-
       const fileInfo = await storageService.file.getFileByFileId({
         itemId: preSign.fileId,
         projectKey: tenantId ?? "",
       });
-
       setClientLogoUrl(fileInfo.url);
-
       showSuccessToast({ description: "Logo uploaded successfully" });
     } catch (err: unknown) {
       if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
@@ -157,7 +140,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       e.target.value = "";
     }
   };
-
   const onSubmit = async (data: CreateOIDCFormValues) => {
     try {
       const payload: ISaveOidcCredentialPayload = {
@@ -171,9 +153,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         clientBrandColor: data.clientBrandColor || undefined,
         clientDisplayName: data.clientDisplayName,
       };
-
       const res = await mutateAsync(payload);
-
       if (!res.isSuccess) return showErrorToast({ errors: res.error });
       const message = isEditMode
         ? "OIDC Client updated successfully"
@@ -188,7 +168,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       setClientLogoUrl("");
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -251,7 +230,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
                 </div>
               </div>
-
               <FormField
                 control={form.control}
                 name="clientDisplayName"
@@ -265,7 +243,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="redirectUrlOidc"
@@ -275,12 +252,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     <FormControl>
                       <Input placeholder="https://example.com/oidc" {...field} />
                     </FormControl>
-
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="audienceUrlOidc"
@@ -290,12 +265,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     <FormControl>
                       <Input placeholder="https://example.com" {...field} />
                     </FormControl>
-
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="clientBrandColor"
@@ -309,7 +282,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="scope"

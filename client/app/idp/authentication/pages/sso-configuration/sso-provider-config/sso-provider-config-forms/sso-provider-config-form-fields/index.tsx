@@ -6,12 +6,10 @@ import { MultiSelectField } from "./multi-select-field";
 import { RadioField } from "./radio-field";
 import { PasswordField } from "./password-field";
 import { InputField } from "./input-field";
-
 type SSOProviderConfigFormFieldProps<T extends FieldValues> = {
   fields: SSOProviderConfigFormFieldType[];
   form: UseFormReturn<T>;
 };
-
 export const SSOProviderConfigFormField = <T extends FieldValues>({
   fields,
   form,

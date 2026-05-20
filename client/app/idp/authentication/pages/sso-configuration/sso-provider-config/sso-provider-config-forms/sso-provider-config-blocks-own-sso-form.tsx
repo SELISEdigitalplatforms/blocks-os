@@ -14,7 +14,6 @@ import { ssoProviderConfigBaseSchema } from "../sso-provider-config.schema";
 import { SSOProviderConfigFormFieldType } from "../sso-provider-config.type";
 import { SSOProviderConfigFormField } from "./sso-provider-config-form-fields";
 import { SsoConfigForms } from "./sso-provider-config-forms";
-
 const SSOOwnSSOFormFields: SSOProviderConfigFormFieldType[] = [
   ...createCommonOAuthFields({ clientId: { description: "" } }),
   {
@@ -24,7 +23,6 @@ const SSOOwnSSOFormFields: SSOProviderConfigFormFieldType[] = [
     name: "wellKnownUrl",
   },
 ];
-
 type FormValue = {
   provider: string;
   audience: string;
@@ -33,17 +31,14 @@ type FormValue = {
   redirectUrl: string;
   wellKnownUrl: string;
 };
-
 const schema = ssoProviderConfigBaseSchema.extend({
   clientId: z.string().trim().nonempty("Client id is required"),
   clientSecret: z.string().trim().nonempty("Client secret is required"),
   wellKnownUrl: z.string().url({ message: "Well known URL must be a valid URL." }).trim(),
 });
-
 export const SSOProviderConfigOwnSSOForm: React.FC<SsoConfigForms> = ({ configuration }) => {
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { mutateAsync } = useSaveSsoCredential();
-
   const form = useForm({
     values: configuration || {
       provider: SSO_PROVIDERS.ownsso,
@@ -55,7 +50,6 @@ export const SSOProviderConfigOwnSSOForm: React.FC<SsoConfigForms> = ({ configur
     },
     resolver: zodResolver(schema),
   });
-
   const onFormSubmit = async (data: ISsoProviderConfiguration | FormValue) => {
     const payload = {
       provider: data.provider,
@@ -69,13 +63,10 @@ export const SSOProviderConfigOwnSSOForm: React.FC<SsoConfigForms> = ({ configur
       initialPermissions: [],
       ssoType: 1,
     };
-
     const res = await mutateAsync(payload);
-
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });
     showSuccessToast({ description: `Bring your own SSO is configured successfully` });
   };
-
   return (
     <Form {...form}>
       <form
@@ -90,7 +81,6 @@ export const SSOProviderConfigOwnSSOForm: React.FC<SsoConfigForms> = ({ configur
             <SSOProviderConfigFormField fields={SSOOwnSSOFormFields} form={form} />
           </CardContent>
         </Card>
-
         <div className="flex items-center justify-end gap-2">
           <Button type="submit">Save</Button>
         </div>

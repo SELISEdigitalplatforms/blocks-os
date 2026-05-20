@@ -1,5 +1,3 @@
-
-
 import React, { forwardRef, useImperativeHandle, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Input } from "@/components/ui-kits/input/input";
@@ -55,7 +53,6 @@ const BasicInformation = forwardRef(function Inner(
   const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
   // const { getEmailConfigs, isPending } = useGetEmailConfigs();
   // const [mailConfigs, setData] = useState<IEmailConfig[]>([]);
-
   const form = useForm<IEmailTemplate>({
     defaultValues: {
       itemId: templateData.itemId,
@@ -69,12 +66,10 @@ const BasicInformation = forwardRef(function Inner(
     mode: "onChange",
     reValidateMode: "onChange",
   });
-
   // Notify parent of form validity changes
   React.useEffect(() => {
     onValidityChange?.(form.formState.isValid);
   }, [form.formState.isValid, onValidityChange]);
-
   useImperativeHandle(ref, () => {
     return {
       submit() {
@@ -84,7 +79,6 @@ const BasicInformation = forwardRef(function Inner(
       isValid: form.formState.isValid,
     };
   }, [form.formState.isValid]);
-
   // useEffect(() => {
   //   const fetchData = async () => {
   //     try {
@@ -104,7 +98,6 @@ const BasicInformation = forwardRef(function Inner(
   //     fetchData();
   //   }
   // }, [tenantId]);
-
   return (
     <main className="mt-[20%] text-left sm:mt-[10%]">
       <h3 className="mt-[-16px] text-3xl font-semibold tracking-tight">Basic Information</h3>
@@ -286,5 +279,4 @@ const BasicInformation = forwardRef(function Inner(
     </main>
   );
 });
-
 export default BasicInformation;

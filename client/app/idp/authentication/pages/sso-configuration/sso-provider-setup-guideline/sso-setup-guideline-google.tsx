@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-
 export const googleStepupDocs = [
   {
     id: "0",

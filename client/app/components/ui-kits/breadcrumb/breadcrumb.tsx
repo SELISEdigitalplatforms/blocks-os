@@ -1,9 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { ChevronRight, MoreHorizontal } from "lucide-react"
-
 import { cn } from "@/lib/utils"
-
 const Breadcrumb = React.forwardRef<
   HTMLElement,
   React.ComponentPropsWithoutRef<"nav"> & {
@@ -11,7 +9,6 @@ const Breadcrumb = React.forwardRef<
   }
 >(({ ...props }, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />)
 Breadcrumb.displayName = "Breadcrumb"
-
 const BreadcrumbList = React.forwardRef<
   HTMLOListElement,
   React.ComponentPropsWithoutRef<"ol">
@@ -26,7 +23,6 @@ const BreadcrumbList = React.forwardRef<
   />
 ))
 BreadcrumbList.displayName = "BreadcrumbList"
-
 const BreadcrumbItem = React.forwardRef<
   HTMLLIElement,
   React.ComponentPropsWithoutRef<"li">
@@ -38,7 +34,6 @@ const BreadcrumbItem = React.forwardRef<
   />
 ))
 BreadcrumbItem.displayName = "BreadcrumbItem"
-
 const BreadcrumbLink = React.forwardRef<
   HTMLAnchorElement,
   React.ComponentPropsWithoutRef<"a"> & {
@@ -46,7 +41,6 @@ const BreadcrumbLink = React.forwardRef<
   }
 >(({ asChild, className, ...props }, ref) => {
   const Comp = asChild ? Slot : "a"
-
   return (
     <Comp
       ref={ref}
@@ -56,7 +50,6 @@ const BreadcrumbLink = React.forwardRef<
   )
 })
 BreadcrumbLink.displayName = "BreadcrumbLink"
-
 const BreadcrumbPage = React.forwardRef<
   HTMLSpanElement,
   React.ComponentPropsWithoutRef<"span">
@@ -71,7 +64,6 @@ const BreadcrumbPage = React.forwardRef<
   />
 ))
 BreadcrumbPage.displayName = "BreadcrumbPage"
-
 const BreadcrumbSeparator = ({
   children,
   className,
@@ -87,7 +79,6 @@ const BreadcrumbSeparator = ({
   </li>
 )
 BreadcrumbSeparator.displayName = "BreadcrumbSeparator"
-
 const BreadcrumbEllipsis = ({
   className,
   ...props
@@ -103,7 +94,6 @@ const BreadcrumbEllipsis = ({
   </span>
 )
 BreadcrumbEllipsis.displayName = "BreadcrumbElipssis"
-
 export {
   Breadcrumb,
   BreadcrumbList,

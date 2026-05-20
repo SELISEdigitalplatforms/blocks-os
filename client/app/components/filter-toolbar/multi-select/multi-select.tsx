@@ -1,7 +1,6 @@
 import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { cn } from "@/lib/utils";
 import usePopoverWidth from "@/hooks/use-popover-width";
-
 import useIsMobile from "@/hooks/use-is-mobile";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { Button } from "@/components/ui-kits/button/button";
@@ -16,17 +15,14 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui-kits/command/command";
-
 interface MultiSelectProps {
   label?: string;
   options: { label: string; value: string }[];
   value: string[];
   onChange: (selected: string[]) => void;
 }
-
 export function MultiSelect({ label, options, onChange, value: selectedValues }: MultiSelectProps) {
   const [buttonRef, popoverWidth] = usePopoverWidth();
-
   const onSelectHandler = (value: string) => {
     const nextValues = selectedValues.includes(value)
       ? selectedValues.filter((item) => item !== value)
@@ -50,7 +46,6 @@ export function MultiSelect({ label, options, onChange, value: selectedValues }:
             {selectedValues?.length > 0 && (
               <>
                 <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
-
                 <div className="flex space-x-1">
                   {selectedValues.length > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">

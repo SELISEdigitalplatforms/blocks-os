@@ -1,5 +1,4 @@
 import React from "react";
-
 interface MaskedTextProps {
   text: string;
   length?: number;
@@ -7,7 +6,6 @@ interface MaskedTextProps {
   showLastN?: number;
   char?: string;
 }
-
 export const MaskedText: React.FC<MaskedTextProps> = ({
   text,
   length,
@@ -16,12 +14,9 @@ export const MaskedText: React.FC<MaskedTextProps> = ({
   char = "*",
 }) => {
   const actualLength = length ?? text?.length ?? 0;
-
   const firstVisible = showFirstN > 0 ? text.slice(0, showFirstN) : "";
   const lastVisible = showLastN > 0 ? text.slice(-showLastN) : "";
-
   const maskedCount = Math.max(actualLength - showFirstN - showLastN, 0);
-
   return (
     <div className="flex min-w-0 items-center overflow-hidden">
       {firstVisible && <span className="shrink-0">{firstVisible}</span>}

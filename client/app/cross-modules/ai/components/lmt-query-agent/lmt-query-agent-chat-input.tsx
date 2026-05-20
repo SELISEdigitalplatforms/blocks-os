@@ -11,27 +11,23 @@ import {
 } from "@/components/ui-kits/form/form";
 import { UseFormReturn } from "react-hook-form";
 import { LmtQueryAgentForm } from "./utils";
-
 interface LMTQueryAgentChatInputProps {
   form: UseFormReturn<LmtQueryAgentForm>;
   isThinking: boolean;
   onSubmit: (data: LmtQueryAgentForm) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
-
 export const LMTQueryAgentChatInput = forwardRef<HTMLTextAreaElement, LMTQueryAgentChatInputProps>(
   ({ form, isThinking, onSubmit, onKeyDown }, _ref) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const currentQuery = form.watch("query");
     const isSubmitDisabled = isThinking || !currentQuery?.trim();
-
     useEffect(() => {
       const textarea = textareaRef.current;
       if (!textarea) return;
       textarea.style.height = "auto";
       textarea.style.height = `${textarea.scrollHeight}px`;
     }, [currentQuery]);
-
     return (
       <div className="w-full shrink-0 px-6 pb-4">
         <Form {...form}>
@@ -81,5 +77,4 @@ export const LMTQueryAgentChatInput = forwardRef<HTMLTextAreaElement, LMTQueryAg
     );
   },
 );
-
 LMTQueryAgentChatInput.displayName = "LMTQueryAgentChatInput";

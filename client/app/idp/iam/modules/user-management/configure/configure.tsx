@@ -1,4 +1,3 @@
-
 import { Edit, Undo2 } from "lucide-react";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Input } from "@/components/ui-kits/input/input";
@@ -25,18 +24,15 @@ import { IIAMConfiguration } from "@blocks-idp/iam/models/configuration.model";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { isErrorWithErrors } from "@/lib/error";
-
 export function Configure() {
   const { isLoading, data } = useGetIamConfiguration();
   const { mutateAsync, isPending } = useSaveIamConfiguration();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const form = useForm<IIAMConfiguration>({
     defaultValues: iamConfigFormDefaultValues,
     values: data?.data,
     resolver: zodResolver(iamConfigFormSchema),
   });
-
   const submitHandler = async (data: IIAMConfiguration) => {
     try {
       await mutateAsync({
@@ -52,11 +48,9 @@ export function Configure() {
       }
     }
   };
-
   return (
     <main className="px-4 pt-4 md:px-6 md:pt-6">
       <PageBreadcrumb breadcrumbIndex={2} />
-
       <div className="mb-6 mt-2 flex h-8 items-center justify-between">
         <div className="item-center flex gap-2">
           <h1 className="text-2xl font-semibold">User Configuration</h1>
@@ -122,7 +116,6 @@ export function Configure() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     name="activationUrlLifetimeInMinutes"
                     control={form.control}
@@ -181,7 +174,6 @@ export function Configure() {
                     )}
                   />
                 </div>
-
                 <div className="mt-6 flex items-center justify-end gap-2">
                   <Button variant="outline" size="sm" className="h-10" type="reset">
                     <Undo2 className="mr-2 h-5 w-4" />
@@ -194,7 +186,6 @@ export function Configure() {
                     disabled={isPending || !form.formState.isDirty}
                   >
                     <Edit className="mr-2 h-5 w-4" />
-
                     {isPending ? "Changing" : "Change"}
                   </Button>
                 </div>

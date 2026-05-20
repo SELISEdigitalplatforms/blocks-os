@@ -1,7 +1,6 @@
 import CoreHCaptcha from "@hcaptcha/react-hcaptcha";
 import { CaptchaRef, HCaptchaProps } from "./index.type";
 import { forwardRef, useImperativeHandle, useRef } from "react";
-
 export const HCaptcha = forwardRef<CaptchaRef, HCaptchaProps>(
   ({ siteKey, onVerify, onError, onExpired, theme = "light", size = "normal" }, ref) => {
     const captchaRef = useRef<CoreHCaptcha>(null);
@@ -23,5 +22,4 @@ export const HCaptcha = forwardRef<CaptchaRef, HCaptchaProps>(
     );
   },
 );
-
 HCaptcha.displayName = "hCaptcha";

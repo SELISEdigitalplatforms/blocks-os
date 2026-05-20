@@ -1,5 +1,3 @@
-
-
 import { useProjectStore } from "@/store/useProjectStore";
 import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
@@ -13,11 +11,9 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
-
 type PermissionDetailsProps = {
   id: string;
 };
-
 const FormLOadingSkeleton = () => (
   <Card>
     <CardContent>
@@ -32,12 +28,10 @@ const FormLOadingSkeleton = () => (
     </CardContent>
   </Card>
 );
-
 export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
   const selectedTenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading } = useGetPermissionById({ id, projectKey: selectedTenantId });
   const { isPending, mutateAsync } = useUpdatePermission({ id, projectKey: selectedTenantId });
-
   const onSubmit = async (data: permissionFormSchemaType) => {
     try {
       const res = await mutateAsync({
@@ -55,10 +49,8 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   BREADCRUMB_CUSTOM_TITLES["/services/iam/permission-detail"] = "Permissions";
   BREADCRUMB_CUSTOM_TITLES[`/services/iam/permission-detail/${id}`] = data?.data.name || "";
-
   return (
     <div className="px-4 pt-4 md:px-6 md:pt-6">
       <div className="hidden md:flex">

@@ -7,20 +7,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-
 type FilterValues = {
   search: string;
   providers: string[];
   types: string[];
 };
-
 type StorageFiltersToolbarProps = {
   filters: FilterValues;
   onChange: FilterChangeHandler<FilterValues>;
   onReset: () => void;
   onAddConfiguration: () => void;
 };
-
 export function StorageFiltersToolbar({
   filters,
   onChange,

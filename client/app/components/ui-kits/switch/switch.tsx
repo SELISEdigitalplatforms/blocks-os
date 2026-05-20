@@ -1,10 +1,7 @@
-
-
 import * as React from "react";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
-
 const switchVariants = cva(
   "relative cursor-pointer rounded-full border-[1px] border-solid transition-colors duration-200",
   {
@@ -20,7 +17,6 @@ const switchVariants = cva(
     },
   },
 );
-
 const switchThumbVariants = cva(
   "block cursor-pointer rounded-full transition-transform duration-200 will-change-transform",
   {
@@ -36,11 +32,9 @@ const switchThumbVariants = cva(
     },
   },
 );
-
 export interface SwitchProps
   extends React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>,
     VariantProps<typeof switchVariants> {}
-
 const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitive.Root>, SwitchProps>(
   ({ className, size, ...props }, ref) => (
     <SwitchPrimitive.Root
@@ -57,5 +51,4 @@ const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitive.Root>, S
   ),
 );
 Switch.displayName = SwitchPrimitive.Root.displayName;
-
 export { Switch };
