@@ -143,6 +143,8 @@ export class UserService {
       totalCount: number;
     }>(
       `${USER_ENDPOINTS.GET_SESSIONS}?page=${payload.page}&pageSize=${payload.pageSize}&projectkey=${payload.projectKey}&filter.userId=${payload.filter.UserId}`,
+      undefined,
+      { absoluteUrl: true },
     );
     return {
       data: res.data.map((item) => JSON.parse(parseMongoDBString(item))),
@@ -160,6 +162,8 @@ export class UserService {
       totalCount: number;
     }>(
       `${USER_ENDPOINTS.GET_HISTORIES}?page=${payload.page}&pageSize=${payload.pageSize}&projectkey=${payload.projectKey}&filter.userId=${payload.filter.UserId}`,
+      undefined,
+      { absoluteUrl: true },
     );
     return {
       data: res.data.map((item) => JSON.parse(parseMongoDBString(item))),
@@ -169,11 +173,11 @@ export class UserService {
   }
 
   async getPats(): Promise<IPATResponse> {
-    return http.get(USER_ENDPOINTS.GET_USER_CODES);
+    return http.get(USER_ENDPOINTS.GET_USER_CODES, undefined, { absoluteUrl: true });
   }
 
   async generatePats(payload: IGeneratePATPayload): Promise<IPATResponse> {
-    return http.post(USER_ENDPOINTS.GENERATE_USER_CODE, payload);
+    return http.post(USER_ENDPOINTS.GENERATE_USER_CODE, payload, undefined, { absoluteUrl: true });
   }
 }
 
