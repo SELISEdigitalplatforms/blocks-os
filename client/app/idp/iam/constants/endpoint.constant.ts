@@ -32,8 +32,8 @@ export const USER_ENDPOINTS = {
 
   GET_SESSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/sessions`,
   GET_HISTORIES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/history`,
-  GET_USER_CODES: `/api/auth/GetUserCodes`,
-  GENERATE_USER_CODE: `/api/auth/GenerateUserCode`,
+  GET_USER_CODES: `${BLOCKS_IDP_BASE_URL}/api/auth/GetUserCodes`,
+  GENERATE_USER_CODE: `${BLOCKS_IDP_BASE_URL}/api/auth/GenerateUserCode`,
 
 } as const;
 

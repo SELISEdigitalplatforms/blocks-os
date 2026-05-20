@@ -3,7 +3,7 @@ import { Camera } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
 import { storageService } from "@blocks-storage/services/storage.service";
-import { useGetUserById, useUpdateUser } from "@blocks-idp/iam/hooks/use-user";
+import { useGetMe, useUpdateUser } from "@blocks-idp/iam/hooks/use-user";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 const emptyProfilePhoto = "/assets/images/empty-profile-photo.png";
@@ -12,7 +12,7 @@ type ProfileImageUploaderProps = { projectKey: string; id: string };
 export const ProfileImageUploader = ({ projectKey, id }: ProfileImageUploaderProps) => {
   const [image, setImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { data } = useGetUserById({ id, projectKey });
+  const { data } = useGetMe();
   const { mutateAsync } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadImageMutate } = useUploadFile();
   const { mutateAsync: updateUserMutate } = useUpdateUser({ projectKey, id, own: true });
