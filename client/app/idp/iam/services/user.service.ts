@@ -133,6 +133,48 @@ export class UserService {
       absoluteUrl: true,
     });
   }
+
+  async getSessions(
+    payload: IGetSessionPayload,
+  ): Promise<IDeviceSessionResponse> {
+    const res = await http.get<{
+      data: string[];
+      errors: unknown;
+      totalCount: number;
+    }>(
+      `${USER_ENDPOINTS.GET_SESSIONS}?page=${payload.page}&pageSize=${payload.pageSize}&projectkey=${payload.projectKey}&filter.userId=${payload.filter.UserId}`,
+    );
+    return {
+      data: res.data.map((item) => JSON.parse(parseMongoDBString(item))),
+      totalCount: res.totalCount,
+      errors: res.errors,
+    };
+  }
+
+  async getHistories(
+    payload: IGetHistoriesPayload,
+  ): Promise<IHistoriesResponse> {
+    const res = await http.get<{
+      data: string[];
+      errors: unknown;
+      totalCount: number;
+    }>(
+      `${USER_ENDPOINTS.GET_HISTORIES}?page=${payload.page}&pageSize=${payload.pageSize}&projectkey=${payload.projectKey}&filter.userId=${payload.filter.UserId}`,
+    );
+    return {
+      data: res.data.map((item) => JSON.parse(parseMongoDBString(item))),
+      totalCount: res.totalCount,
+      errors: res.errors,
+    };
+  }
+
+  async getPats(): Promise<IPATResponse> {
+    return http.get(USER_ENDPOINTS.GET_USER_CODES);
+  }
+
+  async generatePats(payload: IGeneratePATPayload): Promise<IPATResponse> {
+    return http.post(USER_ENDPOINTS.GENERATE_USER_CODE, payload);
+  }
 }
 
 export const userService = new UserService(new UserAccountService());

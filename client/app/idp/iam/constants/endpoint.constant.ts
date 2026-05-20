@@ -4,12 +4,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 const BLOCKS_IDP_BASE_URL = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
 const IAM_SUBPATH = "/iam";
 
-// ─── Activity endpoints (activity.service) ─────────────────────────────────
 
-export const ACTIVITY_ENDPOINTS = {
-  GET_SESSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/sessions`,
-  GET_HISTORIES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/history`,
-} as const;
 
 // ─── User endpoints (user.service) ──────────────────────────────────────────
 
@@ -34,6 +29,12 @@ export const USER_ENDPOINTS = {
   GET_ACCOUNT_ROLES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/roles`,
   GET_ACCOUNT_PERMISSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/account/permissions`,
   GET_EMAIL_AVAILABLE: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/email/available`,
+
+  GET_SESSIONS: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/sessions`,
+  GET_HISTORIES: `${BLOCKS_IDP_BASE_URL}/api${IAM_SUBPATH}/history`,
+  GET_USER_CODES: `/api/auth/GetUserCodes`,
+  GENERATE_USER_CODE: `/api/auth/GenerateUserCode`,
+
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────
