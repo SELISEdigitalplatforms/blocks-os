@@ -3,13 +3,11 @@ import { Button } from "@/components/ui-kits/button/button";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useGetProject, useValidateCNameProject } from "@/hooks/use-project";
 import { useProjectStore } from "@/store/useProjectStore";
-
 export const CnameValidatorProject = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { itemId } = useProjectStore().selectedProject || { itemId: "", tenantId: "" };
   const { data } = useGetProject({ projectId: itemId });
   const { mutateAsync, isPending } = useValidateCNameProject({ projectKey });
-
   const cNameValidator = async () => {
     try {
       if (!data?.data.applicationDomain) return;

@@ -3,15 +3,13 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui-kits/sheet/sh
 import { Bot } from "lucide-react";
 import { LMTQueryAgent } from "./lmt-query-agent";
 import { useState } from "react";
-
 interface LMTQueryAgentSheetProps {
   agentName?: string;
   questions?: string[];
   description?: string;
 }
-
 export const LMTQueryAgentSheet = ({
-  agentName = "Ask AI",
+  agentName = "Blocks Agent",
   questions,
   description,
 }: LMTQueryAgentSheetProps) => {

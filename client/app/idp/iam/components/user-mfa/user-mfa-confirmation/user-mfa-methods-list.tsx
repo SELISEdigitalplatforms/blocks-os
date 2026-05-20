@@ -4,13 +4,11 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { MFA_Provider_Data } from "@blocks-idp/mfa/utils/mfa-config";
 import { useMemo } from "react";
-
 type UserMFAMethodListProps = {
   selected: number;
   setSelected: (selected: number) => void;
   projectKey: string;
 };
-
 export const UserMFAMethodList = ({
   selected,
   setSelected,

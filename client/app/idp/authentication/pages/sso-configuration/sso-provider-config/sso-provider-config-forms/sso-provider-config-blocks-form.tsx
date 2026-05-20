@@ -16,37 +16,27 @@ import { ssoProviderConfigBaseSchema } from "../sso-provider-config.schema";
 import { SSOProviderConfigFormFieldType } from "../sso-provider-config.type";
 import { SSOProviderConfigFormField } from "./sso-provider-config-form-fields";
 import { SsoConfigForms } from "./sso-provider-config-forms";
-
 const SCOPE_OPTIONS = [
   { label: "Open Id", value: "openid" },
   { label: "Email", value: "email" },
 ];
-
 const SCOPE_VALUE_SET = new Set(SCOPE_OPTIONS.map((option) => option.value.toLowerCase()));
-
 const toUniqueList = (values: string[]) => {
   const uniqueValues: string[] = [];
-
   values.forEach((value) => {
     const normalized = value.trim().toLowerCase();
-
     if (normalized && SCOPE_VALUE_SET.has(normalized) && !uniqueValues.includes(normalized)) {
       uniqueValues.push(normalized);
     }
   });
-
   return uniqueValues;
 };
-
 const DEFAULT_SCOPE_SELECTION = toUniqueList(SCOPE_OPTIONS.map((option) => option.value));
-
 const parseScopeValue = (scope?: string | string[]) => {
   if (!scope) return DEFAULT_SCOPE_SELECTION;
   if (Array.isArray(scope)) return toUniqueList(scope);
-
   return toUniqueList(scope.split(/[\s,]+/));
 };
-
 const SSOBlocksFormFields: SSOProviderConfigFormFieldType[] = [
   ...createCommonOAuthFields({
     clientId: { description: "", isDisabled: true },
@@ -73,7 +63,6 @@ const SSOBlocksFormFields: SSOProviderConfigFormFieldType[] = [
     ],
   },
 ];
-
 type FormValue = {
   provider: string;
   audience: string;
@@ -83,17 +72,14 @@ type FormValue = {
   scope: string[];
   isAutoRedirect: "true" | "false";
 };
-
 const schema = ssoProviderConfigBaseSchema.extend({
   scope: z.array(z.string().trim()).nonempty({ message: "Select at least one scope." }),
   isAutoRedirect: z.enum(["true", "false"]),
 });
-
 export const SSOProviderConfigBlocksForm: React.FC<SsoConfigForms> = () => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { data: existingConfiguration } = useSaveGetOIDCCredential(tenantId);
   const { mutateAsync } = useSaveOIDCCredential();
-
   const mapResponseToFormValue = (configuration?: IGetOIDCCredentialResponse): FormValue => ({
     provider: "SELISE OIDC",
     audience: configuration?.audience || "",
@@ -103,12 +89,10 @@ export const SSOProviderConfigBlocksForm: React.FC<SsoConfigForms> = () => {
     scope: parseScopeValue(configuration?.scope),
     isAutoRedirect: configuration?.isAutoRedirect ? "true" : "false",
   });
-
   const form = useForm<FormValue>({
     values: mapResponseToFormValue(existingConfiguration),
     resolver: zodResolver(schema),
   });
-
   const onFormSubmit = async (data: FormValue) => {
     const payload = {
       redirectUri: data.redirectUrl,
@@ -119,11 +103,9 @@ export const SSOProviderConfigBlocksForm: React.FC<SsoConfigForms> = () => {
       projectKey: tenantId,
     };
     const res = await mutateAsync(payload);
-
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });
     showSuccessToast({ description: `Blocks OIDC is configured successfully` });
   };
-
   return (
     <Form {...form}>
       <form
@@ -138,7 +120,6 @@ export const SSOProviderConfigBlocksForm: React.FC<SsoConfigForms> = () => {
             <SSOProviderConfigFormField fields={SSOBlocksFormFields} form={form} />
           </CardContent>
         </Card>
-
         <div className="flex items-center justify-end gap-2">
           <Button type="submit">Save</Button>
         </div>

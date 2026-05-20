@@ -2,7 +2,6 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Checkbox } from "@radix-ui/react-checkbox";
 import { TabsContent } from "@radix-ui/react-tabs";
-
 type MembershipRolesTabProps = {
   isEditing: boolean;
   rolesSearch: string;
@@ -13,7 +12,6 @@ type MembershipRolesTabProps = {
   onRoleToggle: (roleSlug: string) => void;
   getRoleDisplayName: (roleSlug: string) => string;
 };
-
 export const MembershipRolesTab = ({
   isEditing,
   rolesSearch,

@@ -10,9 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-
 type ValueType = { selected: string; value: string };
-
 interface DropdownSearchInputProps {
   onChange: (params: ValueType) => void;
   placeholder?: string;
@@ -24,7 +22,6 @@ interface DropdownSearchInputProps {
   };
   options: { label: ReactNode; value: string }[];
 }
-
 export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   onChange,
   placeholder = "Search...",
@@ -34,42 +31,35 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
 }) => {
   const [state, setState] = useState<ValueType>(value);
   const inputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     setState(value);
   }, [value]);
-
   const debounced = useRef(
     debounce((val: ValueType) => {
       onChange(val);
     }, 300),
   ).current;
-
   useEffect(() => {
     return () => {
       debounced.cancel();
     };
   }, [debounced]);
-
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     event.stopPropagation();
     const data = { ...state, value: event.target.value };
     setState(data);
     debounced(data);
   };
-
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();
     const data = { ...state, value: "" };
     setState(data);
     onChange(data);
   };
-
   const handleSelect = (value: string) => {
     setState({ selected: value, value: "" });
     onChange({ selected: value, value: "" });
   };
-
   return (
     <div className="flex items-center gap-2 rounded-md border pr-2">
       <Select onValueChange={handleSelect} value={state.selected}>
@@ -84,7 +74,6 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
           ))}
         </SelectContent>
       </Select>
-
       <Input
         ref={inputRef}
         placeholder={placeholder}
@@ -95,7 +84,6 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
           className?.input,
         )}
       />
-
       <Button
         variant="ghost"
         size="xs"

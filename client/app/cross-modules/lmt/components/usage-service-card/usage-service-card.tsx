@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { abbreviateBytes, abbreviateDurationMs, abbreviateNumber } from "../../utils/usage.util";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { UsageMatrixSummary } from "../../models/usage.model";
@@ -10,10 +9,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { cn } from "@/lib/utils";
-import { Activity, Cpu, Info, Logs } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
+import { Info, Logs } from "lucide-react";
 import { Link } from "react-router-dom";
-
 interface ServiceCardProps {
   isLoading: boolean;
   name: string;
@@ -23,34 +27,28 @@ interface ServiceCardProps {
     worker: UsageMatrixSummary;
   };
 }
-
 const UsageServiceCardSkelton = ({ name }: { name: string }) => (
-  <Card className="border shadow-none transition-shadow duration-200 hover:shadow-md">
-    <CardHeader className="flex flex-row items-center justify-between">
-      <CardTitle className="text-lg font-semibold text-high-emphasis">{name}</CardTitle>
-    </CardHeader>
-
-    <CardContent>
-      <Skeleton className="h-16 w-full" />
-      <Skeleton className="mt-2 h-16 w-full" />
-      <div className="mt-4 grid gap-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-medium-emphasis">Calls/min</span>
-          <Skeleton className="h-4 w-1/2" />
+  <Card className="border shadow-none">
+    <CardContent className="p-4">
+      <div className="mb-4 flex items-start justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-semibold text-high-emphasis">{name}</div>
+          <Skeleton className="h-3 w-24" />
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-medium-emphasis">Peak Response</span>
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-medium-emphasis">Throughput</span>
-          <Skeleton className="h-4 w-1/2" />
-        </div>
+        <Skeleton className="h-7 w-28 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Skeleton className="h-[72px] rounded-lg" />
+        <Skeleton className="h-[72px] rounded-lg" />
+      </div>
+      <div className="mt-3 space-y-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
       </div>
     </CardContent>
   </Card>
 );
-
 export const UsageServiceCard: React.FC<ServiceCardProps> = ({
   name,
   logLink,
@@ -58,173 +56,111 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
   isLoading,
 }) => {
   const [selected, setSelected] = useState<"api" | "worker">("api");
-
   if (isLoading) return <UsageServiceCardSkelton name={name} />;
-
   const currentMatrix = metrics[selected];
-  const mobileItemClassName =
-    "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200 md:h-8 md:w-auto md:px-2 md:gap-1 md:rounded-[8px]";
-
   return (
-    <Card className="border shadow-none transition-shadow duration-200 hover:shadow-md">
-      <CardHeader className="gap-2">
-        <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-3">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold text-high-emphasis">{name}</CardTitle>
-            <p className="text-xs text-medium-emphasis sm:text-sm">Inspect request path, background work, and logs.</p>
+    <Card className="border shadow-none transition-shadow duration-200 hover:shadow-sm">
+      <CardContent className="p-4">
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold text-high-emphasis">{name}</div>
+            <div className="mt-0.5 text-xs text-medium-emphasis">Requests &amp; performance</div>
           </div>
-
-          <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-surface-app/80 p-1 md:gap-0.5">
-            <button
-              type="button"
-              onClick={() => setSelected("api")}
-              className={cn(
-                mobileItemClassName,
-                selected === "api"
-                  ? "bg-background text-high-emphasis shadow-sm"
-                  : "text-medium-emphasis hover:bg-background/70 hover:text-high-emphasis",
-              )}
-              title="API metrics"
-            >
-              <Activity className="h-3 w-3" />
-              <span className={cn("hidden md:inline text-xs font-medium")}>API</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelected("worker")}
-              className={cn(
-                mobileItemClassName,
-                selected === "worker"
-                  ? "bg-background text-high-emphasis shadow-sm"
-                  : "text-medium-emphasis hover:bg-background/70 hover:text-high-emphasis",
-              )}
-              title="Worker metrics"
-            >
-              <Cpu className="h-3 w-3" />
-              <span className={cn("hidden md:inline text-xs font-medium")}>Worker</span>
-            </button>
-
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Select value={selected} onValueChange={(v) => setSelected(v as "api" | "worker")}>
+              <SelectTrigger className="h-7 w-24 rounded-lg border-border/70 bg-muted/40 px-2 text-xs shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="api" className="text-xs">API</SelectItem>
+                <SelectItem value="worker" className="text-xs">Worker</SelectItem>
+              </SelectContent>
+            </Select>
             {logLink ? (
               <Link
                 to={logLink}
-                className={cn(
-                  mobileItemClassName,
-                  "border border-transparent text-medium-emphasis hover:border-border/80 hover:bg-background hover:text-high-emphasis",
-                )}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 bg-muted/40 text-medium-emphasis transition-colors hover:bg-background hover:text-high-emphasis hover:shadow-sm"
                 title="View logs"
               >
-                <Logs className="h-3 w-3" />
-                <span className={cn("hidden md:inline text-xs font-medium")}>Logs</span>
+                <Logs className="h-3.5 w-3.5" />
               </Link>
             ) : (
               <div
-                className={cn(
-                  mobileItemClassName,
-                  "cursor-not-allowed border border-dashed border-border/70 text-disabled opacity-70",
-                )}
+                className="flex h-7 w-7 cursor-not-allowed items-center justify-center rounded-lg border border-dashed border-border/70 text-muted-foreground opacity-50"
                 title="Logs unavailable"
               >
-                <Logs className="h-3 w-3" />
-                <span className={cn("hidden md:inline text-xs font-medium")}>Logs</span>
+                <Logs className="h-3.5 w-3.5" />
               </div>
             )}
           </div>
         </div>
-      </CardHeader>
-
-      <CardContent>
-        <div className="flex h-16 flex-col justify-center rounded-sm bg-surface-app px-3 py-2">
-          <div className="flex items-center justify-between text-high-emphasis">
-            <h3 className="text-lg font-normal">API calls</h3>
-            <h3 className="text-xl font-semibold">
-              {abbreviateNumber(currentMatrix.TotalRequests)}
-            </h3>
-          </div>
-          {selected === "api" && (
-            <div className="mt-1 flex items-center gap-2 text-sm font-medium text-medium-emphasis">
-              <div>
-                Success:{" "}
-                <span className="text-green-700">
-                  {abbreviateNumber(currentMatrix.totalSuccess)} ({currentMatrix.successRate}%)
-                </span>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col justify-between rounded-lg bg-muted/40 p-3">
+            <span className="text-xs text-medium-emphasis">API Calls</span>
+            <div>
+              <div className="text-xl font-bold text-high-emphasis">
+                {abbreviateNumber(currentMatrix.TotalRequests)}
               </div>
-              <div className="aspect-square w-1 rounded-full bg-blocks-primary-50"></div>
-              <div>
-                Error:{" "}
-                <span className="text-red-700">
-                  {abbreviateNumber(currentMatrix.totalError)} ({currentMatrix.errorRate}%)
-                </span>
-              </div>
-              <div className="aspect-square w-1 rounded-full bg-blocks-primary-50"></div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="aspect-square w-4" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-10">
-                      <div className="flex flex-col gap-1">
-                        <h4>Success Series</h4>
-                        <div className="flex items-center justify-between">
-                          <span>1xx</span>
-                          <span>{abbreviateNumber(currentMatrix.Status1xx)}</span>
+              {selected === "api" && (
+                <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+                  <span className="font-medium text-green-600">
+                    {currentMatrix.successRate}% ok
+                  </span>
+                  <span className="text-border">·</span>
+                  <span className="font-medium text-red-500">
+                    {currentMatrix.errorRate}% err
+                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 cursor-pointer text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-1">
+                            <div className="text-xs font-semibold">Success</div>
+                            {[["1xx", currentMatrix.Status1xx], ["2xx", currentMatrix.Status2xx], ["3xx", currentMatrix.Status3xx]].map(([k, v]) => (
+                              <div key={k} className="flex justify-between gap-4 text-xs">
+                                <span className="text-muted-foreground">{k}</span>
+                                <span>{abbreviateNumber(v as number)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-semibold">Errors</div>
+                            {[["4xx", currentMatrix.Status4xx], ["5xx", currentMatrix.Status5xx]].map(([k, v]) => (
+                              <div key={k} className="flex justify-between gap-4 text-xs">
+                                <span className="text-muted-foreground">{k}</span>
+                                <span>{abbreviateNumber(v as number)}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>2xx</span>
-                          <span>{abbreviateNumber(currentMatrix.Status2xx)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>3xx</span>
-                          <span>{abbreviateNumber(currentMatrix.Status3xx)}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <h4>Error Series</h4>
-                        <div className="flex items-center justify-between">
-                          <span>4xx</span>
-                          <span>{abbreviateNumber(currentMatrix.Status4xx)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>5xx</span>
-                          <span>{abbreviateNumber(currentMatrix.Status5xx)}</span>
-                        </div>
-                        <div></div>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+          <div className="flex flex-col justify-between rounded-lg bg-muted/40 p-3">
+            <span className="text-xs text-medium-emphasis">Avg Duration</span>
+            <div className="text-xl font-bold text-high-emphasis">
+              {abbreviateDurationMs(currentMatrix.AverageDuration)}
+            </div>
+          </div>
         </div>
-
-        <div className="mt-3 flex h-16 items-center justify-between rounded-sm bg-surface-app px-3 py-2">
-          <h3 className="text-lg font-normal">Average duration</h3>
-          <h3 className="text-xl font-semibold">
-            {abbreviateDurationMs(currentMatrix.AverageDuration)}
-          </h3>
-        </div>
-
-        <div className="mt-4 grid gap-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-medium-emphasis">Calls/min</span>
-            <span className="text-sm font-semibold text-high-emphasis">
-              {currentMatrix.callsPerMinute}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-medium-emphasis">Peak Response</span>
-            <span className="text-sm font-semibold text-high-emphasis">
-              {abbreviateDurationMs(currentMatrix.PeakDuration)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-medium-emphasis">Throughput</span>
-            <span className="text-sm font-semibold text-high-emphasis">
-              {abbreviateBytes(currentMatrix.TotalThroughput || 0)}
-            </span>
-          </div>
+        <div className="mt-3 divide-y divide-border/50">
+          {[
+            { label: "Calls / min", value: String(currentMatrix.callsPerMinute) },
+            { label: "Peak Response", value: abbreviateDurationMs(currentMatrix.PeakDuration) },
+            { label: "Throughput", value: abbreviateBytes(currentMatrix.TotalThroughput || 0) },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between py-1.5">
+              <span className="text-xs text-medium-emphasis">{label}</span>
+              <span className="text-xs font-semibold text-high-emphasis">{value}</span>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

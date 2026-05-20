@@ -1,5 +1,3 @@
-
-
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
   Table,
@@ -32,14 +30,12 @@ import {
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useNavigate } from "react-router-dom";
-
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;
   emailConfigsData: IEmailConfig[];
   onRowClick: (emailId: number | string) => void;
 };
-
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -47,7 +43,6 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
 export const EmailTemplateList = ({
   templates,
   isLoading,
@@ -62,7 +57,6 @@ export const EmailTemplateList = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTemplateData, setSelectedTemplateData] = useState<IEmailTemplate | null>(null);
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-
   const cloneEmailTemplate = (rowData: IEmailTemplate) => {
     setSelectedTemplateData(rowData);
     setIsCloneDialogOpen(true);
@@ -71,7 +65,6 @@ export const EmailTemplateList = ({
     setSelectedTemplateData(rowData);
     setIsDeleteDialogOpen(true);
   };
-
   const onConfirmDeleteTemplate = async () => {
     try {
       const payload = {
@@ -101,7 +94,6 @@ export const EmailTemplateList = ({
       });
     }
   };
-
   const onConfirmCloneTemplate = async () => {
     try {
       const payload = {
@@ -200,14 +192,14 @@ export const EmailTemplateList = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:no-underline"
                   onClick={() => onRowClick(row.original.itemId)}
                 >
                   <AlignLeft className="mr-2 h-4 w-4" />
                   <span>View details</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:no-underline"
                   onClick={(e) => {
                     e.stopPropagation();
                     cloneEmailTemplate(row.original);
@@ -218,7 +210,7 @@ export const EmailTemplateList = ({
                 </DropdownMenuItem>
                 {row.original.generatedBy !== "Tenant" && (
                   <DropdownMenuItem
-                    className="cursor-pointer text-error"
+                    className="cursor-pointer text-error hover:no-underline"
                     onClick={(e) => {
                       e.stopPropagation();
                       DeleteEmailTemplate(row.original);
@@ -243,15 +235,12 @@ export const EmailTemplateList = ({
     ],
     [sortQueryParams, setSortQueryParams, emailConfigsData],
   );
-
   const table = useReactTable({
     data: templates,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) return <LoadingSkeleton />;
-
   return (
     <Table className="text-sm">
       <TableHeader>
@@ -272,7 +261,7 @@ export const EmailTemplateList = ({
           table.getRowModel().rows.map((row) => (
             <TableRow
               key={row.id}
-              className="cursor-pointer"
+              className="cursor-pointer hover:no-underline"
               onClick={() => onRowClick(row.original.itemId)}
               isHoverable
             >

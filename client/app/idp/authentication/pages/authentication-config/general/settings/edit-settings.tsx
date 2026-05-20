@@ -30,42 +30,33 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { authConfigFormDefaultValues, authConfigFormSchema } from "./utils";
-
 export const EditGeneralSettings = () => {
   const [open, setOpen] = useState<boolean>(false);
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { data } = useGetAuthConfig({ projectKey: tenantId });
-
   const { mutateAsync, isPending } = useSaveAuthConfig({ projectKey: tenantId });
-
   const form = useForm<z.infer<typeof authConfigFormSchema>>({
     defaultValues: authConfigFormDefaultValues,
     resolver: zodResolver(authConfigFormSchema),
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (isOpen) {
       form.reset(data || authConfigFormDefaultValues);
     }
     setOpen(isOpen);
   };
-
   const submitHandler = async (values: z.infer<typeof authConfigFormSchema>) => {
     try {
       if (!tenantId || !data) return showErrorToast({ errors: "Something went wrong" });
-
       const res = await mutateAsync({
         ...data,
         ...values,
         projectKey: tenantId,
       });
-
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-
       showSuccessToast({ description: "Configuration updated successfully" });
       form.reset();
       setOpen(false);
@@ -146,7 +137,6 @@ export const EditGeneralSettings = () => {
                   </FormItem>
                 )}
               />
-
               <FormField
                 name="accountLockDurationInMinutes"
                 control={form.control}

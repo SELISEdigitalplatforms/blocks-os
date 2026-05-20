@@ -132,6 +132,7 @@ namespace DomainService.Projects
             return project.JwtTokenParameters.CertificateStorageType switch
             {
                 CertificateStorageType.Azure => await UploadPublicCertificateIntoCloudAsync(publicKeyCertificate, project),
+                CertificateStorageType.Mongodb => await UploadPublicCertificateIntoCloudAsync(publicKeyCertificate, project),
                 CertificateStorageType.Filefilesystem => await UploadPublicCertificateIntoFileSystemAsync(publicKeyCertificate, project),
                 _ => throw new NotSupportedException($"Unsupported certificate storage type: {project.JwtTokenParameters.CertificateStorageType}"),
             };
@@ -303,10 +304,12 @@ namespace DomainService.Projects
                 LastUpdatedDate = DateTime.UtcNow,
                 IsAcceptBlocksTerms = createProjectRequest.IsAcceptBlocksTerms,
                 IsUseBlocksExclusively = createProjectRequest.IsUseBlocksExclusively,
-                ApplicationDomain = applicationDomain,
+               // ApplicationDomain = applicationDomain,
                 DbConnectionString = _blocksSecret.DatabaseConnectionString,
-                CookieDomain = applicationContext.CookieDomain,
-                IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
+               // CookieDomain = applicationContext.CookieDomain,
+               // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
+
+                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = applicationContext.CookieDomain, IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocksDomain } ],
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -367,49 +370,40 @@ namespace DomainService.Projects
             return new RestoreProjectResponse { IsSuccess = true };
         }
 
-        public async Task<GetProjectResponse> GetAsync(string projectId)
+        public async Task<GetProjectResponse> GetAsync()
         {
-            return await MapIntoProjectAsync(projectId);
-        }
-
-        private async Task<GetProjectResponse> MapIntoProjectAsync(string projectId)
-        {
-            var repoProject = await _projectRepository.GetByIdAsync(projectId);
-
-            if (repoProject == null)
-            {
-                return new GetProjectResponse { Errors = new Dictionary<string, string> { { "project_not_exist", $"project_with_id_{projectId}_not_exist_into_our_system" } } };
-            }
+           var tenant = await _projectRepository.GetByTenantIdAsync(BlocksContext.GetContext()?.TenantId);
 
             string tenantSlug = string.Empty;
-            var blocksGuid = await _projectRepository.GetBlocksGuidAsync(repoProject.TenantGroupId);
+            var blocksGuid = await _projectRepository.GetBlocksGuidAsync(tenant.TenantGroupId);
+
             if (blocksGuid is not null)
             {
-                tenantSlug = $"{IdentifierHelper.EnvironmentMapper(repoProject.Environment)}{blocksGuid.EncodedValue}";
+                tenantSlug = $"{IdentifierHelper.EnvironmentMapper(tenant.Environment)}{blocksGuid.EncodedValue}";
             }
 
             var project = new GetProjectResponseData
             {
-                Name = repoProject.Name,
-                ApplicationDomain = repoProject.ApplicationDomain,
-                ItemId = repoProject.ItemId,
-                CreatedDate = repoProject.CreatedDate,
-                LastUpdatedDate = repoProject.LastUpdatedDate,
-                LastUpdatedBy = repoProject.LastUpdatedBy,
-                OrganizationIds = repoProject.OrganizationIds,
-                CreatedBy = repoProject.CreatedBy,
-                Tags = repoProject.Tags,
-                TenantId = repoProject.TenantId,
-                IsDomainVerified = repoProject.IsDomainVerified,
-                CookieDomain = repoProject.CookieDomain,
-                IsDisabled = repoProject.IsDisabled,
-                Environment = repoProject.Environment,
-                TenantGroupId = repoProject.TenantGroupId,
-                CustomDomain = repoProject.CustomDomain,
+                Name = tenant.Name,
+                ApplicationDomain = tenant.Applications.FirstOrDefault()?.Domain ?? "",
+                ItemId = tenant.ItemId,
+                CreatedDate = tenant.CreatedDate,
+                LastUpdatedDate = tenant.LastUpdatedDate,
+                LastUpdatedBy = tenant.LastUpdatedBy,
+                OrganizationIds = tenant.OrganizationIds,
+                CreatedBy = tenant.CreatedBy,
+                Tags = tenant.Tags,
+                TenantId = tenant.TenantId,
+                IsDomainVerified = tenant.Applications.FirstOrDefault()?.IsDomainVerified ?? false,
+                CookieDomain = tenant.Applications.FirstOrDefault()?.CookieDomain ?? "",
+                IsDisabled = tenant.IsDisabled,
+                Environment = tenant.Environment,
+                TenantGroupId = tenant.TenantGroupId,
                 TenantSlug = tenantSlug
             };
 
             return new GetProjectResponse { Data = project };
+
         }
 
         public async Task<BaseResponse> UpdateProjectAsync(UpdateProjectRequest request)
@@ -423,27 +417,29 @@ namespace DomainService.Projects
 
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.ApplicationDomain);
 
-            if (!string.Equals(request.ApplicationDomain, project.ApplicationDomain))
-            {
-                project.IsDomainVerified = mainDomain == IdentifierConstants.BlocsDomain;
-            }
+            //if (!string.Equals(request.ApplicationDomain, project.ApplicationDomain))
+            //{
+            //    project.IsDomainVerified = mainDomain == IdentifierConstants.BlocksDomain;
+            //}
 
-            if (request.ApplicationDomain.Contains(IdentifierConstants.BlocsDomain, StringComparison.OrdinalIgnoreCase))
-            {
-                project.IsDomainVerified = true;
-            }
+            //if (request.ApplicationDomain.Contains(IdentifierConstants.BlocksDomain, StringComparison.OrdinalIgnoreCase))
+            //{
+            //    project.IsDomainVerified = true;
+            //}
 
             project.LastUpdatedDate = DateTime.UtcNow;
-            project.ApplicationDomain = request.ApplicationDomain;
+            // project.ApplicationDomain = request.ApplicationDomain;
             project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            project.CookieDomain = mainDomain;
-            project.CustomDomain = !string.IsNullOrWhiteSpace(request.CustomDomain) ? request.CustomDomain : project.CustomDomain;
-            project.JwtTokenParameters.Audiences = [request.ApplicationDomain];
+            //  project.CookieDomain = mainDomain;
+           // project.CustomDomain = !string.IsNullOrWhiteSpace(request.CustomDomain) ? request.CustomDomain : project.CustomDomain;
+            project.JwtTokenParameters.Audiences.Add(request.ApplicationDomain);
+            project.Applications.Add(new Applications { Domain = request.ApplicationDomain, CookieDomain = mainDomain, IsDomainVerified = mainDomain == IdentifierConstants.BlocksDomain });
 
-            if (!string.IsNullOrWhiteSpace(request.CustomDomain) && !project.AllowedDomains.Contains(request.ApplicationDomain, StringComparer.OrdinalIgnoreCase))
-            {
-                project.AllowedDomains.Add(request.ApplicationDomain);
-            }   
+
+            //if (!string.IsNullOrWhiteSpace(request.CustomDomain) && !project.AllowedDomains.Contains(request.ApplicationDomain, StringComparer.OrdinalIgnoreCase))
+            //{
+            //    project.AllowedDomains.Add(request.ApplicationDomain);
+            //}   
 
             await Task.WhenAll(_projectRepository.UpdateProjectAsync(project),
                                 _projectRepository.UpdateIamConfiguration(project));
@@ -493,7 +489,7 @@ namespace DomainService.Projects
                 Tenant = project
             });
 
-            var domain = IdentifierConstants.CookieDomainPrefix + project.CookieDomain;
+            var domain = IdentifierConstants.CookieDomainPrefix + project.Applications.FirstOrDefault()?.CookieDomain;
             await _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = new DisableDomainBindingRequest { ProjectId = project.ItemId, Domain = domain } });
 
             return new BaseResponse { IsSuccess = true };

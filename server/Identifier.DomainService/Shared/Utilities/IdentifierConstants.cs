@@ -28,7 +28,7 @@ namespace DomainService.Shared
         public const string GenericMigrationQueue = "blocks_generic_migration_listener";
         public const string MigrationCompletionTopic = "migration_topic";
         public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
-        public const string BlocsDomain = "seliseblocks.com";
+        public const string BlocksDomain = "seliseblocks.com";
 
         public const string CertbotEmail = "devsecops@selisegroup.com";
         public const string CertbotWebrootPath = "/var/www/html";

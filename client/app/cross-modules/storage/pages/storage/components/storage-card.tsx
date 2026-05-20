@@ -8,7 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-
 export interface StorageCardData {
   id: string;
   provider: StorageStrategyType;
@@ -17,7 +16,6 @@ export interface StorageCardData {
   title: string;
   subtitle: string;
 }
-
 type StorageCardProps = {
   data: StorageCardData;
   onClick?: (id: string) => void;
@@ -25,14 +23,12 @@ type StorageCardProps = {
   onRemove?: (id: string) => void;
   onDisconnect?: (id: string) => void;
 };
-
 const providerColors: Record<StorageStrategyType, string> = {
   Amazon: "bg-orange-100 text-orange-600",
   Azure: "bg-blue-100 text-blue-600",
   SftpStorage: "bg-green-100 text-green-600",
   S3Compatible: "bg-purple-100 text-purple-600",
 };
-
 export const StorageCard = ({
   data,
   onClick,
@@ -41,14 +37,11 @@ export const StorageCard = ({
   const handleClick = () => {
     onClick?.(data.id);
   };
-
   const handleViewDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
     onViewDetails?.(data.id);
   };
-
   const providerColorClass = providerColors[data.provider];
-
   return (
     <Card
       onClick={handleClick}

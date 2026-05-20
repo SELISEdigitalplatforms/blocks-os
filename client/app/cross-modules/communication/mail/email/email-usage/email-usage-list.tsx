@@ -1,5 +1,3 @@
-
-
 import React, { useMemo } from "react";
 import { ColumnDef, getCoreRowModel, useReactTable, flexRender } from "@tanstack/react-table";
 import { Eye, MoreVertical } from "lucide-react";
@@ -29,7 +27,6 @@ import {
   useEmailUsageFilterQueryParams,
 } from "@blocks-communication/mail/email/email-usage/email-usage-filter-toolbar";
 import { Link } from "react-router-dom";
-
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -37,11 +34,9 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
 export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
   const { queryParams, setQueryParams } = useEmailUsageFilterQueryParams();
   const { page, pageSize, search, status, startDate, endDate } = queryParams;
-
   const { data, isLoading } = useGetEmailUsage(
     page,
     pageSize,
@@ -51,7 +46,6 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
     startDate,
     endDate,
   );
-
   const columns = useMemo<ColumnDef<IEmailUsage>[]>(() => {
     const allColumns: ColumnDef<IEmailUsage>[] = [
       {
@@ -117,19 +111,16 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
         },
       },
     ];
-
     if (isInbound) {
       return allColumns.filter((col) => col.header !== "Status");
     }
     return allColumns;
   }, [isInbound]);
-
   const table = useReactTable({
     data: data?.data || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   return (
     <div className="flex flex-col gap-4">
       <EmailUsageFilterToolbar isInbound={isInbound} />
@@ -163,7 +154,6 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                     <Link
                       key={row.id}
                       to={`/utilities/email/usage/${row.original.messageId}`}
-                     
                     >
                       <TableRow data-state={row.getIsSelected() && "selected"} isHoverable>
                         {row.getVisibleCells().map((cell) => (

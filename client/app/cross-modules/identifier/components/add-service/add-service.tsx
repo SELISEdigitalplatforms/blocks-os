@@ -36,21 +36,17 @@ import { useForm } from "react-hook-form";
 import { useRegisterService } from "@blocks-identifier/hooks/use-services";
 import { IRegisterServicePayload } from "@blocks-identifier/types/services.type";
 import { addServiceDefaultValues, AddServiceForm, addServiceSchema } from "./utils";
-
 export const AddService = () => {
   const [open, onOpenChange] = useState(false);
   const { mutateAsync: registerService, isPending } = useRegisterService();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   const form = useForm<AddServiceForm>({
     defaultValues: addServiceDefaultValues,
     resolver: zodResolver(addServiceSchema),
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const handleSubmit = async (formValues: AddServiceForm) => {
     try {
       const payload: IRegisterServicePayload = {
@@ -68,7 +64,6 @@ export const AddService = () => {
       showErrorToast({ errors: "Something went wrong." });
     }
   };
-
   return (
     <Dialog
       open={open}
@@ -167,7 +162,6 @@ export const AddService = () => {
                 )}
               />
             </div>
-
             <div className="flex flex-col justify-end gap-2 pt-4 md:flex-row">
               <DialogClose asChild>
                 <Button type="button" variant="outline">

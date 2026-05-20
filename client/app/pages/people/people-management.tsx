@@ -3,7 +3,6 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { Badge } from "@/components/ui-kits/badge/badge";
-
 const PeopleManagementLoading = () => (
   <main className="flex flex-col p-6">
     <div className="flex items-center justify-between">
@@ -26,19 +25,15 @@ const PeopleManagementLoading = () => (
     </div>
   </main>
 );
-
 export const PeopleManagement = () => {
   const { isLoading, data } = useGetPeople({
     page: 0,
     pageSize: 100,
     filter: "",
   });
-
   if (isLoading) return <PeopleManagementLoading />;
-
   const peoples = data?.peoples || [];
   const isViewerOwner = data?.isOwner ?? false;
-
   return (
     <main className="flex flex-col p-6">
       <div className="flex items-center justify-between">
@@ -46,7 +41,6 @@ export const PeopleManagement = () => {
           <h4 className="text-lg font-semibold md:text-xl">People</h4>
         </div>
       </div>
-
       <div className="mb-5 mt-4 flex w-full flex-col">
         <Card>
           <CardContent className="pt-6">

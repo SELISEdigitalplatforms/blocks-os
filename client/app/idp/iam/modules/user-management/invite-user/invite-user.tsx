@@ -28,28 +28,23 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { useState } from "react";
 import { isErrorWithErrors } from "@/lib/error";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
-
 export const InviteUser = () => {
   const { isPending, mutateAsync } = useAddUser();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
-
   const form = useForm({
     defaultValues: inviteUserFormDefaultValue,
     resolver: zodResolver(inviteUserFormSchema),
   });
-
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       form.reset();
     }
     setOpen(isOpen);
   };
-
   const {
     formState: { isDirty },
   } = form;
-
   const onSubmitHandler = async (values: z.infer<typeof inviteUserFormSchema>) => {
     try {
       const res = await mutateAsync({
@@ -72,7 +67,6 @@ export const InviteUser = () => {
       }
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>

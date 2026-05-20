@@ -3,25 +3,19 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Check, Copy, Download } from "lucide-react";
 import { getApiUrl } from "@/lib/get-api-path";
 import { useProjectStore } from "@/store/useProjectStore";
-
 interface UrlWithActionsProps {
   url: string;
 }
-
 export const UrlWithActions = ({ url }: UrlWithActionsProps) => {
   const [isCopying, setIsCopying] = useState(false);
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const jwksUrl = `${getApiUrl("idp/v1", ".well-known/jwks.json")}?X-Blocks-Key=${tenantId}`;
-
   const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
     try {
       event.preventDefault();
       event.stopPropagation();
-
       if (isCopying) return;
-
       setIsCopying(true);
-
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(jwksUrl);
       } else {
@@ -45,7 +39,6 @@ export const UrlWithActions = ({ url }: UrlWithActionsProps) => {
       }, 1000);
     }
   };
-
   const handleDownload = async () => {
     try {
       const response = await fetch(url);
@@ -62,7 +55,6 @@ export const UrlWithActions = ({ url }: UrlWithActionsProps) => {
       console.error("Failed to download:", err);
     }
   };
-
   return (
     <div className="group flex min-w-0 items-center gap-1">
       <span className="text-base font-normal text-high-emphasis underline" title={jwksUrl}>

@@ -3,7 +3,6 @@ import { Pencil, Loader } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import {
@@ -24,11 +23,9 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-
 import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
 import { useProjectStore } from "@/store/useProjectStore";
 import { formatDate } from "@/lib/utils";
-
 const SettingsLoading = () => (
   <main className="p-6">
     <Skeleton className="h-8 w-24" />
@@ -56,7 +53,6 @@ const SettingsLoading = () => (
     </Card>
   </main>
 );
-
 const projectNameSchema = z.object({
   name: z
     .string()
@@ -65,34 +61,26 @@ const projectNameSchema = z.object({
     .min(3, "Project name must be at least 3 characters")
     .max(100, "Project name should be a maximum of 100 characters"),
 });
-
 type ProjectNameForm = z.infer<typeof projectNameSchema>;
-
 export const SettingsPage = () => {
   const { selectedProject, selectedTenantGroup, setSelectedProject } = useProjectStore();
-
   const { data: projectsData, isLoading } = useGetProjects(selectedTenantGroup || "");
   const project = projectsData?.[0]?.projects?.[0];
-
   const { mutateAsync: updateTenantGroup, isPending: isUpdating } = useUpdateTenantGroup({
     tenantGroupId: selectedTenantGroup || "",
   });
-
   const [isEditOpen, setIsEditOpen] = useState(false);
-
   const form = useForm<ProjectNameForm>({
     resolver: zodResolver(projectNameSchema),
     defaultValues: {
       name: "",
     },
   });
-
   useEffect(() => {
     if (project?.name) {
       form.reset({ name: project.name });
     }
   }, [project?.name, form]);
-
   useEffect(() => {
     if (project && selectedProject?.itemId === project.itemId) {
       if (selectedProject.name !== project.name) {
@@ -100,20 +88,15 @@ export const SettingsPage = () => {
       }
     }
   }, [project, selectedProject, setSelectedProject]);
-
   if (isLoading) return <SettingsLoading />;
-
   const handleSave = async (values: ProjectNameForm) => {
     if (!project) return;
-
     try {
       const payload = {
         name: values.name.trim(),
         tenantGroupId: selectedTenantGroup || "",
       };
-
       const res = await updateTenantGroup(payload);
-
       if (res.errors) {
         toast({
           variant: "destructive",
@@ -136,9 +119,7 @@ export const SettingsPage = () => {
       });
     }
   };
-
   const formattedDate = formatDate(new Date(project?.createdDate || ""));
-
   return (
     <main className="p-6 pt-8">
       <h4 className="h-8 text-lg font-semibold md:text-xl">Project Settings</h4>
@@ -173,7 +154,6 @@ export const SettingsPage = () => {
           </div>
         </CardContent>
       </Card>
-
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

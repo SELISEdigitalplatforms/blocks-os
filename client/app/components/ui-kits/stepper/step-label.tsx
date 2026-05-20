@@ -2,14 +2,12 @@ import { cn } from "@/lib/utils";
 import { cva } from "class-variance-authority";
 import { useStepper } from "./use-stepper";
 import React from "react";
-
 interface StepLabelProps {
 	isCurrentStep?: boolean;
 	opacity: number;
 	label?: string | React.ReactNode;
 	description?: string | null;
 }
-
 const labelVariants = cva("", {
 	variants: {
 		size: {
@@ -22,7 +20,6 @@ const labelVariants = cva("", {
 		size: "md",
 	},
 });
-
 const descriptionVariants = cva("", {
 	variants: {
 		size: {
@@ -35,7 +32,6 @@ const descriptionVariants = cva("", {
 		size: "md",
 	},
 });
-
 const StepLabel = ({
 	isCurrentStep,
 	opacity,
@@ -44,7 +40,6 @@ const StepLabel = ({
 }: StepLabelProps) => {
 	const { variant, styles, size, orientation } = useStepper();
 	const shouldRender = !!label || !!description;
-
 	return shouldRender ? (
 		<div
 			aria-current={isCurrentStep ? "step" : undefined}
@@ -87,5 +82,4 @@ const StepLabel = ({
 		</div>
 	) : null;
 };
-
 export { StepLabel };

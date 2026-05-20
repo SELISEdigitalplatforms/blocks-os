@@ -1,4 +1,3 @@
-
 import { PlusCircledIcon } from "@radix-ui/react-icons";
 import usePopoverWidth from "@/hooks/use-popover-width";
 import useIsMobile from "@/hooks/use-is-mobile";
@@ -12,7 +11,6 @@ import { Label } from "@/components/ui-kits/label/label";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui-kits/input/input";
 import { ClearButton } from "../clear-button/clear-button";
-
 interface MultiSelectProps {
   label?: string;
   options: {
@@ -22,22 +20,18 @@ interface MultiSelectProps {
   value: string;
   onChange: (value: unknown) => void;
 }
-
 export function Radio({ label, options, onChange, value }: MultiSelectProps) {
   const [search, setSearch] = useState("");
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const isMobile = useIsMobile();
-
   const selected = useMemo(
     () => options.find((item) => item.value === value) || null,
     [options, value],
   );
-
   const searchedOptions = useMemo(() => {
     if (!search) return options;
     return options.filter((item) => item.label.toLowerCase().includes(search.toLowerCase()));
   }, [options, search]);
-
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -106,7 +100,6 @@ export function Radio({ label, options, onChange, value }: MultiSelectProps) {
             </div>
           )}
         </>
-
         {value ? (
           <>
             <Separator />
