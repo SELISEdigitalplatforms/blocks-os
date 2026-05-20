@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  readonly BLOCKS_BASE_DOMAIN: string;
   readonly BLOCKS_API_BASE_URL: string;
   readonly BLOCKS_X_BLOCKS_KEY: string;
   readonly BLOCKS_GOOGLE_SITE_KEY: string;

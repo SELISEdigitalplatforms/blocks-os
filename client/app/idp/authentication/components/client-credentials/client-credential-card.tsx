@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { MaskedText } from "@/components/masked-text";
@@ -13,7 +12,6 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { isErrorWithErrors } from "@/lib/error";
-
 const Item = ({ label, children }: { label: string; children: ReactNode }) => {
   return (
     <div className="min-w-0">
@@ -22,18 +20,15 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
     </div>
   );
 };
-
 type ClientInfoCardProps = {
   clientCredential: IClientCredentialsConfig;
 };
-
 export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useDeleteAuthClient({
     projectKey: tenantId,
   });
-
   const handleConfirmDelete = async (id: string) => {
     try {
       const payload = {
@@ -49,7 +44,6 @@ export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps)
       return showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   return (
     <div className="grid gap-4">
       <Card className="py-6" key={clientCredential.itemId}>
@@ -72,7 +66,6 @@ export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps)
             </div>
           </div>
         </CardHeader>
-
         <CardContent>
           <div className="flex flex-col gap-8">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -86,7 +79,6 @@ export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps)
                   />
                 </CopyToClipboardButton>
               </Item>
-
               <Item label="Client Secret">
                 <CopyToClipboardButton textToCopy={clientCredential.clientSecret}>
                   <MaskedText
@@ -97,7 +89,6 @@ export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps)
                   />
                 </CopyToClipboardButton>
               </Item>
-
               <Item label="Audience">
                 <div className="flex items-center gap-2">
                   {clientCredential.roles &&
@@ -113,7 +104,6 @@ export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps)
                   )}
                 </div>
               </Item>
-
               <Item label="Role(s)">
                 <div className="flex items-center gap-2">
                   {clientCredential.roles && clientCredential.roles.length > 0 ? (
@@ -129,7 +119,6 @@ export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps)
                   )}
                 </div>
               </Item>
-
               <Item label="Created on">
                 <span className="whitespace-nowrap">
                   {format(clientCredential.createdDate, "dd/MM/yyyy HH:mm")}
@@ -139,7 +128,6 @@ export const ClientCredentialsCard = ({ clientCredential }: ClientInfoCardProps)
           </div>
         </CardContent>
       </Card>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <ConfirmationModal
           onCancel={() => setOpen(false)}

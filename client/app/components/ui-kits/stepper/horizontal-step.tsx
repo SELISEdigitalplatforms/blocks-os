@@ -5,7 +5,6 @@ import { StepIcon } from "./step-icon";
 import { StepLabel } from "./step-label";
 import type { StepSharedProps } from "./types";
 import { useStepper } from "./use-stepper";
-
 const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
 	(props, ref) => {
 		const {
@@ -20,7 +19,6 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
 			steps,
 			setStep,
 		} = useStepper();
-
 		const {
 			index,
 			isCompletedStep,
@@ -34,18 +32,13 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
 			checkIcon: checkIconProp,
 			errorIcon: errorIconProp,
 		} = props;
-
 		const localIsLoading = isLoading || state === "loading";
 		const localIsError = isError || state === "error";
-
 		const opacity = hasVisited ? 1 : 0.5;
-
 		const active =
 			variant === "line" ? isCompletedStep || isCurrentStep : isCompletedStep;
-
 		const checkIcon = checkIconProp || checkIconContext;
 		const errorIcon = errorIconProp || errorIconContext;
-
 		return (
 			<div
 				aria-disabled={!hasVisited}
@@ -102,7 +95,6 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
 					<StepLabel
 						label={label}
 						description={description}
-						
 						{...{ isCurrentStep, opacity }}
 					/>
 				</div>
@@ -110,6 +102,5 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
 		);
 	},
 );
-
 HorizontalStep.displayName = "HorizontalStep";
 export { HorizontalStep };

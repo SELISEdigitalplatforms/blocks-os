@@ -35,12 +35,10 @@ import {
   StorageStrategyType,
 } from "@blocks-storage/models/storage.model";
 import { isErrorWithErrors } from "@/lib/error";
-
 type SaveStorageConfigurationProps = {
   configuration?: IStorageConfiguration;
   onClose: (val: boolean) => void;
 };
-
 export const SaveStorageConfiguration = ({
   onClose,
   configuration,
@@ -51,7 +49,6 @@ export const SaveStorageConfiguration = ({
     resolver: zodResolver(storageConfigurationFormSchema),
   });
   const { isPending, mutateAsync } = useSaveStorageConfiguration();
-
   const onFormSubmitHandler = async (values: z.infer<typeof storageConfigurationFormSchema>) => {
     try {
       const payload = {
@@ -75,9 +72,7 @@ export const SaveStorageConfiguration = ({
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   const storageStrategy = form.watch("storageStrategy") as StorageStrategyType;
-
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <DialogHeader>

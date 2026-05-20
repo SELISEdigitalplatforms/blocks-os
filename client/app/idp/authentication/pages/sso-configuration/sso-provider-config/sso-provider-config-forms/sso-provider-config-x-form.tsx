@@ -1,6 +1,5 @@
 import React from "react";
 import { useForm } from "react-hook-form";
-
 import { Form, FormField } from "@/components/ui-kits/form/form";
 import { Button } from "@/components/ui-kits/button/button";
 import { SSOProviderConfigFormField } from "./sso-provider-config-form-fields";
@@ -12,9 +11,7 @@ import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createCommonOAuthFields } from "../sso-provider-config-field-factory.util";
 import { ssoOAuthProviderSchema } from "../sso-provider-config.schema";
-
 const SSOXFormFields = createCommonOAuthFields();
-
 export const SSOProviderConfigXForm: React.FC<SsoConfigForms> = ({ save, configuration }) => {
   const form = useForm({
     values: configuration || {
@@ -64,7 +61,6 @@ export const SSOProviderConfigXForm: React.FC<SsoConfigForms> = ({ save, configu
             )}
           />
         </div>
-
         <div className="flex items-center justify-end gap-2">
           <Button type="submit">Save</Button>
         </div>

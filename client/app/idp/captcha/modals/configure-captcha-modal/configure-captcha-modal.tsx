@@ -6,11 +6,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-
 import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY, ICaptchaConfig } from "../../models/captcha";
-
-import { ConfigureBlockCaptchaFormField } from "./configure-block-captcha-form-field";
 import { ConfigureGeneralCaptchaFormField } from "./configure-general-captcha-from-field";
+import { ConfigureBlockCaptchaFormField } from "./configure-block-captcha-form-field";
 import { useGetCaptchaConfigs, useSaveCaptcha } from "../../hooks/use-captcha-config";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
@@ -35,17 +33,14 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-
 type ConfigureCaptchaModalProps = {
   configuration?: ICaptchaConfig | null;
   children: ReactNode;
 };
-
 export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCaptchaModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { isLoading, isFetching, data } = useGetCaptchaConfigs({ projectKey: tenantId });
-
   const form = useForm({
     defaultValues: configuration || ConfigureCaptchaFormDefaultValue,
     resolver: zodResolver(ConfigureCaptchaFormSchema),
@@ -54,11 +49,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     formState: { isDirty },
   } = form;
   const { mutateAsync, isPending } = useSaveCaptcha();
-
   const unConfiguredProviders = useMemo(() => {
     if (configuration) return [CAPTCHA_PROVIDERS[configuration.provider]];
     if (!data?.configurations) return Object.values(CAPTCHA_PROVIDERS);
-
     return Object.keys(CAPTCHA_PROVIDERS)
       .filter(
         (item) =>
@@ -66,7 +59,6 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       )
       .map((item) => CAPTCHA_PROVIDERS[item as CAPTCHA_PROVIDERS_KEY]);
   }, [data]);
-
   useEffect(() => {
     if (configuration) {
       form.setValue("provider", configuration.provider);
@@ -75,15 +67,12 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       form.setValue("provider", unConfiguredProviders[0].value);
     }
   }, [unConfiguredProviders]);
-
   const onSubmitHandler = async (values: typeof ConfigureCaptchaFormDefaultValue) => {
     try {
       const payload = {
         projectKey: tenantId,
         isEnable: configuration ? configuration.isEnable : false,
         ...values,
-        ...(values.provider === "bcaptcha" && { captchaKey: "", captchaSecret: "" }),
-        ...(values.provider !== "bcaptcha" && { captchaGenerator: "" }),
       };
       const res = await mutateAsync(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
@@ -98,14 +87,8 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       }
     }
   };
-
   const selectedProvider = form.watch("provider");
-
-  const ConfigureFormField =
-    selectedProvider === "bcaptcha"
-      ? ConfigureBlockCaptchaFormField
-      : ConfigureGeneralCaptchaFormField;
-
+  const ConfigureFormField = ConfigureGeneralCaptchaFormField;
   return (
     <Dialog
       open={open}
@@ -115,7 +98,6 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       }}
     >
       {children}
-
       <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>
@@ -156,13 +138,13 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 )}
               />
               <ConfigureFormField key={selectedProvider} form={form} />
+              <ConfigureBlockCaptchaFormField form={form} />
               <DialogFooter className="mt-4">
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm">
                     Cancel
                   </Button>
                 </DialogTrigger>
-
                 <Button
                   size="sm"
                   disabled={isPending || isLoading || isFetching || !isDirty}

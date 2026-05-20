@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
+import type { InlineConfig } from "vitest/node";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "BLOCKS_");
@@ -26,6 +27,22 @@ export default defineConfig(({ mode }) => {
       outDir: "../server/Api/wwwroot",
       emptyOutDir: true,
     },
+    test: {
+      environment: "jsdom",
+      globals: true,
+      setupFiles: [],
+      alias: {
+        "@": path.resolve(__dirname, "./app"),
+        "@blocks-idp": path.resolve(__dirname, "./app/idp"),
+        "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
+        "@blocks-storage": path.resolve(__dirname, "./app/cross-modules/storage"),
+        "@blocks-communication": path.resolve(__dirname, "./app/cross-modules/communication"),
+        "@blocks-identifier": path.resolve(__dirname, "./app/cross-modules/identifier"),
+        "@blocks-localization": path.resolve(__dirname, "./app/cross-modules/localization"),
+        "@blocks-utilities": path.resolve(__dirname, "./app/cross-modules/utilities"),
+        "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
+      },
+    } as InlineConfig,
     server: {
       host: true, // Listen on all addresses (0.0.0.0)
       port: 4000,
@@ -33,9 +50,16 @@ export default defineConfig(({ mode }) => {
         "dev-cloud.seliseblocks.com",
         "localhost",
         ".seliseblocks.com",
+        ".blocksdevelopers.com",
       ],
-      proxy: proxyTarget
-        ? {
+      proxy: {
+          "/dev-idp-proxy": {
+            target: "https://dev-idp.blocksdevelopers.com",
+            changeOrigin: true,
+            secure: true,
+            rewrite: (path) => path.replace(/^\/dev-idp-proxy/, ""),
+          },
+          ...(proxyTarget ? {
             "/api": { 
               target: proxyTarget, 
               changeOrigin: true, 
@@ -74,8 +98,8 @@ export default defineConfig(({ mode }) => {
             "/blocksai-api": { target: proxyTarget, changeOrigin: true, secure: false },
             "/studio": { target: proxyTarget, changeOrigin: true, secure: false },
             "/uds": { target: proxyTarget, changeOrigin: true, secure: false },
-          }
-        : undefined,
+          } : {}),
+        },
     },
   };
 });

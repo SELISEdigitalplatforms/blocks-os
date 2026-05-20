@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 import {
   Card,
@@ -18,7 +16,6 @@ import { AddEditProviderModal } from "./add-edit-provider-modal";
 import { providers } from "@blocks-idp/authentication/constants/authentication.constant";
 import MapJwtClaimModal from "./map-jwt-claim-modal";
 import { useGetJwtClaim } from "@blocks-idp/authentication/hooks/use-jwt-claim";
-
 const LoadingSkelton = () => {
   return (
     <Card>
@@ -32,7 +29,6 @@ const LoadingSkelton = () => {
         </div>
       </CardHeader>
       <CardContent className="mt-4 space-y-4">
-        {/* First Row: Provider and URL */}
         <div className="flex flex-col gap-4 md:flex-row md:gap-8">
           <div className="md:w-[20%]">
             <Skeleton className="mb-2 h-4 w-16" />
@@ -43,8 +39,6 @@ const LoadingSkelton = () => {
             <Skeleton className="h-5 w-full max-w-md" />
           </div>
         </div>
-
-        {/* Second Row: Issuer and Audience */}
         <div className="flex flex-col gap-4 md:flex-row md:gap-8">
           <div className="md:w-[20%]">
             <Skeleton className="mb-2 h-4 w-16" />
@@ -59,7 +53,6 @@ const LoadingSkelton = () => {
     </Card>
   );
 };
-
 export const Certificates = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const { isLoading, data: existingCertificate } = useGetSavedPublicCertificates(projectKey);
@@ -71,17 +64,13 @@ export const Certificates = () => {
   const handleJwtClaim = () => {
     setIsJwtClaimModalOpen(true);
   };
-
   const hasJwtClaimData = !!jwtClaimData?.itemId;
-
   if (isLoading) {
     return <LoadingSkelton />;
   }
-
   if (!existingCertificate?.isConfigured) {
     return <EmptyConfiguration />;
   }
-
   return (
     <>
       {!isLoading && !isJwtClaimLoading && !hasJwtClaimData && (
@@ -110,11 +99,8 @@ export const Certificates = () => {
             </div>
           </div>
         </CardHeader>
-
         <CardContent className="mt-4 space-y-4">
-          {/* First Row: Provider and URL */}
           <div className="flex flex-col gap-4 md:flex-row md:gap-8">
-            {/* Provider Section */}
             <div className="md:w-[20%]">
               <label className="mb-2 block text-sm text-gray-600">Provider</label>
               <div className="flex items-center gap-2 text-sm font-medium">
@@ -123,7 +109,6 @@ export const Certificates = () => {
                     (p) => p.name.toLowerCase() === existingCertificate.providerName?.toLowerCase(),
                   );
                   const isOthers = existingCertificate.providerName?.toLowerCase() === "others";
-
                   if (isOthers) {
                     return (
                       <div className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600">
@@ -146,8 +131,6 @@ export const Certificates = () => {
                 <span>{existingCertificate.providerName}</span>
               </div>
             </div>
-
-            {/* URL Section */}
             <div className="flex-1">
               <label className="mb-2 block text-sm text-gray-600">URL</label>
               <div className="break-all text-sm font-medium">
@@ -155,18 +138,13 @@ export const Certificates = () => {
               </div>
             </div>
           </div>
-
-          {/* Second Row: Issuer and Audience */}
           <div className="flex flex-col gap-4 md:flex-row md:gap-8">
-            {/* Issuer Section */}
             <div className="md:w-[20%]">
               <label className="mb-2 block text-sm text-gray-600">Issuer</label>
               <div className="break-all text-sm font-medium">
                 {existingCertificate.issuer || "-"}
               </div>
             </div>
-
-            {/* Audience Section */}
             <div className="flex-1">
               <label className="mb-2 block text-sm text-gray-600">Audience</label>
               <div className="break-all text-sm font-medium">
@@ -178,7 +156,6 @@ export const Certificates = () => {
           </div>
         </CardContent>
       </Card>
-
       <MapJwtClaimModal open={isJwtClaimModalOpen} onOpenChange={setIsJwtClaimModalOpen} />
     </>
   );

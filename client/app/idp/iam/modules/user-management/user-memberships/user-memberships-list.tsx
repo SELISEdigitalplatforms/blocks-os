@@ -1,4 +1,3 @@
-
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
@@ -28,7 +27,6 @@ import { Button } from "@/components/ui-kits/button/button";
 import { EllipsisVertical, Settings, XCircle } from "lucide-react";
 import { RemoveMembership } from "./remove-membership";
 import { EditMembership } from "./edit-membership";
-
 type UserMembershipsListProps = {
   memberships: IMembership[];
   orgNameMap: Map<string, string>;
@@ -36,7 +34,6 @@ type UserMembershipsListProps = {
   userId: string;
   projectKey: string;
 };
-
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 3 }).map((_, index) => (
@@ -44,14 +41,11 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
 const PermissionsBadges = ({ permissions }: { permissions: string[] }) => {
   if (!permissions || permissions.length === 0)
     return <span className="text-medium-emphasis">-</span>;
-
   const visiblePermissions = permissions.slice(0, 4);
   const remainingCount = permissions.length - 4;
-
   return (
     <div className="flex flex-wrap gap-1">
       {visiblePermissions.map((permission, index) => (
@@ -80,7 +74,6 @@ const PermissionsBadges = ({ permissions }: { permissions: string[] }) => {
     </div>
   );
 };
-
 export const UserMembershipsList = ({
   memberships,
   orgNameMap,
@@ -91,17 +84,14 @@ export const UserMembershipsList = ({
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState<IMembership | null>(null);
-
   const handleRemoveClick = (membership: IMembership) => {
     setSelectedMembership(membership);
     setRemoveModalOpen(true);
   };
-
   const handleEditClick = (membership: IMembership) => {
     setSelectedMembership(membership);
     setEditDrawerOpen(true);
   };
-
   const columns = useMemo<ColumnDef<IMembership>[]>(
     () => [
       {
@@ -181,17 +171,14 @@ export const UserMembershipsList = ({
     ],
     [orgNameMap],
   );
-
   const table = useReactTable({
     data: memberships,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) {
     return <LoadingSkeleton />;
   }
-
   if (memberships.length === 0) {
     return (
       <div className="flex h-[100px] items-center justify-center text-medium-emphasis">
@@ -199,7 +186,6 @@ export const UserMembershipsList = ({
       </div>
     );
   }
-
   return (
     <>
       <Table>
@@ -228,7 +214,6 @@ export const UserMembershipsList = ({
           ))}
         </TableBody>
       </Table>
-
       {selectedMembership && (
         <RemoveMembership
           open={removeModalOpen}
@@ -241,7 +226,6 @@ export const UserMembershipsList = ({
           projectKey={projectKey}
         />
       )}
-
       {selectedMembership && (
         <EditMembership
           open={editDrawerOpen}

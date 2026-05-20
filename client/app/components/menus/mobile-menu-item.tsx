@@ -13,13 +13,10 @@ import {
 } from "@/components/ui-kits/sheet/sheet";
 import { cn } from "@/lib/utils";
 import { Menu } from "@/models/menu-models";
-
 type MenuItemType = Extract<Menu, { type: "menu" }>;
-
 function ChildMenuItem({ menu, onClick }: { menu: MenuItemType; onClick?: () => void }) {
   const { pathname } = useLocation();
   const isActiveMenu = pathname.startsWith(menu.path);
-
   return (
     <Link
       to={menu.path}
@@ -35,10 +32,8 @@ function ChildMenuItem({ menu, onClick }: { menu: MenuItemType; onClick?: () => 
     </Link>
   );
 }
-
 export function MobileMenuItem({ menu, onClick }: { menu: MenuItemType; onClick?: () => void }) {
   const { pathname } = useLocation();
-
   const isActiveMenu = useMemo(() => {
     const allPaths = [menu.path];
     if (menu.children) {
@@ -48,9 +43,7 @@ export function MobileMenuItem({ menu, onClick }: { menu: MenuItemType; onClick?
     }
     return allPaths.some((item) => pathname.startsWith(item));
   }, [menu.children, menu.path, pathname]);
-
   const hasChildren = Boolean(menu.children?.length);
-
   if (!hasChildren) {
     return (
       <div
@@ -76,7 +69,6 @@ export function MobileMenuItem({ menu, onClick }: { menu: MenuItemType; onClick?
       </div>
     );
   }
-
   return (
     <Sheet>
       <SheetTrigger>

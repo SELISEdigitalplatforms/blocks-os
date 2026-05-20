@@ -1,4 +1,3 @@
-
 import { Logo } from "@/components/logo";
 import {
   Card,
@@ -9,7 +8,6 @@ import {
 } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { ResetPasswordForm } from "./reset-password-form";
-
 type ResetPasswordProps = {
   code?: string;
   lang?: string;
@@ -37,7 +35,6 @@ export const ResetPassword = ({ code }: ResetPasswordProps) => {
       </div>
     );
   }
-
   return (
     <div className="flex min-h-screen flex-col items-center bg-background">
       <div className="mb-4 mt-[136px] p-4">

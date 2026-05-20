@@ -7,19 +7,16 @@ import { MaskedText } from "@/components/masked-text";
 import { IProject } from "@blocks-identifier/models/project.model";
 import { environmentOptions } from "@/constants/environment-options";
 import { getProjectBlocksApiUrl } from "@/lib/domain";
-
 interface ProjectDetailItemProps {
   label: string;
   children: ReactNode;
 }
-
 const ProjectDetailItem = ({ label, children }: ProjectDetailItemProps) => (
   <div className="space-y-1.5">
     <div className="text-sm text-muted-foreground">{label}</div>
     <div className="text-base">{children}</div>
   </div>
 );
-
 const RenderProjectUrl = ({ project }: { project?: IProject }) => {
   if (!project) return null;
   const url = getProjectBlocksApiUrl(project);
@@ -31,7 +28,6 @@ const RenderProjectUrl = ({ project }: { project?: IProject }) => {
     </div>
   );
 };
-
 const LoadingSkeleton = () => {
   return (
     <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
@@ -46,7 +42,6 @@ const LoadingSkeleton = () => {
     </div>
   );
 };
-
 export const ProjectDetail = ({
   project,
   isLoading,
@@ -55,7 +50,6 @@ export const ProjectDetail = ({
   isLoading: boolean;
 }) => {
   if (isLoading) return <LoadingSkeleton />;
-
   return (
     <div className="rounded-sm border bg-card px-2 py-2 shadow-sm">
       <div className="grid-col-1 grid gap-4 px-2 py-4 md:gap-6 lg:grid-cols-2">

@@ -12,23 +12,18 @@ import { useCallback, useState } from "react";
 import { PermissionToggleCard } from "./permission-toggle-card";
 import { PermissionDialogProps, isChecked } from "./permission-selection-utils";
 import { useRoleDetailsStore } from "./role-details-state";
-
 type SelectionState = {
   [key: string]: {
     isChecked: boolean;
     permissionResource: string;
   };
 };
-
 export const RequiredPermissionsDialog = ({ permission, onOpenChange, open }: PermissionDialogProps) => {
   const [selectionState, setSelectionState] = useState<SelectionState>({});
-
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
-
   const title = `Review Permission Changes`;
   const dependentPermissions = permission.dependentPermissions.map((dp) => permissionMap.get(dp));
-
   const onCheckedChangeHandler = (permResource: string, checked: boolean) => {
     setSelectionState((prev) => {
       const newState = { ...prev };
@@ -36,7 +31,6 @@ export const RequiredPermissionsDialog = ({ permission, onOpenChange, open }: Pe
       return newState;
     });
   };
-
   const isDependentPermissionChecked = useCallback(
     (permResource: string) => {
       if (selectionState[permResource]) return selectionState[permResource].isChecked;
@@ -44,19 +38,16 @@ export const RequiredPermissionsDialog = ({ permission, onOpenChange, open }: Pe
     },
     [permissionMap, selectionState]
   );
-
   const onSaveClick = () => {
     const changePermissions = Object.values(selectionState);
     changePermissionSelection(changePermissions);
     onOpenChange(false);
   };
-
   const resetSelectionState = () => {
     setTimeout(() => {
       setSelectionState({});
     }, 500);
   };
-
   return (
     <Dialog
       open={open}

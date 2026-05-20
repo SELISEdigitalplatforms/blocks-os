@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Copy, Pencil, Plus, Trash } from "lucide-react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
@@ -12,7 +11,6 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import DeleteEmailConfig from "@blocks-communication/mail/components/email-service/modals/delete-email-config/delete-email-config";
 import MessageConfiguration from "@blocks-communication/mail/components/messaging/message-configuration/message-configuration";
-
 interface MessagingConfig {
   id: string;
   title: string;
@@ -23,7 +21,6 @@ interface MessagingConfig {
   sender: string;
   numberLookupEndURI: string;
 }
-
 const msgConfigurations: MessagingConfig[] = [
   {
     id: "default",
@@ -56,7 +53,6 @@ const msgConfigurations: MessagingConfig[] = [
     numberLookupEndURI: "EE85JKL",
   },
 ];
-
 export function MessagingConfiguration() {
   return (
     <div>
@@ -103,7 +99,6 @@ export function MessagingConfiguration() {
                     </DialogTrigger>
                     <DeleteEmailConfig onClose={() => {}} configId={config.id} />
                   </Dialog>
-
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-9 gap-2 px-4 py-1">
@@ -113,7 +108,6 @@ export function MessagingConfiguration() {
                     </DialogTrigger>
                     <MessageConfiguration dialogTitle="Edit Configuration" data={[]} />
                   </Dialog>
-
                   <Button size="sm" variant="outline" className="h-9 gap-2 px-4 py-1">
                     <Copy className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Duplicate</span>

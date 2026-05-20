@@ -1,4 +1,3 @@
-
 import { Pencil } from "lucide-react";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui-kits/table/table";
@@ -19,12 +18,10 @@ import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
-
 type PermissionTableProps = {
   permissions: IPermission[];
   isLoading: boolean;
 };
-
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -32,7 +29,6 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeverityLevel }) => {
   const config = PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === severity);
   if (!config) return null;
@@ -42,11 +38,9 @@ export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeve
     </Badge>
   );
 };
-
 export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps) => {
   const { sortQueryParams, setSortQueryParams } = usePermissionsSortQuaryParams();
   const navigate = useNavigate();
-
   const columns = useMemo<ColumnDef<IPermission>[]>(
     () => [
       {
@@ -72,7 +66,6 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
             onChange={setSortQueryParams}
           />
         ),
-
         cell: (permission) => (
           <div className="flex w-[180px] items-center break-all">
             <span>{permission.row.original.resource}</span>
@@ -89,7 +82,6 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
             </div>
           );
         },
-
         cell: (permission) => (
           <div className="flex w-[180px] items-center break-all">
             <Badge
@@ -108,11 +100,9 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         header: () => (
           <FilterControls.SortHeader label="Type" id="Type" value={sortQueryParams} onChange={setSortQueryParams} />
         ),
-
         cell: (permission) => {
           const resourceTypeKey = permission.row.original.type as number;
           const resourceName = ResourceType[resourceTypeKey] as string;
-
           return (
             <div className="flex w-[150px] items-center">
               <span>{resourceName}</span>
@@ -138,7 +128,6 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
           );
         },
       },
-
       {
         id: "rolesCount",
         accessorFn: (row) => `${row.roles.length}`.trim(),
@@ -157,7 +146,6 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
           );
         },
       },
-
       {
         id: "tags",
         accessorFn: (row) => `${row.description}`.trim(),
@@ -167,7 +155,6 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         cell: (tags) => (
           <div className="flex max-w-[150px] flex-wrap gap-1">
             {tags.row.original.tags.length > 0 && <Badge variant="secondary">{tags.row.original.tags[0]}</Badge>}
-
             {tags.row.original.tags.length - 1 > 0 && (
               <TooltipProvider>
                 <Tooltip>
@@ -223,15 +210,12 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
     ],
     [setSortQueryParams, sortQueryParams]
   );
-
   const table = useReactTable({
     data: permissions,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <ScrollArea className="w-full">
       <Table className="text-sm ">

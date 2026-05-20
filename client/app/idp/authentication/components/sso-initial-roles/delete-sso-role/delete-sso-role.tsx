@@ -3,15 +3,12 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { X } from "lucide-react";
 import { useState } from "react";
-
 type DeleteUserRoleProps = {
   role: IRole;
   onDelete: (role: IRole) => void;
 };
-
 export const DeleteSSORole = ({ role, onDelete }: DeleteUserRoleProps) => {
   const [open, setOpen] = useState<boolean>(false);
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

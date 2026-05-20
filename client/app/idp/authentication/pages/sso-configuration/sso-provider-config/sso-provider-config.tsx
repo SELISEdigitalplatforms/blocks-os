@@ -6,16 +6,13 @@ import { SSO_PROVIDERS } from "@blocks-idp/authentication/constants/sso-provider
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { useState } from "react";
-
 type SSOProviderConfigProps = {
   provider: SSO_PROVIDERS;
   id: string;
 };
-
 export const SSOProviderConfig = ({ provider, id = "" }: SSOProviderConfigProps) => {
   const [open, setOpen] = useState<boolean>(false);
   if (!provider) return null;
-
   BREADCRUMB_CUSTOM_TITLES["/services/authentication?tab=social"] = "Authentication";
   BREADCRUMB_CUSTOM_TITLES[`/services/authentication/sso-configuration`] = provider;
   return (
@@ -30,7 +27,6 @@ export const SSOProviderConfig = ({ provider, id = "" }: SSOProviderConfigProps)
           <span className="sr-only sm:not-sr-only sm:ml-2">Setup Guide</span>
         </Button>
       </div>
-
       <div className="mt-4 flex-1">
         <SsoProviderConfigForms provider={provider} id={id} />
         <SSoProviderSetupGuideLine open={open} onOpenChange={setOpen} provider={provider} />

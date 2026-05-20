@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
-
 export const ChatItemSuggestions = ({
   suggestions,
   onSelect,

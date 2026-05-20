@@ -96,7 +96,6 @@ namespace XUnitTest.DomainService.OAuth.Services
             {
                 TenantId = "tenant-123",
                 ItemId = "item-456",
-                ApplicationDomain = "test.example.com",
                 DbConnectionString = "mongodb://localhost:27017/test",
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -139,7 +138,6 @@ namespace XUnitTest.DomainService.OAuth.Services
             {
                 TenantId = "tenant-123",
                 ItemId = "item-456",
-                ApplicationDomain = "test.example.com",
                 DbConnectionString = "mongodb://localhost:27017/test",
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -194,7 +192,6 @@ namespace XUnitTest.DomainService.OAuth.Services
             {
                 TenantId = "tenant-123",
                 ItemId = "tenant-item-456",
-                ApplicationDomain = "test.example.com",
                 DbConnectionString = "mongodb://localhost:27017/test",
                 JwtTokenParameters = new JwtTokenParameters()
                 {
@@ -232,7 +229,6 @@ namespace XUnitTest.DomainService.OAuth.Services
             {
                 TenantId = "tenant-123",
                 ItemId = "tenant-item-456",
-                ApplicationDomain = "test.example.com",
                 DbConnectionString = "mongodb://localhost:27017/test",
                 JwtTokenParameters = new JwtTokenParameters()
                 {

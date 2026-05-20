@@ -189,8 +189,6 @@ namespace XUnitTest.DomainService.Authentication
             var tenant = new Tenant
             {
                 TenantId = tenantId,
-                CookieDomain = cookieDomain,
-                ApplicationDomain = "test.example.com",
                 DbConnectionString = "test-connection-string",
                 JwtTokenParameters = new JwtTokenParameters()
                 {

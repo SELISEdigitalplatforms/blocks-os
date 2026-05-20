@@ -12,23 +12,21 @@ import { showErrorToast } from "@/hooks/use-toast";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useEffect, useState } from "react";
 import { ProfileMFAMethodList } from "./profile-mfa-methods-list";
-import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
 import { profileMfaContext } from "../profile-mfa";
 import { RefreshCcw } from "lucide-react";
-
 export const ProfileMFAConfigManage = () => {
   const { projectKey, userId, showVerifyModal } = useContext(profileMfaContext);
   const [open, setOpen] = useState<boolean>(false);
   const [type, setType] = useState(0);
   const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
-  const { data: userData, isLoading, isFetching } = useGetUserById({ id: userId, projectKey });
+  const { data: userData, isLoading, isFetching } = useGetMe();
   useEffect(() => {
     if (userData?.data.userMfaType) {
       setType(userData?.data.userMfaType);
     }
   }, [userData?.data.userMfaType]);
-
   const onClickHandler = async () => {
     if (userData?.data?.userMfaType === type) {
       if (!userData?.data.isMfaVerified) {
@@ -51,7 +49,6 @@ export const ProfileMFAConfigManage = () => {
       if (isErrorWithErrors(error)) showErrorToast({ errors: error.errors });
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -60,7 +57,6 @@ export const ProfileMFAConfigManage = () => {
           <span className="sr-only sm:not-sr-only sm:ml-2">Switch</span>
         </Button>
       </DialogTrigger>
-
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Switch MFA?</DialogTitle>

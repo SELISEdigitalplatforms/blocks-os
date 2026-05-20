@@ -37,7 +37,6 @@ import {
   createClientSchema,
 } from "./utils";
 import { isErrorWithErrors } from "@/lib/error";
-
 export const CreateClientCredential = () => {
   const [open, setOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState<string>("");
@@ -46,7 +45,6 @@ export const CreateClientCredential = () => {
   const { mutateAsync: saveServiceClient, isPending } = useSaveAuthClient({
     projectKey: tenantId,
   });
-
   const { data, isLoading } = useGetRoles({
     page: 0,
     pageSize: 0,
@@ -56,7 +54,6 @@ export const CreateClientCredential = () => {
       search: filter,
     },
   });
-
   useEffect(() => {
     if (data?.data) {
       setFilteredRoles(
@@ -66,16 +63,13 @@ export const CreateClientCredential = () => {
       setFilteredRoles([]);
     }
   }, [filter, data]);
-
   const form = useForm({
     resolver: zodResolver(createClientSchema),
     defaultValues: CreateClientModalFormDefaultValues,
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       form.reset();
@@ -83,7 +77,6 @@ export const CreateClientCredential = () => {
     }
     setOpen(isOpen);
   };
-
   const onSubmit = async (data: CreateClientModalFormValues) => {
     try {
       const payload: ISaveClientCredentialPayload = {
@@ -91,7 +84,6 @@ export const CreateClientCredential = () => {
         roles: data.roles,
         projectKey: tenantId,
       };
-
       const res = await saveServiceClient(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.error });
       showSuccessToast({ description: "Service Created successfully" });
@@ -104,7 +96,6 @@ export const CreateClientCredential = () => {
       form.reset();
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger>
@@ -118,7 +109,6 @@ export const CreateClientCredential = () => {
           <DialogTitle>New Access Token</DialogTitle>
           <DialogDescription>Enter details to create a new key.</DialogDescription>
         </DialogHeader>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -134,7 +124,6 @@ export const CreateClientCredential = () => {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="audienceUrlService"
@@ -148,14 +137,12 @@ export const CreateClientCredential = () => {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="roles"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assign Role(s)</FormLabel>
-
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -165,12 +152,10 @@ export const CreateClientCredential = () => {
                       onChange={(e) => setFilter(e.target.value)}
                     />
                   </div>
-
                   <FormControl>
                     <div className="grid grid-cols-2 gap-4 rounded border p-3">
                       {filteredRoles?.map((type) => {
                         const isChecked = field.value?.includes(type.slug);
-
                         return (
                           <div key={type.slug} className="flex items-center gap-2">
                             <Checkbox
@@ -179,7 +164,6 @@ export const CreateClientCredential = () => {
                                 const updated = checked
                                   ? [...field.value, type.slug]
                                   : field.value.filter((role: string) => role !== type.slug);
-
                                 field.onChange(updated);
                               }}
                             />
@@ -189,13 +173,11 @@ export const CreateClientCredential = () => {
                           </div>
                         );
                       })}
-
                       {isLoading && (
                         <div className="col-span-2 grid gap-2">
                           <Skeleton className="h-12 w-full rounded" />
                         </div>
                       )}
-
                       {!isLoading && filteredRoles?.length === 0 && (
                         <p className="col-span-2 py-2 text-center text-sm text-muted-foreground">
                           No roles found
@@ -206,7 +188,6 @@ export const CreateClientCredential = () => {
                 </FormItem>
               )}
             />
-
             <DialogFooter>
               <DialogClose>
                 <Button onClick={() => setOpen(false)} type="button" variant="outline">

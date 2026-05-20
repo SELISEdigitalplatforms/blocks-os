@@ -6,19 +6,16 @@ import { UserMFAMethodList } from "./user-mfa-methods-list";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
 import { userMfaContext } from "../user-mfa";
-
 export const UserMFAConfigManage = () => {
   const { projectKey, userId } = useContext(userMfaContext);
   const [type, setType] = useState(0);
   const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
   const { data: userData, isLoading, isFetching } = useGetUserById({ id: userId, projectKey });
-
   useEffect(() => {
     if (userData && userData?.data.userMfaType) {
       setType(userData?.data.userMfaType);
     }
   }, [userData, userData?.data.userMfaType]);
-
   const onClickHandler = async () => {
     try {
       const res = await mutateAsync({

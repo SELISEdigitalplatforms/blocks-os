@@ -9,11 +9,9 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-
 type RolesTableProps = {
   slugs: string[];
 };
-
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -21,7 +19,6 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
 export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const navigate = useNavigate();
@@ -29,7 +26,6 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
     page: parseAsInteger.withDefault(0),
     pageSize: parseAsInteger.withDefault(10),
   });
-
   const { data, isLoading } = useGetRoles({
     projectKey: tenantId,
     page: queryParams.page,
@@ -39,7 +35,6 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
       slugs,
     },
   });
-
   const columns = useMemo<ColumnDef<IRole>[]>(
     () => [
       {
@@ -79,20 +74,17 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
     ],
     []
   );
-
   const table = useReactTable({
     data: data?.data || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   const onRowClickHandler = (itemId: number | string) => {
     navigate(`/services/iam/role-detail/${itemId}`);
   };
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
-
   const onPageSizeChangeHandler = (pageSize: number) => {
     setQueryParams((prev) => ({
       ...prev,
@@ -100,9 +92,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
       page: 0,
     }));
   };
-
   if (!slugs.length) return null;
-
   return (
     <Card className="mt-4">
       <CardHeader>

@@ -18,17 +18,14 @@ import { getDomain, getSubdomain } from "@/lib/domain";
 import { DialogClose, DialogFooter } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { editDomainFormSchema } from "./utils";
-
 type EditDomainFormProps = {
   customDomain: string;
   repositories: IEnvRepository[];
   onAfterSubmit: () => void;
 };
-
 const editDomainFormDefaultValue = {
   domains: [] as { itemId: string; customDeploymentUrl: string; repoUrl: string }[],
 };
-
 export const EditDomainForm = ({
   customDomain,
   repositories,
@@ -51,7 +48,6 @@ export const EditDomainForm = ({
         : undefined,
     resolver: zodResolver(editDomainFormSchema),
   });
-
   if (repositories.length === 0) {
     return <> </>;
   }

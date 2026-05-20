@@ -6,7 +6,6 @@ import { AffectedPermissionsDialog } from "./affected-dependents-dialog";
 import { PermissionToggleCard } from "./permission-toggle-card";
 import { isChecked } from "./permission-selection-utils";
 import { PermissionState, useRoleDetailsStore } from "./role-details-state";
-
 export const PermissionSelectionRow = ({ permission }: { permission: PermissionState }) => {
   const [requiredPermissionsModalState, setRequiredPermissionsModalState] = useState<{
     open: boolean;
@@ -27,15 +26,11 @@ export const PermissionSelectionRow = ({ permission }: { permission: PermissionS
     checked: false,
   });
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
-
   const checked = useMemo(() => isChecked(permission.resource, permissionMap), [permission.resource, permissionMap]);
-
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
-
   const onCheckedChangeHandler = (nextChecked: CheckedState) => {
     if (permission.dependentPermissions && permission.dependentPermissions.length > 0)
       return setRequiredPermissionsModalState({ open: true, permission, checked: !!nextChecked });
-
     if (
       !nextChecked &&
       permission.parents &&
@@ -44,20 +39,16 @@ export const PermissionSelectionRow = ({ permission }: { permission: PermissionS
     ) {
       return setAffectedPermissionsDialogModalState({ open: true, permission, checked: !!nextChecked });
     }
-
     changePermissionSelection([{ permissionResource: permission.resource, isChecked: !!nextChecked }]);
   };
-
   const hasDependentPermissions = useMemo(
     () => permission.dependentPermissions && permission.dependentPermissions.length > 0,
     [permission.dependentPermissions]
   );
-
   const isAllDependentPermissionsChecked = useMemo(() => {
     if (!hasDependentPermissions) return false;
     return permission.dependentPermissions.every((dp) => isChecked(dp, permissionMap));
   }, [permission.dependentPermissions, hasDependentPermissions, permissionMap]);
-
   return (
     <li key={permission.itemId} className="mb-2">
       <PermissionToggleCard

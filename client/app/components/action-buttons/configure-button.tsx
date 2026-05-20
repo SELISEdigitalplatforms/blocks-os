@@ -1,11 +1,9 @@
 import { MouseEventHandler } from "react";
 import { Button } from "../ui-kits/button/button";
 import { Settings } from "lucide-react";
-
 type ConfigureButtonProps = {
   onClick?: MouseEventHandler;
 };
-
 export const ConfigureButton = ({ onClick }: ConfigureButtonProps) => {
   return (
     <Button size="sm" variant="outline" onClick={onClick}>

@@ -1,7 +1,6 @@
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui-kits/button/button";
 import { Link } from "react-router-dom";
-
 export const ActivationSuccess = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 md:justify-start">
