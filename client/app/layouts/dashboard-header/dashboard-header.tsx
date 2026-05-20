@@ -10,6 +10,7 @@ import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
 import { useProjectStore } from "@/store/useProjectStore";
 import { cn } from "@/lib/utils";
+
 export function DashboardHeader() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
   const { pathname } = useLocation();
