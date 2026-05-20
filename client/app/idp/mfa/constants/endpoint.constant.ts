@@ -1,9 +1,12 @@
 // ─── MFA configuration endpoints (mfa.service — cloud config) ──────────────
 
+import { getRuntimeEnv } from "@/lib/runtime-env";
+
 const MFA_CONFIG_SUBPATH = "/MFA";
+const BLOCKS_IDP_BASE_URL = getRuntimeEnv("BLOCKS_IDP_BASE_URL") || "";
 
 export const MFA_CONFIG_ENDPOINTS = {
-  GET: `/api${MFA_CONFIG_SUBPATH}/Get`,
+  GET: `${BLOCKS_IDP_BASE_URL}/api${MFA_CONFIG_SUBPATH}/Get`,
   SAVE: `/api${MFA_CONFIG_SUBPATH}/Save`,
 } as const;
 
