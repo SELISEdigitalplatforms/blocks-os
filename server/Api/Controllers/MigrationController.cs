@@ -37,7 +37,8 @@ namespace Api.Controllers
         /// <param name="command"></param>
         /// <returns></returns>
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::migration::migrate")]
+        //[ProtectedEndPoint("blocks-os::migration::migrate")]
+        [Authorize]
         public async Task<MigrationOtpGenerationResponse> Migrate([FromBody] MigrationRequest command)
         {
             return await _migrationService.Migrate(command);
@@ -49,7 +50,8 @@ namespace Api.Controllers
         /// <param name="command">The OTP verification request containing the verification ID and code.</param>
         /// <returns>An <see cref="MigrationOtpVerificationResponse"/> indicating whether the OTP is valid.</returns>
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::migration::verify-otp")]
+        //[ProtectedEndPoint("blocks-os::migration::verify-otp")]
+        [Authorize]
         public async Task<MigrationOtpVerificationResponse> Verify([FromBody] MigrationVerifyOtpRequest request)
         {
             return await _migrationService.VerifyAsync(request);
@@ -61,7 +63,8 @@ namespace Api.Controllers
         /// <param name="tenantGroupId">The tenant group ID to check for migrations.</param>
         /// <returns>List of migration trackers with incomplete services.</returns>
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::migration::get-migration-status")]
+        //[ProtectedEndPoint("blocks-os::migration::get-migration-status")]
+        [Authorize]
         public async Task<IActionResult> GetMigrationStatus([FromQuery] string tenantGroupId)
         {
             if (string.IsNullOrEmpty(tenantGroupId))
@@ -74,7 +77,8 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::migration::data-cleanup")]
+        //[ProtectedEndPoint("blocks-os::migration::data-cleanup")]
+        [Authorize]
         public async Task<IActionResult> DataCleanup([FromBody] DataCleanupRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.ProjectKey))
