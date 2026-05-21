@@ -165,4 +165,4 @@ server/Api/wwwroot/**
 
 client/graphify-out/
 
-launchSettings.json
+server/**/launchSettings.json
