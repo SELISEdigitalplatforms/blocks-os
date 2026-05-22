@@ -4,35 +4,26 @@ import {
   IDeleteOidcClientPayload,
   IDeleteOidcClientResponse,
   IGetOidcPayload,
-  IOidcConfigResponse,
+  IGetOidcCredentialsResponse,
   ISaveOidcCredentialPayload,
   ISaveOidcCredentialResponse,
+  IOidcConfig,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { AUTH_OIDC_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class AuthOidc {
-  async getOidcCredentials(_payload: IGetOidcPayload): Promise<{
-    oIDCClientCredentials: IOidcConfigResponse[];
-    errors: Record<string, string> | null;
-    isSuccess: boolean;
-  }> {
-    return http.get<{
-      oIDCClientCredentials: IOidcConfigResponse[];
-      errors: Record<string, string> | null;
-      isSuccess: boolean;
-    }>(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS, undefined, { absoluteUrl: true });
+  async getOidcCredentials(): Promise<IGetOidcCredentialsResponse> {
+    return http.get(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   async getOidcCredential(payload: IGetOidcPayload): Promise<{
-    oIDCClientCredential: IOidcConfigResponse;
+    oIDCClientCredential: IOidcConfig;
     errors: Record<string, string> | null;
     isSuccess: boolean;
   }> {
-    return http.get<{
-      oIDCClientCredential: IOidcConfigResponse;
-      errors: Record<string, string> | null;
-      isSuccess: boolean;
-    }>(
+    return http.get(
       `${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}/${payload.clientId}`,
       undefined,
       { absoluteUrl: true },
@@ -42,13 +33,19 @@ export class AuthOidc {
   saveOidcCredential(
     payload: ISaveOidcCredentialPayload,
   ): Promise<APIResponse<ISaveOidcCredentialResponse>> {
-    return http.post(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload, undefined, { absoluteUrl: true });
+    return http.post(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   deleteOidcCredential(
     payload: IDeleteOidcClientPayload,
   ): Promise<APIResponse<IDeleteOidcClientResponse>> {
-    return http.delete(`${AUTH_OIDC_ENDPOINTS.DELETE_OIDC_CLIENT}/${payload.itemId}`, undefined, { absoluteUrl: true });
+    return http.delete(
+      `${AUTH_OIDC_ENDPOINTS.DELETE_OIDC_CLIENT}/${payload.itemId}`,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 }
 

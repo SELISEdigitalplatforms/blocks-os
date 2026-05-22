@@ -57,7 +57,9 @@ export const PeopleManagement = () => {
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--avatar-surface-default)] text-sm font-medium text-[var(--avatar-text-high-emphasis)]">
-                        {person.peopleDetails?.firstName?.[0] || person.peopleDetails?.email?.[0] || "?"}
+                        {person.peopleDetails?.firstName?.[0] ||
+                          person.peopleDetails?.email?.[0] ||
+                          "?"}
                       </div>
                       <div>
                         <div className="text-sm font-medium">
@@ -72,7 +74,11 @@ export const PeopleManagement = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {person.sharedEnviroments?.map((env) => (
-                        <Badge key={env.tenantId} variant="secondary" className="text-xs">
+                        <Badge
+                          key={env.tenantId}
+                          variant="secondary"
+                          className="text-xs"
+                        >
                           {env.enviroment}
                         </Badge>
                       ))}

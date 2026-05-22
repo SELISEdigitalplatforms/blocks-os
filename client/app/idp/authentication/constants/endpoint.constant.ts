@@ -30,6 +30,7 @@ export const AUTH_OIDC_ENDPOINTS = {
   SAVE_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
   DELETE_OIDC_CLIENT: `${BLOCKS_IDP_BASE_URL}/api/oidc-clients`,
   OIDC_TOKEN: `${BLOCKS_IDP_BASE_URL}/api${AUTH_OIDC_SUBPATH}/token`,
+  OIDC_CALL_BACK: `${BLOCKS_IDP_BASE_URL}/api${AUTH_OIDC_SUBPATH}/oidc/callback`,
 } as const;
 
 // ─── Auth configuration endpoints (auth-config.service) ─────────────────────
