@@ -35,11 +35,9 @@ import CallbackPage from "./routes/callback/callback";
 import { ProjectOverviewLayout } from "./layouts/project-overview-layout";
 import LoginCallbackPage from "./routes/auth/callback";
 import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-usage-page";
+import SsoCallbackPage from "./routes/auth/sso-callback";
 
 export const router = createBrowserRouter([
-
-
-
   // ── IDP service login (initiates OIDC flow + handles callback) ──
   {
     path: "/login",
@@ -63,12 +61,18 @@ export const router = createBrowserRouter([
   {
     element: <ProjectOverviewLayout />,
     children: [
-      { path: "/project-overview", element: <Navigate to="/project-overview/environments" replace /> },
+      {
+        path: "/project-overview",
+        element: <Navigate to="/project-overview/environments" replace />,
+      },
       { path: "/project-overview/environments", element: <EnvironmentsPage /> },
       { path: "/project-overview/people", element: <PeopleManagement /> },
       { path: "/project-overview/repositories", element: <RepositoriesPage /> },
       { path: "/project-overview/settings", element: <SettingsPage /> },
-      { path: "/project-overview/subscription-usage", element: <SubscriptionUsagePage /> },
+      {
+        path: "/project-overview/subscription-usage",
+        element: <SubscriptionUsagePage />,
+      },
     ],
   },
   // ── Dashboard layout (protected routes + future impersonated pages) ──
@@ -78,29 +82,61 @@ export const router = createBrowserRouter([
       { path: "/dashboard", element: <DashboardOverview /> },
       { path: "/services/iam", element: <IamPage /> },
       { path: "/services/iam/role-detail/:id", element: <IamRoleDetailPage /> },
-      { path: "/services/iam/permission-detail/new", element: <IamAddPermissionPage /> },
-      { path: "/services/iam/permission-detail/:id", element: <IamPermissionDetailPage /> },
-      { path: "/services/iam/organization-detail/:itemId", element: <IamOrgDetailPage /> },
+      {
+        path: "/services/iam/permission-detail/new",
+        element: <IamAddPermissionPage />,
+      },
+      {
+        path: "/services/iam/permission-detail/:id",
+        element: <IamPermissionDetailPage />,
+      },
+      {
+        path: "/services/iam/organization-detail/:itemId",
+        element: <IamOrgDetailPage />,
+      },
       { path: "/services/iam/logs", element: <IamLogsPage /> },
       { path: "/services/iam/configure", element: <IamConfigurePage /> },
-      { path: "/services/authentication", element: <AuthenticationConfigPage /> },
-      { path: "/services/authentication/sso-configuration", element: <SsoConfigurationPage /> },
+      {
+        path: "/services/authentication",
+        element: <AuthenticationConfigPage />,
+      },
+      {
+        path: "/services/authentication/sso-configuration",
+        element: <SsoConfigurationPage />,
+      },
       { path: "/services/authentication/logs", element: <AuthLogsPage /> },
-      { path: "/services/mfa", element: <Navigate to="/services/secret-management?tab=mfa" replace /> },
+      {
+        path: "/services/mfa",
+        element: <Navigate to="/services/secret-management?tab=mfa" replace />,
+      },
       { path: "/services/mfa/logs", element: <MfaLogsPage /> },
       { path: "/services/api-settings", element: <ApiSettingsPage /> },
       { path: "/services/rate-limiter", element: <RateLimiterPage /> },
       { path: "/services/lmt", element: <LmtPage /> },
-      { path: "/services/lmt/logs/:serviceName", element: <LmtServiceLogsPage /> },
+      {
+        path: "/services/lmt/logs/:serviceName",
+        element: <LmtServiceLogsPage />,
+      },
       { path: "/tracing/timeline/:traceId", element: <LmtTraceDetailsPage /> },
-      { path: "/services/secret-management", element: <SecretManagementPage /> },
-      { path: "/services/secret-management/ai-models/:provider", element: <AiModelSelectedRoute /> },
+      {
+        path: "/services/secret-management",
+        element: <SecretManagementPage />,
+      },
+      {
+        path: "/services/secret-management/ai-models/:provider",
+        element: <AiModelSelectedRoute />,
+      },
       { path: "/managed-services", element: <ManagedServicesPage /> },
-      { path: "/services/captcha", element: <Navigate to="/services/secret-management?tab=captcha" replace /> },
+      {
+        path: "/services/captcha",
+        element: (
+          <Navigate to="/services/secret-management?tab=captcha" replace />
+        ),
+      },
       { path: "/services/captcha/logs", element: <CaptchaLogsPage /> },
     ],
   },
-  
+
   // ── Root redirect: authenticated users go to console ──
   { path: "/", element: <Navigate to="/console" replace /> },
   // ── Catch-all: redirect to login ──
