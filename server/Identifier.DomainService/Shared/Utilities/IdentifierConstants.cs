@@ -20,7 +20,7 @@ namespace DomainService.Shared
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string CookieDomainPrefix = "blocksapi.";
 
-        public const string IdentifierQueueName = "create_project_consumer";
+        public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_data_cleanup_listener";
         public const string LanguageDataMigrationQueue = "blocks_uilm_environment_data_migration_listener";
         public const string IamQueue = "blocks_iam_listener";
