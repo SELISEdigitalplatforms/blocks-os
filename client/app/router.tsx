@@ -28,6 +28,7 @@ import { Console } from "./pages/console/console";
 import { DashboardOverview } from "./pages/dashboard/dashboard-overview";
 import { EnvironmentsPage } from "./pages/environments/environments";
 import { PeopleManagement } from "./pages/people/people-management";
+import { PersonDetailPage } from "./pages/people/person-detail-page";
 import { RepositoriesPage } from "./pages/repositories/repositories";
 import { SettingsPage } from "./pages/settings/settings";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
@@ -67,6 +68,7 @@ export const router = createBrowserRouter([
       },
       { path: "/project-overview/environments", element: <EnvironmentsPage /> },
       { path: "/project-overview/people", element: <PeopleManagement /> },
+      { path: "/project-overview/people/:id", element: <PersonDetailPage /> },
       { path: "/project-overview/repositories", element: <RepositoriesPage /> },
       { path: "/project-overview/settings", element: <SettingsPage /> },
       {
