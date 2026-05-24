@@ -61,8 +61,8 @@ namespace XUnitTest.DomainService.Shared
                 phoneNumber: null,
                 displayName: null,
                 oauthToken: null,
-                refreshToken: null,
-                actualTentId: null
+                //refreshToken: null,
+                originalTenantId: null
             );
             BlocksContext.SetContext(_context);
         }
