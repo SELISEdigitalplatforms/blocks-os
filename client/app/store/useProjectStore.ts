@@ -23,7 +23,10 @@ export const useProjectStore = create<IProjectStore>()(
       selectedTenantGroup: null,
       setSelectedProject(project) {
         set((state) => ({ ...state, selectedProject: project }));
-        set((state) => ({ ...state, selectedTenantGroup: project.tenantGroupId }));
+        set((state) => ({
+          ...state,
+          selectedTenantGroup: project.tenantGroupId,
+        }));
       },
       resetSelectedProject() {
         set((state) => ({ ...state, selectedProject: null }));
@@ -35,12 +38,18 @@ export const useProjectStore = create<IProjectStore>()(
         set((state) => ({ ...state, projects: [] }));
       },
       reset() {
-        set(() => ({ projects: [], selectedProject: null, selectedTenantGroup: null }));
+        set(() => ({
+          projects: [],
+          selectedProject: null,
+          selectedTenantGroup: null,
+        }));
       },
       setTennantGroup(tenantGroupId) {
+        console.log("Setting tenant group to", tenantGroupId);
         set((state) => ({ ...state, selectedTenantGroup: tenantGroupId }));
       },
       resetTennantGroup() {
+        console.log("Resetting tenant group");
         set((state) => ({ ...state, selectedTenantGroup: null }));
       },
     }),

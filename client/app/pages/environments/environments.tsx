@@ -44,16 +44,12 @@ const ProjectGroupLoading = () => (
   </main>
 );
 export const EnvironmentsPage = () => {
-  const { resetTennantGroup } = useProjectStore();
   const groupId = useProjectStore().selectedTenantGroup;
   const {
     data: environmentList,
     isLoading,
     isFetching,
   } = useGetProjects(groupId ?? "");
-  useEffect(() => {
-    resetTennantGroup();
-  }, []);
   const { data: peopleData } = useGetPeople({
     page: 0,
     pageSize: 1,
