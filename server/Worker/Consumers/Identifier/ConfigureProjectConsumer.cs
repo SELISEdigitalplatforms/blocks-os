@@ -20,15 +20,15 @@ namespace Worker.Consumers.Identifier
 
         public async Task Consume(Tenant project)
         {
-            if (project.Applications.FirstOrDefault()?.CookieDomain != IdentifierConstants.BlocksDomain)
-            {
-                await Task.WhenAll(_domainManagementService.ConfigureDomainAsync(new ConfigureDomainRequest { CookieDomain = project.Applications.FirstOrDefault()?.Domain, ProjectKey = project.ItemId }),
-                                   _projectManagementService.ConfigureProjectAsync(project));
-            }
-            else
-            {
+            //if (project.Applications.FirstOrDefault()?.CookieDomain != IdentifierConstants.BlocksDomain)
+            //{
+            //    await Task.WhenAll(_domainManagementService.ConfigureDomainAsync(new ConfigureDomainRequest { CookieDomain = project.Applications.FirstOrDefault()?.Domain, ProjectKey = project.ItemId }),
+            //                       _projectManagementService.ConfigureProjectAsync(project));
+            //}
+           // else
+           // {
                 await _projectManagementService.ConfigureProjectAsync(project);
-            }
+           // }
         }
     }
 }

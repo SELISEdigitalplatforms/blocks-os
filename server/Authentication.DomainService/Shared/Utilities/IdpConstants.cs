@@ -18,7 +18,7 @@ namespace DomainService.Utilities
         private const string RabbitMqProvider = "rabbitmq";
 
         #region Identifier Service Constants
-        public const string IdentifierQueueName = "blocks_os_identifier_listener";
+        public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_os_data_cleanup_listener";
         public const string LanguageDataMigrationQueue = "blocks_os_uilm_environment_data_migration_listener";
         public const string GenericMigrationQueue = "blocks_os_generic_migration_listener";
