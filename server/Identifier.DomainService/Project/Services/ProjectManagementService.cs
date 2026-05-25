@@ -58,6 +58,8 @@ namespace DomainService.Projects
 
             try
             {
+                await InsertIntoProjectPeopleAsync(projectStatus, project);
+
                 (X509Certificate2 publicKeyCertificate, X509Certificate2 privateKeyCertificate) = _certificateManager.GenerateCertificates(project.JwtTokenParameters);
 
                 await Task.WhenAll( UploadPrivateCertificateIfNeeded(projectStatus, privateKeyCertificate, project),
@@ -65,9 +67,6 @@ namespace DomainService.Projects
 
                 await Task.WhenAll(UpdateProjectIfNeeded(projectStatus, project),
                                    _projectRepository.CreateDefaultConfigurationAsync(projectStatus, project));
-
-                await InsertIntoProjectPeopleAsync(projectStatus, project);
-
             }
             catch (Exception ex)
             {

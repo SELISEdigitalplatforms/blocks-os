@@ -322,8 +322,8 @@ namespace XUnitTest.DomainService.Mfa
                 phoneNumber: "",
                 displayName: "Test User",
                 oauthToken: "",
-                refreshToken: "",
-                actualTentId: "test-tenant"
+                //refreshToken: "",
+                originalTenantId: "test-tenant"
             );
             BlocksContext.SetContext(blocksContext);
 
@@ -359,8 +359,8 @@ namespace XUnitTest.DomainService.Mfa
                 phoneNumber: "",
                 displayName: "Test User",
                 oauthToken: "",
-                refreshToken: "",
-                actualTentId: "test-tenant"
+                //refreshToken: "",
+                originalTenantId: "test-tenant"
             );
             BlocksContext.SetContext(blocksContext);
 
