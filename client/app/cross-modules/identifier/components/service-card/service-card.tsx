@@ -62,7 +62,7 @@ const LinkButton = ({
 export const ServiceCard = ({ service }: { service: RegisteredService }) => {
   const [showAllTags, setShowAllTags] = useState(false);
   const navigate = useNavigate();
-  const swaggerUrl = `${getRuntimeEnv("BLOCKS_API_BASE_URL")}/identifier/v1/swagger/index.html`;
+  const swaggerUrl = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}/identifier/v1/swagger/index.html`;
   const docsUrl = "https://docs.seliseblocks.com/";
   return (
     <>
