@@ -26,25 +26,27 @@ namespace DomainService.ManagedService.Services
         private readonly ArmClient _armClient;
         private readonly string? _azureSubscriptionId;
         private readonly string? _azureResourceGroupName;
+        private readonly IConfiguration configuration;
 
         [ExcludeFromCodeCoverage]
         public ServiceManagement(IServiceManagementRepository serviceManagementRepository,
                                  IValidator<RegisterServiceRequest> registerServiceRequestValidator,
                                  IBlocksSecret blocksSecret,
                                  ICacheClient cacheClient,
-                                 ITenants tenants)
+                                 ITenants tenants,
+                                 IConfiguration configuration)
         {
             _serviceManagementRepository = serviceManagementRepository;
             _registerServiceRequestValidator = registerServiceRequestValidator;
             _blocksSecret = blocksSecret;
             _cacheClient = cacheClient;
-           
+            this.configuration = configuration;
             _tenants = tenants;
             var isRabbitMq = IdentifierHelper.IsRabbitMq(_blocksSecret.LmtMessageConnectionString);
             if (!isRabbitMq)
             {
                 _adminClient = new ServiceBusAdministrationClient(blocksSecret.LmtMessageConnectionString);
-                var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+                //var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
                 var azureTenantId = configuration["AZURE_TENANT_ID_LMT"];
                 var azureClientId = configuration["AZURE_CLIENT_ID_LMT"];
                 var azureClientSecret = configuration["AZURE_CLIENT_SECRET_LMT"];
