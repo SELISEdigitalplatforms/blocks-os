@@ -17,7 +17,8 @@ const redirectPaths: Record<string, string> = {
   "/services/iam/role-detail/*": "/services/iam?tab=roles",
   "/services/iam/organization-detail/*": "/services/iam",
   "/services/iam/permission-detail/*": "/services/iam",
-  "/services/authentication/sso-configuration": "/services/authentication?tab=social",
+  "/services/authentication/sso-configuration":
+    "/services/authentication?tab=social",
 };
 const wildcardToRegex = (pattern: string) => {
   const escaped = pattern.replace(/[-/\\^$+?.()|[\]{}]/g, "\\$&");
@@ -28,14 +29,17 @@ export function ProjectList({ collapsed = false }: { collapsed?: boolean }) {
   const { pathname } = useLocation();
   const { data: projectGroups = [], isLoading } = useGetProjects();
   const { selectedProject, setSelectedProject } = useProjectStore();
-  const { data: projectData } = useGetProject({ projectId: selectedProject?.itemId || "" });
+  const { data: projectData } = useGetProject();
   const pendingProjectRef = useRef<IProject | null>(null);
   const redirectRegexMap = useMemo(
     () =>
-      Object.entries(redirectPaths).reduce<Record<string, string>>((acc, [pattern, target]) => {
-        acc[wildcardToRegex(pattern)] = target;
-        return acc;
-      }, {}),
+      Object.entries(redirectPaths).reduce<Record<string, string>>(
+        (acc, [pattern, target]) => {
+          acc[wildcardToRegex(pattern)] = target;
+          return acc;
+        },
+        {},
+      ),
     [],
   );
   useEffect(() => {
@@ -56,7 +60,9 @@ export function ProjectList({ collapsed = false }: { collapsed?: boolean }) {
     setSelectedProject(project);
   };
   const name = projectData?.data.name || selectedProject?.name;
-  const projects = projectGroups.map((group) => group.projects[0]).filter(Boolean);
+  const projects = projectGroups
+    .map((group) => group.projects[0])
+    .filter(Boolean);
   return (
     <DropdownMenu>
       {collapsed ? (
@@ -71,8 +77,12 @@ export function ProjectList({ collapsed = false }: { collapsed?: boolean }) {
           <div className="flex items-center gap-2.5">
             <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Project</div>
-              <div className="break-all text-sm font-medium leading-tight">{name || "Select a Project"}</div>
+              <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Project
+              </div>
+              <div className="break-all text-sm font-medium leading-tight">
+                {name || "Select a Project"}
+              </div>
             </div>
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </div>
@@ -82,14 +92,19 @@ export function ProjectList({ collapsed = false }: { collapsed?: boolean }) {
         align={collapsed ? "center" : "start"}
         side={collapsed ? "right" : "bottom"}
         sideOffset={collapsed ? 8 : 4}
-        className={collapsed ? "min-w-48" : "w-[--radix-dropdown-menu-trigger-width]"}
+        className={
+          collapsed ? "min-w-48" : "w-[--radix-dropdown-menu-trigger-width]"
+        }
       >
         <DropdownMenuLabel>Your Projects</DropdownMenuLabel>
         {projects
           .filter((project) => project.itemId !== selectedProject?.itemId)
           .slice(0, 5)
           .map((project) => (
-            <DropdownMenuItem key={project.itemId} onSelect={() => handleProjectSelect(project)}>
+            <DropdownMenuItem
+              key={project.itemId}
+              onSelect={() => handleProjectSelect(project)}
+            >
               {isLoading ? (
                 <div className="flex w-full items-center justify-center py-2">
                   <Loader size={16} className="animate-spin text-gray-400" />
@@ -100,7 +115,9 @@ export function ProjectList({ collapsed = false }: { collapsed?: boolean }) {
             </DropdownMenuItem>
           ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>Project overview is not part of this client</DropdownMenuItem>
+        <DropdownMenuItem disabled>
+          Project overview is not part of this client
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

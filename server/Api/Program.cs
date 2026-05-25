@@ -1,15 +1,16 @@
-using BlocksTemplate.Api;
 using Blocks.Genesis;
+using BlocksTemplate.Api;
+using Captcha.DomainService.Configuration;
 using Cloud.DomainService.Utilities;
-using DomainService.Utilities;
-using DomainService.Shared;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
 using Cloud.LmtService.Utilities;
 using CloudConfiguration.DomainService.Shared.Utilities;
-using Captcha.DomainService.Configuration;
+using DomainService.Shared;
+using DomainService.Utilities;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using Secrets.DomainService.Services;
+using SeliseBlocks.ConfigurationDriver;
 
 var serviceName = "blocks-os";
 //var vaultType = ResolveVaultType();
@@ -20,6 +21,13 @@ Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString
 
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
+builder.Configuration.AddMongoDbConfiguration(options =>
+{
+    options.ConnectionString = secret.DatabaseConnectionString;
+    options.DatabaseName = secret.RootDatabaseName;
+    options.CollectionName = "Secrets";
+    options.SecretKey = "blocks-Secret";
+});
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 15 * 1024 * 1024; // 15 MB
