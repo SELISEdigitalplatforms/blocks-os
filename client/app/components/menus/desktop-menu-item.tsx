@@ -1,76 +1,71 @@
-import { useMemo } from "react";
-import { ChevronDown } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
-import { Badge } from "@/components/ui-kits/badge/badge";
-import { cn } from "@/lib/utils";
-import { Menu } from "@/models/menu-models";
-type MenuItemType = Extract<Menu, { type: "menu" }>;
-function ChildMenuItem({ menu }: { menu: MenuItemType }) {
-  const { pathname } = useLocation();
-  const isActiveMenu = pathname.startsWith(menu.path);
+import { useMemo } from "react"
+import { Link, useLocation } from "react-router-dom"
+import { ChevronRight } from "lucide-react"
+import { Badge } from "@/components/ui-kits/badge/badge"
+import { cn } from "@/lib/utils"
+import { Menu } from "@/models/menu-models"
+
+type MenuItemType = Extract<Menu, { type: "menu" }>
+
+type ChildMenuItemProps = {
+  menu: MenuItemType
+}
+
+const ChildMenuItem = ({ menu }: ChildMenuItemProps) => {
+  const { pathname } = useLocation()
+  const isActiveMenu = pathname.startsWith(menu.path)
+
   return (
     <Link
       to={menu.path}
       className={cn(
-        "mx-1 flex h-8 items-center rounded-md px-3 text-sm transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
-        isActiveMenu
-          ? "bg-primary/10 text-primary"
-          : "text-[hsl(var(--low-emphasis))]",
+        "flex h-10 items-center gap-2 px-4 py-1.5 text-base transition-colors hover:text-[hsl(var(--high-emphasis))]",
+        isActiveMenu && "!text-primary",
         menu.disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
-      {menu.icon ? <menu.icon className="mr-2 h-4 w-4" /> : null}
+      {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
       <span>{menu.name}</span>
     </Link>
-  );
+  )
 }
-export function DesktopMenuItem({
-  menu,
-  isSidebarOpen,
-}: {
-  menu: MenuItemType;
-  isSidebarOpen: boolean;
-}) {
-  const { pathname } = useLocation();
+
+export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; isSidebarOpen: boolean }) {
+  const { pathname } = useLocation()
+
   const isActiveMenu = useMemo(() => {
-    const allPaths = [menu.path];
+    const allPaths = [menu.path]
     if (menu.children) {
       menu.children.forEach((child) => {
-        if (child.type === "menu") allPaths.push(child.path);
-      });
+        if (child.type === "menu") {
+          allPaths.push(child.path)
+        }
+      })
     }
-    return allPaths.some((item) => pathname.startsWith(item));
-  }, [menu.children, menu.path, pathname]);
-  const hasChildren = Boolean(menu.children?.length);
+    return allPaths.some((item) => pathname.startsWith(item))
+  }, [menu.children, menu.path, pathname])
+
+  const hasChildren = Boolean(menu.children?.length)
+
+  if (menu.type !== "menu") {
+    return null
+  }
+
   const baseClasses = cn(
-    "group relative flex cursor-pointer items-center transition-colors",
-    isSidebarOpen
-      ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm"
-      : "h-10 w-full justify-center",
-    // Hover effects only when not active
-    !isActiveMenu && "hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
-    // Base color
-    isActiveMenu
-      ? isSidebarOpen
-        ? "bg-primary/10 text-primary"
-        : "text-primary"
-      : "text-[hsl(var(--low-emphasis))]",
-  );
+    "relative flex h-10 cursor-pointer items-center gap-3 p-1.5 px-4 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+    isActiveMenu && "!text-primary",
+  )
+
   if (!hasChildren) {
     return (
-      <div className={cn(baseClasses)}>
+      <div className={cn(baseClasses, "group relative justify-between")}>
         <Link
           to={menu.path}
-          className={cn(
-            "flex min-w-0 items-center gap-2.5 w-full h-full ",
-            menu.disabled && "pointer-events-none opacity-50",
-          )}
+          className={cn("flex items-center gap-3", menu.disabled && "pointer-events-none opacity-50")}
         >
-          {menu.icon ? (
-            <menu.icon className="h-[18px] w-[18px] shrink-0" />
-          ) : null}
+          {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
           {isSidebarOpen ? (
-            <span className="relative min-w-0 truncate flex-1">
+            <span className="relative">
               {menu.name}
               {menu.badge ? (
                 <Badge
@@ -88,20 +83,17 @@ export function DesktopMenuItem({
             {menu.name}
           </div>
         ) : null}
-        {isActiveMenu && !isSidebarOpen ? (
-          <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
-        ) : null}
+        {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
       </div>
-    );
+    )
   }
+
   return (
-    <div className={cn(baseClasses)}>
-      <div className="flex min-w-0 items-center gap-2.5">
-        {menu.icon ? (
-          <menu.icon className="h-[18px] w-[18px] shrink-0" />
-        ) : null}
+    <div className={cn(baseClasses, "group relative")}>
+      <div className="flex items-center gap-3">
+        {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
         {isSidebarOpen ? (
-          <span className="relative min-w-0 truncate">
+          <span className="relative">
             {menu.name}
             {menu.badge ? (
               <Badge
@@ -116,26 +108,27 @@ export function DesktopMenuItem({
       </div>
       {!isSidebarOpen ? (
         <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="whitespace-nowrap">{menu.name}</span>
+          {menu.name.length >= 8 ? (
+            <div className="max-w-[50px] break-words text-center">
+              <span>{menu.name}</span>
+            </div>
+          ) : (
+            <span className="whitespace-nowrap">{menu.name}</span>
+          )}
         </div>
       ) : null}
-      {isSidebarOpen ? (
-        <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 -rotate-90 text-muted-foreground transition-transform duration-200 group-hover:rotate-0" />
-      ) : null}
-      {isActiveMenu && !isSidebarOpen ? (
-        <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
-      ) : null}
-      <div className="absolute left-full top-0 z-10 hidden w-56 flex-col rounded-md border bg-background py-1 shadow-md group-hover:flex group-hover:text-[hsl(var(--low-emphasis))]">
+      {isSidebarOpen ? <ChevronRight className="ml-auto h-4 w-4" /> : null}
+      {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+
+      <div className="absolute left-full top-0 z-10 hidden w-64 min-w-64 flex-col rounded-sm border border-border bg-background py-2 text-[hsl(var(--low-emphasis))] group-hover:flex">
         {menu.children
-          ?.filter(
-            (subMenu): subMenu is MenuItemType =>
-              subMenu.type === "menu" && !subMenu.disabled,
-          )
+          ?.filter((subMenu): subMenu is MenuItemType => subMenu.type === "menu" && !subMenu.disabled)
           .map((subMenu) => (
             <ChildMenuItem key={subMenu.id} menu={subMenu} />
           ))}
       </div>
+
       <div className="absolute left-full top-0 hidden h-full w-1 bg-transparent group-hover:block" />
     </div>
-  );
+  )
 }
