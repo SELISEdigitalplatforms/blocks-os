@@ -8,8 +8,7 @@ namespace DomainService.Utilities
         public const string TenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
         public const string AuthenticationQueue = "blocks_os_authentication_listener";
         public const string IamQueue = "blocks_os_iam_listener";
-        //public const string MailQueue = "blocks_os_mail_listener";
-        public const string MailQueue = "blocks_email_listener";
+        public const string MailQueue = "blocks_os_mail_listener";
         public const string MfaQueueName = "blocks_os_mfa_listener";
 
         public const string AccessTokenCookieName = "access_token";
