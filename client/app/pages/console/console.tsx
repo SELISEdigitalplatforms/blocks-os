@@ -3,10 +3,13 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { DefaultDoc } from "./default-doc";
 import { SelfProject } from "./self-project";
 export const Console = () => {
-  const { resetSelectedProject } = useProjectStore();
+  const { resetSelectedProject, resetTennantGroup } = useProjectStore();
+
   useEffect(() => {
     resetSelectedProject();
+    resetTennantGroup();
   }, []);
+
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
       <div className="relative flex flex-1 flex-col gap-12 px-6 py-10 sm:px-10 xl:px-[154px]">
