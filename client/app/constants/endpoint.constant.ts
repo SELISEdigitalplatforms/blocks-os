@@ -1,10 +1,10 @@
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export const DEPLOYMENT_BASE_URL =
-  "https://dev-release.blocksdevelopers.com";
+  "https://stg-release.blocksdevelopers.com";
 
 
-const DEFAULT_BLOCKS_LOGIC_SITE_ORIGIN = "https://dev-logic.blocksdevelopers.com" as const;
+const DEFAULT_BLOCKS_LOGIC_SITE_ORIGIN = "https://stg-logic.blocksdevelopers.com" as const;
 
 const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
