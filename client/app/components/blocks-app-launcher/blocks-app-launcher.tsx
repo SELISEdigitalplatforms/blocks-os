@@ -165,8 +165,8 @@ function DeploymentsIcon() {
 }
 const SELISE_APPS: BlocksApp[] = [
   {
-    key: "idp",
-    label: "IDP",
+    key: "iam",
+    label: "IAM",
     description: "Identity & Access",
     url: getRuntimeEnv("BLOCKS_IDP_BASE_URL"),
     icon: <IdpIcon />,
@@ -174,8 +174,8 @@ const SELISE_APPS: BlocksApp[] = [
     redirectUri: getRuntimeEnv("BLOCKS_IDP_CALLBACK_URL"),
   },
   {
-    key: "uilm",
-    label: "EUROLM",
+    key: "localization",
+    label: "Localization",
     description: "Localization",
     url: getRuntimeEnv("BLOCKS_EUROLM_BASE_URL"),
     icon: <UilmIcon />,
@@ -183,8 +183,8 @@ const SELISE_APPS: BlocksApp[] = [
     redirectUri: getRuntimeEnv("BLOCKS_EUROLM_CALLBACK_URL"),
   },
   {
-    key: "ai",
-    label: "Blocks Agents",
+    key: "agents",
+    label: "Agents",
     description: "AI Platform",
     url: getRuntimeEnv("BLOCKS_AGENT_BASE_URL"),
     icon: <AiIcon />,
@@ -192,8 +192,8 @@ const SELISE_APPS: BlocksApp[] = [
     redirectUri: getRuntimeEnv("BLOCKS_AGENT_CALLBACK_URL"),
   },
   {
-    key: "data-gateway",
-    label: "Data Gateway",
+    key: "data",
+    label: "Data",
     description: "Data Integration",
     url: getRuntimeEnv("BLOCKS_DATA_GATEWAY_BASE_URL"),
     icon: <DataGatewayIcon />,
@@ -201,8 +201,8 @@ const SELISE_APPS: BlocksApp[] = [
     redirectUri: getRuntimeEnv("BLOCKS_DATA_GATEWAY_CALLBACK_URL"),
   },
   {
-    key: "blocks-os",
-    label: "Blocks OS",
+    key: "os",
+    label: "OS",
     description: "Operating System",
     url: getRuntimeEnv("BLOCKS_OS_BASE_URL"),
     icon: <BlocksOsIcon />,
@@ -210,8 +210,8 @@ const SELISE_APPS: BlocksApp[] = [
     redirectUri: getRuntimeEnv("BLOCKS_OS_CALLBACK_URL"),
   },
   {
-    key: "utility",
-    label: "Utility",
+    key: "utilities",
+    label: "Utilities",
     description: "Utility Tools",
     url: getRuntimeEnv("BLOCKS_UTILITY_BASE_URL"),
     icon: <UtilityIcon />,
@@ -228,8 +228,8 @@ const SELISE_APPS: BlocksApp[] = [
     redirectUri: getRuntimeEnv("BLOCKS_LOGIC_CALLBACK_URL"),
   },
   {
-    key: "observability",
-    label: "Observability",
+    key: "monitor",
+    label: "Monitor",
     description: "Monitoring & Logs",
     url: getRuntimeEnv("BLOCKS_OBSERVABILITY_BASE_URL"),
     icon: <ObservabilityIcon />,
@@ -237,8 +237,8 @@ const SELISE_APPS: BlocksApp[] = [
     redirectUri: getRuntimeEnv("BLOCKS_OBSERVABILITY_CALLBACK_URL"),
   },
   {
-    key: "deployments",
-    label: "Deployments",
+    key: "release",
+    label: "Release",
     description: "CI/CD & Releases",
     url: getRuntimeEnv("BLOCKS_DEPLOYMENTS_BASE_URL"),
     icon: <DeploymentsIcon />,
@@ -325,7 +325,7 @@ export function BlocksAppLauncher() {
     const stored = localStorage.getItem("blocks-app-favourites");
     const keys = stored
       ? new Set<string>(JSON.parse(stored) as string[])
-      : new Set<string>(["idp", "uilm"]);
+      : new Set<string>(["iam", "localization"]);
     setFavouriteKeys(keys);
     setIsHydrated(true);
   }, []);
