@@ -1,11 +1,16 @@
-import react from "@vitejs/plugin-react";
+/// <reference types="vite/client" />
 import path from "path";
+import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import type { InlineConfig } from "vitest/node";
+import { getRuntimeEnv } from "./app/lib/runtime-env";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "BLOCKS_");
-  const proxyTarget = env.BLOCKS_API_BASE_URL;
+  const proxyTarget = getRuntimeEnv("BLOCKS_OS_BASE_URL", env);
+  const iamProxyTarget =
+    getRuntimeEnv("BLOCKS_IAM_BASE_URL", env) ||
+    "https://dev-iam.blocksdevelopers.com";
 
   return {
     envPrefix: ["BLOCKS_"],
@@ -53,8 +58,14 @@ export default defineConfig(({ mode }) => {
         ".blocksdevelopers.com",
       ],
       proxy: {
+          "/dev-iam-proxy": {
+            target: iamProxyTarget,
+            changeOrigin: true,
+            secure: true,
+            rewrite: (path) => path.replace(/^\/dev-iam-proxy/, ""),
+          },
           "/dev-idp-proxy": {
-            target: "https://dev-idp.blocksdevelopers.com",
+            target: iamProxyTarget,
             changeOrigin: true,
             secure: true,
             rewrite: (path) => path.replace(/^\/dev-idp-proxy/, ""),

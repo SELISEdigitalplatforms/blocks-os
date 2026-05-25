@@ -17,7 +17,7 @@ export default function LoginCallbackPage() {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
 
-    const idpBaseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
+    const idpBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL");
     const callbackUrl = new URL(`${idpBaseUrl}/api/idp/callback`);
     // Forward the callback parameters to backend
     if (code) callbackUrl.searchParams.set("code", code);
