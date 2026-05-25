@@ -1,5 +1,4 @@
 import {
-  Server,
   KeyRound,
   Layers,
   ShieldCheck,
@@ -35,7 +34,6 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
   {
     label: "Secrets & Keys",
     items: [
-      { id: "infra-config", label: "Infra Config", value: "infra-config", icon: Server, desc: "Manage infrastructure configurations" },
       { id: "my-secret", label: "My Secret", value: "my-secret", icon: KeyRound, desc: "Manage your secrets and credentials" },
       { id: "managed-services", label: "My Service", value: "managed-services", icon: Layers, desc: "Manage connected services" },
     ],

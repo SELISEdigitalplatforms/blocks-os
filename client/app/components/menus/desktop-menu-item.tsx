@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui-kits/badge/badge"
+import { SidebarCollapsedTooltip } from "@/components/menus/sidebar-collapsed-tooltip"
 import { cn } from "@/lib/utils"
 import { Menu } from "@/models/menu-models"
 
@@ -52,46 +53,48 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
   }
 
   const baseClasses = cn(
-    "relative flex h-10 cursor-pointer items-center gap-3 p-1.5 px-4 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+    "relative flex h-10 w-full cursor-pointer items-center gap-3 p-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+    isSidebarOpen ? "px-4" : "justify-center px-0",
     isActiveMenu && "!text-primary",
   )
 
   if (!hasChildren) {
     return (
-      <div className={cn(baseClasses, "group relative justify-between")}>
-        <Link
-          to={menu.path}
-          className={cn("flex items-center gap-3", menu.disabled && "pointer-events-none opacity-50")}
-        >
-          {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
-          {isSidebarOpen ? (
-            <span className="relative">
-              {menu.name}
-              {menu.badge ? (
-                <Badge
-                  variant="secondary"
-                  className="absolute -top-2 left-full ml-1 h-4 px-1 text-[9px] font-semibold uppercase text-primary"
-                >
-                  {menu.badge}
-                </Badge>
-              ) : null}
-            </span>
-          ) : null}
-        </Link>
-        {!isSidebarOpen ? (
-          <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-            {menu.name}
-          </div>
-        ) : null}
-        {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
-      </div>
+      <SidebarCollapsedTooltip label={menu.name} show={!isSidebarOpen}>
+        <div className={cn(baseClasses, "group relative")}>
+          <Link
+            to={menu.path}
+            className={cn(
+              "flex items-center gap-3",
+              !isSidebarOpen && "justify-center",
+              menu.disabled && "pointer-events-none opacity-50",
+            )}
+          >
+            {menu.icon ? <menu.icon className="h-5 w-5 shrink-0" /> : null}
+            {isSidebarOpen ? (
+              <span className="relative">
+                {menu.name}
+                {menu.badge ? (
+                  <Badge
+                    variant="secondary"
+                    className="absolute -top-2 left-full ml-1 h-4 px-1 text-[9px] font-semibold uppercase text-primary"
+                  >
+                    {menu.badge}
+                  </Badge>
+                ) : null}
+              </span>
+            ) : null}
+          </Link>
+          {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+        </div>
+      </SidebarCollapsedTooltip>
     )
   }
 
   return (
     <div className={cn(baseClasses, "group relative")}>
-      <div className="flex items-center gap-3">
-        {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
+      <div className={cn("flex items-center gap-3", !isSidebarOpen && "justify-center w-full")}>
+        {menu.icon ? <menu.icon className="h-5 w-5 shrink-0" /> : null}
         {isSidebarOpen ? (
           <span className="relative">
             {menu.name}
@@ -106,17 +109,6 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
           </span>
         ) : null}
       </div>
-      {!isSidebarOpen ? (
-        <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-          {menu.name.length >= 8 ? (
-            <div className="max-w-[50px] break-words text-center">
-              <span>{menu.name}</span>
-            </div>
-          ) : (
-            <span className="whitespace-nowrap">{menu.name}</span>
-          )}
-        </div>
-      ) : null}
       {isSidebarOpen ? <ChevronRight className="ml-auto h-4 w-4" /> : null}
       {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
 
