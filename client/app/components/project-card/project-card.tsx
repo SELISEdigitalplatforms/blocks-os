@@ -18,11 +18,12 @@ type ProjectCardProps = {
 export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
   const navigate = useNavigate();
   const { setTennantGroup, setSelectedProject } = useProjectStore();
+
   const onConfigureClick = () => {
     setTennantGroup(project.tenantGroupId);
-    setSelectedProject(project);
     navigate("/project-overview/environments");
   };
+
   const onEnvBadgeClick = (e: React.MouseEvent, envProject: IProject) => {
     e.stopPropagation();
     setTennantGroup(envProject.tenantGroupId);
@@ -77,7 +78,9 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex flex-wrap gap-1.5">
-                  {projects.slice(0, 3).map((p) => renderEnvChip(p.environment, p))}
+                  {projects
+                    .slice(0, 3)
+                    .map((p) => renderEnvChip(p.environment, p))}
                   <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                     +{projects.length - 3}
                   </span>

@@ -78,7 +78,7 @@ namespace Api.Controllers
 
         [Authorize]
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::mfa::save-configuration")]
+        //[ProtectedEndPoint("blocks-os::mfa::save-configuration")]
         public async Task<BaseResponse> Save(SaveMfaConfigurationRequest request)
         {
             return await _configurationService.SaveMfaConfigurationAsync(request);
