@@ -22,24 +22,10 @@ export interface IOidcConfig {
   clientBrandColor?: string;
   clientDisplayName: string;
 }
-export interface IOidcConfigResponse {
-  itemId: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  language: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  clientSecret: string;
-  redirectUri: string;
-  scope: string;
-  audience: string;
-  isAutoRedirect: boolean;
-  tenantId: string;
-  clientLogoUrl?: string;
-  clientBrandColor?: string;
-  clientDisplayName: string;
+export interface IGetOidcCredentialsResponse {
+  oIDCClientCredentials: IOidcConfig[];
+  errors: Record<string, string> | null;
+  isSuccess: boolean;
 }
 
 export interface ISaveOidcCredentialPayload {
