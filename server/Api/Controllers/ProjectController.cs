@@ -53,7 +53,8 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::restore-project")]
+        // [ProtectedEndPoint("blocks-os::restore-project")]
+        [Authorize]
         public async Task<RestoreProjectResponse> Restore([FromBody] RestoreProjectRequest restoreProjectRequest)
         {
             return await _projectManagementService.RestoreProjectAsync(restoreProjectRequest);
@@ -67,7 +68,8 @@ namespace Api.Controllers
             return await _projectManagementService.GetAsync();
         }
 
-        [ProtectedEndPoint("blocks-os::update-project")]
+        //[ProtectedEndPoint("blocks-os::update-project")]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> UpdateProject([FromBody] UpdateProjectRequest request)
         {
@@ -93,7 +95,8 @@ namespace Api.Controllers
              return await _projectManagementService.UpdateTenantGroupAsync(request);
         }
 
-        [ProtectedEndPoint("blocks-os::disable-project")]
+        //[ProtectedEndPoint("blocks-os::disable-project")]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> Disable([FromBody] DisableProjectRequest request)
         {
@@ -106,14 +109,16 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::get-asset")]
+        //[ProtectedEndPoint("blocks-os::get-asset")]
+        [Authorize]
         public async Task<GetAssetResponse> GetAsset([FromQuery] GetAssetRequest request)
         {
             return await _projectManagementService.GetAssetAsync(request);   
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::add-asset")]
+        //[ProtectedEndPoint("blocks-os::add-asset")]
+        [Authorize]
         public async Task<BaseResponse> AddAsset([FromBody] AddAssetRequest asset)
         {
             if (string.IsNullOrWhiteSpace(asset.TenantGroupId) || asset.Resource == null)
@@ -126,28 +131,32 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::update-token-validation-parameters")]
+        //[ProtectedEndPoint("blocks-os::update-token-validation-parameters")]
+        [Authorize]
         public async Task<BaseResponse> UpdateTokenValidationParameters([FromBody] UpdateTokenValidationParametersRequest request)
         {
             return await _projectManagementService.UpdateTokenValidationParametersAsync(request);
         }
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::get-token-validation-parameters")]
+        //[ProtectedEndPoint("blocks-os::get-token-validation-parameters")]
+        [Authorize]
         public async Task<IActionResult> GetTokenValidationParameters([FromQuery] GetTokenValidationParametersRequest request)
         {
             return await _projectManagementService.GetProjectTokenValidationParametersAsync(request.ProjectKey);
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::save-third-party-jwt-claims")]
+        //[ProtectedEndPoint("blocks-os::save-third-party-jwt-claims")]
+        [Authorize]
         public async Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaims([FromBody] SaveThirdPartyJWTClaimsRequest request)
         {
             return await _projectManagementService.SaveThirdPartyJWTClaimsAsync(request);
         }
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::get-third-party-jwt-claims")]
+        //[ProtectedEndPoint("blocks-os::get-third-party-jwt-claims")]
+        [Authorize]
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaims([FromQuery] GetThirdPartyJWTClaimsRequest request)
         {
             return await _projectManagementService.GetThirdPartyJWTClaimsAsync(request);

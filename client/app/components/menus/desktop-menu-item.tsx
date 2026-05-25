@@ -13,7 +13,9 @@ function ChildMenuItem({ menu }: { menu: MenuItemType }) {
       to={menu.path}
       className={cn(
         "mx-1 flex h-8 items-center rounded-md px-3 text-sm transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
-        isActiveMenu ? "bg-primary/10 text-primary" : "text-[hsl(var(--low-emphasis))]",
+        isActiveMenu
+          ? "bg-primary/10 text-primary"
+          : "text-[hsl(var(--low-emphasis))]",
         menu.disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
@@ -22,7 +24,13 @@ function ChildMenuItem({ menu }: { menu: MenuItemType }) {
     </Link>
   );
 }
-export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; isSidebarOpen: boolean }) {
+export function DesktopMenuItem({
+  menu,
+  isSidebarOpen,
+}: {
+  menu: MenuItemType;
+  isSidebarOpen: boolean;
+}) {
   const { pathname } = useLocation();
   const isActiveMenu = useMemo(() => {
     const allPaths = [menu.path];
@@ -36,7 +44,9 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
   const hasChildren = Boolean(menu.children?.length);
   const baseClasses = cn(
     "group relative flex cursor-pointer items-center transition-colors",
-    isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
+    isSidebarOpen
+      ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm"
+      : "h-10 w-full justify-center",
     // Hover effects only when not active
     !isActiveMenu && "hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
     // Base color
@@ -49,10 +59,18 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
   if (!hasChildren) {
     return (
       <div className={cn(baseClasses)}>
-        <Link to={menu.path} className={cn("flex min-w-0 items-center gap-2.5", menu.disabled && "pointer-events-none opacity-50")}>
-          {menu.icon ? <menu.icon className="h-[18px] w-[18px] shrink-0" /> : null}
+        <Link
+          to={menu.path}
+          className={cn(
+            "flex min-w-0 items-center gap-2.5 w-full h-full ",
+            menu.disabled && "pointer-events-none opacity-50",
+          )}
+        >
+          {menu.icon ? (
+            <menu.icon className="h-[18px] w-[18px] shrink-0" />
+          ) : null}
           {isSidebarOpen ? (
-            <span className="relative min-w-0 truncate">
+            <span className="relative min-w-0 truncate flex-1">
               {menu.name}
               {menu.badge ? (
                 <Badge
@@ -70,14 +88,18 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
             {menu.name}
           </div>
         ) : null}
-        {isActiveMenu && !isSidebarOpen ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+        {isActiveMenu && !isSidebarOpen ? (
+          <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
+        ) : null}
       </div>
     );
   }
   return (
     <div className={cn(baseClasses)}>
       <div className="flex min-w-0 items-center gap-2.5">
-        {menu.icon ? <menu.icon className="h-[18px] w-[18px] shrink-0" /> : null}
+        {menu.icon ? (
+          <menu.icon className="h-[18px] w-[18px] shrink-0" />
+        ) : null}
         {isSidebarOpen ? (
           <span className="relative min-w-0 truncate">
             {menu.name}
@@ -97,12 +119,21 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
           <span className="whitespace-nowrap">{menu.name}</span>
         </div>
       ) : null}
-      {isSidebarOpen ? <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 -rotate-90 text-muted-foreground transition-transform duration-200 group-hover:rotate-0" /> : null}
-      {isActiveMenu && !isSidebarOpen ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+      {isSidebarOpen ? (
+        <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 -rotate-90 text-muted-foreground transition-transform duration-200 group-hover:rotate-0" />
+      ) : null}
+      {isActiveMenu && !isSidebarOpen ? (
+        <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
+      ) : null}
       <div className="absolute left-full top-0 z-10 hidden w-56 flex-col rounded-md border bg-background py-1 shadow-md group-hover:flex group-hover:text-[hsl(var(--low-emphasis))]">
         {menu.children
-          ?.filter((subMenu): subMenu is MenuItemType => subMenu.type === "menu" && !subMenu.disabled)
-          .map((subMenu) => <ChildMenuItem key={subMenu.id} menu={subMenu} />)}
+          ?.filter(
+            (subMenu): subMenu is MenuItemType =>
+              subMenu.type === "menu" && !subMenu.disabled,
+          )
+          .map((subMenu) => (
+            <ChildMenuItem key={subMenu.id} menu={subMenu} />
+          ))}
       </div>
       <div className="absolute left-full top-0 hidden h-full w-1 bg-transparent group-hover:block" />
     </div>

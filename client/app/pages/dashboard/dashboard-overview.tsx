@@ -8,10 +8,11 @@ import { ProjectRepoList } from "@/components/project-repo-list/project-repo-lis
 import { ProjectCliSnippet } from "@/components/project-cli-snippet/project-cli-snippet";
 import { GitCommandSnippet } from "@/components/git-command-snippet/git-command-snippet";
 import { ActionsListProject } from "@/components/actions-list-project/actions-list-project";
+
 export const DashboardOverview = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const { itemId } = useProjectStore().selectedProject || { itemId: "", tenantId: "" };
-  const { data, isLoading } = useGetProject({ projectId: itemId });
+
+  const { data, isLoading } = useGetProject();
   const { mutateAsync } = useValidateCNameProject({ projectKey });
   const cNameValidator = useCallback(async () => {
     try {
@@ -29,14 +30,21 @@ export const DashboardOverview = () => {
         showErrorToast({ errors: (error as any).errors });
       }
     }
-  }, [data?.data.applicationDomain, data?.data.customDomain, mutateAsync, projectKey]);
+  }, [
+    data?.data.applicationDomain,
+    data?.data.customDomain,
+    mutateAsync,
+    projectKey,
+  ]);
   useEffect(() => {
     cNameValidator();
   }, [cNameValidator]);
   return (
     <main className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold md:text-2xl">Environment Overview</h1>
+        <h1 className="text-xl font-semibold md:text-2xl">
+          Environment Overview
+        </h1>
         <ActionsListProject />
       </div>
       <ProjectDetail project={data?.data} isLoading={isLoading} />

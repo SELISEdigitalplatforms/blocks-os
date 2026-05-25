@@ -2,6 +2,7 @@
 using CloudConfiguration.DomainService.Shared.Services;
 using CloudConfiguration.DomainService.Storage.Entities;
 using CloudConfiguration.DomainService.Storage.RequestModel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,28 +21,32 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::storage::save")]
+        //[ProtectedEndPoint("blocks-os::storage::save")]
+        [Authorize]
         public async Task<BaseMutationResponse> Save([FromBody] SaveStorageConfigurationRequest request)
         {
             return await _configurationService.SaveStorageConfigurationAsync(request);
         }
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::storage::gets")]
+        //[ProtectedEndPoint("blocks-os::storage::gets")]
+        [Authorize]
         public async Task<List<StorageConfiguration>> Gets([FromQuery] GetStorageConfigurationsRequest request)
         {
             return await _configurationService.GetStorageConfigurationsAsync();
         }
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::storage::get")]
+        //[ProtectedEndPoint("blocks-os::storage::get")]
+        [Authorize]
         public async Task<StorageConfiguration> Get([FromQuery] GetStorageConfigurationRequest request)
         {
             return await _configurationService.GetStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::storage::delete")]
+        //[ProtectedEndPoint("blocks-os::storage::delete")]
+        [Authorize]
         public async Task<BaseResponse> Delete([FromQuery] DeleteStorageConfigurationRequest request)
         {
             return await _configurationService.DeleteStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);

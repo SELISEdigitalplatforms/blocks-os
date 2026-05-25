@@ -12,6 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FluentValidation.AspNetCore" />
+	<PackageReference Include="SeliseBlocks.ConfigurationDriver" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Authentication.DomainService\Authentication.DomainService.csproj" />

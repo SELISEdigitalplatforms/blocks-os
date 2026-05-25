@@ -4,14 +4,14 @@ import { http } from "@/lib/http-client";
 const IMPERSONATION_BASE = "/api/Authentication";
 
 export interface ImpersonationRequest {
-  targetTenantId: string;
+  targeted_tenant_id: string;
   orgId?: string;
   organizationId?: string;
 }
 
 export interface ImpersonationState {
   rootTenantId: string;
-  targetTenantId: string;
+  targeted_tenant_id: string;
   orgId: string;
   startedAtUtc: string;
 }
@@ -37,7 +37,7 @@ class ImpersonationService {
   stopImpersonation(): Promise<void> {
     return http.post(
       `${IMPERSONATE_ENDPOINTS.STOP_IMPERSONATION}`,
-      null,
+      {},
       undefined,
       { absoluteUrl: true },
     );
