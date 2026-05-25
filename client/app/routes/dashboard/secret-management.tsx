@@ -33,7 +33,7 @@ import { SecretType } from "@/cross-modules/secrets/constants/secret-key.enum";
 
 const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models"];
 export default function SecretManagementPage() {
-  const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "infra-config" });
+  const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "my-secret" });
   const [secretType, setSecretType] = useQueryState("secretType", {
     defaultValue: SecretType.OIDC,
     parse: (v) => (Object.values(SecretType).includes(v as SecretType) ? (v as SecretType) : SecretType.OIDC),
@@ -49,7 +49,7 @@ export default function SecretManagementPage() {
   const [isAddIdpOpen, setIsAddIdpOpen] = useState(false);
   const currentItem = SECRET_MANAGEMENT_NAV_GROUPS
     .flatMap((g) => g.items)
-    .find((item) => item.value === (selectedTab ?? "infra-config"));
+    .find((item) => item.value === (selectedTab ?? "my-secret"));
   const areAllProvidersConfigured = useMemo(() => {
     if (!captchaData?.configurations) return false;
     const allProviderKeys = Object.keys(CAPTCHA_PROVIDERS) as CAPTCHA_PROVIDERS_KEY[];
@@ -169,7 +169,7 @@ export default function SecretManagementPage() {
                       </p>
                       {group.items.map((item) => {
                         const Icon = item.icon;
-                        const isActive = (selectedTab ?? "infra-config") === item.value;
+                        const isActive = (selectedTab ?? "my-secret") === item.value;
                         return (
                           <button
                             key={item.id}
@@ -219,12 +219,6 @@ export default function SecretManagementPage() {
                 can only view and manage configurations.
               </p>
             </div>
-          </div>
-        )}
-        {selectedTab === "infra-config" && (
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h3 className="text-lg font-semibold">Infra Config</h3>
-            <p className="mt-2 text-muted-foreground">Manage your infrastructure configurations</p>
           </div>
         )}
         {selectedTab === GRANT_TYPES.authorizationCode && <OIDC />}

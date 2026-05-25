@@ -2,10 +2,12 @@ import { Fragment, useContext, useState } from "react"
 import { ChevronRight, PanelLeft } from "lucide-react"
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { DesktopMenuItem } from "@/components/menus/desktop-menu-item"
+import { SidebarCollapsedTooltip } from "@/components/menus/sidebar-collapsed-tooltip"
 import { EnvironmentList } from "@/components/environment-list/environment-list"
 import { Button } from "@/components/ui-kits/button/button"
 import { ProjectList } from "@/components/project-list/project-list"
 import { Separator } from "@/components/ui-kits/separator/separator"
+import { TooltipProvider } from "@/components/ui-kits/tooltip/tooltip"
 import { navigationMenus } from "@/constants/navigation-menus"
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav"
@@ -40,7 +42,7 @@ export function SidebarMenuDesktop() {
   const isSecretManagementRoute = pathname.startsWith("/services/secret-management")
   const isAuthenticationRoute = pathname.startsWith("/services/authentication")
   const isLmtRoute = pathname.startsWith("/services/lmt")
-  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "infra-config" : "general")
+  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "my-secret" : "general")
   const [secretsOpen, setSecretsOpen] = useState(true)
   const [idpOpen, setIdpOpen] = useState(true)
   const [lmtOpen, setLmtOpen] = useState(true)
@@ -48,8 +50,8 @@ export function SidebarMenuDesktop() {
   const getLogoSrc = () => {
     if (isSidebarOpen) {
       return resolvedTheme === "dark"
-        ? "/blocks-logos/iam_dark_mode.svg"
-        : "/blocks-logos/iam_light_mode.svg"
+        ? "/blocks-logos/os_dark_mode.svg"
+        : "/blocks-logos/os_light_mode.svg"
     }
     return resolvedTheme === "dark" ? "/Icon_White.svg" : "/Icon.svg"
   }
@@ -60,21 +62,18 @@ export function SidebarMenuDesktop() {
     isOpen: boolean,
     onToggle: () => void,
   ) => (
-    <button onClick={onToggle} className={expandableParentClasses(isSidebarOpen, isActiveRoute)}>
-      {menu.icon ? <menu.icon className="h-5 w-5 shrink-0" /> : null}
-      {isSidebarOpen && (
-        <>
-          <span>{menu.name}</span>
-          <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-        </>
-      )}
-      {!isSidebarOpen && (
-        <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-          {menu.name}
-        </div>
-      )}
-      {isActiveRoute ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
-    </button>
+    <SidebarCollapsedTooltip label={menu.name} show={!isSidebarOpen}>
+      <button onClick={onToggle} className={expandableParentClasses(isSidebarOpen, isActiveRoute)}>
+        {menu.icon ? <menu.icon className="h-5 w-5 shrink-0" /> : null}
+        {isSidebarOpen && (
+          <>
+            <span>{menu.name}</span>
+            <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+          </>
+        )}
+        {isActiveRoute ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+      </button>
+    </SidebarCollapsedTooltip>
   )
 
   const renderExpandableChildren = (
@@ -87,7 +86,7 @@ export function SidebarMenuDesktop() {
           const Icon = item.icon
           const isActive = currentTab === item.value
           return (
-            <div key={item.id} className="group relative">
+            <SidebarCollapsedTooltip key={item.id} label={item.label} show={!isSidebarOpen}>
               <button
                 onClick={() => navigate(`${routePrefix}?tab=${item.value}`)}
                 className={expandableChildClasses(isSidebarOpen, isActive)}
@@ -96,12 +95,7 @@ export function SidebarMenuDesktop() {
                 {isSidebarOpen && <span>{item.label}</span>}
                 {isActive ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
               </button>
-              {!isSidebarOpen && (
-                <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  {item.label}
-                </div>
-              )}
-            </div>
+            </SidebarCollapsedTooltip>
           )
         }),
       )}
@@ -109,9 +103,13 @@ export function SidebarMenuDesktop() {
   )
 
   return (
-    <div
-      className={`hidden h-[calc(100vh)] flex-col border-r bg-background transition-all md:flex ${isSidebarOpen ? "w-60 overflow-hidden" : "w-14"}`}
-    >
+    <TooltipProvider delayDuration={0}>
+      <div
+        className={cn(
+          "hidden h-[calc(100vh)] shrink-0 flex-col border-r bg-background transition-all md:flex",
+          isSidebarOpen ? "w-60 overflow-hidden" : "w-14 overflow-visible",
+        )}
+      >
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b bg-background px-3">
         <Link
           to="/console"
@@ -145,7 +143,7 @@ export function SidebarMenuDesktop() {
             <EnvironmentList collapsed />
           </div>
         ))}
-      <div className="w-full flex-1 overflow-y-auto">
+      <div className={cn("w-full flex-1", isSidebarOpen ? "overflow-y-auto" : "overflow-visible")}>
         <nav className={cn("grid w-full items-start gap-1 text-sm")}>
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
@@ -155,7 +153,7 @@ export function SidebarMenuDesktop() {
                     <>
                       {renderExpandableParent(menu, isSecretManagementRoute, secretsOpen, () => {
                         if (!isSecretManagementRoute) {
-                          navigate("/services/secret-management?tab=infra-config")
+                          navigate("/services/secret-management?tab=my-secret")
                           setSecretsOpen(true)
                         } else {
                           setSecretsOpen((v) => !v)
@@ -200,6 +198,7 @@ export function SidebarMenuDesktop() {
           ))}
         </nav>
       </div>
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }
