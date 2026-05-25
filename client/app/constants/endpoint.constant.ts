@@ -1,7 +1,7 @@
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export const DEPLOYMENT_BASE_URL =
-  "https://dev-deployment.blocksdevelopers.com";
+  "https://dev-release.blocksdevelopers.com";
 
 
 const DEFAULT_BLOCKS_LOGIC_SITE_ORIGIN = "https://dev-logic.blocksdevelopers.com" as const;
