@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AUTH_ENDPOINTS,
-  AUTH_OIDC_ENDPOINTS,
-  OIDC_FLOW_ENDPOINTS,
-} from "../constants/endpoint.constant";
+import { AUTH_OIDC_ENDPOINTS, OIDC_FLOW_ENDPOINTS } from "../constants/endpoint.constant";
+import { API_BASES } from "@/constants/endpoint.constant";
 import { ACCOUNT_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
-import { IDP_BASE_URL } from "@/constants/endpoint.constant";
 import {
   mockOidcFlowCredentialPayload,
   mockOidcFlowCredentialResponse,
@@ -60,7 +56,7 @@ describe("oidc-auth-flow.service", () => {
       const result = await refreshAccessToken("test-project-key");
 
       expect(fetch).toHaveBeenCalledWith(
-        `${IDP_BASE_URL}${AUTH_ENDPOINTS.TOKEN}`,
+        `${API_BASES.IAM}/auth/Token`,
         expect.objectContaining({ method: "POST" }),
       );
       expect(result).toBe(mockRefreshedTokenResponse.access_token);
