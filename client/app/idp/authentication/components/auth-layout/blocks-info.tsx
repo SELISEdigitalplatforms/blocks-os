@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui-kits/button/button";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 import { BookOpenText } from "lucide-react";
 // import { BookOpenText, Component } from "lucide-react";
 import { Link } from "react-router-dom";
-
 export const BlockInfo = () => {
   return (
     <div className="mt-[24px] w-full p-4 shadow-none md:p-0 lg:mt-0 lg:max-w-md">
@@ -44,7 +44,7 @@ export const BlockInfo = () => {
               </Link>
               <span className="h-4 w-[1px] bg-gray-300"></span>
               <Link
-                to={import.meta.env.BLOCKS_CONSTRUCT_URL || "https://construct.seliseblocks.com"}
+                to={getRuntimeEnv("BLOCKS_CONSTRUCT_URL") || "https://construct.seliseblocks.com"}
                 className="text-primary"
                 target="_blank"
               >

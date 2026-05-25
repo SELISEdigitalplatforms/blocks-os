@@ -12,19 +12,16 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
-
 interface CampaignCreationProps {
   dialogTitle: string;
   data?: string[];
 }
-
 const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => (
   <DialogContent className="rounded-md sm:max-w-[700px]">
     <DialogHeader>
       <DialogTitle className="text-left">{dialogTitle}</DialogTitle>
       <DialogDescription> </DialogDescription>
       <hr />
-
       <div className="py-4 text-left">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -58,7 +55,6 @@ const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => (
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Merge tags</span>
             </Button>
           </div>
-
           <Textarea
             id="configName"
             className="border-default col-span-3 mt-1 min-h-[116px] border shadow-none"
@@ -67,7 +63,6 @@ const CampaignCreation: React.FC<CampaignCreationProps> = ({ dialogTitle }) => (
         </div>
       </div>
     </DialogHeader>
-
     <DialogFooter className="mt-[-14px] flex flex-row gap-2">
       <DialogTrigger asChild>
         <Button variant="outline" size="default">

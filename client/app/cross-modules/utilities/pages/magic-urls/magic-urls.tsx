@@ -7,14 +7,12 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { useGetMagicUrls, useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url";
 import { MagicUrlDialog } from "@blocks-utilities/components/magic-url-dialog/magic-url-dialog";
 import { MagicUrlConfigDialog } from "@blocks-utilities/components/magic-url-config-dialog/magic-url-config-dialog";
-
 export const MagicUrls = () => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } = useMagicUrlsFilterQueryParams();
   const [isShortenDialogOpen, setIsShortenDialogOpen] = useState(false);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const { mutateAsync: saveMagicUrlConfig } = useSaveMagicUrlConfig();
-
   const { data, isLoading, isFetching } = useGetMagicUrls({
     page: queryParams.page,
     pageSize: queryParams.pageSize,
@@ -26,13 +24,10 @@ export const MagicUrls = () => {
     requestMethod: queryParams.requestMethod || undefined,
     type: queryParams.type || undefined,
   });
-
   const loading = isLoading || isFetching;
-
   const pageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
-
   return (
     <div>
       <div className="mb-[18px] flex w-full flex-row justify-end gap-2 md:mb-[24px]">
@@ -49,7 +44,6 @@ export const MagicUrls = () => {
           }}
         />
       </div>
-
       <Card>
         <CardHeader>
           <MagicUrlsFilterToolBar />

@@ -1,11 +1,9 @@
 import { ReactNode } from "react";
 import { TRACE_PROVIDERS } from "../../constants/trace.constant";
-
 export type Step = {
   id: string;
   description: ReactNode;
 };
-
 export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
   hot: [
     {
@@ -131,7 +129,6 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
           <ul className="mt-2 list-inside list-disc text-sm">
             <li>Not directly queryable from the UI.</li>
             <li>Intended for audits, incident forensics, legal hold.</li>
-            {/* <li>Encryption at rest (customer-managed key optional).</li> */}
           </ul>
         </div>
       ),

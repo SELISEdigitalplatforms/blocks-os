@@ -11,7 +11,7 @@ import {
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 
 export const useGetProjects = (tenantGroupId = "") => {
-  const { setProjects, selectedProject, setSelectedProject } = useProjectStore();
+  const { setProjects } = useProjectStore();
 
   const query = useQuery({
     queryKey: ["identifier", "projects", tenantGroupId],
@@ -23,19 +23,15 @@ export const useGetProjects = (tenantGroupId = "") => {
     if (!query.data) return;
     const flattenedProjects = query.data.flatMap((group) => group.projects);
     setProjects(flattenedProjects);
-    if (!selectedProject && flattenedProjects.length > 0) {
-      setSelectedProject(flattenedProjects[0]);
-    }
-  }, [query.data, selectedProject, setProjects, setSelectedProject]);
+  }, [query.data, setProjects]);
 
   return query;
 };
 
-export const useGetProject = (options: { projectId: string }) => {
+export const useGetProject = () => {
   return useQuery({
-    queryKey: ["identifier", "project", options],
-    queryFn: () => projectService.getProject(options),
-    enabled: Boolean(options.projectId),
+    queryKey: ["identifier", "project"],
+    queryFn: () => projectService.getProject(),
   });
 };
 
@@ -67,6 +63,7 @@ export const useGetEnvRepositories = (projectkey: string) => {
   return useQuery({
     queryKey: ["env-repositories", projectkey],
     queryFn: () => crossProjectService.getEnvRepositories(projectkey),
+    enabled: !!projectkey,
   });
 };
 
@@ -115,7 +112,9 @@ export const useValidateCNameProject = (options: { projectKey: string }) => {
     mutationKey: ["identifier", "projects", "validate cname"],
     mutationFn: crossProjectService.validateCNameProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["identifier", "project", options] });
+      queryClient.invalidateQueries({
+        queryKey: ["identifier", "project", options],
+      });
     },
   });
 };
@@ -126,7 +125,9 @@ export const useDisableProject = (options: { projectKey: string }) => {
     mutationKey: ["identifier", "projects", "disable"],
     mutationFn: crossProjectService.disableProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["identifier", "project", options] });
+      queryClient.invalidateQueries({
+        queryKey: ["identifier", "project", options],
+      });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
     },
   });
@@ -163,7 +164,8 @@ export const useProjectForm = () => {
     try {
       const environments = formData[2]?.environments || [];
       const shortGuid = shortGuidGenerator(5);
-      const baseDomain = import.meta.env.BLOCKS_BASE_DOMAIN || "seliseblocks.com";
+      const baseDomain =
+        import.meta.env.BLOCKS_BASE_DOMAIN || "blocksdevelopers.com";
       const applicationContexts =
         environments.map((env: { value: string }) => ({
           environment: env.value,
@@ -192,7 +194,8 @@ export const useProjectForm = () => {
         try {
           const projectGroups = await queryClient.fetchQuery({
             queryKey: ["identifier", "projects", response.tenantGroupId],
-            queryFn: () => projectService.getProjects(0, 100, response.tenantGroupId),
+            queryFn: () =>
+              projectService.getProjects(0, 100, response.tenantGroupId),
             staleTime: 0,
           });
 

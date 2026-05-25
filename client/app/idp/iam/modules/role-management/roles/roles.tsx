@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { RolesList } from "./roles-list";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
@@ -9,7 +8,6 @@ import {
   useRolesSortQueryParams,
 } from "./roles-filter-toolbar";
 import { useProjectStore } from "@/store/useProjectStore";
-
 export const Roles = () => {
   const { queryParams, setQueryParams } = useRolesFilterQueryParams();
   const { sortQueryParams } = useRolesSortQueryParams();
@@ -23,15 +21,12 @@ export const Roles = () => {
     },
     sort: sortQueryParams,
   });
-
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
-
   const loading = isLoading || isFetching;
   const rolesList = data?.data || [];
   const totalCount = data?.totalCount || 0;
-
   return (
     <Card>
       <CardContent>

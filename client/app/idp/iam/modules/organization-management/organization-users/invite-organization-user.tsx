@@ -27,13 +27,11 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { useState } from "react";
 import { isErrorWithErrors } from "@/lib/error";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
-
 const inviteOrganizationUserFormDefaultValue = {
   email: "",
   firstName: "",
   lastName: "",
 };
-
 const inviteOrganizationUserFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z
@@ -47,21 +45,17 @@ const inviteOrganizationUserFormSchema = z.object({
     .max(150, "Last name must be at most 150 characters")
     .trim(),
 });
-
 interface InviteOrganizationUserProps {
   organizationId: string;
 }
-
 export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUserProps) => {
   const { isPending, mutateAsync } = useAddUser();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
-
   const form = useForm({
     defaultValues: inviteOrganizationUserFormDefaultValue,
     resolver: zodResolver(inviteOrganizationUserFormSchema),
   });
-
   const onSubmitHandler = async (values: z.infer<typeof inviteOrganizationUserFormSchema>) => {
     try {
       const res = await mutateAsync({
@@ -85,7 +79,6 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
       }
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

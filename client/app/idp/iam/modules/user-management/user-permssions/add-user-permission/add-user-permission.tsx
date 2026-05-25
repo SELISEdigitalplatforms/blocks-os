@@ -29,12 +29,10 @@ import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
 import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus } from "lucide-react";
 import { useState } from "react";
-
 type AddUserPermissionProps = {
   userId: string;
   projectKey: string;
 };
-
 export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [selectedPermisson, setSelectedPermissions] = useState<string[]>([]);
@@ -53,7 +51,6 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
     userId,
     projectKey,
   });
-
   const onClickHandler = async () => {
     try {
       const res = await addPermissions(selectedPermisson);
@@ -68,7 +65,6 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   const onCheckedChangeHandler = (checked: boolean, resource: string) => {
     if (checked && resources.length + selectedPermisson.length > 4) return;
     if (checked) {
@@ -77,7 +73,6 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
     selectedPermisson.splice(selectedPermisson.indexOf(resource), 1);
     setSelectedPermissions(() => [...selectedPermisson]);
   };
-
   const resetFilter = () => {
     setFilter({
       page: 0,
@@ -88,7 +83,6 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
     });
     setSelectedPermissions([]);
   };
-
   return (
     <Dialog
       open={open}
@@ -124,7 +118,6 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
             className="h-fit w-full py-3"
           />
         </div>
-
         <Card>
           <CardContent className="max-h-[300px] overflow-y-auto">
             <Table>

@@ -3,7 +3,6 @@ import { HorizontalStep } from "./horizontal-step";
 import type { StepProps } from "./types";
 import { useStepper } from "./use-stepper";
 import { VerticalStep } from "./vertical-step";
-
 // Props which shouldn't be passed to to the Step component from the user
 interface StepInternalConfig {
   index: number;
@@ -11,9 +10,7 @@ interface StepInternalConfig {
   isCurrentStep?: boolean;
   isLastStep?: boolean;
 }
-
 interface FullStepProps extends StepProps, StepInternalConfig {}
-
 const Step = React.forwardRef<HTMLLIElement, StepProps>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (props, ref: React.Ref<any>) => {
@@ -32,11 +29,8 @@ const Step = React.forwardRef<HTMLLIElement, StepProps>(
       label,
       onClickStep,
     } = props as FullStepProps;
-
     const { isVertical, isError, isLoading, clickable } = useStepper();
-
     const hasVisited = isCurrentStep || isCompletedStep;
-
     const sharedProps = {
       isLastStep,
       isCompletedStep,
@@ -55,7 +49,6 @@ const Step = React.forwardRef<HTMLLIElement, StepProps>(
       errorIcon,
       onClickStep,
     };
-
     const renderStep = () => {
       switch (isVertical) {
         case true:
@@ -68,7 +61,6 @@ const Step = React.forwardRef<HTMLLIElement, StepProps>(
           return <HorizontalStep ref={ref} {...sharedProps} />;
       }
     };
-
     return renderStep();
   },
 );

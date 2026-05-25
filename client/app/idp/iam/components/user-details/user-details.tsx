@@ -2,7 +2,6 @@ import React from "react";
 import { UserBasicInformation } from "../user-basic-information";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ProfileImageUploader } from "../profile-image-uploader";
-
 export const UserDetails = ({ id }: { id: string }) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return (

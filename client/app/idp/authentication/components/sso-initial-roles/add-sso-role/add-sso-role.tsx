@@ -13,24 +13,20 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-
 import { useProjectStore } from "@/store/useProjectStore";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { CirclePlus } from "lucide-react";
 import { useMemo, useState } from "react";
-
 type AddSSORoleProps = {
   roles: IRole[];
   onAdd: (data: IRole[]) => void;
 };
-
 export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
   const [selectedRolos, setSelectedRoles] = useState<IRole[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
-
   const { data, isLoading } = useGetRoles({
     page: filter.page,
     pageSize: filter.pageSize,
@@ -40,29 +36,23 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
       search: filter.search,
     },
   });
-
   const onCheckedChangeHandler = (checked: boolean, role: IRole) => {
     if (checked) {
       return setSelectedRoles((roles) => [...roles, role]);
     }
     setSelectedRoles((roles) => roles.filter((item) => item.slug !== role.slug));
   };
-
   const pageChangeHandler = (page: number) => setFilter((prev) => ({ ...prev, page }));
-
   const reset = () => {
     setSelectedRoles([]);
     setFilter({ page: 0, pageSize: 10, search: "" });
   };
-
   const rolesSlug = useMemo(() => {
     return roles.map((item) => item.slug) || [];
   }, [roles]);
-
   const selectedRolesSlug = useMemo(() => {
     return selectedRolos.map((item) => item.slug) || [];
   }, [selectedRolos]);
-
   return (
     <Dialog
       open={open}

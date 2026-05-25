@@ -1,5 +1,4 @@
 import { ChatItemSuggestions } from "../chat-item-suggestions/chat-item-suggestions";
-
 export const EmptyConversations = ({
   queries = [],
   onSelect,

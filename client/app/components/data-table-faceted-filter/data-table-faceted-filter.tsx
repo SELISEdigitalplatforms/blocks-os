@@ -1,7 +1,6 @@
 import * as React from "react";
 import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { Column } from "@tanstack/react-table";
-
 import { cn } from "@/lib/utils";
 import { Button } from "../ui-kits/button/button";
 import {
@@ -16,11 +15,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "../ui-kits/popover/popover";
 import { Separator } from "../ui-kits/separator/separator";
 import { Badge } from "../ui-kits/badge/badge";
-
 import usePopoverWidth from "@/hooks/use-popover-width";
-
 import useIsMobile from "@/hooks/use-is-mobile";
-
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title?: string;
@@ -29,7 +25,6 @@ interface DataTableFacetedFilterProps<TData, TValue> {
     value: string;
   }[];
 }
-
 export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,
@@ -39,9 +34,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   const columnFilterValue = column?.getFilterValue() as { types?: string[] } | undefined;
   const selectedValues = new Set(columnFilterValue?.types || []);
   const [buttonRef, popoverWidth] = usePopoverWidth();
-
   const isMobile = useIsMobile();
-
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -55,7 +48,6 @@ export function DataTableFacetedFilter<TData, TValue>({
             {selectedValues?.size > 0 && (
               <>
                 <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
-
                 <div className="flex space-x-1">
                   {selectedValues.size > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">

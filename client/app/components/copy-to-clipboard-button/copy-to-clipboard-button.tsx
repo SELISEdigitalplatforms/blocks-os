@@ -1,29 +1,23 @@
 import { MouseEvent, ReactNode, useState } from "react";
 import { Button } from "../ui-kits/button/button";
 import { Check, Copy } from "lucide-react";
-
 interface CopyToClipboardButtonProps {
   textToCopy: string;
   children: ReactNode;
   isHoverable?: boolean;
 }
-
 export const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({
   textToCopy,
   children,
   isHoverable = false,
 }) => {
   const [isCopying, setIsCopying] = useState(false);
-
   const copyToClipBoard = async (event: MouseEvent<HTMLButtonElement>) => {
     try {
       event.preventDefault();
       event.stopPropagation();
-
       if (isCopying) return;
-
       setIsCopying(true);
-
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(textToCopy);
       } else {
@@ -47,7 +41,6 @@ export const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({
       }, 1000);
     }
   };
-
   return (
     <div className="group flex items-center gap-2">
       {children}

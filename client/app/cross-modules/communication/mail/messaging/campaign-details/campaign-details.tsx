@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -11,11 +9,9 @@ import CampaignCreation from "@blocks-communication/mail/components/messaging/ca
 import { formatDate } from "@/lib/utils";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { messagingServiceData } from "@blocks-communication/mail/constants/messaging";
-
 export function CampaignDetails({ params }: { params: { id: string } }) {
   const { id } = params;
   const [messageDetails, setMessageDetails] = useState<IMessagingServiceData | null>(null);
-
   useEffect(() => {
     if (id) {
       const messageId = Array.isArray(id) ? id[0] : id;
@@ -23,14 +19,12 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
       setMessageDetails(message || null);
     }
   }, [id]);
-
   if (!messageDetails) {
     return <div>Loading...</div>;
   }
   BREADCRUMB_CUSTOM_TITLES["/utilities/messaging/campaigns"] = "Messaging Messages";
   BREADCRUMB_CUSTOM_TITLES["/utilities/messaging/campaigns/" + messageDetails?.id] =
     messageDetails.name;
-
   return (
     <div>
       <div className="hidden md:flex">

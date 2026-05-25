@@ -1,10 +1,8 @@
-
 import { ViewAuthConfigure } from "./view-auth-configure";
 import { EditGeneralSettings } from "./edit-settings";
 import { useIsFetching } from "@tanstack/react-query";
 import { useProjectStore } from "@/store/useProjectStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-
 export function GeneralSettings() {
   const { itemId } = useProjectStore().selectedProject || { itemId: "" };
   const isFetching = useIsFetching({
@@ -16,7 +14,6 @@ export function GeneralSettings() {
       },
     ],
   });
-
   return (
     <Card>
       <CardHeader>

@@ -6,10 +6,10 @@ namespace DomainService.Utilities
     public static class IdpConstants
     {
         public const string TenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
-        public const string AuthenticationQueue = "blocks_authentication_listener";
-        public const string IamQueue = "blocks_iam_listener";
-        public const string MailQueue = "blocks_mail_listener";
-        public const string MfaQueueName = "blocks_mfa_listener";
+        public const string AuthenticationQueue = "blocks_os_authentication_listener";
+        public const string IamQueue = "blocks_os_iam_listener";
+        public const string MailQueue = "blocks_os_mail_listener";
+        public const string MfaQueueName = "blocks_os_mfa_listener";
 
         public const string AccessTokenCookieName = "access_token";
         public const string RefreshTokenCookieName = "refresh_token";
@@ -17,6 +17,15 @@ namespace DomainService.Utilities
         private const string DefaultProvider = "azure";
         private const string RabbitMqProvider = "rabbitmq";
 
+        #region Identifier Service Constants
+        public const string IdentifierQueueName = "blocks_project_listener";
+        public const string DataCleanupQueue = "blocks_os_data_cleanup_listener";
+        public const string LanguageDataMigrationQueue = "blocks_os_uilm_environment_data_migration_listener";
+        public const string GenericMigrationQueue = "blocks_os_generic_migration_listener";
+        public const string MigrationCompletionTopic = "blocks_os_migration_topic";
+        public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
+        public const string BlocsDomain = "seliseblocks.com";
+        #endregion
 
         public static MessageConfiguration GetMessageConfiguration(string messageConnectionString)
         {
@@ -48,7 +57,11 @@ namespace DomainService.Utilities
                 {
                     ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(AuthenticationQueue),
                                              ConsumerSubscription.BindToQueue(IamQueue),
-                                             ConsumerSubscription.BindToQueue(MfaQueueName)],
+                                             ConsumerSubscription.BindToQueue(MfaQueueName),
+                                             ConsumerSubscription.BindToQueue(IdentifierQueueName),
+                                             ConsumerSubscription.BindToQueue(DataCleanupQueue),
+                                             ConsumerSubscription.BindToQueue(LanguageDataMigrationQueue),
+                                             ConsumerSubscription.BindToQueue(GenericMigrationQueue)],
                 }
             };
         }
@@ -59,8 +72,8 @@ namespace DomainService.Utilities
             {
                 AzureServiceBusConfiguration = new AzureServiceBusConfiguration
                 {
-                    Queues = [AuthenticationQueue, IamQueue, MfaQueueName],
-                    Topics = []
+                    Queues = [AuthenticationQueue, IamQueue, MfaQueueName, IdentifierQueueName, DataCleanupQueue, LanguageDataMigrationQueue, GenericMigrationQueue],
+                    Topics = [MigrationCompletionTopic]
                 }
             };
         }

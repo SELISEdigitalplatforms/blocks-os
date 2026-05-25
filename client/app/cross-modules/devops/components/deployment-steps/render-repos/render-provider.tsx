@@ -13,13 +13,11 @@ import { useNavigate } from "react-router-dom";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { IProviderDestination } from "@/cross-modules/devops/models/utils";
 import { useProjectStore } from "@/store/useProjectStore";
-
 interface ProviderButtonsProps extends IProviderDestination {
   onClose?: (verifyAuth?: boolean) => void | Promise<void>;
   extraState?: string;
   closeOnProviderSelect?: boolean;
 }
-
 const ProviderButtons = ({
   destination,
   onClose,
@@ -28,19 +26,14 @@ const ProviderButtons = ({
 }: ProviderButtonsProps) => {
   const navigate = useNavigate();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   const { data: verifyAuth } = useValidateAuthorization();
   const [, setSelectedProvider] = useState<string | null>(null);
-  
   const targetDestination = destination || "/devops/configure";
-  
   if (destination) {
     localStorage.setItem("destination", destination);
   }
-
   const handleContinue = (providerId: string) => {
     setSelectedProvider(providerId);
-
     switch (providerId) {
       case "github":
         if (verifyAuth?.isSuccess) {
@@ -58,7 +51,6 @@ const ProviderButtons = ({
             }
           };
           window.addEventListener("storage", reloadListener);
-
           authenticateWithGithub(extraState || "", projectKey);
         }
         break;
@@ -79,7 +71,6 @@ const ProviderButtons = ({
     }
     if (closeOnProviderSelect && onClose) onClose();
   };
-
   return (
     <>
       <div className="flex h-auto w-full flex-col items-center self-stretch">
@@ -110,5 +101,4 @@ const ProviderButtons = ({
     </>
   );
 };
-
 export default ProviderButtons;
