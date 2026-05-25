@@ -23,7 +23,6 @@ type ServiceGroupCardProps = {
   onBulkGroupMfa: (ids: string[], value: boolean) => void;
   onBulkGroupCaptcha: (ids: string[], value: boolean) => void;
 };
-
 export const ServiceGroupCard = ({
   controller,
   endpoints,
@@ -37,29 +36,24 @@ export const ServiceGroupCard = ({
 }: ServiceGroupCardProps) => {
   const [open, setOpen] = useState(false);
   const meta = SERVICE_META[controller] || DEFAULT_SERVICE_META;
-
   const groupIds = endpoints.map((e) => e.itemId);
   const selectedCount = groupIds.filter((id) => selectedIds.has(id)).length;
   const allSelected = selectedCount === groupIds.length && groupIds.length > 0;
   const someSelected = selectedCount > 0 && !allSelected;
-
   const handleGroupCheckbox = (checked: boolean) => {
     onSelectGroup(groupIds, checked);
   };
-
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="rounded-lg border border-border bg-card">
-        {/* Header */}
         <div className="flex items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
           <Checkbox
             checked={allSelected}
             // @ts-expect-error indeterminate is supported by radix but not typed
-            indeterminate={someSelected}
+            indeterminate={someSelected ? true : undefined}
             onCheckedChange={handleGroupCheckbox}
             onClick={(e) => e.stopPropagation()}
           />
-
           <CollapsibleTrigger asChild>
             <button className="flex flex-1 items-center gap-3 text-left">
               <div className="min-w-0 flex-1">
@@ -68,7 +62,6 @@ export const ServiceGroupCard = ({
               </div>
             </button>
           </CollapsibleTrigger>
-
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Badge className="hidden sm:flex rounded-full font-mono text-xs bg-primary/10 text-primary">
               {endpoints.length} Endpoint{endpoints.length !== 1 ? "s" : ""}
@@ -89,8 +82,6 @@ export const ServiceGroupCard = ({
             </CollapsibleTrigger>
           </div>
         </div>
-
-        {/* Expanded endpoint list */}
         <CollapsibleContent>
           <div className="flex flex-col gap-1.5 border-t border-border px-3 py-3 sm:px-4">
             {endpoints.map((ep) => (

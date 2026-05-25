@@ -3,12 +3,10 @@ import { FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui-k
 import { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { SSOProviderConfigFormFieldType } from "../../sso-provider-config.type";
 import { PasswordInput } from "@/components/password-input";
-
 type PasswordFieldProps = {
   item: Extract<SSOProviderConfigFormFieldType, { type: "password" }>;
   field: ControllerRenderProps<FieldValues>;
 };
-
 export const PasswordField: React.FC<PasswordFieldProps> = ({ item, field }) => {
   return (
     <FormItem>

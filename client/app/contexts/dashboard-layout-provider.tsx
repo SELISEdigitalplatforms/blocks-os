@@ -1,7 +1,6 @@
 import React, { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import useIsMobile from "@/hooks/use-is-mobile";
-
 type SidebarContextValue = {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -15,7 +14,6 @@ type SidebarContextValue = {
   servicesSearchTerm: string;
   updateServicesSearchTerm: (term: string) => void;
 };
-
 const defaultContextValue: SidebarContextValue = {
   isSidebarOpen: false,
   toggleSidebar: () => undefined,
@@ -29,9 +27,7 @@ const defaultContextValue: SidebarContextValue = {
   servicesSearchTerm: "",
   updateServicesSearchTerm: () => undefined,
 };
-
 export const SidebarContext = createContext<SidebarContextValue>(defaultContextValue);
-
 export function DashboardLayoutProvider({
   children,
   isOpen,
@@ -52,7 +48,6 @@ export function DashboardLayoutProvider({
   const [isSidebarSubMenuOpen, setIsSidebarSubMenuOpen] = useState(isSubMenuOpen);
   const [subMenuId, setSubMenuId] = useState<string | null>(null);
   const [servicesSearchTerm, setServicesSearchTerm] = useState("");
-
   useEffect(() => {
     if (persist && !isMountedRef.current) {
       isMountedRef.current = true;
@@ -67,7 +62,6 @@ export function DashboardLayoutProvider({
       }
     }
   }, [isMobile, persist, storageKey]);
-
   useEffect(() => {
     if (!persist) {
       setIsSidebarOpen(!isMobile);
@@ -75,26 +69,22 @@ export function DashboardLayoutProvider({
       setIsSidebarOpen(false);
     }
   }, [isMobile, persist]);
-
   useEffect(() => {
     const menuId = localStorage.getItem("subMenuId");
     if (menuId !== null) {
       setSubMenuId(menuId);
     }
   }, []);
-
   useEffect(() => {
     if (!isMobile && pathname.startsWith("/services")) {
       setIsSidebarSubMenuOpen(true);
     }
   }, [pathname, isMobile]);
-
   useEffect(() => {
     if (isSidebarOpen && !isMobile) {
       setIsSidebarSubMenuOpen(false);
     }
   }, [isSidebarOpen, isMobile]);
-
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen((prev) => {
       const nextState = !prev;
@@ -107,36 +97,29 @@ export function DashboardLayoutProvider({
       return nextState;
     });
   }, [isMobile, persist, storageKey]);
-
   const closeSidebar = useCallback(() => {
     setIsSidebarOpen(false);
     if (persist && !isMobile) {
       localStorage.setItem(storageKey, JSON.stringify(false));
     }
   }, [isMobile, persist, storageKey]);
-
   const closeWithoutPersist = useCallback(() => {
     setIsSidebarOpen(false);
   }, []);
-
   const toggleSidebarSubMenu = useCallback(() => {
     setIsSidebarSubMenuOpen((prev) => !prev);
   }, []);
-
   const showSidebarSubMenu = useCallback(() => {
     setIsSidebarSubMenuOpen(true);
   }, []);
-
   const updateSubMenuId = useCallback((id: string) => {
     localStorage.setItem("subMenuId", id);
     setSubMenuId(id);
     setServicesSearchTerm("");
   }, []);
-
   const updateServicesSearchTerm = useCallback((term: string) => {
     setServicesSearchTerm(term);
   }, []);
-
   return (
     <SidebarContext.Provider
       value={{

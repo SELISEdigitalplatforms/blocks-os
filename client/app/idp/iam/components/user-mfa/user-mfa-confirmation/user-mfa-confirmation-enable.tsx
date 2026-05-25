@@ -15,15 +15,12 @@ import { UserMFAMethodList } from "./user-mfa-methods-list";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
 import { userMfaContext } from "../user-mfa";
-
 export const UserMFAConfirmationEnable = () => {
   const { projectKey, userId, enableTotpModal, showTotpModal } = useContext(userMfaContext);
   const [open, setOpen] = useState<boolean>(false);
-
   const [type, setType] = useState(0);
   const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
   const { data: userData, isLoading, isFetching } = useGetUserById({ id: userId, projectKey });
-
   const onClickHandler = async () => {
     try {
       const res = await mutateAsync({
@@ -40,7 +37,6 @@ export const UserMFAConfirmationEnable = () => {
       if (isErrorWithErrors(error)) showErrorToast({ errors: error.errors });
     }
   };
-
   const onTriggerHandler = () => {
     if (!userData?.data.isVarified) {
       return toast({
@@ -58,7 +54,6 @@ export const UserMFAConfirmationEnable = () => {
     }
     return setOpen(true);
   };
-
   const onOpenChangeHandler = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) setType(0);
@@ -68,7 +63,6 @@ export const UserMFAConfirmationEnable = () => {
       <Button variant="outline" onClick={onTriggerHandler} size="sm">
         Enable
       </Button>
-
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Enable MFA?</DialogTitle>

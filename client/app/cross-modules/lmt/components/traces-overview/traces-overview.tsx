@@ -1,6 +1,7 @@
 import { FilterControls, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
+import { useNavigate } from "react-router-dom";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import {
   Select,
@@ -32,13 +33,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Archive, BookOpenText, Flame, Snowflake } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
-
 type TracesOverviewProps = {
   projectKey: string;
 };
-
 type TraceFilter = { search: string; services: string[] };
-
 const useTracesFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     search: parseAsString.withDefault(""),
@@ -46,13 +44,10 @@ const useTracesFilterQueryParams = () => {
     page: parseAsInteger.withDefault(0),
     pageSize: parseAsInteger.withDefault(10),
   });
-
   return { queryParams, setQueryParams };
 };
-
 const useTraceSortQueryParams = () =>
   useSortQueryParams({ initial: { property: "Timestamp", isDescending: true } });
-
 const TRACE_MODE_OPTIONS = [
   {
     value: "hot",
@@ -73,7 +68,6 @@ const TRACE_MODE_OPTIONS = [
     Icon: Archive,
   },
 ] as const;
-
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
@@ -81,7 +75,6 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 function TracesList({
   data,
   isLoading,
@@ -92,7 +85,7 @@ function TracesList({
   services: { label: string; value: string }[];
 }) {
   const { sortQueryParams, setSortQueryParams } = useTraceSortQueryParams();
-
+  const navigate = useNavigate();
   const columns = useMemo<ColumnDef<TraceTree>[]>(
     () => [
       {
@@ -162,15 +155,12 @@ function TracesList({
     ],
     [services, setSortQueryParams, sortQueryParams],
   );
-
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <ScrollArea className="w-full">
       <Table className="text-sm">
@@ -190,7 +180,11 @@ function TracesList({
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="text-medium-emphasis">
+              <TableRow
+                key={row.id}
+                className="cursor-pointer text-medium-emphasis hover:bg-accent/50"
+                onClick={() => navigate(`/tracing/timeline/${row.original.traceId}`)}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -211,7 +205,6 @@ function TracesList({
     </ScrollArea>
   );
 }
-
 export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const isMobile = useIsMobile();
   const { queryParams, setQueryParams } = useTracesFilterQueryParams();
@@ -219,7 +212,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const [tabId, setTabId] = useState("hot");
   const [open, setOpen] = useState(false);
   const [provider, setProvider] = useState<TRACE_PROVIDERS>(TRACE_PROVIDERS.hot);
-
   const { data: registeredServices } = useQuery({
     queryKey: ["registered-services", projectKey],
     queryFn: () =>
@@ -231,7 +223,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       }),
     enabled: !!projectKey,
   });
-
   const { data, isLoading, isFetching, refetch } = useGetTraces({
     page: queryParams.page,
     pageSize: queryParams.pageSize,
@@ -243,9 +234,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       excepts: ["blocks-lmt-api"],
     },
   });
-
   const loading = isLoading || isFetching;
-
   const allServices = useMemo(() => {
     const registered = registeredServices?.data || [];
     const merged = [
@@ -254,21 +243,17 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     ];
     return merged.filter((item, index, array) => array.findIndex((value) => value.value === item.value) === index);
   }, [registeredServices?.data]);
-
   const pageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
-
   const pageSizeChangeHandler = (pageSize: number) => {
     setQueryParams((params) => ({ ...params, page: 0, pageSize }));
   };
-
   const tabChangedHandler = (value: keyof typeof TRACE_PROVIDERS) => {
     pageChangeHandler(0);
     setTabId(value);
     setProvider(TRACE_PROVIDERS[value]);
   };
-
   const changeHandler = (key: string, value: unknown) => {
     setQueryParams((params) => ({
       ...params,
@@ -276,9 +261,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       page: 0,
     }));
   };
-
   const resetHandler = () => setQueryParams(null);
-
   return (
     <main>
       <Tabs value={tabId} onValueChange={(value: string) => tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)}>
@@ -293,7 +276,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
               <span className="sr-only sm:not-sr-only sm:ml-2">Guide</span>
             </Button>
           </div>
-
           {isMobile ? (
             <Select value={tabId} onValueChange={(value: string) => tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)}>
               <SelectTrigger className="w-full sm:w-48">
@@ -312,7 +294,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
               {TRACE_MODE_OPTIONS.map((option) => {
                 const Icon = option.Icon;
                 const isActive = tabId === option.value;
-
                 return (
                   <button
                     key={option.value}
@@ -343,7 +324,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
             </div>
           )}
         </div>
-
         <TabsContent value="hot">
           <Card>
             <CardHeader>

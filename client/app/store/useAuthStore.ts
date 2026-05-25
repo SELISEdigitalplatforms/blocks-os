@@ -1,6 +1,6 @@
 import { User } from "@blocks-idp/iam/models/user";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -23,7 +23,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       setUser: (user: User | null) => {
-        set((state) => ({ ...state, user }));
+        set((state) => ({ ...state, user, isAuthenticated: !!user }));
       },
       setAuthenticated: () => {
         set((state) => ({ ...state, isAuthenticated: true }));

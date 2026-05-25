@@ -1,11 +1,8 @@
-
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { useState } from "react";
-
 import { createContext, useContext } from "react";
-
 interface ChipsContextProps {
   value: string[];
   inputValue: string;
@@ -14,15 +11,12 @@ interface ChipsContextProps {
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   handleRemoveChip: (item: string) => void;
 }
-
 export const ChipsContext = createContext<ChipsContextProps | null>(null);
-
 export const useChipsContext = () => {
   const ctx = useContext(ChipsContext);
   if (!ctx) throw new Error("ChipsInput components must be used within <ChipsInput>");
   return ctx;
 };
-
 export const ChipsInputList = () => {
   const { value, handleRemoveChip } = useChipsContext();
   return (
@@ -45,14 +39,11 @@ export const ChipsInputList = () => {
     </>
   );
 };
-
 export interface ChipsInputFieldProps {
   className?: string;
 }
-
 export const ChipsInputField = ({ className }: ChipsInputFieldProps) => {
   const { inputValue, handleInputChange, handleKeyDown, error } = useChipsContext();
-
   return (
     <>
       <Input
@@ -70,7 +61,6 @@ export const ChipsInputField = ({ className }: ChipsInputFieldProps) => {
     </>
   );
 };
-
 interface ChipsInputRootProps {
   children: React.ReactNode;
   value: string[];
@@ -80,7 +70,6 @@ interface ChipsInputRootProps {
   validatorRegexErrorMessage?: string;
   className?: string;
 }
-
 export const ChipsInput = ({
   children,
   value = [],
@@ -92,10 +81,8 @@ export const ChipsInput = ({
 }: ChipsInputRootProps) => {
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
-
   const handleInputChange = (val: string) => {
     setInputValue(val);
-
     if (val.trim()) {
       if (customValidator) {
         if (!customValidator(val.trim())) {
@@ -114,7 +101,6 @@ export const ChipsInput = ({
       setError(null);
     }
   };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -125,12 +111,10 @@ export const ChipsInput = ({
       }
     }
   };
-
   const handleRemoveChip = (item: string) => {
     const updated = value.filter((i) => i !== item);
     onChange(updated);
   };
-
   return (
     <ChipsContext.Provider
       value={{

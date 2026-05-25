@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -16,11 +15,9 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../models/captcha";
 import { isErrorWithErrors } from "@/lib/error";
 import { Check, X } from "lucide-react";
-
 type ToggleCaptchaStatusModalProps = {
   configuration: ICaptchaConfig;
 };
-
 export const ToggleCaptchaStatusModal = ({ configuration }: ToggleCaptchaStatusModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { isPending, mutateAsync } = useToggleCaptchaConfigStatus();
@@ -29,13 +26,11 @@ export const ToggleCaptchaStatusModal = ({ configuration }: ToggleCaptchaStatusM
   const onConfirm = async () => {
     try {
       if (!configuration) return showErrorToast({ errors: "Something went wrong" });
-
       const res = await mutateAsync({
         projectKey: tenantId,
         isEnable: !configuration.isEnable,
         itemId: configuration.itemId,
       });
-
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
         description: `${providerType.label} is ${configuration.isEnable ? "disabled" : "enabled"} successfully`,
@@ -47,9 +42,7 @@ export const ToggleCaptchaStatusModal = ({ configuration }: ToggleCaptchaStatusM
       }
     }
   };
-
   const IconComponent = configuration?.isEnable ? X : Check;
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>

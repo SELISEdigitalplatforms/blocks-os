@@ -11,29 +11,23 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetAuthConfig, useSaveAuthConfig } from "@blocks-idp/authentication/hooks/use-auth-config";
-
 export const GrantTypes = () => {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "", itemId: "" };
   const { data, isLoading } = useGetAuthConfig({ projectKey: tenantId });
-
   const { mutateAsync, isPending } = useSaveAuthConfig({ projectKey: tenantId });
-
   const form = useForm<authGrantTypeFormType>({
     defaultValues: authGrantTypeFormDefaultValues,
     values: data,
     resolver: zodResolver(authGrantTypeFormSchema),
   });
-
   const submitHandler = async (values: authGrantTypeFormType) => {
     try {
       if (!tenantId || !data) return showErrorToast({ errors: "Something went wrong" });
-
       const res = await mutateAsync({
         ...data,
         ...values,
         projectKey: tenantId,
       });
-
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Grant types updated successfully" });
     } catch (error) {

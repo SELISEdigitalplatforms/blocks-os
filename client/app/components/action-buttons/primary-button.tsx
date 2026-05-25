@@ -1,13 +1,11 @@
 import { ElementType, forwardRef, MouseEventHandler } from "react";
 import { Button } from "../ui-kits/button/button";
 import { CirclePlus } from "lucide-react";
-
 type PrimaryButtonProps = {
   Icon?: ElementType;
   label?: string;
   onClick?: MouseEventHandler;
 };
-
 export const PrimaryButton = forwardRef<HTMLButtonElement, PrimaryButtonProps>(
   ({ Icon = CirclePlus, label = "Add", onClick }, ref) => {
     return (
@@ -18,5 +16,4 @@ export const PrimaryButton = forwardRef<HTMLButtonElement, PrimaryButtonProps>(
     );
   },
 );
-
 PrimaryButton.displayName = "PrimaryButton";

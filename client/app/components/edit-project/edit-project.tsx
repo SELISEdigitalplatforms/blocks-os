@@ -13,12 +13,10 @@ import { EditProjectForm } from "@/components/edit-project-form/edit-project-for
 import { IGetProjectResponse } from "@blocks-identifier/models/project.model";
 import { CnameValidatorProject } from "@/components/cname-validator-project/cname-validator-project";
 import { formatFullDate } from "@/lib/utils";
-
 interface EditProjectProps {
   data?: IGetProjectResponse;
   isLoading?: boolean;
 }
-
 export const EditProject = ({ data, isLoading }: EditProjectProps) => {
   const isCNameNotValidated = !isLoading && data?.data && !data?.data.isDomainVerified;
   const [open, setOpen] = useState<boolean>(false);

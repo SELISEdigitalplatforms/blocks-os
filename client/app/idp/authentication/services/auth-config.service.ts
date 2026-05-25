@@ -10,10 +10,10 @@ import { AUTH_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
 export class AuthConfiguration {
   getConfig(payload: IAuthConfigPayload): Promise<IGetAuthConfigResponse> {
     const url = `${AUTH_CONFIG_ENDPOINTS.GET_CONFIG}?ProjectKey=${payload.projectKey}`;
-    return http.get(url);
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 
   saveAuthConfig(payload: ISaveAuthConfigPayload): Promise<ISaveAuthConfigResponse> {
-    return http.post(AUTH_CONFIG_ENDPOINTS.UPDATE_CONFIG, payload);
+    return http.post(AUTH_CONFIG_ENDPOINTS.UPDATE_CONFIG, payload, undefined, { absoluteUrl: true });
   }
 }

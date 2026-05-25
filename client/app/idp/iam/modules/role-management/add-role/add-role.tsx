@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui-kits/button/button";
@@ -28,21 +27,17 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { useAddRole } from "@blocks-idp/iam/hooks/use-roles";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
-
 export const AddRole = () => {
   const [isAddRoleOpenModal, setIsAddRoleOpenModal] = useState(false);
   const { mutateAsync, isPending } = useAddRole();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const form = useForm({
     defaultValues: addRoleFormDefaultValue,
     resolver: zodResolver(addRoleFormSchema),
   });
-
   const {
     formState: { isDirty },
   } = form;
-
   const onSubmit: SubmitHandler<z.infer<typeof addRoleFormSchema>> = async (data) => {
     const newRole = {
       name: data.name,
@@ -58,7 +53,6 @@ export const AddRole = () => {
     } catch (error: unknown) {
       if (error && typeof error === "object" && "status" in error && "errors" in error) {
         const httpError = error as { status: number; errors: Record<string, string | string[]> };
-
         if (httpError.status === 403) {
           showErrorToast({
             title: "Forbidden",
@@ -72,7 +66,6 @@ export const AddRole = () => {
       }
     }
   };
-
   return (
     <Dialog
       open={isAddRoleOpenModal}

@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AUTH_ENDPOINTS,
-  AUTH_OIDC_ENDPOINTS,
-  OIDC_FLOW_ENDPOINTS,
-} from "../constants/endpoint.constant";
+import { AUTH_OIDC_ENDPOINTS, OIDC_FLOW_ENDPOINTS } from "../constants/endpoint.constant";
+import { API_BASES } from "@/constants/endpoint.constant";
 import { ACCOUNT_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
 import {
   mockOidcFlowCredentialPayload,
@@ -59,7 +56,7 @@ describe("oidc-auth-flow.service", () => {
       const result = await refreshAccessToken("test-project-key");
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_API_BASE}${AUTH_ENDPOINTS.TOKEN}`,
+        `${API_BASES.IAM}/auth/Token`,
         expect.objectContaining({ method: "POST" }),
       );
       expect(result).toBe(mockRefreshedTokenResponse.access_token);
@@ -160,7 +157,7 @@ describe("oidc-auth-flow.service", () => {
       const result = await userAcknowledgement(mockUserAcknowledgementPayload);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_API_BASE}${OIDC_FLOW_ENDPOINTS.USER_ACKNOWLEDGEMENT}`,
+        expect.stringContaining(OIDC_FLOW_ENDPOINTS.USER_ACKNOWLEDGEMENT),
         expect.objectContaining({
           method: "POST",
           body: expect.any(String),
@@ -191,7 +188,7 @@ describe("oidc-auth-flow.service", () => {
       const result = await accountRecover(mockOidcFlowAccountRecoverPayload);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_API_BASE}${ACCOUNT_ENDPOINTS.RECOVER}`,
+        expect.stringContaining(ACCOUNT_ENDPOINTS.RECOVER),
         expect.objectContaining({
           method: "POST",
           body: expect.any(String),

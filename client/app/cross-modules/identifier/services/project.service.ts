@@ -70,7 +70,7 @@ export class ProjectService {
     isSuccess: boolean;
   }> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?projectkey=${projectkey}`;
-    return http.get(url);
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 
   repoUpdate(payload: {
@@ -118,9 +118,7 @@ export class ProjectService {
     return http.post(PROJECT_ENDPOINTS.DISABLE, payload);
   }
 
-  getProjectLoginOption(): Promise<IGetProjectLoginOptionResponse> {
-    return http.get(PROJECT_ENDPOINTS.GET_LOGIN_OPTIONS);
-  }
+
 
   // Data Migration Methods
   initiateMigration(payload: IMigrationRequest): Promise<IMigrationInitiateResponse> {

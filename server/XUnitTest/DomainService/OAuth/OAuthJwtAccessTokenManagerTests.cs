@@ -290,8 +290,6 @@ namespace XUnitTest.DomainService.OAuth
         private Tenant CreateTenant() => new()
         {
             TenantId = "tenant-123",
-            CookieDomain = ".example.com",
-            ApplicationDomain = "app.example.com",
             DbConnectionString = "test-connection-string",
             JwtTokenParameters = new JwtTokenParameters()
             {

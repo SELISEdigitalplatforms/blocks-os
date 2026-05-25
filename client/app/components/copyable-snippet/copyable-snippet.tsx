@@ -1,7 +1,6 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-
 const customStyle = {
   'code[class*="language-"]': {
     color: "hsl(var(--foreground))",
@@ -36,20 +35,17 @@ const customStyle = {
     borderRadius: "0.375rem",
   },
 };
-
 interface CopyableSnippetProps {
   code: string;
   language?: string;
   isCopyable: boolean;
 }
-
 export const CopyableSnippet = ({
   code,
   language = "bash",
   isCopyable = true,
 }: CopyableSnippetProps) => {
   const [copied, setCopied] = useState(false);
-
   const handleCopy = async () => {
     try {
       if (navigator?.clipboard?.writeText) {
@@ -72,7 +68,6 @@ export const CopyableSnippet = ({
       console.error("Failed to copy text:", error);
     }
   };
-
   return (
     <div className="relative">
       {isCopyable && (

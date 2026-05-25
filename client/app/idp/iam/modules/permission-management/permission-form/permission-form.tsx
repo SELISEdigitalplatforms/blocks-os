@@ -1,4 +1,3 @@
-
 import { ChipsInput, ChipsInputField, ChipsInputList } from "@/components/chip-input/chips-input";
 import { Button } from "@/components/ui-kits/button/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form";
@@ -12,25 +11,20 @@ import { Card, CardContent, CardFooter } from "@/components/ui-kits/card/card";
 import { DependentPermissions } from "../dependent-permissions";
 import { PermissionGroupCombobox } from "@blocks-idp/iam/components/permission-group-combobox/permission-group-combobox";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
-
 type PermissionFormProps = {
   onSave: (data: permissionFormSchemaType) => void;
   isPending: boolean;
   values?: IPermission | null;
 };
-
 export const PermissionForm = ({ onSave, isPending, values = null }: PermissionFormProps) => {
   const form = useForm({
     values: values || permissionFormDefaultValue,
     resolver: zodResolver(permissionFormSchema),
   });
-
   const onSubmit = async (data: permissionFormSchemaType) => {
     onSave(data);
   };
-
   const resourceType = form.watch("type");
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-4">
@@ -141,7 +135,6 @@ export const PermissionForm = ({ onSave, isPending, values = null }: PermissionF
                 </FormItem>
               )}
             />
-
             <FormField
               name="tags"
               control={form.control}

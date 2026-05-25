@@ -100,8 +100,8 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTentId: "test-tenant-id"
+                //refreshToken: string.Empty,
+                originalTenantId: "test-tenant-id"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -165,8 +165,8 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTentId: "test-tenant-id"
+                //refreshToken: string.Empty,
+                originalTenantId: "test-tenant-id"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -219,8 +219,8 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTentId: "test-tenant-id"
+                //refreshToken: string.Empty,
+                originalTenantId: "test-tenant-id"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -269,8 +269,8 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTentId: "test-tenant-id"
+                //refreshToken: string.Empty,
+                originalTenantId: "test-tenant-id"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -353,8 +353,8 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTentId: "test-tenant-id"
+                //refreshToken: string.Empty,
+                originalTenantId: "test-tenant-id"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -456,8 +456,8 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTentId: "test-tenant-id"
+                // refreshToken: string.Empty,
+                originalTenantId: "test-tenant-id"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -497,8 +497,8 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTentId: "test-tenant-id"
+                // refreshToken: string.Empty,
+                originalTenantId: "test-tenant-id"
             );
 
             BlocksContext.SetContext(blocksContext, true);

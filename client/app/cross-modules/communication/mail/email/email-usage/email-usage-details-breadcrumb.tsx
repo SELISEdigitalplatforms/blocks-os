@@ -8,12 +8,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui-kits/breadcrumb/breadcrumb";
-
 interface EmailUsageDetailsBreadcrumbProps {
   id: string;
   isInbound?: boolean;
 }
-
 export const EmailUsageDetailsBreadcrumb = ({
   id,
   isInbound,
@@ -22,7 +20,6 @@ export const EmailUsageDetailsBreadcrumb = ({
   const backLink = isInbound
     ? "/utilities/email?emailAnalytics=Inbox"
     : "/utilities/email?emailAnalytics=Outgoingmails";
-
   return (
     <Breadcrumb>
       <BreadcrumbList>

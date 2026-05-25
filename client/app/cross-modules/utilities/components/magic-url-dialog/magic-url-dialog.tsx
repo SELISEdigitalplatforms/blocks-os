@@ -34,21 +34,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { magicUrlSchema } from "@blocks-utilities/utils/url.util";
-
 type MagicUrlFormData = z.infer<typeof magicUrlSchema>;
-
 interface MagicUrlDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode;
   initialData?: MagicUrl;
 }
-
 export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: MagicUrlDialogProps) {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { user } = useAuthStore();
   const userId = user?.itemId || "";
-
   const {
     register,
     formState: { errors, isValid },
@@ -59,7 +55,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
     mode: "onChange",
     defaultValues: { uri: "", name: "" },
   });
-
   const [url, setUrl] = useState("");
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("1");
@@ -76,9 +71,7 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
   const [autoExpiry, setAutoExpiry] = useState(false);
   const [expiryDate, setExpiryDate] = useState<Date>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
   const { mutate: createMagicUrl, isPending } = useCreateMagicUrl();
-
   const resetForm = React.useCallback(() => {
     setUrl("");
     setName("");
@@ -98,7 +91,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
     setIsCalendarOpen(false);
     reset({ uri: "", name: "" });
   }, [reset]);
-
   React.useEffect(() => {
     if (open) {
       if (initialData) {
@@ -120,7 +112,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
       }
     }
   }, [open, initialData, setValue, resetForm]);
-
   const handleShorten = () => {
     if (!isValid) {
       toast({
@@ -130,14 +121,12 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
       });
       return;
     }
-
     let expiryLifeSpan: number | undefined;
     if (autoExpiry && expiryDate) {
       const now = new Date();
       const diffMs = expiryDate.getTime() - now.getTime();
       expiryLifeSpan = diffMs * 10000;
     }
-
     const payload = {
       uri: url,
       name,
@@ -155,7 +144,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
       expiryLifeSpan,
       requestByUserId: userId,
     };
-
     createMagicUrl(payload, {
       onSuccess: () => {
         toast({ variant: "success", title: "Success", description: "Magic URL created successfully" });
@@ -170,12 +158,10 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
       },
     });
   };
-
   const handleCancel = () => {
     resetForm();
     onOpenChange?.(false);
   };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
@@ -184,7 +170,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
           <DialogTitle>Magic URL</DialogTitle>
           <DialogDescription>Create a new Magic URL with custom configurations.</DialogDescription>
         </DialogHeader>
-
         <ScrollArea className="max-h-[60vh] pr-6">
           <div className="grid gap-6 px-1 py-4">
             <div className="grid grid-cols-2 gap-4">
@@ -221,7 +206,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                 </div>
               </div>
             </div>
-
             <div className={type === "1" ? "grid gap-2" : "grid grid-cols-2 gap-4"}>
               <div className="grid gap-2">
                 <Label>Type</Label>
@@ -250,7 +234,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                 </div>
               )}
             </div>
-
             {type !== "1" && (
               <>
                 <div className="grid gap-2">
@@ -275,7 +258,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                 </div>
               </>
             )}
-
             <div className={type === "1" ? "grid gap-2" : "grid grid-cols-2 gap-4"}>
               {type !== "1" && (
                 <div className="grid gap-2">
@@ -297,7 +279,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                 />
               </div>
             </div>
-
             <div className="grid gap-4 rounded-md border p-4">
               <div className="grid gap-3">
                 <div className="flex items-center justify-between">
@@ -316,7 +297,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
                   />
                 )}
               </div>
-
               <div className="grid gap-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="auto-expiry" className="font-medium">
@@ -360,7 +340,6 @@ export function MagicUrlDialog({ open, onOpenChange, trigger, initialData }: Mag
             </div>
           </div>
         </ScrollArea>
-
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={handleCancel} disabled={isPending}>
             Cancel
