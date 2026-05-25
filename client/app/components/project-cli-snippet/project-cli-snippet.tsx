@@ -1,10 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetProject } from "@/hooks/use-project";
 import { useProjectStore } from "@/store/useProjectStore";
 import { CopyableSnippet } from "@/components/copyable-snippet/copyable-snippet";
 import { getProjectBlocksApiUrl } from "@/lib/domain";
-
 const LoadingSkeleton = () => (
   <Card>
     <CardContent>
@@ -19,16 +23,16 @@ const LoadingSkeleton = () => (
     </CardContent>
   </Card>
 );
-
 export const ProjectCliSnippet = () => {
-  const { itemId } = useProjectStore().selectedProject || { itemId: "", tenantId: "" };
-  const { data, isLoading } = useGetProject({ projectId: itemId });
-
+  const { itemId } = useProjectStore().selectedProject || {
+    itemId: "",
+    tenantId: "",
+  };
+  const { data, isLoading } = useGetProject();
   const cliSetupCommand = "npm install -g @seliseblocks/cli";
   const blocksMicroservicesUrl = getProjectBlocksApiUrl(data?.data);
   const projectSetupCommand =
     `blocks new web ${data?.data.name.replaceAll(" ", "_").toLowerCase()} --x-blocks-key ${data?.data.tenantId} --app-domain ${data?.data.applicationDomain} --project-slug ${data?.data.tenantSlug || ""} --blocks-api-url ${blocksMicroservicesUrl}`.trim();
-
   if (isLoading) return <LoadingSkeleton />;
   return (
     <Card>
@@ -41,8 +45,12 @@ export const ProjectCliSnippet = () => {
           <CopyableSnippet code={projectSetupCommand} isCopyable={true} />
         </div>
         <div className="mt-6">
-          If you haven&apos;t installed the CLI yet, install it globally using npm, then run the command:
-          <CopyableSnippet code={`${cliSetupCommand} \n${projectSetupCommand}`} isCopyable={true} />
+          If you haven&apos;t installed the CLI yet, install it globally using
+          npm, then run the command:
+          <CopyableSnippet
+            code={`${cliSetupCommand} \n${projectSetupCommand}`}
+            isCopyable={true}
+          />
         </div>
       </CardContent>
     </Card>

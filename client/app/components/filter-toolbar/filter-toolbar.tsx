@@ -12,7 +12,6 @@ import {
 import { Button } from "../ui-kits/button/button";
 import { Filter } from "lucide-react";
 import { deepEqual } from "@/lib/utils";
-
 type FilterItem<T extends Record<string, unknown>> = {
   [K in keyof typeof FilterControls]: {
     key: keyof T;
@@ -22,13 +21,11 @@ type FilterItem<T extends Record<string, unknown>> = {
     props?: Omit<React.ComponentProps<(typeof FilterControls)[K]>, "value" | "onChange" | "label">;
   };
 }[keyof typeof FilterControls];
-
 export type FilterChangeHandler<T extends Record<string, unknown>> = <K extends keyof T>(
   key: K,
   value: T[K],
   values: T,
 ) => void;
-
 type FilterToolbarProps<T extends Record<string, unknown>> = {
   filters: FilterItem<T>[];
   values: T;
@@ -37,13 +34,11 @@ type FilterToolbarProps<T extends Record<string, unknown>> = {
   onReset?: (values?: T) => void;
   hideGlobalResetButton?: boolean;
 };
-
 type ViewType = {
   Components: ReactNode[];
   onReset?: () => void;
   showReset: boolean;
 };
-
 const FilterToolbarDesktopView = ({ Components, showReset, onReset }: ViewType) => {
   return (
     <div className="hidden flex-wrap items-center gap-4 md:flex">
@@ -58,7 +53,6 @@ const FilterToolbarDesktopView = ({ Components, showReset, onReset }: ViewType) 
     </div>
   );
 };
-
 export const FilterToolBarMobileView = ({ Components, showReset, onReset }: ViewType) => {
   return (
     <div className={"flex items-center justify-between gap-2 md:hidden"}>
@@ -85,7 +79,6 @@ export const FilterToolBarMobileView = ({ Components, showReset, onReset }: View
                   Show Results
                 </Button>
               </SheetClose>
-
               {showReset && (
                 <ResetButton
                   onClick={() => {
@@ -100,7 +93,6 @@ export const FilterToolBarMobileView = ({ Components, showReset, onReset }: View
     </div>
   );
 };
-
 export const FilterToolbar = <T extends Record<string, unknown>>({
   filters,
   values,
@@ -110,15 +102,12 @@ export const FilterToolbar = <T extends Record<string, unknown>>({
   hideGlobalResetButton = false,
 }: FilterToolbarProps<T>) => {
   const initialValuesRef = useRef(defaultValues);
-
   const changeHandler = <K extends keyof T>(key: K, value: T[K]) => {
     const changedValues = { ...values, [key]: value };
     onChange(key, value, changedValues);
   };
-
   const controllers = filters.map((item) => {
     const Component = FilterControls[item.type];
-
     return (
       <Component
         {...item}
@@ -131,9 +120,7 @@ export const FilterToolbar = <T extends Record<string, unknown>>({
       />
     );
   });
-
   const showReset = !hideGlobalResetButton && !deepEqual(initialValuesRef.current, values);
-
   return (
     <>
       <FilterToolbarDesktopView

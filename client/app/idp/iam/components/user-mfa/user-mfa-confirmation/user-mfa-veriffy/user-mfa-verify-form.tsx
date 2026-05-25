@@ -14,7 +14,6 @@ import { z } from "zod";
 import { userMfaContext } from "../../user-mfa";
 import { useVerifyMfaOTP } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-
 const CustomInputOTPSlot = ({ index }: { index: number }) => {
   return (
     <InputOTPSlot
@@ -26,11 +25,9 @@ const CustomInputOTPSlot = ({ index }: { index: number }) => {
 const FormSchema = z.object({
   code: z.string().min(5),
 });
-
 export const UserMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
   const { projectKey, setIsTotpModalOpen, mfaMethodType, userId } = useContext(userMfaContext);
   const { mutateAsync } = useVerifyMfaOTP({ id: userId, projectKey });
-
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -52,7 +49,6 @@ export const UserMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
       //
     }
   };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submitHandler)}>
@@ -77,7 +73,6 @@ export const UserMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
             </FormItem>
           )}
         />
-
         <div className="mt-6 flex items-center justify-end gap-4">
           <Button variant="outline" type="button" onClick={() => setIsTotpModalOpen(false)}>
             Cancel

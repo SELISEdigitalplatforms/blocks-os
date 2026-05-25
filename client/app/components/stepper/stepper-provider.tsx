@@ -1,8 +1,6 @@
 import { StepperContextType, Steps } from "./stepper-models";
 import React, { createContext, useContext, useState, ReactNode } from "react";
-
 const StepperContext = createContext<StepperContextType | undefined>(undefined);
-
 export const useStepper = (): StepperContextType => {
   const context = useContext(StepperContext);
   if (!context) {
@@ -10,14 +8,12 @@ export const useStepper = (): StepperContextType => {
   }
   return context;
 };
-
 type StepperProviderProps = {
   children: ReactNode;
   steps: Steps;
   isStepValid?: (step: number) => boolean;
   initialStep?: number;
 };
-
 const StepperProvider: React.FC<StepperProviderProps> = ({
   children,
   steps,
@@ -29,7 +25,6 @@ const StepperProvider: React.FC<StepperProviderProps> = ({
     Array.from({ length: initialStep - 1 }, (_, i) => i + 1),
   );
   const totalSteps = steps.length;
-
   const nextStep = () => {
     if (currentStep < totalSteps) {
       setCurrentStep((prevStep) => prevStep + 1);
@@ -38,7 +33,6 @@ const StepperProvider: React.FC<StepperProviderProps> = ({
       }
     }
   };
-
   const previousStep = () => {
     if (currentStep > 1) {
       setCurrentStep((prevStep) => prevStep - 1);
@@ -47,21 +41,18 @@ const StepperProvider: React.FC<StepperProviderProps> = ({
       );
     }
   };
-
   const goToStep = (step: number) => {
     const canNavigate =
       step > 0 &&
       step <= totalSteps &&
       (step === 1 || completedSteps.includes(step - 1)) &&
       isStepValid(step);
-
     if (canNavigate) {
       setCurrentStep(step);
       const newCompletedSteps = Array.from({ length: step - 1 }, (_, i) => i + 1);
       setCompletedSteps(newCompletedSteps);
     }
   };
-
   return (
     <StepperContext.Provider
       value={{
@@ -79,5 +70,4 @@ const StepperProvider: React.FC<StepperProviderProps> = ({
     </StepperContext.Provider>
   );
 };
-
 export default StepperProvider;

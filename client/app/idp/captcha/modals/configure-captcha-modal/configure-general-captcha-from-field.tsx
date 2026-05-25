@@ -8,11 +8,9 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { ConfigureCaptchaFormDefaultValue } from "./utils";
-
 type ConfigureGeneralCaptchaFormProps = {
   form: UseFormReturn<typeof ConfigureCaptchaFormDefaultValue>;
 };
-
 export const ConfigureGeneralCaptchaFormField = ({ form }: ConfigureGeneralCaptchaFormProps) => {
   return (
     <>

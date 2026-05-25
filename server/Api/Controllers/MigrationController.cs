@@ -1,9 +1,10 @@
 using Blocks.Genesis;
-using DomainService.Migration;
-using DomainService.Migration.Services;
+
 using DomainService.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using DomainService.Migration;
+using DomainService.Migration.Services;
 
 namespace Api.Controllers
 {
@@ -31,13 +32,14 @@ namespace Api.Controllers
         }
 
         /// <summary>
-        /// Initiates the migration process for the specified project and services.
+        /// 
         /// </summary>
-        /// <param name="command">The migration request containing project and service details.</param>
-        /// <returns>An <see cref="OtpGenerationResponse"/> containing the verification ID for OTP validation.</returns>
+        /// <param name="command"></param>
+        /// <returns></returns>
         [HttpPost]
-        [ProtectedEndPoint]
-        public async Task<OtpGenerationResponse> Migrate([FromBody] MigrationRequest command)
+        //[ProtectedEndPoint("blocks-os::migration::migrate")]
+        [Authorize]
+        public async Task<MigrationOtpGenerationResponse> Migrate([FromBody] MigrationRequest command)
         {
             return await _migrationService.Migrate(command);
         }
@@ -46,10 +48,11 @@ namespace Api.Controllers
         /// Verifies the OTP code for the migration process.
         /// </summary>
         /// <param name="command">The OTP verification request containing the verification ID and code.</param>
-        /// <returns>An <see cref="OtpVerificationResponse"/> indicating whether the OTP is valid.</returns>
+        /// <returns>An <see cref="MigrationOtpVerificationResponse"/> indicating whether the OTP is valid.</returns>
         [HttpPost]
-        [ProtectedEndPoint]
-        public async Task<OtpVerificationResponse> Verify([FromBody] VerifyOtpRequest request)
+        //[ProtectedEndPoint("blocks-os::migration::verify-otp")]
+        [Authorize]
+        public async Task<MigrationOtpVerificationResponse> Verify([FromBody] MigrationVerifyOtpRequest request)
         {
             return await _migrationService.VerifyAsync(request);
         }
@@ -60,7 +63,8 @@ namespace Api.Controllers
         /// <param name="tenantGroupId">The tenant group ID to check for migrations.</param>
         /// <returns>List of migration trackers with incomplete services.</returns>
         [HttpGet]
-        [ProtectedEndPoint]
+        //[ProtectedEndPoint("blocks-os::migration::get-migration-status")]
+        [Authorize]
         public async Task<IActionResult> GetMigrationStatus([FromQuery] string tenantGroupId)
         {
             if (string.IsNullOrEmpty(tenantGroupId))
@@ -73,7 +77,8 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        //[ProtectedEndPoint("blocks-os::migration::data-cleanup")]
+        [Authorize]
         public async Task<IActionResult> DataCleanup([FromBody] DataCleanupRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.ProjectKey))

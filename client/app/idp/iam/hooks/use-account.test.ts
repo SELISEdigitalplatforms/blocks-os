@@ -39,6 +39,7 @@ describe("use-account hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(userService.account.accountActivation).toHaveBeenCalledWith(
         mockAccountActivationPayload,
+        expect.anything(),
       );
     });
   });
@@ -55,6 +56,7 @@ describe("use-account hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(userService.account.accountResendActivation).toHaveBeenCalledWith(
         mockResendActivationPayload,
+        expect.anything(),
       );
     });
   });
@@ -70,7 +72,7 @@ describe("use-account hooks", () => {
       const payload = { userId: "user-123", projectKey: "test-key" };
       result.current.mutate(payload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.accountDeactivate).toHaveBeenCalledWith(payload);
+      expect(userService.accountDeactivate).toHaveBeenCalledWith(payload, expect.anything());
     });
   });
 
@@ -84,7 +86,7 @@ describe("use-account hooks", () => {
 
       result.current.mutate(mockAccountRecoverPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.account.accountRecover).toHaveBeenCalledWith(mockAccountRecoverPayload);
+      expect(userService.account.accountRecover).toHaveBeenCalledWith(mockAccountRecoverPayload, expect.anything());
     });
   });
 
@@ -100,6 +102,7 @@ describe("use-account hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(userService.account.accountResetPassword).toHaveBeenCalledWith(
         mockAccountResetPasswordPayload,
+        expect.anything(),
       );
     });
   });
@@ -118,6 +121,7 @@ describe("use-account hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(userService.account.checkActivationCodeExpiration).toHaveBeenCalledWith(
         mockActivationCodeValidationPayload,
+        expect.anything(),
       );
     });
   });

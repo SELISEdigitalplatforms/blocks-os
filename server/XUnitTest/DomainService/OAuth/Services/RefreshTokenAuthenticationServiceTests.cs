@@ -54,8 +54,6 @@ namespace XUnitTest.DomainService.OAuth.Services
             var tenant = new Tenant
             {
                 TenantId = "tenant-123",
-                CookieDomain = ".example.com",
-                ApplicationDomain = "https://example.com",
                 DbConnectionString = "Server=test;Database=test;",
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -90,6 +88,9 @@ namespace XUnitTest.DomainService.OAuth.Services
             _jwtAccessTokenProvider
                 .Setup(x => x.GetJwtAccessToken(authConfig, tenant, user, null, request.OrganizationId))
                 .ReturnsAsync(jwtAccessToken);
+            _oAuthJwtAccessTokenManager
+                .Setup(x => x.ManageRefreshTokenAsync(request, jwtAccessToken, authConfig, tenant, user))
+                .ReturnsAsync(("new-refresh-token-123", DateTime.UtcNow.AddDays(30)));
 
             // Act
             var result = await _service.AuthenticateAsync(request, authConfig, user);
@@ -139,8 +140,6 @@ namespace XUnitTest.DomainService.OAuth.Services
             var tenant = new Tenant
             {
                 TenantId = "tenant-456",
-                CookieDomain = ".custom-domain.com",
-                ApplicationDomain = "https://custom-domain.com",
                 DbConnectionString = "Server=test;Database=test;",
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -176,6 +175,9 @@ namespace XUnitTest.DomainService.OAuth.Services
             _jwtAccessTokenProvider
                 .Setup(x => x.GetJwtAccessToken(authConfig, tenant, user, null, request.OrganizationId))
                 .ReturnsAsync(jwtAccessToken);
+            _oAuthJwtAccessTokenManager
+                .Setup(x => x.ManageRefreshTokenAsync(request, jwtAccessToken, authConfig, tenant, user))
+                .ReturnsAsync(("new-refresh-token-xyz", DateTime.UtcNow.AddDays(30)));
 
             // Act
             var result = await _service.AuthenticateAsync(request, authConfig, user);

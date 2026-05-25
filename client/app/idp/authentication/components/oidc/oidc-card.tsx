@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { MaskedText } from "@/components/masked-text";
@@ -19,7 +18,6 @@ import { useDeleteAuthOidc } from "@blocks-idp/authentication/hooks/use-auth-oid
 import { isErrorWithErrors } from "@/lib/error";
 import { Trash } from "lucide-react";
 import { CreateOIDC } from "../create-oidc/create-oidc";
-
 const Item = ({ label, children }: { label: string; children: ReactNode }) => {
   return (
     <div className="min-w-0">
@@ -28,26 +26,21 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
     </div>
   );
 };
-
 type OIDCCardProps = {
   oidc: IOidcConfig;
 };
-
 export const OIDCCard = ({ oidc }: OIDCCardProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   const { mutateAsync, isPending } = useDeleteAuthOidc({
     projectKey: tenantId,
   });
-
   const handleConfirmDelete = async (id: string) => {
     try {
       const payload: IDeleteOidcClientPayload = {
         itemId: id,
         projectKey: tenantId,
       };
-
       const res = await mutateAsync(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.error });
       showSuccessToast({ description: "OIDC credential deleted successfully" });
@@ -57,7 +50,6 @@ export const OIDCCard = ({ oidc }: OIDCCardProps) => {
       return showErrorToast({ errors: "Something went wrong" });
     }
   };
-
   return (
     <div className="grid gap-4">
       <Card className="py-6">
@@ -81,7 +73,6 @@ export const OIDCCard = ({ oidc }: OIDCCardProps) => {
             </div>
           </div>
         </CardHeader>
-
         <CardContent>
           <div className="flex flex-col gap-8">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -90,19 +81,16 @@ export const OIDCCard = ({ oidc }: OIDCCardProps) => {
                   <MaskedText text={oidc.itemId} length={30} showFirstN={4} showLastN={4} />
                 </CopyToClipboardButton>
               </Item>
-
               <Item label="Client Secret">
                 <CopyToClipboardButton textToCopy={oidc.clientSecret}>
                   <MaskedText text={oidc.clientSecret} length={30} showFirstN={4} showLastN={4} />
                 </CopyToClipboardButton>
               </Item>
-
               <Item label="Redirect URL">
                 <CopyToClipboardButton textToCopy={oidc.redirectUri}>
                   {oidc.redirectUri}
                 </CopyToClipboardButton>
               </Item>
-
               <Item label="Audience">
                 <CopyToClipboardButton textToCopy={oidc.audience}>
                   <div className="flex items-center gap-2">
@@ -110,7 +98,6 @@ export const OIDCCard = ({ oidc }: OIDCCardProps) => {
                   </div>
                 </CopyToClipboardButton>
               </Item>
-
               <Item label="Scope(s)">
                 <div className="flex items-center gap-2">
                   <div className="flex flex-wrap gap-1.5">
@@ -124,13 +111,11 @@ export const OIDCCard = ({ oidc }: OIDCCardProps) => {
                   </div>
                 </div>
               </Item>
-
               <Item label="Created on">
                 <span className="whitespace-nowrap">
                   {format(oidc.createdDate, "dd/MM/yyyy HH:mm")}
                 </span>
               </Item>
-
               <Item label="Theme Color">
                 <div className="flex items-center gap-3">
                   {oidc.clientBrandColor && (
@@ -143,7 +128,6 @@ export const OIDCCard = ({ oidc }: OIDCCardProps) => {
                   <span className="font-mono">{oidc.clientBrandColor || "N/A"}</span>
                 </div>
               </Item>
-
               <div className="md:col-span-2">
                 <Item label="Well Known URL">
                   <CopyToClipboardButton
@@ -159,7 +143,6 @@ export const OIDCCard = ({ oidc }: OIDCCardProps) => {
           </div>
         </CardContent>
       </Card>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <ConfirmationModal
           onCancel={() => setOpen(false)}

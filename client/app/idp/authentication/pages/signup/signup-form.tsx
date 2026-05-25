@@ -1,4 +1,3 @@
-
 import { Captcha } from "@/components/captcha";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -18,39 +17,26 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
-import { showErrorToast } from "@/hooks/use-toast";
-import { isErrorWithErrors } from "@/lib/error";
-import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication.constant";
-import { useSignupByEmail } from "@blocks-idp/authentication/hooks/use-auth";
-import { LoginOption } from "@blocks-idp/authentication/models/auth-configuration.model";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { SsoSignin } from "../login/sso-signin";
 import { signupFormDefaultValue, signupFormSchema } from "./utils";
 
 export const SignupForm = ({
-  loginOption,
   emailSignUpEnabled,
-  ssoSignUpEnabled,
 }: {
-  loginOption: LoginOption;
   emailSignUpEnabled: boolean;
-  ssoSignUpEnabled: boolean;
 }) => {
   const [isChecked, setIsChecked] = useState(false);
-  const navigate = useNavigate();
   const form = useForm({
     defaultValues: signupFormDefaultValue,
     resolver: zodResolver(signupFormSchema),
   });
-  const { isPending, mutateAsync } = useSignupByEmail();
-
-  const googleSiteKey = import.meta.env.BLOCKS_GOOGLE_SITE_KEY || "";
+  const googleSiteKey = getRuntimeEnv("BLOCKS_GOOGLE_SITE_KEY") || "";
   const {
     code: captchaCode,
     captcha,
@@ -59,34 +45,11 @@ export const SignupForm = ({
     type: "reCaptcha-v2-checkbox",
     siteKey: googleSiteKey,
   });
-
   const { isValid } = form.formState;
-
-  const onSubmitHandler = async (values: z.infer<typeof signupFormSchema>) => {
-    try {
-      const res = await mutateAsync({
-        ...values,
-        captchaCode,
-      });
-      if (!res.isSuccess) {
-        resetCaptcha();
-        return showErrorToast({ errors: res.errors });
-      }
-      navigate(`/signup-email-sent?email=${values.email}`);
-    } catch (error) {
-      resetCaptcha();
-      if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors });
-      } else {
-        showErrorToast({ errors: "Something went wrong" });
-      }
-    }
-  };
-
+  const onSubmitHandler = async (_values: z.infer<typeof signupFormSchema>) => {};
   useEffect(() => {
     if (!isValid && captchaCode) resetCaptcha();
   }, [captchaCode, isValid, resetCaptcha]);
-
   return (
     <Card className="w-full rounded border-solid border-background shadow-none md:border-[#95ADC4] lg:max-w-md">
       <CardHeader className="text-center">
@@ -112,7 +75,6 @@ export const SignupForm = ({
                   )}
                 />
                 {isValid && <Captcha {...captcha} />}
-
                 <div className="mt-2 flex justify-start gap-2 text-sm text-foreground">
                   <Checkbox
                     id="terms"
@@ -145,7 +107,7 @@ export const SignupForm = ({
                 <Button
                   type="submit"
                   className="w-full rounded"
-                  disabled={isPending || !isValid || !captchaCode || !isChecked}
+                  disabled={!isValid || !captchaCode || !isChecked}
                 >
                   Continue
                 </Button>
@@ -153,18 +115,6 @@ export const SignupForm = ({
             )}
           </form>
         </Form>
-        {ssoSignUpEnabled && emailSignUpEnabled && (
-          <div className="my-2 flex items-center">
-            <hr className="flex-grow border-gray-300" />
-            <span className="mx-2 text-xs text-gray-500">OR</span>
-            <hr className="flex-grow border-gray-300" />
-          </div>
-        )}
-
-        {ssoSignUpEnabled && loginOption?.allowedGrantTypes.includes(GRANT_TYPES.social) && (
-          <SsoSignin loginOption={loginOption} />
-        )}
-
         <div className="mt-4 text-center text-base text-foreground">
           Already a member?{" "}
           <Link to={"/login"} className="text-primary hover:underline">

@@ -1,5 +1,3 @@
-
-
 import React, { useCallback, useEffect, useState } from "react";
 import { Filter } from "lucide-react";
 import { Table } from "@tanstack/react-table";
@@ -19,26 +17,21 @@ import {
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { SearchInput } from "@/components/search-input/search-input";
 import useIsServiceBarOpenComm from "@blocks-communication/mail/hooks/use-is-service-tab-open-comm";
-
 interface EmailTableToolbarProps<TData> {
   table: Table<TData>;
 }
-
 export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData>) {
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenComm();
-
   const textSearchColumn = table.getColumn("name");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [searchValue, setSearchValue] = useState("");
   const [isSearchVisible, setIsSearchVisible] = useState(!isMobile);
   const activeFiltersCount = useActiveFiltersCount(table, dateRange, "name");
   const isFiltered = activeFiltersCount > 0;
-
   useEffect(() => {
     setIsSearchVisible(!isMobile);
   }, [isMobile]);
-
   const onSearchInputChange = useCallback(
     (text: string) => {
       setSearchValue(text);
@@ -46,15 +39,12 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
     },
     [textSearchColumn],
   );
-
   function resetFilters() {
     setDateRange(undefined);
     table.resetColumnFilters();
   }
-
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      {/* Mobile view */}
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter communication"
@@ -81,7 +71,6 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
               <SheetTitle className="mb-4">Filter</SheetTitle>
               <SheetDescription></SheetDescription>
               <div className="flex flex-col space-y-4">
-                {/* <FilterContent /> */}
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
                     Show Results
@@ -98,8 +87,6 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
           </Sheet>
         )}
       </div>
-
-      {/* Desktop view */}
       <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter communication"
@@ -109,7 +96,6 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
           isVisible={isSearchVisible}
           setIsVisible={setIsSearchVisible}
         />
-        {/* <FilterContent /> */}
         {isFiltered && (
           <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
             Reset

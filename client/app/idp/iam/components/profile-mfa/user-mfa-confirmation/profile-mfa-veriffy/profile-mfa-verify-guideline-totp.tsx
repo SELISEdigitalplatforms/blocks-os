@@ -2,7 +2,6 @@ import { useGetTotp } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext } from "react";
 import { profileMfaContext } from "../../profile-mfa";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-
 export const ProfileMfaVerifyGuideLineTotp = () => {
   const { userId, projectKey } = useContext(profileMfaContext);
   const { data } = useGetTotp({ id: userId, projectKey });

@@ -1,4 +1,3 @@
-
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui-kits/sheet/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -12,7 +11,6 @@ import { RemoveMembership } from "../remove-membership";
 import { MembershipPermissionsTab } from "./membership-permission-tab";
 import { MembershipRolesTab } from "./membership-role-tab";
 import { MembershipFooter } from "./membership-footer";
-
 type EditMembershipProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,7 +19,6 @@ type EditMembershipProps = {
   userId: string;
   projectKey: string;
 };
-
 export const EditMembership = ({
   open,
   onOpenChange,
@@ -33,17 +30,14 @@ export const EditMembership = ({
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("roles");
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
-
   // Roles state
   const [rolesSearch, setRolesSearch] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-
   // Permissions state
   const [permissionsSearch, setPermissionsSearch] = useState("");
   const [permissionsTypeFilter, setPermissionsTypeFilter] = useState<string>("all");
   const [permissionsPage, setPermissionsPage] = useState(0);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
-
   const { data: userData } = useGetUserById({ id: userId, projectKey });
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
     projectKey,
@@ -61,67 +55,54 @@ export const EditMembership = ({
     roles: [],
     type: permissionsTypeFilter !== "all" ? parseInt(permissionsTypeFilter) : null,
   });
-
   const { mutateAsync, isPending } = useUpdateUser({ id: userId, projectKey });
-
   const allRoles = rolesData?.data || [];
   const allPermissions = permissionsData?.data || [];
   const totalPermissions = permissionsData?.totalCount || 0;
   const totalPermissionPages = Math.ceil(totalPermissions / 10);
-
   const resetSelections = useCallback(() => {
     setSelectedRoles(membership.roles || []);
     setSelectedPermissions(membership.permissions || []);
   }, [membership]);
-
   const resetFilters = useCallback(() => {
     setRolesSearch("");
     setPermissionsSearch("");
     setPermissionsTypeFilter("all");
     setPermissionsPage(0);
   }, []);
-
   useEffect(() => {
     if (open) {
       resetSelections();
       return;
     }
-
     setIsEditing(false);
     setActiveTab("roles");
     resetFilters();
     resetSelections();
   }, [open, resetFilters, resetSelections]);
-
   // Filter all roles by search in edit mode
   const filteredRolesForEdit = allRoles.filter((role) =>
     role.name.toLowerCase().includes(rolesSearch.toLowerCase()),
   );
-
   const handleRolesSearchChange = useCallback((value: string) => {
     setRolesSearch(value);
   }, []);
-
   const handleRoleToggle = useCallback((roleSlug: string) => {
     setSelectedRoles((prev) =>
       prev.includes(roleSlug) ? prev.filter((r) => r !== roleSlug) : [...prev, roleSlug],
     );
   }, []);
-
   const handlePermissionsSearchChange = useCallback((value: string) => {
     setPermissionsSearch(value);
     setPermissionsPage(0);
   }, []);
-
   const handlePermissionsTypeFilterChange = useCallback((value: string) => {
     setPermissionsTypeFilter(value);
     setPermissionsPage(0);
   }, []);
-
   const handlePermissionsPageChange = useCallback((page: number) => {
     setPermissionsPage(page);
   }, []);
-
   const handlePermissionToggle = useCallback((permissionName: string) => {
     setSelectedPermissions((prev) =>
       prev.includes(permissionName)
@@ -129,7 +110,6 @@ export const EditMembership = ({
         : [...prev, permissionName],
     );
   }, []);
-
   const handleSave = async () => {
     try {
       const existingMemberships = userData?.data?.memberships || [];
@@ -138,19 +118,16 @@ export const EditMembership = ({
           ? { ...m, roles: selectedRoles, permissions: selectedPermissions }
           : m,
       );
-
       const res = await mutateAsync({
         ...userData?.data,
         memberships: updatedMemberships,
         itemId: userId,
         projectKey,
       });
-
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
         return;
       }
-
       showSuccessToast({ description: "Membership updated successfully" });
       setIsEditing(false);
     } catch (error) {
@@ -161,23 +138,18 @@ export const EditMembership = ({
       }
     }
   };
-
   const handleCancel = useCallback(() => {
     resetSelections();
     setRolesSearch("");
     setPermissionsSearch("");
     setIsEditing(false);
   }, [resetSelections]);
-
   const handleEdit = useCallback(() => setIsEditing(true), []);
-
   const handleUnassignOpen = useCallback(() => setRemoveModalOpen(true), []);
-
   const handleUnassignSuccess = useCallback(() => {
     setRemoveModalOpen(false);
     onOpenChange(false);
   }, [onOpenChange]);
-
   const getRoleDisplayName = useCallback(
     (roleSlug: string) => {
       const role = allRoles.find((r) => r.slug === roleSlug);
@@ -185,7 +157,6 @@ export const EditMembership = ({
     },
     [allRoles],
   );
-
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -193,7 +164,6 @@ export const EditMembership = ({
           <SheetHeader>
             <SheetTitle>{organizationName}</SheetTitle>
           </SheetHeader>
-
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -203,7 +173,6 @@ export const EditMembership = ({
               <TabsTrigger value="roles">Roles</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
             </TabsList>
-
             <MembershipRolesTab
               isEditing={isEditing}
               rolesSearch={rolesSearch}
@@ -214,7 +183,6 @@ export const EditMembership = ({
               onRoleToggle={handleRoleToggle}
               getRoleDisplayName={getRoleDisplayName}
             />
-
             <MembershipPermissionsTab
               isEditing={isEditing}
               permissionsSearch={permissionsSearch}
@@ -231,7 +199,6 @@ export const EditMembership = ({
               onPermissionToggle={handlePermissionToggle}
             />
           </Tabs>
-
           <MembershipFooter
             isEditing={isEditing}
             isPending={isPending}
@@ -242,7 +209,6 @@ export const EditMembership = ({
           />
         </SheetContent>
       </Sheet>
-
       <RemoveMembership
         open={removeModalOpen}
         onOpenChange={setRemoveModalOpen}

@@ -28,7 +28,7 @@ export interface IProjectGroup {
 }
 
 export interface IGetProjectPayload {
-  projectId: string;
+  projectId?: string;
 }
 
 export interface IGetProjectResponse {

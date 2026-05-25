@@ -13,7 +13,6 @@ import { isErrorWithErrors } from "@/lib/error";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useState } from "react";
 import { userMfaContext } from "../user-mfa";
-
 export const UserMFAConfirmationDisable = () => {
   const { projectKey, userId } = useContext(userMfaContext);
   const [open, setOpen] = useState<boolean>(false);
@@ -35,7 +34,6 @@ export const UserMFAConfirmationDisable = () => {
       }
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

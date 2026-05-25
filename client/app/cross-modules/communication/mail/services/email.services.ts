@@ -18,7 +18,9 @@ class EmailService {
     pageSize: number,
   ): Promise<IEmailConfig[]> => {
     return http.get(
-      `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${projectKey}&pageNumber=${pageNumber + 1}&pageSize=${pageSize}`,
+      `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=${pageNumber + 1}&pageSize=${pageSize}`,
+       undefined,
+      { absoluteUrl: true },
     );
   };
 
@@ -32,14 +34,15 @@ class EmailService {
     language: string,
     mailConfigurationId: string,
   ): Promise<{ templates: IEmailTemplate[]; totalCount: number }> => {
-    return http.get(
-      `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&projectKey=${projectKey}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}`,
-    );
+    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&projectKey=${projectKey}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}`;
+    return http.get(url, undefined, { absoluteUrl: true });
   };
 
   fetchEmailTemplate = (projectKey: string, itemId: string): Promise<IEmailTemplate> => {
     return http.get(
       `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=${itemId}&projectKey=${projectKey}`,
+      undefined,
+      { absoluteUrl: true },
     );
   };
 
@@ -73,12 +76,14 @@ class EmailService {
       params.append("SendDateRange.EndDate", endDate);
     }
 
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`);
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, { absoluteUrl: true });
   };
 
   getMailBoxMail = (projectKey: string, messageId: string): Promise<IGetMailBoxMailResponse> => {
     return http.get(
-      `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ProjectKey=${projectKey}&MessageId=${messageId}`,
+      `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=${messageId}`,
+      undefined,
+      { absoluteUrl: true },
     );
   };
 
@@ -100,7 +105,7 @@ class EmailService {
     isSuccess: boolean;
     itemId: string;
   }> => {
-    return http.post(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload);
+    return http.post(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload, undefined, { absoluteUrl: true });
   };
 
   sendTestMail = (data: {
@@ -121,7 +126,7 @@ class EmailService {
       projectKey: data.projectKey,
       isTestMail: true,
     };
-    return http.post(MAIL_ENDPOINTS.SEND_TO_ANY, payload);
+    return http.post(MAIL_ENDPOINTS.SEND_TO_ANY, payload, undefined, { absoluteUrl: true });
   };
 
   saveMailTemplate(requestBody: {
@@ -144,7 +149,7 @@ class EmailService {
         errors: null | unknown;
         isSuccess: boolean;
         itemId: string;
-      }>(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody)
+      }>(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody, undefined, { absoluteUrl: true })
       .then((response) => response);
   }
 
@@ -165,7 +170,7 @@ class EmailService {
         errors: null | unknown;
         isSuccess: boolean;
         itemId: string;
-      }>(EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE, requestBody)
+      }>(EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE, requestBody, undefined, { absoluteUrl: true })
       .then((response) => response);
   }
 
@@ -179,6 +184,8 @@ class EmailService {
         isSuccess: boolean;
       }>(
         `${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=${payload.itemId}&projectKey=${payload.projectKey}`,
+        undefined,
+        { absoluteUrl: true },
       )
       .then((response) => response);
   }
@@ -193,6 +200,8 @@ class EmailService {
         isSuccess: boolean;
       }>(
         `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${payload.configurationId}&projectKey=${payload.projectKey}`,
+        undefined,
+        { absoluteUrl: true },
       )
       .then((response) => response);
   }

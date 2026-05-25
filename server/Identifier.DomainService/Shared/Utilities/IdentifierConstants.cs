@@ -20,7 +20,7 @@ namespace DomainService.Shared
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string CookieDomainPrefix = "blocksapi.";
 
-        public const string IdentifierQueueName = "blocks_identifier_listener";
+        public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_data_cleanup_listener";
         public const string LanguageDataMigrationQueue = "blocks_uilm_environment_data_migration_listener";
         public const string IamQueue = "blocks_iam_listener";
@@ -28,7 +28,7 @@ namespace DomainService.Shared
         public const string GenericMigrationQueue = "blocks_generic_migration_listener";
         public const string MigrationCompletionTopic = "migration_topic";
         public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
-        public const string BlocsDomain = "seliseblocks.com";
+        public const string BlocksDomain = "seliseblocks.com";
 
         public const string CertbotEmail = "devsecops@selisegroup.com";
         public const string CertbotWebrootPath = "/var/www/html";

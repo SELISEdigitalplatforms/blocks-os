@@ -33,7 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
-
 interface NewNotificationConfigurationProps {
   dialogTitle: string;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
@@ -41,7 +40,6 @@ interface NewNotificationConfigurationProps {
   previousData?: INotificationConfig;
   isEdit: boolean;
 }
-
 const schema = z.object({
   name: z
     .string()
@@ -61,7 +59,6 @@ const schema = z.object({
       message: "Notify method cannot contain only whitespace",
     }),
 });
-
 const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> = ({
   dialogTitle,
   onClose,
@@ -70,11 +67,9 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
 }) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { isPending, mutateAsync } = useSaveNotificationConfig();
-
   if (isEdit && previousData?.itemId == "") {
     return <div>loading</div>;
   }
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const form = useForm<INotificationConfig>({
     defaultValues: isEdit
@@ -95,7 +90,6 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
     resolver: zodResolver(schema),
     mode: "onChange",
   });
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (isEdit && previousData) {
@@ -116,7 +110,6 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
       });
     }
   }, [previousData, isEdit, form]);
-
   const formSubmitHandler = async (data: INotificationConfig) => {
     try {
       data.itemId = isEdit && previousData?.itemId ? previousData?.itemId : "";
@@ -145,7 +138,6 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
       }
     }
   };
-
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <Form {...form}>
@@ -307,5 +299,4 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
     </DialogContent>
   );
 };
-
 export default NewNotificationConfiguration;

@@ -1,5 +1,3 @@
-
-
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import BeefreeSDK from "@beefree.io/sdk";
 // import Bee from "@mailupinc/bee-plugin";
@@ -20,9 +18,7 @@ import Bee from "@beefree.io/sdk";
 // const BEE_TEMPLATE_URL = "https://rsrc.getbee.io/api/templates/m-bee";
 const BEEJS_URL = "https://app-rsrc.getbee.io/plugin/BeePlugin.js";
 const API_AUTH_URL = "https://auth.getbee.io/loginV2";
-
 const BEE_PLUGIN_CONTAINER_ID = "bee-plugin-container";
-
 const specialLinks: ISpecialLink[] = [
   {
     type: "unsubscribe",
@@ -45,13 +41,11 @@ const mergeTags: IMergeTag[] = [
     value: "[tag2]",
   },
 ];
-
 interface IBeePluginStarterProps {
   onBeeSave(data: { htmlFile: string; jsonFile: string }): void;
   onBeeTemplateLoad?: (isLoaded: boolean) => void;
   jsonFile?: IEntityContentJson | Record<string, unknown>;
 }
-
 const BeePluginStarter = forwardRef(function Inner(
   { onBeeSave, onBeeTemplateLoad, jsonFile = blankTemplate }: IBeePluginStarterProps,
   ref,
@@ -85,7 +79,6 @@ const BeePluginStarter = forwardRef(function Inner(
     }),
     [onBeeSave, onBeeTemplateLoad],
   );
-
   useEffect(() => {
     const clientId = "de2d39d8-2380-419f-914b-eafb504e060b";
     const clientSecret = "***REMOVED***";
@@ -103,7 +96,6 @@ const BeePluginStarter = forwardRef(function Inner(
         setBee(instance as Bee);
       })
       .catch((error) => console.error("error during iniziatialization --> ", error));
-
     // const beeTest = new Bee();
     // const conf = { authUrl: API_AUTH_URL, beePluginUrl: BEEJS_URL };
     // console.log(jsonFile);
@@ -124,7 +116,6 @@ const BeePluginStarter = forwardRef(function Inner(
     //   })
     //   .catch((error) => console.error("error during iniziatialization --> ", error));
   }, [beeConfig, jsonFile]);
-
   useImperativeHandle(ref, () => {
     return {
       submit() {
@@ -141,7 +132,6 @@ const BeePluginStarter = forwardRef(function Inner(
       },
     };
   }, [bee, jsonFile]);
-
   return (
     <>
       <div id={BEE_PLUGIN_CONTAINER_ID} className="h-[calc(100vh-60px)] w-full" />
@@ -151,5 +141,4 @@ const BeePluginStarter = forwardRef(function Inner(
     </>
   );
 });
-
 export default BeePluginStarter;

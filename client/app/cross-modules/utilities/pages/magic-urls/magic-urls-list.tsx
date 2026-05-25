@@ -29,7 +29,6 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { useDeactivateMagicUrl } from "@blocks-utilities/hooks/use-deactivate-magic-url";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
@@ -37,12 +36,10 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
 type MagicUrlsListProps = {
   data: MagicUrl[];
   isLoading: boolean;
 };
-
 export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
   const { sortQueryParams, setSortQueryParams } = useMagicUrlSortQueryParams();
   const navigate = useNavigate();
@@ -50,12 +47,10 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
   const { deactivateMagicUrl, isRemoving } = useDeactivateMagicUrl();
   const [itemToDeactivate, setItemToDeactivate] = React.useState<string | null>(null);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = React.useState(false);
-
   const handleDeactivate = (id: string) => {
     setItemToDeactivate(id);
     setIsDeactivateModalOpen(true);
   };
-
   const confirmDeactivate = () => {
     if (itemToDeactivate) {
       deactivateMagicUrl(itemToDeactivate, tenantId, () => {
@@ -64,11 +59,9 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
       });
     }
   };
-
   const handleViewDetails = (itemId: string) => {
     navigate(`/utilities/magic-url/details/${itemId}`);
   };
-
   const columns = useMemo<ColumnDef<MagicUrl>[]>(
     () => [
       {
@@ -211,15 +204,12 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
     ],
     [setSortQueryParams, sortQueryParams, isRemoving],
   );
-
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
   if (isLoading) return <LoadingSkelton />;
-
   return (
     <>
       <ScrollArea className="w-full">

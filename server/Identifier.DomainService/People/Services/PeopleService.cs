@@ -322,7 +322,7 @@ namespace DomainService.People
 
             try
             {
-                var createUserCommand = new CreateUserByEmailEvent
+                var createUserCommand = new CreateUserByEmailEvent_Identifier
                 {
                     Email = email,
                     EventQueue = IdentifierConstants.IdentifierQueueName,
@@ -331,7 +331,7 @@ namespace DomainService.People
                 };
 
                 await _messageClient.SendToConsumerAsync(
-                    new ConsumerMessage<CreateUserByEmailEvent>
+                    new ConsumerMessage<CreateUserByEmailEvent_Identifier>
                     {
                         ConsumerName = IdentifierConstants.IamQueue,
                         Payload = createUserCommand
@@ -424,9 +424,8 @@ namespace DomainService.People
                 ? user.Email
                 : $"{user.FirstName} {user.LastName}".Trim();
 
-            var projectName = string.IsNullOrWhiteSpace(project.Name)
-                ? project.ApplicationDomain
-                : project.Name;
+            var projectName = project.Name;
+
 
             return new SendMail
             {
@@ -571,7 +570,7 @@ namespace DomainService.People
         /// <summary>
         /// Sends project invitation to newly created user
         /// </summary>
-        public async Task<bool> SendProjectInvitationToNewUser(CreateUserByEmailPostEvent @event)
+        public async Task<bool> SendProjectInvitationToNewUser(CreateUserByEmailPostEvent_Identifier @event)
         {
             if (@event == null || string.IsNullOrWhiteSpace(@event.UserId) || string.IsNullOrWhiteSpace(@event.ProjectKey))
             {

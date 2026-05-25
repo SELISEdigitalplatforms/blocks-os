@@ -1,5 +1,3 @@
-
-
 import { useMemo } from "react";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -13,11 +11,9 @@ import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
 import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
 import { useQueryClient } from "@tanstack/react-query";
 import { PermissionsSelectionPanel } from "./permissions-selection-panel";
-
 export function RoleDetailsContainer() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const queryClient = useQueryClient();
-
   const role = useRoleDetailsStore((state) => state.role);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
   const discardChanges = useRoleDetailsStore((state) => state.discardChanges);
@@ -25,10 +21,8 @@ export function RoleDetailsContainer() {
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles(role?.slug);
-
   BREADCRUMB_CUSTOM_TITLES["/services/iam/role-detail"] = "Roles";
   BREADCRUMB_CUSTOM_TITLES["/services/iam/role-detail/" + role?.itemId] = role?.name || "";
-
   const onSaveClick = async () => {
     const changedPermissions = Array.from(permissionMap.values()).reduce(
       (acc, item) => {
@@ -63,7 +57,6 @@ export function RoleDetailsContainer() {
       }
     }
   };
-
   const permissionSeverityData = useMemo(() => {
     const permissions = Array.from(permissionMap.values());
     return Object.values(
@@ -88,13 +81,11 @@ export function RoleDetailsContainer() {
         ),
     );
   }, [permissionMap]);
-
   return (
     <div className="px-4 pt-4 md:px-6 md:pt-6">
       <div className="hidden md:flex">
         <PageBreadcrumb breadcrumbIndex={3} />
       </div>
-
       <div className="mt-4 grid gap-4">
         <div className="flex items-center justify-between rounded text-base">
           {!isInitialized ? (
@@ -126,11 +117,9 @@ export function RoleDetailsContainer() {
     </div>
   );
 }
-
 export function RoleDetails({ params }: { params: { id: string } }) {
   const { id } = params;
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
   return (
     <RoleDetailsProvider id={id} projectKey={tenantId}>
       <RoleDetailsContainer />

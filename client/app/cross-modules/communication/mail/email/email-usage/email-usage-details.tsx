@@ -1,5 +1,3 @@
-
-
 import React from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -10,27 +8,22 @@ import { useGetEmailUsageById } from "@blocks-communication/mail/hooks/use-email
 import { StatusBadge } from "@blocks-communication/mail/email/email-usage/status-badge";
 import { EmailUsageDetailsSkeleton } from "@blocks-communication/mail/email/email-usage/email-usage-details-skeleton";
 import { EmailUsageDetailsBreadcrumb } from "@blocks-communication/mail/email/email-usage/email-usage-details-breadcrumb";
-
 export const EmailUsageDetails = ({ id }: { id: string }) => {
   const navigate = useNavigate();
   const { data: details, isLoading } = useGetEmailUsageById(id);
   if (isLoading) return <EmailUsageDetailsSkeleton />;
-
   if (!details) return <div>Email details not found.</div>;
-
   return (
     <main className="flex flex-col gap-6">
       <div className="hidden md:flex">
         <EmailUsageDetailsBreadcrumb id={details.messageId || id} isInbound={details.isInbound} />
       </div>
-
       <div className="mt-5 flex items-center gap-2">
         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-lg font-semibold md:text-2xl">Email Details</h1>
       </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Details</CardTitle>

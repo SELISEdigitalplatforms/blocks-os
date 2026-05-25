@@ -17,15 +17,12 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import { SearchInput } from "@/components/search-input/search-input";
 import useIsServiceBarOpenLocal from "@blocks-localization/hooks/use-is-service-tab-open-local";
-
 interface TableFilterData {
   resourceGroup: string;
 }
-
 interface UsersRolePermissionTableToolbarProps<TData> {
   table: Table<TData>;
 }
-
 export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
   table,
 }: UsersRolePermissionTableToolbarProps<TData>) {
@@ -34,14 +31,11 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
   const textSearchColumn = table.getColumn("name");
   const [searchValue, setSearchValue] = useState("");
   const [isSearchVisible, setIsSearchVisible] = useState(!isMobile);
-
   const activeFiltersCount = useActiveFiltersCount(table, undefined, "name");
   const isFiltered = activeFiltersCount > 0;
-
   useEffect(() => {
     setIsSearchVisible(!isMobile);
   }, [isMobile]);
-
   const onSearchInputChange = useCallback(
     (text: string) => {
       setSearchValue(text);
@@ -49,13 +43,10 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
     },
     [textSearchColumn]
   );
-
   function resetFilters() {
     setSearchValue("");
-
     table.resetColumnFilters();
   }
-
   const FilterContent = () => (
     <>
       {table.getRowModel() && (
@@ -72,10 +63,8 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
       )}
     </>
   );
-
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      {/* Mobile view */}
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter permission"
@@ -119,8 +108,6 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
           </Sheet>
         )}
       </div>
-
-      {/* Desktop view */}
       <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter users by name or email"

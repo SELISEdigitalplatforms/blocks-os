@@ -1,17 +1,14 @@
 import { isValidJSON, formatJSON } from "./utils";
-
 type LmtQueryAgentChatItemProps = {
   time: string;
   message: string;
   type: "human" | "bot";
 };
-
 const formatChatTimestamp = (timestamp?: string) => {
   if (!timestamp) return "";
   const date = new Date(timestamp);
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
-
 export const LMTQueryAgentChatItem = ({ message, type, time }: LmtQueryAgentChatItemProps) => {
   if (type === "human") {
     return (
@@ -23,7 +20,6 @@ export const LMTQueryAgentChatItem = ({ message, type, time }: LmtQueryAgentChat
       </div>
     );
   }
-
   if (isValidJSON(message)) {
     const formattedJson = formatJSON(message);
     return (
@@ -35,7 +31,6 @@ export const LMTQueryAgentChatItem = ({ message, type, time }: LmtQueryAgentChat
       </div>
     );
   }
-
   return (
     <div className="flex flex-col">
       <span className="text-xs text-low-emphasis">{formatChatTimestamp(time)}</span>
