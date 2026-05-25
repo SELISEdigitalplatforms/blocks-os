@@ -302,8 +302,8 @@ namespace XUnitTest.DomainService.Mfa
                 phoneNumber: "",
                 displayName: "Test User",
                 oauthToken: "test-token",
-                refreshToken: "",
-                actualTentId: "test-tenant"
+                //  refreshToken: "",
+                originalTenantId: "test-tenant"
             );
         }
 

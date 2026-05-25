@@ -34,17 +34,17 @@ namespace DomainService.Certificate
             var cloudConfig = new Dictionary<string, string>();
             configuration.GetSection("KeyVault").Bind(cloudConfig);
 
-            if (!cloudConfig.TryGetValue("KeyVaultUrl", out var keyVaultUrl) ||
-                !cloudConfig.TryGetValue("TenantId", out var tenantId) ||
-                !cloudConfig.TryGetValue("ClientId", out var clientId) ||
-                !cloudConfig.TryGetValue("ClientSecret", out var clientSecret))
+            if (!cloudConfig.TryGetValue("KeyVaultUrl", out var keyVaultUrl))
             {
                 _logger.LogError("One or more required Azure config values are missing. Please check your environment configuration.");
                 throw new Exception("One or more required Azure config values are missing. Please check your environment configuration.");
             }
 
-            var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-            _secretClient = new SecretClient(new Uri(keyVaultUrl), credential);
+            var credential = new DefaultAzureCredential();
+
+            _secretClient = new SecretClient(
+                new Uri(keyVaultUrl),
+                credential);
         }
     }
 }
