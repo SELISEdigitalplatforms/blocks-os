@@ -1,11 +1,7 @@
+import { API_BASES } from "@/constants/endpoint.constant";
 import { showErrorToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-// import { IDP_BASE_URL } from "@/constants/endpoint.constant";
-import {
-  AUTH_ENDPOINTS,
-  AUTH_OIDC_ENDPOINTS,
-  OIDC_FLOW_ENDPOINTS,
-} from "../constants/endpoint.constant";
+import { AUTH_OIDC_ENDPOINTS, OIDC_FLOW_ENDPOINTS } from "../constants/endpoint.constant";
 import { ACCOUNT_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
 export {
   redirectToLogin,
@@ -77,7 +73,7 @@ export const refreshAccessToken = async (
     body.append("grant_type", "refresh_token");
     body.append("refresh_token", refreshToken);
 
-    const url = `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}${AUTH_ENDPOINTS.TOKEN}`;
+    const url = `${API_BASES.IAM}/auth/Token`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -190,7 +186,7 @@ export const userAcknowledgement = async (
   payload: IUserAcknowledgementPayload,
 ): Promise<IUserAcknowledgementResponse> => {
   try {
-    const url = `${getRuntimeEnv("BLOCKS_API_BASE_URL")}${OIDC_FLOW_ENDPOINTS.USER_ACKNOWLEDGEMENT}`;
+    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${OIDC_FLOW_ENDPOINTS.USER_ACKNOWLEDGEMENT}`;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -233,7 +229,7 @@ export const accountRecover = async (
   payload: IAccountRecoverPayload,
 ): Promise<IAccountRecoverResponse> => {
   try {
-    const url = `${getRuntimeEnv("BLOCKS_API_BASE_URL")}${ACCOUNT_ENDPOINTS.RECOVER}`;
+    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${ACCOUNT_ENDPOINTS.RECOVER}`;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
