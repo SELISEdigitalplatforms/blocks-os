@@ -2,7 +2,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../../models/captcha";
-import { ConfigureCaptchaModal } from "../../modals/configure-captcha-modal/";
+import { ConfigureCaptchaModal } from "../../modals/configure-captcha-modal";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";

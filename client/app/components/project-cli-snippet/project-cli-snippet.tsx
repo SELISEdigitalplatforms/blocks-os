@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetProject } from "@/hooks/use-project";
 import { useProjectStore } from "@/store/useProjectStore";
@@ -19,8 +24,11 @@ const LoadingSkeleton = () => (
   </Card>
 );
 export const ProjectCliSnippet = () => {
-  const { itemId } = useProjectStore().selectedProject || { itemId: "", tenantId: "" };
-  const { data, isLoading } = useGetProject({ projectId: itemId });
+  const { itemId } = useProjectStore().selectedProject || {
+    itemId: "",
+    tenantId: "",
+  };
+  const { data, isLoading } = useGetProject();
   const cliSetupCommand = "npm install -g @seliseblocks/cli";
   const blocksMicroservicesUrl = getProjectBlocksApiUrl(data?.data);
   const projectSetupCommand =
@@ -37,8 +45,12 @@ export const ProjectCliSnippet = () => {
           <CopyableSnippet code={projectSetupCommand} isCopyable={true} />
         </div>
         <div className="mt-6">
-          If you haven&apos;t installed the CLI yet, install it globally using npm, then run the command:
-          <CopyableSnippet code={`${cliSetupCommand} \n${projectSetupCommand}`} isCopyable={true} />
+          If you haven&apos;t installed the CLI yet, install it globally using
+          npm, then run the command:
+          <CopyableSnippet
+            code={`${cliSetupCommand} \n${projectSetupCommand}`}
+            isCopyable={true}
+          />
         </div>
       </CardContent>
     </Card>
