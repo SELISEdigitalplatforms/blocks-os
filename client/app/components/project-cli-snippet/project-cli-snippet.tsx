@@ -28,7 +28,7 @@ export const ProjectCliSnippet = () => {
     itemId: "",
     tenantId: "",
   };
-  const { data, isLoading } = useGetProject();
+  const { data, isLoading } = useGetProject({ projectId: itemId });
   const cliSetupCommand = "npm install -g @seliseblocks/cli";
   const blocksMicroservicesUrl = getProjectBlocksApiUrl(data?.data);
   const projectSetupCommand =

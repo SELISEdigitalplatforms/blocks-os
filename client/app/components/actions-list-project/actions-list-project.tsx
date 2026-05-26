@@ -2,8 +2,12 @@ import { useGetProject } from "@/hooks/use-project";
 import { ArchivedProject } from "@/components/archive-project/archive-project";
 import { EditProject } from "@/components/edit-project/edit-project";
 import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
+import { useProjectStore } from "@/store/useProjectStore";
 export const ActionsListProject = () => {
-  const { data, isLoading, isFetching } = useGetProject();
+  const selectedProject = useProjectStore((state) => state.selectedProject);
+  const { data, isLoading, isFetching } = useGetProject({
+    projectId: selectedProject?.itemId || "",
+  });
   const { data: loggedInUser } = useGetUser();
   const isOwner = data?.data?.createdBy === loggedInUser?.data?.itemId;
   return (

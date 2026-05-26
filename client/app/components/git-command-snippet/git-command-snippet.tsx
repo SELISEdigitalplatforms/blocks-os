@@ -26,7 +26,10 @@ const LoadingSkeleton = () => (
   </Card>
 );
 export const GitCommandSnippet = () => {
-  const { data, isLoading } = useGetProject();
+  const selectedProject = useProjectStore((state) => state.selectedProject);
+  const { data, isLoading } = useGetProject({
+    projectId: selectedProject?.itemId || "",
+  });
   const {
     data: envRepositoriesResponse,
     isLoading: isLoadingEnvRepos,
