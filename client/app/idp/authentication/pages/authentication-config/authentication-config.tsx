@@ -254,18 +254,6 @@ export const AuthenticationConfig = () => {
             <GrantTypes />
           </div>
         )}
-        {selectedTab === "signin-flow" && (
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h3 className="text-lg font-semibold">Signin flow</h3>
-            <p className="mt-2 text-muted-foreground">Configure your signin flow settings</p>
-          </div>
-        )}
-        {selectedTab === "signup-flow" && (
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h3 className="text-lg font-semibold">Signup flow</h3>
-            <p className="mt-2 text-muted-foreground">Configure your signup flow settings</p>
-          </div>
-        )}
         {selectedTab === "email-template" && (
           selectedTemplateId ? (
             <EmailCommunicationDetails
