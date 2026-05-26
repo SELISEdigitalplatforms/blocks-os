@@ -166,3 +166,10 @@ server/Api/wwwroot/**
 client/graphify-out/
 
 server/**/launchSettings.json
+
+#Cursor rules
+
+client/.cursor/
+
+#docs
+docs/

@@ -63,11 +63,11 @@ export const IMPERSONATE_ENDPOINTS = {
 // ─── Identity Provider endpoints (identity-provider.service) ─────────────────
 
 export const IDENTITY_PROVIDER_ENDPOINTS = {
-  GET_ALL: `${API_BASES.IAM}/identity-providers`,
-  GET_BY_ID: `${API_BASES.IAM}/identity-providers`,
-  CREATE: `${API_BASES.IAM}/identity-providers`,
-  UPDATE: `${API_BASES.IAM}/identity-providers`,
-  UPDATE_STATUS: `${API_BASES.IAM}/identity-providers`,
+  GET_ALL: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
+  GET_BY_ID: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
+  CREATE: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
+  UPDATE: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
+  UPDATE_STATUS: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
 } as const;
 
 export const EXECUTION_CONTEXT_ENDPOINTS = {
