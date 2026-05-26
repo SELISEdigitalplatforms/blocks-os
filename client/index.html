@@ -7,10 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <title>Blocks OS</title>
   </head>
   <body class="min-h-screen bg-background font-sans text-foreground antialiased">
@@ -18,9 +14,9 @@
     <div id="portal-root"></div>
     <script>
       /* =========================================================
-         DEV environment — comment out this block when using STG
+         DEV environment — comment out this block when using PRE-STG
          ========================================================= */
-        /*
+      /*
       window.__BLOCKS_ENV__ = {
         BLOCKS_IAM_BASE_URL: "https://dev-iam.blocksdevelopers.com",
         BLOCKS_X_BLOCKS_KEY: "f080a1bea04280a72149fd689d50a48c",
@@ -49,16 +45,16 @@
         BLOCKS_STUDIO_BASE_URL: "https://dev-studio.blocksdevelopers.com",
         BLOCKS_STUDIO_CALLBACK_URL: "https://dev-studio.blocksdevelopers.com/login/callback",
       };
-  */
-      
-      /* =========================================================
-         STG environment — comment out this block when using DEV
-         ========================================================= */
-    
+      */
+
+    /* =========================================================
+           STG — uncomment and comment out DEV
+           ========================================================= */
+           
       window.__BLOCKS_ENV__ = {
         BLOCKS_IAM_BASE_URL: "https://stg-iam.blocksdevelopers.com",
         BLOCKS_X_BLOCKS_KEY: "acf19d8d8841400a8999f0a5337fadf5",
-        BLOCKS_GOOGLE_SITE_KEY: "your-google-site-key",
+        BLOCKS_GOOGLE_SITE_KEY: "6Lf68uEqAAAAAM7QFutu6S_nVroukxb3Hc5khrCU",
         BLOCKS_CONSTRUCT_URL: "https://stg-construct.blocksdevelopers.com",
         BLOCKS_GITHUB_SSO_CLIENT_ID: "Ov23liYFIWB7OZx7CIxu",
         BLOCKS_OIDC_CLIENT_ID: "5225b9c1-15bc-41b0-bdc6-d3ceb180ccc5",
@@ -83,7 +79,6 @@
         BLOCKS_STUDIO_BASE_URL: "https://stg-studio.blocksdevelopers.com",
         BLOCKS_STUDIO_CALLBACK_URL: "https://stg-studio.blocksdevelopers.com/login/callback",
       };
-    
     </script>
     <script type="module" src="/app/main.tsx"></script>
   </body>
