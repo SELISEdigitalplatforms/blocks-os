@@ -9,6 +9,7 @@ using Iam.DomainService.Users;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using System.Text;
 using System.Text.Json;
 
 namespace DomainService.People
@@ -322,7 +323,7 @@ namespace DomainService.People
 
             try
             {
-                var createUserCommand = new CreateUserByEmailEvent_Identifier
+                var createUserCommand = new CreateUserByEmailEvent
                 {
                     Email = email,
                     EventQueue = IdentifierConstants.IdentifierQueueName,
@@ -331,7 +332,7 @@ namespace DomainService.People
                 };
 
                 await _messageClient.SendToConsumerAsync(
-                    new ConsumerMessage<CreateUserByEmailEvent_Identifier>
+                    new ConsumerMessage<CreateUserByEmailEvent>
                     {
                         ConsumerName = IdentifierConstants.IamQueue,
                         Payload = createUserCommand
@@ -405,14 +406,16 @@ namespace DomainService.People
         /// </summary>
         private string GenerateInvitationLink(string code)
         {
-            var blocksAppHost = _configuration["BlocksAppHost"];
-            if (string.IsNullOrWhiteSpace(blocksAppHost))
+            var blocksAppHost = _configuration["FrontendRuntime:BLOCKS_OS_URL"];
+            if (!string.IsNullOrWhiteSpace(blocksAppHost))
             {
                 _logger.LogWarning("BlocksAppHost configuration is missing");
                 blocksAppHost = "https://app.blocks.com"; // Fallback
+                return $"{blocksAppHost}/invitation?code={code}";
             }
-
-            return $"{blocksAppHost}/invitation?code={code}";
+            var url =$"{blocksAppHost}/invitation?code={code}";
+            _logger.LogInformation("Generated invitation link: {Url}", url);
+            return url;
         }
 
         /// <summary>
@@ -570,7 +573,7 @@ namespace DomainService.People
         /// <summary>
         /// Sends project invitation to newly created user
         /// </summary>
-        public async Task<bool> SendProjectInvitationToNewUser(CreateUserByEmailPostEvent_Identifier @event)
+        public async Task<bool> SendProjectInvitationToNewUser(CreateUserByEmailPostEvent @event)
         {
             if (@event == null || string.IsNullOrWhiteSpace(@event.UserId) || string.IsNullOrWhiteSpace(@event.ProjectKey))
             {
