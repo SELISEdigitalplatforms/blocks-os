@@ -10,9 +10,12 @@ import { GitCommandSnippet } from "@/components/git-command-snippet/git-command-
 import { ActionsListProject } from "@/components/actions-list-project/actions-list-project";
 
 export const DashboardOverview = () => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
+  const selectedProject = useProjectStore((state) => state.selectedProject);
+  const projectKey = selectedProject?.tenantId || "";
 
-  const { data, isLoading } = useGetProject();
+  const { data, isLoading } = useGetProject({
+    projectId: selectedProject?.itemId || "",
+  });
   const { mutateAsync } = useValidateCNameProject({ projectKey });
   const cNameValidator = useCallback(async () => {
     try {
