@@ -1,13 +1,12 @@
-import { Fragment, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { PanelLeft, X } from "lucide-react";
-import { Link } from "react-router-dom";
-import { EnvironmentList } from "@/components/environment-list/environment-list";
-import { Logo } from "@/components/logo";
-import { MobileMenuItem } from "@/components/menus/mobile-menu-item";
-import { ProjectList } from "@/components/project-list/project-list";
-import { Button } from "@/components/ui-kits/button/button";
-import { Separator } from "@/components/ui-kits/separator/separator";
+import { Fragment, useState } from "react"
+import { Menu, X } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
+import { EnvironmentList } from "@/components/environment-list/environment-list"
+import { Logo } from "@/components/logo"
+import { MobileMenuItem } from "@/components/menus/mobile-menu-item"
+import { ProjectList } from "@/components/project-list/project-list"
+import { Button } from "@/components/ui-kits/button/button"
+import { Separator } from "@/components/ui-kits/separator/separator"
 import {
   Sheet,
   SheetClose,
@@ -15,26 +14,28 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui-kits/sheet/sheet";
-import { navigationMenus } from "@/constants/navigation-menus";
-import { useFilteredMenus } from "@/hooks/use-filtered-menus";
+} from "@/components/ui-kits/sheet/sheet"
+import { navigationMenus } from "@/constants/navigation-menus"
+import { useFilteredMenus } from "@/hooks/use-filtered-menus"
+
 export function SidebarMobileView() {
-  const [open, setOpen] = useState(false);
-  const { pathname } = useLocation();
-  const allowedMenu = useFilteredMenus(navigationMenus);
-  const isProjectOverviewRoute = pathname.startsWith("/project-overview");
+  const [open, setOpen] = useState(false)
+  const { pathname } = useLocation()
+  const allowedMenu = useFilteredMenus(navigationMenus)
+  const isProjectOverviewRoute = pathname.startsWith("/project-overview")
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="shrink-0">
-          <PanelLeft className="h-5 w-5" />
+        <Button variant="outline" size="icon" className="shrink-0">
+          <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle navigation menu</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-full overflow-y-auto p-0" aria-describedby={undefined} hideClose>
         <SheetHeader className="h-[60px] px-4 py-3">
           <SheetTitle className="flex items-center justify-between">
-            <Link to="/services/authentication">
+            <Link to="/console">
               <Logo width={72} height={36} className="h-9 w-auto" />
             </Link>
             <SheetClose className="!mt-0">
@@ -44,30 +45,30 @@ export function SidebarMobileView() {
         </SheetHeader>
         <Separator />
         {!isProjectOverviewRoute && (
-          <div className="border-b px-2 pb-2 pt-2">
-            <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Workspace
-            </p>
-            <div className="space-y-0.5">
+          <>
+            <div className="mt-3 flex w-full flex-col items-start px-6">
+              <div className="ml-1 text-sm text-[hsl(var(--low-emphasis))]">Project</div>
               <ProjectList />
+            </div>
+            <div className="my-3 flex w-full flex-col items-start px-6">
+              <div className="ml-1 text-sm text-[hsl(var(--low-emphasis))]">Environment</div>
               <EnvironmentList />
             </div>
-          </div>
+            <Separator />
+          </>
         )}
-        <nav className="grid w-full items-start gap-1 pt-1 pb-3 text-sm">
+        <nav className="grid gap-2">
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
               {menu.type === "menu" ? (
                 <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
               ) : (
-                <div className="mx-3 mt-0.5">
-                  <Separator />
-                </div>
+                <Separator />
               )}
             </Fragment>
           ))}
         </nav>
       </SheetContent>
     </Sheet>
-  );
+  )
 }
