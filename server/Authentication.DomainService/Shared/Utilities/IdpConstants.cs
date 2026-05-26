@@ -58,6 +58,7 @@ namespace DomainService.Utilities
                     ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(AuthenticationQueue),
                                              ConsumerSubscription.BindToQueue(IamQueue),
                                              ConsumerSubscription.BindToQueue(MfaQueueName),
+                                             ConsumerSubscription.BindToQueue(MailQueue),
                                              ConsumerSubscription.BindToQueue(IdentifierQueueName),
                                              ConsumerSubscription.BindToQueue(DataCleanupQueue),
                                              ConsumerSubscription.BindToQueue(LanguageDataMigrationQueue),
@@ -72,7 +73,7 @@ namespace DomainService.Utilities
             {
                 AzureServiceBusConfiguration = new AzureServiceBusConfiguration
                 {
-                    Queues = [AuthenticationQueue, IamQueue, MfaQueueName, IdentifierQueueName, DataCleanupQueue, LanguageDataMigrationQueue, GenericMigrationQueue],
+                    Queues = [AuthenticationQueue, IamQueue, MfaQueueName, MailQueue, IdentifierQueueName, DataCleanupQueue, LanguageDataMigrationQueue, GenericMigrationQueue],
                     Topics = [MigrationCompletionTopic]
                 }
             };
