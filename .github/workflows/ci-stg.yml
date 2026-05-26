@@ -1,11 +1,16 @@
 name: CI/CD - Stage Environment
 
-# Deploy staging only when code lands on `stg` (merge/push).
-# `pre-stg` is integration-only — pushes and PRs from pre-stg must not run this workflow.
 on:
   push:
     branches:
       - stg
+  pull_request:
+    branches:
+      - stg
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 env:
   # ========================================
