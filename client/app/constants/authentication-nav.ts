@@ -1,7 +1,5 @@
 import {
   Wrench,
-  LogIn,
-  UserPlus,
   Mail,
   FileCode,
   ShieldCheck,
@@ -17,8 +15,6 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
     label: "Configuration",
     items: [
       { id: "general", label: "General", value: "general", icon: Wrench, desc: "General authentication settings" },
-      { id: "signin-flow", label: "Signin Flow", value: "signin-flow", icon: LogIn, desc: "Configure signin flow" },
-      { id: "signup-flow", label: "Signup Flow", value: "signup-flow", icon: UserPlus, desc: "Configure signup flow" },
     ],
   },
   {
