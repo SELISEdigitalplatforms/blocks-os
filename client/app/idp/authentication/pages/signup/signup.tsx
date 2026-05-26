@@ -1,24 +1,22 @@
-import { SignupForm } from "./signup-form";
-import { useGetSignUpSetting } from "@blocks-idp/iam/hooks/use-user";
-import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { getRuntimeEnv } from "@/lib/runtime-env";
-import { Loader } from "lucide-react";
+import { Loader } from "lucide-react"
+import { AuthPageShell } from "@/components/auth-page-shell/auth-page-shell"
+import { getRuntimeEnv } from "@/lib/runtime-env"
+import { useGetSignUpSetting } from "@blocks-idp/iam/hooks/use-user"
+import { SignupForm } from "./signup-form"
 
 export const Signup = () => {
-  const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "";
-  const { data: signUpSetting, isLoading: isSignUpSettingLoading } = useGetSignUpSetting({ projectKey });
-  if (isSignUpSettingLoading) {
-    return (
-      <Card className="flex h-full flex-col rounded border-solid border-background shadow-none md:min-w-[448px] md:border-[#95ADC4] lg:max-w-md">
-        <CardContent className="flex flex-1 items-center justify-center">
-          <Loader className="h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || ""
+  const { data: signUpSetting, isLoading: isSignUpSettingLoading } = useGetSignUpSetting({ projectKey })
+
   return (
-    <SignupForm
-      emailSignUpEnabled={signUpSetting?.isEmailPasswordSignUpEnabled || false}
-    />
-  );
-};
+    <AuthPageShell badge="Sign Up" title="Blocks Cloud">
+      {isSignUpSettingLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <SignupForm emailSignUpEnabled={signUpSetting?.isEmailPasswordSignUpEnabled || false} />
+      )}
+    </AuthPageShell>
+  )
+}
