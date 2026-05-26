@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+
 const LoadingSkeleton = () => {
   return (
     <Card className="py-6">
@@ -48,6 +49,7 @@ const LoadingSkeleton = () => {
     </Card>
   );
 };
+
 export const OidcList = () => {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { isLoading, isFetching, data } = useGetAuthOidcCredentials({
@@ -74,7 +76,9 @@ export const OidcList = () => {
     );
   return (
     <div className="grid gap-4">
-      {sortedOidcData?.map((item) => <OIDCCard key={item.itemId} oidc={item} />)}
+      {sortedOidcData?.map((item) => (
+        <OIDCCard key={item.itemId} oidc={item} />
+      ))}
     </div>
   );
 };
