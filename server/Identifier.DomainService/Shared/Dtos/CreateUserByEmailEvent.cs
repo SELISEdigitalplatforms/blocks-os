@@ -1,4 +1,4 @@
-﻿namespace Iam.DomainService.Dtos
+﻿namespace DomainService.Dtos
 {
     public class CreateUserByEmailEvent
     {

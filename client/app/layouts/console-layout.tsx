@@ -11,14 +11,12 @@ export function ConsoleLayout() {
     <ProtectedGuard>
       <ImpersonationChecker>
         <ImpersonationTerminator>
-          {/* <UnCheckedImpersonate> */}
           <div className="relative min-h-screen bg-[hsl(var(--surface-app))]">
             <ConsoleHeader />
             <main className="pt-[59px]">
               <Outlet />
             </main>
           </div>
-          {/* </UnCheckedImpersonate> */}
         </ImpersonationTerminator>
       </ImpersonationChecker>
     </ProtectedGuard>
