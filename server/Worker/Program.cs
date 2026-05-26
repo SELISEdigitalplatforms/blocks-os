@@ -46,7 +46,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<ResourceSetToPermissionMutationEvent>, ResourceSetToPermissionMutationConsumer>();
             services.AddSingleton<IConsumer<UserMutationEvent>, UserMutationConsumer>();
             services.AddSingleton<IConsumer<AccountActivityEvent>, AccountActivityWorkerService>();
-            services.AddSingleton<IConsumer<CreateUserByEmailEvent>, CreateUserByEmailConsumer>();
+           // services.AddSingleton<IConsumer<CreateUserByEmailEvent>, CreateUserByEmailConsumer>();
             services.AddSingleton<IConsumer<CreateUserRequest>, CreateUserConsumer>();
             services.AddSingleton<IConsumer<CreateUserViaSsoEvent>, CreateUserViaSsoConsumer>();
             services.AddSingleton<IConsumer<UserStatusChangedEvent>, UserStatusChangedConsumer>();
@@ -62,7 +62,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<Tenant>, ConfigureProjectConsumer>();
             services.AddSingleton<IConsumer<DisableDomainBindingRequest>, DisableDomainBindingConsumer>();
             services.AddSingleton<IConsumer<RestoreProjectRequest>, RestoreProjectConsumer>();
-            services.AddSingleton<IConsumer<CreateUserByEmailPostEvent_Identifier>, CreateUserByEmailPostConsumer>();
+            services.AddSingleton<IConsumer<DomainService.Dtos.CreateUserByEmailPostEvent>, CreateUserByEmailPostConsumer>();
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
             services.AddSingleton<IConsumer<MigrationCompletionEvent>, MigrationCompletionConsumer>();
             services.AddSingleton<IConsumer<EnvironmentDataMigrationEvent>, EnvironmentDataMigrationEventConsumer>();

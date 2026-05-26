@@ -366,53 +366,53 @@ namespace Iam.DomainService.Users
             };
         }
 
-        public async Task<bool> CreateUserByEmailAsync(CreateUserByEmailEvent @event)
-        {
-            _logger.LogInformation("User creation start from CreateUserByEmail");
+        //public async Task<bool> CreateUserByEmailAsync(CreateUserByEmailEvent @event)
+        //{
+        //    _logger.LogInformation("User creation start from CreateUserByEmail");
 
-            var command = new CreateUserRequest
-            {
-                Email = @event.Email,
-                UserCreationType = UserCreationType.Service,
-                MailPurpose = @event.EventType,
-                Memberships = [new OrganizationMembership {OrganizationId = "default", Permissions = [], Roles = ["user"] }]
-            };
+        //    var command = new CreateUserRequest
+        //    {
+        //        Email = @event.Email,
+        //        UserCreationType = UserCreationType.Service,
+        //        MailPurpose = @event.EventType,
+        //        Memberships = [new OrganizationMembership {OrganizationId = "default", Permissions = [], Roles = ["user"] }]
+        //    };
 
-            _blocksContext = BlocksContext.GetContext();
+        //    _blocksContext = BlocksContext.GetContext();
 
-            var validationResult = await _createValidator.ValidateAsync(command);
-            if (!validationResult.IsValid)
-            {
-                _logger.LogInformation("User creation end -- Validation Error -- CreateUserByEmail");
-                return false;
-            }
+        //    var validationResult = await _createValidator.ValidateAsync(command);
+        //    if (!validationResult.IsValid)
+        //    {
+        //        _logger.LogInformation("User creation end -- Validation Error -- CreateUserByEmail");
+        //        return false;
+        //    }
 
-            var itemId = await ProcessAsync(command);
+        //    var itemId = await ProcessAsync(command);
 
-            await ProcessCreateUserByEmailAfterActionAsync(@event, itemId);
+        //    await ProcessCreateUserByEmailAfterActionAsync(@event, itemId);
 
-            _logger.LogInformation("User creation end -- Success -- CreateUserByEmail");
-            return true;
-        }
+        //    _logger.LogInformation("User creation end -- Success -- CreateUserByEmail");
+        //    return true;
+        //}
 
-        public async Task<bool> ProcessCreateUserByEmailAfterActionAsync(CreateUserByEmailEvent @event, string userId)
-        {
-            var user = await _userRepository.GetUserByIdAsync(userId);
+        //public async Task<bool> ProcessCreateUserByEmailAfterActionAsync(CreateUserByEmailEvent @event, string userId)
+        //{
+        //    var user = await _userRepository.GetUserByIdAsync(userId);
 
-            var key = await CreateUserByEmailActivationProcessAsync(user, @event.EventType);
+        //    var key = await CreateUserByEmailActivationProcessAsync(user, @event.EventType);
 
-            await SaveUserTimelineAsync(user);
+        //    await SaveUserTimelineAsync(user);
 
-            await _identityAccessManagementService.SendToQueueAsync(@event.EventQueue, new CreateUserByEmailPostEvent
-            {
-                Key = key,
-                UserId = userId,
-                EventType = @event.EventType,
-                ProjectKey = @event.ProjectKey,
-            });
+        //    await _identityAccessManagementService.SendToQueueAsync(@event.EventQueue, new CreateUserByEmailPostEvent
+        //    {
+        //        Key = key,
+        //        UserId = userId,
+        //        EventType = @event.EventType,
+        //        ProjectKey = @event.ProjectKey,
+        //    });
 
-            return true;
-        }
+        //    return true;
+        //}
 
         public async Task<string> CreateUserByEmailActivationProcessAsync(User user, string eventType)
         {
