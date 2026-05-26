@@ -10,14 +10,10 @@ import {
 import { usePeopleAcceptInvitation } from "@/hooks/use-people"
 import { hasErrorCode, isErrorWithErrors } from "@/lib/error"
 import { Link, useNavigate } from "react-router-dom"
+import { buildInvitationResultPath } from "./use-invitation-search-params"
 
 type PeopleInviteConfirmationProps = {
   code: string
-}
-
-const buildResultPath = (params: Record<string, string>) => {
-  const search = new URLSearchParams(params)
-  return `/invitation/result?${search.toString()}`
 }
 
 export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps) => {
@@ -29,12 +25,12 @@ export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps
       const res = await mutateAsync({ code })
       if (!res.isSuccess) {
         const errorType = res.errors && hasErrorCode(res.errors, "code_expire") ? "expired" : "unknown"
-        navigate(buildResultPath({ success: "0", error: errorType }), { replace: true })
+        navigate(buildInvitationResultPath({ success: "0", error: errorType }), { replace: true })
         return
       }
       if (res.activationKey && res.activationKey.trim() !== "") {
         navigate(
-          buildResultPath({
+          buildInvitationResultPath({
             success: "1",
             old: "0",
             code: res.activationKey,
@@ -43,11 +39,11 @@ export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps
         )
         return
       }
-      navigate(buildResultPath({ success: "1", old: "1" }), { replace: true })
+      navigate(buildInvitationResultPath({ success: "1", old: "1" }), { replace: true })
     } catch (error) {
       const errorType =
         isErrorWithErrors(error) && hasErrorCode(error.errors, "code_expire") ? "expired" : "unknown"
-      navigate(buildResultPath({ success: "0", error: errorType }), { replace: true })
+      navigate(buildInvitationResultPath({ success: "0", error: errorType }), { replace: true })
     }
   }
 

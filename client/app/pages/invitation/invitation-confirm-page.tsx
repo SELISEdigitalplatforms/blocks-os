@@ -1,4 +1,5 @@
-import { Link, useSearchParams } from "react-router-dom"
+import { Link } from "react-router-dom"
+import { useInvitationConfirmCode } from "./use-invitation-search-params"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui-kits/button/button"
 import {
@@ -36,10 +37,9 @@ const InvitationMissingCode = () => (
 )
 
 export const InvitationConfirmPage = () => {
-  const [searchParams] = useSearchParams()
-  const code = searchParams.get("code") ?? ""
+  const { code, isValid } = useInvitationConfirmCode()
 
-  if (!code.trim()) {
+  if (!isValid) {
     return <InvitationMissingCode />
   }
 
