@@ -30,8 +30,6 @@ export const GRANT_TYPES_OPTIONS: { id: GRANT_TYPES; label: string; value: strin
 
 export const AuthenticationTabs: { id: string; label: string; value: string }[] = [
   { id: "general", label: "General", value: "general" },
-  { id: "signin-flow", label: "Signin flow", value: "signin-flow" },
-  { id: "signup-flow", label: "Signup flow", value: "signup-flow" },
   { id: "email-template", label: "Email template", value: "email-template" },
   { id: "oidc-template", label: "OIDC template", value: "oidc-template" },
   { id: "roles", label: "Roles", value: "roles" },
@@ -44,11 +42,6 @@ export const AuthenticationTabs: { id: string; label: string; value: string }[] 
 ];
 
 export const SecretManagementTabs: { id: string; label: string; value: string }[] = [
-  {
-    id: "infra-config",
-    label: "Infra Config",
-    value: "infra-config",
-  },
   {
     id: "my-secret",
     label: "My Secret",
