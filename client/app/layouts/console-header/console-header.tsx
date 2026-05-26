@@ -1,26 +1,25 @@
-import { useContext, useEffect, useState } from "react";
-import { PanelLeft, Menu } from "lucide-react";
-import { useLocation, Link } from "react-router-dom";
-import { Button } from "@/components/ui-kits/button/button";
+import { BackToConsoleNavigator } from "@/components/back-to-console-navigator/back-to-console-navigator";
+import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
+import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Notification } from "@/components/notification/notification";
-import { ProjectList } from "@/components/project-list/project-list";
-import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
-import { EnvironmentList } from "@/components/environment-list/environment-list";
-import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
-import { BackToConsoleNavigator } from "@/components/back-to-console-navigator/back-to-console-navigator";
-import { SidebarContext } from "@/contexts/dashboard-layout-provider";
+import { Button } from "@/components/ui-kits/button/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui-kits/sheet/sheet";
-import { Logo } from "@/components/logo";
-import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
+import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
+import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import useIsMobile from "@/hooks/use-is-mobile";
-import { cn } from "@/lib/utils";
+import { Menu } from "lucide-react";
+import { useContext, useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+
 export function ConsoleHeader() {
   const context = useContext(SidebarContext);
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
   const [isScrolled, setIsScrolled] = useState(false);
-  const isConsoleButtonVisible = pathname === "/profile" || pathname.startsWith("/project-overview");
+
+  const isConsoleButtonVisible = pathname.startsWith("/project-overview") || pathname.startsWith("/profile");
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 25);
@@ -28,6 +27,7 @@ export function ConsoleHeader() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
   return (
     <div
       className={`fixed left-0 right-0 top-0 z-40 ${isScrolled || isConsoleButtonVisible ? "border-b bg-background" : "bg-transparent"}`}
@@ -45,7 +45,7 @@ export function ConsoleHeader() {
         <div className="block sm:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost">
+              <Button variant="outline">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
