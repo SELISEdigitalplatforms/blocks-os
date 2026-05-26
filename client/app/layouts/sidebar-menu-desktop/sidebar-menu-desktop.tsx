@@ -1,50 +1,121 @@
-import { Fragment, useContext, useState } from "react";
-import { ChevronRight, PanelLeft } from "lucide-react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { DesktopMenuItem } from "@/components/menus/desktop-menu-item";
-import { EnvironmentList } from "@/components/environment-list/environment-list";
-import { Button } from "@/components/ui-kits/button/button";
-import { ProjectList } from "@/components/project-list/project-list";
-import { Separator } from "@/components/ui-kits/separator/separator";
-import { navigationMenus } from "@/constants/navigation-menus";
-import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
-import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
-import { LMT_NAV_GROUPS } from "@/constants/lmt-nav";
-import { SidebarContext } from "@/contexts/dashboard-layout-provider";
-import { useFilteredMenus } from "@/hooks/use-filtered-menus";
-import { cn } from "@/lib/utils";
-import { useTheme } from "@/hooks/use-theme";
+import { Fragment, useContext, useState } from "react"
+import { ChevronRight, PanelLeft } from "lucide-react"
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
+import { DesktopMenuItem } from "@/components/menus/desktop-menu-item"
+import { SidebarCollapsedTooltip } from "@/components/menus/sidebar-collapsed-tooltip"
+import { EnvironmentList } from "@/components/environment-list/environment-list"
+import { Button } from "@/components/ui-kits/button/button"
+import { ProjectList } from "@/components/project-list/project-list"
+import { Separator } from "@/components/ui-kits/separator/separator"
+import { TooltipProvider } from "@/components/ui-kits/tooltip/tooltip"
+import { navigationMenus } from "@/constants/navigation-menus"
+import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
+import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav"
+import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
+import { SidebarContext } from "@/contexts/dashboard-layout-provider"
+import { useFilteredMenus } from "@/hooks/use-filtered-menus"
+import { cn } from "@/lib/utils"
+import { useTheme } from "@/hooks/use-theme"
+
+const expandableParentClasses = (isSidebarOpen: boolean, isActive: boolean) =>
+  cn(
+    "group relative flex h-10 w-full cursor-pointer items-center gap-3 p-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+    isSidebarOpen ? "px-4" : "justify-center px-0",
+    isActive && "!text-primary",
+  )
+
+const expandableChildClasses = (isSidebarOpen: boolean, isActive: boolean) =>
+  cn(
+    "group relative flex h-10 w-full cursor-pointer items-center gap-3 text-base transition-colors",
+    isSidebarOpen ? "px-4 pl-8" : "justify-center px-4",
+    isActive ? "!text-primary" : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+  )
+
 export function SidebarMenuDesktop() {
-  const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
-  const { resolvedTheme } = useTheme();
-  const allowedMenu = useFilteredMenus(navigationMenus);
-  const { pathname } = useLocation();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const isProjectOverviewRoute = pathname.startsWith("/project-overview");
-  const isSecretManagementRoute = pathname.startsWith("/services/secret-management");
-  const isAuthenticationRoute = pathname.startsWith("/services/authentication");
-  const isLmtRoute = pathname.startsWith("/services/lmt");
-  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "infra-config" : "general");
-  const [secretsOpen, setSecretsOpen] = useState(true);
-  const [idpOpen, setIdpOpen] = useState(true);
-  const [lmtOpen, setLmtOpen] = useState(true);
+  const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext)
+  const { resolvedTheme } = useTheme()
+  const allowedMenu = useFilteredMenus(navigationMenus)
+  const { pathname } = useLocation()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const isProjectOverviewRoute = pathname.startsWith("/project-overview")
+  const isSecretManagementRoute = pathname.startsWith("/services/secret-management")
+  const isAuthenticationRoute = pathname.startsWith("/services/authentication")
+  const isLmtRoute = pathname.startsWith("/services/lmt")
+  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "my-secret" : "general")
+  const [secretsOpen, setSecretsOpen] = useState(true)
+  const [idpOpen, setIdpOpen] = useState(true)
+  const [lmtOpen, setLmtOpen] = useState(true)
+
   const getLogoSrc = () => {
     if (isSidebarOpen) {
-      return resolvedTheme === "dark" ? "/Logo_White.svg" : "/Logo.svg";
+      return resolvedTheme === "dark"
+        ? "/blocks-logos/os_dark_mode.svg"
+        : "/blocks-logos/os_light_mode.svg"
     }
-    return resolvedTheme === "dark" ? "/Icon_White.svg" : "/Icon.svg";
-  };
+    return resolvedTheme === "dark" ? "/Icon_White.svg" : "/Icon.svg"
+  }
+
+  const renderExpandableParent = (
+    menu: (typeof allowedMenu)[number] & { type: "menu" },
+    isActiveRoute: boolean,
+    isOpen: boolean,
+    onToggle: () => void,
+  ) => (
+    <SidebarCollapsedTooltip label={menu.name} show={!isSidebarOpen}>
+      <button onClick={onToggle} className={expandableParentClasses(isSidebarOpen, isActiveRoute)}>
+        {menu.icon ? <menu.icon className="h-5 w-5 shrink-0" /> : null}
+        {isSidebarOpen && (
+          <>
+            <span>{menu.name}</span>
+            <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+          </>
+        )}
+        {isActiveRoute ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+      </button>
+    </SidebarCollapsedTooltip>
+  )
+
+  const renderExpandableChildren = (
+    groups: typeof SECRET_MANAGEMENT_NAV_GROUPS,
+    routePrefix: string,
+  ) => (
+    <div className="grid gap-0.5">
+      {groups.map((group) =>
+        group.items.map((item) => {
+          const Icon = item.icon
+          const isActive = currentTab === item.value
+          return (
+            <SidebarCollapsedTooltip key={item.id} label={item.label} show={!isSidebarOpen}>
+              <button
+                onClick={() => navigate(`${routePrefix}?tab=${item.value}`)}
+                className={expandableChildClasses(isSidebarOpen, isActive)}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {isSidebarOpen && <span>{item.label}</span>}
+                {isActive ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+              </button>
+            </SidebarCollapsedTooltip>
+          )
+        }),
+      )}
+    </div>
+  )
+
   return (
-    <div
-      className={`hidden h-[calc(100vh)] flex-col border-r bg-background transition-all md:flex ${isSidebarOpen ? "w-60 overflow-hidden" : "w-14"}`}
-    >
+    <TooltipProvider delayDuration={0}>
+      <div
+        className={cn(
+          "hidden h-[calc(100vh)] shrink-0 flex-col border-r bg-background transition-all md:flex",
+          isSidebarOpen ? "w-60 overflow-hidden" : "w-14 overflow-visible",
+        )}
+      >
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b bg-background px-3">
         <Link
           to="/console"
           className={cn(
             "relative inline-block cursor-pointer overflow-hidden transition-all",
-            isSidebarOpen ? "h-[36px] w-[72px]" : "h-8 w-8"
+            isSidebarOpen ? "h-[36px] w-[72px]" : "h-8 w-8",
           )}
         >
           <img src={getLogoSrc()} alt="Logo" className="h-full w-full object-contain" />
@@ -55,245 +126,79 @@ export function SidebarMenuDesktop() {
           </Button>
         )}
       </div>
-      {!isProjectOverviewRoute && (isSidebarOpen ? (
-        <div className="border-b px-2 pb-2 pt-2">
-          <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Workspace
-          </p>
-          <div className="space-y-0.5">
-            <ProjectList />
-            <EnvironmentList />
+      {!isProjectOverviewRoute &&
+        (isSidebarOpen ? (
+          <div className="border-b px-2 pb-2 pt-2">
+            <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Workspace
+            </p>
+            <div className="space-y-0.5">
+              <ProjectList />
+              <EnvironmentList />
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="border-b py-1">
-          <ProjectList collapsed />
-          <EnvironmentList collapsed />
-        </div>
-      ))}
-      <div className="flex-1 overflow-y-auto overflow-x-visible">
-        <nav className={cn("grid w-full items-start gap-1 pt-1 pb-3 text-sm")}>
+        ) : (
+          <div className="border-b py-1">
+            <ProjectList collapsed />
+            <EnvironmentList collapsed />
+          </div>
+        ))}
+      <div className={cn("w-full flex-1", isSidebarOpen ? "overflow-y-auto" : "overflow-visible")}>
+        <nav className={cn("grid w-full items-start gap-1 text-sm")}>
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
               {menu.type === "menu" ? (
                 <>
                   {menu.id === "service-identity__secret-management" ? (
-                    <button
-                      onClick={() => {
+                    <>
+                      {renderExpandableParent(menu, isSecretManagementRoute, secretsOpen, () => {
                         if (!isSecretManagementRoute) {
-                          navigate("/services/secret-management?tab=infra-config");
-                          setSecretsOpen(true);
+                          navigate("/services/secret-management?tab=my-secret")
+                          setSecretsOpen(true)
                         } else {
-                          setSecretsOpen((v) => !v);
+                          setSecretsOpen((v) => !v)
                         }
-                      }}
-                      className={cn(
-                        "group relative flex cursor-pointer items-center transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
-                        isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
-                        isSecretManagementRoute
-                          ? isSidebarOpen
-                            ? "bg-primary/10 text-primary"
-                            : "text-primary"
-                          : "text-[hsl(var(--low-emphasis))]",
-                      )}
-                    >
-                      {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
-                      {isSidebarOpen && (
-                        <>
-                          <span>{menu.name}</span>
-                          <ChevronRight className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform", secretsOpen && "rotate-90")} />
-                        </>
-                      )}
-                      {!isSidebarOpen && (
-                        <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                          {menu.name}
-                        </div>
-                      )}
-                    </button>
+                      })}
+                      {isSecretManagementRoute && secretsOpen &&
+                        renderExpandableChildren(SECRET_MANAGEMENT_NAV_GROUPS, "/services/secret-management")}
+                    </>
                   ) : menu.id === "service-identity__authentication" ? (
-                    <button
-                      onClick={() => {
+                    <>
+                      {renderExpandableParent(menu, isAuthenticationRoute, idpOpen, () => {
                         if (!isAuthenticationRoute) {
-                          navigate("/services/authentication?tab=general");
-                          setIdpOpen(true);
+                          navigate("/services/authentication?tab=general")
+                          setIdpOpen(true)
                         } else {
-                          setIdpOpen((v) => !v);
+                          setIdpOpen((v) => !v)
                         }
-                      }}
-                      className={cn(
-                        "group relative flex cursor-pointer items-center transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
-                        isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
-                        isAuthenticationRoute
-                          ? isSidebarOpen
-                            ? "bg-primary/10 text-primary"
-                            : "text-primary"
-                          : "text-[hsl(var(--low-emphasis))]",
-                      )}
-                    >
-                      {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
-                      {isSidebarOpen && (
-                        <>
-                          <span>{menu.name}</span>
-                          <ChevronRight className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform", idpOpen && "rotate-90")} />
-                        </>
-                      )}
-                      {!isSidebarOpen && (
-                        <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                          {menu.name}
-                        </div>
-                      )}
-                    </button>
+                      })}
+                      {isAuthenticationRoute && idpOpen &&
+                        renderExpandableChildren(AUTHENTICATION_NAV_GROUPS, "/services/authentication")}
+                    </>
                   ) : menu.id === "service-identity__lmt" ? (
-                    <button
-                      onClick={() => {
+                    <>
+                      {renderExpandableParent(menu, isLmtRoute, lmtOpen, () => {
                         if (!isLmtRoute) {
-                          navigate("/services/lmt?tab=usage");
-                          setLmtOpen(true);
+                          navigate("/services/lmt?tab=usage")
+                          setLmtOpen(true)
                         } else {
-                          setLmtOpen((v) => !v);
+                          setLmtOpen((v) => !v)
                         }
-                      }}
-                      className={cn(
-                        "group relative flex cursor-pointer items-center transition-colors hover:bg-accent hover:text-[hsl(var(--high-emphasis))]",
-                        isSidebarOpen ? "mx-2 h-9 gap-2.5 rounded-md px-3 text-sm" : "h-10 w-full justify-center",
-                        isLmtRoute
-                          ? isSidebarOpen
-                            ? "bg-primary/10 text-primary"
-                            : "text-primary"
-                          : "text-[hsl(var(--low-emphasis))]",
-                      )}
-                    >
-                      {menu.icon && <menu.icon className="h-[18px] w-[18px] shrink-0" />}
-                      {isSidebarOpen && (
-                        <>
-                          <span>{menu.name}</span>
-                          <ChevronRight className={cn("ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform", lmtOpen && "rotate-90")} />
-                        </>
-                      )}
-                      {!isSidebarOpen && (
-                        <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                          {menu.name}
-                        </div>
-                      )}
-                    </button>
+                      })}
+                      {isLmtRoute && lmtOpen && renderExpandableChildren(LMT_NAV_GROUPS, "/services/lmt")}
+                    </>
                   ) : (
                     <DesktopMenuItem menu={menu} isSidebarOpen={isSidebarOpen} />
                   )}
-                  {isSecretManagementRoute && menu.id === "service-identity__secret-management" && secretsOpen && (
-                    <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
-                      {SECRET_MANAGEMENT_NAV_GROUPS.map((group) =>
-                        group.items.map((item) => {
-                          const Icon = item.icon;
-                          const isActive = currentTab === item.value;
-                          return (
-                            <div key={item.id} className="group relative">
-                              <button
-                                onClick={() => navigate(`/services/secret-management?tab=${item.value}`)}
-                                className={cn(
-                                  "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-sm transition-colors",
-                                  isSidebarOpen ? "px-3" : "justify-center",
-                                  isActive
-                                    ? "text-primary"
-                                    : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-                                )}
-                              >
-                                <Icon className="h-4 w-4 shrink-0" />
-                                {isSidebarOpen && <span>{item.label}</span>}
-                                {isActive && isSidebarOpen && (
-                                  <div className="absolute right-3 h-2 w-2 rounded-full bg-primary" />
-                                )}
-                              </button>
-                              {!isSidebarOpen && (
-                                <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                                  {item.label}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
-                  {isAuthenticationRoute && menu.id === "service-identity__authentication" && idpOpen && (
-                    <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
-                      {AUTHENTICATION_NAV_GROUPS.map((group) =>
-                        group.items.map((item) => {
-                          const Icon = item.icon;
-                          const isActive = currentTab === item.value;
-                          return (
-                            <div key={item.id} className="group relative">
-                              <button
-                                onClick={() => navigate(`/services/authentication?tab=${item.value}`)}
-                                className={cn(
-                                  "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-sm transition-colors",
-                                  isSidebarOpen ? "px-3" : "justify-center",
-                                  isActive
-                                    ? "text-primary"
-                                    : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-                                )}
-                              >
-                                <Icon className="h-4 w-4 shrink-0" />
-                                {isSidebarOpen && <span>{item.label}</span>}
-                                {isActive && isSidebarOpen && (
-                                  <div className="absolute right-3 h-2 w-2 rounded-full bg-primary" />
-                                )}
-                              </button>
-                              {!isSidebarOpen && (
-                                <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                                  {item.label}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
-                  {isLmtRoute && menu.id === "service-identity__lmt" && lmtOpen && (
-                    <div className={cn("grid gap-0.5", isSidebarOpen ? "pl-3 pr-2" : "")}>
-                      {LMT_NAV_GROUPS.map((group) =>
-                        group.items.map((item) => {
-                          const Icon = item.icon;
-                          const isActive = currentTab === item.value;
-                          return (
-                            <div key={item.id} className="group relative">
-                              <button
-                                onClick={() => navigate(`/services/lmt?tab=${item.value}`)}
-                                className={cn(
-                                  "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-sm transition-colors",
-                                  isSidebarOpen ? "px-3" : "justify-center",
-                                  isActive
-                                    ? "text-primary"
-                                    : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-                                )}
-                              >
-                                <Icon className="h-4 w-4 shrink-0" />
-                                {isSidebarOpen && <span>{item.label}</span>}
-                                {isActive && isSidebarOpen && (
-                                  <div className="absolute right-3 h-2 w-2 rounded-full bg-primary" />
-                                )}
-                              </button>
-                              {!isSidebarOpen && (
-                                <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                                  {item.label}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
                 </>
               ) : (
-                <div className="mx-3 mt-0.5">
-                  <Separator />
-                </div>
+                <Separator />
               )}
             </Fragment>
           ))}
         </nav>
       </div>
-    </div>
-  );
+      </div>
+    </TooltipProvider>
+  )
 }
