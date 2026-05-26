@@ -407,7 +407,7 @@ namespace DomainService.People
         private string GenerateInvitationLink(string code)
         {
             var blocksAppHost = _configuration["FrontendRuntime:BLOCKS_OS_URL"];
-            if (!string.IsNullOrWhiteSpace(blocksAppHost))
+            if (string.IsNullOrWhiteSpace(blocksAppHost))
             {
                 _logger.LogWarning("BlocksAppHost configuration is missing");
                 blocksAppHost = "https://app.blocks.com"; // Fallback
