@@ -1,375 +1,195 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Button } from "@/components/ui-kits/button/button";
-import { Logo } from "@/components/logo";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { showErrorToast } from "@/hooks/use-toast";
-import {
-  BarChart3,
-  Bot,
-  ChevronLeft,
-  ChevronRight,
-  Cloud,
-  Code2,
-  Database,
-  ExternalLink,
-  KeyRound,
-  MoveRight,
-  ScrollText,
-  Settings2,
-  ShieldCheck,
-  Sliders,
-  type LucideIcon,
-} from "lucide-react";
-import { Link } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
-const pillars = [
-  { icon: ShieldCheck, label: "Authentication" },
-  { icon: KeyRound, label: "Secrets Management" },
-  { icon: Sliders, label: "Configuration" },
-  { icon: Settings2, label: "API Console" },
-  { icon: BarChart3, label: "Usage" },
-  { icon: ScrollText, label: "Logs & Tracing" },
-];
+import { useAuthStore } from "@/store/useAuthStore"
+import "./login-eurolm.css"
+
 interface StackLink {
   label: string;
   to: string;
 }
 interface Stack {
-  icon: string;
   name: string;
   available: boolean;
   links: StackLink[];
 }
 interface Service {
-  icon: LucideIcon;
   badge: string;
   title: string;
   description: string;
   features: string[];
   url: string;
   cta: string;
-  gradient: string;
   stacks?: Stack[];
 }
+
 const services: Service[] = [
   {
-    icon: Bot,
-    badge: "AI & Knowledge Bases",
+    badge: "AI & Knowledge",
     title: "Blocks Agent Platform",
     description:
-      "Integrate intelligent agents into any frontend with a single script. Enable advanced use cases with support for RAG pipelines, MCP, and custom LLM integrations.",
+      "Integrate intelligent agents into any frontend with a single script. Advanced use cases with RAG pipelines, MCP, and custom LLM integrations.",
     features: ["RAG Pipelines", "MCP Support", "Custom LLM", "Knowledge Bases"],
-    url: "https://dev-agent.blocksdevelopers.com",
+    url: getRuntimeEnv("BLOCKS_AGENTS_BASE_URL"),
     cta: "Visit Agent Platform",
-    gradient: "from-violet-600 to-indigo-600",
   },
   {
-    icon: Cloud,
-    badge: "Deployments & CI/CD",
+    badge: "Deployments",
     title: "Blocks Cloud Build",
     description:
-      "Build, deploy, and scale your applications with automated CI/CD pipelines. Connect your GitHub repositories and go live in minutes.",
+      "Build, deploy, and scale your applications with automated CI/CD pipelines. Connect GitHub repositories and go live in minutes.",
     features: ["Auto CI/CD", "GitHub Integration", "Multi-env", "Build Logs"],
-    url: "https://dev-deployment.blocksdevelopers.com",
+    url: getRuntimeEnv("BLOCKS_RELEASE_BASE_URL"),
     cta: "Visit Cloud Build",
-    gradient: "from-sky-500 to-cyan-500",
   },
   {
-    icon: Database,
-    badge: "Database Management",
+    badge: "Databases",
     title: "Blocks Data Service",
     description:
       "Provision and manage databases with automatic scaling, backups, and real-time monitoring. Full control without the operational overhead.",
     features: ["Auto Backups", "Auto Scaling", "Query Console", "Monitoring"],
-    url: "https://dev-uds.blocksdevelopers.com",
+    url: getRuntimeEnv("BLOCKS_DATA_BASE_URL"),
     cta: "Visit Data Service",
-    gradient: "from-emerald-600 to-teal-500",
   },
   {
-    icon: Code2,
-    badge: "Developer SDK & CLI",
+    badge: "SDK & CLI",
     title: "Blocks Construct",
     description:
       "Open-source SDKs and CLI tools for React, .NET and more. Scaffold and integrate Blocks services into your projects in minutes.",
     features: ["React SDK", ".NET SDK", "CLI Tooling", "Starter Templates"],
     url: "https://construct.seliseblocks.com",
     cta: "Visit Construct",
-    gradient: "from-orange-500 to-rose-500",
     stacks: [
       {
-        icon: "/assets/images/react-icon.png",
         name: "React",
         available: true,
         links: [
-          {
-            label: "npm",
-            to: "https://www.npmjs.com/package/@seliseblocks/cli",
-          },
-          {
-            label: "GitHub",
-            to: "https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct",
-          },
-          { label: "Demo", to: "https://construct.seliseblocks.com" },
+          { label: "npm", to: "https://www.npmjs.com/package/@seliseblocks/cli" },
+          { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct" },
         ],
       },
       {
-        icon: "/assets/images/angular-icon.png",
-        name: "Angular",
-        available: false,
-        links: [],
-      },
-      {
-        icon: "/assets/images/dotnet-icon.png",
         name: ".NET",
         available: true,
         links: [
           { label: "NuGet", to: "https://www.nuget.org/profiles/SELISE" },
-          {
-            label: "GitHub",
-            to: "https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct",
-          },
-          { label: "PyPI", to: "https://pypi.org/project/seliseblocks-lmt/" },
+          { label: "GitHub", to: "https://github.com/SELISEdigitalplatforms/l0-net-blocks-construct" },
         ],
       },
-      {
-        icon: "/assets/images/ruby-icon.png",
-        name: "Ruby",
-        available: false,
-        links: [],
-      },
+      { name: "Angular", available: false, links: [] },
+      { name: "Ruby", available: false, links: [] },
     ],
   },
 ];
-const slideVariants = {
-  enter: (dir: number) => ({
-    x: dir > 0 ? 52 : -52,
-    opacity: 0,
-    filter: "blur(4px)",
-  }),
-  center: { x: 0, opacity: 1, filter: "blur(0px)" },
-  exit: (dir: number) => ({
-    x: dir > 0 ? -52 : 52,
-    opacity: 0,
-    filter: "blur(4px)",
-  }),
-};
-const ServiceCarousel = () => {
-  const [index, setIndex] = useState(0);
-  const [direction, setDirection] = useState(1);
-  const [paused, setPaused] = useState(false);
-  const goTo = useCallback(
-    (next: number) => {
-      setDirection(next > index ? 1 : -1);
-      setIndex(next);
-    },
-    [index],
-  );
-  const prev = useCallback(
-    () => goTo(index === 0 ? services.length - 1 : index - 1),
-    [goTo, index],
-  );
-  const next = useCallback(
-    () => goTo(index === services.length - 1 ? 0 : index + 1),
-    [goTo, index],
-  );
-  useEffect(() => {
-    if (paused) return;
-    const id = setTimeout(next, 5000);
-    return () => clearTimeout(id);
-  }, [index, paused, next]);
-  const service = services[index];
-  return (
-    <aside className="mt-8 w-full shrink-0 lg:mt-0 lg:w-[380px] xl:w-[420px]">
-      <div
-        className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
-        <div className="relative h-[450px]">
-          <AnimatePresence mode="popLayout" custom={direction}>
-            <motion.div
-              key={index}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0 flex flex-col"
-            >
-              <div className="relative overflow-hidden bg-primary px-6 py-7">
-                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5" />
-                <div className="absolute -bottom-6 right-4 h-20 w-20 rounded-full bg-white/5" />
-                <span className="relative inline-flex items-center rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/80">
-                  {service.badge}
-                </span>
-                <div className="relative mt-3 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                    <service.icon className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold leading-tight text-primary-foreground">
-                      {service.title}
-                    </h3>
-                    {service.stacks && (
-                      <p className="mt-0.5 text-xs text-primary-foreground/70">
-                        Open-source SDKs &amp; CLI tools
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-1 flex-col gap-4 px-6 py-5">
-                <p className="text-sm leading-relaxed text-[hsl(var(--medium-emphasis))]">
-                  {service.description}
-                </p>
-                {service.stacks ? (
-                  <div className="flex flex-col divide-y divide-[hsl(var(--border-default))]">
-                    {service.stacks
-                      .filter((s) => s.available)
-                      .map((sdk) => (
-                        <div
-                          key={sdk.name}
-                          className="flex items-center justify-between py-2"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
-                              <img
-                                src={sdk.icon}
-                                width={16}
-                                height={16}
-                                alt={sdk.name}
-                              />
-                            </div>
-                            <span className="text-sm font-medium text-[hsl(var(--high-emphasis))]">
-                              {sdk.name}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            {sdk.links.map((link, i) => (
-                              <span
-                                key={link.label}
-                                className="flex items-center gap-2"
-                              >
-                                {i > 0 && (
-                                  <span className="h-3 w-px bg-[hsl(var(--border-default))]" />
-                                )}
-                                <Link
-                                  to={link.to}
-                                  target="_blank"
-                                  className="font-medium text-primary hover:underline"
-                                >
-                                  {link.label}
-                                </Link>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    {service.stacks.filter((s) => !s.available).length > 0 && (
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-3">
-                          {service.stacks
-                            .filter((s) => !s.available)
-                            .map((sdk) => (
-                              <div
-                                key={sdk.name}
-                                className="flex items-center gap-1.5 opacity-40"
-                              >
-                                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))]">
-                                  <img
-                                    src={sdk.icon}
-                                    width={16}
-                                    height={16}
-                                    alt={sdk.name}
-                                  />
-                                </div>
-                                <span className="text-sm font-medium text-[hsl(var(--low-emphasis))]">
-                                  {sdk.name}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                        <span className="rounded-full bg-[hsl(var(--surface-app))] px-2.5 py-0.5 text-[10px] font-semibold text-[hsl(var(--low-emphasis))]">
-                          Coming soon
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-1">
-                    {service.features.map((f) => (
-                      <span
-                        key={f}
-                        className="inline-flex items-center rounded-full bg-primary/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
-                      >
-                        {f}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="mt-auto pt-1">
-                  <Button asChild size="sm" className="gap-2">
-                    <Link to={service.url} target="_blank">
-                      {service.cta}
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-        <div className="flex items-center justify-between border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-app))] px-5 py-3">
-          <div className="flex items-center gap-1.5">
-            {services.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(i)}
-                aria-label={`Go to slide ${i + 1}`}
-                className={`rounded-full transition-all duration-300 ${
-                  i === index
-                    ? "h-2 w-5 bg-primary"
-                    : "h-2 w-2 bg-[hsl(var(--border-default))] hover:bg-primary/40"
-                }`}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={prev}
-              aria-label="Previous service"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] transition-all hover:border-primary/40 hover:text-primary"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={next}
-              aria-label="Next service"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] text-[hsl(var(--medium-emphasis))] transition-all hover:border-primary/40 hover:text-primary"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </aside>
-  );
-};
+
 export default function LoginSimplePage() {
   const [isStarting, setIsStarting] = useState(false);
-  const [titleNumber, setTitleNumber] = useState(0);
-  const titles = useMemo(
+  const [keywordIdx, setKeywordIdx] = useState(0);
+  const [keywordVisible, setKeywordVisible] = useState(true);
+  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const keywords = useMemo(
     () => ["observable", "intelligent", "scalable", "resilient", "secure"],
     [],
   );
+
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setTitleNumber((prev) => (prev === titles.length - 1 ? 0 : prev + 1));
-    }, 2400);
-    return () => clearTimeout(timeoutId);
-  }, [titleNumber, titles]);
+    if (isAuthenticated) navigate("/console", { replace: true });
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setKeywordVisible(false);
+      setTimeout(() => {
+        setKeywordIdx((p) => (p + 1) % keywords.length);
+        setKeywordVisible(true);
+      }, 280);
+    }, 2800);
+    return () => clearInterval(id);
+  }, [keywords.length]);
+
+  // Atmospheric canvas — animated HSL color blobs
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    let raf = 0;
+    let t = 0;
+    let dpr = window.devicePixelRatio || 1;
+    let w = 0;
+    let h = 0;
+
+    const resize = () => {
+      dpr = window.devicePixelRatio || 1;
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const hslToRgb = (hue: number, s: number, l: number) => {
+      s /= 100;
+      l /= 100;
+      const k = (n: number) => (n + hue / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) =>
+        l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return [
+        Math.round(f(0) * 255),
+        Math.round(f(8) * 255),
+        Math.round(f(4) * 255),
+      ];
+    };
+
+    const draw = () => {
+      const time = t * 0.008;
+      const baseHue = 185 + 15 * Math.sin(time);
+      const c1 = hslToRgb(baseHue, 100, 50);
+      const c2 = hslToRgb(baseHue + 15, 100, 50);
+      const c3 = hslToRgb(baseHue - 15, 100, 50);
+      const cx = (w / dpr) * 0.5;
+      const cy = (h / dpr) * 0.5;
+      ctx.clearRect(0, 0, w / dpr, h / dpr);
+
+      const r1 = (Math.max(w, h) / dpr) * 0.6;
+      const g1 = ctx.createRadialGradient(cx * 0.6, cy * 0.7, 0, cx * 0.6, cy * 0.7, r1);
+      g1.addColorStop(0, `rgba(${c1[0]}, ${c1[1]}, ${c1[2]}, 0.18)`);
+      g1.addColorStop(1, `rgba(${c1[0]}, ${c1[1]}, ${c1[2]}, 0)`);
+      ctx.fillStyle = g1;
+      ctx.fillRect(0, 0, w / dpr, h / dpr);
+
+      const r2 = (Math.max(w, h) / dpr) * 0.5;
+      const g2 = ctx.createRadialGradient(cx * 1.3, cy * 0.4, 0, cx * 1.3, cy * 0.4, r2);
+      g2.addColorStop(0, `rgba(${c2[0]}, ${c2[1]}, ${c2[2]}, 0.12)`);
+      g2.addColorStop(1, `rgba(${c2[0]}, ${c2[1]}, ${c2[2]}, 0)`);
+      ctx.fillStyle = g2;
+      ctx.fillRect(0, 0, w / dpr, h / dpr);
+
+      const r3 = (Math.max(w, h) / dpr) * 0.45;
+      const g3 = ctx.createRadialGradient(cx * 0.3, cy * 1.2, 0, cx * 0.3, cy * 1.2, r3);
+      g3.addColorStop(0, `rgba(${c3[0]}, ${c3[1]}, ${c3[2]}, 0.10)`);
+      g3.addColorStop(1, `rgba(${c3[0]}, ${c3[1]}, ${c3[2]}, 0)`);
+      ctx.fillStyle = g3;
+      ctx.fillRect(0, 0, w / dpr, h / dpr);
+
+      t++;
+      raf = requestAnimationFrame(draw);
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+    raf = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
 
   const startLogin = async () => {
     try {
@@ -378,21 +198,17 @@ export default function LoginSimplePage() {
 
       const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
       const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID");
-      const idpBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL");
       const redirectUri = `${window.location.origin}/login/callback`;
-      const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${redirectUri}`;
-      const headers: Record<string, string> = {};
-      if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
+      const idpBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL")
+      const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${redirectUri}`
 
-      const response = await fetch(initiateUrl.toString(), { headers });
-      const data = await response.json();
+      const headers: Record<string, string> = {}
+      if (blocksKey) headers["X-Blocks-Key"] = blocksKey
 
+      const response = await fetch(initiateUrl.toString(), { headers })
+      const data = await response.json()
       if (data.redirect_uri) {
         window.location.href = data.redirect_uri;
-        console.log(
-          "Redirecting to IDP for authentication...",
-          data.redirect_uri,
-        );
       } else {
         showErrorToast({ errors: "Failed to get authorization URL" });
         setIsStarting(false);
@@ -404,82 +220,203 @@ export default function LoginSimplePage() {
     }
   };
 
+  // Duplicated for seamless loop
+  const carouselCards = [...services, ...services];
+
   return (
-    <div className="relative flex min-h-screen flex-col bg-[hsl(var(--surface-app))]">
-      <header className="relative z-10 flex items-center px-6 py-5 xl:px-[154px]">
-        <Logo width={120} height={52} />
-        <div className="absolute right-6 top-5 xl:right-[154px]">
+    <div className="eurolm-page">
+
+      <div className="grid-bg" />
+      <div className="scan-line" />
+      <div className="radial-glow" />
+      <div className="secondary-glow" />
+      <div className="vignette" />
+      <div className="noise-overlay" />
+      <canvas className="atmospheric-canvas" ref={canvasRef} />
+
+      <div className="corner corner-tl" />
+      <div className="corner corner-tr" />
+      <div className="corner corner-bl" />
+      <div className="corner corner-br" />
+      <div className="corner-dot corner-dot-tl" />
+      <div className="corner-dot corner-dot-tr" />
+      <div className="corner-dot corner-dot-bl" />
+      <div className="corner-dot corner-dot-br" />
+
+      <div className="particle" style={{ left: "6%", animationDuration: "16s", animationDelay: "0s", width: 2, height: 2 }} />
+      <div className="particle" style={{ left: "18%", animationDuration: "20s", animationDelay: "3s", width: 1.5, height: 1.5 }} />
+      <div className="particle large" style={{ left: "35%", animationDuration: "14s", animationDelay: "1.5s", width: 3, height: 3 }} />
+      <div className="particle" style={{ left: "52%", animationDuration: "18s", animationDelay: "5s", width: 2, height: 2 }} />
+      <div className="particle" style={{ left: "68%", animationDuration: "22s", animationDelay: "2s", width: 1, height: 1 }} />
+      <div className="particle large" style={{ left: "82%", animationDuration: "15s", animationDelay: "4s", width: 2.5, height: 2.5 }} />
+      <div className="particle" style={{ left: "92%", animationDuration: "19s", animationDelay: "6s", width: 1.5, height: 1.5 }} />
+
+      <nav className="site-nav">
+        <div className="nav-left">
+          <svg className="nav-logo-mark" viewBox="0 0 246 360" xmlns="http://www.w3.org/2000/svg">
+            <path d="M245.455 68.162V129.87L168.982 156.65V93.9637L245.455 68.162Z" />
+            <path d="M240.389 62.3805L165.49 87.6573L5.30945 24.2563L85.3315 0L240.389 62.3805Z" />
+            <path d="M161.797 93.8295V156.43L81.1141 122.607V188.07L0 152.738V29.6846L161.797 93.8295Z" />
+            <path d="M76.4728 266.036L0 291.837V230.123L76.4728 203.329V266.036Z" />
+            <path d="M160.122 360L5.07166 297.619L79.9639 272.343L240.144 335.743L160.122 360Z" />
+            <path d="M245.454 330.315L83.6569 266.175V203.57L164.34 237.395V171.93L245.454 207.262V330.315Z" />
+          </svg>
+          <div className="nav-divider" />
+          <span className="nav-product">Blocks OS</span>
+        </div>
+        <div className="nav-right">
+          <nav className="nav-links">
+            <a href="https://docs.seliseblocks.com/" target="_blank" rel="noreferrer" className="nav-link">Docs</a>
+            <a href="https://seliseblocks.com" target="_blank" rel="noreferrer" className="nav-link">Blocks</a>
+            <a href="https://github.com/SELISEdigitalplatforms" target="_blank" rel="noreferrer" className="nav-link">GitHub</a>
+          </nav>
           <ModeToggle />
         </div>
-      </header>
-      <main className="relative z-10 flex flex-1 flex-col items-start justify-center gap-16 px-6 py-12 lg:flex-row lg:items-center lg:gap-16 lg:py-0 xl:px-[154px]">
-        <div className="flex flex-1 flex-col items-start gap-6">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.1em] text-primary">
-              Blocks OS Platform
-            </p>
-            <h1 className="max-w-xl text-5xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] lg:text-6xl">
-              Backends that are
-            </h1>
-            <div className="relative flex h-[80px] overflow-visible lg:h-[88px]">
-              {titles.map((title, index) => (
-                <motion.span
-                  key={index}
-                  className="absolute text-5xl font-semibold tracking-tight text-primary lg:text-6xl"
-                  initial={{ opacity: 0, y: 28, filter: "blur(6px)" }}
-                  transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-                  animate={
-                    titleNumber === index
-                      ? { y: 0, opacity: 1, filter: "blur(0px)" }
-                      : {
-                          y: titleNumber > index ? -28 : 28,
-                          opacity: 0,
-                          filter: "blur(6px)",
-                        }
-                  }
-                >
-                  {title}.
-                </motion.span>
-              ))}
-            </div>
-          </div>
-          <p className="max-w-lg text-lg leading-relaxed tracking-tight text-muted-foreground">
+      </nav>
+
+      <main className="main">
+        <div className="col-left">
+          <p className="eyebrow">Blocks · Core Services</p>
+          <h1 className="title-main">
+            blocks<br />OS Platform
+          </h1>
+          <p className="title-sub">Enterprise platform for secure, scalable applications</p>
+          <p className="keywords">
+            Backends that are{" "}
+            <span
+              className="keyword-anim"
+              style={{ opacity: keywordVisible ? 1 : 0 }}
+            >
+              {keywords[keywordIdx]}
+            </span>
+            .
+          </p>
+          <p className="desc">
             Blocks OS is a modern platform for building and deploying secure,
             scalable applications with built-in observability, AI capabilities,
             and comprehensive identity management. Focus on your application
-            logic while Blocks OS handles the infrastructure.
+            logic while Blocks OS handles <span className="highlight">infrastructure, auth, and ops</span>.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {pillars.map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--high-emphasis))]"
-              >
-                <Icon className="h-3.5 w-3.5 text-primary" />
-                {label}
-              </div>
-            ))}
+
+          <div className="features">
+            <span className="feature-pill">Authentication</span>
+            <span className="feature-pill">Secrets Management</span>
+            <span className="feature-pill">Configuration</span>
+            <span className="feature-pill">API Console</span>
+            <span className="feature-pill">Usage</span>
+            <span className="feature-pill">Logs &amp; Tracing</span>
           </div>
-          <div className="flex flex-col gap-3 pt-2">
-            <div className="flex flex-row gap-3">
-              <Button
-                size="lg"
-                className="group gap-2"
+
+          <div className="cta-row">
+            <div className="button-container">
+              <div className="button-ring" />
+              <div className="button-ring" />
+              <button
+                className="launch-btn"
                 disabled={isStarting}
                 onClick={startLogin}
               >
                 {isStarting ? "Redirecting…" : "Log in to your account"}
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link to="https://docs.seliseblocks.com/" target="_blank">
-                  Read the Docs
-                </Link>
-              </Button>
+              </button>
             </div>
+            <Link
+              to="https://docs.seliseblocks.com/"
+              target="_blank"
+              className="cta-docs"
+            >
+              View documentation
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         </div>
-        <ServiceCarousel />
+
+        <div className="col-right">
+          <div className="sdk-header-row">
+            <p className="sdk-header-label">Core Services — Blocks Platform</p>
+            <span className="sdk-count-badge">{services.length} services</span>
+          </div>
+
+          <div className="carousel-track">
+            <div className="carousel-inner">
+              {carouselCards.map((s, i) => (
+                <div className="sdk-card" key={`${s.title}-${i}`}>
+                  <div className="sdk-card-top">
+                    <span className="sdk-name">{s.title.replace(/^Blocks\s+/, "")}</span>
+                    <span className={`sdk-badge${s.stacks ? "" : " soon"}`}>
+                      {s.badge}
+                    </span>
+                  </div>
+                  <p className="sdk-desc">{s.description}</p>
+
+                  {s.stacks ? (
+                    <div className="sdk-links">
+                      {s.stacks
+                        .filter((st) => st.available)
+                        .map((st) => (
+                          <a
+                            key={st.name}
+                            href={st.links[0]?.to ?? "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="sdk-link"
+                          >
+                            {st.name}
+                          </a>
+                        ))}
+                      {s.stacks
+                        .filter((st) => !st.available)
+                        .map((st) => (
+                          <span key={st.name} className="sdk-link dim">
+                            {st.name}
+                          </span>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="sdk-links">
+                      {s.features.map((f) => (
+                        <span key={f} className="sdk-link dim">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="sdk-card-footer">
+                    <a
+                      href={s.url || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="sdk-cta"
+                    >
+                      {s.cta}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="sdk-footer">
+            <a href="https://seliseblocks.com" target="_blank" rel="noreferrer" className="visit-construct">
+              Visit Blocks
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+            <span className="sdk-open-source">Open source</span>
+          </div>
+        </div>
       </main>
+
+      <div className="status">
+        <span className="status-dot" />
+        <span>All systems operational</span>
+      </div>
     </div>
   );
 }
