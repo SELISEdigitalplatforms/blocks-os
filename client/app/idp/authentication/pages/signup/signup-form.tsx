@@ -1,12 +1,5 @@
 import { Captcha } from "@/components/captcha";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Form,
@@ -51,12 +44,7 @@ export const SignupForm = ({
     if (!isValid && captchaCode) resetCaptcha();
   }, [captchaCode, isValid, resetCaptcha]);
   return (
-    <Card className="w-full rounded border-solid border-background shadow-none md:border-[#95ADC4] lg:max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle className="text-3xl leading-9">Blocks Cloud</CardTitle>
-        <CardDescription className="text-xl text-foreground">Sign Up</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmitHandler)}>
             {emailSignUpEnabled && (
@@ -121,7 +109,6 @@ export const SignupForm = ({
             Log in
           </Link>
         </div>
-      </CardContent>
-    </Card>
+    </>
   );
 };
