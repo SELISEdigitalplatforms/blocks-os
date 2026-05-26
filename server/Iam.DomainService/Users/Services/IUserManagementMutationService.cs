@@ -11,10 +11,10 @@ namespace Iam.DomainService.Users
         Task UpdateUserByLoginInfoAsync(RefreshTokenEvent refreshTokenConsumer);
         Task ExecuteUserMutationCommandAsync(UserMutationEvent command);
         Task<BaseMutationResponse> SaveRolesAndPermissionsAsync(SaveRolesAndPermissionsRequest command);
-        Task<bool> CreateUserByEmailAsync(CreateUserByEmailEvent @event);
+       // Task<bool> CreateUserByEmailAsync(CreateUserByEmailEvent @event);
         Task<BaseMutationResponse> CreateUserViaSsoAsync(CreateUserViaSsoRequest command);
         Task ExecuteUserMutationViaSsoCommandAsync(CreateUserViaSsoEvent command);
-        Task<bool> ProcessCreateUserByEmailAfterActionAsync(CreateUserByEmailEvent @event, string userId);
+        //Task<bool> ProcessCreateUserByEmailAfterActionAsync(CreateUserByEmailEvent @event, string userId);
         Task<BaseResponse> DeactivateUserAsync(DeactivateUserRequest request);
     }
 }
