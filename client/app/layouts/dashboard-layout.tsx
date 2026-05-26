@@ -13,7 +13,7 @@ export function DashboardLayout() {
       <ImpersonationChecker>
         <ImpersonationSynchronizer>
           <DashboardLayoutProvider isOpen={true} persist>
-            <div className="relative flex h-screen overflow-hidden bg-[hsl(var(--surface-app))]">
+            <div className="relative flex h-screen bg-[hsl(var(--surface-app))]">
               <SidebarMenuDesktop />
               <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <DashboardHeader />

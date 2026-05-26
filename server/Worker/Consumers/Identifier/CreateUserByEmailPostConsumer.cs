@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Worker.Consumers.Identifier
 {
-    public class CreateUserByEmailPostConsumer : IConsumer<CreateUserByEmailPostEvent_Identifier>
+    public class CreateUserByEmailPostConsumer : IConsumer<CreateUserByEmailPostEvent>
     {
         private readonly IPeopleService _peopleService;
 
@@ -16,7 +16,7 @@ namespace Worker.Consumers.Identifier
             _peopleService = peopleService;
         }
 
-        public async Task Consume(CreateUserByEmailPostEvent_Identifier context)
+        public async Task Consume(CreateUserByEmailPostEvent context)
         {
             await _peopleService.SendProjectInvitationToNewUser(context);
         }
