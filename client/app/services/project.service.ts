@@ -1,6 +1,7 @@
 import { http } from "@/lib/http-client";
 import { PROJECT_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
-import { IGetProjectResponse, IProjectGroup } from "@/models/project.model";
+import { IGetProjectPayload, IGetProjectResponse, IProjectGroup } from "@/models/project.model";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export class ProjectService {
   getProjects(
@@ -8,13 +9,13 @@ export class ProjectService {
     pageSize = 100,
     tenantGroupId = "",
   ): Promise<IProjectGroup[]> {
-    const url = `${PROJECT_ENDPOINTS.GETS}?page=${page}&pageSize=${pageSize}&tenantGroupId=${tenantGroupId}`;
-    return http.get(url);
+    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.GETS}?page=${page}&pageSize=${pageSize}&tenantGroupId=${tenantGroupId}`;
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  getProject(): Promise<IGetProjectResponse> {
-    const url = `${PROJECT_ENDPOINTS.GET}`;
-    return http.get(url);
+ getProject(payload: IGetProjectPayload): Promise<IGetProjectResponse> {
+    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.GET}?projectId=${payload.projectId}`;
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 }
 

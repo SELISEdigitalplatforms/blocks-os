@@ -75,6 +75,14 @@ export const useConfirmInvitation = () => {
   });
 };
 
+/** Public email-link flow: accept project invitation (unauthenticated). */
+export const usePeopleAcceptInvitation = () => {
+  return useMutation({
+    mutationKey: ["people", "accept-invite"],
+    mutationFn: peopleService.peopleAcceptInvitation,
+  });
+};
+
 export const useTransferOwnership = () => {
   const queryClient = useQueryClient();
   return useMutation({
