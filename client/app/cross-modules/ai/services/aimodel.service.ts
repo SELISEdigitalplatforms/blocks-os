@@ -18,7 +18,7 @@ const agentsBase = () => getRuntimeEnv("BLOCKS_AGENTS_BASE_URL");
 
 export class ModelService {
   createModel(payload: ICreateModelPayload): Promise<IModelResponse> {
-    return http.post(`${agentsBase()}/api${AI_ENDPOINTS.MODELS}/`, payload, { absoluteUrl: true });
+    return http.post(`${agentsBase()}/api${AI_ENDPOINTS.MODELS}/`, payload, undefined, { absoluteUrl: true });
   }
 
   getModels(payload: IModelListPayload, project_key: string): Promise<IModelListResponse> {
@@ -65,6 +65,7 @@ export class ModelService {
     return http.post(
       `${agentsBase()}/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}`,
       payload,
+      undefined,
       { absoluteUrl: true },
     );
   }
@@ -81,6 +82,7 @@ export class ModelService {
     return http.post(
       `${agentsBase()}/api${AI_ENDPOINTS.MODEL_VALIDATE.replace(":id", modelId)}?project_key=${project_key}`,
       "",
+      undefined,
       { absoluteUrl: true },
     );
   }
