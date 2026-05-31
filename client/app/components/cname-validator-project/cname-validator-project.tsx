@@ -9,7 +9,7 @@ export const CnameValidatorProject = () => {
     itemId: "",
     tenantId: "",
   };
-  const { data } = useGetProject();
+  const { data } = useGetProject({ projectId: itemId });
   const { mutateAsync, isPending } = useValidateCNameProject({ projectKey });
   const cNameValidator = async () => {
     try {

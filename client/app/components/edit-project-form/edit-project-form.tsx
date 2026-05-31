@@ -41,7 +41,7 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
     tenantId: "",
   };
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const { data } = useGetProject();
+  const { data } = useGetProject({ projectId: itemId });
   const { mutateAsync, isPending } = useUpdateProject({ projectKey });
   const [customDomainTooltipOpen, setCustomDomainTooltipOpen] = useState(false);
   const form = useForm({

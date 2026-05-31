@@ -28,7 +28,7 @@ export function ProjectList({ collapsed = false }: { collapsed?: boolean }) {
   const { pathname } = useLocation();
   const { data: projectGroups = [], isLoading } = useGetProjects();
   const { selectedProject, setSelectedProject, projects: storedProjects } = useProjectStore();
-  const { data: projectData } = useGetProject();
+  const { data: projectData } = useGetProject({ projectId: selectedProject?.itemId || "" });
   const pendingProjectRef = useRef<IProject | null>(null);
   const redirectRegexMap = useMemo(
     () =>
