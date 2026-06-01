@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { useToggleCaptchaConfigStatus } from "../hooks/use-captcha-config";
-import { useProjectStore } from "@/store/useProjectStore";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../models/captcha";
 import { isErrorWithErrors } from "@/lib/error";
@@ -21,15 +20,17 @@ type ToggleCaptchaStatusModalProps = {
 export const ToggleCaptchaStatusModal = ({ configuration }: ToggleCaptchaStatusModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { isPending, mutateAsync } = useToggleCaptchaConfigStatus();
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];
   const onConfirm = async () => {
     try {
       if (!configuration) return showErrorToast({ errors: "Something went wrong" });
       const res = await mutateAsync({
-        projectKey: tenantId,
-        isEnable: !configuration.isEnable,
         itemId: configuration.itemId,
+        isEnable: !configuration.isEnable,
+        provider: configuration.provider,
+        captchaKey: configuration.captchaKey,
+        captchaSecret: configuration.captchaSecret,
+        captchaGenerator: configuration.captchaGenerator,
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({

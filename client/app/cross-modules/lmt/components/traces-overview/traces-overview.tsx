@@ -265,7 +265,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
   return (
     <main>
       <Tabs value={tabId} onValueChange={(value: string) => tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)}>
-        <div className="mb-5 flex flex-col gap-4 rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4">
+        <div className="mb-5 flex flex-col gap-4 rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 dark:from-slate-900 dark:to-slate-800/50">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-high-emphasis">Trace storage modes</p>
