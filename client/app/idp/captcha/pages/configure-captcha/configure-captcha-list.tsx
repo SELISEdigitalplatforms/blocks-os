@@ -81,7 +81,7 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <Item label="Site Key">
                         <CopyToClipboardButton textToCopy={configuration.captchaKey}>
-                          <MaskedText text={configuration.captchaSecret} length={30} />
+                          <MaskedText text={configuration.captchaKey} length={30} />
                         </CopyToClipboardButton>
                       </Item>
                       <Item label="Secret Key">
