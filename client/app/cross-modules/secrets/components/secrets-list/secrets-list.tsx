@@ -1,9 +1,10 @@
-import { ReactNode, useState } from "react";
-import { KeyRound, Pencil, Trash2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { useState } from "react";
+import { KeyRound, Pencil, Trash2, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui-kits/table/table";
+import { MaskedText } from "@/components/masked-text";
 import { format } from "date-fns";
 import { AddSecretModal } from "../add-secret-modal/add-secret-modal";
 import { type SecretItem } from "../../constants/secret-key.enum";
@@ -21,103 +31,146 @@ const MY_SECRET_KEY = "my-secret";
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 const LoadingSkeleton = () => (
-  <div className="grid gap-4">
-    {Array.from({ length: 3 }).map((_, i) => (
-      <Card key={i}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-5 w-32 rounded" />
-            <Skeleton className="h-6 w-20 rounded" />
+  <Card>
+    <CardContent className="p-0">
+      <div className="border-b px-4 py-3 flex items-center gap-4 bg-muted/40">
+        <Skeleton className="h-3 w-4" />
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-3 w-12" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 border-b px-4 py-4 last:border-0">
+          <Skeleton className="h-4 w-4 rounded" />
+          <div className="flex items-center gap-2 flex-1">
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-36" />
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, j) => (
-              <div key={j} className="space-y-1">
-                <Skeleton className="h-3 w-20 rounded" />
-                <Skeleton className="h-5 w-36 rounded" />
-              </div>
-            ))}
+          <Skeleton className="h-5 w-14 rounded-full" />
+          <Skeleton className="h-3 w-24" />
+          <div className="ml-auto flex gap-1.5">
+            <Skeleton className="h-7 w-7 rounded" />
+            <Skeleton className="h-7 w-7 rounded" />
           </div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
+        </div>
+      ))}
+    </CardContent>
+  </Card>
 );
 
-// ─── Item ─────────────────────────────────────────────────────────────────────
-const Item = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="min-w-0">
-    <p className="mb-2 text-sm font-medium text-low-emphasis">{label}</p>
-    <div className="break-words text-base font-normal text-high-emphasis">{children}</div>
-  </div>
-);
+// ─── KV Row (expanded) ────────────────────────────────────────────────────────
+const KVRow = ({ keyName, value }: { keyName: string; value: string }) => {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <TableRow className="group bg-muted/20 hover:bg-muted/30">
+      <TableCell className="w-8 pl-4" />
+      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground" colSpan={1}>
+        {keyName}
+      </TableCell>
+      <TableCell className="py-2" colSpan={2}>
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1 font-mono text-xs">
+            {value ? (
+              revealed ? (
+                <span className="break-all text-high-emphasis">{value}</span>
+              ) : (
+                <MaskedText text={value} length={Math.min(value.length, 36)} />
+              )
+            ) : (
+              <span className="italic text-muted-foreground">empty</span>
+            )}
+          </div>
+          {value && (
+            <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-high-emphasis"
+                onClick={() => setRevealed((r) => !r)}
+              >
+                {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </Button>
+              <CopyToClipboardButton textToCopy={value}>
+                <span />
+              </CopyToClipboardButton>
+            </div>
+          )}
+        </div>
+      </TableCell>
+      <TableCell />
+    </TableRow>
+  );
+};
 
-// ─── Generic Secret Card ──────────────────────────────────────────────────────
-const GenericSecretCard = ({ item }: { item: SecretItem }) => {
+// ─── Secret Row ───────────────────────────────────────────────────────────────
+const SecretRow = ({ item }: { item: SecretItem }) => {
+  const [expanded, setExpanded] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { mutate: deleteSecret, isPending: isDeleting } = useDeleteSecret();
+
   const pairs = item.keyValuePairs ?? {};
-
-  const secretName =
-    pairs["secretName"] ?? pairs["SecretName"] ?? item.itemId;
-
-  const createdAt = item.createdDate
-    ? format(new Date(item.createdDate), "dd/MM/yyyy HH:mm")
-    : null;
-
-  const otherPairs = Object.entries(pairs).filter(
-    ([k]) => k.toLowerCase() !== "secretname",
-  );
-
-  const handleDelete = () => {
-    deleteSecret(item.itemId, {
-      onSuccess: () => setShowDeleteDialog(false),
-    });
-  };
+  const secretName = pairs["secretName"] ?? pairs["SecretName"] ?? item.itemId;
+  const otherPairs = Object.entries(pairs).filter(([k]) => k.toLowerCase() !== "secretname");
+  const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd MMM yyyy") : "—";
+  const hasKeys = otherPairs.length > 0;
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <CardTitle>{secretName}</CardTitle>
-              {createdAt && (
-                <p className="mt-0.5 text-xs text-muted-foreground">Created on {createdAt}</p>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setShowDeleteDialog(true)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+      <TableRow
+        className={`${hasKeys ? "cursor-pointer" : ""} hover:bg-muted/50`}
+        onClick={() => hasKeys && setExpanded((e) => !e)}
+      >
+        <TableCell className="w-8 py-3.5 pl-4">
+          {hasKeys ? (
+            <ChevronRight
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+            />
+          ) : (
+            <span className="block h-4 w-4" />
+          )}
+        </TableCell>
+        <TableCell className="py-3.5">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="font-medium text-high-emphasis">{secretName}</span>
           </div>
-        </CardHeader>
-        {otherPairs.length > 0 && (
-          <CardContent>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {otherPairs.map(([key, value]) => (
-                <Item key={key} label={key}>
-                  <CopyToClipboardButton textToCopy={value}>
-                    <span className="break-all">{value || "N/A"}</span>
-                  </CopyToClipboardButton>
-                </Item>
-              ))}
-            </div>
-          </CardContent>
-        )}
-      </Card>
+        </TableCell>
+        <TableCell className="py-3.5">
+          <Badge variant="secondary" className="gap-1 text-xs font-normal">
+            {otherPairs.length} {otherPairs.length === 1 ? "key" : "keys"}
+          </Badge>
+        </TableCell>
+        <TableCell className="py-3.5 text-sm text-muted-foreground">{createdAt}</TableCell>
+        <TableCell
+          className="py-3.5 pr-4 text-right"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setShowEditModal(true)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+
+      {expanded && otherPairs.map(([k, v]) => (
+        <KVRow key={k} keyName={k} value={v} />
+      ))}
+
       <AddSecretModal
         mode="edit"
         editItem={item}
@@ -125,24 +178,29 @@ const GenericSecretCard = ({ item }: { item: SecretItem }) => {
         onOpenChange={setShowEditModal}
         hideTrigger
       />
+
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Secret</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "<strong>{secretName}</strong>"? This action cannot be undone.
+              Are you sure you want to delete "<strong>{secretName}</strong>"? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDelete}
+              size="sm"
+              onClick={() =>
+                deleteSecret(item.itemId, { onSuccess: () => setShowDeleteDialog(false) })
+              }
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -159,18 +217,46 @@ export function SecretsList() {
 
   if (items.length === 0) {
     return (
-      <Card className="flex flex-col items-center justify-center py-16">
-        <KeyRound className="mb-3 h-10 w-10 opacity-30" />
-        <p className="text-sm text-muted-foreground">No secrets added yet.</p>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <KeyRound className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-high-emphasis">No secrets yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add your first secret to get started.
+          </p>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="grid gap-4">
-      {items.map((item) => (
-        <GenericSecretCard key={item.itemId} item={item} />
-      ))}
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-8 pl-4" />
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Name
+              </TableHead>
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Keys
+              </TableHead>
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Created
+              </TableHead>
+              <TableHead className="w-20" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <SecretRow key={item.itemId} item={item} />
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
