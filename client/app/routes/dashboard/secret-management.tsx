@@ -12,7 +12,9 @@ import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { MagicUrlConfigDialog } from "@blocks-utilities/components/magic-url-config-dialog/magic-url-config-dialog";
+import { MagicUrlDialog } from "@blocks-utilities/components/magic-url-dialog/magic-url-dialog";
 import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url";
+import { MagicUrls } from "@blocks-utilities/pages/magic-urls/magic-urls";
 import { StorageContents } from "@blocks-storage/pages/storage/storage-contents";
 import { ManagedServices } from "@blocks-identifier/pages/services/managed-services";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
@@ -33,7 +35,7 @@ import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-mo
 import { SecretsList } from "@/cross-modules/secrets/components/secrets-list/secrets-list";
 import { SecretType } from "@/cross-modules/secrets/constants/secret-key.enum";
 
-const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models"];
+const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models", "magic-url"];
 export default function SecretManagementPage() {
   const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "my-secret" });
   const [secretType, setSecretType] = useQueryState("secretType", {
@@ -44,6 +46,7 @@ export default function SecretManagementPage() {
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
   const { mutateAsync: saveMagicUrlConfig } = useSaveMagicUrlConfig();
   const [isMagicUrlConfigDialogOpen, setIsMagicUrlConfigDialogOpen] = useState(false);
+  const [isMagicUrlCreateDialogOpen, setIsMagicUrlCreateDialogOpen] = useState(false);
   const [isManagedServicesGuideOpen, setIsManagedServicesGuideOpen] = useState(false);
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
   const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
@@ -96,12 +99,22 @@ export default function SecretManagementPage() {
       )}
       {selectedTab === "magic-url" && (
         <>
+          <Button size="sm" onClick={() => setIsMagicUrlCreateDialogOpen(true)}>
+            <CirclePlus className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+              Create Magic URL
+            </span>
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setIsMagicUrlConfigDialogOpen(true)}>
             <Settings className="h-5 w-5" />
             <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
               Configure
             </span>
           </Button>
+          <MagicUrlDialog
+            open={isMagicUrlCreateDialogOpen}
+            onOpenChange={setIsMagicUrlCreateDialogOpen}
+          />
           <MagicUrlConfigDialog
             open={isMagicUrlConfigDialogOpen}
             onOpenChange={setIsMagicUrlConfigDialogOpen}
@@ -240,11 +253,7 @@ export default function SecretManagementPage() {
         {selectedTab === "external-idp" && <Certificates />}
         {selectedTab === "captcha" && <ConfigureCaptcha />}
         {selectedTab === "mfa" && <ConfigureMFA />}
-        {selectedTab === "magic-url" && (
-          <div className="rounded-lg border border-dashed bg-background p-8 text-center text-muted-foreground">
-            <p>Use the Configure button above to manage Magic URL settings.</p>
-          </div>
-        )}
+        {selectedTab === "magic-url" && <MagicUrls />}
         {selectedTab === "storage" && <StorageContents />}
         {selectedTab === "email" && (
           <EmailConfiguration
