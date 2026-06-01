@@ -14,6 +14,7 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
       "people",
       "repositories",
       "settings",
+      "subscription-usage",
     ]);
     const nonProjectMenuIds = new Set([
       "overview-project",
