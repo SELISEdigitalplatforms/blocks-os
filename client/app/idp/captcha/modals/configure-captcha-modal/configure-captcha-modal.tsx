@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
+import { Input } from "@/components/ui-kits/input/input";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 type ConfigureCaptchaModalProps = {
@@ -109,6 +110,19 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
         <div className="mt-2">
           <Form {...form}>
             <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmitHandler)}>
+              <FormField
+                control={form.control}
+                name="secretName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="provider"
