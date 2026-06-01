@@ -60,7 +60,7 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
     }
   };
   const handleViewDetails = (itemId: string) => {
-    navigate(`/utilities/magic-url/details/${itemId}`);
+    navigate(`/services/secret-management/magic-url/${itemId}`);
   };
   const columns = useMemo<ColumnDef<MagicUrl>[]>(
     () => [

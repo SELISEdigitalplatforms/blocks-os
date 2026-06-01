@@ -21,6 +21,7 @@ import LmtPage from "./routes/dashboard/lmt";
 import LmtServiceLogsPage from "./routes/dashboard/lmt-service-logs";
 import LmtTraceDetailsPage from "./routes/dashboard/lmt-trace-details";
 import SecretManagementPage from "./routes/dashboard/secret-management";
+import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
 import ProfilePage from "./routes/dashboard/profile";
@@ -131,6 +132,10 @@ export const router = createBrowserRouter([
       {
         path: "/services/secret-management",
         element: <SecretManagementPage />,
+      },
+      {
+        path: "/services/secret-management/magic-url/:id",
+        element: <MagicUrlDetailsPage />,
       },
       {
         path: "/services/secret-management/ai-models/:provider",

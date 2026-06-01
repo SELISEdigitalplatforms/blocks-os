@@ -1,8 +1,8 @@
 const MAGIC_LINK_SUBPATH = "/MagicLink";
 
 export const MAGIC_URL_ENDPOINTS = {
+  GET: `/api/Secrets/Gets`,
   GET_LINK: `/api${MAGIC_LINK_SUBPATH}/GetLink`,
-  GET_LINKS: `/api${MAGIC_LINK_SUBPATH}/GetLinks`,
   CREATE_LINK: `/api${MAGIC_LINK_SUBPATH}/CreateLink`,
   SAVE_CONFIG: `/api${MAGIC_LINK_SUBPATH}/SaveConfig`,
   GET_CONFIG: `/api${MAGIC_LINK_SUBPATH}/GetConfig`,

@@ -50,7 +50,7 @@ export class MagicUrlService {
     if (expiryDateRangeEndDate) params.append("ExpiryDateRange.EndDate", expiryDateRangeEndDate);
 
     const response = await http.get<IAPIResponse<MagicUrl[]>>(
-      `${MAGIC_URL_ENDPOINTS.GET_LINKS}?${params.toString()}`,
+      `${MAGIC_URL_ENDPOINTS.GET}?secretKey=magic-urls${params.toString()}`,
     );
 
     return {
