@@ -33,6 +33,7 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ReactNode, useEffect, useMemo, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 type ConfigureCaptchaModalProps = {
   configuration?: ICaptchaConfig | null;
   children: ReactNode;
@@ -72,6 +73,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       const payload = {
         projectKey: tenantId,
         isEnable: configuration ? configuration.isEnable : false,
+        itemId: configuration?.itemId ?? uuidv4(),
         ...values,
       };
       const res = await mutateAsync(payload);
