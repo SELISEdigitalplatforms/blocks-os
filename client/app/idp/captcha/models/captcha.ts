@@ -17,11 +17,34 @@ export interface ICaptchaConfig {
   lastUpdatedBy: string;
   organizationIds: string[];
   tags: string[];
+  secretName: string;
   captchaKey: string;
   captchaSecret: string;
   provider: CAPTCHA_PROVIDERS_KEY;
   captchaGenerator: keyof typeof CAPTCHA_GENERATOR_TYPE;
   isEnable: boolean;
+}
+
+export interface ICaptchaSecretKeyValuePairs {
+  secretName: string;
+  captchaKey: string;
+  captchaSecret: string;
+  provider: string;
+  captchaGenerator: string;
+  isEnable: boolean | string;
+  itemId: string;
+}
+
+export interface ICaptchaSecretResponse {
+  secretKey: string;
+  keyValuePairs: ICaptchaSecretKeyValuePairs;
+  itemId: string;
+  createdDate: string;
+  lastUpdatedDate: string;
+  createdBy: string;
+  lastUpdatedBy: string;
+  organizationIds: string[];
+  tags: string[];
 }
 
 export interface IGetCaptchaConfigsPayload {
@@ -32,6 +55,7 @@ export interface IGetCaptchaConfigsResponse {
 }
 
 export interface ISaveCaptchaConfigsPayload {
+  secretName: string;
   captchaKey: string;
   captchaSecret: string;
   provider: string;
