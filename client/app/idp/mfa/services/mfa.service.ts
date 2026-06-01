@@ -52,11 +52,11 @@ export class MFAService {
   saveMFAConfiguration(
     payload: IMFAConfigurationSavePayload,
   ): Promise<IMFAConfigurationSaveResponse> {
-    const keyValuePairs: Record<string, unknown> = {
-      enableMfa: payload.enableMfa,
-      userMfaType: payload.userMfaType,
+    const keyValuePairs: Record<string, string> = {
+      enableMfa: String(payload.enableMfa),
+      userMfaType: JSON.stringify(payload.userMfaType),
     };
-    if (payload.mfaTemplate) keyValuePairs.mfaTemplate = payload.mfaTemplate;
+    if (payload.mfaTemplate) keyValuePairs.mfaTemplate = JSON.stringify(payload.mfaTemplate);
     return secretsService
       .save({
         secretKey: "mfa",
