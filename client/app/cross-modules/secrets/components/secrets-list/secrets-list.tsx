@@ -238,14 +238,14 @@ export function SecretsList() {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Name
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Keys
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Created
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+                Created On
               </TableHead>
               <TableHead className="w-20" />
             </TableRow>
