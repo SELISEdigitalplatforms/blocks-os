@@ -10,15 +10,36 @@ import { MaskedText } from "@/components/masked-text";
 import { ReactNode } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { ToggleCaptchaStatusModal } from "@blocks-idp/captcha/modals/toggle-captcha-status-modal";
-const LoadingSkelton = () => {
-  return (
-    <div className="grid gap-2">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <Skeleton key={index} className="h-12 w-full rounded" />
-      ))}
-    </div>
-  );
-};
+const LoadingSkelton = () => (
+  <div className="grid gap-4">
+    {Array.from({ length: 2 }).map((_, index) => (
+      <Card key={index}>
+        <CardHeader className="flex-row justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </div>
+          <div className="hidden gap-4 sm:flex">
+            <Skeleton className="h-8 w-16 rounded-md" />
+            <Skeleton className="h-8 w-20 rounded-md" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <Skeleton className="h-3 w-14" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+);
 const EmptyCaptchaConfig = () => {
   return (
     <div className="text-muted- flex h-32 flex-wrap items-center justify-center rounded-sm border bg-background p-4 text-center text-muted-foreground">
