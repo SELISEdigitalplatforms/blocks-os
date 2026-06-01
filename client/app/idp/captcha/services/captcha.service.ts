@@ -52,6 +52,7 @@ export class CaptchaService {
           captchaSecret: payload.captchaSecret,
           captchaGenerator: payload.captchaGenerator,
         },
+        ...(payload.itemId ? { itemId: payload.itemId } : {}),
       })
       .then((item) => ({ isSuccess: true, errors: null, itemId: item.itemId }));
   };
