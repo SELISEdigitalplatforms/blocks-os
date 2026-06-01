@@ -14,20 +14,22 @@ import { AUTH_CLIENT_ENDPOINTS } from "../constants/endpoint.constant";
 export class AuthClientsService {
   getClientCredentials(payload: IGetClientsPayload): Promise<IClientConfigResponse[]> {
     return http.get(
-      `${AUTH_CLIENT_ENDPOINTS.GET_CLIENT_CREDENTIALS}?ProjectKey=${payload.projectKey}`,
+      `${AUTH_CLIENT_ENDPOINTS.GET_CLIENT_CREDENTIALS}`,
+      undefined,
+      { absoluteUrl: true },
     );
   }
 
   saveClientCredential(
     payload: ISaveClientCredentialPayload,
   ): Promise<APIResponse<ISaveClientCredentialResponse>> {
-    return http.post(AUTH_CLIENT_ENDPOINTS.SAVE_CLIENT_CREDENTIAL, payload);
+    return http.post(AUTH_CLIENT_ENDPOINTS.SAVE_CLIENT_CREDENTIAL, payload, undefined, { absoluteUrl: true });
   }
 
   deleteClientCredential(
     payload: IDeleteOidcClientPayload,
   ): Promise<APIResponse<IDeleteOidcClientResponse>> {
-    return http.post(AUTH_CLIENT_ENDPOINTS.DELETE_CLIENT_CREDENTIAL, payload);
+    return http.post(AUTH_CLIENT_ENDPOINTS.DELETE_CLIENT_CREDENTIAL, payload, undefined, { absoluteUrl: true });
   }
 }
 
