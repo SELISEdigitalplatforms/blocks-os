@@ -47,13 +47,12 @@ export class CaptchaService {
       .save({
         secretKey: "captcha",
         keyValuePairs: {
-          isEnable: payload.isEnable,
+          isEnable: String(payload.isEnable),
           provider: payload.provider,
           captchaKey: payload.captchaKey,
           captchaSecret: payload.captchaSecret,
           captchaGenerator: payload.captchaGenerator,
         },
-        projectKey: payload.projectKey,
       })
       .then((item) => ({ isSuccess: true, errors: null, itemId: item.itemId }));
   };
