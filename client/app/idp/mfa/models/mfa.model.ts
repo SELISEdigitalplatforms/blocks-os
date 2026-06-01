@@ -4,11 +4,31 @@ export interface IMFAConfiguration {
   projectKey: string | null;
   userMfaType: number[];
 }
+
+export interface IMFASecretKeyValuePairs {
+  enableMfa: boolean | string;
+  userMfaType: number[] | string;
+  mfaTemplate?: { templateName: string; templateId: string } | string;
+}
+
+export interface IMFASecretResponse {
+  secretKey: string;
+  keyValuePairs: IMFASecretKeyValuePairs;
+  itemId: string;
+  createdDate: string;
+  lastUpdatedDate: string;
+  createdBy: string;
+  lastUpdatedBy: string;
+  organizationIds: string[];
+  tags: string[];
+}
+
 export interface IGetConfigurationPayload {
   projectKey: string;
 }
 
 export interface IMFAConfigurationSavePayload {
+  itemId?: string;
   enableMfa: boolean;
   userMfaType: number[];
   mfaTemplate?: {
@@ -21,7 +41,9 @@ export interface IMFAConfigurationSaveResponse {
   errors: unknown | null;
   isSuccess: boolean;
 }
-export interface IGetConfigurationResponse extends IMFAConfiguration {}
+export interface IGetConfigurationResponse extends IMFAConfiguration {
+  itemId?: string;
+}
 
 export interface IConfigureUserMFAPayload {
   userId: string;
