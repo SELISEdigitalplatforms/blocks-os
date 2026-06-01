@@ -69,7 +69,10 @@ export interface ISaveCaptchaConfigsResponse {
 export interface IEnableCaptchaConfigsStatusPayload {
   itemId: string;
   isEnable: boolean;
-  projectKey: string;
+  provider: string;
+  captchaKey: string;
+  captchaSecret: string;
+  captchaGenerator: string;
 }
 
 export interface IEnableCaptchaConfigsStatusResponse extends ISaveCaptchaConfigsResponse {}

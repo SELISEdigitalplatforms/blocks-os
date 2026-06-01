@@ -18,13 +18,12 @@ export class CaptchaService {
         `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha`,
       )
       .then((secrets) => {
-        const secret = secrets?.[0];
-        if (!secret) return { configurations: [] };
-        const kv = secret.keyValuePairs;
+        if (!secrets?.length) return { configurations: [] };
         return {
-          configurations: [
-            {
-              itemId: kv.itemId || secret.itemId,
+          configurations: secrets.map((secret) => {
+            const kv = secret.keyValuePairs;
+            return {
+              itemId: secret.itemId,
               createdDate: secret.createdDate,
               lastUpdatedDate: secret.lastUpdatedDate,
               createdBy: secret.createdBy,
@@ -36,8 +35,8 @@ export class CaptchaService {
               provider: kv.provider as IGetCaptchaConfigsResponse["configurations"][0]["provider"],
               captchaGenerator: kv.captchaGenerator as IGetCaptchaConfigsResponse["configurations"][0]["captchaGenerator"],
               isEnable: typeof kv.isEnable === "string" ? kv.isEnable === "true" : Boolean(kv.isEnable),
-            },
-          ],
+            };
+          }),
         };
       });
   }
@@ -65,8 +64,11 @@ export class CaptchaService {
         secretKey: "captcha",
         keyValuePairs: {
           isEnable: String(payload.isEnable),
+          provider: payload.provider,
+          captchaKey: payload.captchaKey,
+          captchaSecret: payload.captchaSecret,
+          captchaGenerator: payload.captchaGenerator,
         },
-        projectKey: payload.projectKey,
         itemId: payload.itemId,
       })
       .then((item) => ({ isSuccess: true, errors: null, itemId: item.itemId }));
