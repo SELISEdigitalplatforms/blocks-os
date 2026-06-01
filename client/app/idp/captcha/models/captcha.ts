@@ -53,6 +53,7 @@ export interface IGetCaptchaConfigsResponse {
 }
 
 export interface ISaveCaptchaConfigsPayload {
+  itemId?: string;
   captchaKey: string;
   captchaSecret: string;
   provider: string;
