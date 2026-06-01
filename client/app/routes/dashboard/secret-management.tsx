@@ -4,6 +4,8 @@ import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication
 import { AIModels } from "@blocks-ai/pages/aimodels";
 import { OIDC } from "@blocks-idp/authentication/components/oidc";
 import { IdentityProviders } from "@blocks-idp/authentication/components/identity-provider";
+import { ClientCredentials } from "@blocks-idp/authentication/components/client-credentials";
+import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
 import { Certificates } from "@blocks-idp/authentication/pages/authentication-config/general/certificates/certificates";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
@@ -71,6 +73,7 @@ export default function SecretManagementPage() {
   const headerActions = (
     <>
       {selectedTab === GRANT_TYPES.authorizationCode && <CreateOIDC />}
+      {selectedTab === "client-credentials" && <CreateClientCredential />}
       {selectedTab === "identity-providers" && (
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
           <CirclePlus className="h-5 w-5" />
@@ -225,6 +228,7 @@ export default function SecretManagementPage() {
         {selectedTab === "identity-providers" && (
           <IdentityProviders addOpen={isAddIdpOpen} onAddOpenChange={setIsAddIdpOpen} />
         )}
+        {selectedTab === "client-credentials" && <ClientCredentials />}
         {selectedTab === "managed-services" && (
           <ManagedServices
             guideOpen={isManagedServicesGuideOpen}

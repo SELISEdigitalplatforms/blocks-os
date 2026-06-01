@@ -74,7 +74,7 @@ export type AddSecretPayload<K extends SecretType = SecretType> = {
 
 export interface SaveSecretRequest {
   secretKey: string;
-  keyValuePairs: Record<string, string>;
+  keyValuePairs: Record<string, unknown>;
   projectKey?: string;
   itemId?: string;
 }
