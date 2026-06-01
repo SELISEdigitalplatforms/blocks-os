@@ -46,6 +46,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
         projectKey: tenantId,
         enableMfa: true,
         userMfaType: userMfaTypes,
+        ...(mfaConfigData?.itemId ? { itemId: mfaConfigData.itemId } : {}),
       });
       if (res.isSuccess) {
         toast({
