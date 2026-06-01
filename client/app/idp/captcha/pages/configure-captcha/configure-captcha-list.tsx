@@ -44,16 +44,29 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
   return (
     <>
       <div className="grid gap-4">
-        {configurations.map((configuration) => (
-          <>
-            {CAPTCHA_PROVIDERS[configuration.provider] && (
-              <Card key={configuration.itemId}>
-                <CardHeader className="flex-row justify-between">
-                  <div className="flex items-center gap-4">
-                    <CardTitle> {CAPTCHA_PROVIDERS[configuration.provider].label} </CardTitle>
-                    {configuration.isEnable && <Badge variant="success">Enable</Badge>}
-                  </div>
-                  <div className="hidden gap-4 sm:flex">
+        {configurations.map((configuration) =>
+          CAPTCHA_PROVIDERS[configuration.provider] ? (
+            <Card key={configuration.itemId}>
+              <CardHeader className="flex-row justify-between">
+                <div className="flex items-center gap-4">
+                  <CardTitle> {CAPTCHA_PROVIDERS[configuration.provider].label} </CardTitle>
+                  {configuration.isEnable && <Badge variant="success">Enable</Badge>}
+                </div>
+                <div className="hidden gap-4 sm:flex">
+                  <ConfigureCaptchaModal configuration={configuration}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Pencil className="h-4 w-4" />
+                        <span className="ml-2.5">Edit</span>
+                      </Button>
+                    </DialogTrigger>
+                  </ConfigureCaptchaModal>
+                  <ToggleCaptchaStatusModal configuration={configuration} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-4 sm:hidden">
                     <ConfigureCaptchaModal configuration={configuration}>
                       <DialogTrigger asChild>
                         <Button size="sm" variant="outline">
@@ -64,38 +77,23 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
                     </ConfigureCaptchaModal>
                     <ToggleCaptchaStatusModal configuration={configuration} />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-4">
-                    <div className="flex gap-4 sm:hidden">
-                      <ConfigureCaptchaModal configuration={configuration}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Pencil className="h-4 w-4" />
-                            <span className="ml-2.5">Edit</span>
-                          </Button>
-                        </DialogTrigger>
-                      </ConfigureCaptchaModal>
-                      <ToggleCaptchaStatusModal configuration={configuration} />
-                    </div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <Item label="Site Key">
-                        <CopyToClipboardButton textToCopy={configuration.captchaKey}>
-                          <MaskedText text={configuration.captchaKey} length={30} />
-                        </CopyToClipboardButton>
-                      </Item>
-                      <Item label="Secret Key">
-                        <CopyToClipboardButton textToCopy={configuration.captchaSecret}>
-                          <MaskedText text={configuration.captchaSecret} length={30} />
-                        </CopyToClipboardButton>
-                      </Item>
-                    </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Item label="Site Key">
+                      <CopyToClipboardButton textToCopy={configuration.captchaKey}>
+                        <MaskedText text={configuration.captchaKey} length={30} />
+                      </CopyToClipboardButton>
+                    </Item>
+                    <Item label="Secret Key">
+                      <CopyToClipboardButton textToCopy={configuration.captchaSecret}>
+                        <MaskedText text={configuration.captchaSecret} length={30} />
+                      </CopyToClipboardButton>
+                    </Item>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null
+        )}
       </div>
     </>
   );
