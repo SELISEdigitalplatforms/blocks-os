@@ -1,4 +1,5 @@
 import {
+  Fingerprint,
   KeyRound,
   Layers,
   ShieldCheck,
@@ -42,6 +43,7 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
     label: "Authentication",
     items: [
       { id: GRANT_TYPES.authorizationCode, label: "OIDC", value: GRANT_TYPES.authorizationCode, icon: ShieldCheck, desc: "OpenID Connect configuration" },
+      { id: "client-credentials", label: "Client Credentials", value: "client-credentials", icon: Fingerprint, desc: "OAuth client credentials for service-to-service access" },
       { id: "identity-providers", label: "Identity Provider", value: "identity-providers", icon: Building2, desc: "Federated external identity providers" },
       { id: GRANT_TYPES.social, label: "SSO", value: GRANT_TYPES.social, icon: Users, desc: "Single sign-on providers" },
       { id: "external-idp", label: "External IdP", value: "external-idp", icon: Globe, desc: "External identity providers & certificates" },

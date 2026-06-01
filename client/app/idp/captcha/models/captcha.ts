@@ -24,6 +24,27 @@ export interface ICaptchaConfig {
   isEnable: boolean;
 }
 
+export interface ICaptchaSecretKeyValuePairs {
+  captchaKey: string;
+  captchaSecret: string;
+  provider: string;
+  captchaGenerator: string;
+  isEnable: boolean | string;
+  itemId: string;
+}
+
+export interface ICaptchaSecretResponse {
+  secretKey: string;
+  keyValuePairs: ICaptchaSecretKeyValuePairs;
+  itemId: string;
+  createdDate: string;
+  lastUpdatedDate: string;
+  createdBy: string;
+  lastUpdatedBy: string;
+  organizationIds: string[];
+  tags: string[];
+}
+
 export interface IGetCaptchaConfigsPayload {
   projectKey: string;
 }
@@ -32,6 +53,7 @@ export interface IGetCaptchaConfigsResponse {
 }
 
 export interface ISaveCaptchaConfigsPayload {
+  itemId?: string;
   captchaKey: string;
   captchaSecret: string;
   provider: string;
@@ -48,7 +70,10 @@ export interface ISaveCaptchaConfigsResponse {
 export interface IEnableCaptchaConfigsStatusPayload {
   itemId: string;
   isEnable: boolean;
-  projectKey: string;
+  provider: string;
+  captchaKey: string;
+  captchaSecret: string;
+  captchaGenerator: string;
 }
 
 export interface IEnableCaptchaConfigsStatusResponse extends ISaveCaptchaConfigsResponse {}
