@@ -17,7 +17,6 @@ export interface ICaptchaConfig {
   lastUpdatedBy: string;
   organizationIds: string[];
   tags: string[];
-  secretName: string;
   captchaKey: string;
   captchaSecret: string;
   provider: CAPTCHA_PROVIDERS_KEY;
@@ -26,7 +25,6 @@ export interface ICaptchaConfig {
 }
 
 export interface ICaptchaSecretKeyValuePairs {
-  secretName: string;
   captchaKey: string;
   captchaSecret: string;
   provider: string;
@@ -55,7 +53,6 @@ export interface IGetCaptchaConfigsResponse {
 }
 
 export interface ISaveCaptchaConfigsPayload {
-  secretName: string;
   captchaKey: string;
   captchaSecret: string;
   provider: string;

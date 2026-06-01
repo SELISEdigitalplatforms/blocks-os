@@ -15,7 +15,7 @@ export class CaptchaService {
   getCaptchaConfigs(payload: IGetCaptchaConfigsPayload): Promise<IGetCaptchaConfigsResponse> {
     return http
       .get<ICaptchaSecretResponse[]>(
-        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&ProjectKey=${payload.projectKey}`,
+        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha`,
       )
       .then((secrets) => {
         const secret = secrets?.[0];
@@ -31,7 +31,6 @@ export class CaptchaService {
               lastUpdatedBy: secret.lastUpdatedBy,
               organizationIds: secret.organizationIds,
               tags: secret.tags,
-              secretName: kv.secretName,
               captchaKey: kv.captchaKey,
               captchaSecret: kv.captchaSecret,
               provider: kv.provider as IGetCaptchaConfigsResponse["configurations"][0]["provider"],
@@ -48,7 +47,6 @@ export class CaptchaService {
       .save({
         secretKey: "captcha",
         keyValuePairs: {
-          secretName: payload.secretName,
           isEnable: payload.isEnable,
           provider: payload.provider,
           captchaKey: payload.captchaKey,
