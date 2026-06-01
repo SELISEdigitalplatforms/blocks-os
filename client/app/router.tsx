@@ -37,8 +37,16 @@ import { ProjectOverviewLayout } from "./layouts/project-overview-layout";
 import LoginCallbackPage from "./routes/auth/callback";
 import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-usage-page";
 import SsoCallbackPage from "./routes/auth/sso-callback";
+import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
+import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
+import ActivatePage from "./routes/auth/activate-page";
 
 export const router = createBrowserRouter([
+  // ── Public invitation accept flow (no auth guard) ──
+  { path: "/invitation", element: <InvitationConfirmPage /> },
+  { path: "/invitation/result", element: <InvitationResultPage /> },
+  { path: "/activate", element: <ActivatePage /> },
+
   // ── IDP service login (initiates OIDC flow + handles callback) ──
   {
     path: "/login",
