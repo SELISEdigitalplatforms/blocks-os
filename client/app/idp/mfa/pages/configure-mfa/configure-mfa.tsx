@@ -129,6 +129,7 @@ export const ConfigureMFA = () => {
       projectKey: tenantId,
       enableMfa: !!userMfaTypes.size,
       userMfaType: Array.from(userMfaTypes),
+      ...(data?.itemId ? { itemId: data.itemId } : {}),
     };
     const res = await mutateAsync(payload);
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });
