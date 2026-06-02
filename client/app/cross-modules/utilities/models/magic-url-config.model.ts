@@ -14,10 +14,14 @@ export interface IMagicUrlConfig {
 
 export interface IGetMagicUrlConfigsPayload {
   projectKey: string;
+  page: number;
+  pageSize: number;
+  searchText?: string;
 }
 
 export interface IGetMagicUrlConfigsResponse {
   configurations: IMagicUrlConfig[];
+  totalCount: number;
 }
 
 export interface ISaveMagicUrlConfigPayload {

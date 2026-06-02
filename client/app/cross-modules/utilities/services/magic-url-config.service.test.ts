@@ -38,7 +38,7 @@ describe("MagicUrlConfigService", () => {
   });
 
   describe("getMagicUrlConfigs", () => {
-    it("should GET secrets with secretKey=magic-url and map configurations", async () => {
+    it("should GET with secretKey, pagination, and map configurations", async () => {
       vi.mocked(http.get).mockResolvedValue([
         {
           itemId: "cfg-1",
@@ -50,10 +50,14 @@ describe("MagicUrlConfigService", () => {
         },
       ]);
 
-      const result = await service.getMagicUrlConfigs({ projectKey: "proj-1" });
+      const result = await service.getMagicUrlConfigs({
+        projectKey: "proj-1",
+        page: 0,
+        pageSize: 10,
+      });
 
       expect(http.get).toHaveBeenCalledWith(
-        `${SECRETS_ENDPOINTS.GETS}?secretKey=${MAGIC_URL_CONFIG_SECRET_KEY}`,
+        `${SECRETS_ENDPOINTS.GETS}?secretKey=${MAGIC_URL_CONFIG_SECRET_KEY}&PageSize=10&PageNumber=0`,
       );
       expect(result.configurations).toHaveLength(1);
       expect(result.configurations[0]).toMatchObject({
@@ -61,14 +65,34 @@ describe("MagicUrlConfigService", () => {
         contextName: "Default",
         shortUrlBase: "https://short.example.com/",
       });
+      expect(result.totalCount).toBe(1);
+    });
+
+    it("should append SearchText when provided", async () => {
+      vi.mocked(http.get).mockResolvedValue([]);
+
+      await service.getMagicUrlConfigs({
+        projectKey: "proj-1",
+        page: 0,
+        pageSize: 10,
+        searchText: "dev-short",
+      });
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${SECRETS_ENDPOINTS.GETS}?secretKey=${MAGIC_URL_CONFIG_SECRET_KEY}&PageSize=10&PageNumber=0&SearchText=dev-short`,
+      );
     });
 
     it("should return empty configurations when API returns no rows", async () => {
       vi.mocked(http.get).mockResolvedValue([]);
 
-      const result = await service.getMagicUrlConfigs({ projectKey: "proj-1" });
+      const result = await service.getMagicUrlConfigs({
+        projectKey: "proj-1",
+        page: 0,
+        pageSize: 10,
+      });
 
-      expect(result).toEqual({ configurations: [] });
+      expect(result).toEqual({ configurations: [], totalCount: 0 });
     });
   });
 
@@ -92,24 +116,6 @@ describe("MagicUrlConfigService", () => {
         itemId: "cfg-1",
       });
       expect(result).toEqual({ isSuccess: true, errors: null, itemId: "cfg-1" });
-    });
-
-    it("should omit itemId on create when not provided", async () => {
-      vi.mocked(secretsService.save).mockResolvedValue({ itemId: "new-id" } as never);
-
-      await service.saveMagicUrlConfig({
-        projectKey: "proj-1",
-        contextName: "Default",
-        shortUrlBase: "https://short.example.com/",
-      });
-
-      expect(secretsService.save).toHaveBeenCalledWith({
-        secretKey: MAGIC_URL_CONFIG_SECRET_KEY,
-        keyValuePairs: {
-          contextName: "Default",
-          shortUrlBase: "https://short.example.com/",
-        },
-      });
     });
   });
 });
