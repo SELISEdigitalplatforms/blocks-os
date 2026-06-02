@@ -9,7 +9,6 @@ const IAM_SUBPATH = "/iam";
 
 export const USER_ENDPOINTS = {
   GET_USERS: `${API_BASES.IAM}${IAM_SUBPATH}/users`,
-  GET_USER: `${API_BASES.IAM}${IAM_SUBPATH}/user`,
   ME: `${API_BASES.IAM}${IAM_SUBPATH}/me`,
   USER_INFO: `${API_BASES.IAM}/idp/UserInfo`,
   CREATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/create`,
