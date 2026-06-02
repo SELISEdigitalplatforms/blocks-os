@@ -12,7 +12,6 @@ import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { MagicUrlConfigDialog } from "@blocks-utilities/components/magic-url-config-dialog/magic-url-config-dialog";
-import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url";
 import { MagicUrls } from "@blocks-utilities/pages/magic-urls/magic-urls";
 import { StorageContents } from "@blocks-storage/pages/storage/storage-contents";
 import { ManagedServices } from "@blocks-identifier/pages/services/managed-services";
@@ -43,7 +42,6 @@ export default function SecretManagementPage() {
   });
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
-  const { mutateAsync: saveMagicUrlConfig } = useSaveMagicUrlConfig();
   const [isMagicUrlConfigDialogOpen, setIsMagicUrlConfigDialogOpen] = useState(false);
   const [isManagedServicesGuideOpen, setIsManagedServicesGuideOpen] = useState(false);
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
@@ -106,10 +104,6 @@ export default function SecretManagementPage() {
           <MagicUrlConfigDialog
             open={isMagicUrlConfigDialogOpen}
             onOpenChange={setIsMagicUrlConfigDialogOpen}
-            projectKey={tenantId}
-            onSave={async (config) => {
-              await saveMagicUrlConfig(config);
-            }}
           />
         </>
       )}

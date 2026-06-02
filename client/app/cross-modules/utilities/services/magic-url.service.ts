@@ -1,23 +1,19 @@
 import { http } from "@/lib/http-client";
+import { IAPIResponse } from "@/models/api-response";
+import { MAGIC_URL_ENDPOINTS } from "@blocks-utilities/constants/endpoint.constant";
 import {
+  ICreateMagicUrlPayload,
   IGetMagicUrlByIdPayload,
   IGetMagicUrlsPayload,
   IGetMagicUrlsResponse,
   MagicUrl,
-  ICreateMagicUrlPayload,
 } from "@blocks-utilities/models/magic-url.model";
-import {
-  ISaveMagicUrlConfigPayload,
-  ISaveMagicUrlConfigResponse,
-} from "@blocks-utilities/models/magic-url-config.model";
-import { IAPIResponse } from "@/models/api-response";
-import { MAGIC_URL_ENDPOINTS } from "@blocks-utilities/constants/endpoint.constant";
 
 export class MagicUrlService {
   async getMagicUrl(payload: IGetMagicUrlByIdPayload): Promise<MagicUrl> {
-    const { ItemId, projectKey } = payload;
+    const { ItemId } = payload;
     const response = await http.get<IAPIResponse<MagicUrl>>(
-      `${MAGIC_URL_ENDPOINTS.GET_LINK}?ItemId=${ItemId}&ProjectKey=${projectKey}`,
+      `${MAGIC_URL_ENDPOINTS.GET_LINK}?ItemId=${ItemId}`,
     );
     return response.data;
   }
@@ -26,7 +22,6 @@ export class MagicUrlService {
     const {
       page,
       pageSize,
-      projectKey,
       searchText,
       status,
       expiryDateRangeStartDate,
@@ -38,7 +33,6 @@ export class MagicUrlService {
     const params = new URLSearchParams({
       PageSize: pageSize.toString(),
       PageNumber: page.toString(),
-      ProjectKey: projectKey,
     });
 
     if (searchText) params.append("SearchText", searchText);
@@ -50,7 +44,7 @@ export class MagicUrlService {
     if (expiryDateRangeEndDate) params.append("ExpiryDateRange.EndDate", expiryDateRangeEndDate);
 
     const response = await http.get<IAPIResponse<MagicUrl[]>>(
-      `${MAGIC_URL_ENDPOINTS.GET}?secretKey=magic-urls${params.toString()}`,
+      `${MAGIC_URL_ENDPOINTS.GET}?secretKey=magic-url&${params.toString()}`,
     );
 
     return {
@@ -62,23 +56,6 @@ export class MagicUrlService {
 
   async createMagicUrl(payload: ICreateMagicUrlPayload): Promise<MagicUrl> {
     const response = await http.post<MagicUrl>(MAGIC_URL_ENDPOINTS.CREATE_LINK, payload);
-    return response;
-  }
-
-  async saveMagicUrlConfig(
-    payload: ISaveMagicUrlConfigPayload,
-  ): Promise<ISaveMagicUrlConfigResponse> {
-    const response = await http.post<ISaveMagicUrlConfigResponse>(
-      MAGIC_URL_ENDPOINTS.SAVE_CONFIG,
-      payload,
-    );
-    return response;
-  }
-
-  async getMagicUrlConfig(projectKey: string): Promise<ISaveMagicUrlConfigResponse> {
-    const response = await http.get<ISaveMagicUrlConfigResponse>(
-      `${MAGIC_URL_ENDPOINTS.GET_CONFIG}?ProjectKey=${projectKey}`,
-    );
     return response;
   }
 
