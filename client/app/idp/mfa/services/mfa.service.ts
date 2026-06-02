@@ -1,15 +1,12 @@
 import { http } from "@/lib/http-client";
-import { secretsService } from "@/services/secrets.service";
 import {
   IGenerateUserMFA_OtpPayload,
   IGenerateUserMFA_OtpResponse,
-  IGetConfigurationPayload,
   IGetConfigurationResponse,
   IConfigureUserMFAPayload,
   IConfigureUserMFAResponse,
   IMFAConfigurationSavePayload,
   IMFAConfigurationSaveResponse,
-  IMFASecretResponse,
   ISetupUserTotpPayload,
   ISetupUserTotpResponse,
   IVerifyMfaOtpPayload,
@@ -21,49 +18,14 @@ import {
 import { MFA_CONFIG_ENDPOINTS, MFA_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class MFAService {
-  getConfigurations(_payload: IGetConfigurationPayload): Promise<IGetConfigurationResponse> {
-    return http
-      .get<IMFASecretResponse[]>(`${MFA_CONFIG_ENDPOINTS.GET}?secretKey=mfa`)
-      .then((secrets) => {
-        const secret = secrets?.[0];
-        if (!secret) {
-          return { enableMfa: false, mfaTemplate: { templateName: "", templateId: "" }, projectKey: null, userMfaType: [] };
-        }
-        const kv = secret.keyValuePairs;
-        const userMfaType = Array.isArray(kv.userMfaType)
-          ? kv.userMfaType.map(Number)
-          : typeof kv.userMfaType === "string"
-          ? JSON.parse(kv.userMfaType)
-          : [];
-        const mfaTemplate =
-          typeof kv.mfaTemplate === "string"
-            ? JSON.parse(kv.mfaTemplate)
-            : kv.mfaTemplate ?? { templateName: "", templateId: "" };
-        return {
-          itemId: secret.itemId,
-          enableMfa: typeof kv.enableMfa === "string" ? kv.enableMfa === "true" : Boolean(kv.enableMfa),
-          userMfaType,
-          mfaTemplate,
-          projectKey: null,
-        };
-      });
+  getConfigurations(): Promise<IGetConfigurationResponse> {
+    return http.get(MFA_CONFIG_ENDPOINTS.GET, undefined, { absoluteUrl: true });
   }
 
   saveMFAConfiguration(
     payload: IMFAConfigurationSavePayload,
   ): Promise<IMFAConfigurationSaveResponse> {
-    const keyValuePairs: Record<string, string> = {
-      enableMfa: String(payload.enableMfa),
-      userMfaType: JSON.stringify(payload.userMfaType),
-    };
-    if (payload.mfaTemplate) keyValuePairs.mfaTemplate = JSON.stringify(payload.mfaTemplate);
-    return secretsService
-      .save({
-        secretKey: "mfa",
-        keyValuePairs,
-        ...(payload.itemId ? { itemId: payload.itemId } : {}),
-      })
-      .then(() => ({ isSuccess: true, errors: null }));
+    return http.post(MFA_CONFIG_ENDPOINTS.SAVE, payload, undefined, { absoluteUrl: true });
   }
 
   generateUserMfaOTP(payload: IGenerateUserMFA_OtpPayload): Promise<IGenerateUserMFA_OtpResponse> {
