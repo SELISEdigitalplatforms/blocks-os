@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogHeader,
@@ -9,46 +9,51 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
-import { ISaveMagicUrlConfigPayload } from "@blocks-utilities/models/magic-url-config.model";
-import { useGetMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetMagicUrlConfigs,
+  useSaveMagicUrlConfig,
+} from "@blocks-utilities/hooks/use-magic-url-config";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { getDefaultShortUrlBase, isValidUrl } from "@blocks-utilities/utils/url.util";
-import { Loader2 } from "lucide-react";
+import { useProjectStore } from "@/store/useProjectStore";
+import { v4 as uuidv4 } from "uuid";
+
 interface MagicUrlConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger?: React.ReactNode;
-  onSave?: (config: ISaveMagicUrlConfigPayload) => Promise<void>;
-  projectKey?: string;
 }
+
 export const MagicUrlConfigDialog = ({
   open,
   onOpenChange,
   trigger,
-  onSave,
-  projectKey,
 }: MagicUrlConfigDialogProps) => {
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [contextName, setContextName] = useState("");
   const [shortUrlBase, setShortUrlBase] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({ contextName: "", shortUrlBase: "" });
-  const queryClient = useQueryClient();
-  const { data: configData, isLoading: isConfigLoading } = useGetMagicUrlConfig(projectKey || "", {
-    enabled: open && !!projectKey,
-  });
+
+  const { data: configData } = useGetMagicUrlConfigs(
+    { projectKey: tenantId },
+    { enabled: open && !!tenantId },
+  );
+  const { mutateAsync: saveConfig, isPending: isSaving } = useSaveMagicUrlConfig();
+
+  const existingConfig = configData?.configurations?.[0];
+
   useEffect(() => {
-    if (open && configData) {
-      if (configData.config) {
-        setContextName(configData.config.contextName || "");
-        setShortUrlBase(configData.config.shortUrlBase || "");
-      } else {
-        setContextName("Default");
-        setShortUrlBase(getDefaultShortUrlBase());
-      }
-      setErrors({ contextName: "", shortUrlBase: "" });
+    if (!open) return;
+    if (existingConfig) {
+      setContextName(existingConfig.contextName || "");
+      setShortUrlBase(existingConfig.shortUrlBase || "");
+    } else {
+      setContextName("Default");
+      setShortUrlBase(getDefaultShortUrlBase());
     }
-  }, [open, configData]);
+    setErrors({ contextName: "", shortUrlBase: "" });
+  }, [open, existingConfig?.itemId, existingConfig?.contextName, existingConfig?.shortUrlBase]);
+
   const validateFields = (): boolean => {
     const newErrors = { contextName: "", shortUrlBase: "" };
     if (!contextName.trim()) {
@@ -64,28 +69,30 @@ export const MagicUrlConfigDialog = ({
     setErrors(newErrors);
     return !newErrors.contextName && !newErrors.shortUrlBase;
   };
+
   const handleSave = async () => {
-    if (!projectKey) return;
+    if (!tenantId) return;
     if (!validateFields()) return;
-    setIsLoading(true);
     try {
-      const payload: ISaveMagicUrlConfigPayload = { contextName, shortUrlBase, projectKey };
-      if (onSave) {
-        await onSave(payload);
-      }
-      await queryClient.invalidateQueries({ queryKey: ["magic-url-config", projectKey] });
-      if (!configData?.isSuccess) return showErrorToast({ errors: configData?.errorMessage });
+      const res = await saveConfig({
+        projectKey: tenantId,
+        contextName: contextName.trim(),
+        shortUrlBase: shortUrlBase.trim(),
+        itemId: existingConfig?.itemId ?? uuidv4(),
+      });
+      if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Configuration updated successfully" });
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save config:", error);
-    } finally {
-      setIsLoading(false);
+      showErrorToast({ errors: "Failed to save configuration" });
     }
   };
+
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen);
   };
+
   return (
     <>
       {trigger && (
@@ -98,64 +105,52 @@ export const MagicUrlConfigDialog = ({
           <DialogHeader>
             <DialogTitle>Configure Magic URL</DialogTitle>
           </DialogHeader>
-          {isConfigLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-4 w-4 animate-spin" />
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="contextName">
+                Context Name <span className="text-error">*</span>
+              </Label>
+              <Input
+                id="contextName"
+                placeholder="Enter context name"
+                value={contextName}
+                onChange={(e) => {
+                  setContextName(e.target.value);
+                  if (errors.contextName) setErrors((prev) => ({ ...prev, contextName: "" }));
+                }}
+                disabled={isSaving}
+                className={errors.contextName ? "border-error" : ""}
+              />
+              {errors.contextName && <p className="text-sm text-error">{errors.contextName}</p>}
             </div>
-          ) : (
-            <>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contextName">
-                    Context Name <span className="text-error">*</span>
-                  </Label>
-                  <Input
-                    id="contextName"
-                    placeholder="Enter context name"
-                    value={contextName}
-                    onChange={(e) => {
-                      setContextName(e.target.value);
-                      if (errors.contextName) setErrors((prev) => ({ ...prev, contextName: "" }));
-                    }}
-                    disabled={isLoading}
-                    className={errors.contextName ? "border-error" : ""}
-                  />
-                  {errors.contextName && <p className="text-sm text-error">{errors.contextName}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="shortUrlBase">
-                    Short URL Base <span className="text-error">*</span>
-                  </Label>
-                  <Input
-                    id="shortUrlBase"
-                    placeholder="e.g., https://short.seliseblocks.com/"
-                    value={shortUrlBase}
-                    onChange={(e) => {
-                      setShortUrlBase(e.target.value);
-                      if (errors.shortUrlBase) setErrors((prev) => ({ ...prev, shortUrlBase: "" }));
-                    }}
-                    disabled={isLoading}
-                    className={errors.shortUrlBase ? "border-error" : ""}
-                  />
-                  {errors.shortUrlBase && (
-                    <p className="text-sm text-error">{errors.shortUrlBase}</p>
-                  )}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => handleOpenChange(false)}
-                  disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="shortUrlBase">
+                Short URL Base <span className="text-error">*</span>
+              </Label>
+              <Input
+                id="shortUrlBase"
+                placeholder="e.g., https://short.seliseblocks.com/"
+                value={shortUrlBase}
+                onChange={(e) => {
+                  setShortUrlBase(e.target.value);
+                  if (errors.shortUrlBase) setErrors((prev) => ({ ...prev, shortUrlBase: "" }));
+                }}
+                disabled={isSaving}
+                className={errors.shortUrlBase ? "border-error" : ""}
+              />
+              {errors.shortUrlBase && (
+                <p className="text-sm text-error">{errors.shortUrlBase}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
