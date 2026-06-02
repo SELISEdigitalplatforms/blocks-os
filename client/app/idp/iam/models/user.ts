@@ -12,25 +12,40 @@ export interface User {
   email: string;
   userName: string;
   phoneNumber: string;
-  roles: string[];
-  permissions: string[];
+  organizationIds: string[];
+  lastUsedOrganizationId: string | null;
+  roles: Record<string, string[]>;
+  permissions: Record<string, string[]>;
   active: boolean;
+  status: number;
+  statusReason: string | null;
+  deactivatedAtUtc: string | null;
   isVarified: boolean;
+  isVerified: boolean;
+  emailVerifiedAtUtc: string | null;
+  phoneVerifiedAtUtc: string | null;
   profileImageUrl: string;
+  profileImageId: string;
   mfaEnabled: boolean;
+  isMfaVerified: boolean;
+  userMfaType: number;
   lastLoggedInTime: string;
+  lastLoggedInDeviceInfo: string;
   logInCount: number;
   firstLoggedInTime: string;
-  userMfaType: number;
-  isMfaVerified: boolean;
+  provisioningSource: number;
+  externalIdentities: unknown[];
   userCreationType: number;
-  memberships: IMembership[]
+  department: string | null;
+  employeeId: string | null;
+  isMultiOrgEnabled: boolean;
+  organizations: IMembership[];
 }
 
 export interface IMembership {
-  organizationId: string,
-  roles: string[],
-  permissions: string[]
+  organizationId: string;
+  roles: string[];
+  permissions: string[];
 }
 export interface IGetUsersPayload {
   page: number;
@@ -59,8 +74,6 @@ export interface IGetUserByIdPayload {
 export interface IGetUserByIdResponse {
   data: User;
   errors: unknown;
-  roles: IRole[];
-  permissions: IPermission[];
 }
 
 export interface ICreateUserPayload {
@@ -81,19 +94,28 @@ export interface ICreateUserResponse {
 
 export interface IUpdateUserPayload {
   itemId: string;
-  projectKey: string;
-  salutation?: string;
+  projectKey?: string;
   firstName?: string;
   lastName?: string;
-  phoneNumber?: string;
-  tags?: string[];
-  profileImageUrl?: string;
-  profileImageId?: string;
-  userMfaType?: number;
+  email?: string;
+  userName?: string;
+  language?: string;
+  organizationIds?: string[];
+  roles?: string[] | Record<string, string[]>;
+  permissions?: string[] | Record<string, string[]>;
+  active?: boolean;
+  status?: number;
+  isVerified?: boolean;
   mfaEnabled?: boolean;
-  roles?: string[];
-  permissions?: string[];
-  memberships?: IMembership[];
+  isMfaVerified?: boolean;
+  userMfaType?: number;
+  provisioningSource?: number;
+  externalIdentities?: unknown[];
+  userCreationType?: number;
+  isMultiOrgEnabled?: boolean;
+  organizations?: string[] | IMembership[];
+  profileImageId?: string | null;
+  profileImageUrl?: string | null;
 }
 
 export interface IUpdateUserResponse {
@@ -134,7 +156,6 @@ export interface IGeneratePATPayload {
 
 export interface IGetUserRolesPayload {
   userId: string;
-  projectKey: string;
 }
 export interface IGetUserRolesResponse {
   totalCount: number;
@@ -144,7 +165,6 @@ export interface IGetUserRolesResponse {
 
 export interface IGetUserPermissionsPayload {
   userId: string;
-  projectKey: string;
 }
 export interface IGetUserPermissionsResponse {
   errors: unknown | null;

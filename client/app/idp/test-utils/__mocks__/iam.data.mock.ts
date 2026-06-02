@@ -73,19 +73,34 @@ export const mockUser: User = {
   email: "test@blocks.com",
   userName: "testuser",
   phoneNumber: "+1234567890",
-  roles: ["admin"],
-  permissions: ["read", "write"],
+  organizationIds: [],
+  lastUsedOrganizationId: null,
+  roles: { default: ["admin"] },
+  permissions: { default: ["read", "write"] },
   active: true,
+  status: 1,
+  statusReason: null,
+  deactivatedAtUtc: null,
   isVarified: true,
+  isVerified: true,
+  emailVerifiedAtUtc: null,
+  phoneVerifiedAtUtc: null,
   profileImageUrl: "",
+  profileImageId: "",
   mfaEnabled: false,
+  isMfaVerified: false,
+  userMfaType: 0,
   lastLoggedInTime: "2026-01-15T10:00:00Z",
+  lastLoggedInDeviceInfo: "",
   logInCount: 5,
   firstLoggedInTime: "2025-12-01T10:00:00Z",
-  userMfaType: 0,
-  isMfaVerified: false,
+  provisioningSource: 0,
+  externalIdentities: [],
   userCreationType: 1,
-  memberships: [],
+  department: null,
+  employeeId: null,
+  isMultiOrgEnabled: false,
+  organizations: [],
 };
 
 export const mockUser2: User = {
@@ -127,7 +142,6 @@ export const mockCreateUserPayload: ICreateUserPayload = {
 
 export const mockUpdateUserPayload: IUpdateUserPayload = {
   itemId: MOCK_USER_ITEM_ID,
-  projectKey: TEST_PROJECT_KEY,
   firstName: "Updated",
 };
 
@@ -160,12 +174,10 @@ export const mockGeneratePATPayload: IGeneratePATPayload = {
 
 export const mockGetUserRolesPayload: IGetUserRolesPayload = {
   userId: MOCK_USER_ITEM_ID,
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockGetUserPermissionsPayload: IGetUserPermissionsPayload = {
   userId: MOCK_USER_ITEM_ID,
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockSignUpSettingResponse = {
