@@ -1,6 +1,7 @@
 import { http } from "@/lib/http-client";
 import { secretsService, SECRETS_ENDPOINTS } from "@/services/secrets.service";
 import type { SecretItem } from "@/cross-modules/secrets/constants/secret-key.enum";
+import type { IAPIResponse } from "@/models/api-response";
 import {
   IGetMagicUrlConfigsPayload,
   IGetMagicUrlConfigsResponse,
@@ -25,18 +26,49 @@ const mapSecretToConfig = (secret: SecretItem): IMagicUrlConfig => {
   };
 };
 
+const normalizeSecretsResponse = (
+  response: SecretItem[] | IAPIResponse<SecretItem[]>,
+): SecretItem[] => {
+  if (Array.isArray(response)) return response;
+  return response.data ?? [];
+};
+
+const filterBySearch = (configs: IMagicUrlConfig[], searchText?: string): IMagicUrlConfig[] => {
+  const query = searchText?.trim().toLowerCase();
+  if (!query) return configs;
+  return configs.filter(
+    (config) =>
+      config.contextName.toLowerCase().includes(query) ||
+      config.shortUrlBase.toLowerCase().includes(query),
+  );
+};
+
 export class MagicUrlConfigService {
-  getMagicUrlConfigs(
-    _payload: IGetMagicUrlConfigsPayload,
-  ): Promise<IGetMagicUrlConfigsResponse> {
+  getMagicUrlConfigs(payload: IGetMagicUrlConfigsPayload): Promise<IGetMagicUrlConfigsResponse> {
+    const params = new URLSearchParams({
+      secretKey: MAGIC_URL_CONFIG_SECRET_KEY,
+      PageSize: payload.pageSize.toString(),
+      PageNumber: payload.page.toString(),
+    });
+    if (payload.searchText?.trim()) {
+      params.append("SearchText", payload.searchText.trim());
+    }
+
     return http
-      .get<SecretItem[]>(
-        `${SECRETS_ENDPOINTS.GETS}?secretKey=${MAGIC_URL_CONFIG_SECRET_KEY}`,
+      .get<SecretItem[] | IAPIResponse<SecretItem[]>>(
+        `${SECRETS_ENDPOINTS.GETS}?${params.toString()}`,
       )
-      .then((secrets) => {
-        if (!secrets?.length) return { configurations: [] };
+      .then((response) => {
+        const secrets = normalizeSecretsResponse(response);
+        const mapped = secrets.map(mapSecretToConfig);
+        const filtered = filterBySearch(mapped, payload.searchText);
+        const totalCount = Array.isArray(response)
+          ? filtered.length
+          : (response.totalCount ?? filtered.length);
+
         return {
-          configurations: secrets.map(mapSecretToConfig),
+          configurations: filtered,
+          totalCount,
         };
       });
   }
