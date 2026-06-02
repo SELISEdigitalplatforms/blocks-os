@@ -112,17 +112,14 @@ export const EditMembership = ({
   }, []);
   const handleSave = async () => {
     try {
-      const existingMemberships = userData?.data?.memberships || [];
-      const updatedMemberships = existingMemberships.map((m) =>
-        m.organizationId === membership.organizationId
-          ? { ...m, roles: selectedRoles, permissions: selectedPermissions }
-          : m,
-      );
+      const existingOrgIds = userData?.data?.organizationIds || [];
       const res = await mutateAsync({
         ...userData?.data,
-        memberships: updatedMemberships,
         itemId: userId,
-        projectKey,
+        organizationIds: existingOrgIds,
+        organizations: existingOrgIds,
+        roles: selectedRoles,
+        permissions: selectedPermissions,
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
