@@ -7,7 +7,7 @@ export interface IdentityProvider {
   name: string;
   displayName: string;
   description?: string;
-  provider: IdentityProviderType;
+  providerType: IdentityProviderType;
   tokenEndpointAuthMethod: TokenEndpointAuthMethod;
   clientId: string;
   clientSecret?: string;
