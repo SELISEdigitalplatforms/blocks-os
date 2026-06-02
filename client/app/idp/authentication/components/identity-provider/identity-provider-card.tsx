@@ -73,7 +73,7 @@ export function IdentityProviderCard({ provider }: Props) {
                 {provider.isActive ? "Active" : "Inactive"}
               </Badge>
               <Badge variant="outline" className="shrink-0 text-xs">
-                {PROVIDER_TYPE_LABELS[provider.providerType] ?? provider.providerType}
+                {PROVIDER_TYPE_LABELS[provider.provider] ?? provider.provider}
               </Badge>
             </div>
             <div className="flex shrink-0 items-center gap-1">
