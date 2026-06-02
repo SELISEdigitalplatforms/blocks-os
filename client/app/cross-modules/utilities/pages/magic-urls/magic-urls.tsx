@@ -1,31 +1,26 @@
-import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card"
-import { Pagination } from "@/components/ui-kits/pagination/pagination"
-import { useMagicUrlsFilterQueryParams, MagicUrlsFilterToolBar } from "./magic-urls-filter-toolbar"
-import { MagicUrlsList } from "./magic-urls-list"
-import { useProjectStore } from "@/store/useProjectStore"
-import { useGetMagicUrls } from "@blocks-utilities/hooks/use-magic-url"
+import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { useMagicUrlsFilterQueryParams, MagicUrlsFilterToolBar } from "./magic-urls-filter-toolbar";
+import { MagicUrlsList } from "./magic-urls-list";
+import { useProjectStore } from "@/store/useProjectStore";
+import { useGetMagicUrlConfigs } from "@blocks-utilities/hooks/use-magic-url-config";
 
 export const MagicUrls = () => {
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || ""
-  const { queryParams, setQueryParams } = useMagicUrlsFilterQueryParams()
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  const { queryParams, setQueryParams } = useMagicUrlsFilterQueryParams();
 
-  const { data, isLoading, isFetching } = useGetMagicUrls({
+  const { data, isLoading, isFetching } = useGetMagicUrlConfigs({
+    projectKey: tenantId,
     page: queryParams.page,
     pageSize: queryParams.pageSize,
-    projectKey: tenantId,
     searchText: queryParams.search || undefined,
-    status: queryParams.status || undefined,
-    expiryDateRangeStartDate: queryParams.expiryStartDate || undefined,
-    expiryDateRangeEndDate: queryParams.expiryEndDate || undefined,
-    requestMethod: queryParams.requestMethod || undefined,
-    type: queryParams.type || undefined,
-  })
+  });
 
-  const loading = isLoading || isFetching
+  const loading = isLoading || isFetching;
 
   const handlePageChange = (page: number) => {
-    setQueryParams((params) => ({ ...params, page }))
-  }
+    setQueryParams((params) => ({ ...params, page }));
+  };
 
   return (
     <Card>
@@ -33,7 +28,7 @@ export const MagicUrls = () => {
         <MagicUrlsFilterToolBar />
       </CardHeader>
       <CardContent>
-        <MagicUrlsList data={data?.data || []} isLoading={loading} />
+        <MagicUrlsList configurations={data?.configurations || []} isLoading={loading} />
         {!loading && data && data.totalCount > queryParams.pageSize && (
           <div className="mt-5 flex items-center md:justify-end">
             <Pagination
@@ -41,11 +36,11 @@ export const MagicUrls = () => {
               pageSize={queryParams.pageSize}
               pageSizeOptions={[queryParams.pageSize]}
               onChange={handlePageChange}
-              totalCount={data?.totalCount || 0}
+              totalCount={data.totalCount}
             />
           </div>
         )}
       </CardContent>
     </Card>
-  )
-}
+  );
+};
