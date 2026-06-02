@@ -10,5 +10,5 @@ export const ConfigureCaptchaFormDefaultValue = {
   provider: "",
   captchaKey: "",
   captchaSecret: "",
-  captchaGenerator: "",
+  captchaGenerator: "EasyCaptchaGenerator",
 };
