@@ -31,17 +31,32 @@ export const RemoveMembership = ({
 }: RemoveMembershipProps) => {
     const { data: userData } = useGetUserById({ id: userId, projectKey });
     const { mutateAsync, isPending } = useUpdateUser({ id: userId, projectKey });
-    const existingMemberships = userData?.data?.memberships || [];
     const onConfirm = async () => {
         try {
-            const updatedMemberships = existingMemberships.filter(
-                (m) => m.organizationId !== membership.organizationId
+            const updatedOrganizationIds = (userData?.data?.organizationIds || []).filter(
+                (id) => id !== membership.organizationId,
             );
+            const updatedRoles = Object.values(
+                Object.fromEntries(
+                    Object.entries(userData?.data?.roles || {}).filter(
+                        ([orgId]) => orgId !== membership.organizationId,
+                    ),
+                ),
+            ).flat();
+            const updatedPermissions = Object.values(
+                Object.fromEntries(
+                    Object.entries(userData?.data?.permissions || {}).filter(
+                        ([orgId]) => orgId !== membership.organizationId,
+                    ),
+                ),
+            ).flat();
             const res = await mutateAsync({
                 ...userData?.data,
-                memberships: updatedMemberships,
                 itemId: userId,
-                projectKey,
+                organizationIds: updatedOrganizationIds,
+                organizations: updatedOrganizationIds,
+                roles: updatedRoles,
+                permissions: updatedPermissions,
             });
             if (!res.isSuccess) {
                 showErrorToast({ errors: res.errors });
