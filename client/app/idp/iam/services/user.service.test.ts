@@ -73,7 +73,7 @@ describe("UserService", () => {
 
       const result = await service.getUser();
 
-      expect(http.get).toHaveBeenCalledWith(USER_ENDPOINTS.GET_USER, undefined, {
+      expect(http.get).toHaveBeenCalledWith(USER_ENDPOINTS.GET_USERS, undefined, {
         absoluteUrl: true,
       });
       expect(result).toEqual(mockResponse);
@@ -95,7 +95,7 @@ describe("UserService", () => {
       const result = await service.getUserById(payload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${USER_ENDPOINTS.GET_USER}?id=${payload.id}&ProjectKey=${payload.projectKey}`,
+        `${USER_ENDPOINTS.GET_USERS}/${payload.id}`,
         undefined,
         { absoluteUrl: true },
       );
@@ -136,14 +136,17 @@ describe("UserService", () => {
 
   // ─── updateUser ───────────────────────────────────────────────────────────
   describe("updateUser", () => {
-    it("should POST to the correct endpoint with payload", async () => {
+    it("should POST to the correct endpoint with normalized payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.updateUser(mockUpdateUserPayload);
 
       expect(http.post).toHaveBeenCalledWith(
-        USER_ENDPOINTS.UPDATE,
-        mockUpdateUserPayload,
+        `${USER_ENDPOINTS.GET_USERS}/${mockUpdateUserPayload.itemId}`,
+        expect.objectContaining({
+          itemId: mockUpdateUserPayload.itemId,
+          firstName: mockUpdateUserPayload.firstName,
+        }),
         undefined,
         { absoluteUrl: true },
       );
@@ -338,7 +341,7 @@ describe("UserService", () => {
       const result = await service.getUserRoles(mockGetUserRolesPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${USER_ENDPOINTS.GET_USER_ROLES}?Id=${mockGetUserRolesPayload.userId}&ProjectKey=${mockGetUserRolesPayload.projectKey}`,
+        `${USER_ENDPOINTS.GET_USER_ROLES}?Id=${mockGetUserRolesPayload.userId}`,
         undefined,
         { absoluteUrl: true },
       );
@@ -361,7 +364,7 @@ describe("UserService", () => {
       const result = await service.getUserPermissions(mockGetUserPermissionsPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${mockGetUserPermissionsPayload.userId}&ProjectKey=${mockGetUserPermissionsPayload.projectKey}`,
+        `${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${mockGetUserPermissionsPayload.userId}`,
         undefined,
         { absoluteUrl: true },
       );
