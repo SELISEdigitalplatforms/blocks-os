@@ -30,7 +30,6 @@ export const GRANT_TYPES_OPTIONS: { id: GRANT_TYPES; label: string; value: strin
 
 export const AuthenticationTabs: { id: string; label: string; value: string }[] = [
   { id: "general", label: "General", value: "general" },
-  { id: "email-template", label: "Email template", value: "email-template" },
   { id: "oidc-template", label: "OIDC template", value: "oidc-template" },
   { id: "roles", label: "Roles", value: "roles" },
   { id: "permissions", label: "Permissions", value: "permissions" },

@@ -12,7 +12,6 @@ import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { MagicUrlConfigDialog } from "@blocks-utilities/components/magic-url-config-dialog/magic-url-config-dialog";
-import { MagicUrlDialog } from "@blocks-utilities/components/magic-url-dialog/magic-url-dialog";
 import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url";
 import { MagicUrls } from "@blocks-utilities/pages/magic-urls/magic-urls";
 import { StorageContents } from "@blocks-storage/pages/storage/storage-contents";
@@ -46,7 +45,6 @@ export default function SecretManagementPage() {
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
   const { mutateAsync: saveMagicUrlConfig } = useSaveMagicUrlConfig();
   const [isMagicUrlConfigDialogOpen, setIsMagicUrlConfigDialogOpen] = useState(false);
-  const [isMagicUrlCreateDialogOpen, setIsMagicUrlCreateDialogOpen] = useState(false);
   const [isManagedServicesGuideOpen, setIsManagedServicesGuideOpen] = useState(false);
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
   const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
@@ -99,22 +97,12 @@ export default function SecretManagementPage() {
       )}
       {selectedTab === "magic-url" && (
         <>
-          <Button size="sm" onClick={() => setIsMagicUrlCreateDialogOpen(true)}>
-            <CirclePlus className="h-5 w-5" />
-            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-              Create Magic URL
-            </span>
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setIsMagicUrlConfigDialogOpen(true)}>
             <Settings className="h-5 w-5" />
             <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
               Configure
             </span>
           </Button>
-          <MagicUrlDialog
-            open={isMagicUrlCreateDialogOpen}
-            onOpenChange={setIsMagicUrlCreateDialogOpen}
-          />
           <MagicUrlConfigDialog
             open={isMagicUrlConfigDialogOpen}
             onOpenChange={setIsMagicUrlConfigDialogOpen}
