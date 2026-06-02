@@ -61,7 +61,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
       name: "",
       displayName: "",
       description: "",
-      provider: "oidc",
+      providerType: "oidc",
       tokenEndpointAuthMethod: "client_secret_basic",
       clientId: "",
       clientSecret: "",
@@ -75,7 +75,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
     },
   });
 
-  const provider = watch("provider");
+  const providerType = watch("providerType");
   const tokenEndpointAuthMethod = watch("tokenEndpointAuthMethod");
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         name: editItem.name,
         displayName: editItem.displayName,
         description: editItem.description ?? "",
-        provider: editItem.provider,
+        providerType: editItem.providerType,
         tokenEndpointAuthMethod: editItem.tokenEndpointAuthMethod ?? "client_secret_basic",
         clientId: editItem.clientId,
         clientSecret: "",
@@ -101,7 +101,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         name: "",
         displayName: "",
         description: "",
-        provider: "oidc",
+        providerType: "oidc",
         tokenEndpointAuthMethod: "client_secret_basic",
         clientId: "",
         clientSecret: "",
@@ -147,7 +147,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
     }
   };
 
-  const isOidc = provider === "oidc";
+  const isOidc = providerType === "oidc";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -199,12 +199,12 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="provider">Provider Type <span className="text-destructive">*</span></Label>
+                <Label htmlFor="providerType">Provider Type <span className="text-destructive">*</span></Label>
                 <Select
-                  value={provider}
-                  onValueChange={(v) => setValue("provider", v as IdentityProviderType)}
+                  value={providerType}
+                  onValueChange={(v) => setValue("providerType", v as IdentityProviderType)}
                 >
-                  <SelectTrigger id="provider">
+                  <SelectTrigger id="providerType">
                     <SelectValue placeholder="Select provider type" />
                   </SelectTrigger>
                   <SelectContent>
