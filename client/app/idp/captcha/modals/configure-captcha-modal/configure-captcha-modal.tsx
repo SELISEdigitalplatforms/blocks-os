@@ -45,9 +45,10 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
   const form = useForm({
     defaultValues: configuration || ConfigureCaptchaFormDefaultValue,
     resolver: zodResolver(ConfigureCaptchaFormSchema),
+    mode: "onChange",
   });
   const {
-    formState: { isDirty },
+    formState: { isDirty, isValid },
   } = form;
   const { mutateAsync, isPending } = useSaveCaptcha();
   const unConfiguredProviders = useMemo(() => {
@@ -149,7 +150,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 </DialogTrigger>
                 <Button
                   size="sm"
-                  disabled={isPending || isLoading || isFetching || !isDirty}
+                  disabled={isPending || isLoading || isFetching || !isDirty || !isValid}
                   type="submit"
                 >
                   Save
