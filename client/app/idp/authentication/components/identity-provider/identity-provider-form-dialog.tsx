@@ -55,10 +55,11 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
     reset,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<FormValues>({
+    mode: "onChange",
     defaultValues: {
-      name: "",
+      provider: "",
       displayName: "",
       description: "",
       providerType: "oidc",
@@ -81,7 +82,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   useEffect(() => {
     if (open && editItem) {
       reset({
-        name: editItem.name,
+        provider: editItem.provider,
         displayName: editItem.displayName,
         description: editItem.description ?? "",
         providerType: editItem.providerType,
@@ -98,7 +99,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
       });
     } else if (open) {
       reset({
-        name: "",
+        provider: "",
         displayName: "",
         description: "",
         providerType: "oidc",
@@ -170,10 +171,10 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 <Input
                   id="name"
                   placeholder="my-identity-provider"
-                  {...register("name", { required: "Name is required" })}
+                  {...register("provider", { required: "Name is required" })}
                 />
-                {errors.name && (
-                  <p className="text-xs text-destructive">{errors.name.message}</p>
+                {errors.provider && (
+                  <p className="text-xs text-destructive">{errors.provider.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">

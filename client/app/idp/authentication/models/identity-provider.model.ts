@@ -4,7 +4,7 @@ export type TokenEndpointAuthMethod = "client_secret_basic" | "client_secret_pos
 
 export interface IdentityProvider {
   itemId?: string;
-  name: string;
+  provider: string;
   displayName: string;
   description?: string;
   providerType: IdentityProviderType;

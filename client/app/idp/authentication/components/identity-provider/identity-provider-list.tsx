@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
@@ -133,7 +134,7 @@ export function IdentityProviderList() {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{p.displayName}</p>
-                <p className="truncate font-mono text-xs text-muted-foreground">{p.name}</p>
+                <p className="truncate font-mono text-xs text-muted-foreground">{p.provider}</p>
               </div>
             </div>
           );
@@ -246,13 +247,17 @@ export function IdentityProviderList() {
 
   return (
     <>
-      <div className="rounded-md border">
+      <Card>
+        <CardContent className="p-0">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    key={header.id}
+                    className="text-xs font-semibold uppercase tracking-wide text-high-emphasis"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -320,7 +325,8 @@ export function IdentityProviderList() {
             )}
           </TableBody>
         </Table>
-      </div>
+        </CardContent>
+      </Card>
 
       {editItem && (
         <IdentityProviderFormDialog
