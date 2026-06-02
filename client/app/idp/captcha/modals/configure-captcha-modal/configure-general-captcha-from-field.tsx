@@ -19,7 +19,7 @@ export const ConfigureGeneralCaptchaFormField = ({ form }: ConfigureGeneralCaptc
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Site key</FormLabel>
+            <FormLabel>Site key <span className="text-destructive">*</span></FormLabel>
             <FormControl>
               <Input placeholder="Enter site key" {...field} />
             </FormControl>
@@ -32,7 +32,7 @@ export const ConfigureGeneralCaptchaFormField = ({ form }: ConfigureGeneralCaptc
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Secret key</FormLabel>
+            <FormLabel>Secret key <span className="text-destructive">*</span></FormLabel>
             <FormControl>
               <Input placeholder="Enter secret key" {...field} />
             </FormControl>

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { IdentityProvider, IdentityProviderType } from "@blocks-idp/authentication/models/identity-provider.model";
+import { IdentityProvider, IdentityProviderType, TokenEndpointAuthMethod } from "@blocks-idp/authentication/models/identity-provider.model";
 import {
   useCreateIdentityProvider,
   useUpdateIdentityProvider,
@@ -31,6 +31,12 @@ const PROVIDER_TYPES: { value: IdentityProviderType; label: string }[] = [
   { value: "oauth2", label: "OAuth 2.0" },
   { value: "saml", label: "SAML 2.0" },
   { value: "ldap", label: "LDAP" },
+];
+
+const TOKEN_AUTH_METHODS: { value: TokenEndpointAuthMethod; label: string }[] = [
+  { value: "client_secret_basic", label: "Client Secret Basic" },
+  { value: "client_secret_post", label: "Client Secret Post" },
+  { value: "none", label: "None (Public Client)" },
 ];
 
 type FormValues = Omit<IdentityProvider, "itemId" | "isActive" | "createdDate" | "updatedDate">;
@@ -56,6 +62,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
       displayName: "",
       description: "",
       providerType: "oidc",
+      tokenEndpointAuthMethod: "client_secret_basic",
       clientId: "",
       clientSecret: "",
       issuerUrl: "",
@@ -69,6 +76,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   });
 
   const providerType = watch("providerType");
+  const tokenEndpointAuthMethod = watch("tokenEndpointAuthMethod");
 
   useEffect(() => {
     if (open && editItem) {
@@ -77,6 +85,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         displayName: editItem.displayName,
         description: editItem.description ?? "",
         providerType: editItem.providerType,
+        tokenEndpointAuthMethod: editItem.tokenEndpointAuthMethod ?? "client_secret_basic",
         clientId: editItem.clientId,
         clientSecret: "",
         issuerUrl: editItem.issuerUrl ?? "",
@@ -93,6 +102,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         displayName: "",
         description: "",
         providerType: "oidc",
+        tokenEndpointAuthMethod: "client_secret_basic",
         clientId: "",
         clientSecret: "",
         issuerUrl: "",
@@ -156,7 +166,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Internal Name *</Label>
+                <Label htmlFor="name">Internal Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="name"
                   placeholder="my-identity-provider"
@@ -167,7 +177,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="displayName">Display Name *</Label>
+                <Label htmlFor="displayName">Display Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="displayName"
                   placeholder="My Identity Provider"
@@ -187,23 +197,43 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 {...register("description")}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="providerType">Provider Type *</Label>
-              <Select
-                value={providerType}
-                onValueChange={(v) => setValue("providerType", v as IdentityProviderType)}
-              >
-                <SelectTrigger id="providerType">
-                  <SelectValue placeholder="Select provider type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROVIDER_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="providerType">Provider Type <span className="text-destructive">*</span></Label>
+                <Select
+                  value={providerType}
+                  onValueChange={(v) => setValue("providerType", v as IdentityProviderType)}
+                >
+                  <SelectTrigger id="providerType">
+                    <SelectValue placeholder="Select provider type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROVIDER_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tokenEndpointAuthMethod">Token Endpoint Auth Method <span className="text-destructive">*</span></Label>
+                <Select
+                  value={tokenEndpointAuthMethod}
+                  onValueChange={(v) => setValue("tokenEndpointAuthMethod", v as TokenEndpointAuthMethod)}
+                >
+                  <SelectTrigger id="tokenEndpointAuthMethod">
+                    <SelectValue placeholder="Select auth method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TOKEN_AUTH_METHODS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -214,7 +244,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="clientId">Client ID *</Label>
+                <Label htmlFor="clientId">Client ID <span className="text-destructive">*</span></Label>
                 <Input
                   id="clientId"
                   placeholder="Enter client ID"
