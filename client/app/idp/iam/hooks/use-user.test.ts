@@ -73,7 +73,7 @@ describe("use-user hooks", () => {
 
   describe("useGetUserById", () => {
     it("should fetch user by ID successfully", async () => {
-      const mockResponse = { data: mockUser, roles: [], permissions: [], errors: null };
+      const mockResponse = { data: mockUser, errors: null };
       vi.mocked(userService.getUserById).mockResolvedValue(mockResponse as never);
 
       const payload = { id: MOCK_USER_ITEM_ID, projectKey: TEST_PROJECT_KEY };

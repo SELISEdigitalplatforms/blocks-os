@@ -34,7 +34,7 @@ const LoadingSkelton = () => {
 };
 export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data: mfaConfigData } = useGetMFAConfig({ projectKey: tenantId });
+  const { data: mfaConfigData } = useGetMFAConfig();
   const [filter, setFilter] = useState({ page: 0, pageSize: 10 });
   const { data, isLoading, isFetching } = useGetEmailTemplates(filter.page, filter.pageSize, "", "Name", false, "", "");
   const { isPending, mutateAsync } = useSaveMFAConfig();
@@ -46,6 +46,7 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
         projectKey: tenantId,
         enableMfa: true,
         userMfaType: userMfaTypes,
+        ...(mfaConfigData?.itemId ? { itemId: mfaConfigData.itemId } : {}),
       });
       if (res.isSuccess) {
         toast({

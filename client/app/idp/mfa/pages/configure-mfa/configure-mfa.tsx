@@ -42,7 +42,7 @@ const LoadingSkelton = () => {
 };
 export const ConfigureMFA = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { isLoading, isFetching, data } = useGetMFAConfig({ projectKey: tenantId });
+  const { isLoading, isFetching, data } = useGetMFAConfig();
   const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
     enable: false,
@@ -129,6 +129,7 @@ export const ConfigureMFA = () => {
       projectKey: tenantId,
       enableMfa: !!userMfaTypes.size,
       userMfaType: Array.from(userMfaTypes),
+      ...(data?.itemId ? { itemId: data.itemId } : {}),
     };
     const res = await mutateAsync(payload);
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });

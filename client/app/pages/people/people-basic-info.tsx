@@ -50,7 +50,9 @@ export const PeopleBasicInfo = ({
             </div>
           </Item>
           <Item label="Role">
-            {initialUser?.roles?.length ? initialUser.roles.join(", ") : "-"}
+            {initialUser?.roles
+              ? Object.values(initialUser.roles).flat().join(", ") || "-"
+              : "-"}
           </Item>
           <Item label="Latest Login">
             {initialUser?.lastLoggedInTime && checkValidDate(initialUser.lastLoggedInTime)
