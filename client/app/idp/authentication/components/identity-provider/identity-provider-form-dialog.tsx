@@ -98,7 +98,12 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         jwksUri: editItem.jwksUri ?? "",
       });
       setCustomProviderType(isCustom ? editItem.providerType : "");
-      setRedirectUris(editItem.redirectUri?.length ? editItem.redirectUri : [""]);
+      const uris = Array.isArray(editItem.redirectUri)
+        ? editItem.redirectUri
+        : editItem.redirectUri
+          ? [editItem.redirectUri as string]
+          : [""];
+      setRedirectUris(uris.length ? uris : [""]);
     } else if (open) {
       reset(BLANK_FORM);
       setCustomProviderType("");

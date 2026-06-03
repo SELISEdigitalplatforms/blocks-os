@@ -1,5 +1,6 @@
 import { http } from "@/lib/http-client";
 import type { SaveSecretRequest, SecretItem } from "@/cross-modules/secrets/constants/secret-key.enum";
+import type { IAPIResponse } from "@/models/api-response";
 
 const SECRETS_BASE = "/api/Secrets";
 
@@ -17,7 +18,11 @@ export class SecretsService {
   }
 
   gets(secretKey: string): Promise<SecretItem[]> {
-    return http.get(`${SECRETS_ENDPOINTS.GETS}?secretKey=${secretKey}`);
+    return http
+      .get<SecretItem[] | IAPIResponse<SecretItem[]>>(
+        `${SECRETS_ENDPOINTS.GETS}?secretKey=${secretKey}&PageNumber=0&PageSize=10`,
+      )
+      .then((response) => (Array.isArray(response) ? response : (response.data ?? [])));
   }
 
   get(itemId: string): Promise<SecretItem> {
