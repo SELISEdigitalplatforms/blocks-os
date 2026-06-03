@@ -1,11 +1,11 @@
-import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { useGetProfileMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
-import { createContext, useState } from "react";
-import { Link } from "react-router-dom";
 import { ProfileMFADetails } from "./profile-mfa-detail";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui-kits/button/button";
+import { createContext, useState } from "react";
 import { ProfileMfaMethodSelectList } from "./user-mfa-confirmation/profile-mfa-methods-select-list";
+import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 type ProfileMFAProps = {
   userId: string;
   projectKey: string;
@@ -89,7 +89,7 @@ export const ProfileMFA = (props: ProfileMFAProps) => {
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState<boolean>(false);
   const [isDisableModalOpen, setIsDisableModalOpen] = useState<boolean>(false);
   const [mfaMethodType, setMfaMethodType] = useState<number>(0);
-  const { isLoading, data } = useGetProfileMFAConfig();
+  const { isLoading, data } = useGetMFAConfig();
   if (isLoading) return <LoadingSkelton />;
   if (!data?.enableMfa) return <ProjectMFA />;
   const showVerifyModal = (type: number) => {

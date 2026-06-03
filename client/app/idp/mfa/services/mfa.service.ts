@@ -21,7 +21,6 @@ import {
 import {
   MFA_CONFIG_ENDPOINTS,
   MFA_ENDPOINTS,
-  PROFILE_MFA_ENDPOINTS,
 } from '../constants/endpoint.constant'
 
 export class MFAService {
@@ -119,17 +118,6 @@ export class MFAService {
   }
   disableMFA(payload: IDisableMFAPayload): Promise<IDisableMFAResponse> {
     return http.post(MFA_ENDPOINTS.DISABLE_MFA, payload, undefined, {
-      absoluteUrl: true,
-    })
-  }
-
-  getProfileMFAConfiguration(): Promise<IGetConfigurationResponse> {
-    return http.get(PROFILE_MFA_ENDPOINTS.GET, undefined, {
-      absoluteUrl: true,
-    })
-  }
-  saveProfileMFAConfiguration(payload: IMFAConfigurationSavePayload): Promise<IMFAConfigurationSaveResponse> {
-    return http.post(PROFILE_MFA_ENDPOINTS.SAVE, payload, undefined, {
       absoluteUrl: true,
     })
   }
