@@ -9,6 +9,13 @@ export const useGetMFAConfig = () => {
   });
 };
 
+export const useGetProfileMFAConfig = () => {
+  return useQuery({
+    queryKey: ["profile-mfa-config", "get"],
+    queryFn: () => mfaService.getProfileMfaConfiguration(),
+  });
+};
+
 export const useSaveMFAConfig = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -27,6 +34,8 @@ export const useConfigureUserMFA = (option: { id: string; projectKey: string }) 
     mutationFn: mfaService.configureUserMFA,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user", option] });
+      queryClient.invalidateQueries({ queryKey: ["user-by-id", option] });
+      queryClient.invalidateQueries({ queryKey: ["profile-user", option] });
     },
   });
 };
@@ -52,8 +61,14 @@ export const useVerifyMfaOTP = (option: IGetUserByIdPayload & { own?: boolean })
     mutationKey: ["mfa-config", "verify-otp"],
     mutationFn: mfaService.verifyOtp,
     onSuccess: () => {
-      if (own) return queryClient.invalidateQueries({ queryKey: ["user"] });
+      if (own) {
+        queryClient.invalidateQueries({ queryKey: ["user"] });
+        queryClient.invalidateQueries({ queryKey: ["profile-user"] });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["user", rest] });
+      queryClient.invalidateQueries({ queryKey: ["user-by-id", rest] });
+      queryClient.invalidateQueries({ queryKey: ["profile-user", rest] });
     },
   });
 };
@@ -71,6 +86,8 @@ export const useDisableMfa = (option: { id: string; projectKey: string }) => {
     mutationFn: mfaService.disableMFA,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user", option] });
+      queryClient.invalidateQueries({ queryKey: ["user-by-id", option] });
+      queryClient.invalidateQueries({ queryKey: ["profile-user", option] });
     },
   });
 };

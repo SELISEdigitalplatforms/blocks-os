@@ -1,4 +1,4 @@
-import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
+import { useGetMe, useGetProfileUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useQueryState } from "nuqs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { getRuntimeEnv } from "@/lib/runtime-env";
@@ -18,7 +18,7 @@ export const Profile = () => {
 
 export const UserProfile = ({ id }: { id: string }) => {
   const [tabId, setTabId] = useQueryState("userDetails", { defaultValue: "details" });
-  const { data } = useGetMe();
+  const { data } = useGetProfileUserById({ id, projectKey: x_blocks_key });
 
   return (
     <div className="">
