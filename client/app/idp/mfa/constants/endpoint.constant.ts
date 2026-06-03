@@ -19,3 +19,8 @@ export const MFA_ENDPOINTS = {
   RESEND_OTP: `${API_BASES.LOGIC}${MFA_SUBPATH}/ResendOtp`,
   DISABLE_MFA: `${API_BASES.LOGIC}${MFA_SUBPATH}/DisableUserMfa`,
 } as const;
+
+export const PROFILE_MFA_ENDPOINTS = {
+  GET: `${API_BASES.LOGIC}/MFA/Get`,
+  SAVE: `${API_BASES.LOGIC}/MFA/Save`,
+} as const;
