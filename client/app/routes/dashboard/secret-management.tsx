@@ -11,8 +11,7 @@ import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
-import { MagicUrlConfigDialog } from "@blocks-utilities/components/magic-url-config-dialog/magic-url-config-dialog";
-import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url";
+import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
 import { MagicUrls } from "@blocks-utilities/pages/magic-urls/magic-urls";
 import { StorageContents } from "@blocks-storage/pages/storage/storage-contents";
 import { ManagedServices } from "@blocks-identifier/pages/services/managed-services";
@@ -20,7 +19,7 @@ import { AddService } from "@blocks-identifier/components/add-service/add-servic
 import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
 import NotificationConfigurationList from "@blocks-communication/notification/components/notification-configuration-list";
 import { Button } from "@/components/ui-kits/button/button";
-import { CirclePlus, ChevronsLeft, Menu, Settings, Notebook, AlertCircle } from "lucide-react";
+import { CirclePlus, ChevronsLeft, Menu, Notebook, AlertCircle } from "lucide-react";
 import { MouseEvent, useMemo, useState } from "react";
 import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
@@ -43,8 +42,6 @@ export default function SecretManagementPage() {
   });
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
-  const { mutateAsync: saveMagicUrlConfig } = useSaveMagicUrlConfig();
-  const [isMagicUrlConfigDialogOpen, setIsMagicUrlConfigDialogOpen] = useState(false);
   const [isManagedServicesGuideOpen, setIsManagedServicesGuideOpen] = useState(false);
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
   const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
@@ -96,22 +93,16 @@ export default function SecretManagementPage() {
         </ConfigureCaptchaModal>
       )}
       {selectedTab === "magic-url" && (
-        <>
-          <Button variant="outline" size="sm" onClick={() => setIsMagicUrlConfigDialogOpen(true)}>
-            <Settings className="h-5 w-5" />
-            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-              Configure
-            </span>
-          </Button>
-          <MagicUrlConfigDialog
-            open={isMagicUrlConfigDialogOpen}
-            onOpenChange={setIsMagicUrlConfigDialogOpen}
-            projectKey={tenantId}
-            onSave={async (config) => {
-              await saveMagicUrlConfig(config);
-            }}
-          />
-        </>
+        <ConfigureMagicUrlModal>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <CirclePlus className="h-5 w-5" />
+              <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+                Add Configuration
+              </span>
+            </Button>
+          </DialogTrigger>
+        </ConfigureMagicUrlModal>
       )}
       {selectedTab === "managed-services" && (
         <>
