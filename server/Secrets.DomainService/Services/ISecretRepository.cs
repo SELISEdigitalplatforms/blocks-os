@@ -7,7 +7,7 @@ namespace Secrets.DomainService.Services
     {
         Task SaveSecretAsync(Secret secret);
         Task<Secret?> GetSecretByIdAsync(string id);
-        Task<List<Secret>> GetSecretsAsync(string secretKey);
+        Task<(List<Secret> secrets, long totalCount)> GetSecretsAsync(string secretKey,int page, int pageSize);
         Task DeleteSecretAsync(string itemId);
     }
 }
