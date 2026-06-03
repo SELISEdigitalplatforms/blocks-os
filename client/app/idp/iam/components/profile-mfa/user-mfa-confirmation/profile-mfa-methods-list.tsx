@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { Label } from "@/components/ui-kits/label/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { useGetMFAConfig, useGetProfileMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
+import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { MFA_Provider_Data } from "@blocks-idp/mfa/utils/mfa-config";
 import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
 import { useContext, useMemo } from "react";
@@ -13,7 +13,7 @@ type UserMFAMethodListProps = {
 };
 export const ProfileMFAMethodList = ({ selected, setSelected }: UserMFAMethodListProps) => {
   const { userId, projectKey } = useContext(profileMfaContext);
-  const { isLoading, isFetching, data } = useGetProfileMFAConfig();
+  const { isLoading, isFetching, data } = useGetMFAConfig();
   const { data: userData } = useGetMe();
   const availableMFaMethod = useMemo(() => {
     if (!data?.userMfaType.length) return [];
