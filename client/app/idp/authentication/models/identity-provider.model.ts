@@ -1,20 +1,23 @@
-export type IdentityProviderType = "oidc" | "oauth2" | "saml" | "ldap";
+export type IdentityProviderType = "oidc" | "oauth2" | "saml" | "ldap" | "social" | (string & {});
+
+export type TokenEndpointAuthMethod = "client_secret_basic" | "client_secret_post" | "none";
 
 export interface IdentityProvider {
   itemId?: string;
-  name: string;
+  provider: string;
   displayName: string;
   description?: string;
   providerType: IdentityProviderType;
+  tokenEndpointAuthMethod: TokenEndpointAuthMethod;
   clientId: string;
-  clientSecret?: string;
+  clientSecret: string;
   issuerUrl?: string;
   authorizationUrl?: string;
   tokenUrl?: string;
   userInfoUrl?: string;
   jwksUri?: string;
   scope?: string;
-  redirectUri?: string;
+  redirectUri?: string[];
   isActive: boolean;
   createdDate?: string;
   updatedDate?: string;

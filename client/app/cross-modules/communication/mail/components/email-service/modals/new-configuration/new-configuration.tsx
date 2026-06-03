@@ -167,10 +167,22 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   }
   const formSubmitHandler = async (data: IEmailConfig) => {
     try {
-      data.configurationId = isEdit && previousData?.itemId ? previousData?.itemId : "";
       const payload = {
-        ...data,
-        projectKey: tenantId,
+        secretKey: "email",
+        keyValuePairs: {
+          configurationName: data.configurationName,
+          host: data.host,
+          port: String(data.port),
+          enableSSL: String(data.enableSSL),
+          senderName: data.senderName || "",
+          senderAddress: data.senderAddress || "",
+          senderUserName: data.senderUserName,
+          accountPassword: data.accountPassword || "",
+          isInbound: String(data.isInbound),
+          provider: String(data.provider),
+          isDefault: "false",
+        },
+        ...(isEdit && previousData?.itemId ? { itemId: previousData.itemId } : {}),
       };
       const res = await mutateAsync(payload);
       if (res?.isSuccess) {

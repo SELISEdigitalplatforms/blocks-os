@@ -39,15 +39,13 @@ describe("use-mfa-config hooks", () => {
     it("should fetch MFA configuration successfully", async () => {
       vi.mocked(mfaService.getConfigurations).mockResolvedValue(mockMfaConfigResponse);
 
-      const { result } = renderHook(() => useGetMFAConfig({ projectKey: TEST_PROJECT_KEY }), {
+      const { result } = renderHook(() => useGetMFAConfig(), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockMfaConfigResponse);
-      expect(mfaService.getConfigurations).toHaveBeenCalledWith({
-        projectKey: TEST_PROJECT_KEY,
-      });
+      expect(mfaService.getConfigurations).toHaveBeenCalledWith();
     });
   });
 
