@@ -74,3 +74,21 @@ export const useDisableMfa = (option: { id: string; projectKey: string }) => {
     },
   });
 };
+
+export const useGetProfileMFAConfig = () => {
+  return useQuery({
+    queryKey: ["mfa-config", "profile-get"],
+    queryFn: () => mfaService.getProfileMFAConfiguration(),
+  });
+};
+
+export const useSaveProfileMFAConfig = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["mfa-config", "profile-save"],
+    mutationFn: mfaService.saveProfileMFAConfiguration,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mfa-config", "profile-get"] });
+    },
+  });
+};
