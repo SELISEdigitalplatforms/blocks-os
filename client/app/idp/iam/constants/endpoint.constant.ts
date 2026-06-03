@@ -39,7 +39,7 @@ export const USER_ENDPOINTS = {
 
 export const ACCOUNT_ENDPOINTS = {
   ACTIVATE: `${API_BASES.IAM}${IAM_SUBPATH}/Activate`,
-  RESEND_ACTIVATION: `${API_BASES.IAM}${IAM_SUBPATH}/ResendActivation`,
+  RESEND_ACTIVATION: `${API_BASES.IAM}/auth/resend-activation`,
   RECOVER: `${API_BASES.IAM}${IAM_SUBPATH}/Recover`,
   RESET_PASSWORD: `${API_BASES.IAM}${IAM_SUBPATH}/ResetPassword`,
   VALIDATE_ACTIVATION_CODE: `${API_BASES.IAM}${IAM_SUBPATH}/ValidateActivationCode`,
