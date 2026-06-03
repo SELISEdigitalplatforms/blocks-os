@@ -6,7 +6,7 @@ namespace Secrets.DomainService.Services
 {
     public interface ISecretManagementService
     {
-        Task<List<Secret>> GetSecretAsync(string secretKey);
+        Task<GetSecretsResponse> GetSecretAsync(string secretKey,int page,int pageSize);
         Task<BaseResponse> SaveSecretAsync(SaveSecretRequest saveSecretRequest);
         Task<Secret> SecretAsync(string itemId);
         Task<BaseResponse> DeleteSecretAsync(DeleteSecretRequest deleteSecretRequest);
