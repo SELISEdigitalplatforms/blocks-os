@@ -1,13 +1,10 @@
-// ─── MFA configuration endpoints (mfa.service — cloud config) ──────────────
+// ─── MFA configuration endpoints (mfa.service — Logic MFA API) ───────────
 
 import { API_BASES } from "@/constants/endpoint.constant";
 
-const MFA_CONFIG_SUBPATH = "/MFA";
-
 export const MFA_CONFIG_ENDPOINTS = {
-  GET: `${API_BASES.LOGIC}${MFA_CONFIG_SUBPATH}/Get`,
-  SAVE: `${API_BASES.LOGIC}${MFA_CONFIG_SUBPATH}/Save`,
-} as const;
+  GET: `/api/Secrets/Gets`,
+} as const
 
 // ─── MFA endpoints (mfa.service — IDP & MFA bases) ─────────────────────────
 

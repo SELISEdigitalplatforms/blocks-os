@@ -1,6 +1,5 @@
 import {
   Wrench,
-  Mail,
   FileCode,
   ShieldCheck,
   Lock,
@@ -20,7 +19,6 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
   {
     label: "Templates",
     items: [
-      { id: "email-template", label: "Email Template", value: "email-template", icon: Mail, desc: "Manage email templates" },
       { id: "oidc-template", label: "OIDC Template", value: "oidc-template", icon: FileCode, desc: "Configure OIDC template" },
     ],
   },

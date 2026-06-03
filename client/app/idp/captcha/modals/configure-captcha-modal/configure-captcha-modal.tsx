@@ -33,6 +33,7 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ReactNode, useEffect, useMemo, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 type ConfigureCaptchaModalProps = {
   configuration?: ICaptchaConfig | null;
   children: ReactNode;
@@ -44,9 +45,10 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
   const form = useForm({
     defaultValues: configuration || ConfigureCaptchaFormDefaultValue,
     resolver: zodResolver(ConfigureCaptchaFormSchema),
+    mode: "onChange",
   });
   const {
-    formState: { isDirty },
+    formState: { isDirty, isValid },
   } = form;
   const { mutateAsync, isPending } = useSaveCaptcha();
   const unConfiguredProviders = useMemo(() => {
@@ -72,6 +74,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       const payload = {
         projectKey: tenantId,
         isEnable: configuration ? configuration.isEnable : false,
+        itemId: configuration?.itemId ?? uuidv4(),
         ...values,
       };
       const res = await mutateAsync(payload);
@@ -114,7 +117,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 name="provider"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Captcha Provider</FormLabel>
+                    <FormLabel>Captcha Provider <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Select
                         onValueChange={field.onChange}
@@ -147,7 +150,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 </DialogTrigger>
                 <Button
                   size="sm"
-                  disabled={isPending || isLoading || isFetching || !isDirty}
+                  disabled={isPending || isLoading || isFetching || !isDirty || !isValid}
                   type="submit"
                 >
                   Save

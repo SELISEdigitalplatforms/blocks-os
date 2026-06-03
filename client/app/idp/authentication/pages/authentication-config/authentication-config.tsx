@@ -10,7 +10,7 @@ import { Permissions } from "@blocks-idp/iam/modules/permission-management";
 import { AddRole, Roles } from "@blocks-idp/iam/modules/role-management";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { Link } from "react-router-dom";
-import { CirclePlus, Settings, X, ChevronsLeft, Menu } from "lucide-react";
+import { Settings, X, ChevronsLeft, Menu } from "lucide-react";
 import { EmailServiceTable, EmailConfiguration, EmailCommunicationDetails } from "@blocks-communication/mail";
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui-kits/dialog/dialog";
@@ -138,7 +138,6 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
 export const AuthenticationConfig = () => {
   const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "general" });
   const [configureOpen, setConfigureOpen] = useState(false);
-  const [addTemplateOpen, setAddTemplateOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -146,7 +145,6 @@ export const AuthenticationConfig = () => {
     .flatMap((g) => g.items)
     .find((item) => item.value === (selectedTab ?? "general"));
   const handleTemplateCreated = (id: string) => {
-    setAddTemplateOpen(false);
     setSelectedTemplateId(id);
   };
   const headerActions = (
@@ -158,26 +156,15 @@ export const AuthenticationConfig = () => {
         </Link>
       )}
       {selectedTab === "email-template" && (
-        <div className="flex shrink-0 items-center gap-2">
-          <Button
-            variant="outline"
-            size="default"
-            className="gap-1 text-sm font-medium"
-            onClick={() => setConfigureOpen(true)}
-          >
-            <Settings className="h-5 w-5" />
-            <span className="sr-only sm:not-sr-only">Configure</span>
-          </Button>
-          <Button
-            size="default"
-            variant="default"
-            className="bg-primary text-primary-foreground shadow-none"
-            onClick={() => setAddTemplateOpen(true)}
-          >
-            <CirclePlus className="h-5 w-5 lg:mr-2" />
-            <span className="sr-only lg:not-sr-only">Add Template</span>
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="default"
+          className="gap-1 text-sm font-medium"
+          onClick={() => setConfigureOpen(true)}
+        >
+          <Settings className="h-5 w-5" />
+          <span className="sr-only sm:not-sr-only">Configure</span>
+        </Button>
       )}
     </>
   );
@@ -282,16 +269,6 @@ export const AuthenticationConfig = () => {
         <EmailConfiguration />
       </DialogContent>
     </Dialog>
-    <Sheet open={addTemplateOpen} onOpenChange={setAddTemplateOpen}>
-      <SheetContent side="right" className="flex h-full w-full max-w-full flex-col overflow-hidden p-0 sm:max-w-full" hideClose>
-        <StepperProvider steps={NEW_COMMUNICATION_STEPS}>
-          <NewCommunicationContent
-            onClose={() => setAddTemplateOpen(false)}
-            onCreated={handleTemplateCreated}
-          />
-        </StepperProvider>
-      </SheetContent>
-    </Sheet>
     </>
   );
 };
