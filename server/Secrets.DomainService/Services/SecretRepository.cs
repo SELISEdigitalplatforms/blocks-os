@@ -44,7 +44,7 @@ namespace Secrets.DomainService.Services
             var countTask = collection.CountDocumentsAsync(filter);
 
             var itemsTask = collection.Find(filter)
-                .Skip((page - 1) * pageSize)
+                .Skip((page) * pageSize)
                 .Limit(pageSize)
                 .ToListAsync();
 
