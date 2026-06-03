@@ -223,7 +223,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          Name
+                          Name <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -245,7 +245,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Type
+                          Type <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(value === "true")}
@@ -271,7 +271,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Provider
+                          Provider <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
@@ -305,7 +305,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          {isInbound ? "Server Name" : "Host"}
+                          {isInbound ? "Server Name" : "Host"} <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -325,7 +325,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          Port
+                          Port <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -350,7 +350,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              Sender Name
+                              Sender Name <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -372,7 +372,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              Sender Address
+                              Sender Address <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -397,7 +397,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
                             {" "}
-                            {isInbound ? "Username" : "Sender Username"}
+                            {isInbound ? "Username" : "Sender Username"} <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -419,7 +419,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
                             {" "}
-                            Account password
+                            Account password <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input
