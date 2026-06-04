@@ -164,7 +164,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Name *
+                          Name <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -191,7 +191,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Channel to Notify *
+                          Channel to Notify <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           disabled={true}
@@ -221,7 +221,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notification Type *
+                          Notification Type <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(val) => field.onChange(Number(val))}
@@ -252,7 +252,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notify Method *
+                          Notify Method <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
