@@ -20,7 +20,7 @@ export const useGetServiceAnalytics = (option: IGetServiceAnalyticsPayload) => {
   });
 };
 
-export const useUsagesMetrics = (option: { timeRange: string; projectKey: string }) => {
+export const useUsagesMetrics = (option: { timeRange: string }) => {
   return useQuery({
     queryKey: ["usage-metrics", option],
     queryFn: async () => {
@@ -45,7 +45,6 @@ export const useUsagesMetrics = (option: { timeRange: string; projectKey: string
       }
 
       const payload = {
-        projectKey: option.projectKey,
         startTime: startTime.toISOString(),
         endTime: now.toISOString(),
       };
