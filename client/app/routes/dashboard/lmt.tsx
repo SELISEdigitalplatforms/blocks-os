@@ -55,10 +55,7 @@ export default function LmtPage() {
   );
   const [timeRange, setTimeRange] = useState("1h");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const { data, isLoading, isFetching, refetch } = useUsagesMetrics({
-    timeRange,
-    projectKey: tenantId,
-  });
+  const { data, isLoading, isFetching, refetch } = useUsagesMetrics({ timeRange });
   const defaultUsageData = {
     api: defaultUsagesMetrics,
     worker: defaultUsagesMetrics,

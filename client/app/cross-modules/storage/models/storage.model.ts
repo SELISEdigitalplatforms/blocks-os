@@ -1,5 +1,5 @@
 // "Azure"
-export type StorageStrategyType = "Amazon" | "Azure" | "SftpStorage" | "S3Compatible";
+export type StorageStrategyType = "AWS" | "Azure" | "SftpStorage" | "S3Compatible";
 
 export interface StorageStrategyOption {
   id: string;
@@ -8,7 +8,7 @@ export interface StorageStrategyOption {
 }
 
 export const STORAGE_STRATEGIES: StorageStrategyOption[] = [
-  { id: "aws", label: "AWS", value: "Amazon" },
+  { id: "aws", label: "AWS", value: "AWS" },
   { id: "azure", label: "Azure", value: "Azure" },
   { id: "sftp", label: "SFTP", value: "SftpStorage" },
   { id: "s3compatible", label: "AWS S3 Compatible", value: "S3Compatible" },
