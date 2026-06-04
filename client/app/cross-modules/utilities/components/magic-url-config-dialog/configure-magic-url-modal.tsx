@@ -19,15 +19,24 @@ import { v4 as uuidv4 } from "uuid";
 
 type ConfigureMagicUrlModalProps = {
   configuration?: IMagicUrlConfig | null;
-  children: ReactNode;
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export const ConfigureMagicUrlModal = ({
   configuration,
   children,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: ConfigureMagicUrlModalProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled
+    ? (value: boolean) => controlledOnOpenChange?.(value)
+    : setUncontrolledOpen;
   const [contextName, setContextName] = useState("");
   const [shortUrlBase, setShortUrlBase] = useState("");
   const [errors, setErrors] = useState({ contextName: "", shortUrlBase: "" });

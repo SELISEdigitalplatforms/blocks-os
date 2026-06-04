@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui-kits/card/card";
+import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EllipsisVertical, Pencil, Trash } from "lucide-react";
 import NewNotificationConfiguration from "../modals/new-notification-configuration";
@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
-import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
+import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import {
@@ -115,121 +115,119 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
           isEdit={false}
         />
       </Dialog>
-      <Card>
-        <CardHeader className="flex flex-col gap-4">
-          <CardTitle>Configurations</CardTitle>
-          <NotificationConfigsFilterToolBar />
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead key={col.key}>{col.label}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, idx) => (
-                  <TableRow key={idx}>
-                    {columns.map((col) => (
-                      <TableCell key={col.key}>
-                        <Skeleton className="h-6 w-full rounded" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : data && data.configurations?.length > 0 ? (
-                data.configurations.map((config) => (
-                  <TableRow key={config.itemId}>
-                    <TableCell>{config.name}</TableCell>
-                    <TableCell>
-                      {channelsToNotify.find((x) => x.value === config.channelToNotify)?.label}
+      <ConfigsTableShell
+        title="Configurations"
+        toolbar={<NotificationConfigsFilterToolBar />}
+        footer={
+          <Pagination
+            page={queryParams.notificationPage}
+            pageSize={queryParams.notificationPageSize}
+            totalCount={data?.totalCount ?? 0}
+            pageSizeOptions={[queryParams.notificationPageSize]}
+            onChange={onPageChangeHandler}
+          />
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map((col) => (
+                <TableHead key={col.key}>{col.label}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, idx) => (
+                <TableRow key={idx}>
+                  {columns.map((col) => (
+                    <TableCell key={col.key}>
+                      <Skeleton className="h-6 w-full rounded" />
                     </TableCell>
-                    <TableCell>
-                      {notificationTypes.find((x) => x.value === config.notificationType)?.label}
-                    </TableCell>
-                    <TableCell>{config.enablePersistence ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-5 w-5 p-0">
-                            <EllipsisVertical width={20} height={20} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditNotificationConfig(config);
-                            }}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            <span>Edit</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer text-error"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteNotificationConfig(config);
-                            }}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="text-center">
-                    No notification configurations found.
+                  ))}
+                </TableRow>
+              ))
+            ) : data && data.configurations?.length > 0 ? (
+              data.configurations.map((config) => (
+                <TableRow key={config.itemId}>
+                  <TableCell>{config.name}</TableCell>
+                  <TableCell>
+                    {channelsToNotify.find((x) => x.value === config.channelToNotify)?.label}
+                  </TableCell>
+                  <TableCell>
+                    {notificationTypes.find((x) => x.value === config.notificationType)?.label}
+                  </TableCell>
+                  <TableCell>{config.enablePersistence ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-5 w-5 p-0">
+                          <EllipsisVertical width={20} height={20} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditNotificationConfig(config);
+                          }}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer text-error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteNotificationConfig(config);
+                          }}
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            {!loading && selectedConfigData && (
-              <ConfirmationModal
-                onCancel={() => setIsDeleteDialogOpen(false)}
-                onConfirm={() => onConfirmDeleteConfig()}
-                data={{
-                  dialogTitle: "Confirmation",
-                  dialogSubtitle: `Are you sure you want to delete the ${selectedConfigData?.name} configuration?`,
-                }}
-                buttonState={{ confirm: { disable: isDeletePending } }}
-              />
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-[240px] align-middle text-center text-muted-foreground"
+                >
+                  No notification configurations found.
+                </TableCell>
+              </TableRow>
             )}
-          </Dialog>
-          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-            {selectedConfigData && (
-              <NewNotificationConfiguration
-                key={`${selectedConfigData.itemId}-${isEditOpen}`}
-                dialogTitle="Edit Configuration"
-                previousData={selectedConfigData}
-                isEdit={true}
-                onClose={setIsEditOpen}
-              />
-            )}
-          </Dialog>
-          {!loading && data && data.totalCount > queryParams.notificationPageSize && (
-            <div className="mt-5 flex items-center md:justify-end">
-              <Pagination
-                page={queryParams.notificationPage}
-                pageSize={queryParams.notificationPageSize}
-                totalCount={data.totalCount}
-                pageSizeOptions={[queryParams.notificationPageSize]}
-                onChange={onPageChangeHandler}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </TableBody>
+        </Table>
+      </ConfigsTableShell>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        {!loading && selectedConfigData && (
+          <ConfirmationModal
+            onCancel={() => setIsDeleteDialogOpen(false)}
+            onConfirm={() => onConfirmDeleteConfig()}
+            data={{
+              dialogTitle: "Confirmation",
+              dialogSubtitle: `Are you sure you want to delete the ${selectedConfigData?.name} configuration?`,
+            }}
+            buttonState={{ confirm: { disable: isDeletePending } }}
+          />
+        )}
+      </Dialog>
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        {selectedConfigData && (
+          <NewNotificationConfiguration
+            key={`${selectedConfigData.itemId}-${isEditOpen}`}
+            dialogTitle="Edit Configuration"
+            previousData={selectedConfigData}
+            isEdit={true}
+            onClose={setIsEditOpen}
+          />
+        )}
+      </Dialog>
     </div>
   );
 };
