@@ -95,7 +95,7 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col justify-between rounded-lg bg-muted/60 p-3">
+          <div className="flex flex-col justify-between rounded-lg bg-muted p-3">
             <span className="text-xs text-medium-emphasis">API Calls</span>
             <div>
               <div className="text-xl font-bold text-high-emphasis">
@@ -143,7 +143,7 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
               )}
             </div>
           </div>
-          <div className="flex flex-col justify-between rounded-lg bg-muted/60 p-3">
+          <div className="flex flex-col justify-between rounded-lg bg-muted p-3">
             <span className="text-xs text-medium-emphasis">Avg Duration</span>
             <div className="text-xl font-bold text-high-emphasis">
               {abbreviateDurationMs(currentMatrix.AverageDuration)}
