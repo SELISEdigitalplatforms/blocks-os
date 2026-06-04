@@ -155,6 +155,29 @@ export const useGetMigrationStatus = (tenantGroupId: string) => {
   });
 };
 
+export const useInitiateMigration = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["identifier", "migration", "initiate"],
+    mutationFn: crossProjectService.initiateMigration,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["identifier", "migration-status"] });
+    },
+  });
+};
+
+export const useVerifyMigration = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["identifier", "migration", "verify"],
+    mutationFn: crossProjectService.verifyMigration,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["identifier", "migration-status"] });
+      queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+    },
+  });
+};
+
 export const useProjectForm = () => {
   const navigate = useNavigate();
   const { isPending, mutateAsync } = useCreateProject();
