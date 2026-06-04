@@ -12,7 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { X } from "lucide-react";
+import { EnvironmentMigrationStepOne } from "@/components/environment-migration/environment-migration-step-one";
+import { MigrationStepper } from "@/components/environment-migration/migration-stepper";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ProjectCardLoading } from "@/components/project-card/loading";
 import { useNavigate } from "react-router-dom";
@@ -203,5 +207,75 @@ export const EnvironmentsPage = () => {
         </DialogContent>
       </Dialog>
     </main>
+  );
+};
+
+export const EnvironmentMigrationPage = () => {
+  const groupId = useProjectStore().selectedTenantGroup;
+  const {
+    data: environmentList,
+    isLoading,
+    isFetching,
+  } = useGetProjects(groupId ?? "");
+
+  const projects = useMemo(
+    () => environmentList?.flatMap((group) => group.projects) ?? [],
+    [environmentList],
+  );
+
+  const isProjectsLoading = isLoading || isFetching;
+
+  return (
+    <>
+      <div className="flex flex-col md:hidden">
+        <div className="border-b bg-background p-5 pt-20">
+          <div className="flex gap-2">
+            <Link to="/project-overview/environments" aria-label="Close migration">
+              <X size={28} strokeWidth={1} />
+            </Link>
+            <div>
+              <p className="text-lg font-semibold">Environment migration</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Configure your source, target, and services to migrate.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 bg-muted/30 p-5">
+          <EnvironmentMigrationStepOne
+            projects={projects}
+            isProjectsLoading={isProjectsLoading}
+          />
+        </div>
+      </div>
+
+      <div className="hidden min-h-screen gap-10 bg-muted/30 px-8 py-10 md:flex lg:px-12">
+        <aside className="w-full max-w-xs shrink-0 pt-4">
+          <div className="mb-8">
+            <div className="flex gap-2">
+              <Link
+                to="/project-overview/environments"
+                aria-label="Close migration"
+                tabIndex={0}
+              >
+                <X size={32} strokeWidth={1} />
+              </Link>
+              <p className="mt-0.5 text-lg font-semibold">Environment migration</p>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Configure your source, target, and services to migrate.
+            </p>
+          </div>
+          <MigrationStepper activeStep={1} />
+        </aside>
+        <div className="min-w-0 flex-1">
+          <EnvironmentMigrationStepOne
+            projects={projects}
+            isProjectsLoading={isProjectsLoading}
+            hideStepper
+          />
+        </div>
+      </div>
+    </>
   );
 };
