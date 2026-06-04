@@ -36,7 +36,7 @@ export function StorageFiltersToolbar({
               label: "Provider",
               props: {
                 options: [
-                  { label: "AWS", value: "Amazon" },
+                  { label: "AWS", value: "AWS" },
                   { label: "Azure", value: "Azure" },
                   { label: "SFTP", value: "SftpStorage" },
                   { label: "AWS S3 Compatible", value: "S3Compatible" },
