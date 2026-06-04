@@ -1,5 +1,6 @@
 import { http } from '@/lib/http-client'
 import { secretsService } from '@/services/secrets.service'
+import type { IAPIResponse } from '@/models/api-response'
 import {
   IGenerateUserMFA_OtpPayload,
   IGenerateUserMFA_OtpResponse,
@@ -21,6 +22,7 @@ import {
 import {
   MFA_CONFIG_ENDPOINTS,
   MFA_ENDPOINTS,
+  PROFILE_MFA_CONFIG_ENDPOINTS,
 } from '../constants/endpoint.constant'
 
 export class MFAService {
@@ -28,8 +30,9 @@ export class MFAService {
     _payload?: IGetConfigurationPayload,
   ): Promise<IGetConfigurationResponse> {
     return http
-      .get<IMFASecretResponse[]>(`${MFA_CONFIG_ENDPOINTS.GET}?secretKey=mfa`)
-      .then((secrets) => {
+      .get<IMFASecretResponse[] | IAPIResponse<IMFASecretResponse[]>>(`${MFA_CONFIG_ENDPOINTS.GET}?secretKey=mfa&PageNumber=0&PageSize=10`)
+      .then((response) => {
+        const secrets = Array.isArray(response) ? response : (response.data ?? [])
         const secret = secrets?.[0]
         if (!secret) {
           return {
@@ -60,6 +63,12 @@ export class MFAService {
           projectKey: null,
         }
       })
+  }
+
+  getProfileMfaConfiguration(): Promise<IGetConfigurationResponse> {
+    return http.get(PROFILE_MFA_CONFIG_ENDPOINTS.GET, undefined, {
+      absoluteUrl: true,
+    })
   }
 
   saveMFAConfiguration(
