@@ -59,5 +59,8 @@ namespace Cloud.DomainService.Models
 
         [BsonElement("Version")]
         public string Version { get; set; } = string.Empty;
-    } 
+
+        [BsonElement("HttpMethod")]
+        public string HttpMethod { get; set; } = string.Empty;
+    }
 }
