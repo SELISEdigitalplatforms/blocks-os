@@ -27,7 +27,10 @@ import ManagedServicesPage from "./routes/dashboard/managed-services";
 import ProfilePage from "./routes/dashboard/profile";
 import { Console } from "./pages/console/console";
 import { DashboardOverview } from "./pages/dashboard/dashboard-overview";
-import { EnvironmentsPage } from "./pages/environments/environments";
+import {
+  EnvironmentsPage,
+  EnvironmentMigrationPage,
+} from "./pages/environments/environments";
 import { PeopleManagement } from "./pages/people/people-management";
 import { PersonDetailPage } from "./pages/people/person-detail-page";
 import { RepositoriesPage } from "./pages/repositories/repositories";
@@ -64,6 +67,7 @@ export const router = createBrowserRouter([
       { path: "/profile", element: <ProfilePage /> },
       { path: "/console", element: <Console /> },
       { path: "/create-project", element: <CreateProjectWrapper /> },
+      { path: "/data-migration", element: <EnvironmentMigrationPage /> },
       { path: "/callback", element: <CallbackPage /> },
     ],
   },
