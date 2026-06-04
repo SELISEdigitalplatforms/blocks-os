@@ -1,33 +1,21 @@
 import { Menu } from "@/models/menu-models";
-import {
-  Home,
-  Package,
-  Users,
-  BookMinus,
-  Settings,
-  Key,
-  Lock,
-  Zap,
-  CreditCard,
-} from "lucide-react";
+import { Home, Package, Users, BookMinus, Settings, Shield, Key, ShieldCheck, ScanFace, Lock, Zap, Gauge, CreditCard } from "lucide-react";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "./secret-management-nav";
 import { AUTHENTICATION_NAV_GROUPS } from "./authentication-nav";
 import { LMT_NAV_GROUPS } from "./lmt-nav";
 
-function convertNavGroupsToMenu(
-  groups: typeof SECRET_MANAGEMENT_NAV_GROUPS,
-  basePath: string
-): Menu[] {
-  return groups.flatMap((group) =>
-    group.items.map((item) => ({
+// Helper to convert NavGroups into Menu[]
+const mapNavGroupsToMenus = (groups: any[], routePrefix: string): Menu[] => {
+  return groups.flatMap(group => 
+    group.items.map((item: any) => ({
       id: item.id,
-      type: "menu",
+      type: "menu" as const,
       name: item.label,
-      path: `${basePath}?tab=${item.value}`,
+      path: `${routePrefix}?tab=${item.value}`,
       icon: item.icon,
     }))
   );
-}
+};
 
 export const navigationMenus: Menu[] = [
   {
@@ -86,10 +74,7 @@ export const navigationMenus: Menu[] = [
     name: "Secrets & Configs",
     path: "/services/secret-management",
     icon: Lock,
-    children: convertNavGroupsToMenu(
-      SECRET_MANAGEMENT_NAV_GROUPS,
-      "/services/secret-management"
-    ),
+    children: mapNavGroupsToMenus(SECRET_MANAGEMENT_NAV_GROUPS, "/services/secret-management"),
   },
   {
     id: "service-identity__api-settings",
@@ -104,10 +89,7 @@ export const navigationMenus: Menu[] = [
     name: "IDP",
     path: "/services/authentication",
     icon: Key,
-    children: convertNavGroupsToMenu(
-      AUTHENTICATION_NAV_GROUPS,
-      "/services/authentication"
-    ),
+    children: mapNavGroupsToMenus(AUTHENTICATION_NAV_GROUPS, "/services/authentication"),
   },
   {
     type: "separator",
@@ -119,6 +101,6 @@ export const navigationMenus: Menu[] = [
     name: "LMT",
     path: "/services/lmt",
     icon: Zap,
-    children: convertNavGroupsToMenu(LMT_NAV_GROUPS, "/services/lmt"),
+    children: mapNavGroupsToMenus(LMT_NAV_GROUPS, "/services/lmt"),
   },
 ];

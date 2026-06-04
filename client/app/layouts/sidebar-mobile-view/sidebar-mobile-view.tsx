@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react"
 import { Menu, X } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { EnvironmentList } from "@/components/environment-list/environment-list"
 import { Logo } from "@/components/logo"
 import { MobileMenuItem } from "@/components/menus/mobile-menu-item"
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui-kits/sheet/sheet"
 import { navigationMenus } from "@/constants/menus"
 import { useFilteredMenus } from "@/hooks/use-filtered-menus"
+import { useLocation } from "react-router-dom"
 
 export function SidebarMobileView() {
   const [open, setOpen] = useState(false)
@@ -59,10 +60,11 @@ export function SidebarMobileView() {
         <nav className="grid gap-2 py-2">
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
-              {menu.type === "menu" && (
+              {menu.type === "menu" ? (
                 <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
+              ) : (
+                <Separator />
               )}
-              {menu.type === "separator" && <Separator />}
             </Fragment>
           ))}
         </nav>
