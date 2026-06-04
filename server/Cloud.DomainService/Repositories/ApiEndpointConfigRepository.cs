@@ -23,10 +23,20 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<(List<ApiEndpointConfigResponse>, long)> GetListAsync(GetApiEndpointConfigsRequest request)
         {
-            var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
-            var collection = db.GetCollection<ApiEndpointConfig>(CollectionName);
-
+            var collection = _dbContextProvider.GetCollection<ApiEndpointConfig>(CollectionName);
             var filter = Builders<ApiEndpointConfig>.Filter.Empty;
+            filter &= Builders<ApiEndpointConfig>.Filter.Nin(
+                    x => x.ResourceGroup,
+                    new[]
+                    {
+                        "communication",
+                        "configuration",
+                        "identifier",
+                        "idp",
+                        "lmt",
+                        "localization",
+                        "uds"
+                    });
             if (!string.IsNullOrWhiteSpace(request.Filter?.ResourceGroup))
                 filter &= Builders<ApiEndpointConfig>.Filter.Eq(x => x.ResourceGroup, request.Filter.ResourceGroup);
 
@@ -78,7 +88,8 @@ namespace Cloud.DomainService.Repositories
                     Usage = x.Usage,
                     BaseUrl = x.BaseUrl,
                     Version = x.Version,
-                    ItemId = x.ItemId
+                    ItemId = x.ItemId,
+                    HttpMethod = x.HttpMethod,
                 };
             }).ToList();
             return (mapped, count);

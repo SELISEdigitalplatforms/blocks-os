@@ -1,6 +1,7 @@
 using Blocks.Genesis;
 using Cloud.DomainService.Requests;
 using Cloud.DomainService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -16,7 +17,7 @@ namespace Api.Controllers
             _service = service;
         }
 
-   
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> GetList([FromBody] GetApiEndpointConfigsRequest request)
         {
@@ -30,7 +31,7 @@ namespace Api.Controllers
             var response = await _service.GetListAsync(request);
             return Ok(response);
         }
-
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Update([FromBody] UpdateApiEndpointConfigRequest request)
         {
@@ -44,7 +45,7 @@ namespace Api.Controllers
             var response = await _service.UpdateAsync(request);
             return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
-
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> BulkUpdate([FromBody] BulkUpdateApiEndpointConfigRequest request)
         {
