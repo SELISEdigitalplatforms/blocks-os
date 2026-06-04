@@ -107,13 +107,13 @@ export const CreateClientCredential = () => {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh]">
-        <DialogHeader>
+        <DialogHeader classNAme="pl-1">
           <DialogTitle>New Access Token</DialogTitle>
           <DialogDescription>Enter details to create a new key.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-            <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-2">
+            <div className="max-h-[60vh] space-y-6 overflow-y-auto pl-1 pr-2">
               <FormField
                 control={form.control}
                 name="clientNameService"
