@@ -180,6 +180,7 @@ export const mockCaptchaServiceFactory = () => ({
 export const mockMfaServiceFactory = () => ({
   mfaService: {
     getConfigurations: vi.fn(),
+    getProfileMfaConfiguration: vi.fn(),
     saveMFAConfiguration: vi.fn(),
     generateUserMfaOTP: vi.fn(),
     configureUserMFA: vi.fn(),
