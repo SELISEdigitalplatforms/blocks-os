@@ -20,7 +20,7 @@ export class StorageConfiguration {
   }> {
     const url = STORAGE_CONFIG_ENDPOINTS.SAVE_CONFIG;
     const resetValues =
-      values.storageStrategy === "Amazon"
+      values.storageStrategy === "AWS"
         ? {
           host: "",
           port: "",
