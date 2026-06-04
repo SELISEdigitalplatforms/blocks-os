@@ -33,5 +33,4 @@ export interface IGetServiceAnalyticsPayload {
   startTime: string;
   endTime: string;
   serviceName?: string;
-  projectKey: string;
 }
