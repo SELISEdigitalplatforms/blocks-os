@@ -47,9 +47,9 @@ export function SidebarMobileView() {
   const isLmtRoute = pathname.startsWith("/services/lmt")
 
   const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "my-secret" : "general")
-  const [secretsOpen, setSecretsOpen] = useState(true)
-  const [idpOpen, setIdpOpen] = useState(true)
-  const [lmtOpen, setLmtOpen] = useState(true)
+  const [secretsOpen, setSecretsOpen] = useState(isSecretManagementRoute)
+  const [idpOpen, setIdpOpen] = useState(isAuthenticationRoute)
+  const [lmtOpen, setLmtOpen] = useState(isLmtRoute)
 
   const renderExpandableParent = (
     menu: (typeof allowedMenu)[number] & { type: "menu" },
@@ -68,12 +68,13 @@ export function SidebarMobileView() {
   const renderExpandableChildren = (
     groups: typeof SECRET_MANAGEMENT_NAV_GROUPS,
     routePrefix: string,
+    isParentRouteActive: boolean
   ) => (
     <div className="grid gap-0.5">
       {groups.map((group) =>
         group.items.map((item) => {
           const Icon = item.icon
-          const isActive = currentTab === item.value
+          const isActive = isParentRouteActive && currentTab === item.value
           return (
             <button
               key={item.id}
@@ -132,40 +133,25 @@ export function SidebarMobileView() {
                   {menu.id === "service-identity__secret-management" ? (
                     <>
                       {renderExpandableParent(menu, isSecretManagementRoute, secretsOpen, () => {
-                        if (!isSecretManagementRoute) {
-                          navigate("/services/secret-management?tab=my-secret")
-                          setOpen(false)
-                        } else {
-                          setSecretsOpen((v) => !v)
-                        }
+                        setSecretsOpen((v) => !v)
                       })}
-                      {isSecretManagementRoute && secretsOpen &&
-                        renderExpandableChildren(SECRET_MANAGEMENT_NAV_GROUPS, "/services/secret-management")}
+                      {secretsOpen &&
+                        renderExpandableChildren(SECRET_MANAGEMENT_NAV_GROUPS, "/services/secret-management", isSecretManagementRoute)}
                     </>
                   ) : menu.id === "service-identity__authentication" ? (
                     <>
                       {renderExpandableParent(menu, isAuthenticationRoute, idpOpen, () => {
-                        if (!isAuthenticationRoute) {
-                          navigate("/services/authentication?tab=general")
-                          setOpen(false)
-                        } else {
-                          setIdpOpen((v) => !v)
-                        }
+                        setIdpOpen((v) => !v)
                       })}
-                      {isAuthenticationRoute && idpOpen &&
-                        renderExpandableChildren(AUTHENTICATION_NAV_GROUPS, "/services/authentication")}
+                      {idpOpen &&
+                        renderExpandableChildren(AUTHENTICATION_NAV_GROUPS, "/services/authentication", isAuthenticationRoute)}
                     </>
                   ) : menu.id === "service-identity__lmt" ? (
                     <>
                       {renderExpandableParent(menu, isLmtRoute, lmtOpen, () => {
-                        if (!isLmtRoute) {
-                          navigate("/services/lmt?tab=usage")
-                          setOpen(false)
-                        } else {
-                          setLmtOpen((v) => !v)
-                        }
+                        setLmtOpen((v) => !v)
                       })}
-                      {isLmtRoute && lmtOpen && renderExpandableChildren(LMT_NAV_GROUPS, "/services/lmt")}
+                      {lmtOpen && renderExpandableChildren(LMT_NAV_GROUPS, "/services/lmt", isLmtRoute)}
                     </>
                   ) : (
                     <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
