@@ -63,6 +63,17 @@ export const useGetUserById = (
   });
 };
 
+export const useGetProfileUserById = (
+  options: IGetUserByIdPayload & { enabled?: boolean },
+) => {
+  const { enabled, id, projectKey } = options;
+  return useQuery({
+    queryKey: ["profile-user", { id, projectKey }],
+    queryFn: () => userService.getUserById({ id, projectKey }),
+    enabled,
+  });
+};
+
 export const useAddUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
