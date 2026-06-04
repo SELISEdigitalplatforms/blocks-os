@@ -12,7 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { EnvironmentMigrationWizard } from "@/components/environment-migration/environment-migration-wizard";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ProjectCardLoading } from "@/components/project-card/loading";
 import { useNavigate } from "react-router-dom";
@@ -205,3 +206,5 @@ export const EnvironmentsPage = () => {
     </main>
   );
 };
+
+export const EnvironmentMigrationPage = () => <EnvironmentMigrationWizard />;
