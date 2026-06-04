@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http-client";
+import { secretsService } from "@/services/secrets.service";
 import { MFAService } from "./mfa.service";
-import { MFA_CONFIG_ENDPOINTS, MFA_ENDPOINTS } from "../constants/endpoint.constant";
+import {
+  MFA_CONFIG_ENDPOINTS,
+  MFA_ENDPOINTS,
+  PROFILE_MFA_CONFIG_ENDPOINTS,
+} from "../constants/endpoint.constant";
 import {
   mockMfaConfigResponse,
   mockSaveMfaConfigPayload,
@@ -20,6 +25,12 @@ import {
 
 vi.mock("@/lib/http-client", () => mockHttpClientFactory());
 
+vi.mock("@/services/secrets.service", () => ({
+  secretsService: {
+    save: vi.fn(),
+  },
+}));
+
 describe("MFAService", () => {
   let service: MFAService;
 
@@ -32,14 +43,36 @@ describe("MFAService", () => {
     vi.clearAllMocks();
   });
 
-  // ─── getConfigurations ────────────────────────────────────────────────────
+  // ─── getConfigurations (secrets — secret-management admin UI) ─────────────
   describe("getConfigurations", () => {
-    it("should GET MFA config from Logic API", async () => {
-      vi.mocked(http.get).mockResolvedValue(mockMfaConfigResponse);
+    it("should map secrets response to MFA configuration shape", async () => {
+      vi.mocked(http.get).mockResolvedValue([
+        {
+          itemId: "mfa-1",
+          keyValuePairs: {
+            enableMfa: "true",
+            userMfaType: "[1,2]",
+            mfaTemplate: JSON.stringify({ templateName: "t", templateId: "id" }),
+          },
+        },
+      ]);
 
       const result = await service.getConfigurations();
 
-      expect(http.get).toHaveBeenCalledWith(MFA_CONFIG_ENDPOINTS.GET, undefined, {
+      expect(http.get).toHaveBeenCalledWith(`${MFA_CONFIG_ENDPOINTS.GET}?secretKey=mfa`);
+      expect(result.enableMfa).toBe(true);
+      expect(result.userMfaType).toEqual([1, 2]);
+    });
+  });
+
+  // ─── getProfileMfaConfiguration (Logic — profile page) ────────────────────
+  describe("getProfileMfaConfiguration", () => {
+    it("should GET MFA config from Logic API", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockMfaConfigResponse);
+
+      const result = await service.getProfileMfaConfiguration();
+
+      expect(http.get).toHaveBeenCalledWith(PROFILE_MFA_CONFIG_ENDPOINTS.GET, undefined, {
         absoluteUrl: true,
       });
       expect(result).toEqual(mockMfaConfigResponse);
@@ -48,28 +81,30 @@ describe("MFAService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getConfigurations()).rejects.toThrow("Network error");
+      await expect(service.getProfileMfaConfiguration()).rejects.toThrow("Network error");
     });
   });
 
   // ─── saveMFAConfiguration ─────────────────────────────────────────────────
   describe("saveMFAConfiguration", () => {
-    it("should POST to the correct endpoint with payload", async () => {
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+    it("should save via secretsService with MFA keyValuePairs", async () => {
+      vi.mocked(secretsService.save).mockResolvedValue({ itemId: "mfa-1" } as never);
 
       const result = await service.saveMFAConfiguration(mockSaveMfaConfigPayload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        MFA_CONFIG_ENDPOINTS.SAVE,
-        mockSaveMfaConfigPayload,
-        undefined,
-        { absoluteUrl: true },
-      );
-      expect(result).toEqual(mockSuccessResponse);
+      expect(secretsService.save).toHaveBeenCalledWith({
+        secretKey: "mfa",
+        keyValuePairs: {
+          enableMfa: "true",
+          userMfaType: JSON.stringify(mockSaveMfaConfigPayload.userMfaType),
+          mfaTemplate: JSON.stringify(mockSaveMfaConfigPayload.mfaTemplate),
+        },
+      });
+      expect(result).toEqual({ isSuccess: true, errors: null });
     });
 
-    it("should throw when the API call fails", async () => {
-      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
+    it("should throw when secrets save fails", async () => {
+      vi.mocked(secretsService.save).mockRejectedValue(new Error("Network error"));
 
       await expect(service.saveMFAConfiguration(mockSaveMfaConfigPayload)).rejects.toThrow(
         "Network error",

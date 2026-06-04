@@ -22,6 +22,7 @@ import {
 import {
   MFA_CONFIG_ENDPOINTS,
   MFA_ENDPOINTS,
+  PROFILE_MFA_CONFIG_ENDPOINTS,
 } from '../constants/endpoint.constant'
 
 export class MFAService {
@@ -62,6 +63,12 @@ export class MFAService {
           projectKey: null,
         }
       })
+  }
+
+  getProfileMfaConfiguration(): Promise<IGetConfigurationResponse> {
+    return http.get(PROFILE_MFA_CONFIG_ENDPOINTS.GET, undefined, {
+      absoluteUrl: true,
+    })
   }
 
   saveMFAConfiguration(
