@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { ChevronsLeft, Menu } from "lucide-react";
-import { Button } from "@/components/ui-kits/button/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
 import { cn } from "@/lib/utils";
 import { NavGroup } from "@/constants/secret-management-nav";
 type PageSidebarLayoutProps = {
@@ -19,7 +16,6 @@ export function PageSidebarLayout({
   headerContent,
   children,
 }: PageSidebarLayoutProps) {
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const location = useLocation();
   useEffect(() => {
@@ -29,7 +25,6 @@ export function PageSidebarLayout({
   }, [location.key]);
   const handleTabChange = (value: string) => {
     onTabChange(value);
-    setIsMobileSidebarOpen(false);
   };
   const SidebarNav = ({ showCollapse = false }: { showCollapse?: boolean }) => (
     <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -77,27 +72,6 @@ export function PageSidebarLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-52 p-0" hideClose>
-                <div className="flex h-full flex-col">
-                  <SheetHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
-                    <SheetTitle className="text-sm font-semibold">Secrets &amp; Configs</SheetTitle>
-                    <SheetClose asChild>
-                      <Button variant="ghost" size="icon" className="!mt-0 h-7 w-7 shrink-0">
-                        <ChevronsLeft className="h-4 w-4" />
-                        <span className="sr-only">Close sidebar</span>
-                      </Button>
-                    </SheetClose>
-                  </SheetHeader>
-                  <SidebarNav showCollapse={false} />
-                </div>
-              </SheetContent>
-            </Sheet>
             {currentItem && (
               <div>
                 <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
@@ -114,3 +88,4 @@ export function PageSidebarLayout({
     </div>
   );
 }
+

@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react"
-import { ChevronRight, Menu, X } from "lucide-react"
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
+import { Menu, X } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 import { EnvironmentList } from "@/components/environment-list/environment-list"
 import { Logo } from "@/components/logo"
 import { MobileMenuItem } from "@/components/menus/mobile-menu-item"
@@ -15,84 +15,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui-kits/sheet/sheet"
-import { navigationMenus } from "@/constants/navigation-menus"
+import { navigationMenus } from "@/constants/menus"
 import { useFilteredMenus } from "@/hooks/use-filtered-menus"
-import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
-import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav"
-import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
-import { cn } from "@/lib/utils"
-
-const expandableParentClasses = (isActive: boolean) =>
-  cn(
-    "group relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-    isActive && "!text-primary",
-  )
-
-const expandableChildClasses = (isActive: boolean) =>
-  cn(
-    "group relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 pl-8 text-base transition-colors",
-    isActive ? "!text-primary" : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-  )
 
 export function SidebarMobileView() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
   const allowedMenu = useFilteredMenus(navigationMenus)
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
 
   const isProjectOverviewRoute = pathname.startsWith("/project-overview")
-  const isSecretManagementRoute = pathname.startsWith("/services/secret-management")
-  const isAuthenticationRoute = pathname.startsWith("/services/authentication")
-  const isLmtRoute = pathname.startsWith("/services/lmt")
-
-  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "my-secret" : "general")
-  const [secretsOpen, setSecretsOpen] = useState(isSecretManagementRoute)
-  const [idpOpen, setIdpOpen] = useState(isAuthenticationRoute)
-  const [lmtOpen, setLmtOpen] = useState(isLmtRoute)
-
-  const renderExpandableParent = (
-    menu: (typeof allowedMenu)[number] & { type: "menu" },
-    isActiveRoute: boolean,
-    isOpen: boolean,
-    onToggle: () => void,
-  ) => (
-    <button onClick={onToggle} className={expandableParentClasses(isActiveRoute)}>
-      {menu.icon ? <menu.icon className="h-5 w-5 shrink-0" /> : null}
-      <span>{menu.name}</span>
-      <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-      {isActiveRoute ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
-    </button>
-  )
-
-  const renderExpandableChildren = (
-    groups: typeof SECRET_MANAGEMENT_NAV_GROUPS,
-    routePrefix: string,
-    isParentRouteActive: boolean
-  ) => (
-    <div className="grid gap-0.5">
-      {groups.map((group) =>
-        group.items.map((item) => {
-          const Icon = item.icon
-          const isActive = isParentRouteActive && currentTab === item.value
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                navigate(`${routePrefix}?tab=${item.value}`)
-                setOpen(false)
-              }}
-              className={expandableChildClasses(isActive)}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-              {isActive ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
-            </button>
-          )
-        }),
-      )}
-    </div>
-  )
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -128,38 +59,10 @@ export function SidebarMobileView() {
         <nav className="grid gap-2 py-2">
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
-              {menu.type === "menu" ? (
-                <>
-                  {menu.id === "service-identity__secret-management" ? (
-                    <>
-                      {renderExpandableParent(menu, isSecretManagementRoute, secretsOpen, () => {
-                        setSecretsOpen((v) => !v)
-                      })}
-                      {secretsOpen &&
-                        renderExpandableChildren(SECRET_MANAGEMENT_NAV_GROUPS, "/services/secret-management", isSecretManagementRoute)}
-                    </>
-                  ) : menu.id === "service-identity__authentication" ? (
-                    <>
-                      {renderExpandableParent(menu, isAuthenticationRoute, idpOpen, () => {
-                        setIdpOpen((v) => !v)
-                      })}
-                      {idpOpen &&
-                        renderExpandableChildren(AUTHENTICATION_NAV_GROUPS, "/services/authentication", isAuthenticationRoute)}
-                    </>
-                  ) : menu.id === "service-identity__lmt" ? (
-                    <>
-                      {renderExpandableParent(menu, isLmtRoute, lmtOpen, () => {
-                        setLmtOpen((v) => !v)
-                      })}
-                      {lmtOpen && renderExpandableChildren(LMT_NAV_GROUPS, "/services/lmt", isLmtRoute)}
-                    </>
-                  ) : (
-                    <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
-                  )}
-                </>
-              ) : (
-                <Separator />
+              {menu.type === "menu" && (
+                <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
               )}
+              {menu.type === "separator" && <Separator />}
             </Fragment>
           ))}
         </nav>
