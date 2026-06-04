@@ -69,7 +69,7 @@ describe("StorageConfiguration", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_CONFIG_ENDPOINTS.SAVE_CONFIG,
         expect.objectContaining({
-          storageStrategy: "Amazon",
+          storageStrategy: "AWS",
           accessKey: mockSaveAmazonConfigPayload.accessKey,
           secretKey: mockSaveAmazonConfigPayload.secretKey,
           cloudStorageRegionEndPoint: mockSaveAmazonConfigPayload.cloudStorageRegionEndPoint,
