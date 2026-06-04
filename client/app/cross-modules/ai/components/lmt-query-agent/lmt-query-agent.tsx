@@ -104,7 +104,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
         setCurrentEvent({ message: "Sending..." });
         setSuggestions([]);
         const stream = await streamQuery({
-          project_key: tenantId,
           query: formData.query,
           session_id: session,
         });
