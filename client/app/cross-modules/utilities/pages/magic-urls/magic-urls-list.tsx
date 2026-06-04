@@ -13,10 +13,15 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { formatDate, parseDateString } from "@/lib/utils";
 import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
 import { Button } from "@/components/ui-kits/button/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { EllipsisVertical, Pencil, Trash } from "lucide-react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
-import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { useDeleteMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url-config";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
@@ -39,6 +44,13 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
   const { mutateAsync: deleteConfig, isPending: isDeleting } = useDeleteMagicUrlConfig();
   const [itemToDelete, setItemToDelete] = React.useState<IMagicUrlConfig | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [selectedConfig, setSelectedConfig] = React.useState<IMagicUrlConfig | null>(null);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+
+  const handleEditConfig = (config: IMagicUrlConfig) => {
+    setSelectedConfig(config);
+    setIsEditOpen(true);
+  };
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
@@ -86,28 +98,38 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
         header: "",
         enableHiding: false,
         cell: ({ row }) => (
-          <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            <ConfigureMagicUrlModal configuration={row.original}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <Pencil className="h-4 w-4" />
-                  <span className="ml-2.5 hidden sm:inline">Edit</span>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-5 w-5 p-0">
+                  <EllipsisVertical width={20} height={20} />
                 </Button>
-              </DialogTrigger>
-            </ConfigureMagicUrlModal>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-error"
-              disabled={isDeleting}
-              onClick={() => {
-                setItemToDelete(row.original);
-                setIsDeleteModalOpen(true);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="ml-2.5 hidden sm:inline">Delete</span>
-            </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditConfig(row.original);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer text-error"
+                  disabled={isDeleting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setItemToDelete(row.original);
+                    setIsDeleteModalOpen(true);
+                  }}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
       },
@@ -160,7 +182,7 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
               <TableRow>
                 <TableCell
                   colSpan={table.getAllColumns().length}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-[240px] align-middle text-center text-muted-foreground"
                 >
                   No configurations found. Use Add Configuration to create one.
                 </TableCell>
@@ -170,6 +192,16 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
         </Table>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
+      {selectedConfig && (
+        <ConfigureMagicUrlModal
+          configuration={selectedConfig}
+          open={isEditOpen}
+          onOpenChange={(value) => {
+            setIsEditOpen(value);
+            if (!value) setSelectedConfig(null);
+          }}
+        />
+      )}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <ConfirmationModal
           onCancel={() => setIsDeleteModalOpen(false)}

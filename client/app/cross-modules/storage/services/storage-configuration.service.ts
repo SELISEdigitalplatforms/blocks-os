@@ -7,10 +7,8 @@ import {
 import { STORAGE_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class StorageConfiguration {
-  gets(projectKey: string): Promise<IStorageConfiguration[]> {
-    return http.get<IStorageConfiguration[]>(
-      `${STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS}?ProjectKey=${projectKey}`,
-    );
+  gets(): Promise<IStorageConfiguration[]> {
+    return http.get<IStorageConfiguration[]>(STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS);
   }
 
   save(values: IStorageConfigurationSavePayload): Promise<{
@@ -20,7 +18,7 @@ export class StorageConfiguration {
   }> {
     const url = STORAGE_CONFIG_ENDPOINTS.SAVE_CONFIG;
     const resetValues =
-      values.storageStrategy === "Amazon"
+      values.storageStrategy === "AWS"
         ? {
           host: "",
           port: "",
