@@ -112,10 +112,11 @@ export const CreateClientCredential = () => {
           <DialogDescription>Enter details to create a new key.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="clientNameService"
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+            <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-2">
+              <FormField
+                control={form.control}
+                name="clientNameService"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Client Name</FormLabel>
@@ -190,6 +191,7 @@ export const CreateClientCredential = () => {
                 </FormItem>
               )}
             />
+            </div>
             <DialogFooter>
               <DialogClose>
                 <Button onClick={() => setOpen(false)} type="button" variant="outline">
