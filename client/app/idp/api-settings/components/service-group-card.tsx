@@ -63,7 +63,7 @@ export const ServiceGroupCard = ({
             </button>
           </CollapsibleTrigger>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <Badge className="hidden sm:flex rounded-full font-mono text-xs bg-primary/10 text-primary">
+            <Badge className="hidden sm:flex rounded-full font-mono text-xs bg-primary/10 text-primary pointer-events-none">
               {endpoints.length} Endpoint{endpoints.length !== 1 ? "s" : ""}
             </Badge>
             <SecurityPresetsPopover
