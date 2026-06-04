@@ -20,7 +20,7 @@ const mapConfigurationToCardData = (config: IStorageConfiguration): StorageCardD
   providerColor: "",
   title: config.name,
   subtitle:
-    config.storageStrategy === "Amazon"
+    config.storageStrategy === "AWS"
       ? "AWS"
       : config.storageStrategy === "Azure"
         ? "Azure"
