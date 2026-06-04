@@ -107,7 +107,7 @@ export const CreateClientCredential = () => {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh]">
-        <DialogHeader classNAme="pl-1">
+        <DialogHeader className="pl-1">
           <DialogTitle>New Access Token</DialogTitle>
           <DialogDescription>Enter details to create a new key.</DialogDescription>
         </DialogHeader>
