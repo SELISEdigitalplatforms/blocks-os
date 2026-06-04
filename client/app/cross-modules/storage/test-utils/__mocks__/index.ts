@@ -23,7 +23,7 @@ import type {
 
 export const mockStorageConfigList: IStorageConfiguration[] = [
   {
-    storageStrategy: "Amazon",
+    storageStrategy: "AWS",
     accessKey: "AKIAIOSFODNN7EXAMPLE",
     cloudStorageRegionEndPoint: "us-east-1",
     connectionString: null,
@@ -78,7 +78,7 @@ export const mockDeleteSuccessResponse: IDeleteResourceResponse = {
 export const mockSaveAmazonConfigPayload: IStorageConfigurationSavePayload = {
   name: "Amazon S3 Config",
   projectKey: "test-project-key-123",
-  storageStrategy: "Amazon",
+  storageStrategy: "AWS",
   secretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
   accessKey: "AKIAIOSFODNN7EXAMPLE",
   cloudStorageRegionEndPoint: "us-east-1",
