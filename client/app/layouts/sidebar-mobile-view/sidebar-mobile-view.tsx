@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react"
-import { ChevronRight, Menu, X } from "lucide-react"
+import { Menu, X, ChevronRight, ChevronsLeft } from "lucide-react"
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { EnvironmentList } from "@/components/environment-list/environment-list"
 import { Logo } from "@/components/logo"
@@ -17,22 +17,10 @@ import {
 } from "@/components/ui-kits/sheet/sheet"
 import { navigationMenus } from "@/constants/navigation-menus"
 import { useFilteredMenus } from "@/hooks/use-filtered-menus"
-import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
+import { SECRET_MANAGEMENT_NAV_GROUPS, NavGroup } from "@/constants/secret-management-nav"
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav"
 import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
 import { cn } from "@/lib/utils"
-
-const expandableParentClasses = (isActive: boolean) =>
-  cn(
-    "group relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-    isActive && "!text-primary",
-  )
-
-const expandableChildClasses = (isActive: boolean) =>
-  cn(
-    "group relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 pl-8 text-base transition-colors",
-    isActive ? "!text-primary" : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-  )
 
 export function SidebarMobileView() {
   const [open, setOpen] = useState(false)
@@ -47,52 +35,81 @@ export function SidebarMobileView() {
   const isLmtRoute = pathname.startsWith("/services/lmt")
 
   const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "my-secret" : "general")
-  const [secretsOpen, setSecretsOpen] = useState(isSecretManagementRoute)
-  const [idpOpen, setIdpOpen] = useState(isAuthenticationRoute)
-  const [lmtOpen, setLmtOpen] = useState(isLmtRoute)
 
-  const renderExpandableParent = (
-    menu: (typeof allowedMenu)[number] & { type: "menu" },
-    isActiveRoute: boolean,
-    isOpen: boolean,
-    onToggle: () => void,
-  ) => (
-    <button onClick={onToggle} className={expandableParentClasses(isActiveRoute)}>
-      {menu.icon ? <menu.icon className="h-5 w-5 shrink-0" /> : null}
-      <span>{menu.name}</span>
-      <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-      {isActiveRoute ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
-    </button>
-  )
-
-  const renderExpandableChildren = (
-    groups: typeof SECRET_MANAGEMENT_NAV_GROUPS,
-    routePrefix: string,
-    isParentRouteActive: boolean
-  ) => (
-    <div className="grid gap-0.5">
-      {groups.map((group) =>
-        group.items.map((item) => {
-          const Icon = item.icon
-          const isActive = isParentRouteActive && currentTab === item.value
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                navigate(`${routePrefix}?tab=${item.value}`)
-                setOpen(false)
-              }}
-              className={expandableChildClasses(isActive)}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-              {isActive ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
-            </button>
-          )
-        }),
-      )}
-    </div>
-  )
+  const MobileGroupedMenuItem = ({
+    menu,
+    groups,
+    routePrefix,
+  }: {
+    menu: (typeof allowedMenu)[number] & { type: "menu" }
+    groups: NavGroup[]
+    routePrefix: string
+  }) => {
+    const isActiveMenu = pathname.startsWith(menu.path)
+    return (
+      <Sheet>
+        <SheetTrigger asChild>
+          <div
+            className={cn(
+              "flex h-10 cursor-pointer items-center justify-between px-4 py-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+              isActiveMenu && "!text-primary",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
+              <span className="relative">{menu.name}</span>
+            </div>
+            <ChevronRight className="aspect-square w-4" />
+          </div>
+        </SheetTrigger>
+        <SheetContent className="w-full p-0 flex flex-col" aria-describedby={undefined} hideClose>
+          <SheetHeader className="flex-row items-center justify-between border-b border-border px-4 py-3 shrink-0">
+            <SheetTitle className="text-sm font-semibold">{menu.name}</SheetTitle>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" className="!mt-0 h-7 w-7 shrink-0">
+                <ChevronsLeft className="h-4 w-4" />
+                <span className="sr-only">Close sidebar</span>
+              </Button>
+            </SheetClose>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-1">
+            {groups.map((group) => (
+              <div key={group.label}>
+                <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group.label}
+                </p>
+                {group.items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname.startsWith(routePrefix) && currentTab === item.value
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        navigate(`${routePrefix}?tab=${item.value}`)
+                        setOpen(false) // Close the main sidebar too
+                      }}
+                      className={cn(
+                        "relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-sm transition-colors",
+                        isActive
+                          ? "text-primary"
+                          : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
+                      )}
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      <span>{item.label}</span>
+                      {isActive && (
+                        <div className="absolute right-0 top-2.5 h-5 w-1 rounded-l-lg bg-primary" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    )
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -131,28 +148,23 @@ export function SidebarMobileView() {
               {menu.type === "menu" ? (
                 <>
                   {menu.id === "service-identity__secret-management" ? (
-                    <>
-                      {renderExpandableParent(menu, isSecretManagementRoute, secretsOpen, () => {
-                        setSecretsOpen((v) => !v)
-                      })}
-                      {secretsOpen &&
-                        renderExpandableChildren(SECRET_MANAGEMENT_NAV_GROUPS, "/services/secret-management", isSecretManagementRoute)}
-                    </>
+                    <MobileGroupedMenuItem
+                      menu={menu}
+                      groups={SECRET_MANAGEMENT_NAV_GROUPS}
+                      routePrefix="/services/secret-management"
+                    />
                   ) : menu.id === "service-identity__authentication" ? (
-                    <>
-                      {renderExpandableParent(menu, isAuthenticationRoute, idpOpen, () => {
-                        setIdpOpen((v) => !v)
-                      })}
-                      {idpOpen &&
-                        renderExpandableChildren(AUTHENTICATION_NAV_GROUPS, "/services/authentication", isAuthenticationRoute)}
-                    </>
+                    <MobileGroupedMenuItem
+                      menu={menu}
+                      groups={AUTHENTICATION_NAV_GROUPS}
+                      routePrefix="/services/authentication"
+                    />
                   ) : menu.id === "service-identity__lmt" ? (
-                    <>
-                      {renderExpandableParent(menu, isLmtRoute, lmtOpen, () => {
-                        setLmtOpen((v) => !v)
-                      })}
-                      {lmtOpen && renderExpandableChildren(LMT_NAV_GROUPS, "/services/lmt", isLmtRoute)}
-                    </>
+                    <MobileGroupedMenuItem
+                      menu={menu}
+                      groups={LMT_NAV_GROUPS}
+                      routePrefix="/services/lmt"
+                    />
                   ) : (
                     <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
                   )}
