@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ServiceGroupCard } from "@blocks-idp/api-settings/components/service-group-card";
 import { BulkActionBar } from "@blocks-idp/api-settings/components/bulk-action-bar";
 import {
-  useGetApiEndpoints,
+  useGetApiEndpointsInfinite,
   useUpdateApiEndpoint,
   useBulkUpdateApiEndpoints,
 } from "@blocks-idp/api-settings/hooks/use-api-settings";
@@ -30,11 +30,29 @@ const ServiceGroupSkeleton = () => (
 /** ─── Page component ────────────────────────────────────────────────────────── */
 export default function ApiSettingsPage() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data, isLoading } = useGetApiEndpoints({ projectKey: tenantId, page: 0, pageSize: 100 });
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useGetApiEndpointsInfinite({ projectKey: tenantId });
   const { mutateAsync: updateEndpoint } = useUpdateApiEndpoint();
   const { mutateAsync: bulkUpdate } = useBulkUpdateApiEndpoints();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const endpoints = data?.data ?? [];
+  const endpoints = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage(); },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   // Group endpoints: service → controller (nested)
   const serviceGroups = useMemo(() => {
     const byService: Record<string, Record<string, IApiEndpoint[]>> = {};
@@ -342,6 +360,14 @@ export default function ApiSettingsPage() {
           ))}
         </div>
       )}
+      {isFetchingNextPage && (
+        <div className="flex flex-col gap-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <ServiceGroupSkeleton key={i} />
+          ))}
+        </div>
+      )}
+      <div ref={sentinelRef} className="h-1" />
       <BulkActionBar
         selectedCount={selectedIds.size}
         onEnableMfa={handleBulkMfa}
