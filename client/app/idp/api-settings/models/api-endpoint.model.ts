@@ -43,7 +43,6 @@ export interface IGetApiEndpointsResponse {
 }
 
 export interface IUpdateApiEndpointPayload {
-  projectKey: string;
   itemId: string;
   service: string;
   method: string;
@@ -61,7 +60,6 @@ export interface IUpdateApiEndpointResponse {
 }
 
 export interface IBulkUpdateApiEndpointsPayload {
-  projectKey: string;
   itemIds: string[];
   isCaptchaRequired?: boolean;
   isMFARequired?: boolean;

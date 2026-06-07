@@ -115,7 +115,6 @@ export default function ApiSettingsPage() {
     async (ep: IApiEndpoint, value: boolean) => {
       try {
         const result = await updateEndpoint({
-          projectKey: tenantId,
           itemId: ep.itemId,
           service: ep.service,
           method: ep.method,
@@ -140,7 +139,6 @@ export default function ApiSettingsPage() {
     async (ep: IApiEndpoint, value: boolean) => {
       try {
         const result = await updateEndpoint({
-          projectKey: tenantId,
           itemId: ep.itemId,
           service: ep.service,
           method: ep.method,
@@ -176,7 +174,6 @@ export default function ApiSettingsPage() {
                 : false
             : false;
         const result = await bulkUpdate({
-          projectKey: tenantId,
           itemIds: ids,
           isMFARequired: value,
           isCaptchaRequired: captchaState,
@@ -206,7 +203,6 @@ export default function ApiSettingsPage() {
                 : false
             : false;
         const result = await bulkUpdate({
-          projectKey: tenantId,
           itemIds: ids,
           isCaptchaRequired: value,
           isMFARequired: mfaState,
@@ -225,7 +221,7 @@ export default function ApiSettingsPage() {
   const handleBulkGroupDisableAll = useCallback(
     async (ids: string[]) => {
       try {
-        const result = await bulkUpdate({ projectKey: tenantId, itemIds: ids, isMFARequired: false, isCaptchaRequired: false, disableAll: true });
+        const result = await bulkUpdate({ itemIds: ids, isMFARequired: false, isCaptchaRequired: false, disableAll: true });
         if (!result.isSuccess) {
           throw new Error(result.errors?.join(", ") || "Failed to disable security features");
         }
@@ -251,7 +247,6 @@ export default function ApiSettingsPage() {
               : false
           : false;
       const result = await bulkUpdate({
-        projectKey: tenantId,
         itemIds: selectedArray,
         isMFARequired: true,
         isCaptchaRequired: captchaState,
@@ -279,7 +274,6 @@ export default function ApiSettingsPage() {
               : false
           : false;
       const result = await bulkUpdate({
-        projectKey: tenantId,
         itemIds: selectedArray,
         isCaptchaRequired: true,
         isMFARequired: mfaState,
