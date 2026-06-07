@@ -14,14 +14,14 @@ interface StorageDetailsDrawerProps {
   storage: IStorageConfiguration | null;
 }
 const providerColors: Record<StorageStrategyType, string> = {
-  Amazon: "bg-orange-100 text-orange-600",
+  AWS: "bg-orange-100 text-orange-600",
   Azure: "bg-blue-100 text-blue-600",
   SftpStorage: "bg-green-100 text-green-600",
   S3Compatible: "bg-purple-100 text-purple-600",
 };
 const getProviderLabel = (provider: StorageStrategyType): string => {
   switch (provider) {
-    case "Amazon": return "AWS";
+    case "AWS": return "AWS";
     case "Azure": return "Azure";
     case "SftpStorage": return "SFTP";
     case "S3Compatible": return "AWS S3 Compatible";
@@ -61,7 +61,7 @@ export function StorageDetailsDrawer({ open, onOpenChange, storage }: StorageDet
                     <div className="mb-2 text-xs text-muted-foreground">Storage provider</div>
                     <div className="flex items-center gap-2">
                       <div className={cn("flex h-8 w-8 items-center justify-center rounded", providerColorClass)}>
-                        {(storage.storageStrategy === "Amazon" || storage.storageStrategy === "S3Compatible") && (
+                        {(storage.storageStrategy === "AWS" || storage.storageStrategy === "S3Compatible") && (
                           <img src="/assets/images/amazon.png" alt="AWS" className="h-4 w-4 object-contain" />
                         )}
                         {storage.storageStrategy === "Azure" && (

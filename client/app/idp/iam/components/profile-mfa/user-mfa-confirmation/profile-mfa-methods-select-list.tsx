@@ -1,7 +1,7 @@
 import { profileMfaContext } from "../profile-mfa";
 import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
-import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
-import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
+import { useGetProfileMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
+import { useGetProfileUserById } from "@blocks-idp/iam/hooks/use-user";
 import { MFA_Provider_Data } from "@blocks-idp/mfa/utils/mfa-config";
 import { Button } from "@/components/ui-kits/button/button";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -52,8 +52,8 @@ const MethodsOption = ({ method, onSaveClick, activeType, isVerified }: MethodsO
 export const ProfileMfaMethodSelectList = () => {
   const { userId, projectKey, showVerifyModal, setIsDisableModalOpen } =
     useContext(profileMfaContext);
-  const { data } = useGetMFAConfig({ projectKey });
-  const { data: userData } = useGetMe();
+  const { data } = useGetProfileMFAConfig();
+  const { data: userData } = useGetProfileUserById({ id: userId, projectKey });
   const [type, setType] = useState<string>("");
   const availableMFaMethod = useMemo(() => {
     if (!data?.userMfaType.length) return [];

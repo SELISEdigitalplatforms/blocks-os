@@ -6,7 +6,13 @@ import { IProvider } from "@blocks-ai/types/aimodel.service.type";
 import { getProviderDisplayName, ProviderType } from "@blocks-ai/utils/aimodel-provider.utils";
 const PROVIDER_PNG_MAP: Record<string, string> = {
   google: "/assets/images/google.png",
-  deepseek: "/assets/images/deepseek.png",
+  azure: "/assets/images/azure.png",
+  openai: "/assets/images/agents/openai.png",
+  anthropic: "/assets/images/agents/anthropic.png",
+  gemini: "/assets/images/agents/gemini.png",
+  meta: "/assets/images/agents/meta.png",
+  custom: "/assets/images/custom.png",
+  deepseek: "/assets/images/deepseek.png", // keeping this if they add it later
 };
 const getProviderPng = (provider: string): string => {
   return PROVIDER_PNG_MAP[provider.toLowerCase()] ?? "";
