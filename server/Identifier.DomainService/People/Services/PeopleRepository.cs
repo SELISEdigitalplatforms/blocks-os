@@ -108,20 +108,6 @@ namespace DomainService.People
             return await _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName).Find(filter).FirstOrDefaultAsync();
         }
 
-        public async Task<bool> IsPeoplesWithinLimit(InvitationDetails request, string resource)
-        {
-            var collection = _dbContextProvider.GetDatabase(request.ProjectKey).GetCollection<ResourceLimit>("ResourceLimits");
-            var filter = Builders<ResourceLimit>.Filter.Eq(r => r.Resource, resource);
-            var resourceLimit = await collection.Find(filter).FirstOrDefaultAsync();
-
-            if (resourceLimit is not null && resourceLimit.Limit >= request.Emails.Count())
-            {
-                return true;
-            }
-
-            return false;
-        }
-
         public async Task<List<User>> GetUsersByEmailAsync(List<string> emails)
         {
             var filter = Builders<User>.Filter.In(x => x.Email, emails);

@@ -24,7 +24,7 @@ type StorageCardProps = {
   onDisconnect?: (id: string) => void;
 };
 const providerColors: Record<StorageStrategyType, string> = {
-  Amazon: "bg-orange-100 text-orange-600",
+  AWS: "bg-orange-100 text-orange-600",
   Azure: "bg-blue-100 text-blue-600",
   SftpStorage: "bg-green-100 text-green-600",
   S3Compatible: "bg-purple-100 text-purple-600",
@@ -58,7 +58,7 @@ export const StorageCard = ({
               providerColorClass,
             )}
           >
-            {(data.provider === "Amazon" || data.provider === "S3Compatible") && (
+            {(data.provider === "AWS" || data.provider === "S3Compatible") && (
               <img
                 src="/assets/images/amazon.png"
                 alt="AWS"

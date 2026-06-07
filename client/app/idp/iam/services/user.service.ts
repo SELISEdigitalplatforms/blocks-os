@@ -42,7 +42,7 @@ export class UserService {
   }
 
   getUser(): Promise<{ data: User }> {
-    return http.get(`${USER_ENDPOINTS.GET_USER}`, undefined, {
+    return http.get(`${USER_ENDPOINTS.GET_USERS}`, undefined, {
       absoluteUrl: true,
     });
   }
@@ -74,9 +74,41 @@ export class UserService {
   }
 
   updateUser(payload: IUpdateUserPayload): Promise<IUpdateUserResponse> {
-    return http.post(USER_ENDPOINTS.UPDATE, payload, undefined, {
-      absoluteUrl: true,
-    });
+    const flattenRecord = (value: unknown): string[] => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value as string[];
+      return Object.values(value as Record<string, string[]>).flat();
+    };
+    const normalized = {
+      itemId: payload.itemId,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      email: payload.email,
+      userName: payload.userName,
+      language: payload.language,
+      organizationIds: payload.organizationIds,
+      roles: flattenRecord(payload.roles),
+      permissions: flattenRecord(payload.permissions),
+      active: payload.active,
+      status: payload.status,
+      isVerified: payload.isVerified,
+      mfaEnabled: payload.mfaEnabled,
+      isMfaVerified: payload.isMfaVerified,
+      userMfaType: payload.userMfaType,
+      provisioningSource: payload.provisioningSource,
+      externalIdentities: payload.externalIdentities,
+      userCreationType: payload.userCreationType,
+      isMultiOrgEnabled: payload.isMultiOrgEnabled,
+      organizations: payload.organizations,
+      profileImageId: payload.profileImageId,
+      profileImageUrl: payload.profileImageUrl,
+    };
+    return http.post(
+      `${USER_ENDPOINTS.GET_USERS}/${payload.itemId}`,
+      normalized,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   getSignUpSetting(
@@ -110,7 +142,7 @@ export class UserService {
 
   getUserRoles(payload: IGetUserRolesPayload): Promise<IGetUserRolesResponse> {
     return http.get(
-      `${USER_ENDPOINTS.GET_USER_ROLES}?Id=${payload.userId}&ProjectKey=${payload.projectKey}`,
+      `${USER_ENDPOINTS.GET_USER_ROLES}?Id=${payload.userId}`,
       undefined,
       { absoluteUrl: true },
     );
@@ -120,7 +152,7 @@ export class UserService {
     payload: IGetUserPermissionsPayload,
   ): Promise<IGetUserPermissionsResponse> {
     return http.get(
-      `${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${payload.userId}&ProjectKey=${payload.projectKey}`,
+      `${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${payload.userId}`,
       undefined,
       { absoluteUrl: true },
     );
