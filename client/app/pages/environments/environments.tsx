@@ -24,6 +24,20 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui-kits/tooltip/tooltip";
+import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
+
+const isRecentMigrationForTarget = (
+  data: IMigrationStatusResponse[number],
+  tenantId: string,
+): boolean => {
+  if (data.targetedProjectKey !== tenantId || !data.createdDate) {
+    return false;
+  }
+  const createdDate = new Date(data.createdDate);
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+  return createdDate > tenMinutesAgo;
+};
+
 const ProjectGroupLoading = () => (
   <main className="flex flex-1 flex-col gap-4 p-4 sm:mx-10 md:gap-6">
     <div className="mt-4">
@@ -128,8 +142,8 @@ export const EnvironmentsPage = () => {
               project={project}
               isMigrationOngoing={
                 Array.isArray(migrationStatus) &&
-                migrationStatus.some(
-                  (data) => data.targetedProjectKey === project.tenantId,
+                migrationStatus.some((data) =>
+                  isRecentMigrationForTarget(data, project.tenantId),
                 )
               }
             />
@@ -154,9 +168,8 @@ export const EnvironmentsPage = () => {
                       project={project}
                       isMigrationOngoing={
                         Array.isArray(migrationStatus) &&
-                        migrationStatus.some(
-                          (data) =>
-                            data.targetedProjectKey === project.tenantId,
+                        migrationStatus.some((data) =>
+                          isRecentMigrationForTarget(data, project.tenantId),
                         )
                       }
                       className="bg-muted"
