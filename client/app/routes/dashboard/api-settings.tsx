@@ -65,7 +65,7 @@ export default function ApiSettingsPage() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([svc, controllers]) => {
         const firstEp = Object.values(controllers)[0]?.[0];
-        const baseUrl = firstEp?.baseUrl || "";
+        const baseUrl = (firstEp?.baseUrl || "").replace(/\/+$/, "");
         const version = firstEp?.version || "v1";
         return {
           service: svc,
@@ -289,10 +289,10 @@ export default function ApiSettingsPage() {
     }
   }, [tenantId, endpoints, selectedArray, bulkUpdate, clearSelection]);
   return (
-    <main className="flex flex-col gap-6 p-6 pb-24">
+    <main className="flex flex-col gap-4 p-4 pb-24 sm:gap-6 sm:p-6">
       <div>
-        <h1 className="text-xl font-semibold md:text-2xl">API Settings</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">API Settings</h1>
+        <p className="text-sm text-muted-foreground">
           Configure security policies for your API endpoints — enable MFA, Captcha, and manage access controls.
         </p>
       </div>
@@ -310,14 +310,14 @@ export default function ApiSettingsPage() {
         <div className="flex flex-col gap-8">
           {serviceGroups.map(({ service, swaggerJsonUrl, swaggerUiUrl, controllers }) => (
             <div key={service} className="flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-lg font-bold capitalize">{service}</h2>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
                   <a
                     href={swaggerJsonUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
+                    className="hidden items-center gap-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline sm:inline-flex"
                     title={swaggerJsonUrl}
                   >
                     <span className="truncate">{swaggerJsonUrl}</span>
@@ -328,7 +328,7 @@ export default function ApiSettingsPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => window.open(swaggerUiUrl, "_blank")}
-                  className="shrink-0 gap-1.5"
+                  className="w-fit shrink-0 gap-1.5"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   <span>API Docs</span>
