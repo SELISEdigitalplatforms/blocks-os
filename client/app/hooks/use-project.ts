@@ -28,11 +28,14 @@ export const useGetProjects = (tenantGroupId = "") => {
   return query;
 };
 
-export const useGetProject = (options: { projectId: string }) => {
+export const useGetProject = (options?: { projectId: string }) => {
+  const { selectedProject } = useProjectStore();
+  const projectId = options?.projectId ?? selectedProject?.itemId ?? "";
+  const resolvedOptions = { projectId };
   return useQuery({
-    queryKey: ["identifier", "project", options],
-    queryFn: () => projectService.getProject(options),
-    enabled: Boolean(options.projectId),
+    queryKey: ["identifier", "project", resolvedOptions],
+    queryFn: () => projectService.getProject(resolvedOptions),
+    enabled: Boolean(projectId),
   });
 };
 
