@@ -35,6 +35,7 @@ function mapApiResponseToEndpoint(data: Record<string, unknown>): IApiEndpoint {
     tags: getProperty<string[]>("tags", "Tags", []),
     service: getProperty<string>("service", "Service", ""),
     method: getProperty<string>("method", "Method", ""),
+    httpMethod: getProperty<string>("httpMethod", "HttpMethod", ""),
     description: getProperty<string>("description", "Description", ""),
     isCaptchaRequired: getProperty<boolean>("isCaptchaRequired", "IsCaptchaRequired", false),
     captchaProvider: getProperty<string>("captchaProvider", "CaptchaProvider", ""),
@@ -52,7 +53,6 @@ function mapApiResponseToEndpoint(data: Record<string, unknown>): IApiEndpoint {
 class ApiSettingsService {
   getEndpoints(payload: IGetApiEndpointsPayload): Promise<IGetApiEndpointsResponse> {
     return http.post(API_SETTINGS_ENDPOINTS.GET_LIST, {
-      projectKey: payload.projectKey,
       page: payload.page ?? 0,
       pageSize: payload.pageSize ?? 100,
       filter: payload.filter ?? {},

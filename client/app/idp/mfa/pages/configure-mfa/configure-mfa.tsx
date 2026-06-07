@@ -42,7 +42,7 @@ const LoadingSkelton = () => {
 };
 export const ConfigureMFA = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { isLoading, isFetching, data } = useGetMFAConfig({ projectKey: tenantId });
+  const { isLoading, isFetching, data } = useGetMFAConfig();
   const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
     enable: false,
@@ -83,7 +83,7 @@ export const ConfigureMFA = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {row.original.type === 2 && data?.userMfaType.includes(row.original.type) && (
+                {/* {row.original.type === 2 && data?.userMfaType.includes(row.original.type) && (
                   <DropdownMenuItem>
                     <Link
                       to={`/utilities/email/communications/${data.mfaTemplate.templateId}/edit`}
@@ -91,7 +91,7 @@ export const ConfigureMFA = () => {
                       Update Template
                     </Link>
                   </DropdownMenuItem>
-                )}
+                )} */}
                 <DropdownMenuItem
                   onClick={async (e) => {
                     e.stopPropagation();

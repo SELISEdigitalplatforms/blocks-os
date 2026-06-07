@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const ConfigureCaptchaFormSchema = z.object({
-  provider: z.enum(["recaptcha", "hcaptcha"]),
+  provider: z.enum(["recaptcha", "hcaptcha"], { required_error: "Captcha provider is required" }),
   captchaKey: z.string().min(1, "Site key is required"),
   captchaSecret: z.string().min(1, "Secret key is required"),
   captchaGenerator: z.string().min(1, "Generator type is required"),
@@ -10,5 +10,5 @@ export const ConfigureCaptchaFormDefaultValue = {
   provider: "",
   captchaKey: "",
   captchaSecret: "",
-  captchaGenerator: "",
+  captchaGenerator: "EasyCaptchaGenerator",
 };

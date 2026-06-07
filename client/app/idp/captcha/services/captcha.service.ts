@@ -1,5 +1,6 @@
 import { http } from "@/lib/http-client";
 import { secretsService } from "@/services/secrets.service";
+import type { IAPIResponse } from "@/models/api-response";
 import {
   ICaptchaSecretResponse,
   IEnableCaptchaConfigsStatusPayload,
@@ -14,10 +15,11 @@ import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
 export class CaptchaService {
   getCaptchaConfigs(payload: IGetCaptchaConfigsPayload): Promise<IGetCaptchaConfigsResponse> {
     return http
-      .get<ICaptchaSecretResponse[]>(
-        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha`,
+      .get<ICaptchaSecretResponse[] | IAPIResponse<ICaptchaSecretResponse[]>>(
+        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`,
       )
-      .then((secrets) => {
+      .then((response) => {
+        const secrets = Array.isArray(response) ? response : (response.data ?? []);
         if (!secrets?.length) return { configurations: [] };
         return {
           configurations: secrets.map((secret) => {
