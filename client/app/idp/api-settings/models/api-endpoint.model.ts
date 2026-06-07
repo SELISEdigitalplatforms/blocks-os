@@ -9,6 +9,7 @@ export interface IApiEndpoint {
   tags: string[];
   service: string;
   method: string;
+  httpMethod: string;
   description: string;
   isCaptchaRequired: boolean;
   captchaProvider: string;
