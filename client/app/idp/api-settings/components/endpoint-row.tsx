@@ -18,7 +18,7 @@ export const EndpointRow = ({
   onToggleMfa,
   onToggleCaptcha,
 }: EndpointRowProps) => {
-  const isCritical = (endpoint.method ?? "").toUpperCase() === "DELETE";
+  const isCritical = (endpoint.httpMethod ?? "").toUpperCase() === "DELETE";
   return (
     <div className="group flex flex-col gap-2.5 rounded-lg border border-border bg-background px-3 py-3 transition-colors hover:bg-accent/20 sm:flex-row sm:items-center sm:justify-between sm:px-4">
       <div className="flex min-w-0 flex-1 items-start gap-2.5">
@@ -27,7 +27,7 @@ export const EndpointRow = ({
           onCheckedChange={(checked) => onSelect(endpoint.itemId, !!checked)}
           className="mt-0.5 shrink-0 sm:mt-0"
         />
-        <MethodBadge method={endpoint.method} />
+        <MethodBadge method={endpoint.httpMethod} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <code className="break-all rounded-md bg-muted px-2 py-0.5 text-xs font-mono font-medium leading-relaxed">
