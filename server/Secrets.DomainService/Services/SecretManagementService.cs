@@ -13,9 +13,14 @@ namespace Secrets.DomainService.Services
             _secretRepository = secretRepository;
         }
 
-        public async Task<List<Secret>> GetSecretAsync(string secretKey)
+        public async Task<GetSecretsResponse> GetSecretAsync(string secretKey,int page,int pageSize)
         {
-            return await _secretRepository.GetSecretsAsync(secretKey);
+            var (secrets, totalCount) = await _secretRepository.GetSecretsAsync(secretKey,page,pageSize);
+            return new GetSecretsResponse
+            {
+                Data = secrets,
+                TotalCount = totalCount
+            };
         }
 
         public async Task<BaseResponse> SaveSecretAsync(SaveSecretRequest saveSecretRequest)

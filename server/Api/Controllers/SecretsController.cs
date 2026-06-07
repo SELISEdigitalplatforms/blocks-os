@@ -29,9 +29,9 @@ namespace BlocksTemplate.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<List<Secret>> Gets([FromQuery] GetSecretsRequest request)
+        public async Task<GetSecretsResponse> Gets([FromQuery] GetSecretsRequest request)
         {
-            return await _secretManagementService.GetSecretAsync(request.SecretKey.ToLower());
+            return await _secretManagementService.GetSecretAsync(request.SecretKey.ToLower(), request.PageNumber ?? 1, request.PageSize ?? 10);
         }
 
         [Authorize]

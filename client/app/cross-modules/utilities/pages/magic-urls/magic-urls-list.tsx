@@ -11,190 +11,122 @@ import {
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { formatDate, parseDateString } from "@/lib/utils";
-import { MagicUrl } from "@blocks-utilities/models/magic-url.model";
-import { useMagicUrlSortQueryParams } from "./magic-urls-filter-toolbar";
-import { FilterControls } from "@/components/filter-toolbar";
+import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
 import { Button } from "@/components/ui-kits/button/button";
+import { EllipsisVertical, Pencil, Trash } from "lucide-react";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-import { EllipsisVertical, CircleSlash, Eye, ExternalLink } from "lucide-react";
-import { MagicUrlStatusBadge } from "./magic-url-status-badge";
-import { useNavigate } from "react-router-dom";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
-import { useProjectStore } from "@/store/useProjectStore";
-import { useDeactivateMagicUrl } from "@blocks-utilities/hooks/use-deactivate-magic-url";
+import { useDeleteMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url-config";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
-    {Array.from({ length: 10 }).map((_, index) => (
+    {Array.from({ length: 5 }).map((_, index) => (
       <Skeleton key={index} className="h-12 w-full rounded-xl" />
     ))}
   </div>
 );
+
 type MagicUrlsListProps = {
-  data: MagicUrl[];
+  configurations: IMagicUrlConfig[];
   isLoading: boolean;
 };
-export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
-  const { sortQueryParams, setSortQueryParams } = useMagicUrlSortQueryParams();
-  const navigate = useNavigate();
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  const { deactivateMagicUrl, isRemoving } = useDeactivateMagicUrl();
-  const [itemToDeactivate, setItemToDeactivate] = React.useState<string | null>(null);
-  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = React.useState(false);
-  const handleDeactivate = (id: string) => {
-    setItemToDeactivate(id);
-    setIsDeactivateModalOpen(true);
+
+export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps) {
+  const { mutateAsync: deleteConfig, isPending: isDeleting } = useDeleteMagicUrlConfig();
+  const [itemToDelete, setItemToDelete] = React.useState<IMagicUrlConfig | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [selectedConfig, setSelectedConfig] = React.useState<IMagicUrlConfig | null>(null);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+
+  const handleEditConfig = (config: IMagicUrlConfig) => {
+    setSelectedConfig(config);
+    setIsEditOpen(true);
   };
-  const confirmDeactivate = () => {
-    if (itemToDeactivate) {
-      deactivateMagicUrl(itemToDeactivate, tenantId, () => {
-        setIsDeactivateModalOpen(false);
-        setItemToDeactivate(null);
-      });
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    try {
+      await deleteConfig(itemToDelete.itemId);
+      showSuccessToast({ description: "Configuration deleted successfully" });
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch {
+      showErrorToast({ errors: "Failed to delete configuration" });
     }
   };
-  const handleViewDetails = (itemId: string) => {
-    navigate(`/utilities/magic-url/details/${itemId}`);
-  };
-  const columns = useMemo<ColumnDef<MagicUrl>[]>(
+
+  const columns = useMemo<ColumnDef<IMagicUrlConfig>[]>(
     () => [
       {
-        accessorKey: "uri",
-        header: () => (
-          <FilterControls.SortHeader
-            id="Uri"
-            label="URL"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
+        accessorKey: "contextName",
+        header: "Context Name",
         cell: ({ row }) => (
-          <div className="ml-2 flex flex-col sm:ml-0">
-            <CopyToClipboardButton textToCopy={row.original.shortUri} isHoverable>
-              <span className="truncate font-medium">{row.original.shortUri}</span>
-            </CopyToClipboardButton>
-            <span
-              className="w-[420px] truncate text-xs text-muted-foreground"
-              title={row.original.uri}
-            >
-              {row.original.uri}
-            </span>
-          </div>
+          <span className="font-medium" title={row.original.contextName}>
+            {row.original.contextName || "-"}
+          </span>
         ),
       },
       {
-        accessorKey: "name",
-        header: () => (
-          <FilterControls.SortHeader
-            id="Name"
-            label="Name"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
+        accessorKey: "shortUrlBase",
+        header: "Short URL Base",
         cell: ({ row }) => (
-          <div className="ml-2 flex flex-col sm:ml-0">
-            <span className="truncate font-medium" title={row.original.name}>
-              {row.original.name || "-"}
-            </span>
-          </div>
+          <CopyToClipboardButton textToCopy={row.original.shortUrlBase} isHoverable>
+            <span className="truncate font-medium">{row.original.shortUrlBase || "-"}</span>
+          </CopyToClipboardButton>
         ),
       },
       {
-        accessorKey: "usageLimit",
-        header: "Usage Limit",
+        accessorKey: "lastUpdatedDate",
+        header: "Last Updated",
         cell: ({ row }) => {
-          const limit = row.getValue("usageLimit") as number;
-          return (
-            <div className="ml-2 flex w-[100px] items-center sm:ml-0">
-              <span>{limit === 0 ? "Unlimited" : limit}</span>
-            </div>
-          );
+          const dateStr = row.original.lastUpdatedDate || row.original.createdDate;
+          if (!dateStr) return <span>-</span>;
+          return <span>{formatDate(parseDateString(dateStr))}</span>;
         },
-      },
-      {
-        accessorKey: "expiryDate",
-        header: "Scheduled Expiry Date",
-        cell: ({ row }) => {
-          const dateStr = row.getValue("expiryDate") as string | undefined;
-          if (!dateStr) return <div className="ml-2 w-[180px] sm:ml-0">-</div>;
-          const dateValue = parseDateString(dateStr);
-          const formattedDate = formatDate(dateValue);
-          return <div className="ml-2 w-[180px] lowercase sm:ml-0">{formattedDate}</div>;
-        },
-      },
-      {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => (
-          <div className="ml-2 flex w-[120px] items-center sm:ml-0">
-            <MagicUrlStatusBadge item={row.original} />
-          </div>
-        ),
-      },
-      {
-        accessorKey: "requestMethod",
-        header: "Request Method",
-        cell: ({ row }) => (
-          <div className="ml-2 flex w-[120px] items-center sm:ml-0">
-            <span className="uppercase">{row.getValue("requestMethod") || "-"}</span>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "clientCredential",
-        header: "Client Credential",
-        cell: ({ row }) => (
-          <div className="max-w-[150px] truncate" title={row.getValue("clientCredential")}>
-            {row.getValue("clientCredential") || "-"}
-          </div>
-        ),
       },
       {
         id: "actions",
+        header: "",
         enableHiding: false,
         cell: ({ row }) => (
           <div onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-5 w-5 p-0" disabled={isRemoving}>
+                <Button variant="ghost" className="h-5 w-5 p-0">
                   <EllipsisVertical width={20} height={20} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => handleViewDetails(row.original.itemId)}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  <span>View Details</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(row.original.shortUri, "_blank");
+                    handleEditConfig(row.original);
                   }}
                 >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  <span>Go to Link</span>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  <span>Edit</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer text-error"
+                  disabled={isDeleting}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeactivate(row.original.itemId);
+                    setItemToDelete(row.original);
+                    setIsDeleteModalOpen(true);
                   }}
-                  disabled={isRemoving}
                 >
-                  <CircleSlash className="mr-2 h-4 w-4" />
-                  <span>{isRemoving ? "Removing..." : "Deactivate"}</span>
+                  <Trash className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -202,14 +134,17 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
         ),
       },
     ],
-    [setSortQueryParams, sortQueryParams, isRemoving],
+    [isDeleting],
   );
+
   const table = useReactTable({
-    data,
+    data: configurations,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
   if (isLoading) return <LoadingSkelton />;
+
   return (
     <>
       <ScrollArea className="w-full">
@@ -233,9 +168,8 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="cursor-pointer text-medium-emphasis"
+                  className="text-medium-emphasis"
                   isHoverable
-                  onClick={() => handleViewDetails(row.original.itemId)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -248,9 +182,9 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
               <TableRow>
                 <TableCell
                   colSpan={table.getAllColumns().length}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-[240px] align-middle text-center text-muted-foreground"
                 >
-                  No results.
+                  No configurations found. Use Add Configuration to create one.
                 </TableCell>
               </TableRow>
             )}
@@ -258,17 +192,27 @@ export function MagicUrlsList({ data, isLoading }: MagicUrlsListProps) {
         </Table>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
-      <Dialog open={isDeactivateModalOpen} onOpenChange={setIsDeactivateModalOpen}>
+      {selectedConfig && (
+        <ConfigureMagicUrlModal
+          configuration={selectedConfig}
+          open={isEditOpen}
+          onOpenChange={(value) => {
+            setIsEditOpen(value);
+            if (!value) setSelectedConfig(null);
+          }}
+        />
+      )}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <ConfirmationModal
-          onCancel={() => setIsDeactivateModalOpen(false)}
-          onConfirm={confirmDeactivate}
+          onCancel={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDelete}
           data={{
-            dialogTitle: "Deactivate Magic URL",
-            dialogSubtitle: "Are you sure you want to deactivate this Magic URL? This action cannot be undone.",
-            confirmButton: "Deactivate",
+            dialogTitle: "Delete Magic URL Configuration",
+            dialogSubtitle: `Are you sure you want to delete "${itemToDelete?.contextName ?? "this configuration"}"?`,
+            confirmButton: "Delete",
             cancelButton: "Cancel",
           }}
-          buttonState={{ confirm: { disable: isRemoving } }}
+          buttonState={{ confirm: { disable: isDeleting } }}
         />
       </Dialog>
     </>
