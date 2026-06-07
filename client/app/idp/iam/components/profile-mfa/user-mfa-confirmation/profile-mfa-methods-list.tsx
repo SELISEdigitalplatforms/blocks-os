@@ -2,9 +2,9 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { Label } from "@/components/ui-kits/label/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
+import { useGetProfileMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { MFA_Provider_Data } from "@blocks-idp/mfa/utils/mfa-config";
-import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
+import { useGetProfileUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useContext, useMemo } from "react";
 import { profileMfaContext } from "../profile-mfa";
 type UserMFAMethodListProps = {
@@ -13,8 +13,8 @@ type UserMFAMethodListProps = {
 };
 export const ProfileMFAMethodList = ({ selected, setSelected }: UserMFAMethodListProps) => {
   const { userId, projectKey } = useContext(profileMfaContext);
-  const { isLoading, isFetching, data } = useGetMFAConfig({ projectKey });
-  const { data: userData } = useGetMe();
+  const { isLoading, isFetching, data } = useGetProfileMFAConfig();
+  const { data: userData } = useGetProfileUserById({ id: userId, projectKey });
   const availableMFaMethod = useMemo(() => {
     if (!data?.userMfaType.length) return [];
     return MFA_Provider_Data.filter((item) => data?.userMfaType.includes(item.type));

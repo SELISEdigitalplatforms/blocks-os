@@ -6,5 +6,6 @@ namespace Secrets.DomainService.Entities
     {
         public string SecretKey { get; set; } = string.Empty;
         public Dictionary<string, string> KeyValuePairs { get; set; }
+        public Dictionary<string, object>? KeyPairs { get; set; }
     }
 }

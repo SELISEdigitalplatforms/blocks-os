@@ -9,6 +9,7 @@ export interface IApiEndpoint {
   tags: string[];
   service: string;
   method: string;
+  httpMethod: string;
   description: string;
   isCaptchaRequired: boolean;
   captchaProvider: string;
@@ -42,7 +43,6 @@ export interface IGetApiEndpointsResponse {
 }
 
 export interface IUpdateApiEndpointPayload {
-  projectKey: string;
   itemId: string;
   service: string;
   method: string;
@@ -60,7 +60,6 @@ export interface IUpdateApiEndpointResponse {
 }
 
 export interface IBulkUpdateApiEndpointsPayload {
-  projectKey: string;
   itemIds: string[];
   isCaptchaRequired?: boolean;
   isMFARequired?: boolean;
