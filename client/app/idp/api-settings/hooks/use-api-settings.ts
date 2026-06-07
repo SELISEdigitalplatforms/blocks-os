@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiSettingsService } from "../services/api-settings.service";
 import {
   IGetApiEndpointsPayload,
@@ -8,12 +8,33 @@ import {
 } from "../models/api-endpoint.model";
 
 const QUERY_KEY = "api-settings-endpoints";
+const PAGE_SIZE = 20;
 
 export const useGetApiEndpoints = (options: IGetApiEndpointsPayload) => {
   return useQuery({
     queryKey: [QUERY_KEY, options.projectKey, options.page, options.pageSize, options.filter],
     queryFn: () => apiSettingsService.getEndpoints(options),
     enabled: !!options.projectKey,
+    staleTime: 0,
+  });
+};
+
+export const useGetApiEndpointsInfinite = (
+  options: Pick<IGetApiEndpointsPayload, "projectKey" | "filter">,
+) => {
+  return useInfiniteQuery({
+    queryKey: [QUERY_KEY, "infinite", options.projectKey, options.filter],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      apiSettingsService.getEndpoints({
+        ...options,
+        page: pageParam as number,
+        pageSize: PAGE_SIZE,
+      }),
+    getNextPageParam: (lastPage) => {
+      const nextPage = lastPage.page + 1;
+      return nextPage < lastPage.totalPages ? nextPage : undefined;
+    },
     staleTime: 0,
   });
 };

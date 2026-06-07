@@ -28,8 +28,8 @@ import {
 
 // User
 const GET_USERS_PATTERN = new RegExp(USER_ENDPOINTS.GET_USERS);
-const GET_USER_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_USER}$`);
-const GET_USER_BY_ID_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_USER}\\?`);
+const GET_USERS_EXACT_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_USERS}$`);
+const GET_USER_BY_ID_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_USERS}/[^/?]+$`);
 const CREATE_USER_PATTERN = new RegExp(USER_ENDPOINTS.CREATE);
 const UPDATE_USER_PATTERN = new RegExp(USER_ENDPOINTS.UPDATE);
 const GET_SIGNUP_SETTING_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_SIGNUP_SETTING}\\?`);
@@ -84,9 +84,9 @@ const SAVE_IAM_CONFIG_PATTERN = new RegExp(IAM_CONFIGURATION_ENDPOINTS.SAVE);
 export const iamHandlers = [
   // User
   http.post(GET_USERS_PATTERN, () => HttpResponse.json(mockUsersResponse)),
-  http.get(GET_USER_PATTERN, () => HttpResponse.json({ data: mockUser })),
+  http.get(GET_USERS_EXACT_PATTERN, () => HttpResponse.json({ data: mockUser })),
   http.get(GET_USER_BY_ID_PATTERN, () =>
-    HttpResponse.json({ data: mockUser, errors: null, roles: [], permissions: [] }),
+    HttpResponse.json({ data: mockUser, errors: null }),
   ),
   http.post(CREATE_USER_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
   http.post(UPDATE_USER_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
@@ -160,10 +160,10 @@ export const getUsersErrorHandler = (status = 500) =>
   );
 
 export const getUserHandler = (response: JsonBodyType = { data: mockUser }) =>
-  http.get(GET_USER_PATTERN, () => HttpResponse.json(response));
+  http.get(GET_USERS_EXACT_PATTERN, () => HttpResponse.json(response));
 
 export const getUserByIdHandler = (
-  response: JsonBodyType = { data: mockUser, errors: null, roles: [], permissions: [] },
+  response: JsonBodyType = { data: mockUser, errors: null },
 ) => http.get(GET_USER_BY_ID_PATTERN, () => HttpResponse.json(response));
 
 export const createUserHandler = (response: JsonBodyType = mockSuccessResponseWithItemId) =>

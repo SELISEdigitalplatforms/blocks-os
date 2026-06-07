@@ -19,6 +19,7 @@ import { LMTQueryAgentChatItem } from "./lmt-query-agent-chat-item";
 import { LMTQueryAgentChatInput } from "./lmt-query-agent-chat-input";
 import { EmptyConversations } from "@blocks-ai/shared/components/chat/empty-conversation/empty-conversation";
 import { ChatItemSuggestions } from "@blocks-ai/shared/components/chat/chat-item-suggestions/chat-item-suggestions";
+import { AnimatedDots, ChatEventMessage } from "@blocks-ai/shared/utils/chat-event-messages";
 interface ConversationMessage {
   type: "bot" | "human";
   message: string;
@@ -104,7 +105,6 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
         setCurrentEvent({ message: "Sending..." });
         setSuggestions([]);
         const stream = await streamQuery({
-          project_key: tenantId,
           query: formData.query,
           session_id: session,
         });
@@ -200,9 +200,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
           ))}
         {isThinking && (
           <div className="mb-6 flex flex-col gap-3">
-            <p className="text-sm text-medium-emphasis animate-pulse">
-              {currentEvent?.message ?? "Thinking…"}
-            </p>
+            {currentEvent ? <ChatEventMessage message={currentEvent.message} /> : <AnimatedDots />}
           </div>
         )}
       </div>

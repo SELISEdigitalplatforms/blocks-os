@@ -2,10 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mfaService } from "../services/mfa.service";
 import { IGetUserByIdPayload } from "@blocks-idp/iam/models/user";
 
-export const useGetMFAConfig = (option: { projectKey: string }) => {
+export const useGetMFAConfig = () => {
   return useQuery({
-    queryKey: ["mfa-config", "get", option.projectKey],
-    queryFn: () => mfaService.getConfigurations({ projectKey: option.projectKey }),
+    queryKey: ["mfa-config", "get"],
+    queryFn: () => mfaService.getConfigurations(),
+  });
+};
+
+export const useGetProfileMFAConfig = () => {
+  return useQuery({
+    queryKey: ["profile-mfa-config", "get"],
+    queryFn: () => mfaService.getProfileMfaConfiguration(),
   });
 };
 
@@ -27,6 +34,8 @@ export const useConfigureUserMFA = (option: { id: string; projectKey: string }) 
     mutationFn: mfaService.configureUserMFA,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user", option] });
+      queryClient.invalidateQueries({ queryKey: ["user-by-id", option] });
+      queryClient.invalidateQueries({ queryKey: ["profile-user", option] });
     },
   });
 };
@@ -52,8 +61,14 @@ export const useVerifyMfaOTP = (option: IGetUserByIdPayload & { own?: boolean })
     mutationKey: ["mfa-config", "verify-otp"],
     mutationFn: mfaService.verifyOtp,
     onSuccess: () => {
-      if (own) return queryClient.invalidateQueries({ queryKey: ["user"] });
+      if (own) {
+        queryClient.invalidateQueries({ queryKey: ["user"] });
+        queryClient.invalidateQueries({ queryKey: ["profile-user"] });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["user", rest] });
+      queryClient.invalidateQueries({ queryKey: ["user-by-id", rest] });
+      queryClient.invalidateQueries({ queryKey: ["profile-user", rest] });
     },
   });
 };
@@ -71,6 +86,8 @@ export const useDisableMfa = (option: { id: string; projectKey: string }) => {
     mutationFn: mfaService.disableMFA,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user", option] });
+      queryClient.invalidateQueries({ queryKey: ["user-by-id", option] });
+      queryClient.invalidateQueries({ queryKey: ["profile-user", option] });
     },
   });
 };

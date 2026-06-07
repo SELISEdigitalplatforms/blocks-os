@@ -1,4 +1,5 @@
 import { isValidJSON, formatJSON } from "./utils";
+import { MarkdownRenderer } from "@blocks-ai/shared/components/markdown-renderer";
 type LmtQueryAgentChatItemProps = {
   time: string;
   message: string;
@@ -34,7 +35,9 @@ export const LMTQueryAgentChatItem = ({ message, type, time }: LmtQueryAgentChat
   return (
     <div className="flex flex-col">
       <span className="text-xs text-low-emphasis">{formatChatTimestamp(time)}</span>
-      <div className="my-0 py-0 text-sm text-high-emphasis whitespace-pre-wrap">{message}</div>
+      <div className="my-0 py-0 text-sm text-high-emphasis">
+        <MarkdownRenderer content={message} />
+      </div>
     </div>
   );
 };
