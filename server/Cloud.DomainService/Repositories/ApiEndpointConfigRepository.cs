@@ -34,7 +34,6 @@ namespace Cloud.DomainService.Repositories
                         "identifier",
                         "idp",
                         "lmt",
-                        "localization",
                         "uds"
                     });
             if (!string.IsNullOrWhiteSpace(request.Filter?.ResourceGroup))
