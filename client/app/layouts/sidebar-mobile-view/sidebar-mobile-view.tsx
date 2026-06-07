@@ -74,10 +74,7 @@ export function SidebarMobileView() {
           </SheetHeader>
           <div className="flex-1 overflow-y-auto py-1">
             {groups.map((group) => (
-              <div key={group.label}>
-                <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group.label}
-                </p>
+              <Fragment key={group.label}>
                 {group.items.map((item) => {
                   const Icon = item.icon
                   const isActive = pathname.startsWith(routePrefix) && currentTab === item.value
@@ -103,7 +100,7 @@ export function SidebarMobileView() {
                     </button>
                   )
                 })}
-              </div>
+              </Fragment>
             ))}
           </div>
         </SheetContent>
