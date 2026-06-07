@@ -17,7 +17,6 @@ namespace DomainService.People
         Task<Tenant> GetProjectByIdAsync(string projectKey);
         Task<User> GetUserByIdAsync(string userId);
         Task<bool> UpdateProjectPeoples(List<string> ids);
-        Task<bool> IsPeoplesWithinLimit(InvitationDetails request, string resource);
         Task<bool> IsOwner(string email, List<string> projectKeys);
         Task<bool> UpdateProjectPeopleOwnerShipAsync(List<string> ids, bool ownerShipStatus);
         Task<ProjectPeople> GetProjectPeopleByTenantIdAndUserIdAsync(string tenantId, string userId);

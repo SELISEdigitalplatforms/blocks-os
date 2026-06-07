@@ -195,7 +195,7 @@ namespace DomainService.People
                     };
                 }
 
-                foreach (var (email, projectKeys) in request.Invitations)
+                foreach (var (email, envDetails) in request.Invitations)
                 {
                     if (string.IsNullOrWhiteSpace(email) || email == BlocksContext.GetContext()?.UserName)
                     {
@@ -203,15 +203,15 @@ namespace DomainService.People
                         continue;
                     }
 
-                    var validProjectKeys = projectKeys?.Where(pk => tenants.Contains(pk)).ToList();
+                    //var envDetails = envDetails?.Where(env => tenants.Contains(env.TenantId)).ToList();
 
-                    if (validProjectKeys == null || validProjectKeys.Count == 0)
+                    if (envDetails == null || envDetails.Count == 0)
                     {
                         _logger.LogWarning("No valid project keys found for email: {Email}", email);
                         continue;
                     }
 
-                    await ProcessInvitationForEmail(email, validProjectKeys, tenants);
+                    await ProcessInvitationForEmail(email, envDetails, tenants);
                 }
 
                 _logger.LogInformation("InvitePeoplesAsync completed successfully for GroupId: {GroupId}", request.GroupId);
@@ -228,7 +228,7 @@ namespace DomainService.People
         /// <summary>
         /// Processes invitation for a single email address
         /// </summary>
-        private async Task ProcessInvitationForEmail(string email, List<string> validProjectKeys, List<string> tenants)
+        private async Task ProcessInvitationForEmail(string email, List<EnviromentDetails> enviromentDetails, List<string> tenants)
         {
             var existingUsers = await _peopleRepository.GetUsersByEmailAsync(new List<string> { email });
             var user = existingUsers?.FirstOrDefault(u => u.Email == email);
@@ -236,12 +236,11 @@ namespace DomainService.People
             if (user == null)
             {
                 _logger.LogInformation("User not found for email: {Email}. Creating new user.", email);
-                await ProcessUserCreateAndInvitation(email, string.Join(";", validProjectKeys));
+                await ProcessUserCreateAndInvitation(email, string.Join(";", enviromentDetails.Select(e => e.TenantId)));
                 return;
             }
 
-            var projectPeoples = await ProcessInviteRequests(tenants, validProjectKeys, user);
-
+            var projectPeoples = await ProcessInviteRequests(tenants, enviromentDetails, user);
             if (projectPeoples.Count > 0)
             {
                 await _peopleRepository.InsertPeoplesAsync(projectPeoples);
@@ -252,15 +251,15 @@ namespace DomainService.People
         /// <summary>
         /// Processes invitation requests for existing user
         /// </summary>
-        private async Task<List<ProjectPeople>> ProcessInviteRequests(List<string> tenants, List<string> projectKeys, User user)
+        private async Task<List<ProjectPeople>> ProcessInviteRequests(List<string> tenants, List<EnviromentDetails> enviromentDetails, User user)
         {
             var projectPeoples = new List<ProjectPeople>();
 
             var existingPeople = await _peopleRepository.GetProjectPeoplesAsync(user.ItemId, tenants) ?? new List<ProjectPeople>();
             var existingProjectKeys = existingPeople.Select(p => p.TenantId).ToList();
-            var newProjectKeys = projectKeys.Except(existingProjectKeys).ToList();
+            var newEnviroments = enviromentDetails.Where(e => !existingProjectKeys.Contains(e.TenantId)).ToList();
 
-            if (newProjectKeys.Count == 0)
+            if (newEnviroments.Count == 0)
             {
                 _logger.LogInformation("User {Email} already has access to all requested projects", user.Email);
                 return projectPeoples;
@@ -268,23 +267,24 @@ namespace DomainService.People
 
             var isFirstInvitation = existingPeople.Count == 0;
 
-            foreach (var projectKey in newProjectKeys)
+            foreach (var env in newEnviroments)
             {
                 var projectPeople = new ProjectPeople
                 {
                     ItemId = Guid.NewGuid().ToString(),
-                    TenantId = projectKey,
+                    TenantId = env.TenantId,
                     Email = user.Email,
                     IsInvitationSent = true,
                     IsInvitationConfirmed = !isFirstInvitation,
                     UserId = user.ItemId,
+                    Roles = env.Roles
                 };
                 projectPeoples.Add(projectPeople);
             }
 
-            if (isFirstInvitation && newProjectKeys.Count > 0)
+            if (isFirstInvitation && newEnviroments.Count > 0)
             {
-                var project = await _peopleRepository.GetProjectByIdAsync(newProjectKeys[0]);
+                var project = await _peopleRepository.GetProjectByIdAsync(newEnviroments[0].TenantId);
                 if (project != null)
                 {
                     var projectPeopleIds = projectPeoples.Select(x => x.ItemId).ToList();
