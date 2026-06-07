@@ -103,8 +103,8 @@ const KVRow = ({ keyName, value }: { keyName: string; value: string }) => {
 };
 
 // ─── Secret Row ───────────────────────────────────────────────────────────────
-const SecretRow = ({ item }: { item: SecretItem }) => {
-  const [expanded, setExpanded] = useState(false);
+const SecretRow = ({ item, defaultExpanded = false }: { item: SecretItem; defaultExpanded?: boolean }) => {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { mutate: deleteSecret, isPending: isDeleting } = useDeleteSecret();
@@ -251,8 +251,8 @@ export function SecretsList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
-              <SecretRow key={item.itemId} item={item} />
+            {items.map((item, index) => (
+              <SecretRow key={item.itemId} item={item} defaultExpanded={index === 0} />
             ))}
           </TableBody>
         </Table>

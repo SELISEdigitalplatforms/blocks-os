@@ -107,15 +107,16 @@ export const CreateClientCredential = () => {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh]">
-        <DialogHeader>
+        <DialogHeader className="pl-1">
           <DialogTitle>New Access Token</DialogTitle>
           <DialogDescription>Enter details to create a new key.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="clientNameService"
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+            <div className="max-h-[60vh] space-y-6 overflow-y-auto pl-1 pr-2">
+              <FormField
+                control={form.control}
+                name="clientNameService"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Client Name</FormLabel>
@@ -190,6 +191,7 @@ export const CreateClientCredential = () => {
                 </FormItem>
               )}
             />
+            </div>
             <DialogFooter>
               <DialogClose>
                 <Button onClick={() => setOpen(false)} type="button" variant="outline">

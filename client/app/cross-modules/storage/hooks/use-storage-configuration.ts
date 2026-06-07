@@ -3,10 +3,9 @@ import { storageService } from "../services/storage.service";
 import { useProjectStore } from "@/store/useProjectStore";
 
 export const useGetStorageConfigurations = () => {
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
-    queryKey: ["storage", "configuration", "gets", tenantId],
-    queryFn: () => storageService.configuration.gets(tenantId),
+    queryKey: ["storage", "configuration", "gets"],
+    queryFn: () => storageService.configuration.gets(),
   });
 };
 

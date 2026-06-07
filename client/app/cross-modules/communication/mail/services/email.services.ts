@@ -10,6 +10,7 @@ import {
   MAIL_CONFIG_ENDPOINTS,
   MAIL_ENDPOINTS,
 } from "../constants/endpoint.constant";
+import { secretsService } from "@/services/secrets.service";
 
 class EmailService {
   fetchEmailConfigs = (
@@ -22,6 +23,33 @@ class EmailService {
        undefined,
       { absoluteUrl: true },
     );
+  };
+
+  getEmailSecretConfigs = (projectKey: string): Promise<{ configurations: IEmailConfig[] }> => {
+    return secretsService.gets("email").then((secrets) => {
+      if (!secrets?.length) return { configurations: [] };
+      return {
+        configurations: secrets.map((secret) => {
+          const kv = secret.keyValuePairs;
+          return {
+            configurationId: secret.itemId,
+            itemId: secret.itemId,
+            name: kv.configurationName,
+            configurationName: kv.configurationName,
+            host: kv.host,
+            port: Number(kv.port),
+            enableSSL: typeof kv.enableSSL === "string" ? kv.enableSSL === "true" : Boolean(kv.enableSSL),
+            senderName: kv.senderName,
+            senderAddress: kv.senderAddress,
+            senderUserName: kv.senderUserName,
+            accountPassword: kv.accountPassword,
+            isInbound: typeof kv.isInbound === "string" ? kv.isInbound === "true" : Boolean(kv.isInbound),
+            provider: Number(kv.provider),
+            isDefault: typeof kv.isDefault === "string" ? kv.isDefault === "true" : Boolean(kv.isDefault),
+          } as IEmailConfig;
+        }),
+      };
+    });
   };
 
   fetchEmailTemplates = (
@@ -88,24 +116,15 @@ class EmailService {
   };
 
   saveMailConfig = (payload: {
-    configurationId: string;
-    configurationName: string;
-    host: string;
-    port: number;
-    enableSSL: boolean;
-    senderName: string;
-    senderAddress: string;
-    senderUserName: string;
-    accountPassword: string;
-    projectKey: string;
-    isInbound: boolean;
-    provider: number;
+    secretKey: string;
+    keyValuePairs: Record<string, string>;
+    itemId?: string;
   }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
     itemId: string;
   }> => {
-    return http.post(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload, undefined, { absoluteUrl: true });
+    return secretsService.save(payload).then((item) => ({ isSuccess: true, errors: null, itemId: item.itemId }));
   };
 
   sendTestMail = (data: {
@@ -194,16 +213,10 @@ class EmailService {
     errors: null | unknown;
     isSuccess: boolean;
   }> {
-    return http
-      .delete<{
-        errors: unknown;
-        isSuccess: boolean;
-      }>(
-        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${payload.configurationId}&projectKey=${payload.projectKey}`,
-        undefined,
-        { absoluteUrl: true },
-      )
-      .then((response) => response);
+    return secretsService
+      .delete(payload.configurationId)
+      .then(() => ({ isSuccess: true, errors: null }))
+      .catch((error) => ({ isSuccess: false, errors: error }));
   }
 }
 export default EmailService;

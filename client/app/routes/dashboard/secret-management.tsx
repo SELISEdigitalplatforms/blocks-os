@@ -11,15 +11,15 @@ import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
-import { MagicUrlConfigDialog } from "@blocks-utilities/components/magic-url-config-dialog/magic-url-config-dialog";
-import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url";
+import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
+import { MagicUrls } from "@blocks-utilities/pages/magic-urls/magic-urls";
 import { StorageContents } from "@blocks-storage/pages/storage/storage-contents";
 import { ManagedServices } from "@blocks-identifier/pages/services/managed-services";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
 import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
 import NotificationConfigurationList from "@blocks-communication/notification/components/notification-configuration-list";
 import { Button } from "@/components/ui-kits/button/button";
-import { CirclePlus, ChevronsLeft, Menu, Settings, Notebook, AlertCircle } from "lucide-react";
+import { CirclePlus, ChevronsLeft, Menu, Notebook, AlertCircle } from "lucide-react";
 import { MouseEvent, useMemo, useState } from "react";
 import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
@@ -33,7 +33,7 @@ import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-mo
 import { SecretsList } from "@/cross-modules/secrets/components/secrets-list/secrets-list";
 import { SecretType } from "@/cross-modules/secrets/constants/secret-key.enum";
 
-const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models"];
+const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models", "magic-url"];
 export default function SecretManagementPage() {
   const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "my-secret" });
   const [secretType, setSecretType] = useQueryState("secretType", {
@@ -42,12 +42,9 @@ export default function SecretManagementPage() {
   });
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
-  const { mutateAsync: saveMagicUrlConfig } = useSaveMagicUrlConfig();
-  const [isMagicUrlConfigDialogOpen, setIsMagicUrlConfigDialogOpen] = useState(false);
   const [isManagedServicesGuideOpen, setIsManagedServicesGuideOpen] = useState(false);
   const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
   const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAddIdpOpen, setIsAddIdpOpen] = useState(false);
   const currentItem = SECRET_MANAGEMENT_NAV_GROUPS
     .flatMap((g) => g.items)
@@ -95,22 +92,16 @@ export default function SecretManagementPage() {
         </ConfigureCaptchaModal>
       )}
       {selectedTab === "magic-url" && (
-        <>
-          <Button variant="outline" size="sm" onClick={() => setIsMagicUrlConfigDialogOpen(true)}>
-            <Settings className="h-5 w-5" />
-            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-              Configure
-            </span>
-          </Button>
-          <MagicUrlConfigDialog
-            open={isMagicUrlConfigDialogOpen}
-            onOpenChange={setIsMagicUrlConfigDialogOpen}
-            projectKey={tenantId}
-            onSave={async (config) => {
-              await saveMagicUrlConfig(config);
-            }}
-          />
-        </>
+        <ConfigureMagicUrlModal>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <CirclePlus className="h-5 w-5" />
+              <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+                Add Configuration
+              </span>
+            </Button>
+          </DialogTrigger>
+        </ConfigureMagicUrlModal>
       )}
       {selectedTab === "managed-services" && (
         <>
@@ -148,56 +139,6 @@ export default function SecretManagementPage() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden">
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-52 p-0" hideClose>
-              <div className="flex h-full flex-col">
-                <SheetHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
-                  <SheetTitle className="text-sm font-semibold">Secrets &amp; Configs</SheetTitle>
-                  <SheetClose asChild>
-                    <Button variant="ghost" size="icon" className="!mt-0 h-7 w-7 shrink-0">
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                  </SheetClose>
-                </SheetHeader>
-                <nav className="flex-1 overflow-y-auto py-1">
-                  {SECRET_MANAGEMENT_NAV_GROUPS.map((group) => (
-                    <div key={group.label}>
-                      <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {group.label}
-                      </p>
-                      {group.items.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = (selectedTab ?? "my-secret") === item.value;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => { setSelectedTab(item.value); setIsMobileSidebarOpen(false); }}
-                            className={cn(
-                              "relative flex h-10 w-full items-center gap-3 px-4 py-1.5 text-sm transition-colors",
-                              isActive
-                                ? "text-primary"
-                                : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-                            )}
-                          >
-                            <Icon className="h-5 w-5 shrink-0" />
-                            <span>{item.label}</span>
-                            {isActive && (
-                              <div className="absolute right-0 top-2.5 h-5 w-1 rounded-l-lg bg-primary" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </nav>
-              </div>
-            </SheetContent>
-          </Sheet>
           {currentItem && (
             <div>
               <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
@@ -240,11 +181,7 @@ export default function SecretManagementPage() {
         {selectedTab === "external-idp" && <Certificates />}
         {selectedTab === "captcha" && <ConfigureCaptcha />}
         {selectedTab === "mfa" && <ConfigureMFA />}
-        {selectedTab === "magic-url" && (
-          <div className="rounded-lg border border-dashed bg-background p-8 text-center text-muted-foreground">
-            <p>Use the Configure button above to manage Magic URL settings.</p>
-          </div>
-        )}
+        {selectedTab === "magic-url" && <MagicUrls />}
         {selectedTab === "storage" && <StorageContents />}
         {selectedTab === "email" && (
           <EmailConfiguration

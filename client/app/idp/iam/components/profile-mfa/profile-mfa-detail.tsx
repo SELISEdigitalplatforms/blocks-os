@@ -1,4 +1,4 @@
-import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
+import { useGetProfileUserById } from "@blocks-idp/iam/hooks/use-user";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useContext } from "react";
 import { profileMfaContext } from "./profile-mfa";
@@ -13,7 +13,7 @@ const LoadingSkelton = () => {
 };
 export const ProfileMFADetails = () => {
   const { projectKey, userId } = useContext(profileMfaContext);
-  const { isLoading, data } = useGetMe();
+  const { isLoading, data } = useGetProfileUserById({ id: userId, projectKey });
   if (isLoading) return <LoadingSkelton />;
   return (
     <>

@@ -18,7 +18,7 @@ export default function LmtServiceLogsPage() {
   if (!service) {
     return (
       <main className="flex flex-col gap-6 p-6">
-        <PageBreadcrumb breadcrumbIndex={2} />
+        <PageBreadcrumb breadcrumbIndex={2} disabledHrefs={["/services/lmt/logs"]} />
         <Card>
           <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             Logs are not configured for this service.
@@ -29,7 +29,7 @@ export default function LmtServiceLogsPage() {
   }
   return (
     <main className="flex flex-col gap-6 p-6">
-      <PageBreadcrumb breadcrumbIndex={2} />
+      <PageBreadcrumb breadcrumbIndex={2} disabledHrefs={["/services/lmt/logs"]} />
       <LogsViewer
         services={[
           {
