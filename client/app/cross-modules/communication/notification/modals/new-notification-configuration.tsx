@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { INotificationConfig } from "../models/notification.model";
-import { useSaveNotificationConfig } from "../hooks/use-notifications";
+import { v4 as uuidv4 } from "uuid";
+import type { INotificationConfigRow } from "../models/notification-config.model";
+import { useSaveNotificationConfig } from "../hooks/use-notification-config";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { channelsToNotify, notificationTypes } from "../constants/notification.constant";
@@ -37,9 +38,17 @@ interface NewNotificationConfigurationProps {
   dialogTitle: string;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   onClose: Function;
-  previousData?: INotificationConfig;
+  previousData?: INotificationConfigRow;
   isEdit: boolean;
 }
+type NotificationConfigFormValues = {
+  name: string;
+  channelToNotify: number;
+  notificationType: number;
+  enablePersistence: boolean;
+  notifyMethod: string;
+};
+
 const schema = z.object({
   name: z
     .string()
@@ -71,7 +80,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
     return <div>loading</div>;
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const form = useForm<INotificationConfig>({
+  const form = useForm<NotificationConfigFormValues>({
     defaultValues: isEdit
       ? {
           name: previousData?.name || "",
@@ -110,15 +119,17 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
       });
     }
   }, [previousData, isEdit, form]);
-  const formSubmitHandler = async (data: INotificationConfig) => {
+  const formSubmitHandler = async (data: NotificationConfigFormValues) => {
     try {
-      data.itemId = isEdit && previousData?.itemId ? previousData?.itemId : "";
-      const payload = {
-        ...data,
+      const res = await mutateAsync({
+        name: data.name,
+        channelToNotify: data.channelToNotify,
+        notificationType: data.notificationType,
+        enablePersistence: data.enablePersistence,
+        notifyMethod: data.notifyMethod,
         projectKey: tenantId,
-        isUpdateRequest: isEdit,
-      };
-      const res = await mutateAsync(payload);
+        itemId: isEdit && previousData?.itemId ? previousData.itemId : uuidv4(),
+      });
       if (res?.isSuccess) {
         toast({
           variant: "success",
@@ -153,7 +164,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Name *
+                          Name <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -180,7 +191,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Channel to Notify *
+                          Channel to Notify <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           disabled={true}
@@ -210,7 +221,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notification Type *
+                          Notification Type <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(val) => field.onChange(Number(val))}
@@ -241,7 +252,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notify Method *
+                          Notify Method <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input

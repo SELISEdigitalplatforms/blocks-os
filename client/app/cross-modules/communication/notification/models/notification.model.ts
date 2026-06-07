@@ -27,14 +27,7 @@ export interface IDenormalizedPayload {
     | string;
 }
 
-export interface INotificationConfig {
-  itemId: string;
-  name: string;
-  channelToNotify: number;
-  notificationType: number;
-  enablePersistence: boolean;
-  notifyMethod: string;
-}
+export type { INotificationConfigRow as INotificationConfig } from "./notification-config.model";
 
 export interface NotificationSubScriptionFilter {
   context: string;

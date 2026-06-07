@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -22,7 +22,6 @@ import { useGetOrganizations } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUpdateUser, useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { ChevronsUpDown, Check, Plus } from "lucide-react";
-import { IMembership } from "@blocks-idp/iam/models/user";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import {
   Command,
@@ -40,6 +39,7 @@ type AssignOrganizationProps = {
 };
 export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationProps) => {
   const [open, setOpen] = useState(false);
+  const [rolesPopoverOpen, setRolesPopoverOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const { data: userData } = useGetUserById({ id: userId, projectKey });
@@ -56,41 +56,62 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
     filter: { search: "" },
   });
   const { mutateAsync, isPending } = useUpdateUser({ id: userId, projectKey });
-  const existingMemberships = userData?.data?.memberships || [];
+  const existingOrgIds = userData?.data?.organizationIds || [];
   const organizations = orgsData?.organizations || [];
   const roles = rolesData?.data || [];
-  // Filter out organizations that are already assigned or disabled
-  const availableOrgs = organizations.filter(
-    (org) => org.isEnable && !existingMemberships.some((m) => m.organizationId === org.itemId),
-  );
-  // Convert roles to options format for MultiSelect
+  const orgOptions = organizations.filter((org) => org.isEnable);
   const roleOptions = roles.map((role) => ({
     label: role.name,
     value: role.slug,
   }));
+
+  useEffect(() => {
+    if (!open) return;
+    if (existingOrgIds.length === 1) {
+      const orgId = existingOrgIds[0];
+      setSelectedOrgId(orgId);
+      setSelectedRoles(userData?.data?.roles?.[orgId] || []);
+    }
+  }, [open, existingOrgIds, userData?.data?.roles]);
+
+  const handleOrgChange = (orgId: string) => {
+    setSelectedOrgId(orgId);
+    setSelectedRoles(existingOrgIds.includes(orgId) ? userData?.data?.roles?.[orgId] || [] : []);
+  };
+
   const onConfirm = async () => {
     if (!selectedOrgId || selectedRoles.length === 0) {
       showErrorToast({ errors: "Please select an organization and at least one role" });
       return;
     }
     try {
-      const newMembership: IMembership = {
-        organizationId: selectedOrgId,
-        roles: selectedRoles,
-        permissions: [],
-      };
-      const updatedMemberships = [...existingMemberships, newMembership];
+      const isExistingOrg = existingOrgIds.includes(selectedOrgId);
+      const updatedOrganizationIds = isExistingOrg
+        ? existingOrgIds
+        : [...existingOrgIds, selectedOrgId];
+      const otherOrgRoles = Object.values(
+        Object.fromEntries(
+          Object.entries(userData?.data?.roles || {}).filter(([orgId]) => orgId !== selectedOrgId),
+        ),
+      ).flat();
+      const updatedRoles = [...new Set([...otherOrgRoles, ...selectedRoles])];
       const res = await mutateAsync({
         ...userData?.data,
-        memberships: updatedMemberships,
         itemId: userId,
-        projectKey,
+        organizationIds: updatedOrganizationIds,
+        organizations: updatedOrganizationIds,
+        roles: updatedRoles,
+        permissions: Object.values(userData?.data?.permissions || {}).flat(),
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({ description: "Organization assigned successfully" });
+      showSuccessToast({
+        description: isExistingOrg
+          ? "Organization roles updated successfully"
+          : "Organization assigned successfully",
+      });
       reset();
       setOpen(false);
     } catch (error) {
@@ -104,6 +125,7 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
   const reset = () => {
     setSelectedOrgId("");
     setSelectedRoles([]);
+    setRolesPopoverOpen(false);
   };
   return (
     <Dialog
@@ -127,7 +149,7 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Organization name</label>
-            <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+            <Select value={selectedOrgId} onValueChange={handleOrgChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Organization name" />
               </SelectTrigger>
@@ -136,12 +158,12 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
                   <SelectItem value="loading" disabled>
                     Loading...
                   </SelectItem>
-                ) : availableOrgs.length === 0 ? (
+                ) : orgOptions.length === 0 ? (
                   <SelectItem value="none" disabled>
-                    No organizations available
+                    No organizations found
                   </SelectItem>
                 ) : (
-                  availableOrgs.map((org) => (
+                  orgOptions.map((org) => (
                     <SelectItem key={org.itemId} value={org.itemId}>
                       {org.name}
                     </SelectItem>
@@ -157,7 +179,7 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
             ) : roles.length === 0 ? (
               <div className="p-2 text-sm text-muted-foreground">No roles available</div>
             ) : (
-              <Popover>
+              <Popover open={rolesPopoverOpen} onOpenChange={setRolesPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" className="w-full justify-between">
                     {selectedRoles.length > 0 ? (

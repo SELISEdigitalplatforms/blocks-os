@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui-kits/button/button";
 import { createContext, useState } from "react";
 import { ProfileMfaMethodSelectList } from "./user-mfa-confirmation/profile-mfa-methods-select-list";
-import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
+import { useGetProfileMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 type ProfileMFAProps = {
   userId: string;
   projectKey: string;
@@ -89,7 +89,7 @@ export const ProfileMFA = (props: ProfileMFAProps) => {
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState<boolean>(false);
   const [isDisableModalOpen, setIsDisableModalOpen] = useState<boolean>(false);
   const [mfaMethodType, setMfaMethodType] = useState<number>(0);
-  const { isLoading, data } = useGetMFAConfig({ projectKey });
+  const { isLoading, data } = useGetProfileMFAConfig();
   if (isLoading) return <LoadingSkelton />;
   if (!data?.enableMfa) return <ProjectMFA />;
   const showVerifyModal = (type: number) => {

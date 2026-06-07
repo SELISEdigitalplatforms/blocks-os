@@ -7,12 +7,13 @@ import {
 } from "../__mocks__/mfa.data.mock";
 import { mockSuccessResponse } from "@/test-utils/__mocks__";
 import { MFA_CONFIG_ENDPOINTS, MFA_ENDPOINTS } from "../../mfa/constants/endpoint.constant";
+import { SECRETS_ENDPOINTS } from "@/services/secrets.service";
 
 // ─── Endpoint Patterns ────────────────────────────────────────────────────────
 
-// MFA Config
+// MFA Config (admin secret-management — secrets API, not Logic /api/MFA/Save)
 const GET_MFA_CONFIG_PATTERN = new RegExp(`${MFA_CONFIG_ENDPOINTS.GET}\\?`);
-const SAVE_MFA_CONFIG_PATTERN = new RegExp(MFA_CONFIG_ENDPOINTS.SAVE);
+const SAVE_MFA_CONFIG_PATTERN = new RegExp(SECRETS_ENDPOINTS.SAVE);
 
 // MFA Operations
 const GENERATE_OTP_PATTERN = new RegExp(MFA_ENDPOINTS.GENERATE_OTP);

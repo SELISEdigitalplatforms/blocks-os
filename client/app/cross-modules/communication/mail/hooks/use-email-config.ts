@@ -10,6 +10,14 @@ export const useGetEmailConfigs = (pageNumber: number, pageSize: number) => {
   });
 };
 
+export const useGetEmailSecretConfigs = () => {
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  return useQuery({
+    queryKey: ["email-configs", tenantId],
+    queryFn: () => emailService.getEmailSecretConfigs(tenantId),
+  });
+};
+
 export const useSaveEmailConfig = () => {
   const queryClient = useQueryClient();
   return useMutation({
