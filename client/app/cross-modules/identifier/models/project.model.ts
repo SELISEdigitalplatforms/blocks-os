@@ -175,6 +175,7 @@ export interface IMigrationVerificationResponse {
 
 export type IMigrationStatusResponse = Array<{
   targetedProjectKey: string;
+  createdDate?: string;
 }>;
 
 export interface IGetPublicCertificateResponse {

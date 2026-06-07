@@ -5,6 +5,8 @@ using DomainService.Migration.Entities;
 using DomainService.Migration.Services;
 using DomainService.Shared;
 using FluentValidation;
+using Iam.DomainService.Dtos;
+using Iam.DomainService.Users;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
@@ -25,6 +27,7 @@ namespace DomainService.Migration
         private readonly ICryptoService _cryptoService;
         private readonly IHttpService _httpService;
         private readonly ILogger<MigrationService> _logger;
+        private readonly IUserRepository _userRepository;
 
         public MigrationService(
             ICacheClient cacheClient,
@@ -36,7 +39,7 @@ namespace DomainService.Migration
             ITenants tenants,
             ICryptoService cryptoService,
             IHttpService httpService,
-            ILogger<MigrationService> logger)
+            ILogger<MigrationService> logger, IUserRepository userRepository)
         {
             _cacheClient = cacheClient;
             _mailDriverService = mailDriverService;
@@ -48,6 +51,7 @@ namespace DomainService.Migration
             _cryptoService = cryptoService;
             _httpService = httpService;
             _logger = logger;
+            _userRepository = userRepository;
         }
         public async Task<MigrationOtpGenerationResponse> Migrate(MigrationRequest request)
         {
@@ -58,9 +62,16 @@ namespace DomainService.Migration
             }
 
             var bc = BlocksContext.GetContext();
-            if (bc == null || string.IsNullOrEmpty(bc.UserName))
+            if (bc == null || string.IsNullOrEmpty(bc.UserId))
             {
                 return new MigrationOtpGenerationResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "message", "invalid_user_context" } } };
+            }
+            var user = await _userRepository.GetUserByIdAsync(bc.UserId);
+
+            if (user == null)
+            {
+                _logger.LogError("User not found by this user id: {Id}", bc.UserId);
+                return new MigrationOtpGenerationResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "message", "invalid_user" } } }; ;
             }
             var code = GenerateSecureRandomNumber();
             var verificationId = Guid.NewGuid().ToString();
@@ -68,7 +79,7 @@ namespace DomainService.Migration
             var serializedData = JsonSerializer.Serialize(new { Code = code, Request = request });
 
             await _cacheClient.AddStringValueAsync(verificationId, serializedData, 600);
-            var result = await SendMfaCodeAsync(bc.UserName, code, "en-US");
+            var result = await SendMfaCodeAsync(user.UserName, code, "en-US");
             return new MigrationOtpGenerationResponse { VerificationId = verificationId, IsSuccess = result };
         }
         public static string GenerateSecureRandomNumber()

@@ -47,15 +47,29 @@ export const useGetMe = (options?: { enabled?: boolean }) => {
       return user;
     },
     initialData: authStore.user ? { data: authStore.user } : undefined,
+    staleTime: Infinity,
     ...options,
   });
 };
 
-export const useGetUserById = (options: IGetUserByIdPayload & { enabled?: boolean }) => {
+export const useGetUserById = (
+  options: IGetUserByIdPayload & { enabled?: boolean },
+) => {
   const { enabled, ...payload } = options;
   return useQuery({
-    queryKey: ["user", payload],
+    queryKey: ["user-by-id", payload],
     queryFn: () => userService.getUserById(payload),
+    enabled,
+  });
+};
+
+export const useGetProfileUserById = (
+  options: IGetUserByIdPayload & { enabled?: boolean },
+) => {
+  const { enabled, id, projectKey } = options;
+  return useQuery({
+    queryKey: ["profile-user", { id, projectKey }],
+    queryFn: () => userService.getUserById({ id, projectKey }),
     enabled,
   });
 };
@@ -84,7 +98,7 @@ export const useUpdateUser = (options: {
     mutationFn: userService.updateUser,
     onSuccess: () => {
       if (own) return queryClient.invalidateQueries({ queryKey: ["user"] });
-      queryClient.invalidateQueries({ queryKey: ["user", rest] });
+      queryClient.invalidateQueries({ queryKey: ["user-by-id", rest] });
     },
   });
 };
@@ -142,46 +156,49 @@ export const useGetUserPermissions = (option: IGetUserRolesPayload) => {
 };
 
 export const useUserRoles = (option: { id: string; projectKey: string }) => {
-  const { isLoading, isFetching, data } = useGetUserById(option);
+  const { isLoading: isUserLoading, isFetching, data: userData } = useGetUserById(option);
+  const { isLoading: isRolesLoading, data: rolesData } = useGetUserRoles({
+    userId: option.id,
+  });
   const { isPending, mutateAsync } = useUpdateUser(option);
 
   const slugs = useMemo(() => {
-    if (!data) return [];
-    return data?.roles.map((item) => item.slug);
-  }, [data]);
+    if (!rolesData?.data) return [];
+    return rolesData.data.map((item) => item.slug);
+  }, [rolesData]);
 
   const addRoles = useCallback(
     (newSlugs: string[]) => {
       const rolesSlug = new Set([...slugs, ...newSlugs]);
       return mutateAsync({
-        ...data?.data,
+        ...userData?.data,
         itemId: option.id,
-        projectKey: option.projectKey,
+        organizations: userData?.data?.organizationIds || [],
         roles: Array.from(rolesSlug),
+        permissions: Object.values(userData?.data?.permissions || {}).flat(),
       });
     },
-    [data?.data, mutateAsync, option.id, option.projectKey, slugs],
+    [userData?.data, mutateAsync, option.id, slugs],
   );
 
   const deleteRoles = useCallback(
     (deletedSlugs: string[]) => {
-      const restSlug = data?.roles
-        .filter((item) => !deletedSlugs.includes(item.slug))
-        .map((item) => item.slug);
+      const restSlug = slugs.filter((slug) => !deletedSlugs.includes(slug));
       return mutateAsync({
-        ...data?.data,
+        ...userData?.data,
         roles: restSlug,
-        projectKey: option.projectKey,
         itemId: option.id,
+        organizations: userData?.data?.organizationIds || [],
+        permissions: Object.values(userData?.data?.permissions || {}).flat(),
       });
     },
-    [data?.roles, data?.data, mutateAsync, option.projectKey, option.id],
+    [slugs, userData?.data, mutateAsync, option.id],
   );
 
   return {
-    isLoading: isLoading || isFetching,
+    isLoading: isUserLoading || isFetching || isRolesLoading,
     isPending,
-    roles: data?.roles || [],
+    roles: rolesData?.data || [],
     slugs,
     addRoles,
     deleteRoles,
@@ -192,9 +209,12 @@ export const useUserPermissions = (option: {
   userId: string;
   projectKey: string;
 }) => {
-  const { isLoading, isFetching, data } = useGetUserById({
+  const { isLoading: isUserLoading, isFetching, data: userData } = useGetUserById({
     id: option.userId,
     projectKey: option.projectKey,
+  });
+  const { isLoading: isPermissionsLoading, data: permissionsData } = useGetUserPermissions({
+    userId: option.userId,
   });
   const { isPending, mutateAsync } = useUpdateUser({
     id: option.userId,
@@ -202,21 +222,22 @@ export const useUserPermissions = (option: {
   });
 
   const resources = useMemo(() => {
-    if (!data) return [];
-    return data?.permissions.map((item) => item.resource);
-  }, [data]);
+    if (!permissionsData?.data) return [];
+    return permissionsData.data.map((item) => item.resource);
+  }, [permissionsData]);
 
   const addPermissions = useCallback(
     (newResources: string[]) => {
       const totalResources = new Set([...resources, ...newResources]);
       return mutateAsync({
-        ...data?.data,
+        ...userData?.data,
         itemId: option.userId,
-        projectKey: option.projectKey,
+        organizations: userData?.data?.organizationIds || [],
+        roles: Object.values(userData?.data?.roles || {}).flat(),
         permissions: Array.from(totalResources),
       });
     },
-    [mutateAsync, option.userId, resources, option.projectKey],
+    [mutateAsync, option.userId, resources, userData?.data],
   );
 
   const deletePermissions = useCallback(
@@ -225,19 +246,20 @@ export const useUserPermissions = (option: {
         (item) => !deletedResources.includes(item),
       );
       return mutateAsync({
-        ...data?.data,
+        ...userData?.data,
         itemId: option.userId,
-        projectKey: option.projectKey,
+        organizations: userData?.data?.organizationIds || [],
+        roles: Object.values(userData?.data?.roles || {}).flat(),
         permissions: restResources,
       });
     },
-    [mutateAsync, option.userId, resources, option.projectKey],
+    [mutateAsync, option.userId, resources, userData?.data],
   );
 
   return {
-    isLoading: isLoading || isFetching,
+    isLoading: isUserLoading || isFetching || isPermissionsLoading,
     isPending,
-    permissions: data?.permissions || [],
+    permissions: permissionsData?.data || [],
     resources,
     addPermissions,
     deletePermissions,
