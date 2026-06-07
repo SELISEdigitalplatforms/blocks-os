@@ -1,16 +1,18 @@
 import { useContext } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { ChevronRight, FolderOpen, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Notification } from "@/components/notification/notification";
-import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
 import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
-import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
 import { BackToConsoleNavigator } from "@/components/back-to-console-navigator/back-to-console-navigator";
 import { useProjectStore } from "@/store/useProjectStore";
 import { cn } from "@/lib/utils";
+import {
+  AppSwitcher,
+  ThemeSwitcher,
+  UserDropdownMenu,
+} from "@seliseblocks/blocks-kit";
 
 export function DashboardHeader() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
@@ -53,9 +55,9 @@ export function DashboardHeader() {
         </div>
         <div className="flex items-center gap-4">
           <BackToConsoleNavigator />
-          <ModeToggle />
+          <ThemeSwitcher />
           <Notification />
-          <BlocksAppLauncher />
+          <AppSwitcher forwardedTo="/dashboard" />
           <UserDropdownMenu />
         </div>
       </header>
