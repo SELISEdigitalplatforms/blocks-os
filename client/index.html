@@ -8,6 +8,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
     <title>Blocks OS</title>
+     <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("theme") || "system";
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var isDark = stored === "dark" || (stored === "system" && prefersDark);
+          if (isDark) document.documentElement.classList.add("dark");
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body class="min-h-screen bg-background font-sans text-foreground antialiased">
     <div id="root"></div>
@@ -79,7 +89,7 @@
         BLOCKS_STUDIO_BASE_URL: "https://stg-studio.blocksdevelopers.com",
         BLOCKS_STUDIO_CALLBACK_URL: "https://stg-studio.blocksdevelopers.com/login/callback",
       };
-      */
+  
 
       /* =========================================================
          PROD environment — comment out this block when using STG or DEV

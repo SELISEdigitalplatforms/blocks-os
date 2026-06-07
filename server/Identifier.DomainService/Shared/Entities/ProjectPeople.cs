@@ -13,6 +13,8 @@ namespace DomainService.Entities
         public bool IsInvitationConfirmed { get; set; }
         public bool IsCreator { get; set; }
 
+        public List<string> Roles { get; set; } = [];
+
     }
 
 }

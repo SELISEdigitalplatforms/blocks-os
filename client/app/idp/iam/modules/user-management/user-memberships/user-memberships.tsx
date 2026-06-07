@@ -15,7 +15,15 @@ export const UserMemberships = ({ id, projectKey }: UserMembershipsProps) => {
         page: 0,
         pageSize: 1000,
     });
-    const memberships = userData?.data?.memberships || [];
+    const memberships = useMemo(() => {
+        const orgs = userData?.data?.organizations;
+        if (orgs && orgs.length > 0) return orgs;
+        return (userData?.data?.organizationIds || []).map((orgId) => ({
+            organizationId: orgId,
+            roles: userData?.data?.roles?.[orgId] || [],
+            permissions: userData?.data?.permissions?.[orgId] || [],
+        }));
+    }, [userData?.data?.organizations, userData?.data?.organizationIds, userData?.data?.roles, userData?.data?.permissions]);
     // Create a map of organizationId to organizationName
     const orgNameMap = useMemo(() => {
         const map = new Map<string, string>();
