@@ -157,7 +157,7 @@ export const mockMigrationVerifyResponse = {
 };
 
 export const mockMigrationStatusResponse: IMigrationStatusResponse = [
-  { targetedProjectKey: TEST_PROJECT_KEY },
+  { targetedProjectKey: TEST_PROJECT_KEY, createdDate: "2025-01-01T10:00:00Z" },
 ];
 
 // ─── Mock Subscription ────────────────────────────────────────────────────────
