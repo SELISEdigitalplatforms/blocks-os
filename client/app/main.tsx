@@ -19,8 +19,8 @@ createRoot(document.getElementById("root")!).render(
               userBaseUrlKey: "BLOCKS_IAM_BASE_URL",
               projectBaseUrlKey: "BLOCKS_LOGIC_BASE_URL",
               appLogoUrl: {
-                dark: "/blocks-logos/Logo_Black.svg",
-                light: "/blocks-logos/Logo_White.svg",
+                dark: "/blocks-logos/os_dark_mode.svg",
+                light: "/blocks-logos/os_light_mode.svg",
               },
             }}
           >
