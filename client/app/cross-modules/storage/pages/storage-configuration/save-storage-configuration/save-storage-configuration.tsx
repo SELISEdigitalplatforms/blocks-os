@@ -129,7 +129,7 @@ export const SaveStorageConfiguration = ({
                   </FormItem>
                 )}
               />
-              {storageStrategy === "Amazon" && (
+              {storageStrategy === "AWS" && (
                 <>
                   <FormField
                     name="accessKey"

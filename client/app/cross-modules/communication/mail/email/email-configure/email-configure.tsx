@@ -13,7 +13,7 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { useMediaQuery } from "@/components/ui-kits/stepper/use-media-query";
 import { cn } from "@/lib/utils";
 import { IEmailConfig, MailServiceProvider } from "@blocks-communication/mail/models/email";
-import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 interface EmailConfigurationProps {
   addConfigOpen?: boolean;
@@ -28,7 +28,8 @@ export function EmailConfiguration({ addConfigOpen, onAddConfigOpenChange }: Ema
   const isMediumScreen = useMediaQuery(`(max-width: 1180px)`);
   const isMobileScreen = useMediaQuery(`(max-width: 768px)`);
   const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
-  const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
+  const { isLoading, data: secretData } = useGetEmailSecretConfigs();
+  const data = secretData?.configurations || [];
   // const [loading, setLoading] = useState(true);
   // const [error, setError] = useState<string | null>(null);
   // useEffect(() => {
