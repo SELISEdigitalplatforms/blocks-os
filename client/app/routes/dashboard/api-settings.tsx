@@ -308,27 +308,24 @@ export default function ApiSettingsPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-8">
-          {serviceGroups.map(({ service, swaggerJsonUrl, swaggerUiUrl, controllers }) => (
+          {serviceGroups.map(({ service, swaggerJsonUrl, controllers }) => (
             <div key={service} className="flex flex-col gap-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
-                  <a
-                    href={swaggerJsonUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hidden items-center gap-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline sm:inline-flex"
+                  <span
+                    className="hidden items-center gap-1 text-[11px] text-muted-foreground sm:inline-flex cursor-default select-none"
                     title={swaggerJsonUrl}
                   >
                     <span className="truncate">{swaggerJsonUrl}</span>
-                    <ExternalLink className="h-3 w-3 shrink-0" />
-                  </a>
+                    <ExternalLink className="h-3 w-3 shrink-0 opacity-40" />
+                  </span>
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => window.open(swaggerUiUrl, "_blank")}
-                  className="w-fit shrink-0 gap-1.5"
+                  disabled
+                  className="w-fit shrink-0 gap-1.5 cursor-not-allowed opacity-50"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   <span>API Docs</span>
