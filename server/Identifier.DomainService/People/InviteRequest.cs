@@ -4,15 +4,16 @@ namespace DomainService.People
 {
     public class InviteRequest
     {
-       public Dictionary<string, List<string>> Invitations { get; set; } = new Dictionary<string, List<string>>();
+       public Dictionary<string, List<EnviromentDetails>> Invitations { get; set; } = [];
        public required string GroupId { get; set; }
     }
 
-    public class InvitationDetails
+    public class EnviromentDetails
     {
-        public List<string> Emails { get; set; } = [];
-        public string ProjectKey { get; set; }
+        public string TenantId { get; set; }
+        public List<string> Roles { get; set; } = [];
     }
+   
 
     public class InviteResponse : BaseResponse
     {
