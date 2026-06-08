@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetLogs } from "@blocks-lmt/hooks/use-log";
 import {
   ColumnDef,

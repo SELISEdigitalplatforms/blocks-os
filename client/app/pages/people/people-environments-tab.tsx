@@ -11,7 +11,8 @@ import ConfirmationModal from "@/components/confirmation-modal/confirmation-moda
 import { PeopleGroupedByEnvironments } from "@/models/people"
 import { IProjectGroup } from "@/models/project.model"
 import { environmentOptions } from "@/constants/environment-options"
-import { useProjectStore } from "@/store/useProjectStore"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
+import { buildInvitePeoplePayload } from "./invite-people-utils"
 
 interface PeopleEnvironmentsTabProps {
   user?: User
@@ -97,10 +98,9 @@ export const PeopleEnvironmentsTab = ({
     try {
       if (type === "add") {
         if (!user.email || !projectId) return
-        const res = await inviteAsync({
-          invitations: { [user.email]: [projectId] },
-          groupId,
-        })
+        const res = await inviteAsync(
+          buildInvitePeoplePayload({ [user.email]: [projectId] }, groupId),
+        )
         if (!res?.isSuccess) {
           throw new Error(`Failed to grant access to ${getEnvironmentLabel(envValue)}`)
         }

@@ -13,7 +13,7 @@ import { useGetIamConfiguration, useSaveIamConfiguration } from "./use-iam-confi
 vi.mock("@blocks-idp/iam/services/configuration.service", () =>
   mockIamConfigurationServiceFactory(),
 );
-vi.mock("@/store/useProjectStore", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("use-iam-configuration hooks", () => {
   beforeEach(() => {
