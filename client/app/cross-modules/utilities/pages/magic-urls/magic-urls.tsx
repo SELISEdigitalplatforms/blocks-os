@@ -2,7 +2,7 @@ import { Pagination } from "@/components/ui-kits/pagination/pagination"
 import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell"
 import { useMagicUrlsFilterQueryParams, MagicUrlsFilterToolBar } from "./magic-urls-filter-toolbar"
 import { MagicUrlsList } from "./magic-urls-list"
-import { useProjectStore } from "@/store/useProjectStore"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { useGetMagicUrlConfigs } from "@blocks-utilities/hooks/use-magic-url-config"
 
 export const MagicUrls = () => {

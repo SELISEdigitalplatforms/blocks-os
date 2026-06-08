@@ -14,7 +14,7 @@ import { useGetEmailConfigs, useSaveEmailConfig, useDeleteEmailConfig } from "./
 import { TEST_TENANT_ID } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@/store/useProjectStore", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("Email Config Hooks", () => {
   beforeEach(() => {
@@ -64,7 +64,7 @@ describe("Email Config Hooks", () => {
     });
 
     it("should handle empty tenantId", async () => {
-      const { useProjectStore } = await import("@/store/useProjectStore");
+      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
