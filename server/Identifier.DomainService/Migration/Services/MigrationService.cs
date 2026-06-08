@@ -373,6 +373,7 @@ namespace DomainService.Migration
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
             var url = _configuration["NotificationServiceUrl"];
+            _logger.LogInformation("url for notification service: {Url}", url);
             var headers = new Dictionary<string, string>
             {
                 { "x-blocks-key", blocksKey },
@@ -380,6 +381,7 @@ namespace DomainService.Migration
             };
 
             var (data, rawResponse) = await _httpService.Post<NotificationResponse>(requestData, url, "application/json", headers);
+            _logger.LogInformation("Migration started notification sent for project {ProjectKey} to {TargetedProjectKey}. Response: {Response}", projectKey, targetedProjectKey, rawResponse);
             return data == null ? false : data.isSuccess;
         }
 
