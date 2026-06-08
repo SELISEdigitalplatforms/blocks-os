@@ -10,7 +10,7 @@ import { lmtService } from "../services/lmt.service";
 import { useLogs } from "./use-logs";
 
 vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
-vi.mock("@/store/useProjectStore", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("useLogs", () => {
   beforeEach(() => {

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import {
   CircleAlert,
   CircleCheck,
