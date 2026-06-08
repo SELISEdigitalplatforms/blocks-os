@@ -30,7 +30,7 @@ import {
 import { useCountDown } from "@/hooks/use-count-down"
 import { useInitiateMigration, useVerifyMigration } from "@/hooks/use-project"
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
-import { useProjectStore } from "@/store/useProjectStore"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { useDataMigrationFormState } from "./migration-form-state"
 import {
   MIGRATION_SERVICE_NAME_TO_ID,
