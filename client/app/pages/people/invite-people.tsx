@@ -13,7 +13,7 @@ import {
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
 import { Plus, Trash2 } from "lucide-react"
 import { useForm, useFieldArray, type FieldArrayWithId } from "react-hook-form"
-import { emailRegex } from "./invite-people-utils"
+import { buildInvitePeoplePayload, emailRegex } from "./invite-people-utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Form,
@@ -170,10 +170,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
         return
       }
 
-      await mutateAsync({
-        invitations: invitationsMap,
-        groupId: groupId ?? "",
-      })
+      await mutateAsync(buildInvitePeoplePayload(invitationsMap, groupId ?? ""))
 
       showSuccessToast({ description: "Invitation is sent" })
       form.reset()
