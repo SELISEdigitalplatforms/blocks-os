@@ -1,6 +1,6 @@
 "use client"
 
-import { useProjectStore } from "@/store/useProjectStore"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { PeopleDetailsTab } from "./people-details-tab"
 import { PeopleEnvironmentsTab } from "./people-environments-tab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs"
