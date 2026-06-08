@@ -81,7 +81,9 @@ export const router = createBrowserRouter([
                 <Outlet />
               </PublicGuard>
             ),
-            children: [{ path: "/login", element: <LoginPage /> }],
+            children: [
+              { path: "/login", element: <LoginPage name="blocks-os" /> },
+            ],
           },
 
           // protected
@@ -106,8 +108,14 @@ export const router = createBrowserRouter([
                 children: [
                   { path: "/profile", element: <ProfilePage /> },
                   { path: "/console", element: <ConsolePage /> },
-                  { path: "/create-project", element: <CreateProjectWrapper /> },
-                  { path: "/data-migration", element: <EnvironmentMigrationPage /> },
+                  {
+                    path: "/create-project",
+                    element: <CreateProjectWrapper />,
+                  },
+                  {
+                    path: "/data-migration",
+                    element: <EnvironmentMigrationPage />,
+                  },
                   { path: "/callback", element: <GitHubCallbackPage /> },
                 ],
               },
@@ -118,13 +126,30 @@ export const router = createBrowserRouter([
                 children: [
                   {
                     path: "/project-overview",
-                    element: <Navigate to="/project-overview/environments" replace />,
+                    element: (
+                      <Navigate to="/project-overview/environments" replace />
+                    ),
                   },
-                  { path: "/project-overview/environments", element: <EnvironmentsPage /> },
-                  { path: "/project-overview/people", element: <PeopleManagement /> },
-                  { path: "/project-overview/people/:id", element: <PersonDetailPage /> },
-                  { path: "/project-overview/repositories", element: <RepositoriesPage /> },
-                  { path: "/project-overview/settings", element: <SettingsPage /> },
+                  {
+                    path: "/project-overview/environments",
+                    element: <EnvironmentsPage />,
+                  },
+                  {
+                    path: "/project-overview/people",
+                    element: <PeopleManagement />,
+                  },
+                  {
+                    path: "/project-overview/people/:id",
+                    element: <PersonDetailPage />,
+                  },
+                  {
+                    path: "/project-overview/repositories",
+                    element: <RepositoriesPage />,
+                  },
+                  {
+                    path: "/project-overview/settings",
+                    element: <SettingsPage />,
+                  },
                   {
                     path: "/project-overview/subscription-usage",
                     element: <SubscriptionUsagePage />,
@@ -144,7 +169,10 @@ export const router = createBrowserRouter([
                 children: [
                   { path: "/dashboard", element: <DashboardOverview /> },
                   { path: "/services/iam", element: <IamPage /> },
-                  { path: "/services/iam/role-detail/:id", element: <IamRoleDetailPage /> },
+                  {
+                    path: "/services/iam/role-detail/:id",
+                    element: <IamRoleDetailPage />,
+                  },
                   {
                     path: "/services/iam/permission-detail/new",
                     element: <IamAddPermissionPage />,
@@ -158,7 +186,10 @@ export const router = createBrowserRouter([
                     element: <IamOrgDetailPage />,
                   },
                   { path: "/services/iam/logs", element: <IamLogsPage /> },
-                  { path: "/services/iam/configure", element: <IamConfigurePage /> },
+                  {
+                    path: "/services/iam/configure",
+                    element: <IamConfigurePage />,
+                  },
                   {
                     path: "/services/authentication",
                     element: <AuthenticationConfigPage />,
@@ -167,20 +198,37 @@ export const router = createBrowserRouter([
                     path: "/services/authentication/sso-configuration",
                     element: <SsoConfigurationPage />,
                   },
-                  { path: "/services/authentication/logs", element: <AuthLogsPage /> },
+                  {
+                    path: "/services/authentication/logs",
+                    element: <AuthLogsPage />,
+                  },
                   {
                     path: "/services/mfa",
-                    element: <Navigate to="/services/secret-management?tab=mfa" replace />,
+                    element: (
+                      <Navigate
+                        to="/services/secret-management?tab=mfa"
+                        replace
+                      />
+                    ),
                   },
                   { path: "/services/mfa/logs", element: <MfaLogsPage /> },
-                  { path: "/services/api-settings", element: <ApiSettingsPage /> },
-                  { path: "/services/rate-limiter", element: <RateLimiterPage /> },
+                  {
+                    path: "/services/api-settings",
+                    element: <ApiSettingsPage />,
+                  },
+                  {
+                    path: "/services/rate-limiter",
+                    element: <RateLimiterPage />,
+                  },
                   { path: "/services/lmt", element: <LmtPage /> },
                   {
                     path: "/services/lmt/logs/:serviceName",
                     element: <LmtServiceLogsPage />,
                   },
-                  { path: "/tracing/timeline/:traceId", element: <LmtTraceDetailsPage /> },
+                  {
+                    path: "/tracing/timeline/:traceId",
+                    element: <LmtTraceDetailsPage />,
+                  },
                   {
                     path: "/services/secret-management",
                     element: <SecretManagementPage />,
@@ -193,14 +241,23 @@ export const router = createBrowserRouter([
                     path: "/services/secret-management/ai-models/:provider",
                     element: <AiModelSelectedRoute />,
                   },
-                  { path: "/managed-services", element: <ManagedServicesPage /> },
+                  {
+                    path: "/managed-services",
+                    element: <ManagedServicesPage />,
+                  },
                   {
                     path: "/services/captcha",
                     element: (
-                      <Navigate to="/services/secret-management?tab=captcha" replace />
+                      <Navigate
+                        to="/services/secret-management?tab=captcha"
+                        replace
+                      />
                     ),
                   },
-                  { path: "/services/captcha/logs", element: <CaptchaLogsPage /> },
+                  {
+                    path: "/services/captcha/logs",
+                    element: <CaptchaLogsPage />,
+                  },
                 ],
               },
             ],
