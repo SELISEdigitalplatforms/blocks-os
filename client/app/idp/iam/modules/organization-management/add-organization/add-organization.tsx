@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { z } from "zod";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
 import { Plus } from "lucide-react";
 interface AddOrganizationProps {

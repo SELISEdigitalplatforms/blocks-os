@@ -13,7 +13,7 @@ import {
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
 import { Plus, Trash2 } from "lucide-react"
 import { useForm, useFieldArray, type FieldArrayWithId } from "react-hook-form"
-import { emailRegex } from "./invite-people-utils"
+import { buildInvitePeoplePayload, emailRegex } from "./invite-people-utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Form,
@@ -23,7 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form"
 import { Input } from "@/components/ui-kits/input/input"
-import { useProjectStore } from "@/store/useProjectStore"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { useInvitePeople } from "@/hooks/use-people"
 import { useGetProjects } from "@/hooks/use-project"
 import { MultiSelect } from "@/components/filter-toolbar/multi-select/multi-select"
@@ -170,10 +170,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
         return
       }
 
-      await mutateAsync({
-        invitations: invitationsMap,
-        groupId: groupId ?? "",
-      })
+      await mutateAsync(buildInvitePeoplePayload(invitationsMap, groupId ?? ""))
 
       showSuccessToast({ description: "Invitation is sent" })
       form.reset()

@@ -28,7 +28,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import {
   NotificationConfigsFilterToolBar,
   useNotificationConfigsFilterQueryParams,
