@@ -23,7 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form"
 import { Input } from "@/components/ui-kits/input/input"
-import { useProjectStore } from "@/store/useProjectStore"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { useInvitePeople } from "@/hooks/use-people"
 import { useGetProjects } from "@/hooks/use-project"
 import { MultiSelect } from "@/components/filter-toolbar/multi-select/multi-select"
