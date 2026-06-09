@@ -187,7 +187,7 @@ export const AuthenticationConfig = () => {
         {selectedTab === "general" && (
           <div className="grid grid-cols-1 gap-6">
             <GeneralSettings />
-            <GrantTypes />
+            {/* <GrantTypes /> */}
           </div>
         )}
         {selectedTab === "email-template" && (
