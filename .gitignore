@@ -177,3 +177,5 @@ client/.cursor/
 docs/
 
 .cursor/
+
+.vite
