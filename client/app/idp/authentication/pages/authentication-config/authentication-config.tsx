@@ -22,7 +22,7 @@ import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";
 import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
@@ -187,7 +187,7 @@ export const AuthenticationConfig = () => {
         {selectedTab === "general" && (
           <div className="grid grid-cols-1 gap-6">
             <GeneralSettings />
-            <GrantTypes />
+            {/* <GrantTypes /> */}
           </div>
         )}
         {selectedTab === "email-template" && (

@@ -15,7 +15,7 @@ import { act } from "react";
 import { TEST_TENANT_ID } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@/store/useProjectStore", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("Email Usage Hooks", () => {
   beforeEach(() => {
@@ -119,7 +119,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should be disabled when tenantId is empty", async () => {
-      const { useProjectStore } = await import("@/store/useProjectStore");
+      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
@@ -136,7 +136,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should return empty data when tenantId is empty but query runs", async () => {
-      const { useProjectStore } = await import("@/store/useProjectStore");
+      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
@@ -232,7 +232,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should be disabled when tenantId is empty", async () => {
-      const { useProjectStore } = await import("@/store/useProjectStore");
+      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
@@ -261,7 +261,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should return null when tenantId is empty but query runs", async () => {
-      const { useProjectStore } = await import("@/store/useProjectStore");
+      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
