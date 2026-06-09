@@ -2,7 +2,7 @@ import { useGetProject } from "@/hooks/use-project";
 import { ArchivedProject } from "@/components/archive-project/archive-project";
 import { EditProject } from "@/components/edit-project/edit-project";
 import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 export const ActionsListProject = () => {
   const selectedProject = useProjectStore((state) => state.selectedProject);
   const { data, isLoading, isFetching } = useGetProject({
