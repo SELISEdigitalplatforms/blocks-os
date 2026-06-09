@@ -1,6 +1,11 @@
+export interface IInviteEnvironmentDetail {
+  tenantId: string
+  roles: string[]
+}
+
 export interface IInvitePeoplePayload {
-  invitations: Record<string, string[]>;
-  groupId: string;
+  invitations: Record<string, IInviteEnvironmentDetail[]>
+  groupId: string
 }
 
 export interface IInvitePeopleResponse {
