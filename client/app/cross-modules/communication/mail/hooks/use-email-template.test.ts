@@ -26,7 +26,7 @@ import {
 import { TEST_TENANT_ID } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@/store/useProjectStore", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 vi.mock("@/hooks/use-toast", () => mockToastFactory());
 
 describe("Email Template Hooks", () => {

@@ -23,7 +23,7 @@ import { CirclePlus, ChevronsLeft, Menu, Notebook } from "lucide-react";
 import { MouseEvent, useMemo, useState } from "react";
 import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import { toast } from "@/hooks/use-toast";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui-kits/sheet/sheet";
