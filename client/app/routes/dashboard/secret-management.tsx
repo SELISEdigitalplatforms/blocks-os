@@ -19,11 +19,11 @@ import { AddService } from "@blocks-identifier/components/add-service/add-servic
 import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
 import NotificationConfigurationList from "@blocks-communication/notification/components/notification-configuration-list";
 import { Button } from "@/components/ui-kits/button/button";
-import { CirclePlus, ChevronsLeft, Menu, Notebook, AlertCircle } from "lucide-react";
+import { CirclePlus, ChevronsLeft, Menu, Notebook } from "lucide-react";
 import { MouseEvent, useMemo, useState } from "react";
 import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import { toast } from "@/hooks/use-toast";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui-kits/sheet/sheet";
@@ -31,6 +31,7 @@ import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
 import { cn } from "@/lib/utils";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
 import { SecretsList } from "@/cross-modules/secrets/components/secrets-list/secrets-list";
+import { Banner } from "@/components/ui-kits/banner/banner";
 import { SecretType } from "@/cross-modules/secrets/constants/secret-key.enum";
 
 const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models", "magic-url"];
@@ -152,18 +153,12 @@ export default function SecretManagementPage() {
       </div>
       <div className="flex-1 overflow-y-auto p-6">
         {!HIDDEN_BANNER_TABS.includes(selectedTab ?? "") && (
-          <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
-            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-500" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-amber-900 dark:text-amber-100">
-                Secret values are hidden for security
-              </h4>
-              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
-                Once you enter secret values, they won't be displayed again for security reasons. You
-                can only view and manage configurations.
-              </p>
-            </div>
-          </div>
+          <Banner
+            variant="warning"
+            title="Secret values are hidden."
+          >
+            Once entered, they can't be displayed again — you can only view and manage configurations.
+          </Banner>
         )}
         {selectedTab === GRANT_TYPES.authorizationCode && <OIDC />}
         {selectedTab === "identity-providers" && (
