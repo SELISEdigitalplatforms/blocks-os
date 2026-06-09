@@ -19,7 +19,7 @@ import {
   useSeedModelsByProvider,
   useSeedProviders,
 } from "@blocks-ai/hooks/use-aimodel";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Plus, ArrowLeft } from "lucide-react";
 const PROVIDER_PNG_MAP: Record<string, string> = {
