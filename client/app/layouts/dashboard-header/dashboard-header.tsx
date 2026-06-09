@@ -6,7 +6,7 @@ import { Notification } from "@/components/notification/notification";
 import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { BackToConsoleNavigator } from "@/components/back-to-console-navigator/back-to-console-navigator";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { cn } from "@/lib/utils";
 import {
   AppSwitcher,

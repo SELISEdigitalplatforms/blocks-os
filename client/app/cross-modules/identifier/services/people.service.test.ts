@@ -80,7 +80,9 @@ describe("PeopleService", () => {
       vi.mocked(http.post).mockResolvedValue(mockInvitePeopleResponse);
 
       const payload = {
-        invitations: { admin: ["new@example.com"] },
+        invitations: {
+          "new@example.com": [{ tenantId: "tenant-1", roles: ["user"] }],
+        },
         groupId: "group-1",
       };
       const result = await service.invitePeople(payload);
