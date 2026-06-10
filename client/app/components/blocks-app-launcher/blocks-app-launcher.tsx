@@ -180,7 +180,7 @@ const SELISE_APPS: BlocksApp[] = [
     description: "Identity & Access",
     url: getRuntimeEnv("BLOCKS_IAM_BASE_URL"),
     icon: <IdpIcon />,
-    clientId: "a5831e15-e193-4a4f-8e10-d04a4ad1705b",
+    clientId: getRuntimeEnv("BLOCKS_IAM_CLIENT_ID"),
     redirectUri: getRuntimeEnv("BLOCKS_IAM_CALLBACK_URL"),
   },
   {
