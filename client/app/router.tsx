@@ -107,7 +107,7 @@ export const router = createBrowserRouter([
                 ),
                 children: [
                   { path: "/profile", element: <ProfileRedirect /> },
-                  { path: "/console", element: <ConsolePage canCreateProject/> },
+                  { path: "/console", element: <ConsolePage canCreateProject /> },
                   { path: "/create-project", element: <CreateProjectWrapper /> },
                   { path: "/data-migration", element: <EnvironmentMigrationPage /> },
                   { path: "/callback", element: <GitHubCallbackPage /> },
