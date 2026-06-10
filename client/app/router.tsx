@@ -34,6 +34,7 @@ import SecretManagementPage from "./routes/dashboard/secret-management";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
+import { ProfileRedirect } from "./routes/dashboard/profile-redirect";
 import ProfilePage from "./routes/dashboard/profile";
 import { DashboardOverview } from "./pages/dashboard/dashboard-overview";
 import {
@@ -105,7 +106,7 @@ export const router = createBrowserRouter([
                   </ImpersonationChecker>
                 ),
                 children: [
-                  { path: "/profile", element: <ProfilePage /> },
+                  { path: "/profile", element: <ProfileRedirect /> },
                   { path: "/console", element: <ConsolePage canCreateProject/> },
                   { path: "/create-project", element: <CreateProjectWrapper /> },
                   { path: "/data-migration", element: <EnvironmentMigrationPage /> },
