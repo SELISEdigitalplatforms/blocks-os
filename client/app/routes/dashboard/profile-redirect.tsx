@@ -21,7 +21,7 @@ export function ProfileRedirect() {
         const params = new URLSearchParams({
           "x-blocks-key": blocksKey,
           clientId: IAM_APP.clientId,
-          redirectUri: IAM_APP.redirectUri,
+          redirectUri: IAM_APP.redirectUri, 
           forwardedTo: "/profile",
         });
         const initiateUrl = `${idpBaseUrl}/api/idp/initiate?${params.toString()}`;
