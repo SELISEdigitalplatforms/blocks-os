@@ -18,7 +18,13 @@ export function ProfileRedirect() {
       try {
         const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
         const idpBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL");
-        const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${IAM_APP.clientId}&redirectUri=${IAM_APP.redirectUri}`;
+        const params = new URLSearchParams({
+          "x-blocks-key": blocksKey,
+          clientId: IAM_APP.clientId,
+          redirectUri: IAM_APP.redirectUri,
+          forwardedTo: "/profile",
+        });
+        const initiateUrl = `${idpBaseUrl}/api/idp/initiate?${params.toString()}`;
 
         const headers: Record<string, string> = {};
         if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
@@ -27,7 +33,7 @@ export function ProfileRedirect() {
         const data = await response.json();
 
         if (data.redirect_uri) {
-          window.location.href = `${data.redirect_uri}/profile`;
+          window.location.href = data.redirect_uri as string;
         } else {
           setFailed(true);
           showErrorToast({ errors: "Failed to open profile" });
