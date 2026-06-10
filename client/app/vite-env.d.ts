@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly BLOCKS_OIDC_CLIENT_ID: string
   readonly BLOCKS_BASE_DOMAIN: string
   readonly BLOCKS_IAM_BASE_URL: string
+  readonly BLOCKS_IAM_CLIENT_ID: string
   readonly BLOCKS_IAM_CALLBACK_URL: string
   readonly BLOCKS_LOCALIZATION_BASE_URL: string
   readonly BLOCKS_LOCALIZATION_CALLBACK_URL: string
