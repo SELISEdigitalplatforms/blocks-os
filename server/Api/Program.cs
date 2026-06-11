@@ -12,11 +12,13 @@ using MongoDB.Driver;
 using Secrets.DomainService.Services;
 using SeliseBlocks.ConfigurationDriver;
 
-var serviceName = "blocks-os";
-//var vaultType = ResolveVaultType();
-//Console.WriteLine($"Using Genesis vault type: {vaultType}");
-var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, VaultType.Azure);
 var builder = WebApplication.CreateBuilder(args);
+ApplicationConfigurations.ConfigureApiEnv(builder, args);
+
+var serviceName = "blocks-os";
+var vaultType = ApplicationConfigurations.ResolveVaultType();
+Console.WriteLine($"Using Genesis vault type: {vaultType}");
+var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString}");
 
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));

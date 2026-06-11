@@ -11,6 +11,10 @@ WWWROOT_DIR="$SCRIPT_DIR/server/Api/wwwroot"
 API_PORT=5000
 FRONTEND_PORT=4000
 
+CERT_DIR="$SCRIPT_DIR/../local_ssl_certificate/os"
+export OS_SSL_CERT="${OS_SSL_CERT:-$CERT_DIR/dev-os.blocksdevelopers.com.pem}"
+export OS_SSL_KEY="${OS_SSL_KEY:-$CERT_DIR/dev-os.blocksdevelopers.com-key.pem}"
+
 API_PID=""
 WORKER_PID=""
 
@@ -33,7 +37,7 @@ Examples:
   $0 -f
   $0 -k
 EOF
-exit 1
+exit "${1:-1}"
 }
 
 # ---------- PORT CLEANUP ----------
@@ -66,6 +70,10 @@ free_port() {
 
 # ---------- CLEANUP ----------
 cleanup() {
+    if [ -z "${API_PID:-}" ] && [ -z "${WORKER_PID:-}" ]; then
+        return
+    fi
+
     echo "Shutting down..."
 
     [ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null || true
@@ -74,41 +82,77 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+load_repo_env() {
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        set -a
+        # shellcheck disable=SC1091
+        source "$SCRIPT_DIR/.env"
+        set +a
+    fi
+}
+
 # ---------- FRONTEND ----------
 run_frontend() {
     echo "Starting frontend..."
 
     if [ ! -d "$CLIENT_DIR/node_modules" ]; then
         echo "Installing dependencies..."
-        npm --prefix "$CLIENT_DIR" install
+        (cd "$CLIENT_DIR" && npm clean-install)
     fi
 
     free_port $FRONTEND_PORT
 
-    npm --prefix "$CLIENT_DIR" run dev
+    local resolved_ip
+    resolved_ip="$(getent ahostsv4 dev-os.blocksdevelopers.com 2>/dev/null | awk 'NR==1 {print $1}' || true)"
+    if [ "$resolved_ip" = "127.0.0.1" ]; then
+        (cd "$CLIENT_DIR" && npm run dev)
+    else
+        echo "dev-os.blocksdevelopers.com does not resolve to 127.0.0.1 (got: ${resolved_ip:-none})."
+        echo "Add to /etc/hosts: 127.0.0.1 dev-os.blocksdevelopers.com"
+        echo "Starting Vite on 127.0.0.1:$FRONTEND_PORT instead..."
+        (cd "$CLIENT_DIR" && npm exec vite -- --port "$FRONTEND_PORT" --host 127.0.0.1)
+    fi
 }
 
 build_frontend() {
     echo "Building frontend..."
 
-    npm --prefix "$CLIENT_DIR" install
-    npm --prefix "$CLIENT_DIR" run build
+    pushd "$CLIENT_DIR" > /dev/null
+    npm install
+    npm run build
+    popd > /dev/null
 
     mkdir -p "$WWWROOT_DIR"
 
     if [ -d "$CLIENT_DIR/dist" ]; then
         echo "Syncing dist → wwwroot..."
-        rsync -a --delete "$CLIENT_DIR/dist/" "$WWWROOT_DIR/"
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -a --delete "$CLIENT_DIR/dist/" "$WWWROOT_DIR/"
+        else
+            rm -rf "$WWWROOT_DIR"/*
+            cp -r "$CLIENT_DIR/dist/"* "$WWWROOT_DIR/"
+        fi
     fi
 }
 
 # ---------- BACKEND ----------
 run_backend() {
-    echo "Running .NET API on port $API_PORT..."
-    dotnet run --project "$API_PROJECT"
+    load_repo_env
+
+    export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
+    export BLOCKS_VAULT_TYPE="${BLOCKS_VAULT_TYPE:-Azure}"
+    export ProdVaultUrl="${ProdVaultUrl:-https://blocks-keyvault-dev.vault.azure.net/}"
+
+    echo "Running .NET API on https://dev-os.blocksdevelopers.com:$API_PORT ..."
+    dotnet run --project "$API_PROJECT" --launch-profile Api
 }
 
 run_worker() {
+    load_repo_env
+    export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
+    export BLOCKS_VAULT_TYPE="${BLOCKS_VAULT_TYPE:-Azure}"
+    export ProdVaultUrl="${ProdVaultUrl:-https://blocks-keyvault-dev.vault.azure.net/}"
+
     echo "Running .NET Worker..."
     dotnet run --project "$WORKER_PROJECT"
 }
@@ -159,11 +203,11 @@ case "$1" in
     -n|--npm)
         shift
         [ $# -eq 0 ] && echo "Usage: $0 -n <args>" && exit 1
-        npm --prefix "$CLIENT_DIR" "$@"
+        (cd "$CLIENT_DIR" && npm "$@")
         ;;
 
     -h|--help)
-        usage
+        usage 0
         ;;
 
     *)
