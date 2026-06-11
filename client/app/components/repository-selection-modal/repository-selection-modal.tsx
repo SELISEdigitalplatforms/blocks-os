@@ -143,6 +143,9 @@ export const RepositorySelectionModal = ({
     const element = e.currentTarget;
     if (element) {
       element.scrollTop += e.deltaY;
+      // Trigger the scroll event manually to check for infinite loading
+      const scrollEvent = new Event("scroll", { bubbles: true });
+      element.dispatchEvent(scrollEvent);
     }
   }, []);
   useEffect(() => {
@@ -233,12 +236,7 @@ export const RepositorySelectionModal = ({
         </DialogHeader>
         <div className="mb-6 mt-4 flex flex-wrap gap-4">
           {providers.map((provider) => {
-            const iconSrc =
-              typeof iconMap[provider.icon]?.src === "string"
-                ? iconMap[provider.icon].src
-                : typeof provider.icon === "string"
-                  ? provider.icon
-                  : "";
+            const iconSrc = iconMap[provider.icon];
             const isGithub = provider.id === "github";
             return (
               <div
@@ -309,12 +307,8 @@ export const RepositorySelectionModal = ({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent
-              className="w-[400px] p-0"
-              align="start"
-              onOpenAutoFocus={(e) => e.preventDefault()}
-            >
-              <Command>
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command shouldFilter={false}>
                 <CommandInput
                   placeholder="Search repositories..."
                   value={searchTerm}
