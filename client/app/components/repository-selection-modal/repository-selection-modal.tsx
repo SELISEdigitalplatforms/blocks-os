@@ -143,9 +143,6 @@ export const RepositorySelectionModal = ({
     const element = e.currentTarget;
     if (element) {
       element.scrollTop += e.deltaY;
-      // Trigger the scroll event manually to check for infinite loading
-      const scrollEvent = new Event("scroll", { bubbles: true });
-      element.dispatchEvent(scrollEvent);
     }
   }, []);
   useEffect(() => {
@@ -229,7 +226,21 @@ export const RepositorySelectionModal = ({
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-6">
+      <DialogContent
+        className="max-w-2xl p-6"
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
