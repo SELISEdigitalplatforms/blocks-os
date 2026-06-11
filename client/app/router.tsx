@@ -34,8 +34,6 @@ import SecretManagementPage from "./routes/dashboard/secret-management";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
-import { ProfileRedirect } from "./routes/dashboard/profile-redirect";
-import ProfilePage from "./routes/dashboard/profile";
 import { DashboardOverview } from "./pages/dashboard/dashboard-overview";
 import {
   EnvironmentsPage,
@@ -52,6 +50,7 @@ import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-u
 import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
 import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
 import ActivatePage from "./routes/auth/activate-page";
+import { ProfilePage } from "@seliseblocks/blocks-kit";
 
 export const router = createBrowserRouter([
   // ── Public invitation accept flow (no auth guard) ──
@@ -83,7 +82,7 @@ export const router = createBrowserRouter([
               </PublicGuard>
             ),
             // children: [{ path: "/login", element: <LoginPage /> }],
-            children: [{ path: "/login", element: <LoginPage name="blocks-os"/> }],
+            children: [{ path: "/login", element: <LoginPage /> }],
           },
 
           // protected
@@ -106,7 +105,7 @@ export const router = createBrowserRouter([
                   </ImpersonationChecker>
                 ),
                 children: [
-                  { path: "/profile", element: <ProfileRedirect /> },
+                  { path: "/profile", element: <ProfilePage /> },
                   { path: "/console", element: <ConsolePage canCreateProject /> },
                   { path: "/create-project", element: <CreateProjectWrapper /> },
                   { path: "/data-migration", element: <EnvironmentMigrationPage /> },
