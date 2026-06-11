@@ -226,21 +226,7 @@ export const RepositorySelectionModal = ({
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-2xl p-6"
-        onPointerDownOutside={(e) => {
-          const target = e.target as HTMLElement | null;
-          if (target?.closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault();
-          }
-        }}
-        onInteractOutside={(e) => {
-          const target = e.target as HTMLElement | null;
-          if (target?.closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <DialogContent className="max-w-2xl p-6">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -301,7 +287,7 @@ export const RepositorySelectionModal = ({
             Github repository{" "}
             {repositories?.data?.total_count ? `(${repositories.data.total_count} results)` : ""}
           </label>
-          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={false}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -318,24 +304,7 @@ export const RepositorySelectionModal = ({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent
-              className="w-[400px] p-0"
-              align="start"
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onCloseAutoFocus={(e) => e.preventDefault()}
-              onPointerDownOutside={(e) => {
-                const target = e.target as HTMLElement | null;
-                if (target?.closest('[role="option"]') || target?.closest('[cmdk-item]')) {
-                  e.preventDefault();
-                }
-              }}
-              onInteractOutside={(e) => {
-                const target = e.target as HTMLElement | null;
-                if (target?.closest('[role="option"]') || target?.closest('[cmdk-item]')) {
-                  e.preventDefault();
-                }
-              }}
-            >
+            <PopoverContent className="w-[400px] p-0" align="start">
               <Command shouldFilter={false}>
                 <CommandInput
                   placeholder="Search repositories..."
