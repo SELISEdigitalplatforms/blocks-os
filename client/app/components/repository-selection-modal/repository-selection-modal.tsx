@@ -318,7 +318,24 @@ export const RepositorySelectionModal = ({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="start">
+            <PopoverContent
+              className="w-[400px] p-0"
+              align="start"
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+              onPointerDownOutside={(e) => {
+                const target = e.target as HTMLElement | null;
+                if (target?.closest('[role="option"]') || target?.closest('[cmdk-item]')) {
+                  e.preventDefault();
+                }
+              }}
+              onInteractOutside={(e) => {
+                const target = e.target as HTMLElement | null;
+                if (target?.closest('[role="option"]') || target?.closest('[cmdk-item]')) {
+                  e.preventDefault();
+                }
+              }}
+            >
               <Command shouldFilter={false}>
                 <CommandInput
                   placeholder="Search repositories..."
@@ -347,21 +364,6 @@ export const RepositorySelectionModal = ({
                         key={repo.id}
                         value={repo.full_name}
                         onSelect={() => {
-                          handleRepoChange(String(repo.id));
-                          setIsPopoverOpen(false);
-                        }}
-                        onClick={(e: React.MouseEvent<HTMLDivElement>) => {
-                          e.preventDefault();
-                          handleRepoChange(String(repo.id));
-                          setIsPopoverOpen(false);
-                        }}
-                        onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => {
-                          e.preventDefault();
-                          handleRepoChange(String(repo.id));
-                          setIsPopoverOpen(false);
-                        }}
-                        onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                          e.preventDefault();
                           handleRepoChange(String(repo.id));
                           setIsPopoverOpen(false);
                         }}
