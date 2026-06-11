@@ -350,6 +350,21 @@ export const RepositorySelectionModal = ({
                           handleRepoChange(String(repo.id));
                           setIsPopoverOpen(false);
                         }}
+                        onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                          e.preventDefault();
+                          handleRepoChange(String(repo.id));
+                          setIsPopoverOpen(false);
+                        }}
+                        onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => {
+                          e.preventDefault();
+                          handleRepoChange(String(repo.id));
+                          setIsPopoverOpen(false);
+                        }}
+                        onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+                          e.preventDefault();
+                          handleRepoChange(String(repo.id));
+                          setIsPopoverOpen(false);
+                        }}
                       >
                         <Check
                           className={cn(
