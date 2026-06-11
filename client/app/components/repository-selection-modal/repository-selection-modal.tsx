@@ -10,14 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui-kits/command/command";
+import { Input } from "@/components/ui-kits/input/input";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
 import { useGetGithubRepos } from "@/cross-modules/devops/hooks/github-info";
@@ -305,58 +298,62 @@ export const RepositorySelectionModal = ({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[400px] p-0" align="start">
-              <Command shouldFilter={false}>
-                <CommandInput
+              <div className="flex items-center border-b px-3">
+                <Input
                   placeholder="Search repositories..."
                   value={searchTerm}
-                  onValueChange={handleSearchChange}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="h-11 w-full border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
-                <CommandList
-                  ref={commandListRef}
-                  onScroll={handleScroll}
-                  onWheel={handleWheel}
-                  className="max-h-60 overflow-y-auto"
-                  style={{ overflowY: "auto" }}
-                >
-                  {!isLoading && !isFetching && allRepositories.length === 0 && (
-                    <CommandEmpty>No repositories found.</CommandEmpty>
-                  )}
-                  {(isLoading || isFetching) && allRepositories.length === 0 && (
-                    <div className="flex items-center justify-center p-4 text-sm text-gray-500">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading repositories...
-                    </div>
-                  )}
-                  <CommandGroup>
-                    {allRepositories.map((repo: IRepository) => (
-                      <CommandItem
-                        key={repo.id}
-                        value={repo.full_name}
-                        onSelect={() => {
-                          handleRepoChange(String(repo.id));
-                          setIsPopoverOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedRepoId === String(repo.id) ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                        <div className="flex flex-col">
-                          <span className="font-medium">{repo.full_name}</span>
-                        </div>
-                      </CommandItem>
-                    ))}
-                    {(isLoading || isFetching) && allRepositories.length > 0 && (
-                      <div className="flex items-center justify-center p-2 text-sm text-gray-500">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading more...
-                      </div>
+              </div>
+              <div
+                ref={commandListRef}
+                onScroll={handleScroll}
+                onWheel={handleWheel}
+                className="max-h-60 overflow-y-auto p-1"
+                style={{ overflowY: "auto" }}
+              >
+                {!isLoading && !isFetching && allRepositories.length === 0 && (
+                  <div className="py-6 text-center text-sm">No repositories found.</div>
+                )}
+                {(isLoading || isFetching) && allRepositories.length === 0 && (
+                  <div className="flex items-center justify-center p-4 text-sm text-gray-500">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading repositories...
+                  </div>
+                )}
+                {allRepositories.map((repo: IRepository) => (
+                  <div
+                    key={repo.id}
+                    role="option"
+                    aria-selected={selectedRepoId === String(repo.id)}
+                    onClick={() => {
+                      handleRepoChange(String(repo.id));
+                      setIsPopoverOpen(false);
+                    }}
+                    className={cn(
+                      "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                      selectedRepoId === String(repo.id) && "bg-accent text-accent-foreground",
                     )}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedRepoId === String(repo.id) ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{repo.full_name}</span>
+                    </div>
+                  </div>
+                ))}
+                {(isLoading || isFetching) && allRepositories.length > 0 && (
+                  <div className="flex items-center justify-center p-2 text-sm text-gray-500">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading more...
+                  </div>
+                )}
+              </div>
             </PopoverContent>
           </Popover>
           {repoError && <div className="mt-1 text-xs text-red-500">{repoError}</div>}
