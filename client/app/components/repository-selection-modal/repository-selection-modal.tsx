@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { Input } from "@/components/ui-kits/input/input";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
@@ -43,7 +42,9 @@ export const RepositorySelectionModal = ({
   const [allRepositories, setAllRepositories] = useState<IRepository[]>([]);
   const [hasMoreData, setHasMoreData] = useState<boolean>(true);
   const [isPopoverOpen, setIsPopoverOpen] = useState<boolean>(false);
-  const commandListRef = useRef<HTMLDivElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const listRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [isLoadingRevoke, setIsLoadingRevoke] = useState(false);
@@ -130,34 +131,41 @@ export const RepositorySelectionModal = ({
     },
     [hasMoreData, isLoading, isFetching, allRepositories.length],
   );
-  // Wheel event handler no longer needed - native scroll works fine
-  const handleWheel = useCallback((_e: React.WheelEvent<HTMLDivElement>) => {
-    // Native overflow-y-auto handles scrolling
-  }, []);
+  // Click-outside to close dropdown
   useEffect(() => {
-    if (!open) {
-      // On close: clear state
-      setIsPopoverOpen(false);
-      setAllRepositories([]);
-      setCurrentPage(0);
-      setHasMoreData(true);
-      setSearchTerm("");
-      setDebouncedSearchTerm("");
-    } else {
-      // On open: reset pagination/search state and invalidate cache
-      setCurrentPage(0);
-      setHasMoreData(true);
-      setSearchTerm("");
-      setDebouncedSearchTerm("");
-      // Invalidate cache immediately
-      queryClient.invalidateQueries({ queryKey: ["github-repos"] });
-    }
-  }, [open, queryClient]);
+    if (!isPopoverOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (
+        target &&
+        !triggerRef.current?.contains(target) &&
+        !listRef.current?.contains(target)
+      ) {
+        setIsPopoverOpen(false);
+        setHighlightedIndex(-1);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isPopoverOpen]);
+
+  // Reset highlight when list changes
+  useEffect(() => {
+    setHighlightedIndex(allRepositories.length > 0 ? 0 : -1);
+  }, [allRepositories]);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex < 0 || !listRef.current) return;
+    const el = listRef.current.querySelector<HTMLDivElement>(
+      `[data-repo-index="${highlightedIndex}"]`,
+    );
+    if (el) el.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex]);
   const handleSearchChange = useCallback(
     (value: string) => {
       const previousValue = searchTerm;
       setSearchTerm(value);
-      // If changing from one search to another, reset repositories
       if (previousValue !== value) {
         setCurrentPage(0);
         setAllRepositories([]);
@@ -181,6 +189,31 @@ export const RepositorySelectionModal = ({
     setSelectedRepoId(val);
     setRepoError("");
   }, []);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isPopoverOpen || allRepositories.length === 0) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev < allRepositories.length - 1 ? prev + 1 : 0));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : allRepositories.length - 1));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const idx = highlightedIndex >= 0 ? highlightedIndex : 0;
+        const repo = allRepositories[idx];
+        if (repo) {
+          handleRepoChange(String(repo.id));
+          setIsPopoverOpen(false);
+          setHighlightedIndex(-1);
+        }
+      } else if (e.key === "Escape") {
+        setIsPopoverOpen(false);
+        setHighlightedIndex(-1);
+      }
+    },
+    [isPopoverOpen, allRepositories, highlightedIndex, handleRepoChange],
+  );
   const handleCancel = useCallback(() => {
     setSelectedRepoId("");
     setRepoError("");
@@ -215,21 +248,7 @@ export const RepositorySelectionModal = ({
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-2xl p-6"
-        onPointerDownOutside={(e) => {
-          const target = e.target as HTMLElement | null;
-          if (target?.closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault();
-          }
-        }}
-        onInteractOutside={(e) => {
-          const target = e.target as HTMLElement | null;
-          if (target?.closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <DialogContent className="max-w-2xl p-6">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -290,82 +309,97 @@ export const RepositorySelectionModal = ({
             Github repository{" "}
             {repositories?.data?.total_count ? `(${repositories.data.total_count} results)` : ""}
           </label>
-          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={isPopoverOpen}
-                className="w-full justify-between"
-                disabled={isLoading || isFetching}
-              >
-                {selectedRepoId
-                  ? allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name
-                  : isLoading || isFetching
-                    ? "Loading repositories..."
-                    : "Select a repository"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="start">
-              <div className="flex items-center border-b px-3">
-                <Input
-                  placeholder="Search repositories..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="h-11 w-full border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-              </div>
+          <div
+            className="relative"
+            onKeyDown={handleKeyDown}
+          >
+            <Button
+              ref={triggerRef}
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-expanded={isPopoverOpen}
+              className="w-full justify-between"
+              disabled={isLoading || isFetching}
+              onClick={() => {
+                setIsPopoverOpen((prev) => !prev);
+                setHighlightedIndex(allRepositories.length > 0 ? 0 : -1);
+              }}
+            >
+              {selectedRepoId
+                ? allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name
+                : isLoading || isFetching
+                  ? "Loading repositories..."
+                  : "Select a repository"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+            {isPopoverOpen && (
               <div
-                ref={commandListRef}
-                onScroll={handleScroll}
-                onWheel={handleWheel}
-                className="max-h-60 overflow-y-auto p-1"
-                style={{ overflowY: "auto" }}
+                className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover text-popover-foreground shadow-md"
               >
-                {!isLoading && !isFetching && allRepositories.length === 0 && (
-                  <div className="py-6 text-center text-sm">No repositories found.</div>
-                )}
-                {(isLoading || isFetching) && allRepositories.length === 0 && (
-                  <div className="flex items-center justify-center p-4 text-sm text-gray-500">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading repositories...
-                  </div>
-                )}
-                {allRepositories.map((repo: IRepository) => (
-                  <div
-                    key={repo.id}
-                    role="option"
-                    aria-selected={selectedRepoId === String(repo.id)}
-                    onClick={() => {
-                      handleRepoChange(String(repo.id));
-                      setIsPopoverOpen(false);
-                    }}
-                    className={cn(
-                      "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-                      selectedRepoId === String(repo.id) && "bg-accent text-accent-foreground",
-                    )}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedRepoId === String(repo.id) ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{repo.full_name}</span>
+                <div className="flex items-center border-b px-3">
+                  <Input
+                    autoFocus
+                    placeholder="Search repositories..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="h-11 w-full border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </div>
+                <div
+                  ref={listRef}
+                  onScroll={handleScroll}
+                  className="max-h-60 overflow-y-auto overflow-x-hidden p-1"
+                >
+                  {!isLoading && !isFetching && allRepositories.length === 0 && (
+                    <div className="py-6 text-center text-sm">No repositories found.</div>
+                  )}
+                  {(isLoading || isFetching) && allRepositories.length === 0 && (
+                    <div className="flex items-center justify-center p-4 text-sm text-gray-500">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading repositories...
                     </div>
-                  </div>
-                ))}
-                {(isLoading || isFetching) && allRepositories.length > 0 && (
-                  <div className="flex items-center justify-center p-2 text-sm text-gray-500">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading more...
-                  </div>
-                )}
+                  )}
+                  {allRepositories.map((repo: IRepository, idx: number) => (
+                    <div
+                      key={repo.id}
+                      data-repo-index={idx}
+                      role="option"
+                      aria-selected={selectedRepoId === String(repo.id)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleRepoChange(String(repo.id));
+                        setIsPopoverOpen(false);
+                        setHighlightedIndex(-1);
+                      }}
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                      className={cn(
+                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+                        highlightedIndex === idx && "bg-accent text-accent-foreground",
+                        selectedRepoId === String(repo.id) && "bg-accent text-accent-foreground",
+                      )}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedRepoId === String(repo.id) ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{repo.full_name}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {(isLoading || isFetching) && allRepositories.length > 0 && (
+                    <div className="flex items-center justify-center p-2 text-sm text-gray-500">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading more...
+                    </div>
+                  )}
+                </div>
               </div>
-            </PopoverContent>
-          </Popover>
+            )}
+          </div>
           {repoError && <div className="mt-1 text-xs text-red-500">{repoError}</div>}
         </div>
         <div className="mt-6 flex justify-end gap-2">
