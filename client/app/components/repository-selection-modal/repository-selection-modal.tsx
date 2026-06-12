@@ -130,13 +130,9 @@ export const RepositorySelectionModal = ({
     },
     [hasMoreData, isLoading, isFetching, allRepositories.length],
   );
-  // Wheel event handler to ensure mouse wheel scrolling works
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    const element = e.currentTarget;
-    if (element) {
-      element.scrollTop += e.deltaY;
-    }
+  // Wheel event handler no longer needed - native scroll works fine
+  const handleWheel = useCallback((_e: React.WheelEvent<HTMLDivElement>) => {
+    // Native overflow-y-auto handles scrolling
   }, []);
   useEffect(() => {
     if (!open) {
@@ -219,7 +215,21 @@ export const RepositorySelectionModal = ({
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-6">
+      <DialogContent
+        className="max-w-2xl p-6"
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -280,7 +290,7 @@ export const RepositorySelectionModal = ({
             Github repository{" "}
             {repositories?.data?.total_count ? `(${repositories.data.total_count} results)` : ""}
           </label>
-          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={false}>
+          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
