@@ -33,6 +33,8 @@ describe("AuthConfiguration", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${AUTH_CONFIG_ENDPOINTS.GET_CONFIG}?ProjectKey=${mockGetAuthConfigPayload.projectKey}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetAuthConfigResponse);
     });
@@ -54,6 +56,8 @@ describe("AuthConfiguration", () => {
       expect(http.post).toHaveBeenCalledWith(
         AUTH_CONFIG_ENDPOINTS.UPDATE_CONFIG,
         mockSaveAuthConfigPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });

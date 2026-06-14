@@ -363,6 +363,9 @@ export interface IGetSignUpSettingResponse {
   lastUpdatedBy: string;
   organizationIds: string[];
   tags: string[];
+  isSignUpEnable: boolean;
   isEmailPasswordSignUpEnabled: boolean;
   isSSoSignUpEnabled: boolean;
+  defaultRolesForNewUser?: string[];
+  defaultPermissionsForNewUser?: string[];
 }

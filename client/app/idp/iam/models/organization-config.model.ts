@@ -13,6 +13,10 @@ export interface IOrganizationConfigResponse {
   allowCreationFromConstruct: boolean;
   isMultiOrgEnabled: boolean;
   roles?: string[];
+  allowOrgCreationFromSignup?: boolean;
+  allowOrgCreationFromPortal?: boolean;
+  defaultRoleOnOrgCreation?: string[];
+  defaultPermissionOnOrgCreation?: string[];
 }
 
 export interface IOrganizationConfigPayload {

@@ -162,17 +162,34 @@ describe("UserService", () => {
 
   // ─── getSignUpSetting ─────────────────────────────────────────────────────
   describe("getSignUpSetting", () => {
-    it("should GET with correct query params", async () => {
-      vi.mocked(http.get).mockResolvedValue(mockSignUpSettingResponse);
+    it("should GET without query params and map the response", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        IsEmailPasswordSignUpEnabled: true,
+        IsSSoSignUpEnabled: false,
+        ItemId: "signup-001",
+      });
 
       const result = await service.getSignUpSetting(mockGetSignUpSettingPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${USER_ENDPOINTS.GET_SIGNUP_SETTING}?ProjectKey=${mockGetSignUpSettingPayload.projectKey}`,
+        USER_ENDPOINTS.GET_SIGNUP_SETTING,
         undefined,
         { absoluteUrl: true },
       );
-      expect(result).toEqual(mockSignUpSettingResponse);
+      expect(result).toEqual({
+        itemId: "signup-001",
+        createdDate: "",
+        lastUpdatedDate: "",
+        createdBy: "",
+        language: "",
+        lastUpdatedBy: "",
+        organizationIds: [],
+        tags: [],
+        isEmailPasswordSignUpEnabled: true,
+        isSSoSignUpEnabled: false,
+        defaultRolesForNewUser: [],
+        defaultPermissionsForNewUser: [],
+      });
     });
 
     it("should throw when the API call fails", async () => {

@@ -11,6 +11,17 @@ export interface IAuthConfiguration {
   rememberMeRefreshTokenValidForNumberMinutes: number;
   publicCertificatePath: string;
   isSelfSignUpAllowed: boolean;
+  absoluteRefreshTokenValidForNumberMinutes?: number;
+  accountActivationPath?: string;
+  accountVerificationPath?: string;
+  recoverAccountPath?: string;
+  isOidcEnabled?: boolean;
+  accountActionBaseUrl?: string;
+  useAccountActionBaseUrlAsDefault?: boolean;
+  activationUrlLifetimeInMinutes?: number;
+  recoverAccountUrlLifetimeInMinutes?: number;
+  logoutOnPasswordChange?: boolean;
+  passwordStrengthCheckerRegex?: string;
 }
 
 export interface IAuthConfigPayload {
@@ -18,8 +29,8 @@ export interface IAuthConfigPayload {
 }
 
 export interface IGetAuthConfigResponse extends IAuthConfiguration {
-  errors: unknown | null;
-  isSuccess: boolean;
+  errors?: unknown | null;
+  isSuccess?: boolean;
 }
 
 export interface ISaveAuthConfigPayload {
