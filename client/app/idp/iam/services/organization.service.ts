@@ -13,6 +13,7 @@ import {
   IOrganizationConfigSaveResponse,
 } from "@blocks-idp/iam/models/organization-config.model";
 import { ORGANIZATION_ENDPOINTS } from "../constants/endpoint.constant";
+import { mapOrganizationConfigFromApi } from "../utils/normalize-tenant-config";
 
 export class OrganizationService {
   getOrganizations(params: IGetOrganizationsParams): Promise<IGetOrganizationsResponse> {
@@ -36,7 +37,10 @@ export class OrganizationService {
   };
 
   getOrganizationConfig(projectKey: string): Promise<IOrganizationConfigResponse | null> {
-    return http.get(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG}?projectKey=${projectKey}`, undefined, { absoluteUrl: true });
+    if (!projectKey) return Promise.resolve(null);
+    return http
+      .get(ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG, undefined, { absoluteUrl: true })
+      .then((response) => mapOrganizationConfigFromApi(response as Record<string, unknown>));
   }
 
   saveOrganizationConfig = (

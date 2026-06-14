@@ -98,15 +98,38 @@ describe("OrganizationService", () => {
 
   // ─── getOrganizationConfig ────────────────────────────────────────────────
   describe("getOrganizationConfig", () => {
-    it("should GET with correct query params", async () => {
-      vi.mocked(http.get).mockResolvedValue(mockOrganizationConfigResponse);
+    it("should GET without query params and map the response", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        AllowOrgCreationFromCloud: true,
+        AllowOrgCreationFromConstruct: false,
+        IsMultiOrgEnabled: false,
+        ItemId: "org-config-001",
+      });
 
       const result = await service.getOrganizationConfig(TEST_PROJECT_KEY);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG}?projectKey=${TEST_PROJECT_KEY}`,
+        ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG,
+        undefined,
+        { absoluteUrl: true },
       );
-      expect(result).toEqual(mockOrganizationConfigResponse);
+      expect(result).toEqual({
+        itemId: "org-config-001",
+        createdDate: "",
+        lastUpdatedDate: "",
+        createdBy: "",
+        language: "",
+        lastUpdatedBy: "",
+        organizationIds: [],
+        tags: [],
+        allowCreationFromCloud: true,
+        allowCreationFromConstruct: false,
+        isMultiOrgEnabled: false,
+        allowOrgCreationFromSignup: false,
+        allowOrgCreationFromPortal: false,
+        defaultRoleOnOrgCreation: [],
+        defaultPermissionOnOrgCreation: [],
+      });
     });
 
     it("should throw when the API call fails", async () => {
