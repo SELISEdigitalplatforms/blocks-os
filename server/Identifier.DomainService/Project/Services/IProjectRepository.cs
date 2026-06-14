@@ -36,5 +36,6 @@ namespace DomainService.Projects
         Task<List<Project>> GetProjectPeoplesAsync(string tenantGroupId);
         Task<List<string>> GetProjectIdsByGroupId(string projectGroupId);
         Task UpdateTenantGroupAsync(UpdateTenantGroupRequest request);
+        Task DeletePrjectPeopleAsync(string tenantId);
     }
 }
