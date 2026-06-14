@@ -26,6 +26,7 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
+import { SettingsPage } from "@blocks-idp/settings";
 const NEW_COMMUNICATION_STEPS = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Template" },
@@ -208,6 +209,7 @@ export const AuthenticationConfig = () => {
         )}
         {selectedTab === "roles" && <Roles />}
         {selectedTab === "permissions" && <Permissions />}
+        {selectedTab === "config" && <SettingsPage />}
       </div>
     </div>
     <Dialog open={configureOpen} onOpenChange={setConfigureOpen}>

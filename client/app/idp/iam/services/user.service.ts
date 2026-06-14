@@ -31,6 +31,7 @@ import {
 } from "@blocks-idp/iam/models/user";
 import { UserAccountService } from "./account.service";
 import { USER_ENDPOINTS } from "../constants/endpoint.constant";
+import { mapSignUpSettingFromApi } from "../utils/normalize-tenant-config";
 
 export class UserService {
   constructor(public account: UserAccountService) {}
@@ -114,11 +115,12 @@ export class UserService {
   getSignUpSetting(
     payload: IGetSignUpSettingPayload,
   ): Promise<IGetSignUpSettingResponse> {
-    return http.get(
-      `${USER_ENDPOINTS.GET_SIGNUP_SETTING}?ProjectKey=${payload.projectKey}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    if (!payload.projectKey) {
+      return Promise.reject(new Error("projectKey is required"));
+    }
+    return http
+      .get(USER_ENDPOINTS.GET_SIGNUP_SETTING, undefined, { absoluteUrl: true })
+      .then((response) => mapSignUpSettingFromApi(response as Record<string, unknown>));
   }
 
   saveSignUpSetting(
