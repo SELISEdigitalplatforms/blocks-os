@@ -241,7 +241,7 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
               control={form.control}
               render={() => (
                 <FormItem>
-                  <FormLabel className="text-muted-foreground">Public Certificate</FormLabel>
+
                   <FormControl>
                     <UrlWithActions url={config.publicCertificatePath} />
                   </FormControl>

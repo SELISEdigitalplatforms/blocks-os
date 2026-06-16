@@ -80,7 +80,7 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
         className="text-base font-normal text-high-emphasis underline"
         title={jwksUrl}
       >
-        certificate
+        Public Certificate
       </a>
       <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
         <Button

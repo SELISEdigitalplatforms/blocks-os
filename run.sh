@@ -222,6 +222,8 @@ esac
 # CERT_DIR="$SCRIPT_DIR/../local_ssl_certificate/os"
 # export OS_SSL_CERT="${OS_SSL_CERT:-$CERT_DIR/dev-os.blocksdevelopers.com.pem}"
 # export OS_SSL_KEY="${OS_SSL_KEY:-$CERT_DIR/dev-os.blocksdevelopers.com-key.pem}"
+# export OS_SSL_PFX="${OS_SSL_PFX:-$CERT_DIR/dev-os.pfx}"
+# export OS_SSL_PFX_PASSWORD="${OS_SSL_PFX_PASSWORD:-12345}"
 
 # API_PID=""
 # WORKER_PID=""
@@ -344,8 +346,24 @@ esac
 # }
 
 # # ---------- BACKEND ----------
+# # Kestrel cannot load mkcert PEM key pairs reliably — use dev-os.pfx for the API.
+# configure_backend_tls() {
+#     if [ -f "$OS_SSL_PFX" ]; then
+#         export Kestrel__Endpoints__Https__Certificate__Path="$(cd "$(dirname "$OS_SSL_PFX")" && pwd)/$(basename "$OS_SSL_PFX")"
+#         export Kestrel__Endpoints__Https__Certificate__Password="$OS_SSL_PFX_PASSWORD"
+#         unset Kestrel__Endpoints__Https__Certificate__KeyPath
+#         echo "Backend TLS: PFX certificate ($Kestrel__Endpoints__Https__Certificate__Path)"
+#         return
+#     fi
+
+#     echo "Backend TLS: no certificate found under $CERT_DIR"
+#     echo "Run: $CERT_DIR/setup.sh"
+#     exit 1
+# }
+
 # run_backend() {
 #     load_repo_env
+#     configure_backend_tls
 
 #     export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
 #     export BLOCKS_VAULT_TYPE="${BLOCKS_VAULT_TYPE:-Azure}"
