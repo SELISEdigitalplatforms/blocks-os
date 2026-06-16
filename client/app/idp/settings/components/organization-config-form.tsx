@@ -74,7 +74,7 @@ const CreationWorkflowTile = ({
   <label
     className={cn(
       "flex cursor-pointer gap-3 rounded-lg border bg-card p-4 transition-colors",
-      disabled && "cursor-not-allowed opacity-60",
+      disabled && "pointer-events-none cursor-not-allowed",
       checked && !disabled && "border-primary/40 bg-primary/5",
     )}
   >
@@ -83,7 +83,7 @@ const CreationWorkflowTile = ({
       disabled={disabled}
       onCheckedChange={(value) => onCheckedChange(value === true)}
       aria-label={label}
-      className="mt-0.5"
+      className="mt-0.5 disabled:opacity-100"
     />
     <span className="min-w-0 space-y-1">
       <span className="block text-sm font-semibold text-foreground">{label}</span>
