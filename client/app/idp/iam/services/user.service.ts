@@ -31,6 +31,8 @@ import {
 } from "@blocks-idp/iam/models/user";
 import { UserAccountService } from "./account.service";
 import { USER_ENDPOINTS } from "../constants/endpoint.constant";
+import { mapSignUpSettingFromApi } from "../utils/normalize-tenant-config";
+import { toSignupSettingsSaveApiPayload } from "../utils/signup-settings-payload";
 
 export class UserService {
   constructor(public account: UserAccountService) {}
@@ -112,21 +114,22 @@ export class UserService {
   }
 
   getSignUpSetting(
-    payload: IGetSignUpSettingPayload,
+    _payload?: IGetSignUpSettingPayload,
   ): Promise<IGetSignUpSettingResponse> {
-    return http.get(
-      `${USER_ENDPOINTS.GET_SIGNUP_SETTING}?ProjectKey=${payload.projectKey}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http
+      .get(USER_ENDPOINTS.GET_SIGNUP_SETTING, undefined, { absoluteUrl: true })
+      .then((response) => mapSignUpSettingFromApi(response as Record<string, unknown>));
   }
 
   saveSignUpSetting(
     payload: ISaveSignUpSettingPayload,
   ): Promise<ISaveSignUpSettingResponse> {
-    return http.post(USER_ENDPOINTS.SAVE_SIGNUP_SETTING, payload, undefined, {
-      absoluteUrl: true,
-    });
+    return http.post(
+      USER_ENDPOINTS.SAVE_SIGNUP_SETTING,
+      toSignupSettingsSaveApiPayload(payload),
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   saveRolesAndPermissions(

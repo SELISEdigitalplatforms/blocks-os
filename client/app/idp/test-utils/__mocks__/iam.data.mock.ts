@@ -198,10 +198,11 @@ export const mockGetSignUpSettingPayload: IGetSignUpSettingPayload = {
 };
 
 export const mockSaveSignUpSettingPayload: ISaveSignUpSettingPayload = {
+  isSignUpEnable: true,
   isEmailPasswordSignUpEnabled: true,
   isSSoSignUpEnabled: false,
-  projectKey: TEST_PROJECT_KEY,
-  itemId: "signup-001",
+  defaultRolesForNewUserOnSignUp: ["user"],
+  defaultPermissionsForNewUserOnSignUp: ["blocks-idp::self-service"],
 };
 
 // ─── Account Mocks ───────────────────────────────────────────────────────────
@@ -441,11 +442,15 @@ export const mockOrganizationConfigResponse = {
 };
 
 export const mockSaveOrganizationConfigPayload: IOrganizationConfigPayload = {
-  itemId: "org-config-001",
-  allowCreationFromCloud: true,
-  allowCreationFromConstruct: false,
+  allowOrgCreationFromCloud: true,
+  allowOrgCreationFromConstruct: false,
+  allowOrgCreationFromSignup: false,
+  allowOrgCreationFromPortal: false,
   isMultiOrgEnabled: false,
-  projectKey: TEST_PROJECT_KEY,
+  defaultRolesOnOrgCreation: [],
+  defaultPermissionsOnOrgCreation: [],
+  keepOrgRolesSameAsDefaultRoles: true,
+  keepOrgPermissionsSameAsDefaultPermissions: true,
 };
 
 // ─── IAM Configuration Mocks ────────────────────────────────────────────────
