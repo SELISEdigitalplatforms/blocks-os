@@ -337,10 +337,13 @@ export interface IActivationCodeExpirationResponse {
 }
 
 export interface ISaveSignUpSettingPayload {
-  isEmailPasswordSignUpEnabled: boolean;
-  isSSoSignUpEnabled: boolean;
-  projectKey: string;
-  itemId: string;
+  isSignUpEnable: boolean
+  isEmailPasswordSignUpEnabled: boolean
+  isSSoSignUpEnabled: boolean
+  defaultRolesForNewUserOnSignUp?: string[]
+  defaultPermissionsForNewUserOnSignUp?: string[]
+  projectKey?: string
+  itemId?: string
 }
 
 export interface ISaveSignUpSettingResponse {
@@ -350,8 +353,7 @@ export interface ISaveSignUpSettingResponse {
 }
 
 export interface IGetSignUpSettingPayload {
-  projectKey: string;
-  // itemId: string;
+  projectKey?: string
 }
 
 export interface IGetSignUpSettingResponse {

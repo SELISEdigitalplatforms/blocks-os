@@ -39,6 +39,19 @@ describe("AuthConfiguration", () => {
       expect(result).toEqual(mockGetAuthConfigResponse);
     });
 
+    it("should GET without query params when projectKey is omitted", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockGetAuthConfigResponse);
+
+      const result = await service.getConfig();
+
+      expect(http.get).toHaveBeenCalledWith(
+        AUTH_CONFIG_ENDPOINTS.GET_CONFIG,
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(result).toEqual(mockGetAuthConfigResponse);
+    });
+
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 

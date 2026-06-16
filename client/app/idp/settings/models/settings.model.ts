@@ -33,15 +33,60 @@ export interface ISettingsOrganizationConfig {
   allowOrgCreationFromSignup: boolean
   allowOrgCreationFromPortal: boolean
   isMultiOrgEnabled: boolean
-  defaultRoleOnOrgCreation: string[]
-  defaultPermissionOnOrgCreation: string[]
+  consentForMultiOrgEnable: boolean
+  defaultRolesOnOrgCreation: string[]
+  defaultPermissionsOnOrgCreation: string[]
+  keepOrgRolesSameAsDefaultRoles: boolean
+  keepOrgPermissionsSameAsDefaultPermissions: boolean
+}
+
+export interface ISettingsSaveOrganizationConfigPayload {
+  allowOrgCreationFromCloud: boolean
+  allowOrgCreationFromConstruct: boolean
+  allowOrgCreationFromSignup: boolean
+  allowOrgCreationFromPortal: boolean
+  isMultiOrgEnabled: boolean
+  consentForMultiOrgEnable: boolean
+  defaultRolesOnOrgCreation: string[]
+  defaultPermissionsOnOrgCreation: string[]
+  keepOrgRolesSameAsDefaultRoles: boolean
+  keepOrgPermissionsSameAsDefaultPermissions: boolean
+}
+
+export interface ISettingsSaveAuthConfigPayload {
+  itemId: string
+  refreshTokenValidForNumberMinutes: number
+  absoluteRefreshTokenValidForNumberMinutes: number
+  accessTokenValidForNumberMinutes: number
+  rememberMeRefreshTokenValidForNumberMinutes: number
+  getNumberOfWrongAttemptsToLockTheAccount: number
+  accountLockDurationInMinutes: number
+  publicCertificatePath: string
+  accountActivationPath: string
+  accountVerificationPath: string
+  recoverAccountPath: string
+  isOidcEnabled: boolean
+  accountActionBaseUrl: string
+  useAccountActionBaseUrlAsDefault: boolean
+  activationUrlLifetimeInMinutes: number
+  recoverAccountUrlLifetimeInMinutes: number
+  logoutOnPasswordChange: boolean
+  passwordStrengthCheckerRegex: string
+  allowedGrantTypes: string[]
 }
 
 export interface ISettingsSignupConfig {
-  itemId: string
   isSignUpEnable: boolean
   isEmailPasswordSignUpEnabled: boolean
   isSSoSignUpEnabled: boolean
   defaultRolesForNewUser: string[]
   defaultPermissionsForNewUser: string[]
+}
+
+export interface ISettingsSaveSignupConfigPayload {
+  isSignUpEnable: boolean
+  isEmailPasswordSignUpEnabled: boolean
+  isSSoSignUpEnabled: boolean
+  defaultRolesForNewUserOnSignUp: string[]
+  defaultPermissionsForNewUserOnSignUp: string[]
 }

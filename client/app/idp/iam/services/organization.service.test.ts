@@ -38,6 +38,8 @@ describe("OrganizationService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${mockGetOrganizationsPayload.projectKey}&page=${mockGetOrganizationsPayload.page}&pageSize=${mockGetOrganizationsPayload.pageSize}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockOrganizationsResponse);
     });
@@ -60,6 +62,8 @@ describe("OrganizationService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}?ProjectKey=${mockGetOrganizationByIdPayload.projectKey}&ItemId=${mockGetOrganizationByIdPayload.itemId}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetOrganizationByIdResponse);
     });
@@ -83,6 +87,8 @@ describe("OrganizationService", () => {
       expect(http.post).toHaveBeenCalledWith(
         ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION,
         mockSaveOrganizationPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -129,6 +135,8 @@ describe("OrganizationService", () => {
         allowOrgCreationFromPortal: false,
         defaultRoleOnOrgCreation: [],
         defaultPermissionOnOrgCreation: [],
+        keepOrgRolesSameAsDefaultRoles: true,
+        keepOrgPermissionsSameAsDefaultPermissions: true,
       });
     });
 
@@ -150,7 +158,19 @@ describe("OrganizationService", () => {
 
       expect(http.post).toHaveBeenCalledWith(
         ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG,
-        mockSaveOrganizationConfigPayload,
+        {
+          allowOrgCreationFromCloud: true,
+          allowOrgCreationFromConstruct: false,
+          allowOrgCreationFromSignup: false,
+          allowOrgCreationFromPortal: false,
+          isMultiOrgEnabled: false,
+          defaultRolesOnOrgCreation: [],
+          defaultPermissionsOnOrgCreation: [],
+          keepOrgRolesSameAsDefaultRoles: true,
+          keepOrgPermissionsSameAsDefaultPermissions: true,
+        },
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });

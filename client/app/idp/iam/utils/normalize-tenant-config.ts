@@ -11,6 +11,18 @@ const readBool = (raw: TenantConfigApiDict, ...keys: string[]): boolean => {
   return false
 }
 
+const readBoolWithDefault = (
+  raw: TenantConfigApiDict,
+  defaultValue: boolean,
+  ...keys: string[]
+): boolean => {
+  for (const key of keys) {
+    const value = raw[key]
+    if (typeof value === "boolean") return value
+  }
+  return defaultValue
+}
+
 const readString = (raw: TenantConfigApiDict, ...keys: string[]): string => {
   for (const key of keys) {
     const value = raw[key]
@@ -52,6 +64,11 @@ export const mapOrganizationConfigFromApi = (
     "allowCreationFromConstruct",
   ),
   isMultiOrgEnabled: readBool(raw, "IsMultiOrgEnabled", "isMultiOrgEnabled"),
+  consentForMultiOrgEnable: readBool(
+    raw,
+    "ConsentForMultiOrgEnable",
+    "consentForMultiOrgEnable",
+  ),
   allowOrgCreationFromSignup: readBool(
     raw,
     "AllowOrgCreationFromSignup",
@@ -64,13 +81,29 @@ export const mapOrganizationConfigFromApi = (
   ),
   defaultRoleOnOrgCreation: readStringArray(
     raw,
+    "DefaultRolesOnOrgCreation",
+    "defaultRolesOnOrgCreation",
     "DefaultRoleOnOrgCreation",
     "defaultRoleOnOrgCreation",
   ),
   defaultPermissionOnOrgCreation: readStringArray(
     raw,
+    "DefaultPermissionsOnOrgCreation",
+    "defaultPermissionsOnOrgCreation",
     "DefaultPermissionOnOrgCreation",
     "defaultPermissionOnOrgCreation",
+  ),
+  keepOrgRolesSameAsDefaultRoles: readBoolWithDefault(
+    raw,
+    true,
+    "KeepOrgRolesSameAsDefaultRoles",
+    "keepOrgRolesSameAsDefaultRoles",
+  ),
+  keepOrgPermissionsSameAsDefaultPermissions: readBoolWithDefault(
+    raw,
+    true,
+    "KeepOrgPermissionsSameAsDefaultPermissions",
+    "keepOrgPermissionsSameAsDefaultPermissions",
   ),
 })
 
