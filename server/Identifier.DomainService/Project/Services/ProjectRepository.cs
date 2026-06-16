@@ -474,7 +474,9 @@ namespace DomainService.Projects
         {
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
-            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId);
+            var filter = Builders<Tenant>.Filter.And(Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId),
+                                                     Builders<Tenant>.Filter.Eq(mc => mc.IsDisabled, false));
+
             return await (await collection.FindAsync(filter)).FirstOrDefaultAsync();
         }
 
