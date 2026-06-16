@@ -72,7 +72,7 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
         allowCreationFromCloud: configData?.allowCreationFromCloud ?? true,
         allowCreationFromConstruct: configData?.allowCreationFromConstruct ?? false,
       });
-      setSelectedRoles(configData?.roles ?? []);
+      setSelectedRoles(configData?.defaultRoleOnOrgCreation ?? []);
     }
     setIsModalOpen(value);
   };
@@ -84,7 +84,7 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
         allowCreationFromCloud: configData.allowCreationFromCloud ?? true,
         allowCreationFromConstruct: configData.allowCreationFromConstruct ?? false,
       });
-      setSelectedRoles(configData.roles ?? []);
+      setSelectedRoles(configData.defaultRoleOnOrgCreation ?? []);
     }
   }, [configData, form]);
   // Reset dependent fields when isMultiOrgEnabled is toggled off
@@ -97,14 +97,18 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
   const onSubmit: SubmitHandler<IOrganizationConfigForm> = async (data) => {
     try {
       const res = await mutateAsync({
-        itemId: configData?.itemId || "",
-        allowCreationFromCloud: data.isMultiOrgEnabled ? data.allowCreationFromCloud : true,
-        allowCreationFromConstruct: data.isMultiOrgEnabled
+        allowOrgCreationFromCloud: data.isMultiOrgEnabled ? data.allowCreationFromCloud : true,
+        allowOrgCreationFromConstruct: data.isMultiOrgEnabled
           ? data.allowCreationFromConstruct
           : false,
+        allowOrgCreationFromSignup: false,
+        allowOrgCreationFromPortal: false,
         isMultiOrgEnabled: data.isMultiOrgEnabled,
-        roles: data.isMultiOrgEnabled && data.allowCreationFromConstruct ? selectedRoles : [],
-        projectKey: tenantId,
+        defaultRolesOnOrgCreation:
+          data.isMultiOrgEnabled && data.allowCreationFromConstruct ? selectedRoles : [],
+        defaultPermissionsOnOrgCreation: [],
+        keepOrgRolesSameAsDefaultRoles: true,
+        keepOrgPermissionsSameAsDefaultPermissions: true,
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
