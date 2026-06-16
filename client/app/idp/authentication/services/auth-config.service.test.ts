@@ -33,6 +33,21 @@ describe("AuthConfiguration", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${AUTH_CONFIG_ENDPOINTS.GET_CONFIG}?ProjectKey=${mockGetAuthConfigPayload.projectKey}`,
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(result).toEqual(mockGetAuthConfigResponse);
+    });
+
+    it("should GET without query params when projectKey is omitted", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockGetAuthConfigResponse);
+
+      const result = await service.getConfig();
+
+      expect(http.get).toHaveBeenCalledWith(
+        AUTH_CONFIG_ENDPOINTS.GET_CONFIG,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetAuthConfigResponse);
     });
@@ -54,6 +69,8 @@ describe("AuthConfiguration", () => {
       expect(http.post).toHaveBeenCalledWith(
         AUTH_CONFIG_ENDPOINTS.UPDATE_CONFIG,
         mockSaveAuthConfigPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
