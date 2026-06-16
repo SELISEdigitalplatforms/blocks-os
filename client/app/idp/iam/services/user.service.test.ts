@@ -185,6 +185,7 @@ describe("UserService", () => {
         lastUpdatedBy: "",
         organizationIds: [],
         tags: [],
+        isSignUpEnable: true,
         isEmailPasswordSignUpEnabled: true,
         isSSoSignUpEnabled: false,
         defaultRolesForNewUser: [],
@@ -210,7 +211,13 @@ describe("UserService", () => {
 
       expect(http.post).toHaveBeenCalledWith(
         USER_ENDPOINTS.SAVE_SIGNUP_SETTING,
-        mockSaveSignUpSettingPayload,
+        {
+          isSignUpEnable: true,
+          isEmailPasswordSignUpEnabled: true,
+          isSSoSignUpEnabled: false,
+          defaultRolesForNewUserOnSignUp: ["user"],
+          defaultPermissionsForNewUserOnSignUp: ["blocks-idp::self-service"],
+        },
         undefined,
         { absoluteUrl: true },
       );
