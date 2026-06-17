@@ -1,70 +1,43 @@
 import { Button } from "@/components/ui-kits/button/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import {
-  CircleAlert,
-  CircleCheck,
-  Clock,
-  Network,
-  RefreshCcw,
-  Menu,
-  ChevronsLeft,
-} from "lucide-react";
-import { useQueryState, parseAsString } from "nuqs";
-import { useState } from "react";
-import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
-import { UsageServiceCard, UsageSummaryCard } from "@blocks-lmt/components";
-import {
-  USAGES_SERVICE_MAP,
-  type UsageServiceMap,
-} from "@blocks-lmt/constants/usage.constant";
-import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage";
-import {
-  abbreviateDurationMs,
-  abbreviateNumber,
-  defaultUsagesMetrics,
-} from "@blocks-lmt/utils";
-import { TracesOverview } from "@blocks-lmt/components/traces-overview/traces-overview";
 import { LMT_NAV_GROUPS } from "@/constants/lmt-nav";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui-kits/sheet/sheet";
-export default function LmtPage() {
+import { cn } from "@/lib/utils";
+import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
+import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { RefreshCcw } from "lucide-react";
+import { parseAsString, useQueryState } from "nuqs";
+import { Outlet, useLocation } from "react-router-dom";
+
+export default function LmtLayout() {
+  const { pathname } = useLocation();
+  const currentPath = pathname.split("/").pop() ?? "usage";
+
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const [activeTab, setActiveTab] = useQueryState(
-    "tab",
-    parseAsString.withDefault("usage"),
+
+  // Query param so the usage child route reads the same value without prop-drilling
+  const [timeRange, setTimeRange] = useQueryState(
+    "timeRange",
+    parseAsString.withDefault("1h"),
   );
-  const [timeRange, setTimeRange] = useState("1h");
-  const { data, isLoading, isFetching, refetch } = useUsagesMetrics({ timeRange });
-  const defaultUsageData = {
-    api: defaultUsagesMetrics,
-    worker: defaultUsagesMetrics,
-  };
+
+  // Layout only needs these three — the usage child calls the same hook and gets the
+  // cached response from React Query (no duplicate network request)
+  const { isLoading, isFetching, refetch } = useUsagesMetrics({ timeRange });
+
   const currentItem = LMT_NAV_GROUPS.flatMap((g) => g.items).find(
-    (item) => item.value === (activeTab ?? "usage"),
+    (item) => item.value === currentPath,
   );
+
   const headerActions = (
     <>
-      {activeTab === "usage" && (
+      {currentPath === "usage" && (
         <div className="flex items-center gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-40">
@@ -82,8 +55,7 @@ export default function LmtPage() {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            disabled={isLoading || isFetching || !tenantId}
-          >
+            disabled={isLoading || isFetching || !tenantId}>
             <RefreshCcw
               className={cn(
                 "aspect-square w-4",
@@ -94,7 +66,7 @@ export default function LmtPage() {
           </Button>
         </div>
       )}
-      {activeTab === "tracing" && (
+      {currentPath === "tracing" && (
         <LMTQueryAgentSheet
           description="Hello! I can help you search and analyze your logs, metrics, and tracing data."
           questions={[
@@ -106,6 +78,7 @@ export default function LmtPage() {
       )}
     </>
   );
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between px-6 py-4">
@@ -124,89 +97,7 @@ export default function LmtPage() {
         <div className="flex items-center gap-2">{headerActions}</div>
       </div>
       <div className="flex-1 overflow-y-auto p-6">
-        {activeTab === "usage" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Global overview</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                <UsageSummaryCard
-                  description="Total API calls"
-                  title={data ? abbreviateNumber(data.accumulatedApiCall) : ""}
-                  isLoading={isLoading || isFetching}
-                  Icon={Network}
-                />
-                <UsageSummaryCard
-                  description="Average response time"
-                  title={
-                    data
-                      ? abbreviateDurationMs(data.accumulatedAverageDuration)
-                      : ""
-                  }
-                  isLoading={isLoading || isFetching}
-                  Icon={Clock}
-                  className="bg-blocks-secondary-50 text-blocks-secondary-600"
-                />
-                <UsageSummaryCard
-                  description="Successful calls"
-                  title={data ? abbreviateNumber(data.accumulatedSuccess) : ""}
-                  isLoading={isLoading || isFetching}
-                  className="bg-green-50 text-green-600"
-                  Icon={CircleCheck}
-                />
-                <UsageSummaryCard
-                  description="Total errors"
-                  title={data ? abbreviateNumber(data.accumulatedError) : ""}
-                  isLoading={isLoading || isFetching}
-                  className="bg-red-50 text-red-600"
-                  Icon={CircleAlert}
-                />
-              </CardContent>
-            </Card>
-            {tenantId ? (
-              <>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {(
-                    Object.keys(USAGES_SERVICE_MAP) as Array<
-                      keyof UsageServiceMap
-                    >
-                  ).map((item) => (
-                    <UsageServiceCard
-                      key={item}
-                      name={USAGES_SERVICE_MAP[item].label}
-                      logLink={`/services/lmt/logs/${item}`}
-                      isLoading={isLoading || isFetching}
-                      metrics={data?.services[item] ?? defaultUsageData}
-                    />
-                  ))}
-                </div>
-                {data && (
-                  <div className="border-t pt-4 text-center text-xs text-medium-emphasis">
-                    Last updated: {new Date(data.endTime).toLocaleDateString()}{" "}
-                    at {new Date(data.endTime).toLocaleTimeString()}
-                  </div>
-                )}
-              </>
-            ) : (
-              <Card>
-                <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                  Select a project to load LMT usage data.
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-        {activeTab === "tracing" &&
-          (tenantId ? (
-            <TracesOverview projectKey={tenantId} />
-          ) : (
-            <Card>
-              <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                Select a project to load tracing data.
-              </CardContent>
-            </Card>
-          ))}
+        <Outlet />
       </div>
     </div>
   );
