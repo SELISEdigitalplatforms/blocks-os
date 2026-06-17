@@ -1,16 +1,18 @@
 import { IamSettingsForm } from "@blocks-idp/settings/components/iam-settings-form"
 import { ConfigErrorState } from "@blocks-idp/settings/components/config-error-state"
-import { ConfigLoadingState } from "@blocks-idp/settings/components/config-loading-state"
+import { IamTabLoadingState } from "@blocks-idp/settings/components/settings-tab-loading-state"
 import { useSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config"
+import { getSettingsTabQueryState } from "@blocks-idp/settings/hooks/use-settings-tab-query"
 
 export const IamConfigTab = () => {
-  const { data, isLoading, isFetching, isError } = useSettingsAuthConfig()
+  const query = useSettingsAuthConfig()
+  const { data, showLoader, showError } = getSettingsTabQueryState(query)
 
-  if (isLoading || isFetching) {
-    return <ConfigLoadingState fieldCount={7} />
+  if (showLoader) {
+    return <IamTabLoadingState />
   }
 
-  if (isError || !data) {
+  if (showError || !data) {
     return <ConfigErrorState />
   }
 
