@@ -1,22 +1,20 @@
-import { useSettingsOrganizationConfig } from "@blocks-idp/settings/hooks/use-settings-config"
-import { ConfigErrorState } from "@blocks-idp/settings/components/config-error-state"
-import { ConfigLoadingState } from "@blocks-idp/settings/components/config-loading-state"
 import { OrganizationConfigForm } from "@blocks-idp/settings/components/organization-config-form"
+import { ConfigErrorState } from "@blocks-idp/settings/components/config-error-state"
+import { OrganizationTabLoadingState } from "@blocks-idp/settings/components/settings-tab-loading-state"
+import { useSettingsOrganizationConfig } from "@blocks-idp/settings/hooks/use-settings-config"
+import { getSettingsTabQueryState } from "@blocks-idp/settings/hooks/use-settings-tab-query"
 
 export const OrganizationConfigTab = () => {
-  const { data, isLoading, isError } = useSettingsOrganizationConfig()
+  const query = useSettingsOrganizationConfig()
+  const { data, showLoader, showError } = getSettingsTabQueryState(query)
 
-  if (isLoading) {
-    return <ConfigLoadingState fieldCount={6} />
+  if (showLoader) {
+    return <OrganizationTabLoadingState />
   }
 
-  if (isError || !data) {
+  if (showError || !data) {
     return <ConfigErrorState />
   }
 
-  return (
-    <div className="grid grid-cols-1 gap-6">
-      <OrganizationConfigForm config={data} />
-    </div>
-  )
+  return <OrganizationConfigForm config={data} />
 }
