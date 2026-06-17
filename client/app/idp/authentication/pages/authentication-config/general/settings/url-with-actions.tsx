@@ -72,7 +72,7 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
   }
 
   return (
-    <div className={cn("group flex min-w-0 items-center gap-1", className)}>
+    <div className={cn("flex min-w-0 items-center gap-1", className)}>
       <a
         href={jwksUrl}
         target="_blank"
@@ -82,7 +82,7 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
       >
         Public Certificate
       </a>
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1">
         <Button
           variant="ghost"
           className="h-auto p-1 transition-colors hover:bg-gray-100"

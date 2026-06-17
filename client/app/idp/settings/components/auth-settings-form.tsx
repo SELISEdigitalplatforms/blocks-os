@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
 import {
   Form,
   FormControl,
@@ -12,10 +11,13 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
 import { isErrorWithErrors } from "@/lib/error"
 import { cn } from "@/lib/utils"
 import { UrlWithActions } from "@blocks-idp/authentication/pages/authentication-config/general/settings/url-with-actions"
+import { SettingsFieldGrid } from "@blocks-idp/settings/components/settings-field-grid"
+import { SettingsFormSection } from "@blocks-idp/settings/components/settings-form-section"
 import {
   SettingsFormTabButtons,
   SettingsTabActions,
 } from "@blocks-idp/settings/components/settings-tab-actions"
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
 import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config"
 import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model"
 import {
@@ -48,27 +50,17 @@ const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => (
       value={value}
       onBlur={onBlur}
       onChange={(event) => onChange(Number(event.target.value))}
-      className="w-full pr-[5.5rem]"
+      className={SETTINGS_FORM_LAYOUT.inputWithSuffix}
     />
-    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+    <span
+      className={cn(
+        "pointer-events-none absolute inset-y-0 right-3 flex items-center",
+        SETTINGS_FORM_LAYOUT.inputSuffix,
+      )}
+    >
       Minutes
     </span>
   </div>
-)
-
-type FormSectionProps = {
-  title: string
-  children: React.ReactNode
-  className?: string
-}
-
-const FormSection = ({ title, children, className }: FormSectionProps) => (
-  <Card className={cn(className)}>
-    <CardHeader className="mb-4">
-      <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
-    </CardHeader>
-    <CardContent>{children}</CardContent>
-  </Card>
 )
 
 export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
@@ -118,12 +110,15 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
   )
 
   return (
-    <div className="w-full min-w-0">
+    <div className={SETTINGS_FORM_LAYOUT.formRoot}>
       <Form {...form}>
         <SettingsTabActions tabId="auth-config">{tabActions}</SettingsTabActions>
-        <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(handleSubmit)}>
-          <FormSection title="Token Configurations">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <form
+          className={SETTINGS_FORM_LAYOUT.formStack}
+          onSubmit={form.handleSubmit(handleSubmit)}
+        >
+          <SettingsFormSection title="Token Configurations">
+            <SettingsFieldGrid>
               <FormField
                 name="accessTokenValidForNumberMinutes"
                 control={form.control}
@@ -196,19 +191,24 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                   </FormItem>
                 )}
               />
-            </div>
-          </FormSection>
+            </SettingsFieldGrid>
+          </SettingsFormSection>
 
-          <FormSection title="Security & Lockout">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SettingsFormSection title="Security & Lockout">
+            <SettingsFieldGrid>
               <FormField
                 name="getNumberOfWrongAttemptsToLockTheAccount"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Max Wrong Login Attempts</FormLabel>
+                    <FormLabel>Maximum Failed Login Attempts</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} className="w-full" {...field} />
+                      <Input
+                        type="number"
+                        min={0}
+                        className={SETTINGS_FORM_LAYOUT.inputFull}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -232,16 +232,15 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                   </FormItem>
                 )}
               />
-            </div>
-          </FormSection>
+            </SettingsFieldGrid>
+          </SettingsFormSection>
 
-          <FormSection title="Infrastructure">
+          <SettingsFormSection title="Infrastructure">
             <FormField
               name="publicCertificatePath"
               control={form.control}
               render={() => (
                 <FormItem>
-
                   <FormControl>
                     <UrlWithActions url={config.publicCertificatePath} />
                   </FormControl>
@@ -249,7 +248,7 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                 </FormItem>
               )}
             />
-          </FormSection>
+          </SettingsFormSection>
         </form>
       </Form>
     </div>

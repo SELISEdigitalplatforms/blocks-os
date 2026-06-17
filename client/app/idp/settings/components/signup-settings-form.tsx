@@ -1,22 +1,19 @@
-import { Card } from "@/components/ui-kits/card/card"
 import {
   Form,
-  FormControl,
   FormField,
-  FormItem,
-  FormLabel,
 } from "@/components/ui-kits/form/form"
-import { Switch } from "@/components/ui-kits/switch/switch"
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
 import { isErrorWithErrors } from "@/lib/error"
 import { SignupPermissionsSection } from "@blocks-idp/settings/components/signup-permissions-section"
 import { SignupRolesSection } from "@blocks-idp/settings/components/signup-roles-section"
+import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card"
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission"
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles"
 import {
   SettingsFormTabButtons,
   SettingsTabActions,
 } from "@blocks-idp/settings/components/settings-tab-actions"
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
 import { useSaveSettingsSignUpSetting } from "@blocks-idp/settings/hooks/use-settings-config"
 import { useSettingsTenantId } from "@blocks-idp/settings/hooks/use-settings-tenant-id"
 import type { ISettingsSignupConfig } from "@blocks-idp/settings/models/settings.model"
@@ -35,27 +32,6 @@ import { useForm, useFormState } from "react-hook-form"
 type SignupSettingsFormProps = {
   config: ISettingsSignupConfig
 }
-
-type ToggleCardProps = {
-  label: string
-  description?: string
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-}
-
-const ToggleCard = ({ label, description, checked, onCheckedChange }: ToggleCardProps) => (
-  <Card>
-    <FormItem className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1 space-y-1">
-        <FormLabel className="!mt-0 text-sm font-semibold sm:text-base">{label}</FormLabel>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-      </div>
-      <FormControl className="shrink-0 self-start sm:self-center">
-        <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
-      </FormControl>
-    </FormItem>
-  </Card>
-)
 
 export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
   const tenantId = useSettingsTenantId()
@@ -136,17 +112,17 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
   )
 
   return (
-    <div className="w-full min-w-0">
+    <div className={SETTINGS_FORM_LAYOUT.formRoot}>
       <Form {...form}>
         <SettingsTabActions tabId="signup-settings">{tabActions}</SettingsTabActions>
-        <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(handleSubmit)}>
+        <form className={SETTINGS_FORM_LAYOUT.formStack} onSubmit={form.handleSubmit(handleSubmit)}>
           <FormField
             name="isEmailPasswordSignUpEnabled"
             control={form.control}
             render={({ field }) => (
-              <ToggleCard
+              <SettingsToggleCard
                 label="Sign Up Enabled"
-                description="Allow users to register with email and password. SSO sign-up is enabled automatically when this is on."
+                description="Allow users to register using an email address and password. SSO sign-up is enabled automatically when this is on."
                 checked={field.value}
                 onCheckedChange={field.onChange}
               />
