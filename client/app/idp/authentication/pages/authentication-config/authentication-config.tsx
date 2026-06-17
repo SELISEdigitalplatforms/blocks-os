@@ -12,7 +12,6 @@ import { EmailServiceTable, EmailConfiguration, EmailCommunicationDetails } from
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui-kits/dialog/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
-import { cn } from "@/lib/utils";
 import StepperProvider, { useStepper } from "@/components/stepper/stepper-provider";
 import StepVerticalTrackBar from "@/components/stepper/vertical-track-bar";
 import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";
@@ -165,23 +164,23 @@ export const AuthenticationConfig = () => {
       )}
     </>
   );
+  const isSettingsTab = selectedTab === "config"
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            {currentItem && selectedTab !== "config" && (
-              <div>
-                <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+          {!isSettingsTab && currentItem && (
+            <header className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="space-y-1">
+                <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
                   {currentItem.label}
                 </h1>
-                <p className="text-xs text-muted-foreground">{currentItem.desc}</p>
+                <p className="text-sm text-muted-foreground">{currentItem.desc}</p>
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">{headerActions}</div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex shrink-0 items-center justify-end gap-2">{headerActions}</div>
+            </header>
+          )}
         {selectedTab === "email-template" && (
           selectedTemplateId ? (
             <EmailCommunicationDetails

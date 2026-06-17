@@ -2,12 +2,8 @@ import { Checkbox } from "@/components/ui-kits/checkbox/checkbox"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
 import {
   Form,
-  FormControl,
   FormField,
-  FormItem,
-  FormLabel,
 } from "@/components/ui-kits/form/form"
-import { Switch } from "@/components/ui-kits/switch/switch"
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
 import { isErrorWithErrors } from "@/lib/error"
 import { cn } from "@/lib/utils"
@@ -16,6 +12,8 @@ import {
   SettingsFormTabButtons,
   SettingsTabActions,
 } from "@blocks-idp/settings/components/settings-tab-actions"
+import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card"
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
 import { useSaveSettingsOrganizationConfig } from "@blocks-idp/settings/hooks/use-settings-config"
 import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model"
 import {
@@ -36,22 +34,17 @@ type OrganizationConfigFormProps = {
 const CREATION_WORKFLOWS = [
   {
     name: "allowOrgCreationFromCloud" as const,
-    label: "Allow Creation from Cloud",
+    label: "Allow Organization Creation from Cloud",
     description: "Automated provisioning via Global Cloud API.",
   },
   {
-    name: "allowOrgCreationFromConstruct" as const,
-    label: "Allow Creation from Construct",
-    description: "Provisioning via IaC templates.",
-  },
-  {
     name: "allowOrgCreationFromSignup" as const,
-    label: "Allow Creation from Signup",
+    label: "Allow Organization Creation from Signup",
     description: "Self-service creation during user signup.",
   },
   {
     name: "allowOrgCreationFromPortal" as const,
-    label: "Allow Creation from Portal",
+    label: "Allow Organization Creation from Portal",
     description: "Manual provisioning via admin dashboard.",
   },
 ]
@@ -73,9 +66,9 @@ const CreationWorkflowTile = ({
 }: CreationWorkflowTileProps) => (
   <label
     className={cn(
-      "flex cursor-pointer gap-3 rounded-lg border bg-card p-4 transition-colors",
+      "flex min-w-[280px] cursor-pointer items-start gap-3 py-3 transition-colors",
       disabled && "pointer-events-none cursor-not-allowed",
-      checked && !disabled && "border-primary/40 bg-primary/5",
+      checked && !disabled && "text-foreground",
     )}
   >
     <Checkbox
@@ -90,39 +83,6 @@ const CreationWorkflowTile = ({
       <span className="block text-sm text-muted-foreground">{description}</span>
     </span>
   </label>
-)
-
-type ToggleCardProps = {
-  label: string
-  description?: string
-  checked: boolean
-  onCheckedChange?: (checked: boolean) => void
-  disabled?: boolean
-}
-
-const ToggleCard = ({
-  label,
-  description,
-  checked,
-  onCheckedChange,
-  disabled,
-}: ToggleCardProps) => (
-  <Card>
-    <FormItem className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1 space-y-1">
-        <FormLabel className="!mt-0 text-sm font-semibold sm:text-base">{label}</FormLabel>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-      </div>
-      <FormControl className="shrink-0 self-start sm:self-center">
-        <Switch
-          checked={checked}
-          onCheckedChange={onCheckedChange}
-          disabled={disabled}
-          aria-label={label}
-        />
-      </FormControl>
-    </FormItem>
-  </Card>
 )
 
 export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) => {
@@ -180,12 +140,12 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
   )
 
   return (
-    <div className="w-full min-w-0">
+    <div className={SETTINGS_FORM_LAYOUT.formRoot}>
       <Form {...form}>
         <SettingsTabActions tabId="organization-config">{tabActions}</SettingsTabActions>
-        <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(handleSubmit)}>
-          <ToggleCard
-            label="Multi-Org Environment"
+        <form className={SETTINGS_FORM_LAYOUT.formStack} onSubmit={form.handleSubmit(handleSubmit)}>
+          <SettingsToggleCard
+            label="Multi-Organization Environment"
             description="Enable this to manage multiple isolated organization units under a single administrative umbrella. This enables hierarchical resource management."
             checked={isMultiOrgEnabled}
             onCheckedChange={handleMultiOrgToggle}
@@ -194,7 +154,7 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
 
           <Card>
             <CardHeader className="mb-4 flex flex-row items-start justify-between gap-3">
-              <CardTitle className="text-base sm:text-lg">Creation Workflows</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Organization Creation Workflows</CardTitle>
               {fieldsReadOnly ? (
                 <Lock
                   className="h-4 w-4 shrink-0 text-muted-foreground"
@@ -203,7 +163,7 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
               ) : null}
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex flex-row flex-wrap gap-x-6 gap-y-1">
                 {CREATION_WORKFLOWS.map((workflow) => (
                   <FormField
                     key={workflow.name}
