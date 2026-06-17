@@ -41,7 +41,7 @@ import {
 import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account"
 import { useNavigate } from "react-router-dom"
 import { PeopleGroupedByEnvironments } from "@/models/people"
-import { useProjectStore } from "@/store/useProjectStore"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { environmentOptions } from "@/constants/environment-options"
 import { Badge } from "@/components/ui-kits/badge/badge"
 import { PeopleStatusBadge } from "@/components/people/status-badge"
@@ -185,19 +185,21 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                   className="w-fit bg-primary/10 px-2 py-0.5 text-[10px] text-xs font-normal text-primary"
                 />
               )}
-              {info.row.original.sharedEnviroments.some((env) => !env.isInvitationConfirmed) &&
+              {info.row.original.sharedEnviroments.some(
+                (env) => env.isInvitationSent && !env.isInvitationConfirmed,
+              ) &&
                 !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
-                  <PeopleStatusBadge
-                    status="Pending Invite"
-                    className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
-                  />
+                  <>
+                    <PeopleStatusBadge
+                      status="Pending Invite"
+                      className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
+                    />
+                    <PeopleStatusBadge
+                      status="Inactive"
+                      className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
+                    />
+                  </>
                 )}
-              {info.row.original.peopleDetails.allowResendActivation && (
-                <PeopleStatusBadge
-                  status="Inactive"
-                  className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
-                />
-              )}
             </div>
           )
         },

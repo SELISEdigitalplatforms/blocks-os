@@ -96,8 +96,8 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<bool> UpdateAsync(string itemId, bool isCaptchaRequired, bool isMfaRequired, string updatedBy)
         {
-            var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
-            var collection = db.GetCollection<ApiEndpointConfig>(CollectionName);
+           // var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
+            var collection = _dbContextProvider.GetCollection<ApiEndpointConfig>(CollectionName);
 
             var filter = Builders<ApiEndpointConfig>.Filter.Eq(x => x.ItemId, itemId);
             var update = Builders<ApiEndpointConfig>.Update
@@ -112,8 +112,8 @@ namespace Cloud.DomainService.Repositories
 
         public async Task<long> BulkUpdateAsync(List<string> itemIds, bool isCaptchaRequired, bool isMfaRequired, string updatedBy)
         {
-            var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
-            var collection = db.GetCollection<ApiEndpointConfig>(CollectionName);
+           // var db = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
+            var collection = _dbContextProvider.GetCollection<ApiEndpointConfig>(CollectionName);
 
             var filter = Builders<ApiEndpointConfig>.Filter.In(x => x.ItemId, itemIds);
             var update = Builders<ApiEndpointConfig>.Update

@@ -9,6 +9,7 @@ type RuntimeKey =
   | "BLOCKS_OIDC_CLIENT_ID"
   | "BLOCKS_BASE_DOMAIN"
   | "BLOCKS_IAM_BASE_URL"
+  | "BLOCKS_IAM_CLIENT_ID"
   | "BLOCKS_IAM_CALLBACK_URL"
   | "BLOCKS_LOCALIZATION_BASE_URL"
   | "BLOCKS_LOCALIZATION_CALLBACK_URL"
@@ -29,12 +30,6 @@ type RuntimeKey =
   | "BLOCKS_STUDIO_BASE_URL"
   | "BLOCKS_STUDIO_CALLBACK_URL";
 
-declare global {
-  interface Window {
-    __BLOCKS_ENV__?: Partial<Record<RuntimeKey, string>>;
-  }
-}
-
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");
 
@@ -54,7 +49,9 @@ export const getRuntimeEnv = (
   }
 
   const windowValue =
-    typeof window !== "undefined" ? window.__BLOCKS_ENV__?.[key] : undefined;
+    typeof window !== "undefined"
+      ? (window as Window & { __BLOCKS_ENV__?: Partial<Record<RuntimeKey, string>> }).__BLOCKS_ENV__?.[key]
+      : undefined;
   if (windowValue && !isPlaceholder(windowValue)) {
     return windowValue;
   }

@@ -43,7 +43,6 @@ export class GithubInfoService {
   }
 
   async getGithubRepos(
-    projectKey: string,
     search?: string,
     pageNumber?: number,
     pageSize?: number,

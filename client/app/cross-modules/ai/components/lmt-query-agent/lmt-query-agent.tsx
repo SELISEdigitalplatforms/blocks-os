@@ -2,7 +2,7 @@ import React, { Fragment, useCallback, useEffect, useRef, useState } from "react
 import { Bot, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card } from "@/components/ui-kits/card/card";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useLMTQueryAgentSSE } from "@blocks-ai/hooks/use-agent";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ import { LMTQueryAgentChatItem } from "./lmt-query-agent-chat-item";
 import { LMTQueryAgentChatInput } from "./lmt-query-agent-chat-input";
 import { EmptyConversations } from "@blocks-ai/shared/components/chat/empty-conversation/empty-conversation";
 import { ChatItemSuggestions } from "@blocks-ai/shared/components/chat/chat-item-suggestions/chat-item-suggestions";
+import { AnimatedDots, ChatEventMessage } from "@blocks-ai/shared/utils/chat-event-messages";
 interface ConversationMessage {
   type: "bot" | "human";
   message: string;
@@ -199,9 +200,7 @@ export const LMTQueryAgent: React.FC<LMTQueryAgentProps> = ({
           ))}
         {isThinking && (
           <div className="mb-6 flex flex-col gap-3">
-            <p className="text-sm text-medium-emphasis animate-pulse">
-              {currentEvent?.message ?? "Thinking…"}
-            </p>
+            {currentEvent ? <ChatEventMessage message={currentEvent.message} /> : <AnimatedDots />}
           </div>
         )}
       </div>

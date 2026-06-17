@@ -1,8 +1,5 @@
 import { LogMenu } from "@blocks-lmt/components";
 import { useQueryState } from "nuqs";
-import { GrantTypes } from "./general/grant-types";
-// import { SelfSignup } from "./general/self-signup";
-import { GeneralSettings } from "./general/settings";
 import { Button } from "@/components/ui-kits/button/button";
 // import { ClientCredentials } from "@blocks-idp/authentication/components/client-credentials";
 // import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
@@ -22,10 +19,11 @@ import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";
 import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
+import { SettingsPage } from "@blocks-idp/settings";
 const NEW_COMMUNICATION_STEPS = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Template" },
@@ -136,13 +134,13 @@ function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContent
   );
 }
 export const AuthenticationConfig = () => {
-  const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "general" });
+  const [selectedTab] = useQueryState("tab", { defaultValue: "config" });
   const [configureOpen, setConfigureOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const currentItem = AUTHENTICATION_NAV_GROUPS
     .flatMap((g) => g.items)
-    .find((item) => item.value === (selectedTab ?? "general"));
+    .find((item) => item.value === (selectedTab ?? "config"));
   const handleTemplateCreated = (id: string) => {
     setSelectedTemplateId(id);
   };
@@ -172,7 +170,7 @@ export const AuthenticationConfig = () => {
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <div className="flex shrink-0 items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            {currentItem && (
+            {currentItem && selectedTab !== "config" && (
               <div>
                 <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
                   {currentItem.label}
@@ -184,12 +182,6 @@ export const AuthenticationConfig = () => {
           <div className="flex items-center gap-2">{headerActions}</div>
         </div>
         <div className="flex-1 overflow-y-auto p-6">
-        {selectedTab === "general" && (
-          <div className="grid grid-cols-1 gap-6">
-            <GeneralSettings />
-            <GrantTypes />
-          </div>
-        )}
         {selectedTab === "email-template" && (
           selectedTemplateId ? (
             <EmailCommunicationDetails
@@ -208,6 +200,7 @@ export const AuthenticationConfig = () => {
         )}
         {selectedTab === "roles" && <Roles />}
         {selectedTab === "permissions" && <Permissions />}
+        {selectedTab === "config" && <SettingsPage />}
       </div>
     </div>
     <Dialog open={configureOpen} onOpenChange={setConfigureOpen}>
