@@ -29,7 +29,7 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { Info, Trash2, Pen } from "lucide-react";
 import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.service.type";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 const CustomEditKeyFormSchema = z.object({

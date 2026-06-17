@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { notificationService } from "@/services/notification.service";
 

@@ -24,11 +24,11 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
   };
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Roles</CardTitle>
         <AddSSORole onAdd={onAddHandler} roles={roles} />
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-x-auto">
         <SSORolesList roles={slicedRoles} onDelete={onRemoveHandler} />
         {roles.length > filter.pageSize && (
           <div className="flex items-center md:justify-end">

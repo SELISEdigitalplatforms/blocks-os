@@ -6,7 +6,7 @@ import {
   IChangeSettings,
   IManualDeploymentPayload,
 } from "../models/utils";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 
 export const useGithubVerification = (code: string) => {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
@@ -41,14 +41,13 @@ export const useGetGithubRepos = (
   page?: number,
   perPage?: number,
 ) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
     queryKey: ["github-repos", isVerificationSuccessful, search, page, perPage],
     queryFn: () =>
-      githubInfoService.getGithubRepos(projectKey, search, page, perPage),
+      githubInfoService.getGithubRepos(search, page, perPage),
     enabled: isVerificationSuccessful,
     retry: false,
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });

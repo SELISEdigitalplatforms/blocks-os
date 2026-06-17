@@ -6,7 +6,7 @@ import { ArrowLeft, Download, PanelRightClose, PanelRightOpen } from "lucide-rea
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import useIsMobile from "@/hooks/use-is-mobile";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetTraceById } from "@blocks-lmt/hooks/use-trace";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { TracingListBreadCrumb } from "./tracing-list-breadcrum/tracing-list-breadcrum";
