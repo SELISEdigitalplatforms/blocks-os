@@ -42,7 +42,9 @@ export function SidebarMenuDesktop() {
   const isSecretManagementRoute = pathname.startsWith("/services/secret-management")
   const isAuthenticationRoute = pathname.startsWith("/services/authentication")
   const isLmtRoute = pathname.startsWith("/services/lmt")
-  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "my-secret" : "general")
+  const currentTab =
+    searchParams.get("tab") ??
+    (isSecretManagementRoute ? "my-secret" : isAuthenticationRoute ? "config" : "my-secret")
   const [secretsOpen, setSecretsOpen] = useState(true)
   const [idpOpen, setIdpOpen] = useState(true)
   const [lmtOpen, setLmtOpen] = useState(true)
@@ -166,7 +168,7 @@ export function SidebarMenuDesktop() {
                     <>
                       {renderExpandableParent(menu, isAuthenticationRoute, idpOpen, () => {
                         if (!isAuthenticationRoute) {
-                          navigate("/services/authentication?tab=general")
+                          navigate("/services/authentication?tab=config")
                           setIdpOpen(true)
                         } else {
                           setIdpOpen((v) => !v)

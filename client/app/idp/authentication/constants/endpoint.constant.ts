@@ -2,7 +2,7 @@ import { API_BASES } from "@/constants/endpoint.constant";
 
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 const AUTH_SUBPATH = "/auth";
-const AUTH_OIDC_SUBPATH = "/oidc";
+const AUTH_OIDC_SUBPATH = "oidc";
 
 // ─── Auth endpoints (auth.service) ───────────────────────────────────────────
 
@@ -34,8 +34,8 @@ export const AUTH_OIDC_ENDPOINTS = {
 // ─── Auth configuration endpoints (auth-config.service) ─────────────────────
 
 export const AUTH_CONFIG_ENDPOINTS = {
-  GET_CONFIG: `${API_BASES.IAM}${AUTH_SUBPATH}/Config`,
-  UPDATE_CONFIG: `${API_BASES.IAM}${AUTH_SUBPATH}/Config_Update`,
+  GET_CONFIG: `${API_BASES.IAM}${AUTH_SUBPATH}/config`,
+  UPDATE_CONFIG: `${API_BASES.IAM}${AUTH_SUBPATH}/config`,
 } as const;
 
 // ─── SSO endpoints (social.service) ─────────────────────────────────────────

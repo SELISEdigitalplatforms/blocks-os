@@ -1,7 +1,7 @@
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetProjects, useGetMigrationStatus } from "@/hooks/use-project";
 import { useGetPeople } from "@/hooks/use-people";
-import { EnvironmentCard } from "@/components/environment-card/environment-card";
+// import { EnvironmentCard } from "@/components/environment-card/environment-card";
 import { AddEnvironmentModal } from "@/components/environment-card/add-environment-modal";
 import { Plus, ArrowRightLeft, CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
@@ -25,6 +25,7 @@ import {
   TooltipProvider,
 } from "@/components/ui-kits/tooltip/tooltip";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
+import { EnvironmentCard } from "@seliseblocks/blocks-kit";
 
 const isRecentMigrationForTarget = (
   data: IMigrationStatusResponse[number],

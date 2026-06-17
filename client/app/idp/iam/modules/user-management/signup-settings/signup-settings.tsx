@@ -13,7 +13,7 @@ import {
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Wrench } from "lucide-react";
 import { useGetSignUpSetting, useSaveSignUpSetting } from "@blocks-idp/iam/hooks/use-user";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 export const SignupSettings = () => {
   const [open, setOpen] = useState(false);
   const [allowSignup, setAllowSignup] = useState(false);
@@ -30,25 +30,19 @@ export const SignupSettings = () => {
   useEffect(() => {
     if (signUpSettingData && !initializedRef.current) {
       initializedRef.current = true;
-      const ep = signUpSettingData.isEmailPasswordSignUpEnabled;
-      const ssoEnabled = signUpSettingData.isSSoSignUpEnabled;
-      setEmailPassword(ep);
-      setSso(ssoEnabled);
-      setAllowSignup(ep || ssoEnabled);
+      setAllowSignup(signUpSettingData.isSignUpEnable);
+      setEmailPassword(signUpSettingData.isEmailPasswordSignUpEnabled);
+      setSso(signUpSettingData.isSSoSignUpEnabled);
     }
   }, [signUpSettingData]);
-  const handleAllowSignupChange = (checked: boolean) => {
-    setAllowSignup(checked);
-    if (!checked) {
-      setEmailPassword(false);
-      setSso(false);
-    }
-  };
-  const isSaveDisabled = isPending || (allowSignup && !emailPassword && !sso);
+  const isSaveDisabled = isPending
   const submitHandler = async () => {
     await saveSignUpSetting({
-      isEmailPasswordSignUpEnabled: allowSignup && emailPassword,
-      isSSoSignUpEnabled: allowSignup && sso,
+      isSignUpEnable: allowSignup,
+      isEmailPasswordSignUpEnabled: emailPassword,
+      isSSoSignUpEnabled: sso,
+      defaultRolesForNewUserOnSignUp: signUpSettingData?.defaultRolesForNewUser ?? [],
+      defaultPermissionsForNewUserOnSignUp: signUpSettingData?.defaultPermissionsForNewUser ?? [],
       projectKey: tenantId,
       itemId: signUpSettingData?.itemId || "",
     });
@@ -74,7 +68,7 @@ export const SignupSettings = () => {
             <Checkbox 
               id="allow-signup" 
               checked={allowSignup} 
-              onCheckedChange={(checked) => handleAllowSignupChange(!!checked)} 
+              onCheckedChange={(checked) => setAllowSignup(!!checked)} 
             />
             <label
               htmlFor="allow-signup"
@@ -89,13 +83,10 @@ export const SignupSettings = () => {
                   id="email-password" 
                   checked={emailPassword} 
                   onCheckedChange={(checked) => setEmailPassword(!!checked)} 
-                  disabled={!allowSignup}
                 />
                 <label
                   htmlFor="email-password"
-                  className={`text-sm font-medium leading-none ${
-                    allowSignup ? "cursor-pointer" : "text-muted-foreground cursor-not-allowed"
-                  }`}
+                  className="text-sm font-medium leading-none cursor-pointer"
                 >
                   Email and password
                 </label>
@@ -105,13 +96,10 @@ export const SignupSettings = () => {
                   id="sso" 
                   checked={sso} 
                   onCheckedChange={(checked) => setSso(!!checked)} 
-                  disabled={!allowSignup}
                 />
                 <label
                   htmlFor="sso"
-                  className={`text-sm font-medium leading-none ${
-                    allowSignup ? "cursor-pointer" : "text-muted-foreground cursor-not-allowed"
-                  }`}
+                  className="text-sm font-medium leading-none cursor-pointer"
                 >
                   SSO
                 </label>

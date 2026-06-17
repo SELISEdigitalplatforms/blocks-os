@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ServiceGroupCard } from "@blocks-idp/api-settings/components/service-group-card";
@@ -65,7 +65,7 @@ export default function ApiSettingsPage() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([svc, controllers]) => {
         const firstEp = Object.values(controllers)[0]?.[0];
-        const baseUrl = firstEp?.baseUrl || "";
+        const baseUrl = (firstEp?.baseUrl || "").replace(/\/+$/, "");
         const version = firstEp?.version || "v1";
         return {
           service: svc,
@@ -115,7 +115,6 @@ export default function ApiSettingsPage() {
     async (ep: IApiEndpoint, value: boolean) => {
       try {
         const result = await updateEndpoint({
-          projectKey: tenantId,
           itemId: ep.itemId,
           service: ep.service,
           method: ep.method,
@@ -140,7 +139,6 @@ export default function ApiSettingsPage() {
     async (ep: IApiEndpoint, value: boolean) => {
       try {
         const result = await updateEndpoint({
-          projectKey: tenantId,
           itemId: ep.itemId,
           service: ep.service,
           method: ep.method,
@@ -176,7 +174,6 @@ export default function ApiSettingsPage() {
                 : false
             : false;
         const result = await bulkUpdate({
-          projectKey: tenantId,
           itemIds: ids,
           isMFARequired: value,
           isCaptchaRequired: captchaState,
@@ -206,7 +203,6 @@ export default function ApiSettingsPage() {
                 : false
             : false;
         const result = await bulkUpdate({
-          projectKey: tenantId,
           itemIds: ids,
           isCaptchaRequired: value,
           isMFARequired: mfaState,
@@ -225,7 +221,7 @@ export default function ApiSettingsPage() {
   const handleBulkGroupDisableAll = useCallback(
     async (ids: string[]) => {
       try {
-        const result = await bulkUpdate({ projectKey: tenantId, itemIds: ids, isMFARequired: false, isCaptchaRequired: false, disableAll: true });
+        const result = await bulkUpdate({ itemIds: ids, isMFARequired: false, isCaptchaRequired: false, disableAll: true });
         if (!result.isSuccess) {
           throw new Error(result.errors?.join(", ") || "Failed to disable security features");
         }
@@ -251,7 +247,6 @@ export default function ApiSettingsPage() {
               : false
           : false;
       const result = await bulkUpdate({
-        projectKey: tenantId,
         itemIds: selectedArray,
         isMFARequired: true,
         isCaptchaRequired: captchaState,
@@ -279,7 +274,6 @@ export default function ApiSettingsPage() {
               : false
           : false;
       const result = await bulkUpdate({
-        projectKey: tenantId,
         itemIds: selectedArray,
         isCaptchaRequired: true,
         isMFARequired: mfaState,
@@ -295,10 +289,10 @@ export default function ApiSettingsPage() {
     }
   }, [tenantId, endpoints, selectedArray, bulkUpdate, clearSelection]);
   return (
-    <main className="flex flex-col gap-6 p-6 pb-24">
+    <main className="flex flex-col gap-4 p-4 pb-24 sm:gap-6 sm:p-6">
       <div>
-        <h1 className="text-xl font-semibold md:text-2xl">API Settings</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">API Settings</h1>
+        <p className="text-sm text-muted-foreground">
           Configure security policies for your API endpoints — enable MFA, Captcha, and manage access controls.
         </p>
       </div>
@@ -314,27 +308,24 @@ export default function ApiSettingsPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-8">
-          {serviceGroups.map(({ service, swaggerJsonUrl, swaggerUiUrl, controllers }) => (
+          {serviceGroups.map(({ service, swaggerJsonUrl, controllers }) => (
             <div key={service} className="flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-lg font-bold capitalize">{service}</h2>
-                  <a
-                    href={swaggerJsonUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
+                  <span
+                    className="hidden items-center gap-1 text-[11px] text-muted-foreground sm:inline-flex cursor-default select-none"
                     title={swaggerJsonUrl}
                   >
                     <span className="truncate">{swaggerJsonUrl}</span>
-                    <ExternalLink className="h-3 w-3 shrink-0" />
-                  </a>
+                    <ExternalLink className="h-3 w-3 shrink-0 opacity-40" />
+                  </span>
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => window.open(swaggerUiUrl, "_blank")}
-                  className="shrink-0 gap-1.5"
+                  disabled
+                  className="w-fit shrink-0 gap-1.5 cursor-not-allowed opacity-50"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   <span>API Docs</span>

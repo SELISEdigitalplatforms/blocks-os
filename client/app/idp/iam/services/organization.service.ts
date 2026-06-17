@@ -10,9 +10,31 @@ import {
 import {
   IOrganizationConfigPayload,
   IOrganizationConfigResponse,
+  IOrganizationConfigSaveApiPayload,
   IOrganizationConfigSaveResponse,
 } from "@blocks-idp/iam/models/organization-config.model";
 import { ORGANIZATION_ENDPOINTS } from "../constants/endpoint.constant";
+import { toOrganizationConfigSaveApiPayload } from "../utils/organization-config-payload";
+import { mapOrganizationConfigFromApi } from "../utils/normalize-tenant-config";
+
+const toSaveApiPayload = (
+  payload: IOrganizationConfigPayload,
+): IOrganizationConfigSaveApiPayload => ({
+  allowOrgCreationFromCloud:
+    payload.allowOrgCreationFromCloud ?? payload.allowCreationFromCloud ?? false,
+  allowOrgCreationFromConstruct:
+    payload.allowOrgCreationFromConstruct ?? payload.allowCreationFromConstruct ?? false,
+  allowOrgCreationFromSignup: payload.allowOrgCreationFromSignup ?? false,
+  allowOrgCreationFromPortal: payload.allowOrgCreationFromPortal ?? false,
+  isMultiOrgEnabled: payload.isMultiOrgEnabled,
+  consentForMultiOrgEnable: payload.consentForMultiOrgEnable,
+  defaultRolesOnOrgCreation:
+    payload.defaultRolesOnOrgCreation ?? payload.roles ?? [],
+  defaultPermissionsOnOrgCreation: payload.defaultPermissionsOnOrgCreation ?? [],
+  keepOrgRolesSameAsDefaultRoles: payload.keepOrgRolesSameAsDefaultRoles ?? true,
+  keepOrgPermissionsSameAsDefaultPermissions:
+    payload.keepOrgPermissionsSameAsDefaultPermissions ?? true,
+});
 
 export class OrganizationService {
   getOrganizations(params: IGetOrganizationsParams): Promise<IGetOrganizationsResponse> {
@@ -35,14 +57,21 @@ export class OrganizationService {
     return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION, payload, undefined, { absoluteUrl: true });
   };
 
-  getOrganizationConfig(projectKey: string): Promise<IOrganizationConfigResponse | null> {
-    return http.get(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG}?projectKey=${projectKey}`, undefined, { absoluteUrl: true });
+  getOrganizationConfig(_projectKey?: string): Promise<IOrganizationConfigResponse | null> {
+    return http
+      .get(ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG, undefined, { absoluteUrl: true })
+      .then((response) => mapOrganizationConfigFromApi(response as Record<string, unknown>));
   }
 
   saveOrganizationConfig = (
     payload: IOrganizationConfigPayload,
   ): Promise<IOrganizationConfigSaveResponse> => {
-    return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG, payload, undefined, { absoluteUrl: true });
+    return http.post(
+      ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG,
+      toOrganizationConfigSaveApiPayload(toSaveApiPayload(payload)),
+      undefined,
+      { absoluteUrl: true },
+    );
   };
 }
 
