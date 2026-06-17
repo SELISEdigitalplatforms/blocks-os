@@ -4,7 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui-kits/button/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +32,7 @@ import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { formatDate } from "@/lib/utils";
 const SettingsLoading = () => (
-  <main className="p-6">
+  <main className="">
     <Skeleton className="h-8 w-24" />
     <Card className="mt-4">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -63,12 +68,16 @@ const projectNameSchema = z.object({
 });
 type ProjectNameForm = z.infer<typeof projectNameSchema>;
 export const SettingsPage = () => {
-  const { selectedProject, selectedTenantGroup, setSelectedProject } = useProjectStore();
-  const { data: projectsData, isLoading } = useGetProjects(selectedTenantGroup || "");
+  const { selectedProject, selectedTenantGroup, setSelectedProject } =
+    useProjectStore();
+  const { data: projectsData, isLoading } = useGetProjects(
+    selectedTenantGroup || "",
+  );
   const project = projectsData?.[0]?.projects?.[0];
-  const { mutateAsync: updateTenantGroup, isPending: isUpdating } = useUpdateTenantGroup({
-    tenantGroupId: selectedTenantGroup || "",
-  });
+  const { mutateAsync: updateTenantGroup, isPending: isUpdating } =
+    useUpdateTenantGroup({
+      tenantGroupId: selectedTenantGroup || "",
+    });
   const [isEditOpen, setIsEditOpen] = useState(false);
   const form = useForm<ProjectNameForm>({
     resolver: zodResolver(projectNameSchema),
@@ -121,7 +130,7 @@ export const SettingsPage = () => {
   };
   const formattedDate = formatDate(new Date(project?.createdDate || ""));
   return (
-    <main className="p-6 pt-8">
+    <main className="">
       <h4 className="h-8 text-lg font-semibold md:text-xl">Project Settings</h4>
       <Card className="mt-4">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -131,8 +140,7 @@ export const SettingsPage = () => {
             variant="outline"
             className="h-10"
             aria-label="Edit project name"
-            onClick={() => setIsEditOpen(true)}
-          >
+            onClick={() => setIsEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             <span>Edit</span>
           </Button>
@@ -190,12 +198,15 @@ export const SettingsPage = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditOpen(false)}
-                  disabled={isUpdating}
-                >
+                  disabled={isUpdating}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isUpdating || !form.formState.isValid}>
-                  {isUpdating && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+                <Button
+                  type="submit"
+                  disabled={isUpdating || !form.formState.isValid}>
+                  {isUpdating && (
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Save
                 </Button>
               </DialogFooter>
