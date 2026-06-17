@@ -42,7 +42,7 @@ export const SignupRolesSection = ({
         {roles.length === 0 ? (
           <p className="text-sm text-muted-foreground">No roles found</p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {roles.map((role) => (
               <SettingsDismissibleChip
                 key={role.slug}
@@ -52,6 +52,7 @@ export const SignupRolesSection = ({
                 confirmSubtitle="Are you sure you want to remove this role?"
                 onDismiss={() => handleRemove(role)}
                 readOnly={readOnly}
+                variant="badge"
               />
             ))}
           </div>
