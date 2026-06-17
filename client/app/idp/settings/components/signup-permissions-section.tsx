@@ -42,7 +42,7 @@ export const SignupPermissionsSection = ({
         {permissions.length === 0 ? (
           <p className="text-sm text-muted-foreground">No permissions found</p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {permissions.map((permission) => (
               <SettingsDismissibleChip
                 key={permission.name}
@@ -52,6 +52,7 @@ export const SignupPermissionsSection = ({
                 confirmSubtitle="Are you sure you want to remove this permission?"
                 onDismiss={() => handleRemove(permission)}
                 readOnly={readOnly}
+                variant="badge"
               />
             ))}
           </div>
