@@ -60,6 +60,7 @@ import SecretManagementLayout from "./routes/dashboard/secret-management";
 import SsoConfigurationPage from "./routes/dashboard/sso-configuration";
 import { UsageRoute } from "./pages/lmt/usage";
 import { TracingRoute } from "./pages/lmt/tracing";
+import { IdpSettingsPage } from "./idp/settings/pages/settings-page";
 
 const redirectPaths: Record<string, string> = {
   "/services/authentication/user-detail/*": "/services/authentication",
@@ -275,7 +276,7 @@ export const router = createBrowserRouter([
                     children: [
                       {
                         path: "config",
-                        element: <SettingsPage />,
+                        element: <IdpSettingsPage />,
                       },
                       {
                         path: "oidc-template",
