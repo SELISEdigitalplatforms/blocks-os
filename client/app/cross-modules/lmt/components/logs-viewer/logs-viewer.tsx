@@ -23,6 +23,8 @@ interface LogsViewerContextType {
   resetFilter: () => void;
   predefinedQueries?: string[];
   serviceNames?: string[];
+  agentName?: string;
+  askAiDescription?: string;
 }
 const initialContextValue: LogsViewerContextType = {
   services: [],
@@ -33,6 +35,8 @@ const initialContextValue: LogsViewerContextType = {
   setFilter: () => {},
   resetFilter: () => {},
   predefinedQueries: [],
+  agentName: "Ask AI",
+  askAiDescription: "",
 };
 // Create context with the initial value
 export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
@@ -43,12 +47,16 @@ interface LogsViewerProps {
   pageSize?: number;
   className?: string;
   predefinedQueries?: string[];
+  agentName?: string;
+  askAiDescription?: string;
 }
 export const LogsViewer = ({
   pageSize = 20,
   services,
   className,
   predefinedQueries,
+  agentName = "Ask AI",
+  askAiDescription,
 }: LogsViewerProps) => {
   const [selectedService, setSelectedService] = useState<Service | null>(
     services.length > 0 ? services[0] : null,
@@ -71,9 +79,11 @@ export const LogsViewer = ({
         setFilter,
         resetFilter,
         predefinedQueries,
+        agentName,
+        askAiDescription,
       }}
     >
-      <div className={cn("mt-5 flex flex-col gap-6", className)}>
+      <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
         <LogsList
           key={JSON.stringify({
