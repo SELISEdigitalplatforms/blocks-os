@@ -9,6 +9,7 @@ export type LogServiceIconKey =
   | "release"
   | "utilities"
   | "studio"
+  | "agent"
 
 export type LogServiceRow = {
   id: string
