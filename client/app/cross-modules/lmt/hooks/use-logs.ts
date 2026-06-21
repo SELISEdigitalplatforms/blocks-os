@@ -62,7 +62,6 @@ export const useLogs = ({
   const generateFetchLogsPayload = useCallback(() => {
     return {
       pageSize,
-      projectKey: tenantId,
       serviceName,
       filter: {
         ...(startDate && { startDate }),
@@ -71,7 +70,7 @@ export const useLogs = ({
       },
       search,
     }
-  }, [endDate, level, pageSize, search, serviceName, startDate, tenantId])
+  }, [endDate, level, pageSize, search, serviceName, startDate])
 
   useEffect(() => {
     let cancelled = false
