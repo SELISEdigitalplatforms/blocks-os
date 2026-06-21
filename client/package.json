@@ -50,6 +50,7 @@
     "cmdk": "1.0.0",
     "date-fns": "^3.0.0",
     "framer-motion": "^12.38.0",
+    "fuse.js": "^7.4.2",
     "input-otp": "^1.4.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.445.0",
