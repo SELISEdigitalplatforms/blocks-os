@@ -1,46 +1,48 @@
-import PageBreadcrumb from "@/components/breadcrumb/breadcrumb"
-import { Card, CardContent } from "@/components/ui-kits/card/card"
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title"
+import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import {
   LOG_SERVICE_AI_DESCRIPTION,
   LOG_SERVICE_AI_QUERIES,
-} from "@blocks-lmt/constants/logs-service-meta.constant"
-import { getLmtLogCollections } from "@blocks-lmt/constants/logs-service-names.constant"
-import { SERVICES } from "@blocks-lmt/constants/services.constant"
-import { LogsViewer } from "@blocks-lmt/components"
-import { useMemo } from "react"
-import { useParams } from "react-router-dom"
+} from "@blocks-lmt/constants/logs-service-meta.constant";
+import { getLmtLogCollections } from "@blocks-lmt/constants/logs-service-names.constant";
+import { SERVICES } from "@blocks-lmt/constants/services.constant";
+import { LogsViewer } from "@blocks-lmt/components";
+import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 
 export function LmtServiceLogsRoute() {
-  const { serviceName } = useParams<{ serviceName: string }>()
+  const { serviceName } = useParams<{ serviceName: string }>();
 
   const service = useMemo(
     () => SERVICES.find((item) => item.name === serviceName && item.showInLogs),
     [serviceName],
-  )
+  );
 
-  BREADCRUMB_CUSTOM_TITLES["/services/lmt/logs"] = "Logs"
+  BREADCRUMB_CUSTOM_TITLES["/services/lmt/logs"] = "Logs";
   if (serviceName) {
     BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}`] =
-      service?.label ?? serviceName
+      service?.label ?? serviceName;
   }
 
   if (!service) {
     return (
       <div className="flex flex-col gap-5 sm:gap-4">
-        <PageBreadcrumb breadcrumbIndex={3} listClassName="text-base sm:text-lg" />
+        <PageBreadcrumb
+          breadcrumbIndex={3}
+          listClassName="text-base sm:text-lg"
+        />
         <Card>
           <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             Logs are not configured for this service.
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  const { api: apiServiceName, worker: workerServiceName } = getLmtLogCollections(
-    service.serviceName,
-  )
+  const { api: apiServiceName, worker: workerServiceName } =
+    getLmtLogCollections(service.serviceName);
 
   const logServices = useMemo(
     () => [
@@ -56,11 +58,14 @@ export function LmtServiceLogsRoute() {
       },
     ],
     [apiServiceName, workerServiceName],
-  )
+  );
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
-      <PageBreadcrumb breadcrumbIndex={3} listClassName="text-base sm:text-lg" />
+      <PageBreadcrumb
+        breadcrumbIndex={3}
+        listClassName="text-base sm:text-lg"
+      />
       <LogsViewer
         key={serviceName}
         logsRouteServiceName={serviceName}
@@ -70,5 +75,5 @@ export function LmtServiceLogsRoute() {
         agentName="Ask AI"
       />
     </div>
-  )
+  );
 }
