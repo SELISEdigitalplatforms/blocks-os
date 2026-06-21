@@ -1,4 +1,4 @@
-import { BarChart3, GitBranch, type LucideIcon } from "lucide-react";
+import { BarChart3, GitBranch, ScrollText, type LucideIcon } from "lucide-react";
 import { NavItem, NavGroup } from "@/constants/secret-management-nav";
 
 export type { NavItem, NavGroup };
@@ -25,6 +25,13 @@ export const LMT_NAV_GROUPS: NavGroup[] = [
         value: "tracing",
         icon: GitBranch,
         desc: "Trace requests across services",
+      },
+      {
+        id: "logs",
+        label: "Logs",
+        value: "logs",
+        icon: ScrollText,
+        desc: "Search and view application logs across your services",
       },
     ],
   },

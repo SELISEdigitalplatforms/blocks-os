@@ -36,6 +36,10 @@ import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import { EnvironmentMigrationPage } from "./pages/environments/environments";
 import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
 import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
+import { LogsRoute } from "./pages/lmt/logs";
+import { LmtServiceLogTraceRoute } from "./pages/lmt/service-log-trace";
+import { LmtServiceLogsRoute } from "./pages/lmt/service-logs";
+import { LmtTraceDetailRoute } from "./pages/lmt/trace-detail";
 import { TracingRoute } from "./pages/lmt/tracing";
 import { UsageRoute } from "./pages/lmt/usage";
 import { PeopleManagement } from "./pages/people/people-management";
@@ -46,12 +50,13 @@ import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-u
 import ActivatePage from "./routes/auth/activate-page";
 import GitHubCallbackPage from "./routes/callback/callback";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
+import ApiSettingsPage from "./routes/dashboard/api-settings";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
 import LmtPage from "./routes/dashboard/lmt";
+import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
-import ApiSettingsPage from "./routes/dashboard/api-settings";
 
 const redirectPaths: Record<string, string> = {
   "/services/authentication/user-detail/*": "/services/authentication",
@@ -308,6 +313,23 @@ export const router = createBrowserRouter([
                       },
                       { path: "usage", element: <UsageRoute /> },
                       { path: "tracing", element: <TracingRoute /> },
+                      {
+                        path: "tracing/:traceId",
+                        element: <LmtTraceDetailRoute />,
+                      },
+                      {
+                        path: "tracing/timeline/:traceId",
+                        element: <LmtTraceDetailsRedirect />,
+                      },
+                      { path: "logs", element: <LogsRoute /> },
+                      {
+                        path: "logs/:serviceName",
+                        element: <LmtServiceLogsRoute />,
+                      },
+                      {
+                        path: "logs/:serviceName/trace/:traceId",
+                        element: <LmtServiceLogTraceRoute />,
+                      },
                     ],
                   },
 
@@ -343,10 +365,6 @@ export const router = createBrowserRouter([
                   // {
                   //   path: "/services/lmt/logs/:serviceName",
                   //   element: <LmtServiceLogsPage />,
-                  // },
-                  // {
-                  //   path: "/tracing/timeline/:traceId",
-                  //   element: <LmtTraceDetailsPage />,
                   // },
                 ],
               },

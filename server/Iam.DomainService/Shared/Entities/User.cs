@@ -14,6 +14,7 @@ namespace Iam.DomainService.Entities
         public string? UserName { get; set; }
         public string? PhoneNumber { get; set; }
         public List<OrganizationMembership> Memberships { get; set; } = [];
+        public List<string> OrganizationIds { get; set; } = [];
         public bool Active { get; set; }
         public bool IsVarified { get; set; }
         public UserVarifiedType VarifiedType { get; set; } = UserVarifiedType.None;
