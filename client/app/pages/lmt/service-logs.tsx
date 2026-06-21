@@ -5,6 +5,7 @@ import {
   LOG_SERVICE_AI_DESCRIPTION,
   LOG_SERVICE_AI_QUERIES,
 } from "@blocks-lmt/constants/logs-service-meta.constant"
+import { getLmtLogCollections } from "@blocks-lmt/constants/logs-service-names.constant"
 import { SERVICES } from "@blocks-lmt/constants/services.constant"
 import { LogsViewer } from "@blocks-lmt/components"
 import { useMemo } from "react"
@@ -37,25 +38,33 @@ export function LmtServiceLogsRoute() {
     )
   }
 
-  const apiServiceName = `blocks-${service.serviceName}-api`
-  const workerServiceName = `blocks-${service.serviceName}-worker`
+  const { api: apiServiceName, worker: workerServiceName } = getLmtLogCollections(
+    service.serviceName,
+  )
+
+  const logServices = useMemo(
+    () => [
+      {
+        id: apiServiceName,
+        label: "Api",
+        serviceName: apiServiceName,
+      },
+      {
+        id: workerServiceName,
+        label: "Worker",
+        serviceName: workerServiceName,
+      },
+    ],
+    [apiServiceName, workerServiceName],
+  )
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
       <PageBreadcrumb breadcrumbIndex={3} listClassName="text-base sm:text-lg" />
       <LogsViewer
-        services={[
-          {
-            id: apiServiceName,
-            label: "Api",
-            serviceName: apiServiceName,
-          },
-          {
-            id: workerServiceName,
-            label: "Worker",
-            serviceName: workerServiceName,
-          },
-        ]}
+        key={serviceName}
+        logsRouteServiceName={serviceName}
+        services={logServices}
         predefinedQueries={LOG_SERVICE_AI_QUERIES[service.name] ?? []}
         askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
         agentName="Ask AI"

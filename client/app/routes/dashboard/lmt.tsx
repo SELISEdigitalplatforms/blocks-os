@@ -18,7 +18,9 @@ import { Outlet, useLocation } from "react-router-dom"
 
 export default function LmtLayout() {
   const { pathname } = useLocation()
-  const isLogsDetail = /^\/services\/lmt\/logs\/[^/]+$/.test(pathname)
+  const isLogsDetail = /^\/services\/lmt\/logs\/[^/]+(\/trace\/[^/]+)?$/.test(pathname)
+  const isTraceDetail = /^\/services\/lmt\/tracing\/[^/]+$/.test(pathname)
+  const isLmtDetail = isLogsDetail || isTraceDetail
   const currentSegment = pathname.split("/").pop() ?? "usage"
 
   const tenantId = useProjectStore().selectedProject?.tenantId || ""
@@ -78,7 +80,7 @@ export default function LmtLayout() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
-        {currentItem && !isLogsDetail && (
+        {currentItem && !isLmtDetail && (
           <PageHeader
             title={currentItem.label}
             description={currentItem.desc}
