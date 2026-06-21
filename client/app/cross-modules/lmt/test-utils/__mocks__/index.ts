@@ -67,7 +67,6 @@ export const mockGetLogsByDatePayload: IGetLogsByDatePayload = {
   },
   search: "",
   serviceName: "blocks-idp-api",
-  projectKey: "test-project-key-123",
 };
 
 // ─── Trace mock data ──────────────────────────────────────────────────────────
