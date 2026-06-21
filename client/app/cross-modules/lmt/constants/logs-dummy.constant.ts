@@ -1,6 +1,7 @@
 import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model"
 import type { LucideIcon } from "lucide-react"
 import {
+  Bot,
   Database,
   Languages,
   LineChart,
@@ -20,6 +21,7 @@ export const LOG_SERVICE_ICONS = {
   release: Rocket,
   utilities: Wrench,
   studio: Palette,
+  agent: Bot,
 } satisfies Record<LogServiceRow["icon"], LucideIcon>
 
 export const DUMMY_LOG_SERVICES: LogServiceRow[] = [
@@ -93,6 +95,15 @@ export const DUMMY_LOG_SERVICES: LogServiceRow[] = [
     icon: "studio",
     description:
       "Builder and workspace editing logs. Monitor asset processing, publishing flows, and studio-side errors.",
+    status: "running",
+  },
+  {
+    id: "blocks-agent",
+    name: "Blocks Agent",
+    routeSlug: "agent",
+    icon: "agent",
+    description:
+      "AI agent orchestration and tool-call logs. Trace prompt flows, model invocations, and agent-side failures.",
     status: "running",
   },
 ]
