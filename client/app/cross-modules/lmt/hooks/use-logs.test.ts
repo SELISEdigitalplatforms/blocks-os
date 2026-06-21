@@ -25,7 +25,9 @@ describe("useLogs", () => {
       const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
-      expect(lmtService.log.getLogsByDate).toHaveBeenCalled();
+      expect(lmtService.log.getLogsByDate).toHaveBeenCalledWith(
+        expect.not.objectContaining({ projectKey: expect.anything() }),
+      );
       expect(result.current.initialLogs).toHaveLength(2);
     });
 
