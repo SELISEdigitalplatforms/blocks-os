@@ -15,7 +15,6 @@ const FUSE_OPTIONS: IFuseOptions<LogServiceRow> = {
 const sortGetters: Record<string, (row: LogServiceRow) => string> = {
   Name: (row) => row.name,
   Description: (row) => row.description,
-  Status: (row) => row.status,
 }
 
 const sortLogServices = (

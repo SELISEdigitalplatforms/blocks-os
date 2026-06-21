@@ -183,7 +183,7 @@ function TracesList({
               <TableRow
                 key={row.id}
                 className="cursor-pointer text-medium-emphasis hover:bg-accent/50"
-                onClick={() => navigate(`/tracing/timeline/${row.original.traceId}`)}
+                onClick={() => navigate(`/services/lmt/tracing/${row.original.traceId}`)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>

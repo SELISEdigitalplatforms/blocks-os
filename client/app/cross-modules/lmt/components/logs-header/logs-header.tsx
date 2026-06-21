@@ -10,10 +10,20 @@ export const LogsListHeader = () => {
   const [tab, setTab] = useQueryState("tab", { defaultValue: services[0]?.serviceName ?? "" })
 
   useEffect(() => {
-    if (!tab) return
-    const service = services.find((item) => item.serviceName === tab)
-    if (service) changeService(service)
-  }, [changeService, services, tab])
+    const defaultTab = services[0]?.serviceName ?? ""
+    if (!defaultTab) return
+
+    const matchedService = tab ? services.find((item) => item.serviceName === tab) : undefined
+
+    if (matchedService) {
+      changeService(matchedService)
+      return
+    }
+
+    if (tab !== defaultTab) {
+      void setTab(defaultTab)
+    }
+  }, [changeService, services, setTab, tab])
 
   return (
     <div className="flex flex-col gap-6">

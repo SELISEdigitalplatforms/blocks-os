@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 import { LogsListHeader } from "../logs-header/logs-header";
 import { cn } from "@/lib/utils";
 import { LogsList } from "../logs-list";
@@ -25,6 +25,7 @@ interface LogsViewerContextType {
   serviceNames?: string[];
   agentName?: string;
   askAiDescription?: string;
+  logsRouteServiceName?: string;
 }
 const initialContextValue: LogsViewerContextType = {
   services: [],
@@ -37,6 +38,7 @@ const initialContextValue: LogsViewerContextType = {
   predefinedQueries: [],
   agentName: "Ask AI",
   askAiDescription: "",
+  logsRouteServiceName: undefined,
 };
 // Create context with the initial value
 export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
@@ -49,6 +51,7 @@ interface LogsViewerProps {
   predefinedQueries?: string[];
   agentName?: string;
   askAiDescription?: string;
+  logsRouteServiceName?: string;
 }
 export const LogsViewer = ({
   pageSize = 20,
@@ -57,14 +60,15 @@ export const LogsViewer = ({
   predefinedQueries,
   agentName = "Ask AI",
   askAiDescription,
+  logsRouteServiceName,
 }: LogsViewerProps) => {
   const [selectedService, setSelectedService] = useState<Service | null>(
     services.length > 0 ? services[0] : null,
   );
   const [filter, setFilter] = useState<Partial<LogFilter> | null>(null);
-  const changeService = (service: Service) => {
-    setSelectedService(service);
-  };
+  const changeService = useCallback((service: Service) => {
+    setSelectedService((current) => (current?.id === service.id ? current : service));
+  }, []);
   const resetFilter = () => {
     setFilter(null);
   };
@@ -81,15 +85,13 @@ export const LogsViewer = ({
         predefinedQueries,
         agentName,
         askAiDescription,
+        logsRouteServiceName,
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
         <LogsList
-          key={JSON.stringify({
-            selectedService,
-            filter,
-          })}
+          key={`${selectedService?.id ?? "none"}-${JSON.stringify(filter ?? null)}`}
         />
       </div>
     </LogsViewerContext.Provider>
