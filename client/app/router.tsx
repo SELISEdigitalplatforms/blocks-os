@@ -31,10 +31,13 @@ import { ConfigureCaptcha } from "./idp/captcha/pages/configure-captcha";
 import { Permissions } from "./idp/iam/modules/permission-management";
 import { Roles } from "./idp/iam/modules/role-management";
 import { ConfigureMFA } from "./idp/mfa/pages/configure-mfa/configure-mfa";
+import { IdpSettingsPage } from "./idp/settings/pages/settings-page";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import { EnvironmentMigrationPage } from "./pages/environments/environments";
 import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
 import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
+import { TracingRoute } from "./pages/lmt/tracing";
+import { UsageRoute } from "./pages/lmt/usage";
 import { PeopleManagement } from "./pages/people/people-management";
 import { PersonDetailPage } from "./pages/people/person-detail-page";
 import { RepositoriesPage } from "./pages/repositories/repositories";
@@ -43,24 +46,12 @@ import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-u
 import ActivatePage from "./routes/auth/activate-page";
 import GitHubCallbackPage from "./routes/callback/callback";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
-import ApiSettingsPage from "./routes/dashboard/api-settings";
-import IamPage from "./routes/dashboard/iam";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
-import IamConfigurePage from "./routes/dashboard/iam-configure";
-import IamOrgDetailPage from "./routes/dashboard/iam-org-detail";
-import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
-import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
 import LmtPage from "./routes/dashboard/lmt";
-import LmtServiceLogsPage from "./routes/dashboard/lmt-service-logs";
-import LmtTraceDetailsPage from "./routes/dashboard/lmt-trace-details";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
-import RateLimiterPage from "./routes/dashboard/rate-limiter";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
-import SsoConfigurationPage from "./routes/dashboard/sso-configuration";
-import { UsageRoute } from "./pages/lmt/usage";
-import { TracingRoute } from "./pages/lmt/tracing";
-import { IdpSettingsPage } from "./idp/settings/pages/settings-page";
+import ApiSettingsPage from "./routes/dashboard/api-settings";
 
 const redirectPaths: Record<string, string> = {
   "/services/authentication/user-detail/*": "/services/authentication",
@@ -197,6 +188,9 @@ export const router = createBrowserRouter([
                     children: [
                       {
                         index: true,
+                        element: <Navigate to="my-secret" replace />,
+                      },
+                      {
                         path: "my-secret",
                         element: <SecretsList />,
                       },
@@ -275,6 +269,10 @@ export const router = createBrowserRouter([
                     element: <AuthenticationConfigLayout />,
                     children: [
                       {
+                        index: true,
+                        element: <Navigate to="config" replace />,
+                      },
+                      {
                         path: "config",
                         element: <IdpSettingsPage />,
                       },
@@ -297,71 +295,59 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
+                    path: "/services/api-settings",
+                    element: <ApiSettingsPage />,
+                  },
+                  {
                     path: "/services/lmt",
                     element: <LmtPage />,
                     children: [
+                      {
+                        index: true,
+                        element: <Navigate to="usage" replace />,
+                      },
                       { path: "usage", element: <UsageRoute /> },
                       { path: "tracing", element: <TracingRoute /> },
                     ],
                   },
 
-                  { path: "/services/iam", element: <IamPage /> },
-                  {
-                    path: "/services/iam/role-detail/:id",
-                    element: <IamRoleDetailPage />,
-                  },
+                  // { path: "/services/iam", element: <IamPage /> },
+                  // {
+                  //   path: "/services/iam/role-detail/:id",
+                  //   element: <IamRoleDetailPage />,
+                  // },
 
-                  {
-                    path: "/services/iam/permission-detail/:id",
-                    element: <IamPermissionDetailPage />,
-                  },
-                  {
-                    path: "/services/iam/organization-detail/:itemId",
-                    element: <IamOrgDetailPage />,
-                  },
-                  {
-                    path: "/services/iam/configure",
-                    element: <IamConfigurePage />,
-                  },
+                  // {
+                  //   path: "/services/iam/permission-detail/:id",
+                  //   element: <IamPermissionDetailPage />,
+                  // },
+                  // {
+                  //   path: "/services/iam/organization-detail/:itemId",
+                  //   element: <IamOrgDetailPage />,
+                  // },
+                  // {
+                  //   path: "/services/iam/configure",
+                  //   element: <IamConfigurePage />,
+                  // },
 
-                  {
-                    path: "/services/authentication/sso-configuration",
-                    element: <SsoConfigurationPage />,
-                  },
+                  // {
+                  //   path: "/services/authentication/sso-configuration",
+                  //   element: <SsoConfigurationPage />,
+                  // },
 
-                  {
-                    path: "/services/api-settings",
-                    element: <ApiSettingsPage />,
-                  },
-                  {
-                    path: "/services/rate-limiter",
-                    element: <RateLimiterPage />,
-                  },
+                  // {
+                  //   path: "/services/rate-limiter",
+                  //   element: <RateLimiterPage />,
+                  // },
 
-                  {
-                    path: "/services/lmt/logs/:serviceName",
-                    element: <LmtServiceLogsPage />,
-                  },
-                  {
-                    path: "/tracing/timeline/:traceId",
-                    element: <LmtTraceDetailsPage />,
-                  },
-
-                  {
-                    path: "/services/captcha",
-                    element: (
-                      <Navigate
-                        to="/services/secret-management/captcha"
-                        replace
-                      />
-                    ),
-                  },
-                  {
-                    path: "/services/mfa",
-                    element: (
-                      <Navigate to="/services/secret-management/mfa" replace />
-                    ),
-                  },
+                  // {
+                  //   path: "/services/lmt/logs/:serviceName",
+                  //   element: <LmtServiceLogsPage />,
+                  // },
+                  // {
+                  //   path: "/tracing/timeline/:traceId",
+                  //   element: <LmtTraceDetailsPage />,
+                  // },
                 ],
               },
             ],
