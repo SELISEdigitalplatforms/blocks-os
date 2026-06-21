@@ -30,7 +30,7 @@ const DEFAULT_SETTINGS_TAB: SettingsTabValue = "auth-config"
 const isSettingsTabValue = (value: string | null): value is SettingsTabValue =>
   SETTINGS_TABS.some((tab) => tab.value === value)
 
-export const SettingsPage = () => {
+export const IdpSettingsPage = () => {
   const [settingsTab, setSettingsTab] = useQueryState("settingsTab", {
     defaultValue: DEFAULT_SETTINGS_TAB,
   })
