@@ -1,22 +1,13 @@
 import { Button } from "@/components/ui-kits/button/button"
 import { Card, CardContent } from "@/components/ui-kits/card/card"
-import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant"
-import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model"
 import {
-  ArrowRight,
-  LineChart,
-  Network,
-  Shield,
-  type LucideIcon
-} from "lucide-react"
+  DUMMY_LOG_SERVICES,
+  LOG_SERVICE_ICONS,
+} from "@blocks-lmt/constants/logs-dummy.constant"
+import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model"
+import { ArrowRight, Shield } from "lucide-react"
 import { type KeyboardEvent } from "react"
 import { useNavigate } from "react-router-dom"
-
-const SERVICE_ICONS: Record<string, LucideIcon> = {
-  "blocks-iam": Shield,
-  "blocks-os": Network,
-  "blocks-monitor": LineChart,
-}
 
 const LogServiceCard = ({
   service,
@@ -25,7 +16,7 @@ const LogServiceCard = ({
   service: LogServiceRow
   onSelect: (routeSlug: string) => void
 }) => {
-  const Icon = SERVICE_ICONS[service.id] ?? Shield
+  const Icon = LOG_SERVICE_ICONS[service.icon] ?? Shield
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") {
