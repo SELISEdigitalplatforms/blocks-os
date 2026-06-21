@@ -1,218 +1,90 @@
-import { FilterControls, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar"
-import { Badge } from "@/components/ui-kits/badge/badge"
-import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card"
-import { Pagination } from "@/components/ui-kits/pagination/pagination"
-import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui-kits/table/table"
+import { Button } from "@/components/ui-kits/button/button"
+import { Card, CardContent } from "@/components/ui-kits/card/card"
 import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant"
 import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model"
-import { filterLogServices } from "@blocks-lmt/utils/logs-filter.util"
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs"
-import { useMemo } from "react"
+import {
+  ArrowRight,
+  LineChart,
+  Network,
+  Shield,
+  type LucideIcon
+} from "lucide-react"
+import { type KeyboardEvent } from "react"
 import { useNavigate } from "react-router-dom"
 
-type LogFilter = { search: string }
-
-const useLogsFilterQueryParams = () => {
-  const [queryParams, setQueryParams] = useQueryStates({
-    search: parseAsString.withDefault(""),
-    page: parseAsInteger.withDefault(0),
-    pageSize: parseAsInteger.withDefault(10),
-  })
-
-  return { queryParams, setQueryParams }
+const SERVICE_ICONS: Record<string, LucideIcon> = {
+  "blocks-iam": Shield,
+  "blocks-os": Network,
+  "blocks-monitor": LineChart,
 }
 
-const useLogSortQueryParams = () =>
-  useSortQueryParams({ initial: { property: "Name", isDescending: false } })
+const LogServiceCard = ({
+  service,
+  onSelect,
+}: {
+  service: LogServiceRow
+  onSelect: (routeSlug: string) => void
+}) => {
+  const Icon = SERVICE_ICONS[service.id] ?? Shield
 
-const LogsTable = ({ data }: { data: LogServiceRow[] }) => {
-  const navigate = useNavigate()
-  const { sortQueryParams, setSortQueryParams } = useLogSortQueryParams()
-
-  const columns = useMemo<ColumnDef<LogServiceRow>[]>(
-    () => [
-      {
-        accessorKey: "name",
-        header: () => (
-          <FilterControls.SortHeader
-            id="Name"
-            label="Service"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: ({ row }) => (
-          <div className="ml-2 font-medium sm:ml-0">{row.original.name}</div>
-        ),
-      },
-      {
-        accessorKey: "description",
-        header: () => (
-          <FilterControls.SortHeader
-            id="Description"
-            label="Description"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: ({ row }) => (
-          <div className="ml-2 text-muted-foreground sm:ml-0">
-            {row.original.description}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "status",
-        header: () => (
-          <FilterControls.SortHeader
-            id="Status"
-            label="Status"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: ({ row }) => (
-          <div className="ml-2 sm:ml-0">
-            <Badge variant="success" className="capitalize">
-              {row.original.status}
-            </Badge>
-          </div>
-        ),
-      },
-    ],
-    [setSortQueryParams, sortQueryParams],
-  )
-
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
-
-  const handleRowClick = (routeSlug: string) => {
-    navigate(`/services/lmt/logs/${routeSlug}`)
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      onSelect(service.routeSlug)
+    }
   }
 
   return (
-    <ScrollArea className="w-full">
-      <Table className="text-sm">
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="px-4 py-2 hover:bg-transparent">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="font-bold text-medium-emphasis">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="cursor-pointer text-medium-emphasis hover:bg-accent/50"
-                onClick={() => handleRowClick(row.original.routeSlug)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell
-                colSpan={table.getAllColumns().length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No results.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      <ScrollBar orientation="horizontal" />
-    </ScrollArea>
+    <Card
+      role="button"
+      tabIndex={0}
+      aria-label={`View logs for ${service.name}`}
+      className="group flex h-full cursor-pointer flex-col rounded-lg border border-border bg-card shadow-none transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={() => onSelect(service.routeSlug)}
+      onKeyDown={handleKeyDown}
+    >
+      <CardContent className="flex flex-1 flex-col p-5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Icon className="h-5 w-5 text-primary" aria-hidden />
+            </div>
+            <h3 className="truncate text-base font-semibold text-high-emphasis">{service.name}</h3>
+          </div>
+        </div>
+
+        <p className="mt-4 flex-1 text-sm leading-relaxed text-medium-emphasis">
+          {service.description}
+        </p>
+
+        <Button
+          type="button"
+          className="mt-5 w-full gap-2 shadow-none"
+          onClick={(event) => {
+            event.stopPropagation()
+            onSelect(service.routeSlug)
+          }}
+        >
+          View Logs
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
 
 export const LogsOverview = () => {
-  const { queryParams, setQueryParams } = useLogsFilterQueryParams()
-  const { sortQueryParams } = useLogSortQueryParams()
+  const navigate = useNavigate()
 
-  const filteredRows = useMemo(
-    () =>
-      filterLogServices({
-        rows: DUMMY_LOG_SERVICES,
-        search: queryParams.search,
-        sort: sortQueryParams,
-      }),
-    [queryParams.search, sortQueryParams],
-  )
-
-  const paginatedRows = useMemo(() => {
-    const start = queryParams.page * queryParams.pageSize
-    return filteredRows.slice(start, start + queryParams.pageSize)
-  }, [filteredRows, queryParams.page, queryParams.pageSize])
-
-  const changeHandler = (key: string, value: unknown) => {
-    setQueryParams((params) => ({
-      ...params,
-      [key]: value,
-      page: 0,
-    }))
+  const handleSelect = (routeSlug: string) => {
+    navigate(`/services/lmt/logs/${routeSlug}`)
   }
-
-  const pageChangeHandler = (page: number) => {
-    setQueryParams((params) => ({ ...params, page }))
-  }
-
-  const pageSizeChangeHandler = (pageSize: number) => {
-    setQueryParams((params) => ({ ...params, page: 0, pageSize }))
-  }
-
-  const resetHandler = () => setQueryParams(null)
 
   return (
-    <Card>
-      <CardHeader>
-        <FilterToolbar<LogFilter>
-          filters={[{ key: "search", type: "SearchInput", label: "" }]}
-          values={{ search: queryParams.search }}
-          defaultValues={{ search: "" }}
-          onChange={(key, value) => changeHandler(String(key), value)}
-          onReset={resetHandler}
-        />
-      </CardHeader>
-      <CardContent>
-        <LogsTable data={paginatedRows} />
-        {filteredRows.length > queryParams.pageSize && (
-          <div className="mt-5 flex items-center md:justify-end">
-            <Pagination
-              page={queryParams.page}
-              pageSize={queryParams.pageSize}
-              pageSizeOptions={[10, 20, 50]}
-              onChange={pageChangeHandler}
-              onPageSizeChange={pageSizeChangeHandler}
-              totalCount={filteredRows.length}
-            />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {DUMMY_LOG_SERVICES.map((service) => (
+        <LogServiceCard key={service.id} service={service} onSelect={handleSelect} />
+      ))}
+    </div>
   )
 }

@@ -104,7 +104,7 @@ describe("TraceService", () => {
 
       await service.getTraceByTraceId(mockGetTraceByIdPayload);
 
-      const expectedUrl = `${TRACE_ENDPOINTS.GET_TRACE}?TraceId=${mockGetTraceByIdPayload.traceId}&ProjectKey=${mockGetTraceByIdPayload.projectKey}`;
+      const expectedUrl = `${TRACE_ENDPOINTS.GET_TRACE}?TraceId=${mockGetTraceByIdPayload.traceId}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
     });
 
@@ -156,6 +156,19 @@ describe("TraceService", () => {
 
       expect(result.errors).toEqual([]);
       expect(result.totalCount).toBe(0);
+    });
+
+    it("should return null data when API returns empty spans", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        data: [],
+        errors: null,
+        totalCount: 0,
+      });
+
+      const result = await service.getTraceByTraceId(mockGetTraceByIdPayload);
+
+      expect(result.data).toBeNull();
+      expect(result.errors).toEqual([]);
     });
 
     it("should throw when the API call fails", async () => {
