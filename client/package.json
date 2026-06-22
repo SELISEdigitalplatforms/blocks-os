@@ -39,7 +39,6 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.2",
     "@radix-ui/react-tooltip": "^1.1.2",
-    "@seliseblocks/blocks-kit": "^0.0.33",
     "@tanstack/react-query": "^5.62.11",
     "@tanstack/react-query-devtools": "^5.62.11",
     "@tanstack/react-table": "^8.20.5",
@@ -71,7 +70,8 @@
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
     "zod": "^3.23.8",
-    "zustand": "^5.0.1"
+    "zustand": "^5.0.1",
+    "@seliseblocks/blocks-kit": "^0.0.33"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.2",
