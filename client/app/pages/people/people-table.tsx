@@ -272,7 +272,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 )
                 const isOwner = row.original.sharedEnviroments.some((env) => env.isCreator)
                 const showResendInvite = hasPending && !isOwner
-                const showResendActivation = row.original.peopleDetails.allowResendActivation
+                const showResendActivation =
+                  row.original.peopleDetails.allowResendActivation &&
+                  row.original.sharedEnviroments.some((env) => env.isInvitationConfirmed)
 
                 return (
                   <DropdownMenu>
