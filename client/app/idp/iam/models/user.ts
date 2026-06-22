@@ -20,7 +20,6 @@ export interface User {
   status: number;
   statusReason: string | null;
   deactivatedAtUtc: string | null;
-  isVarified: boolean;
   isVerified: boolean;
   emailVerifiedAtUtc: string | null;
   phoneVerifiedAtUtc: string | null;
@@ -337,13 +336,13 @@ export interface IActivationCodeExpirationResponse {
 }
 
 export interface ISaveSignUpSettingPayload {
-  isSignUpEnable: boolean
-  isEmailPasswordSignUpEnabled: boolean
-  isSSoSignUpEnabled: boolean
-  defaultRolesForNewUserOnSignUp?: string[]
-  defaultPermissionsForNewUserOnSignUp?: string[]
-  projectKey?: string
-  itemId?: string
+  isSignUpEnable: boolean;
+  isEmailPasswordSignUpEnabled: boolean;
+  isSSoSignUpEnabled: boolean;
+  defaultRolesForNewUserOnSignUp?: string[];
+  defaultPermissionsForNewUserOnSignUp?: string[];
+  projectKey?: string;
+  itemId?: string;
 }
 
 export interface ISaveSignUpSettingResponse {
@@ -353,7 +352,7 @@ export interface ISaveSignUpSettingResponse {
 }
 
 export interface IGetSignUpSettingPayload {
-  projectKey?: string
+  projectKey?: string;
 }
 
 export interface IGetSignUpSettingResponse {
