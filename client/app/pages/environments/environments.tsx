@@ -1,7 +1,6 @@
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetProjects, useGetMigrationStatus } from "@/hooks/use-project";
 import { useGetPeople } from "@/hooks/use-people";
-// import { EnvironmentCard } from "@/components/environment-card/environment-card";
 import { AddEnvironmentModal } from "@/components/environment-card/add-environment-modal";
 import { Plus, ArrowRightLeft, CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
@@ -25,7 +24,7 @@ import {
   TooltipProvider,
 } from "@/components/ui-kits/tooltip/tooltip";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
-import { EnvironmentCard } from "@seliseblocks/blocks-kit";
+import { EnvironmentCard } from "@/components/environment-card/environment-card";
 
 const isRecentMigrationForTarget = (
   data: IMigrationStatusResponse[number],
@@ -111,8 +110,7 @@ export const EnvironmentsPage = () => {
               variant="outline"
               size="sm"
               onClick={() => navigate("/data-migration")}
-              className="h-10 whitespace-nowrap text-sm"
-            >
+              className="h-10 whitespace-nowrap text-sm">
               <ArrowRightLeft className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Start Migration</span>
             </Button>
@@ -121,8 +119,7 @@ export const EnvironmentsPage = () => {
                 variant="default"
                 size="sm"
                 onClick={() => setAddEnvModalOpen(true)}
-                className="h-10 whitespace-nowrap text-sm"
-              >
+                className="h-10 whitespace-nowrap text-sm">
                 <Plus className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">New Environment</span>
               </Button>
@@ -162,8 +159,7 @@ export const EnvironmentsPage = () => {
                 {environmentList[0]?.nonSharedProject?.map((project) => (
                   <div
                     key={`others-${project.itemId}`}
-                    className="pointer-events-none grayscale"
-                  >
+                    className="pointer-events-none grayscale">
                     <EnvironmentCard
                       key={`others-${project.itemId}`}
                       project={project}

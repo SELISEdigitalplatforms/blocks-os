@@ -5,7 +5,6 @@ import {
   ConsolePage,
   DashboardLayout,
   DashboardOverview,
-  EnvironmentsPage,
   LoginPage,
   ProfilePage,
   ProjectOverviewLayout,
@@ -33,7 +32,10 @@ import { Roles } from "./idp/iam/modules/role-management";
 import { ConfigureMFA } from "./idp/mfa/pages/configure-mfa/configure-mfa";
 import { IdpSettingsPage } from "./idp/settings/pages/settings-page";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
-import { EnvironmentMigrationPage } from "./pages/environments/environments";
+import {
+  EnvironmentMigrationPage,
+  EnvironmentsPage,
+} from "./pages/environments/environments";
 import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
 import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
 import { LogsRoute } from "./pages/lmt/logs";
