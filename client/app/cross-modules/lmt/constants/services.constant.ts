@@ -127,6 +127,14 @@ export const SERVICES = [
     showInTraces: true,
     showInLogs: true,
   },
+  {
+    label: "Agent",
+    name: "agent",
+    serviceName: "agent",
+    showInUsage: true,
+    showInTraces: true,
+    showInLogs: true,
+  },
   // {
   //   label: "Identifier",
   //   name: "identifier",
