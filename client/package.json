@@ -1,5 +1,5 @@
 {
-  "name": "blocks-idp-client",
+  "name": "blocks-os-client",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -39,7 +39,7 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.2",
     "@radix-ui/react-tooltip": "^1.1.2",
-    "@seliseblocks/blocks-kit": "^0.0.30",
+    "@seliseblocks/blocks-kit": "^0.0.33",
     "@tanstack/react-query": "^5.62.11",
     "@tanstack/react-query-devtools": "^5.62.11",
     "@tanstack/react-table": "^8.20.5",
