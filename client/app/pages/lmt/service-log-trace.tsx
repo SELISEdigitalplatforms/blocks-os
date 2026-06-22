@@ -26,7 +26,7 @@ export function LmtServiceLogTraceRoute() {
   if (serviceName) {
     BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}`] =
       service?.label ?? serviceName;
-    BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}/trace`] = "";
+    BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}/trace`] = null;
     if (id) {
       BREADCRUMB_CUSTOM_TITLES[
         `/services/lmt/logs/${serviceName}/trace/${id}`
