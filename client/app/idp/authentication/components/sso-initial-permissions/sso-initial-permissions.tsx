@@ -17,11 +17,11 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
     <div>
       <div className="flex w-full flex-col">
         <Card>
-          <CardHeader className="flex !flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Permissions</CardTitle>
             <AddSSOPermission onAdd={onAddHandler} permissions={permissions} />
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <SSOPermissionsList permissions={permissions} onDelete={onRemoveHandler} />
           </CardContent>
         </Card>

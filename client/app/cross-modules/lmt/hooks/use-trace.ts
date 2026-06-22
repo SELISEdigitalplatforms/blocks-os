@@ -10,8 +10,11 @@ export const useGetTraces = (option: IGetTracesPayload) => {
 };
 
 export const useGetTraceById = (option: IGetTraceByTraceIdPayload) => {
+  const enabled = Boolean(option.traceId)
+
   return useQuery({
     queryKey: ["trace", option],
     queryFn: () => lmtService.trace.getTraceByTraceId(option),
-  });
-};
+    enabled,
+  })
+}
