@@ -305,7 +305,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                           <span>Resend Activation</span>
                         </DropdownMenuItem>
                       )}
-                      {!showResendActivation && !showResendInvite && (
+                      {!showResendInvite && (
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation()
