@@ -34,7 +34,9 @@ export function SidebarMobileView() {
   const isAuthenticationRoute = pathname.startsWith("/services/authentication")
   const isLmtRoute = pathname.startsWith("/services/lmt")
 
-  const currentTab = searchParams.get("tab") ?? (isSecretManagementRoute ? "my-secret" : "general")
+  const currentTab =
+    searchParams.get("tab") ??
+    (isSecretManagementRoute ? "my-secret" : isAuthenticationRoute ? "config" : "my-secret")
 
   const MobileGroupedMenuItem = ({
     menu,
