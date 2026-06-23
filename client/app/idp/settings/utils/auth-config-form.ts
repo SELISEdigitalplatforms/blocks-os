@@ -1,4 +1,10 @@
+import { getRuntimeEnv } from "@/lib/runtime-env"
 import { z } from "zod"
+
+const trimTrailingSlash = (value: string) => value.replace(/\/$/, "")
+
+export const getBlocksIamBaseUrl = () =>
+  trimTrailingSlash(getRuntimeEnv("BLOCKS_IAM_BASE_URL"))
 
 const positiveInt = z.coerce
   .number()
@@ -78,14 +84,29 @@ export const toIamConfigFormValues = (
   accountActivationPath: config.accountActivationPath,
   accountVerificationPath: config.accountVerificationPath,
   recoverAccountPath: config.recoverAccountPath,
-  accountActionBaseUrl: config.accountActionBaseUrl,
-  useAccountActionBaseUrlAsDefault: config.useAccountActionBaseUrlAsDefault,
+  accountActionBaseUrl: config.isOidcEnabled
+    ? getBlocksIamBaseUrl()
+    : config.accountActionBaseUrl,
+  useAccountActionBaseUrlAsDefault: config.isOidcEnabled
+    ? true
+    : config.useAccountActionBaseUrlAsDefault,
   activationUrlLifetimeInMinutes: config.activationUrlLifetimeInMinutes,
   recoverAccountUrlLifetimeInMinutes: config.recoverAccountUrlLifetimeInMinutes,
   logoutOnPasswordChange: config.logoutOnPasswordChange,
   isOidcEnabled: config.isOidcEnabled,
   passwordStrengthCheckerRegex: config.passwordStrengthCheckerRegex,
 })
+
+export const applyOidcIamConfigOverrides = (
+  values: IamConfigFormValues,
+): IamConfigFormValues =>
+  values.isOidcEnabled
+    ? {
+        ...values,
+        accountActionBaseUrl: getBlocksIamBaseUrl(),
+        useAccountActionBaseUrlAsDefault: false,
+      }
+    : values
 
 export const buildSavePayload = (
   config: {
