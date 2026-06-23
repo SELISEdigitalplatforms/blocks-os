@@ -45,6 +45,12 @@ export interface IGetConfigurationResponse extends IMFAConfiguration {
   itemId?: string;
 }
 
+export interface MfaConfigControllerResponse {
+  enableMfa: boolean;
+  userMfaType: number[] | string;
+  mfaTemplate?: { templateName: string; templateId: string };
+}
+
 export interface IConfigureUserMFAPayload {
   userId: string;
   mfaEnabled: boolean;
