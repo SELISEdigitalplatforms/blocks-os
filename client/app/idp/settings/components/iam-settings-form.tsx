@@ -123,7 +123,7 @@ const SwitchRow = ({
     className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}
   >
     <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-      <FormLabel className={SETTINGS_FORM_LAYOUT.toggleTitle}>{label}</FormLabel>
+      <FormLabel className="!mt-0">{label}</FormLabel>
       {description ? (
         <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>{description}</p>
       ) : null}
