@@ -158,14 +158,7 @@ export const navigationMenus: Menu[] = [
         desc: "Bot protection configuration",
         type: "menu",
       },
-      {
-        id: "mfa",
-        name: "MFA",
-        path: "/services/secret-management/mfa",
-        icon: Smartphone,
-        desc: "Multi-factor authentication settings",
-        type: "menu",
-      },
+   
       {
         id: "magic-url",
         name: "Magic URL",
@@ -228,6 +221,14 @@ export const navigationMenus: Menu[] = [
         path: "/services/authentication/config",
         icon: SlidersHorizontal,
         desc: "Tenant IAM, auth, organization, and signup configuration",
+        type: "menu",
+      },
+         {
+        id: "mfa",
+        name: "MFA",
+        path: "/services/secret-management/mfa",
+        icon: Smartphone,
+        desc: "Multi-factor authentication settings",
         type: "menu",
       },
       {
