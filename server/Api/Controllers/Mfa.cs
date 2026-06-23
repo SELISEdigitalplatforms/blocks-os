@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using CloudConfiguration.DomainService.Authentication.RequestModel;
 using CloudConfiguration.DomainService.MFA.RequestModel;
 using CloudConfiguration.DomainService.MFA.ResponseModel;
@@ -87,7 +87,7 @@ namespace Api.Controllers
         [Authorize]
         [HttpGet]
        // [ProtectedEndPoint("blocks-os::mfa::get-configuration")]
-        public async Task<GetMfaConfigurationResponse> Get([FromQuery] GetAuthenticationConfigurationRequest request)
+        public async Task<GetMfaConfigurationResponse> Get()
         {
             return await _configurationService.GetMfaConfigurationAsync();
         }
