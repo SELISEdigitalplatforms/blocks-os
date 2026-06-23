@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http-client";
-import { secretsService } from "@/services/secrets.service";
 import { MFAService } from "./mfa.service";
 import {
   MFA_CONFIG_ENDPOINTS,
@@ -25,12 +24,6 @@ import {
 
 vi.mock("@/lib/http-client", () => mockHttpClientFactory());
 
-vi.mock("@/services/secrets.service", () => ({
-  secretsService: {
-    save: vi.fn(),
-  },
-}));
-
 describe("MFAService", () => {
   let service: MFAService;
 
@@ -43,23 +36,20 @@ describe("MFAService", () => {
     vi.clearAllMocks();
   });
 
-  // ─── getConfigurations (secrets — secret-management admin UI) ─────────────
+  // ─── getConfigurations (Mfa controller — secret-management admin UI) ──────
   describe("getConfigurations", () => {
-    it("should map secrets response to MFA configuration shape", async () => {
-      vi.mocked(http.get).mockResolvedValue([
-        {
-          itemId: "mfa-1",
-          keyValuePairs: {
-            enableMfa: "true",
-            userMfaType: "[1,2]",
-            mfaTemplate: JSON.stringify({ templateName: "t", templateId: "id" }),
-          },
-        },
-      ]);
+    it("should map controller response to MFA configuration shape", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        enableMfa: true,
+        userMfaType: [1, 2],
+        mfaTemplate: { templateName: "t", templateId: "id" },
+      });
 
       const result = await service.getConfigurations();
 
-      expect(http.get).toHaveBeenCalledWith(`${MFA_CONFIG_ENDPOINTS.GET}?secretKey=mfa`);
+      expect(http.get).toHaveBeenCalledWith(MFA_CONFIG_ENDPOINTS.GET, undefined, {
+        absoluteUrl: true,
+      });
       expect(result.enableMfa).toBe(true);
       expect(result.userMfaType).toEqual([1, 2]);
     });
@@ -87,24 +77,27 @@ describe("MFAService", () => {
 
   // ─── saveMFAConfiguration ─────────────────────────────────────────────────
   describe("saveMFAConfiguration", () => {
-    it("should save via secretsService with MFA keyValuePairs", async () => {
-      vi.mocked(secretsService.save).mockResolvedValue({ itemId: "mfa-1" } as never);
+    it("should POST MFA configuration to the controller Save endpoint", async () => {
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
 
       const result = await service.saveMFAConfiguration(mockSaveMfaConfigPayload);
 
-      expect(secretsService.save).toHaveBeenCalledWith({
-        secretKey: "mfa",
-        keyValuePairs: {
-          enableMfa: "true",
-          userMfaType: JSON.stringify(mockSaveMfaConfigPayload.userMfaType),
-          mfaTemplate: JSON.stringify(mockSaveMfaConfigPayload.mfaTemplate),
+      expect(http.post).toHaveBeenCalledWith(
+        MFA_CONFIG_ENDPOINTS.SAVE,
+        {
+          enableMfa: mockSaveMfaConfigPayload.enableMfa,
+          userMfaType: mockSaveMfaConfigPayload.userMfaType,
+          mfaTemplate: mockSaveMfaConfigPayload.mfaTemplate,
+          projectKey: mockSaveMfaConfigPayload.projectKey,
         },
-      });
+        undefined,
+        { absoluteUrl: true },
+      );
       expect(result).toEqual({ isSuccess: true, errors: null });
     });
 
-    it("should throw when secrets save fails", async () => {
-      vi.mocked(secretsService.save).mockRejectedValue(new Error("Network error"));
+    it("should throw when the controller Save call fails", async () => {
+      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
       await expect(service.saveMFAConfiguration(mockSaveMfaConfigPayload)).rejects.toThrow(
         "Network error",
