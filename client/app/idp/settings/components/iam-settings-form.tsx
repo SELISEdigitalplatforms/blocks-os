@@ -23,13 +23,15 @@ import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-fo
 import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config"
 import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model"
 import {
+  applyOidcIamConfigOverrides,
   buildSavePayload,
+  getBlocksIamBaseUrl,
   iamConfigFormSchema,
   toIamConfigFormValues,
   type IamConfigFormValues,
 } from "@blocks-idp/settings/utils/auth-config-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useForm, useFormState } from "react-hook-form"
 
 type IamSettingsFormProps = {
@@ -149,6 +151,21 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
 
   const { isDirty } = useFormState({ control: form.control })
   const isOidcEnabled = form.watch("isOidcEnabled")
+  const blocksIamBaseUrl = useMemo(() => getBlocksIamBaseUrl(), [])
+
+  useEffect(() => {
+    if (!isOidcEnabled) return
+
+    const currentBaseUrl = form.getValues("accountActionBaseUrl")
+    const currentUseDefault = form.getValues("useAccountActionBaseUrlAsDefault")
+
+    if (currentBaseUrl !== blocksIamBaseUrl) {
+      form.setValue("accountActionBaseUrl", blocksIamBaseUrl, { shouldDirty: true })
+    }
+    if (!currentUseDefault) {
+      form.setValue("useAccountActionBaseUrlAsDefault", true, { shouldDirty: true })
+    }
+  }, [blocksIamBaseUrl, form, isOidcEnabled])
 
   const handleReset = useCallback(() => {
     form.reset(toIamConfigFormValues(config))
@@ -157,7 +174,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
   const handleSubmit = useCallback(
     async (values: IamConfigFormValues) => {
       try {
-        const payload = buildSavePayload(config, values)
+        const payload = buildSavePayload(config, applyOidcIamConfigOverrides(values))
         const res = await mutateAsync(payload)
         if (!res.isSuccess) return showErrorToast({ errors: res.errors })
         showSuccessToast({ description: "IAM configuration updated successfully" })
@@ -195,81 +212,86 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
             render={({ field }) => (
               <SettingsToggleCard
                 label="OpenID Connect (OIDC)"
-                description="Routes account activation and recovery through your OIDC provider. Activation and recovery path settings are hidden while this is on."
+                description="Routes account activation and recovery through your OIDC provider. Path settings are hidden while this is on; account action links use the Blocks IAM base URL."
                 checked={field.value}
                 onCheckedChange={field.onChange}
               />
             )}
           />
 
-          {!isOidcEnabled ? (
-            <SettingsFormSection title="Activation & Recovery Paths">
-              <div className={SETTINGS_FORM_LAYOUT.stackedFields}>
-                <FormField
-                  name="accountActivationPath"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account Activation Path</FormLabel>
-                      <FormControl>
-                        <Input
-                          className={SETTINGS_FORM_LAYOUT.inputFull}
-                          placeholder="/auth/activate-account"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Redirect URL for initial user activation flows.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <SettingsFieldGrid>
+          <SettingsFormSection title="Activation & Recovery Paths">
+            <div className={SETTINGS_FORM_LAYOUT.stackedFields}>
+              {!isOidcEnabled ? (
+                <>
                   <FormField
-                    name="accountVerificationPath"
+                    name="accountActivationPath"
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Account Verification Path</FormLabel>
+                        <FormLabel>Account Activation Path</FormLabel>
                         <FormControl>
                           <Input
                             className={SETTINGS_FORM_LAYOUT.inputFull}
-                            placeholder="/auth/verify-identity"
+                            placeholder="/auth/activate-account"
                             {...field}
                           />
                         </FormControl>
+                        <FormDescription>
+                          Redirect URL for initial user activation flows.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    name="recoverAccountPath"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Recover Account Path</FormLabel>
-                        <FormControl>
-                          <Input
-                            className={SETTINGS_FORM_LAYOUT.inputFull}
-                            placeholder="/auth/recovery"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </SettingsFieldGrid>
-                <div className="space-y-3 pt-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-                      <p className="text-sm font-medium leading-none">Account Action Base URL</p>
-                      <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>
-                        Activation, verification, and recovery links use this host as the default
-                        prefix.
-                      </p>
-                    </div>
+                  <SettingsFieldGrid>
+                    <FormField
+                      name="accountVerificationPath"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Verification Path</FormLabel>
+                          <FormControl>
+                            <Input
+                              className={SETTINGS_FORM_LAYOUT.inputFull}
+                              placeholder="/auth/verify-identity"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="recoverAccountPath"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Recover Account Path</FormLabel>
+                          <FormControl>
+                            <Input
+                              className={SETTINGS_FORM_LAYOUT.inputFull}
+                              placeholder="/auth/recovery"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </SettingsFieldGrid>
+                </>
+              ) : null}
+              <div className={cn("space-y-3", !isOidcEnabled && "pt-4")}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
+                    <p className="text-sm font-medium leading-none">Account Action Base URL</p>
+                    <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>
+                      {isOidcEnabled
+                        ? "OIDC account actions use the Blocks IAM base URL."
+                        : "Activation, verification, and recovery links use this host as the default prefix."}
+                    </p>
+                  </div>
+                  {!isOidcEnabled ? (
                     <FormField
                       name="useAccountActionBaseUrlAsDefault"
                       control={form.control}
@@ -292,28 +314,28 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         </FormItem>
                       )}
                     />
-                  </div>
-                  <FormField
-                    name="accountActionBaseUrl"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem className="space-y-0">
-                        <FormControl>
-                          <AccountActionBaseUrlInput
-                            name={field.name}
-                            value={field.value}
-                            onBlur={field.onBlur}
-                            onChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormMessage className="mt-2" />
-                      </FormItem>
-                    )}
-                  />
+                  ) : null}
                 </div>
+                <FormField
+                  name="accountActionBaseUrl"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="space-y-0">
+                      <FormControl>
+                        <AccountActionBaseUrlInput
+                          name={field.name}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage className="mt-2" />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </SettingsFormSection>
-          ) : null}
+            </div>
+          </SettingsFormSection>
 
           <SettingsFormSection title="Expiration Lifetimes">
             <SettingsFieldGrid>
