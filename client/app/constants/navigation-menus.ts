@@ -225,6 +225,14 @@ export const navigationMenus: Menu[] = [
         type: "menu",
       },
       {
+        id: "mfa",
+        name: "MFA",
+        path: "/services/secret-management/mfa",
+        icon: Smartphone,
+        desc: "Multi-factor authentication settings",
+        type: "menu",
+      },
+      {
         id: "oidc-template",
         name: "OIDC Template",
         path: "/app/services/authentication/oidc-template",
