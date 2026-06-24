@@ -1,12 +1,9 @@
-import { authenticationService } from "@blocks-idp/authentication/services/authentication.service"
-import type {
-  IGetAuthConfigResponse,
-  ISaveAuthConfigResponse,
-} from "@blocks-idp/authentication/models/auth-configuration.model"
-import { organizationService } from "@blocks-idp/iam/services/organization.service"
-import type { IOrganizationConfigResponse } from "@blocks-idp/iam/models/organization-config.model"
-import { userService } from "@blocks-idp/iam/services/user.service"
-import type { IGetSignUpSettingResponse } from "@blocks-idp/iam/models/user"
+import { authenticationService } from "@blocks-idp/authentication/services/authentication.service";
+import type { ISaveAuthConfigResponse } from "@blocks-idp/authentication/models/auth-configuration.model";
+import type { IOrganizationConfigResponse } from "@blocks-idp/iam/models/organization-config.model";
+import type { IGetSignUpSettingResponse } from "@blocks-idp/iam/models/user";
+import { organizationService } from "@blocks-idp/iam/services/organization.service";
+import { userService } from "@blocks-idp/iam/services/user.service";
 import type {
   ISettingsAuthConfig,
   ISettingsOrganizationConfig,
@@ -14,8 +11,8 @@ import type {
   ISettingsSaveOrganizationConfigPayload,
   ISettingsSaveSignupConfigPayload,
   ISettingsSignupConfig,
-} from "@blocks-idp/settings/models/settings.model"
-import { normalizeAuthConfigResponse } from "@blocks-idp/settings/utils/normalize-auth-config"
+} from "@blocks-idp/settings/models/settings.model";
+import { normalizeAuthConfigResponse } from "@blocks-idp/settings/utils/normalize-auth-config";
 
 const mapOrganizationConfig = (
   response: IOrganizationConfigResponse,
@@ -30,58 +27,63 @@ const mapOrganizationConfig = (
   defaultRolesOnOrgCreation: response.defaultRoleOnOrgCreation,
   defaultPermissionsOnOrgCreation: response.defaultPermissionOnOrgCreation,
   keepOrgRolesSameAsDefaultRoles: response.keepOrgRolesSameAsDefaultRoles,
-  keepOrgPermissionsSameAsDefaultPermissions: response.keepOrgPermissionsSameAsDefaultPermissions,
-})
+  keepOrgPermissionsSameAsDefaultPermissions:
+    response.keepOrgPermissionsSameAsDefaultPermissions,
+});
 
-const mapSignupConfig = (response: IGetSignUpSettingResponse): ISettingsSignupConfig => ({
+const mapSignupConfig = (
+  response: IGetSignUpSettingResponse,
+): ISettingsSignupConfig => ({
   isSignUpEnable: response.isSignUpEnable,
   isEmailPasswordSignUpEnabled: response.isEmailPasswordSignUpEnabled,
   isSSoSignUpEnabled: response.isSSoSignUpEnabled,
   defaultRolesForNewUser: response.defaultRolesForNewUser ?? [],
   defaultPermissionsForNewUser: response.defaultPermissionsForNewUser ?? [],
-})
+});
 
 export class SettingsConfigService {
   getAuthConfig(): Promise<ISettingsAuthConfig> {
     return authenticationService.configuration
       .getConfig()
-      .then((response) => normalizeAuthConfigResponse(response))
+      .then((response) => normalizeAuthConfigResponse(response));
   }
 
-  saveAuthConfig(payload: ISettingsSaveAuthConfigPayload): Promise<ISaveAuthConfigResponse> {
+  saveAuthConfig(
+    payload: ISettingsSaveAuthConfigPayload,
+  ): Promise<ISaveAuthConfigResponse> {
     return authenticationService.configuration.saveAuthConfig({
       ...payload,
       allowedGrantTypes: payload.allowedGrantTypes,
       projectKey: "",
       isSelfSignUpAllowed: false,
-    })
+    });
   }
 
   getOrganizationConfig(): Promise<ISettingsOrganizationConfig> {
     return organizationService.getOrganizationConfig().then((response) => {
       if (!response) {
-        throw new Error("Organization config not found")
+        throw new Error("Organization config not found");
       }
 
-      return mapOrganizationConfig(response)
-    })
+      return mapOrganizationConfig(response);
+    });
   }
 
   saveOrganizationConfig(
     payload: ISettingsSaveOrganizationConfigPayload,
   ): Promise<{ isSuccess: boolean; errors?: unknown }> {
-    return organizationService.saveOrganizationConfig(payload)
+    return organizationService.saveOrganizationConfig(payload);
   }
 
   getSignUpSetting(): Promise<ISettingsSignupConfig> {
-    return userService.getSignUpSetting().then(mapSignupConfig)
+    return userService.getSignUpSetting().then(mapSignupConfig);
   }
 
   saveSignUpSetting(
     payload: ISettingsSaveSignupConfigPayload,
   ): Promise<{ isSuccess: boolean; itemId?: string; errors?: unknown }> {
-    return userService.saveSignUpSetting(payload)
+    return userService.saveSignUpSetting(payload);
   }
 }
 
-export const settingsConfigService = new SettingsConfigService()
+export const settingsConfigService = new SettingsConfigService();

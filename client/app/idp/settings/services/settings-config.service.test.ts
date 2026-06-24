@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { authenticationService } from "@blocks-idp/authentication/services/authentication.service"
-import { organizationService } from "@blocks-idp/iam/services/organization.service"
-import { userService } from "@blocks-idp/iam/services/user.service"
-import { settingsConfigService } from "./settings-config.service"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { authenticationService } from "@blocks-idp/authentication/services/authentication.service";
+import { organizationService } from "@blocks-idp/iam/services/organization.service";
+import { userService } from "@blocks-idp/iam/services/user.service";
+import { settingsConfigService } from "./settings-config.service";
 
 vi.mock("@blocks-idp/authentication/services/authentication.service", () => ({
   authenticationService: {
@@ -11,36 +11,36 @@ vi.mock("@blocks-idp/authentication/services/authentication.service", () => ({
       saveAuthConfig: vi.fn(),
     },
   },
-}))
+}));
 
 vi.mock("@blocks-idp/iam/services/organization.service", () => ({
   organizationService: {
     getOrganizationConfig: vi.fn(),
     saveOrganizationConfig: vi.fn(),
   },
-}))
+}));
 
 vi.mock("@blocks-idp/iam/services/user.service", () => ({
   userService: {
     getSignUpSetting: vi.fn(),
     saveSignUpSetting: vi.fn(),
   },
-}))
-
-const projectKey = "test-tenant-id"
+}));
 
 describe("SettingsConfigService", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   afterEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   describe("getAuthConfig", () => {
     it("delegates to authentication configuration service", async () => {
-      vi.mocked(authenticationService.configuration.getConfig).mockResolvedValue({
+      vi.mocked(
+        authenticationService.configuration.getConfig,
+      ).mockResolvedValue({
         itemId: "auth-1",
         allowedGrantTypes: ["password"],
         accessTokenValidForNumberMinutes: 7,
@@ -61,23 +61,27 @@ describe("SettingsConfigService", () => {
         recoverAccountUrlLifetimeInMinutes: 10,
         logoutOnPasswordChange: true,
         passwordStrengthCheckerRegex: ".*",
-      })
+      });
 
-      const result = await settingsConfigService.getAuthConfig()
+      const result = await settingsConfigService.getAuthConfig();
 
-      expect(authenticationService.configuration.getConfig).toHaveBeenCalledWith()
-      expect(result.itemId).toBe("auth-1")
-      expect(result.allowedGrantTypes).toEqual(["password"])
-      expect(result.accessTokenValidForNumberMinutes).toBe(7)
-    })
-  })
+      expect(
+        authenticationService.configuration.getConfig,
+      ).toHaveBeenCalledWith();
+      expect(result.itemId).toBe("auth-1");
+      expect(result.allowedGrantTypes).toEqual(["password"]);
+      expect(result.accessTokenValidForNumberMinutes).toBe(7);
+    });
+  });
 
   describe("saveAuthConfig", () => {
     it("delegates to authentication configuration save", async () => {
-      vi.mocked(authenticationService.configuration.saveAuthConfig).mockResolvedValue({
+      vi.mocked(
+        authenticationService.configuration.saveAuthConfig,
+      ).mockResolvedValue({
         isSuccess: true,
         errors: null,
-      })
+      });
 
       const payload = {
         itemId: "auth-1",
@@ -99,18 +103,20 @@ describe("SettingsConfigService", () => {
         logoutOnPasswordChange: true,
         passwordStrengthCheckerRegex: ".*",
         allowedGrantTypes: ["password"],
-      }
+      };
 
-      const result = await settingsConfigService.saveAuthConfig(payload)
+      const result = await settingsConfigService.saveAuthConfig(payload);
 
-      expect(authenticationService.configuration.saveAuthConfig).toHaveBeenCalledWith({
+      expect(
+        authenticationService.configuration.saveAuthConfig,
+      ).toHaveBeenCalledWith({
         ...payload,
         projectKey: "",
         isSelfSignUpAllowed: false,
-      })
-      expect(result.isSuccess).toBe(true)
-    })
-  })
+      });
+      expect(result.isSuccess).toBe(true);
+    });
+  });
 
   describe("getOrganizationConfig", () => {
     it("maps organization config from IAM service", async () => {
@@ -133,34 +139,36 @@ describe("SettingsConfigService", () => {
         defaultPermissionOnOrgCreation: [],
         keepOrgRolesSameAsDefaultRoles: true,
         keepOrgPermissionsSameAsDefaultPermissions: true,
-      })
+      });
 
-      const result = await settingsConfigService.getOrganizationConfig()
+      const result = await settingsConfigService.getOrganizationConfig();
 
-      expect(organizationService.getOrganizationConfig).toHaveBeenCalledWith()
-      expect(result.allowCreationFromCloud).toBe(true)
-      expect(result.allowOrgCreationFromPortal).toBe(true)
-      expect(result.isMultiOrgEnabled).toBe(false)
-      expect(result.consentForMultiOrgEnable).toBe(false)
-      expect(result.defaultRolesOnOrgCreation).toEqual([])
-      expect(result.keepOrgPermissionsSameAsDefaultPermissions).toBe(true)
-    })
+      expect(organizationService.getOrganizationConfig).toHaveBeenCalledWith();
+      expect(result.allowCreationFromCloud).toBe(true);
+      expect(result.allowOrgCreationFromPortal).toBe(true);
+      expect(result.isMultiOrgEnabled).toBe(false);
+      expect(result.consentForMultiOrgEnable).toBe(false);
+      expect(result.defaultRolesOnOrgCreation).toEqual([]);
+      expect(result.keepOrgPermissionsSameAsDefaultPermissions).toBe(true);
+    });
 
     it("throws when organization config is missing", async () => {
-      vi.mocked(organizationService.getOrganizationConfig).mockResolvedValue(null)
+      vi.mocked(organizationService.getOrganizationConfig).mockResolvedValue(
+        null,
+      );
 
-      await expect(settingsConfigService.getOrganizationConfig()).rejects.toThrow(
-        "Organization config not found",
-      )
-    })
-  })
+      await expect(
+        settingsConfigService.getOrganizationConfig(),
+      ).rejects.toThrow("Organization config not found");
+    });
+  });
 
   describe("saveOrganizationConfig", () => {
     it("delegates to organization service save", async () => {
       vi.mocked(organizationService.saveOrganizationConfig).mockResolvedValue({
         isSuccess: true,
         errors: null,
-      })
+      });
 
       const payload = {
         allowOrgCreationFromCloud: true,
@@ -173,14 +181,17 @@ describe("SettingsConfigService", () => {
         defaultPermissionsOnOrgCreation: [],
         keepOrgRolesSameAsDefaultRoles: true,
         keepOrgPermissionsSameAsDefaultPermissions: true,
-      }
+      };
 
-      const result = await settingsConfigService.saveOrganizationConfig(payload)
+      const result =
+        await settingsConfigService.saveOrganizationConfig(payload);
 
-      expect(organizationService.saveOrganizationConfig).toHaveBeenCalledWith(payload)
-      expect(result.isSuccess).toBe(true)
-    })
-  })
+      expect(organizationService.saveOrganizationConfig).toHaveBeenCalledWith(
+        payload,
+      );
+      expect(result.isSuccess).toBe(true);
+    });
+  });
 
   describe("getSignUpSetting", () => {
     it("maps signup settings from IAM user service", async () => {
@@ -198,16 +209,18 @@ describe("SettingsConfigService", () => {
         isSSoSignUpEnabled: false,
         defaultRolesForNewUser: ["user"],
         defaultPermissionsForNewUser: ["blocks-idp::self-service"],
-      })
+      });
 
-      const result = await settingsConfigService.getSignUpSetting()
+      const result = await settingsConfigService.getSignUpSetting();
 
-      expect(userService.getSignUpSetting).toHaveBeenCalledWith()
-      expect(result.isSignUpEnable).toBe(true)
-      expect(result.defaultRolesForNewUser).toEqual(["user"])
-      expect(result.defaultPermissionsForNewUser).toEqual(["blocks-idp::self-service"])
-    })
-  })
+      expect(userService.getSignUpSetting).toHaveBeenCalledWith();
+      expect(result.isSignUpEnable).toBe(true);
+      expect(result.defaultRolesForNewUser).toEqual(["user"]);
+      expect(result.defaultPermissionsForNewUser).toEqual([
+        "blocks-idp::self-service",
+      ]);
+    });
+  });
 
   describe("saveSignUpSetting", () => {
     it("delegates to user service save", async () => {
@@ -215,7 +228,7 @@ describe("SettingsConfigService", () => {
         isSuccess: true,
         itemId: "tenant-config-001",
         errors: null,
-      })
+      });
 
       const payload = {
         isSignUpEnable: true,
@@ -223,12 +236,12 @@ describe("SettingsConfigService", () => {
         isSSoSignUpEnabled: false,
         defaultRolesForNewUserOnSignUp: ["user"],
         defaultPermissionsForNewUserOnSignUp: ["blocks-idp::self-service"],
-      }
+      };
 
-      const result = await settingsConfigService.saveSignUpSetting(payload)
+      const result = await settingsConfigService.saveSignUpSetting(payload);
 
-      expect(userService.saveSignUpSetting).toHaveBeenCalledWith(payload)
-      expect(result.isSuccess).toBe(true)
-    })
-  })
-})
+      expect(userService.saveSignUpSetting).toHaveBeenCalledWith(payload);
+      expect(result.isSuccess).toBe(true);
+    });
+  });
+});
