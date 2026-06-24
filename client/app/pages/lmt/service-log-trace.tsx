@@ -1,4 +1,5 @@
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
+import { LMT_BASE_PATH } from "@/constants/lmt-nav";
 import { TraceDetails } from "@blocks-lmt/components/trace-details";
 import { SERVICES } from "@blocks-lmt/constants/services.constant";
 import { useMemo } from "react";
@@ -19,17 +20,17 @@ export function LmtServiceLogTraceRoute() {
 
   const id = traceId ?? "";
   const backHref = serviceName
-    ? `/services/lmt/logs/${serviceName}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`
-    : "/services/lmt/logs";
+    ? `${LMT_BASE_PATH}/logs/${serviceName}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`
+    : `${LMT_BASE_PATH}/logs`;
 
-  BREADCRUMB_CUSTOM_TITLES["/services/lmt/logs"] = "Logs";
+  BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs`] = "Logs";
   if (serviceName) {
-    BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}`] =
+    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}`] =
       service?.label ?? serviceName;
-    BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}/trace`] = null;
+    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}/trace`] = null;
     if (id) {
       BREADCRUMB_CUSTOM_TITLES[
-        `/services/lmt/logs/${serviceName}/trace/${id}`
+        `${LMT_BASE_PATH}/logs/${serviceName}/trace/${id}`
       ] = id;
     }
   }
