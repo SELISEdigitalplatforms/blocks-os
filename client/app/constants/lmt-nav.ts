@@ -3,6 +3,8 @@ import { NavItem, NavGroup } from "@/constants/secret-management-nav";
 
 export type { NavItem, NavGroup };
 
+export const LMT_BASE_PATH = "/app/services/lmt" as const;
+
 export const LMT_NAV_GROUPS: NavGroup[] = [
   {
     label: "Metrics",
