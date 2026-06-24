@@ -81,7 +81,6 @@ export const mockUser: User = {
   status: 1,
   statusReason: null,
   deactivatedAtUtc: null,
-  isVarified: true,
   isVerified: true,
   emailVerifiedAtUtc: null,
   phoneVerifiedAtUtc: null,

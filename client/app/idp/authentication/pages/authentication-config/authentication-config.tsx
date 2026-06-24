@@ -1,216 +1,88 @@
-import { LogMenu } from "@blocks-lmt/components";
-import { useQueryState } from "nuqs";
-import { Button } from "@/components/ui-kits/button/button";
-// import { ClientCredentials } from "@blocks-idp/authentication/components/client-credentials";
-// import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
-import { Permissions } from "@blocks-idp/iam/modules/permission-management";
-import { AddRole, Roles } from "@blocks-idp/iam/modules/role-management";
-import { PrimaryButton } from "@/components/action-buttons/primary-button";
-import { Link } from "react-router-dom";
-import { Settings, X, ChevronsLeft, Menu } from "lucide-react";
-import { EmailServiceTable, EmailConfiguration, EmailCommunicationDetails } from "@blocks-communication/mail";
-import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui-kits/dialog/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
-import { cn } from "@/lib/utils";
-import StepperProvider, { useStepper } from "@/components/stepper/stepper-provider";
-import StepVerticalTrackBar from "@/components/stepper/vertical-track-bar";
-import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";
-import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
-import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
-import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { IEmailTemplate } from "@blocks-communication/mail/models/email";
-import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
-import { SettingsPage } from "@blocks-idp/settings";
-const NEW_COMMUNICATION_STEPS = [
-  { id: 1, title: "Basic Information" },
-  { id: 2, title: "Template" },
-];
-interface NewCommunicationContentProps {
-  onClose: () => void;
-  onCreated: (id: string) => void;
-}
-function NewCommunicationContent({ onClose, onCreated }: NewCommunicationContentProps) {
-  const { currentStep, nextStep } = useStepper();
-  const [templateData, setTemplateData] = useState<IEmailTemplate>({ itemId: "" });
-  const [isFormValid, setIsFormValid] = useState(false);
-  const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
-  const ref = useRef<{ submit: () => void; isValid: boolean }>(null);
-  const beeRef = useRef<{ submit: () => void; preview: () => void }>(null);
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  const formSubmitHandler = async (data: IEmailTemplate) => {
-    try {
-      data.itemId = templateData?.itemId || "";
-      const response = await saveTemplate({ ...data, projectKey: tenantId });
-      data.itemId = response.itemId;
-      setTemplateData(data);
-      nextStep();
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
-    try {
-      const res = await saveTemplate({
-        itemId: templateData?.itemId || "",
-        templateBody: data.htmlFile,
-        jsonContent: data.jsonFile,
-        projectKey: tenantId,
-      });
-      if (res.isSuccess) {
-        onCreated(res.itemId);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  return (
-    <div className="flex h-full">
-      <div className="hidden min-h-full w-64 flex-shrink-0 flex-col gap-5 border-r bg-background p-5 pt-10 md:flex">
-        <div className="mx-2 my-3">
-          <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onClose}>
-              <X className="h-6 w-6" />
-            </Button>
-            <p className="text-lg font-semibold">New Template</p>
-          </div>
-          <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">Create a new template</p>
-        </div>
-        <StepVerticalTrackBar />
-      </div>
-      <div className="flex-1 overflow-auto p-6">
-        <div className="mb-4 flex flex-col items-center justify-center md:hidden">
-          <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onClose}>
-              <X className="h-6 w-6" />
-            </Button>
-            <p className="text-lg font-semibold">New Template</p>
-          </div>
-          <p className="mt-2 text-sm text-medium-emphasis">Create a new template</p>
-          <div className="mt-4 w-full">
-            <StepHorizontalTrackBar />
-          </div>
-        </div>
-        {currentStep === 1 ? (
-          <div className="[&>main]:mt-0 [&>main]:sm:mt-0">
-            <BasicInformation
-              ref={ref}
-              onSubmit={formSubmitHandler}
-              templateData={templateData}
-              onValidityChange={setIsFormValid}
-            />
-          </div>
-        ) : (
-          <div>
-            <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-2xl font-semibold">Template</h3>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => beeRef?.current?.preview()}>
-                  Preview
-                </Button>
-                <Button disabled={isPending} onClick={() => beeRef?.current?.submit()}>
-                  Save
-                </Button>
-              </div>
-            </div>
-            <BeePluginStarter ref={beeRef} onBeeSave={handleBeePluginData} jsonFile={blankTemplate} />
-          </div>
-        )}
-        {currentStep === 1 && (
-          <div className="mt-10">
-            <Button
-              size="lg"
-              onClick={() => ref?.current?.submit()}
-              disabled={isPending || !isFormValid}
-            >
-              Save & Continue
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
+import { Button } from "@/components/ui-kits/button/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui-kits/dialog/dialog";
+import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
+import { Settings } from "lucide-react";
+import { parseAsBoolean, useQueryState } from "nuqs";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { PrimaryButton } from "@/components/action-buttons/primary-button";
+import { AddRole } from "@/idp/iam/modules/role-management";
+
+export const AuthenticationConfigLayout = () => {
+  const { pathname } = useLocation();
+  const currentPath = pathname.split("/").pop() ?? "config";
+
+  // Shared via URL — the email-template child route reads the same key to know when to open
+  const [configureOpen, setConfigureOpen] = useQueryState(
+    "configure",
+    parseAsBoolean.withDefault(false),
   );
-}
-export const AuthenticationConfig = () => {
-  const [selectedTab] = useQueryState("tab", { defaultValue: "config" });
-  const [configureOpen, setConfigureOpen] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const currentItem = AUTHENTICATION_NAV_GROUPS
-    .flatMap((g) => g.items)
-    .find((item) => item.value === (selectedTab ?? "config"));
-  const handleTemplateCreated = (id: string) => {
-    setSelectedTemplateId(id);
-  };
+
+  const currentItem = AUTHENTICATION_NAV_GROUPS.flatMap((g) => g.items).find(
+    (item) => item.value === currentPath,
+  );
+
+  const isSettingsPath = currentPath === "config";
+
   const headerActions = (
     <>
-      {selectedTab === "roles" && <AddRole />}
-      {selectedTab === "permissions" && (
-        <Link to="/services/iam/permission-detail/new">
+      {currentPath === "roles" && <AddRole />}
+      {currentPath === "permissions" && (
+        <Link to="/services/authentication/permission-detail/new">
           <PrimaryButton label="Add Permission" />
         </Link>
       )}
-      {selectedTab === "email-template" && (
+      {currentPath === "email-template" && (
         <Button
           variant="outline"
           size="default"
           className="gap-1 text-sm font-medium"
-          onClick={() => setConfigureOpen(true)}
-        >
+          onClick={() => setConfigureOpen(true)}>
           <Settings className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only">Configure</span>
         </Button>
       )}
     </>
   );
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            {currentItem && selectedTab !== "config" && (
-              <div>
-                <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+          {!isSettingsPath && currentItem && (
+            <header className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="space-y-1">
+                <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
                   {currentItem.label}
                 </h1>
-                <p className="text-xs text-muted-foreground">{currentItem.desc}</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentItem.desc}
+                </p>
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">{headerActions}</div>
+              <div className="flex shrink-0 items-center justify-end gap-2">
+                {headerActions}
+              </div>
+            </header>
+          )}
+          <Outlet />
         </div>
-        <div className="flex-1 overflow-y-auto p-6">
-        {selectedTab === "email-template" && (
-          selectedTemplateId ? (
-            <EmailCommunicationDetails
-              params={{ id: selectedTemplateId }}
-              onBack={() => setSelectedTemplateId(null)}
-            />
-          ) : (
-            <EmailServiceTable onRowClick={(id) => setSelectedTemplateId(String(id))} />
-          )
-        )}
-        {selectedTab === "oidc-template" && (
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h3 className="text-lg font-semibold">OIDC template</h3>
-            <p className="mt-2 text-muted-foreground">Configure your OIDC template settings</p>
-          </div>
-        )}
-        {selectedTab === "roles" && <Roles />}
-        {selectedTab === "permissions" && <Permissions />}
-        {selectedTab === "config" && <SettingsPage />}
       </div>
-    </div>
-    <Dialog open={configureOpen} onOpenChange={setConfigureOpen}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Email Configuration</DialogTitle>
-        </DialogHeader>
-        <EmailConfiguration />
-      </DialogContent>
-    </Dialog>
+
+      <Dialog
+        open={configureOpen ?? false}
+        onOpenChange={(open) => setConfigureOpen(open)}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email Configuration</DialogTitle>
+          </DialogHeader>
+          <EmailConfiguration />
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

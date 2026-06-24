@@ -25,7 +25,9 @@ describe("useLogs", () => {
       const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
-      expect(lmtService.log.getLogsByDate).toHaveBeenCalled();
+      expect(lmtService.log.getLogsByDate).toHaveBeenCalledWith(
+        expect.not.objectContaining({ projectKey: expect.anything() }),
+      );
       expect(result.current.initialLogs).toHaveLength(2);
     });
 
@@ -45,7 +47,46 @@ describe("useLogs", () => {
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.initialLogs).toHaveLength(0);
     });
-  });
+
+    it("should refetch when serviceName changes", async () => {
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse)
+
+      const { rerender } = renderHook(
+        ({ serviceName }: { serviceName: string }) => useLogs({ serviceName }),
+        { initialProps: { serviceName: "blocks-iam" } },
+      )
+
+      await waitFor(() =>
+        expect(lmtService.log.getLogsByDate).toHaveBeenCalledWith(
+          expect.objectContaining({ serviceName: "blocks-iam" }),
+        ),
+      )
+
+      rerender({ serviceName: "blocks-monitor" })
+
+      await waitFor(() =>
+        expect(lmtService.log.getLogsByDate).toHaveBeenLastCalledWith(
+          expect.objectContaining({ serviceName: "blocks-monitor" }),
+        ),
+      )
+    })
+
+    it("should dedupe concurrent initial fetches with identical params", async () => {
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse)
+
+      const { unmount: unmountA } = renderHook(() =>
+        useLogs({ serviceName: "blocks-iam" }),
+      )
+      const { unmount: unmountB } = renderHook(() =>
+        useLogs({ serviceName: "blocks-iam" }),
+      )
+
+      await waitFor(() => expect(lmtService.log.getLogsByDate).toHaveBeenCalledTimes(1))
+
+      unmountA()
+      unmountB()
+    })
+  })
 
   // ─── fetchOldLogs ─────────────────────────────────────────────────────────
   describe("fetchOldLogs", () => {
