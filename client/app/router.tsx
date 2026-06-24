@@ -61,12 +61,13 @@ import ManagedServicesPage from "./routes/dashboard/managed-services";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
 
 const redirectPaths: Record<string, string> = {
-  "/services/authentication/user-detail/*": "/services/authentication",
-  "/services/authentication/role-detail/*": "/services/authentication/roles",
-  "/services/authentication/organization-detail/*":
-    "/services/authentication/organizations",
-  "/services/authentication/permission-detail/*":
-    "/services/authentication/permissions",
+  "/app/services/authentication/user-detail/*": "/app/services/authentication",
+  "/app/services/authentication/role-detail/*":
+    "/app/services/authentication/roles",
+  "/app/services/authentication/organization-detail/*":
+    "/app/services/authentication/organizations",
+  "/app/services/authentication/permission-detail/*":
+    "/app/services/authentication/permissions",
 };
 
 export const router = createBrowserRouter([
@@ -81,7 +82,7 @@ export const router = createBrowserRouter([
       // Login callback outside AuthResolver (handled by blocks-kit)
       {
         path: "/login/callback",
-        element: <CallbackPage redirectUrl="/console" />,
+        element: <CallbackPage defaultRedirectUrl="/app/console" />,
       },
 
       {
@@ -104,6 +105,7 @@ export const router = createBrowserRouter([
 
           // protected
           {
+            path: "/app",
             element: (
               <ProtectedGuard>
                 <Outlet />
@@ -118,25 +120,26 @@ export const router = createBrowserRouter([
                   </ConsoleLayout>
                 ),
                 children: [
-                  { path: "/profile", element: <ProfilePage /> },
+                  { path: "profile", element: <ProfilePage /> },
                   {
-                    path: "/console",
+                    path: "console",
                     element: <ConsolePage canCreateProject />,
                   },
                   {
-                    path: "/create-project",
+                    path: "create-project",
                     element: <CreateProjectWrapper />,
                   },
                   {
-                    path: "/data-migration",
+                    path: "data-migration",
                     element: <EnvironmentMigrationPage />,
                   },
-                  { path: "/callback", element: <GitHubCallbackPage /> },
+                  { path: "callback", element: <GitHubCallbackPage /> },
                 ],
               },
 
               // ── Project overview layout ──
               {
+                path: "project-overview",
                 element: (
                   <ProjectOverviewLayout
                     redirectPaths={redirectPaths}
@@ -146,33 +149,31 @@ export const router = createBrowserRouter([
                 ),
                 children: [
                   {
-                    path: "/project-overview",
-                    element: (
-                      <Navigate to="/project-overview/environments" replace />
-                    ),
+                    index: true,
+                    element: <Navigate to="environments" replace />,
                   },
                   {
-                    path: "/project-overview/environments",
+                    path: "environments",
                     element: <EnvironmentsPage />,
                   },
                   {
-                    path: "/project-overview/people",
+                    path: "people",
                     element: <PeopleManagement />,
                   },
                   {
-                    path: "/project-overview/people/:id",
+                    path: "people/:id",
                     element: <PersonDetailPage />,
                   },
                   {
-                    path: "/project-overview/repositories",
+                    path: "repositories",
                     element: <RepositoriesPage />,
                   },
                   {
-                    path: "/project-overview/settings",
+                    path: "settings",
                     element: <SettingsPage />,
                   },
                   {
-                    path: "/project-overview/subscription-usage",
+                    path: "subscription-usage",
                     element: <SubscriptionUsagePage />,
                   },
                 ],
@@ -188,9 +189,9 @@ export const router = createBrowserRouter([
                   </DashboardLayout>
                 ),
                 children: [
-                  { path: "/dashboard", element: <DashboardOverview /> },
+                  { path: "dashboard", element: <DashboardOverview /> },
                   {
-                    path: "/services/secret-management",
+                    path: "services/secret-management",
                     element: <SecretManagementLayout />,
                     children: [
                       {
@@ -272,7 +273,7 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
-                    path: "/services/authentication",
+                    path: "services/authentication",
                     element: <AuthenticationConfigLayout />,
                     children: [
                       {
@@ -302,11 +303,11 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
-                    path: "/services/api-settings",
+                    path: "services/api-settings",
                     element: <ApiSettingsPage />,
                   },
                   {
-                    path: "/services/lmt",
+                    path: "services/lmt",
                     element: <LmtPage />,
                     children: [
                       {
@@ -334,40 +335,6 @@ export const router = createBrowserRouter([
                       },
                     ],
                   },
-
-                  // { path: "/services/iam", element: <IamPage /> },
-                  // {
-                  //   path: "/services/iam/role-detail/:id",
-                  //   element: <IamRoleDetailPage />,
-                  // },
-
-                  // {
-                  //   path: "/services/iam/permission-detail/:id",
-                  //   element: <IamPermissionDetailPage />,
-                  // },
-                  // {
-                  //   path: "/services/iam/organization-detail/:itemId",
-                  //   element: <IamOrgDetailPage />,
-                  // },
-                  // {
-                  //   path: "/services/iam/configure",
-                  //   element: <IamConfigurePage />,
-                  // },
-
-                  // {
-                  //   path: "/services/authentication/sso-configuration",
-                  //   element: <SsoConfigurationPage />,
-                  // },
-
-                  // {
-                  //   path: "/services/rate-limiter",
-                  //   element: <RateLimiterPage />,
-                  // },
-
-                  // {
-                  //   path: "/services/lmt/logs/:serviceName",
-                  //   element: <LmtServiceLogsPage />,
-                  // },
                 ],
               },
             ],
@@ -377,7 +344,7 @@ export const router = createBrowserRouter([
           // { path: "/", element: <Navigate to="/console" replace /> },
           // ── Catch-all: redirect to login ──
 
-          { path: "*", element: <Navigate to="/console" replace /> },
+          { path: "*", element: <Navigate to="/app/console" replace /> },
         ],
       },
     ],
