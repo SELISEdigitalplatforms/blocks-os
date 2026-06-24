@@ -82,7 +82,7 @@ export const router = createBrowserRouter([
       // Login callback outside AuthResolver (handled by blocks-kit)
       {
         path: "/login/callback",
-        element: <CallbackPage redirectUrl="/app/console" />,
+        element: <CallbackPage defaultRedirectUrl="/app/console" />,
       },
 
       {
