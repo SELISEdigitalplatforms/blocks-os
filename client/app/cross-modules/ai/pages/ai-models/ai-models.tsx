@@ -1,7 +1,10 @@
 import { Card } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { AiModelsList } from "./aimodels-list";
-import { useAIModelsQueryParams, useSeedProviders } from "@blocks-ai/hooks/use-aimodel";
+import { AiModelsList } from "./ai-models-list";
+import {
+  useAIModelsQueryParams,
+  useSeedProviders,
+} from "@blocks-ai/hooks/use-aimodel";
 import { AIModelsFilterToolbar } from "@blocks-ai/components/aimodels/aimodel-filter-toolbar/aimodel-filter-toolbar";
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
 import {
@@ -13,7 +16,9 @@ const ProviderGridSkeleton = () => {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="flex flex-col gap-4 rounded-md border px-4 py-5">
+        <div
+          key={index}
+          className="flex flex-col gap-4 rounded-md border px-4 py-5">
           <div className="mb-0 flex w-full flex-row justify-between">
             <div className="flex flex-row gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-sm border p-2">
@@ -38,21 +43,33 @@ const ProviderGridSkeleton = () => {
 };
 export const AIModels = () => {
   const { data: providers, isLoading } = useSeedProviders();
-  const allProviders = [...(Array.isArray(providers) ? providers : []), createCustomProvider()];
+  const allProviders = [
+    ...(Array.isArray(providers) ? providers : []),
+    createCustomProvider(),
+  ];
   const officialApiModels = allProviders.filter((p) => {
     if (!p || !p.Provider) return false;
-    return ProviderToPlatformMap[p.Provider.toLowerCase()] === ServicePlatform.OFFICIAL_API;
+    return (
+      ProviderToPlatformMap[p.Provider.toLowerCase()] ===
+      ServicePlatform.OFFICIAL_API
+    );
   });
   const openDeploymentModels = allProviders.filter((p) => {
     if (!p || !p.Provider) return false;
-    return ProviderToPlatformMap[p.Provider.toLowerCase()] !== ServicePlatform.OFFICIAL_API;
+    return (
+      ProviderToPlatformMap[p.Provider.toLowerCase()] !==
+      ServicePlatform.OFFICIAL_API
+    );
   });
   const { queryParams } = useAIModelsQueryParams();
   const search = queryParams.search.toLowerCase();
   const selectedTypes = queryParams.types;
-  const matchSearch = (p: IProvider) => p.Provider.toLowerCase().includes(search);
-  const shouldShowOfficial = selectedTypes.length === 0 || selectedTypes.includes("official");
-  const shouldShowOpen = selectedTypes.length === 0 || selectedTypes.includes("open");
+  const matchSearch = (p: IProvider) =>
+    p.Provider.toLowerCase().includes(search);
+  const shouldShowOfficial =
+    selectedTypes.length === 0 || selectedTypes.includes("official");
+  const shouldShowOpen =
+    selectedTypes.length === 0 || selectedTypes.includes("open");
   const filteredOfficial = officialApiModels.filter(matchSearch);
   const filteredOpen = openDeploymentModels.filter(matchSearch);
   return (
@@ -80,10 +97,16 @@ export const AIModels = () => {
       ) : (
         <>
           {shouldShowOfficial && (
-            <AiModelsList servicePlatform="Official API" providerList={filteredOfficial} />
+            <AiModelsList
+              servicePlatform="Official API"
+              providerList={filteredOfficial}
+            />
           )}
           {shouldShowOpen && (
-            <AiModelsList servicePlatform="Open Deployment" providerList={filteredOpen} />
+            <AiModelsList
+              servicePlatform="Open Deployment"
+              providerList={filteredOpen}
+            />
           )}
         </>
       )}

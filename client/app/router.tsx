@@ -13,7 +13,7 @@ import {
 } from "@seliseblocks/blocks-kit";
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { navigationMenus } from "./constants/navigation-menus";
-import { AIModels } from "./cross-modules/ai/pages/aimodels";
+import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage } from "./cross-modules/communication/mail";
 import { NotificationConfigurationListPage } from "./cross-modules/communication/notification/components/notification-configuration-list";
 import { SecretsList } from "./cross-modules/secrets/components/secrets-list/secrets-list";
@@ -61,13 +61,11 @@ import ManagedServicesPage from "./routes/dashboard/managed-services";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
 
 const redirectPaths: Record<string, string> = {
-  "/app/services/authentication/user-detail/*": "/app/services/authentication",
-  "/app/services/authentication/role-detail/*":
-    "/app/services/authentication/roles",
-  "/app/services/authentication/organization-detail/*":
-    "/app/services/authentication/organizations",
-  "/app/services/authentication/permission-detail/*":
-    "/app/services/authentication/permissions",
+  "/app/authentication/user-detail/*": "/app/authentication",
+  "/app/authentication/role-detail/*": "/app/authentication/roles",
+  "/app/authentication/organization-detail/*":
+    "/app/authentication/organizations",
+  "/app/authentication/permission-detail/*": "/app/authentication/permissions",
 };
 
 export const router = createBrowserRouter([
@@ -191,7 +189,7 @@ export const router = createBrowserRouter([
                 children: [
                   { path: "dashboard", element: <DashboardOverview /> },
                   {
-                    path: "services/secret-management",
+                    path: "secret-management",
                     element: <SecretManagementLayout />,
                     children: [
                       {
@@ -273,7 +271,7 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
-                    path: "services/authentication",
+                    path: "authentication",
                     element: <AuthenticationConfigLayout />,
                     children: [
                       {
@@ -303,11 +301,11 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
-                    path: "services/api-settings",
+                    path: "api-settings",
                     element: <ApiSettingsPage />,
                   },
                   {
-                    path: "services/lmt",
+                    path: "lmt",
                     element: <LmtPage />,
                     children: [
                       {
