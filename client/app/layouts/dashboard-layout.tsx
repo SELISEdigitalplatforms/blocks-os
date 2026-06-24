@@ -3,7 +3,6 @@ import { DashboardLayoutProvider } from "@/contexts/dashboard-layout-provider";
 import { SidebarMenuDesktop } from "@/layouts/sidebar-menu-desktop/sidebar-menu-desktop";
 import { DashboardHeader } from "@/layouts/dashboard-header/dashboard-header";
 export function DashboardLayout() {
-  console.log("husky test 1");
   return (
     <DashboardLayoutProvider isOpen={true} persist>
       <div className="relative flex h-screen bg-[hsl(var(--surface-app))]">
