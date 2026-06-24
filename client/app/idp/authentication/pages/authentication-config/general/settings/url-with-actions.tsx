@@ -1,8 +1,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui-kits/button/button"
 import { cn } from "@/lib/utils"
-import { getApiUrl } from "@/lib/get-api-path"
-import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { Check, Copy, Download } from "lucide-react"
 
 interface UrlWithActionsProps {
@@ -30,10 +28,9 @@ const copyTextToClipboard = async (text: string) => {
 
 export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
   const [isCopying, setIsCopying] = useState(false)
-  const { tenantId } = useProjectStore().selectedProject || { tenantId: "" }
-  const jwksUrl = `${getApiUrl("idp/v1", ".well-known/jwks.json")}?X-Blocks-Key=${tenantId}`
+  const certificatePath = url.trim()
 
-  if (!url) {
+  if (!certificatePath) {
     return <span className="text-sm text-muted-foreground">No certificate configured</span>
   }
 
@@ -43,7 +40,7 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
       event.stopPropagation()
       if (isCopying) return
       setIsCopying(true)
-      await copyTextToClipboard(jwksUrl)
+      await copyTextToClipboard(certificatePath)
     } catch (err) {
       console.error("Failed to copy:", err)
       setIsCopying(false)
@@ -56,12 +53,12 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(url)
+      const response = await fetch(certificatePath)
       const blob = await response.blob()
       const downloadUrl = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = downloadUrl
-      link.download = url.split("/").pop() || "certificate.pem"
+      link.download = certificatePath.split("/").pop() || "certificate.pem"
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -72,17 +69,17 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
   }
 
   return (
-    <div className={cn("group flex min-w-0 items-center gap-1", className)}>
+    <div className={cn("flex min-w-0 items-center gap-1", className)}>
       <a
-        href={jwksUrl}
+        href={certificatePath}
         target="_blank"
         rel="noopener noreferrer"
         className="text-base font-normal text-high-emphasis underline"
-        title={jwksUrl}
+        title={certificatePath}
       >
         Public Certificate
       </a>
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1">
         <Button
           variant="ghost"
           className="h-auto p-1 transition-colors hover:bg-gray-100"

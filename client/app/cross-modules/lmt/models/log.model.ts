@@ -63,5 +63,4 @@ export interface IGetLogsByDatePayload {
   };
   search?: string;
   serviceName: string;
-  projectKey: string;
 }

@@ -6,14 +6,14 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 export function LogOutButton() {
   const queryClient = getQueryClient();
-  const { reset } = useProjectStore();
+  const { resetProjectStore } = useProjectStore();
   const { reset: resetAuth } = useAuthStore();
   const { resetSelectedLanguages } = useLanguageViewStore();
   const { isPending, mutateAsync } = useLogout();
   const handleLogout = async () => {
     try {
       await mutateAsync();
-      reset();
+      resetProjectStore();
       resetAuth();
       resetSelectedLanguages();
       queryClient.clear();
@@ -28,8 +28,7 @@ export function LogOutButton() {
       size="sm"
       className="flex h-full w-full justify-start !p-0 text-error hover:no-underline"
       disabled={isPending}
-      onClick={handleLogout}
-    >
+      onClick={handleLogout}>
       Logout
     </Button>
   );

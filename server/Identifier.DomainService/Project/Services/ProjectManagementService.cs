@@ -389,7 +389,7 @@ namespace DomainService.Projects
                 CreatedDate = tenant.CreatedDate,
                 LastUpdatedDate = tenant.LastUpdatedDate,
                 LastUpdatedBy = tenant.LastUpdatedBy,
-                OrganizationIds = tenant.OrganizationIds,
+              //  OrganizationIds = tenant.OrganizationIds,
                 CreatedBy = tenant.CreatedBy,
                 Tags = tenant.Tags,
                 TenantId = tenant.TenantId,
