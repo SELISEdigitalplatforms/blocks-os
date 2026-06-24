@@ -130,7 +130,7 @@ export const SettingsPage = () => {
   };
   const formattedDate = formatDate(new Date(project?.createdDate || ""));
   return (
-    <main className="">
+    <main className="p-6">
       <h4 className="h-8 text-lg font-semibold md:text-xl">Project Settings</h4>
       <Card className="mt-4">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
