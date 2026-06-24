@@ -13,6 +13,7 @@ type SettingsDismissibleChipProps = {
   onDismiss: () => void
   className?: string
   readOnly?: boolean
+  variant?: "chip" | "badge"
 }
 
 export const SettingsDismissibleChip = ({
@@ -23,6 +24,7 @@ export const SettingsDismissibleChip = ({
   onDismiss,
   className,
   readOnly = false,
+  variant = "chip",
 }: SettingsDismissibleChipProps) => {
   const [open, setOpen] = useState(false)
 
@@ -34,15 +36,29 @@ export const SettingsDismissibleChip = ({
   return (
     <div
       className={cn(
-        "relative rounded-lg border bg-card p-4 pr-10 shadow-sm",
+        variant === "badge"
+          ? "relative inline-flex min-h-10 w-full max-w-full flex-col items-start justify-center rounded-xl border bg-muted/40 px-3 py-1.5 pr-8 sm:w-auto"
+          : "relative rounded-lg border bg-card p-4 pr-10 shadow-sm",
         className,
       )}
     >
-      <p className="truncate text-sm font-semibold text-foreground" title={title}>
+      <p
+        className={cn(
+          "truncate text-foreground",
+          variant === "badge" ? "text-xs font-medium" : "text-sm font-semibold",
+        )}
+        title={title}
+      >
         {title}
       </p>
       {subtitle ? (
-        <p className="mt-1 truncate text-xs text-muted-foreground" title={subtitle}>
+        <p
+          className={cn(
+            "truncate text-muted-foreground",
+            variant === "badge" ? "text-[11px]" : "mt-1 text-xs",
+          )}
+          title={subtitle}
+        >
           {subtitle}
         </p>
       ) : null}
@@ -53,10 +69,15 @@ export const SettingsDismissibleChip = ({
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-1.5 top-1.5 h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+              className={cn(
+                "absolute rounded-full text-muted-foreground hover:text-foreground",
+                variant === "badge"
+                  ? "right-1 top-1 h-5 w-5"
+                  : "right-1.5 top-1.5 h-7 w-7",
+              )}
               aria-label={`Remove ${title}`}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className={cn(variant === "badge" ? "h-3 w-3" : "h-3.5 w-3.5")} />
             </Button>
           </DialogTrigger>
           <ConfirmationModal
