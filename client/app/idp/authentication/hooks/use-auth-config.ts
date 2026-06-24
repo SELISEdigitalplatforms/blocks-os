@@ -15,7 +15,9 @@ export const useSaveAuthConfig = (options: { projectKey: string }) => {
     mutationKey: ["authentication", "auth-config", "save"],
     mutationFn: authenticationService.configuration.saveAuthConfig,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["authentication", "auth-config", options] });
+      queryClient.invalidateQueries({
+        queryKey: ["authentication", "auth-config", options],
+      });
     },
   });
 };

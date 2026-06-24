@@ -21,18 +21,21 @@ describe("use-auth-config hooks", () => {
 
   describe("useGetAuthConfig", () => {
     it("should fetch auth config successfully", async () => {
-      vi.mocked(authenticationService.configuration.getConfig).mockResolvedValue(
-        mockGetAuthConfigResponse,
-      );
+      vi.mocked(
+        authenticationService.configuration.getConfig,
+      ).mockResolvedValue(mockGetAuthConfigResponse);
 
       const { result } = renderHook(
-        () => useGetAuthConfig({ projectKey: mockGetAuthConfigPayload.projectKey }),
+        () =>
+          useGetAuthConfig({ projectKey: mockGetAuthConfigPayload.projectKey }),
         { wrapper: createWrapper() },
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockGetAuthConfigResponse);
-      expect(authenticationService.configuration.getConfig).toHaveBeenCalledWith({
+      expect(
+        authenticationService.configuration.getConfig,
+      ).toHaveBeenCalledWith({
         projectKey: mockGetAuthConfigPayload.projectKey,
       });
     });
@@ -40,21 +43,23 @@ describe("use-auth-config hooks", () => {
 
   describe("useSaveAuthConfig", () => {
     it("should save auth config successfully", async () => {
-      vi.mocked(authenticationService.configuration.saveAuthConfig).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(
+        authenticationService.configuration.saveAuthConfig,
+      ).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(
-        () => useSaveAuthConfig({ projectKey: mockGetAuthConfigPayload.projectKey }),
+        () =>
+          useSaveAuthConfig({
+            projectKey: mockGetAuthConfigPayload.projectKey,
+          }),
         { wrapper: createWrapper() },
       );
 
       result.current.mutate(mockSaveAuthConfigPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(authenticationService.configuration.saveAuthConfig).toHaveBeenCalledWith(
-        mockSaveAuthConfigPayload,
-        expect.anything(),
-      );
+      expect(
+        authenticationService.configuration.saveAuthConfig,
+      ).toHaveBeenCalledWith(mockSaveAuthConfigPayload, expect.anything());
     });
   });
 });
