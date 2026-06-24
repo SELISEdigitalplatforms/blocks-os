@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select"
-import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
+import { LMT_NAV_GROUPS, LMT_BASE_PATH } from "@/constants/lmt-nav"
 import { cn } from "@/lib/utils"
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet"
 import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage"
@@ -18,8 +18,10 @@ import { Outlet, useLocation } from "react-router-dom"
 
 export default function LmtLayout() {
   const { pathname } = useLocation()
-  const isLogsDetail = /^\/services\/lmt\/logs\/[^/]+(\/trace\/[^/]+)?$/.test(pathname)
-  const isTraceDetail = /^\/services\/lmt\/tracing\/[^/]+$/.test(pathname)
+  const isLogsDetail = new RegExp(
+    `^${LMT_BASE_PATH}/logs/[^/]+(/trace/[^/]+)?$`,
+  ).test(pathname)
+  const isTraceDetail = new RegExp(`^${LMT_BASE_PATH}/tracing/[^/]+$`).test(pathname)
   const isLmtDetail = isLogsDetail || isTraceDetail
   const currentSegment = pathname.split("/").pop() ?? "usage"
 

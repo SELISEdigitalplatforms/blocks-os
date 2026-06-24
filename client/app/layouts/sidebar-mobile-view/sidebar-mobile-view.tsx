@@ -19,7 +19,7 @@ import { navigationMenus } from "@/constants/navigation-menus"
 import { useFilteredMenus } from "@/hooks/use-filtered-menus"
 import { SECRET_MANAGEMENT_NAV_GROUPS, NavGroup } from "@/constants/secret-management-nav"
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav"
-import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
+import { LMT_NAV_GROUPS, LMT_BASE_PATH } from "@/constants/lmt-nav"
 import { cn } from "@/lib/utils"
 
 export function SidebarMobileView() {
@@ -32,7 +32,7 @@ export function SidebarMobileView() {
   const isProjectOverviewRoute = pathname.startsWith("/project-overview")
   const isSecretManagementRoute = pathname.startsWith("/services/secret-management")
   const isAuthenticationRoute = pathname.startsWith("/services/authentication")
-  const isLmtRoute = pathname.startsWith("/services/lmt")
+  const isLmtRoute = pathname.startsWith(LMT_BASE_PATH)
 
   const currentTab =
     searchParams.get("tab") ??
@@ -162,7 +162,7 @@ export function SidebarMobileView() {
                     <MobileGroupedMenuItem
                       menu={menu}
                       groups={LMT_NAV_GROUPS}
-                      routePrefix="/services/lmt"
+                      routePrefix={LMT_BASE_PATH}
                     />
                   ) : (
                     <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
