@@ -11,7 +11,7 @@ import { TooltipProvider } from "@/components/ui-kits/tooltip/tooltip"
 import { navigationMenus } from "@/constants/navigation-menus"
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav"
-import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
+import { LMT_NAV_GROUPS, LMT_BASE_PATH } from "@/constants/lmt-nav"
 import { SidebarContext } from "@/contexts/dashboard-layout-provider"
 import { useFilteredMenus } from "@/hooks/use-filtered-menus"
 import { cn } from "@/lib/utils"
@@ -41,7 +41,7 @@ export function SidebarMenuDesktop() {
   const isProjectOverviewRoute = pathname.startsWith("/project-overview")
   const isSecretManagementRoute = pathname.startsWith("/services/secret-management")
   const isAuthenticationRoute = pathname.startsWith("/services/authentication")
-  const isLmtRoute = pathname.startsWith("/services/lmt")
+  const isLmtRoute = pathname.startsWith(LMT_BASE_PATH)
   const currentTab =
     searchParams.get("tab") ??
     (isSecretManagementRoute ? "my-secret" : isAuthenticationRoute ? "config" : "my-secret")
@@ -181,13 +181,13 @@ export function SidebarMenuDesktop() {
                     <>
                       {renderExpandableParent(menu, isLmtRoute, lmtOpen, () => {
                         if (!isLmtRoute) {
-                          navigate("/services/lmt?tab=usage")
+                          navigate(`${LMT_BASE_PATH}?tab=usage`)
                           setLmtOpen(true)
                         } else {
                           setLmtOpen((v) => !v)
                         }
                       })}
-                      {isLmtRoute && lmtOpen && renderExpandableChildren(LMT_NAV_GROUPS, "/services/lmt")}
+                      {isLmtRoute && lmtOpen && renderExpandableChildren(LMT_NAV_GROUPS, LMT_BASE_PATH)}
                     </>
                   ) : (
                     <DesktopMenuItem menu={menu} isSidebarOpen={isSidebarOpen} />

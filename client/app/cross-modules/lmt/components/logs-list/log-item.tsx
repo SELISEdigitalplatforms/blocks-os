@@ -1,4 +1,5 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button"
+import { LMT_BASE_PATH } from "@/constants/lmt-nav"
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils"
 import { useContext } from "react"
 import { Link, useSearchParams } from "react-router-dom"
@@ -11,7 +12,7 @@ export const LogItem = ({ log }: { log: ILog }) => {
   const activeTab = searchParams.get("tab") ?? selectedService?.serviceName
   const traceHref =
     log.traceId && logsRouteServiceName
-      ? `/services/lmt/logs/${logsRouteServiceName}/trace/${log.traceId}${
+      ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${
           activeTab ? `?tab=${encodeURIComponent(activeTab)}` : ""
         }`
       : undefined
