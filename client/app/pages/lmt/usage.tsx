@@ -12,6 +12,7 @@ import {
   abbreviateNumber,
   abbreviateDurationMs,
 } from "@/cross-modules/lmt/utils";
+import { LMT_BASE_PATH } from "@/constants/lmt-nav";
 import {
   Card,
   CardContent,
@@ -84,7 +85,7 @@ export function UsageRoute() {
               <UsageServiceCard
                 key={item}
                 name={USAGES_SERVICE_MAP[item].label}
-                logLink={`/services/lmt/logs/${item}`}
+                logLink={`${LMT_BASE_PATH}/logs/${item}`}
                 isLoading={isLoading || isFetching}
                 metrics={data?.services[item] ?? defaultUsageData}
               />

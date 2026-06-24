@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import { LMT_BASE_PATH } from "@/constants/lmt-nav";
 import { useNavigate } from "react-router-dom";
 import { RegisteredService } from "@blocks-identifier/models/service.model";
 import { Button } from "@/components/ui-kits/button/button";
@@ -80,7 +81,7 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
             <LinkButton
               onClick={() =>
                 navigate(
-                  `/services/lmt/logs/${encodeURIComponent(service.serviceId)}?name=${encodeURIComponent(service.name)}`,
+                  `${LMT_BASE_PATH}/logs/${encodeURIComponent(service.serviceId)}?name=${encodeURIComponent(service.name)}`,
                 )
               }
             >
@@ -89,7 +90,7 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
             </LinkButton>
             <LinkButton
               onClick={() =>
-                navigate(`/services/lmt?tab=tracing&services=${service.serviceId}`)
+                navigate(`${LMT_BASE_PATH}?tab=tracing&services=${service.serviceId}`)
               }
             >
               <Activity className="h-4 w-4" />
