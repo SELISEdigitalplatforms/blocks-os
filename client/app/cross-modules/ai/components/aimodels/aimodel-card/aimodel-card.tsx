@@ -1,9 +1,17 @@
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
-import { getProviderDisplayName, ProviderType } from "@blocks-ai/utils/aimodel-provider.utils";
+import {
+  getProviderDisplayName,
+  ProviderType,
+} from "@blocks-ai/utils/aimodel-provider.utils";
 const PROVIDER_PNG_MAP: Record<string, string> = {
   google: "/assets/images/google.png",
   azure: "/assets/images/azure.png",
@@ -29,13 +37,12 @@ export const ProviderCard = (provider: IProvider) => {
   const navigate = useNavigate();
   const pngUrl = getProviderPng(provider.Provider.toLowerCase());
   const handleClick = () => {
-    navigate(`/services/secret-management/ai-models/${provider.Provider}`);
+    navigate(`/app/secret-management/ai-models/${provider.Provider}`);
   };
   return (
     <Card
       className="w-75 group flex cursor-pointer flex-col items-start gap-4 rounded-md px-4 py-5 transition hover:bg-accent hover:shadow-sm"
-      onClick={handleClick}
-    >
+      onClick={handleClick}>
       <CardHeader className="mb-0 flex w-full flex-row justify-between p-0">
         <div className="flex flex-row">
           <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-sm border p-2">
@@ -54,7 +61,9 @@ export const ProviderCard = (provider: IProvider) => {
               {getProviderDisplayName(provider.Provider)}
             </CardTitle>
             <p className="text-sm font-light text-low-emphasis">
-              {provider.Provider.toLowerCase() === ProviderType.CUSTOM ? "My Model" : "My Key"}
+              {provider.Provider.toLowerCase() === ProviderType.CUSTOM
+                ? "My Model"
+                : "My Key"}
             </p>
           </div>
         </div>
@@ -62,8 +71,10 @@ export const ProviderCard = (provider: IProvider) => {
           variant="ghost"
           size="icon"
           className="p-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-          onClick={(e) => { e.stopPropagation(); handleClick(); }}
-        >
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClick();
+          }}>
           <ChevronRight className="aspect-square w-5" />
         </Button>
       </CardHeader>
