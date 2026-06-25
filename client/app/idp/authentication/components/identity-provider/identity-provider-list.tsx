@@ -8,13 +8,12 @@ import {
 import {
   Globe,
   Key,
-  Lock,
   MoreHorizontal,
   Pencil,
   Power,
   PowerOff,
-  Server,
   Shield,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
@@ -48,38 +47,38 @@ const PROVIDER_CONFIG: Record<
   string,
   { label: string; Icon: React.ElementType; iconBg: string; iconColor: string; badgeClass: string }
 > = {
-  oidc: {
-    label: "OIDC",
-    Icon: Shield,
+  social: {
+    label: "Social",
+    Icon: Users,
     iconBg: "bg-blue-100 dark:bg-blue-950",
     iconColor: "text-blue-600 dark:text-blue-400",
     badgeClass:
       "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300",
   },
-  oauth2: {
-    label: "OAuth 2.0",
+  "blocks-oidc": {
+    label: "Blocks OIDC",
+    Icon: Shield,
+    iconBg: "bg-emerald-100 dark:bg-emerald-950",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    badgeClass:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  },
+  byos: {
+    label: "BYOS",
     Icon: Key,
     iconBg: "bg-purple-100 dark:bg-purple-950",
     iconColor: "text-purple-600 dark:text-purple-400",
     badgeClass:
       "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-300",
   },
-  saml: {
-    label: "SAML 2.0",
-    Icon: Lock,
-    iconBg: "bg-amber-100 dark:bg-amber-950",
-    iconColor: "text-amber-600 dark:text-amber-400",
-    badgeClass:
-      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  },
-  ldap: {
-    label: "LDAP",
-    Icon: Server,
-    iconBg: "bg-emerald-100 dark:bg-emerald-950",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-    badgeClass:
-      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  },
+};
+
+const DEFAULT_PROVIDER_CONFIG = {
+  label: "OIDC",
+  Icon: Shield,
+  iconBg: "bg-muted",
+  iconColor: "text-muted-foreground",
+  badgeClass: "",
 };
 
 const TOKEN_AUTH_LABELS: Record<string, string> = {
@@ -123,7 +122,7 @@ export function IdentityProviderList() {
         header: "Provider",
         cell: ({ row }) => {
           const p = row.original;
-          const cfg = PROVIDER_CONFIG[p.providerType] ?? PROVIDER_CONFIG.oidc;
+          const cfg = PROVIDER_CONFIG[p.providerType] ?? DEFAULT_PROVIDER_CONFIG;
           const Icon = cfg.Icon;
           return (
             <div className="flex items-center gap-3">
