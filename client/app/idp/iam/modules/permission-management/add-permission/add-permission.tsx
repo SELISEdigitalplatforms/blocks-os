@@ -24,16 +24,16 @@ export const AddPermission = () => {
       const res = await mutateAsync(newPermission);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Permission created successfully" });
-      navigate(`/services/authentication/permissions`);
+      navigate(`/app/authentication/permissions`);
     } catch (error) {
       if (isErrorWithErrors(error))
         return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/services/authentication/permission-detail"] =
+  BREADCRUMB_CUSTOM_TITLES["/app/authentication/permission-detail"] =
     "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/services/authentication/permissions/new`] = "New";
+  BREADCRUMB_CUSTOM_TITLES[`/app/authentication/permissions/new`] = "New";
   return (
     <div className="px-4 pt-4 md:px-6 md:pt-6">
       <div className="hidden md:flex">

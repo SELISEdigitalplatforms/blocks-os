@@ -1,7 +1,9 @@
-import { BarChart3, GitBranch, ScrollText, type LucideIcon } from "lucide-react";
-import { NavItem, NavGroup } from "@/constants/secret-management-nav";
+import { NavGroup, NavItem } from "@/constants/secret-management-nav";
+import { BarChart3, GitBranch, ScrollText } from "lucide-react";
 
-export type { NavItem, NavGroup };
+export type { NavGroup, NavItem };
+
+export const LMT_BASE_PATH = "/app/lmt" as const;
 
 export const LMT_NAV_GROUPS: NavGroup[] = [
   {

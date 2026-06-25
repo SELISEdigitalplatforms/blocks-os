@@ -1,6 +1,7 @@
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
+import { LMT_BASE_PATH } from "@/constants/lmt-nav";
 import {
   LOG_SERVICE_AI_DESCRIPTION,
   LOG_SERVICE_AI_QUERIES,
@@ -19,9 +20,9 @@ export function LmtServiceLogsRoute() {
     [serviceName],
   );
 
-  BREADCRUMB_CUSTOM_TITLES["/services/lmt/logs"] = "Logs";
+  BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs`] = "Logs";
   if (serviceName) {
-    BREADCRUMB_CUSTOM_TITLES[`/services/lmt/logs/${serviceName}`] =
+    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}`] =
       service?.label ?? serviceName;
   }
 
