@@ -22,7 +22,7 @@ export enum SSO_PROVIDERS {
   x = "x",
   apple = "apple",
   facebook = "facebook",
-  // ownsso = "ownsso",
+  ownsso = "ownsso",
 }
 
 /** Shared empty defaults for all provider configuration fields. */
@@ -121,11 +121,11 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Record<
     isAvailable: false,
     isConfigured: false,
   }),
-  // ownsso: createProviderConfig(SSO_PROVIDERS.ownsso, {
-  //   label: "Bring your own SSO",
-  //   description: "Bring your own SSO provider",
-  //   imageSrc: Selise,
-  //   isAvailable: true,
-  //   isConfigured: false,
-  // }),
+  ownsso: createProviderConfig(SSO_PROVIDERS.ownsso, {
+    label: "Bring your own SSO",
+    description: "Bring your own SSO provider",
+    imageSrc: "",
+    isAvailable: false,
+    isConfigured: false,
+  }),
 };
