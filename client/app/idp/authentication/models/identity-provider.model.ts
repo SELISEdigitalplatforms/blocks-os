@@ -19,6 +19,7 @@ export interface IdentityProvider {
   scope?: string;
   redirectUri?: string[];
   isActive: boolean;
+  audience?: string;
   createdDate?: string;
   updatedDate?: string;
 }

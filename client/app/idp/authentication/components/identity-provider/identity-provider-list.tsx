@@ -55,14 +55,7 @@ const PROVIDER_CONFIG: Record<
     badgeClass:
       "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300",
   },
-  "blocks-oidc": {
-    label: "Blocks OIDC",
-    Icon: Shield,
-    iconBg: "bg-emerald-100 dark:bg-emerald-950",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-    badgeClass:
-      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  },
+
   byos: {
     label: "BYOS",
     Icon: Key,
@@ -70,6 +63,14 @@ const PROVIDER_CONFIG: Record<
     iconColor: "text-purple-600 dark:text-purple-400",
     badgeClass:
       "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-300",
+  },
+    "blocks-oidc": {
+    label: "Blocks OIDC",
+    Icon: Shield,
+    iconBg: "bg-emerald-100 dark:bg-emerald-950",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    badgeClass:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
   },
 };
 
