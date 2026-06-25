@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, X } from "lucide-react";
+import { Eye, EyeOff, Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +57,7 @@ type Props = {
 
 const BLANK_FORM: FormValues = {
   displayName: "",
-  providerType: "blocks-oidc",
+  providerType: "social",
   provider: "",
   clientId: "",
   clientSecret: "",
@@ -69,6 +69,8 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const isEditing = !!editItem?.itemId;
 
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
+  const [showClientId, setShowClientId] = useState(false);
+  const [showClientSecret, setShowClientSecret] = useState(false);
 
   const {
     register,
@@ -227,11 +229,22 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               <Label htmlFor="clientId">
                 Client ID <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="clientId"
-                placeholder="Enter client ID"
-                {...register("clientId", { required: "Client ID is required" })}
-              />
+              <div className="relative">
+                <Input
+                  id="clientId"
+                  type={showClientId ? "text" : "password"}
+                  placeholder="Enter client ID"
+                  className="pr-10"
+                  {...register("clientId", { required: "Client ID is required" })}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowClientId(!showClientId)}
+                >
+                  {showClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.clientId && (
                 <p className="text-xs text-destructive">{errors.clientId.message}</p>
               )}
@@ -245,14 +258,24 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                   </span>
                 )}
               </Label>
-              <Input
-                id="clientSecret"
-                type="password"
-                placeholder={isEditing ? "••••••••••••" : "Enter client secret"}
-                {...register("clientSecret", {
-                  required: isEditing ? false : "Client secret is required",
-                })}
-              />
+              <div className="relative">
+                <Input
+                  id="clientSecret"
+                  type={showClientSecret ? "text" : "password"}
+                  placeholder={isEditing ? "••••••••••••" : "Enter client secret"}
+                  className="pr-10"
+                  {...register("clientSecret", {
+                    required: isEditing ? false : "Client secret is required",
+                  })}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowClientSecret(!showClientSecret)}
+                >
+                  {showClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.clientSecret && (
                 <p className="text-xs text-destructive">{errors.clientSecret.message}</p>
               )}
@@ -282,13 +305,15 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           )}
 
           {/* Scope(s) */}
-          <div className="space-y-1.5">
-            <Label>Scope(s)</Label>
-            <div className="flex items-center gap-2">
-              <Checkbox checked disabled />
-              <span className="text-sm text-muted-foreground">openid</span>
+          {providerType !== "social" && providerType !== "byos" && (
+            <div className="space-y-1.5">
+              <Label>Scope(s)</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox checked disabled />
+                <span className="text-sm text-muted-foreground">openid</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Redirect URIs */}
           <div className="space-y-2">
