@@ -128,14 +128,7 @@ export const navigationMenus: Menu[] = [
         desc: "Configure identity providers and federation",
         type: "menu",
       },
-      {
-        id: "sso",
-        name: "SSO",
-        path: "/app/services/secret-management/sso",
-        icon: Users,
-        desc: "Single sign-on configurations and social logins",
-        type: "menu",
-      },
+  
       {
         id: "external-idp",
         name: "External IdP",
