@@ -6,7 +6,7 @@ const LinkedIn = "/assets/images/social-media-in.png";
 const AppleDark = "/assets/images/apple-dark-mode-logo.png";
 const Apple = "/assets/images/social-media-apple.png";
 const Facebook = "/assets/images/social-media-facebook.png";
-const Selise = "/assets/images/selise-globe-logo.png";
+// const Selise = "/assets/images/selise-globe-logo.png";
 const XDark = "/assets/images/twitter-x-dark-mode-logo.png";
 const X = "/assets/images/twitter-x-light-mode-logo.png";
 import {
@@ -22,7 +22,7 @@ export enum SSO_PROVIDERS {
   x = "x",
   apple = "apple",
   facebook = "facebook",
-  ownsso = "ownsso",
+  // ownsso = "ownsso",
 }
 
 /** Shared empty defaults for all provider configuration fields. */
@@ -121,11 +121,11 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Record<
     isAvailable: false,
     isConfigured: false,
   }),
-  ownsso: createProviderConfig(SSO_PROVIDERS.ownsso, {
-    label: "Bring your own SSO",
-    description: "Bring your own SSO provider",
-    imageSrc: Selise,
-    isAvailable: true,
-    isConfigured: false,
-  }),
+  // ownsso: createProviderConfig(SSO_PROVIDERS.ownsso, {
+  //   label: "Bring your own SSO",
+  //   description: "Bring your own SSO provider",
+  //   imageSrc: Selise,
+  //   isAvailable: true,
+  //   isConfigured: false,
+  // }),
 };
