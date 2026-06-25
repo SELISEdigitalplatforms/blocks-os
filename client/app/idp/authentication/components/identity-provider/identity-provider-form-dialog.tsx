@@ -30,13 +30,10 @@ import {
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
 
-const PROVIDER_TYPES: { value: string; label: string }[] = [
-  { value: "oidc", label: "OpenID Connect (OIDC)" },
-  { value: "oauth2", label: "OAuth 2.0" },
-  { value: "saml", label: "SAML 2.0" },
-  { value: "ldap", label: "LDAP" },
+const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
-  { value: "others", label: "Others" },
+  { value: "blocks-oidc", label: "Blocks OIDC" },
+  { value: "byos", label: "Bring your own SSO (BYOS)" },
 ];
 
 type FormValues = {
@@ -56,7 +53,7 @@ type Props = {
 
 const BLANK_FORM: FormValues = {
   displayName: "",
-  providerType: "oidc",
+  providerType: "blocks-oidc",
   provider: "",
   clientId: "",
   clientSecret: "",
@@ -66,7 +63,6 @@ const BLANK_FORM: FormValues = {
 export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Props) {
   const isEditing = !!editItem?.itemId;
 
-  const [customProviderType, setCustomProviderType] = useState("");
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
 
   const {
@@ -82,22 +78,17 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   });
 
   const providerType = watch("providerType");
-  const isOthers = providerType === "others";
 
   useEffect(() => {
     if (open && editItem) {
-      const isCustom = !PROVIDER_TYPES.some(
-        (t) => t.value !== "others" && t.value === editItem.providerType,
-      );
+      const matched = PROVIDER_OPTIONS.some((t) => t.value === editItem.providerType);
       reset({
-        displayName: editItem.displayName,
-        providerType: isCustom ? "others" : editItem.providerType,
+        providerType: matched ? editItem.providerType : "blocks-oidc",
         provider: editItem.provider,
         clientId: editItem.clientId,
         clientSecret: "",
         jwksUri: editItem.jwksUri ?? "",
       });
-      setCustomProviderType(isCustom ? editItem.providerType : "");
       const uris = Array.isArray(editItem.redirectUri)
         ? editItem.redirectUri
         : editItem.redirectUri
@@ -106,7 +97,6 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
       setRedirectUris(uris.length ? uris : [""]);
     } else if (open) {
       reset(BLANK_FORM);
-      setCustomProviderType("");
       setRedirectUris([""]);
     }
   }, [open, editItem, reset]);
@@ -117,14 +107,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const finalProviderType: IdentityProviderType =
-        isOthers && customProviderType.trim()
-          ? customProviderType.trim()
-          : values.providerType;
-
       const payload: IdentityProvider = {
         ...values,
-        providerType: finalProviderType,
+        providerType: values.providerType as IdentityProviderType,
         tokenEndpointAuthMethod: "client_secret_basic",
         scope: "openid",
         redirectUri: redirectUris.filter((u) => u.trim()),
@@ -165,36 +150,22 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Display Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="displayName">
-              Display Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="displayName"
-              placeholder="My Identity Provider"
-              {...register("displayName", { required: "Display name is required" })}
-            />
-            {errors.displayName && (
-              <p className="text-xs text-destructive">{errors.displayName.message}</p>
-            )}
-          </div>
+<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-          {/* Provider Type */}
+          {/* Select Provider */}
           <div className="space-y-1.5">
             <Label htmlFor="providerType">
-              Provider Type <span className="text-destructive">*</span>
+              Select provider <span className="text-destructive">*</span>
             </Label>
             <Select
               value={providerType}
               onValueChange={(v) => setValue("providerType", v, { shouldValidate: true })}
             >
               <SelectTrigger id="providerType">
-                <SelectValue placeholder="Select provider type" />
+                <SelectValue placeholder="Select provider" />
               </SelectTrigger>
               <SelectContent>
-                {PROVIDER_TYPES.map((t) => (
+                {PROVIDER_OPTIONS.map((t) => (
                   <SelectItem key={t.value} value={t.value}>
                     {t.label}
                   </SelectItem>
@@ -202,21 +173,6 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               </SelectContent>
             </Select>
           </div>
-
-          {/* Custom Provider Type */}
-          {isOthers && (
-            <div className="space-y-1.5">
-              <Label htmlFor="customProviderType">
-                Custom Provider Type <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="customProviderType"
-                placeholder="e.g. twitter, github, custom-idp"
-                value={customProviderType}
-                onChange={(e) => setCustomProviderType(e.target.value)}
-              />
-            </div>
-          )}
 
           {/* Provider Name */}
           <div className="space-y-1.5">
@@ -331,7 +287,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </Button>
             <Button
               type="submit"
-              disabled={isPending || !isValid || (isOthers && !customProviderType.trim())}
+              disabled={isPending || !isValid}
             >
               {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
             </Button>
