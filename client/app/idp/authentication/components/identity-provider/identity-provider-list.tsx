@@ -154,14 +154,14 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
   const kvPairs: { key: string; value: string; isSecret?: boolean }[] = [
     { key: "Client ID", value: item.clientId, isSecret: true },
     { key: "Client Secret", value: item.clientSecret, isSecret: true },
-    { key: "Issuer URL", value: item.issuerUrl ?? "" },
+    { key: "Issuer URL", value: item.issuer ?? "" },
     { key: "Authorization URL", value: item.authorizationUrl ?? "" },
     { key: "Token URL", value: item.tokenUrl ?? "" },
     { key: "User Info URL", value: item.userInfoUrl ?? "" },
     { key: "JWKS URI", value: item.jwksUri ?? "" },
     { key: "Scope", value: item.scope ?? "" },
     { key: "Audience", value: item.audience ?? "" },
-    { key: "Redirect URI(s)", value: item.redirectUri?.join(", ") ?? "" },
+    { key: "Redirect URI(s)", value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "" },
     { key: "Token Auth Method", value: item.tokenEndpointAuthMethod ?? "" },
   ].filter((pair) => pair.value);
 

@@ -97,11 +97,15 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         jwksUri: editItem.jwksUri ?? "",
         audience: (editItem as any).audience ?? "",
       });
-      const uris = Array.isArray(editItem.redirectUri)
-        ? editItem.redirectUri
-        : editItem.redirectUri
-          ? [editItem.redirectUri as string]
-          : [""];
+      const uris = Array.isArray(editItem.redirectUris)
+        ? editItem.redirectUris
+        : editItem.redirectUris
+          ? [editItem.redirectUris as unknown as string]
+          : Array.isArray(editItem.redirectUri)
+            ? editItem.redirectUri
+            : editItem.redirectUri
+              ? [editItem.redirectUri as string]
+              : [""];
       setRedirectUris(uris.length ? uris : [""]);
     } else if (open) {
       reset(BLANK_FORM);
@@ -116,13 +120,17 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const onSubmit = async (values: FormValues) => {
     try {
       const payload: IdentityProvider = {
-        ...values,
+        displayName: values.displayName,
         providerType: values.providerType as IdentityProviderType,
+        provider: values.provider,
+        clientId: values.clientId,
+        clientSecret: values.clientSecret,
+        audience: values.audience,
+        jwksUri: values.jwksUri,
         tokenEndpointAuthMethod: "client_secret_basic",
         scope: "openid",
-        redirectUri: redirectUris.filter((u) => u.trim()),
+        redirectUris: redirectUris.filter((u) => u.trim()),
         isActive: editItem?.isActive ?? true,
-        audience: values.audience,
         ...(isEditing ? { itemId: editItem!.itemId } : {}),
       };
 
