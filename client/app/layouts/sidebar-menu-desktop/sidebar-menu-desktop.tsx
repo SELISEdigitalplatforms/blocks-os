@@ -47,7 +47,7 @@ export function SidebarMenuDesktop() {
   const navigate = useNavigate();
   const isProjectOverviewRoute = pathname.startsWith("/project-overview");
   const isSecretManagementRoute = pathname.startsWith("/app/secret-management");
-  const isAuthenticationRoute = pathname.startsWith("/app/authentication");
+  const isAuthenticationRoute = pathname.startsWith("/app/idp");
   const isLmtRoute = pathname.startsWith(LMT_BASE_PATH);
   const currentTab =
     searchParams.get("tab") ??
@@ -215,7 +215,7 @@ export function SidebarMenuDesktop() {
                           idpOpen,
                           () => {
                             if (!isAuthenticationRoute) {
-                              navigate("/app/authentication/config");
+                              navigate("/app/idp/config");
                               setIdpOpen(true);
                             } else {
                               setIdpOpen((v) => !v);
@@ -226,7 +226,7 @@ export function SidebarMenuDesktop() {
                           idpOpen &&
                           renderExpandableChildren(
                             AUTHENTICATION_NAV_GROUPS,
-                            "/app/authentication",
+                            "/app/idp",
                           )}
                       </>
                     ) : menu.id === "service-identity__lmt" ? (
