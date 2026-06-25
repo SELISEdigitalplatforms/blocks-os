@@ -29,6 +29,9 @@ import {
   useCreateIdentityProvider,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
+import {
+  SOCIAL_AUTH_PROVIDERS_CONFIG,
+} from "@blocks-idp/authentication/constants/sso-providers.constant";
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
@@ -43,6 +46,7 @@ type FormValues = {
   clientId: string;
   clientSecret: string;
   jwksUri?: string;
+  audience?: string;
 };
 
 type Props = {
@@ -58,6 +62,7 @@ const BLANK_FORM: FormValues = {
   clientId: "",
   clientSecret: "",
   jwksUri: "",
+  audience: "",
 };
 
 export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Props) {
@@ -88,6 +93,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         clientId: editItem.clientId,
         clientSecret: "",
         jwksUri: editItem.jwksUri ?? "",
+        audience: (editItem as any).audience ?? "",
       });
       const uris = Array.isArray(editItem.redirectUri)
         ? editItem.redirectUri
@@ -114,6 +120,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         scope: "openid",
         redirectUri: redirectUris.filter((u) => u.trim()),
         isActive: editItem?.isActive ?? true,
+        audience: values.audience,
         ...(isEditing ? { itemId: editItem!.itemId } : {}),
       };
 
@@ -155,14 +162,14 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           {/* Select Provider */}
           <div className="space-y-1.5">
             <Label htmlFor="providerType">
-              Select provider <span className="text-destructive">*</span>
+              Select Provider <span className="text-destructive">*</span>
             </Label>
             <Select
               value={providerType}
               onValueChange={(v) => setValue("providerType", v, { shouldValidate: true })}
             >
               <SelectTrigger id="providerType">
-                <SelectValue placeholder="Select provider" />
+                <SelectValue placeholder="Select Provider" />
               </SelectTrigger>
               <SelectContent>
                 {PROVIDER_OPTIONS.map((t) => (
@@ -179,11 +186,36 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             <Label htmlFor="provider">
               Provider Name <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="provider"
-              placeholder="my-identity-provider"
-              {...register("provider", { required: "Provider name is required" })}
-            />
+            {providerType === "social" ? (
+              <Select
+                value={watch("provider")}
+                onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
+              >
+                <SelectTrigger id="provider">
+                  <SelectValue placeholder="Select a provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG).map((config) => (
+                    <SelectItem key={config.provider} value={config.provider}>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={config.imageSrc}
+                          alt={config.label}
+                          className="h-5 w-5 object-contain"
+                        />
+                        <span>{config.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="provider"
+                placeholder="my-identity-provider"
+                {...register("provider", { required: "Provider name is required" })}
+              />
+            )}
             {errors.provider && (
               <p className="text-xs text-destructive">{errors.provider.message}</p>
             )}
@@ -227,15 +259,27 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </div>
           </div>
 
-          {/* Well Known URL */}
+          {/* Audience */}
           <div className="space-y-1.5">
-            <Label htmlFor="jwksUri">Well Known URL</Label>
+            <Label htmlFor="audience">Audience</Label>
             <Input
-              id="jwksUri"
-              placeholder="https://idp.example.com/.well-known/jwks.json"
-              {...register("jwksUri")}
+              id="audience"
+              placeholder="Enter audience"
+              {...register("audience")}
             />
           </div>
+
+          {/* Well Known URL - Hidden for social type */}
+          {providerType !== "social" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="jwksUri">Well Known URL</Label>
+              <Input
+                id="jwksUri"
+                placeholder="https://idp.example.com/.well-known/jwks.json"
+                {...register("jwksUri")}
+              />
+            </div>
+          )}
 
           {/* Scope(s) */}
           <div className="space-y-1.5">
