@@ -16,8 +16,8 @@ export const SSOProviderConfig = ({
 }: SSOProviderConfigProps) => {
   const [open, setOpen] = useState<boolean>(false);
   if (!provider) return null;
-  BREADCRUMB_CUSTOM_TITLES["/app/authentication/sso"] = "Authentication";
-  BREADCRUMB_CUSTOM_TITLES["/app/authentication/sso-configuration"] = provider;
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/sso"] = "Authentication";
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/sso-configuration"] = provider;
   return (
     <div className="flex flex-col">
       <div className="hidden md:flex">

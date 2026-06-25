@@ -213,13 +213,13 @@ export const navigationMenus: Menu[] = [
     id: "service-identity__authentication",
     type: "menu",
     name: "IDP",
-    path: "/app/authentication",
+    path: "/app/idp",
     icon: Key,
     children: [
       {
-        id: "config",
+        id: "settings",
         name: "Settings",
-        path: "/app/authentication/config",
+        path: "/app/idp/settings",
         icon: SlidersHorizontal,
         desc: "Tenant IAM, auth, organization, and signup configuration",
         type: "menu",
@@ -228,7 +228,7 @@ export const navigationMenus: Menu[] = [
       {
         id: "oidc-template",
         name: "OIDC Template",
-        path: "/app/authentication/oidc-template",
+        path: "/app/idp/oidc-template",
         icon: FileCode,
         desc: "Configure OIDC template",
         type: "menu",
@@ -236,7 +236,7 @@ export const navigationMenus: Menu[] = [
       {
         id: "roles",
         name: "Roles",
-        path: "/app/authentication/roles",
+        path: "/app/idp/roles",
         icon: ShieldCheck,
         desc: "Manage roles",
         type: "menu",
@@ -244,7 +244,7 @@ export const navigationMenus: Menu[] = [
       {
         id: "permissions",
         name: "Permissions",
-        path: "/app/authentication/permissions",
+        path: "/app/idp/permissions",
         icon: Lock,
         desc: "Manage permissions",
         type: "menu",
