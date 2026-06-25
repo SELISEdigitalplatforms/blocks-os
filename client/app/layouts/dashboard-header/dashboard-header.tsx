@@ -63,7 +63,7 @@ export function DashboardHeader() {
           <BackToConsoleNavigator />
           <ThemeSwitcher />
           <Notification />
-          <AppSwitcher forwardedTo="/app/dashboard" />
+          <AppSwitcher forwardedTo="/dashboard" />
           <UserDropdownMenu />
         </div>
       </header>
