@@ -313,14 +313,14 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           </div>
 
           {/* Audience */}
-          <div className="space-y-1.5">
+          {/* <div className="space-y-1.5">
             <Label htmlFor="audience">Audience</Label>
             <Input
               id="audience"
               placeholder="Enter audience"
               {...register("audience")}
             />
-          </div>
+          </div> */}
 
           {/* Well Known URL - Hidden for social type */}
           {providerType !== "social" && (
@@ -387,7 +387,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 <span className="text-sm text-muted-foreground">openid</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <Checkbox
                 id="requirePkce"
                 checked={requirePkce}
@@ -396,7 +396,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               <Label htmlFor="requirePkce" className="cursor-pointer">
                 Require PKCE
               </Label>
-            </div>
+            </div> */}
           </div>
 
           <DialogFooter>
