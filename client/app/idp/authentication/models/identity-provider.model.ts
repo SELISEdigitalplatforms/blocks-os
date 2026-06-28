@@ -18,7 +18,6 @@ export interface IdentityProvider {
   authorizationUrl?: string | null;
   tokenUrl?: string | null;
   userInfoUrl?: string | null;
-  jwksUri?: string;
   wellKnownUrl?: string | null;
   redirectUris?: string[];
   redirectUri?: string[];

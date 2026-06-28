@@ -81,10 +81,10 @@ const KVRow = ({ label, value, isSecret = false }: KVRowProps) => {
   return (
     <TableRow className="group bg-muted/20 hover:bg-muted/30">
       <TableCell className="w-8 pl-4" />
-      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground" colSpan={1}>
+      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground sm:w-48">
         {label}
       </TableCell>
-      <TableCell className="py-2" colSpan={2}>
+      <TableCell className="py-2" colSpan={3}>
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1 font-mono text-xs">
             {value ? (
@@ -116,7 +116,6 @@ const KVRow = ({ label, value, isSecret = false }: KVRowProps) => {
           )}
         </div>
       </TableCell>
-      <TableCell />
     </TableRow>
   );
 };
@@ -158,11 +157,10 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
     { key: "Authorization URL", value: item.authorizationUrl ?? "" },
     { key: "Token URL", value: item.tokenUrl ?? "" },
     { key: "User Info URL", value: item.userInfoUrl ?? "" },
-    { key: "JWKS URI", value: item.jwksUri ?? "" },
+    { key: "Well-known URI", value: item.wellKnownUrl ?? "" },
     { key: "Scope", value: item.scope ?? "" },
     { key: "Audience", value: item.audience ?? "" },
     { key: "Redirect URI(s)", value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "" },
-    { key: "Token Auth Method", value: item.tokenEndpointAuthMethod ?? "" },
     {
       key: "Roles",
       value: item.initialRoles?.length ? item.initialRoles.join(", ") : "",
@@ -171,10 +169,10 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
       key: "Permissions",
       value: item.initialPermissions?.length ? item.initialPermissions.join(", ") : "",
     },
-    {
-      key: "PKCE",
-      value: item.requirePkce ? "Required" : "",
-    },
+    // {
+    //   key: "PKCE",
+    //   value: item.requirePkce ? "Required" : "",
+    // },
   ].filter((pair) => pair.value);
 
   return (
@@ -206,7 +204,16 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
           </div>
         </TableCell>
         <TableCell className="py-3.5">
-          <Badge variant="outline" className="text-xs">
+          <Badge
+            variant="outline"
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.iconBg.replace(
+                "100",
+                "500",
+              )}`}
+            />
             {cfg.label}
           </Badge>
         </TableCell>
@@ -310,18 +317,18 @@ export function IdentityProviderList() {
 
   return (
     <Card>
-      <CardContent className="p-0">
-        <Table>
+      <CardContent className="overflow-x-auto p-0">
+        <Table className="w-full min-w-[640px] sm:table-fixed sm:min-w-0">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="w-64 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Provider
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Type
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Created On
               </TableHead>
               <TableHead className="w-20" />
