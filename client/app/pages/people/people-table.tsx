@@ -185,19 +185,21 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                   className="w-fit bg-primary/10 px-2 py-0.5 text-[10px] text-xs font-normal text-primary"
                 />
               )}
-              {info.row.original.sharedEnviroments.some((env) => !env.isInvitationConfirmed) &&
+              {info.row.original.sharedEnviroments.some(
+                (env) => env.isInvitationSent && !env.isInvitationConfirmed,
+              ) &&
                 !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
-                  <PeopleStatusBadge
-                    status="Pending Invite"
-                    className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
-                  />
+                  <>
+                    <PeopleStatusBadge
+                      status="Pending Invite"
+                      className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
+                    />
+                    <PeopleStatusBadge
+                      status="Inactive"
+                      className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
+                    />
+                  </>
                 )}
-              {info.row.original.peopleDetails.allowResendActivation && (
-                <PeopleStatusBadge
-                  status="Inactive"
-                  className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
-                />
-              )}
             </div>
           )
         },
@@ -270,7 +272,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 )
                 const isOwner = row.original.sharedEnviroments.some((env) => env.isCreator)
                 const showResendInvite = hasPending && !isOwner
-                const showResendActivation = row.original.peopleDetails.allowResendActivation
+                const showResendActivation =
+                  row.original.peopleDetails.allowResendActivation &&
+                  row.original.sharedEnviroments.some((env) => env.isInvitationConfirmed)
 
                 return (
                   <DropdownMenu>
@@ -303,7 +307,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                           <span>Resend Activation</span>
                         </DropdownMenuItem>
                       )}
-                      {!showResendActivation && !showResendInvite && (
+                      {!showResendInvite && (
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation()

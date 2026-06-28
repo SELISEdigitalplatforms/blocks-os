@@ -27,15 +27,18 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [selectedRolos, setSelectedRoles] = useState<IRole[]>([]);
   const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
-  const { data, isLoading } = useGetRoles({
-    page: filter.page,
-    pageSize: filter.pageSize,
-    projectKey: tenantId,
-    sort: { property: "Name", isDescending: false },
-    filter: {
-      search: filter.search,
+  const { data, isLoading } = useGetRoles(
+    {
+      page: filter.page,
+      pageSize: filter.pageSize,
+      projectKey: tenantId,
+      sort: { property: "Name", isDescending: false },
+      filter: {
+        search: filter.search,
+      },
     },
-  });
+    { enabled: open && Boolean(tenantId) },
+  );
   const onCheckedChangeHandler = (checked: boolean, role: IRole) => {
     if (checked) {
       return setSelectedRoles((roles) => [...roles, role]);
@@ -62,12 +65,12 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant="default" className="h-10 bg-primary text-sm" type="button">
-          <CirclePlus className="h-5 w-5 md:mr-2.5" />
+        <Button size="sm" variant="default" className="h-7 bg-primary text-xs px-2.5" type="button">
+          <CirclePlus className="h-3.5 w-3.5 md:mr-1.5" />
           <span className="sr-only sm:not-sr-only">Assign Role</span>
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
           <DialogTitle className="text-left">Assign roles</DialogTitle>
           <DialogDescription></DialogDescription>
@@ -80,9 +83,9 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
             placeholder="Search by role name"
           />
         </div>
-        <Card>
-          <CardContent>
-            <div className="grid grid-cols-2">
+        <Card className="min-h-0 flex-1 overflow-hidden">
+          <CardContent className="max-h-[min(50vh,360px)] overflow-y-auto">
+            <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
               {isLoading ? (
                 // Show skeletons while loading
                 Array.from({ length: filter.pageSize }).map((_, idx) => (
@@ -177,7 +180,7 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
             </div>
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <DialogClose asChild>
             <Button variant="outline" size="default">
               Cancel

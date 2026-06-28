@@ -190,7 +190,7 @@ export interface TraceTree extends Trace {
   request: IRequest;
   response: IResponse;
   logs: LogEntry[];
-  subEntries: TraceTree[] | [];
+  subEntries: TraceTree[];
   calculatedDuration?: number;
   calculatedStartTime?: string;
   calculatedEndTime?: string;
@@ -241,5 +241,4 @@ export interface IGetTracesResponse {
 }
 export interface IGetTraceByTraceIdPayload {
   traceId: string;
-  projectKey: string;
 }

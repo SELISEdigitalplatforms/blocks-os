@@ -13,10 +13,15 @@ export interface IOidcConfig {
   organizationIds: string[];
   tags: string[];
   clientSecret: string;
-  redirectUri: string;
+  redirectUris?: string[];
+  redirectUri?: string;
   scope: string;
   audience: string;
   isAutoRedirect: boolean;
+  isActive: boolean;
+  requirePkce: boolean;
+  allowedResponseTypes: string[];
+  allowedServiceAccessResources: string[];
   tenantId: string;
   clientLogoUrl?: string;
   clientBrandColor?: string;
@@ -31,10 +36,14 @@ export interface IGetOidcCredentialsResponse {
 export interface ISaveOidcCredentialPayload {
   audience: string;
   isAutoRedirect: boolean;
+  isActive: boolean;
   itemId: string;
   projectKey: string;
-  redirectUri: string;
+  redirectUris: string[];
   scope: string;
+  requirePkce: boolean;
+  allowedResponseTypes: string[];
+  allowedServiceAccessResources: string[];
   clientLogoUrl?: string;
   clientBrandColor?: string;
   clientDisplayName: string;
@@ -43,10 +52,14 @@ export interface ISaveOidcCredentialPayload {
 export interface ISaveOidcCredentialResponse {
   audience: string;
   isAutoRedirect: boolean;
+  isActive: boolean;
   itemId: string;
   projectKey: string;
-  redirectUri: string;
+  redirectUris: string[];
   scope: string;
+  requirePkce: boolean;
+  allowedResponseTypes: string[];
+  allowedServiceAccessResources: string[];
   clientLogoUrl?: string;
   clientBrandColor?: string;
   clientDisplayName: string;
