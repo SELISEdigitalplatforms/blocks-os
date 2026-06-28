@@ -88,17 +88,17 @@ export const OidcList = () => {
   return (
     <Card>
       <CardContent className="p-0">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
               <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Client
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Type
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Created On
               </TableHead>
               <TableHead className="w-20" />

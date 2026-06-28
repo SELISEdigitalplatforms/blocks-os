@@ -384,10 +384,10 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               type="button"
               variant="outline"
               size="sm"
-              className="mt-1 gap-1.5"
+              className="mt-1 h-7 gap-1 px-2 text-xs"
               onClick={addRedirectUri}
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-3 w-3" />
               Add Redirect URI
             </Button>
           </div>
