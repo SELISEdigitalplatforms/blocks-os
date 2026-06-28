@@ -84,9 +84,7 @@ export const toIamConfigFormValues = (
   accountActivationPath: config.accountActivationPath,
   accountVerificationPath: config.accountVerificationPath,
   recoverAccountPath: config.recoverAccountPath,
-  accountActionBaseUrl: config.isOidcEnabled
-    ? getBlocksIamBaseUrl()
-    : config.accountActionBaseUrl,
+  accountActionBaseUrl: config.accountActionBaseUrl,
   useAccountActionBaseUrlAsDefault: config.isOidcEnabled
     ? true
     : config.useAccountActionBaseUrlAsDefault,
@@ -103,7 +101,6 @@ export const applyOidcIamConfigOverrides = (
   values.isOidcEnabled
     ? {
         ...values,
-        accountActionBaseUrl: getBlocksIamBaseUrl(),
         useAccountActionBaseUrlAsDefault: false,
       }
     : values
