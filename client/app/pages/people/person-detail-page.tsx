@@ -109,7 +109,7 @@ export const PersonDetailPage = () => {
                   className="w-fit bg-warning-100 px-2 py-0.5 text-xs font-normal text-warning-700"
                 />
               )}
-              {user && (!user.active || !user.isVarified) && (
+              {user && (!user.active || !user.isVerified) && (
                 <PeopleStatusBadge
                   status="Inactive"
                   className="w-fit bg-blocks-error-100 px-2 py-0.5 text-xs font-normal text-blocks-error-800"

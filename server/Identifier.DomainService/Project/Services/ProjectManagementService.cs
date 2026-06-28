@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -308,7 +308,7 @@ namespace DomainService.Projects
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = applicationContext.CookieDomain, IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocksDomain } ],
+                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = applicationContext.CookieDomain, IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocksDomain }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -389,7 +389,7 @@ namespace DomainService.Projects
                 CreatedDate = tenant.CreatedDate,
                 LastUpdatedDate = tenant.LastUpdatedDate,
                 LastUpdatedBy = tenant.LastUpdatedBy,
-                OrganizationIds = tenant.OrganizationIds,
+              //  OrganizationIds = tenant.OrganizationIds,
                 CreatedBy = tenant.CreatedBy,
                 Tags = tenant.Tags,
                 TenantId = tenant.TenantId,
@@ -480,7 +480,12 @@ namespace DomainService.Projects
             }
 
             project.IsDisabled = true;
+            project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            project.LastUpdatedDate = DateTime.UtcNow;
+
             await _projectRepository.UpdateProjectAsync(project);
+            await _projectRepository.DeletePrjectPeopleAsync(project.TenantId);
+
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
                 Action = "upsert",
