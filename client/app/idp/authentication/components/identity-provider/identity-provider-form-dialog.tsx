@@ -361,7 +361,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           )}
 
           {/* Well Known URL - Hidden for social type */}
-          {providerType !== "social" && (
+          {/* {providerType !== "social" && (
             <div className="space-y-1.5">
               <Label htmlFor="wellKnownUrl">
                 Well Known URL <span className="text-destructive">*</span>
@@ -379,7 +379,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 <p className="text-xs text-destructive">{errors.wellKnownUrl.message}</p>
               )}
             </div>
-          )}
+          )} */}
 
           {/* Redirect URIs */}
           <div className="space-y-2">
