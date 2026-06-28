@@ -54,7 +54,7 @@ type FormValues = {
   provider: string;
   clientId: string;
   clientSecret: string;
-  jwksUri?: string;
+  wellKnownUrl?: string;
   audience?: string;
 };
 
@@ -70,7 +70,7 @@ const BLANK_FORM: FormValues = {
   provider: "",
   clientId: "",
   clientSecret: "",
-  jwksUri: "",
+  wellKnownUrl: "",
   audience: "",
 };
 
@@ -107,7 +107,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         provider: editItem.provider,
         clientId: editItem.clientId,
         clientSecret: "",
-        jwksUri: editItem.jwksUri ?? "",
+        wellKnownUrl: editItem.wellKnownUrl ?? "",
         audience: (editItem as any).audience ?? "",
       });
       const uris = Array.isArray(editItem.redirectUris)
@@ -153,7 +153,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         clientId: values.clientId,
         clientSecret: values.clientSecret,
         audience: values.audience,
-        jwksUri: values.jwksUri,
+        wellKnownUrl: values.wellKnownUrl,
         tokenEndpointAuthMethod: "client_secret_basic",
         scope: "openid",
         redirectUris: cleanedUris,
@@ -336,20 +336,20 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           {/* Well Known URL - Hidden for social type */}
           {providerType !== "social" && (
             <div className="space-y-1.5">
-              <Label htmlFor="jwksUri">
+              <Label htmlFor="wellKnownUrl">
                 Well Known URL <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="jwksUri"
-                placeholder="https://idp.example.com/.well-known/jwks.json"
-                {...register("jwksUri", {
+                id="wellKnownUrl"
+                placeholder="https://idp.example.com/.well-known/openid-configuration"
+                {...register("wellKnownUrl", {
                   required: "Well Known URL is required",
                   validate: (v) =>
                     !v || /^https?:\/\/.+/.test(v) || "Enter a valid URL",
                 })}
               />
-              {errors.jwksUri && (
-                <p className="text-xs text-destructive">{errors.jwksUri.message}</p>
+              {errors.wellKnownUrl && (
+                <p className="text-xs text-destructive">{errors.wellKnownUrl.message}</p>
               )}
             </div>
           )}
