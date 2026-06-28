@@ -92,7 +92,7 @@ export const OidcList = () => {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="w-64 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
                 Client
               </TableHead>
               <TableHead className="w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis">

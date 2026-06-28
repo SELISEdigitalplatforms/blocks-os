@@ -180,7 +180,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 name="clientDisplayName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client Name</FormLabel>
+                    <FormLabel>
+                      Client Name <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input placeholder="Enter client name" {...field} />
                     </FormControl>
@@ -236,22 +238,29 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
               </div>
 
-              <FormField
-                control={form.control}
-                name="audienceUrlOidc"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Audience</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Scope(s) | PKCE | Allowed Response Types — single borderless row */}
+              {/* Status | Scope(s) | PKCE — single borderless row */}
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="isActive"
+                          checked={!!field.value}
+                          onCheckedChange={(v) => field.onChange(!!v)}
+                        />
+                        <label htmlFor="isActive" className="cursor-pointer text-sm text-high-emphasis">
+                          Active
+                        </label>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="scope"
@@ -295,26 +304,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="allowedResponseTypes"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Allowed Response Types</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Checkbox id="response-type-code" checked disabled />
-                        <label
-                          htmlFor="response-type-code"
-                          className="cursor-not-allowed text-sm text-muted-foreground"
-                        >
-                          code
-                        </label>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               {/* Allowed Services - dropdown bound to DUMMY_LOG_SERVICES id */}
@@ -346,49 +335,27 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 )}
               />
 
-              {/* Auto redirect | Active — borderless toggles with friendly labels */}
-              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="isAutoRedirect"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Auto Redirect</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="isAutoRedirect"
-                          checked={!!field.value}
-                          onCheckedChange={(v) => field.onChange(!!v)}
-                        />
-                        <label htmlFor="isAutoRedirect" className="cursor-pointer text-sm text-high-emphasis">
-                          Redirect automatically after authentication
-                        </label>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="isActive"
-                          checked={!!field.value}
-                          onCheckedChange={(v) => field.onChange(!!v)}
-                        />
-                        <label htmlFor="isActive" className="cursor-pointer text-sm text-high-emphasis">
-                          Active
-                        </label>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {/* Auto Redirect — single borderless row */}
+              <FormField
+                control={form.control}
+                name="isAutoRedirect"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Auto Redirect</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="isAutoRedirect"
+                        checked={!!field.value}
+                        onCheckedChange={(v) => field.onChange(!!v)}
+                      />
+                      <label htmlFor="isAutoRedirect" className="cursor-pointer text-sm text-high-emphasis">
+                        Redirect automatically after authentication
+                      </label>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </form>
           </Form>
         </div>
