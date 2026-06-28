@@ -15,13 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui-kits/select/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
@@ -66,10 +59,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   });
 
   const {
-    formState: { isDirty, isValid },
+    formState: { isValid },
     control,
     watch,
-    setValue,
     register,
   } = form;
 
@@ -151,7 +143,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   };
 
   const selectedServices = watch("allowedServiceAccessResources") ?? [];
-  const allowedServicesValue = selectedServices[0] ?? "";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -238,32 +229,52 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
               </div>
 
+              {/* Allowed Services — multi-select checkbox list (values are service ids) */}
               <FormField
                 control={form.control}
                 name="allowedServiceAccessResources"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Allowed Services</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={allowedServicesValue}
-                        onValueChange={(v) => field.onChange(v ? [v] : [])}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DUMMY_LOG_SERVICES.map((service) => (
-                            <SelectItem key={service.id} value={service.id}>
-                              {service.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const value = (field.value ?? []) as string[];
+                  const toggle = (id: string) => {
+                    const next = value.includes(id)
+                      ? value.filter((x) => x !== id)
+                      : [...value, id];
+                    field.onChange(next);
+                  };
+                  return (
+                    <FormItem>
+                      <FormLabel>
+                        Allowed Services <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {DUMMY_LOG_SERVICES.map((service) => {
+                            const checked = value.includes(service.id);
+                            return (
+                              <div
+                                key={service.id}
+                                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/40"
+                              >
+                                <Checkbox
+                                  id={`allowed-service-${service.id}`}
+                                  checked={checked}
+                                  onCheckedChange={() => toggle(service.id)}
+                                />
+                                <label
+                                  htmlFor={`allowed-service-${service.id}`}
+                                  className="cursor-pointer text-sm text-high-emphasis"
+                                >
+                                  {service.name}
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               {/* Status | Scope(s) | PKCE — single borderless row */}
@@ -317,13 +328,12 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                       <div className="flex items-center gap-2">
                         <Checkbox
                           id="requirePkce"
-                          checked={true}
-                          disabled
-                          onCheckedChange={() => field.onChange(true)}
+                          checked={!!field.value}
+                          onCheckedChange={(v) => field.onChange(!!v)}
                         />
                         <label
                           htmlFor="requirePkce"
-                          className="cursor-not-allowed text-sm text-muted-foreground"
+                          className="cursor-pointer text-sm text-high-emphasis"
                         >
                           Enabled
                         </label>
@@ -334,8 +344,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 />
               </div>
 
-              {/* Allowed Services - dropdown bound to DUMMY_LOG_SERVICES id */}
-              
 
               {/* Auto Redirect — single borderless row */}
               <FormField
@@ -368,7 +376,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
           <Button
             form="oidc-form"
             type="submit"
-            disabled={!isValid || isPending || isLoadingOidc || !isDirty}
+            disabled={!isValid || isPending}
           >
             {isEditMode ? "Update" : "Add"}
           </Button>
