@@ -53,12 +53,6 @@ type CreateOIDCProps = {
   triggerVariant?: "default" | "ghost" | "outline";
 };
 
-const ALLOWED_RESPONSE_TYPES = [
-  { value: "code", label: "code" },
-  { value: "token", label: "token" },
-  { value: "id_token", label: "id_token" },
-];
-
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [clientLogoUrl, setClientLogoUrl] = useState<string>("");
@@ -337,85 +331,72 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 )}
               />
 
-              {/* Scope(s) - checkbox style like add identity provider */}
-              <FormField
-                control={form.control}
-                name="scope"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Scope(s)</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center gap-2 rounded border p-4">
-                        <Checkbox id="scope-openid" checked disabled />
-                        <label htmlFor="scope-openid" className="cursor-pointer text-sm">
-                          openid
-                        </label>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* PKCE - locked true */}
-              <FormField
-                control={form.control}
-                name="requirePkce"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center gap-2 rounded border p-4">
-                      <Checkbox
-                        id="requirePkce"
-                        checked={true}
-                        disabled
-                        onCheckedChange={() => field.onChange(true)}
-                      />
-                      <label htmlFor="requirePkce" className="cursor-pointer text-sm">
-                        PKCE
-                      </label>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* AllowedResponseTypes - checkbox list, "code" selected */}
-              <FormField
-                control={form.control}
-                name="allowedResponseTypes"
-                render={({ field }) => {
-                  const value = (field.value ?? []) as string[];
-                  const toggle = (v: string) => {
-                    const next = value.includes(v)
-                      ? value.filter((x) => x !== v)
-                      : [...value, v];
-                    field.onChange(next);
-                  };
-                  return (
+              {/* Scope(s) | PKCE | Allowed Response Types — single borderless row */}
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="scope"
+                  render={() => (
                     <FormItem>
-                      <FormLabel>Allowed Response Types</FormLabel>
-                      <div className="flex flex-col gap-2 rounded border p-4">
-                        {ALLOWED_RESPONSE_TYPES.map((opt) => (
-                          <div key={opt.value} className="flex items-center gap-2">
-                            <Checkbox
-                              id={`response-type-${opt.value}`}
-                              checked={value.includes(opt.value)}
-                              onCheckedChange={() => toggle(opt.value)}
-                            />
-                            <label
-                              htmlFor={`response-type-${opt.value}`}
-                              className="cursor-pointer text-sm"
-                            >
-                              {opt.label}
-                            </label>
-                          </div>
-                        ))}
+                      <FormLabel>Scope(s)</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Checkbox id="scope-openid" checked disabled />
+                          <label htmlFor="scope-openid" className="cursor-not-allowed text-sm text-muted-foreground">
+                            openid
+                          </label>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="requirePkce"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PKCE</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="requirePkce"
+                          checked={true}
+                          disabled
+                          onCheckedChange={() => field.onChange(true)}
+                        />
+                        <label
+                          htmlFor="requirePkce"
+                          className="cursor-not-allowed text-sm text-muted-foreground"
+                        >
+                          Enabled
+                        </label>
                       </div>
                       <FormMessage />
                     </FormItem>
-                  );
-                }}
-              />
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="allowedResponseTypes"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Allowed Response Types</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Checkbox id="response-type-code" checked disabled />
+                        <label
+                          htmlFor="response-type-code"
+                          className="cursor-not-allowed text-sm text-muted-foreground"
+                        >
+                          code
+                        </label>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* Allowed Services - dropdown bound to DUMMY_LOG_SERVICES id */}
               <FormField
@@ -446,21 +427,22 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 )}
               />
 
-              {/* IsAutoRedirect + IsActive checkboxes */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Auto redirect | Active — borderless toggles with friendly labels */}
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="isAutoRedirect"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-2 rounded border p-4">
+                      <FormLabel>Auto Redirect</FormLabel>
+                      <div className="flex items-center gap-2">
                         <Checkbox
                           id="isAutoRedirect"
                           checked={!!field.value}
                           onCheckedChange={(v) => field.onChange(!!v)}
                         />
-                        <label htmlFor="isAutoRedirect" className="cursor-pointer text-sm">
-                          IsAutoRedirect
+                        <label htmlFor="isAutoRedirect" className="cursor-pointer text-sm text-high-emphasis">
+                          Redirect automatically after authentication
                         </label>
                       </div>
                       <FormMessage />
@@ -472,14 +454,15 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   name="isActive"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-2 rounded border p-4">
+                      <FormLabel>Status</FormLabel>
+                      <div className="flex items-center gap-2">
                         <Checkbox
                           id="isActive"
                           checked={!!field.value}
                           onCheckedChange={(v) => field.onChange(!!v)}
                         />
-                        <label htmlFor="isActive" className="cursor-pointer text-sm">
-                          IsActive
+                        <label htmlFor="isActive" className="cursor-pointer text-sm text-high-emphasis">
+                          Active
                         </label>
                       </div>
                       <FormMessage />
