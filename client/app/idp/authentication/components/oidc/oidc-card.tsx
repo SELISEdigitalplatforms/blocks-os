@@ -22,7 +22,7 @@ import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { MaskedText } from "@/components/masked-text";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { getApiUrl } from "@/lib/get-api-path";
+import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import {
   IDeleteOidcClientPayload,
   IOidcConfig,
@@ -124,10 +124,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     .map((id) => DUMMY_LOG_SERVICES.find((s) => s.id === id)?.name ?? id)
     .join(", ");
 
-  const wellKnownUrl = `${getApiUrl(
-    "idp/v1",
-    ".well-known/openid-configuration",
-  )}?projectKey=${tenantId}`;
+  const wellKnownUrl = getBlocksOidcWellKnownUrl(tenantId);
 
   const kvPairs: { key: string; value: string; isSecret?: boolean }[] = [
     { key: "Client Id", value: item.itemId, isSecret: true },
