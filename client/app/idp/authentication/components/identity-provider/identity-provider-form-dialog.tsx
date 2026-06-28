@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, X } from "lucide-react";
+import { Eye, EyeOff, Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,14 +29,26 @@ import {
   useCreateIdentityProvider,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
+import {
+  SOCIAL_AUTH_PROVIDERS_CONFIG,
+} from "@blocks-idp/authentication/constants/sso-providers.constant";
+import { IRole } from "@blocks-idp/iam/models/role";
+import { IPermission } from "@blocks-idp/iam/models/permission";
+import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
+import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
+import { toPermissionStubs, toRoleStubs } from "./identity-provider-form.util";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 
-const PROVIDER_TYPES: { value: string; label: string }[] = [
-  { value: "oidc", label: "OpenID Connect (OIDC)" },
-  { value: "oauth2", label: "OAuth 2.0" },
-  { value: "saml", label: "SAML 2.0" },
-  { value: "ldap", label: "LDAP" },
+const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
-  { value: "others", label: "Others" },
+  { value: "blocks-oidc", label: "Blocks OIDC" },
+  { value: "byos", label: "Bring your own SSO (BYOS)" },
+  // { value: "google", label: "Google" },
+  // { value: "microsoft", label: "Microsoft" },
+  // { value: "linkedin", label: "LinkedIn" },
+  // { value: "github", label: "GitHub" },
 ];
 
 type FormValues = {
@@ -45,7 +57,8 @@ type FormValues = {
   provider: string;
   clientId: string;
   clientSecret: string;
-  jwksUri?: string;
+  wellKnownUrl?: string;
+  audience?: string;
 };
 
 type Props = {
@@ -56,18 +69,25 @@ type Props = {
 
 const BLANK_FORM: FormValues = {
   displayName: "",
-  providerType: "oidc",
+  providerType: "social",
   provider: "",
   clientId: "",
   clientSecret: "",
-  jwksUri: "",
+  wellKnownUrl: "",
+  audience: "",
 };
 
 export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Props) {
   const isEditing = !!editItem?.itemId;
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
-  const [customProviderType, setCustomProviderType] = useState("");
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
+  const [showClientId, setShowClientId] = useState(false);
+  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
+  const [requirePkce, setRequirePkce] = useState(false);
+  const [redirectUrisError, setRedirectUrisError] = useState<string | null>(null);
 
   const {
     register,
@@ -82,32 +102,48 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   });
 
   const providerType = watch("providerType");
-  const isOthers = providerType === "others";
+  const blocksOidcWellKnownUrl = tenantId
+    ? getBlocksOidcWellKnownUrl(tenantId)
+    : "";
+
+  useEffect(() => {
+    if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
+      setValue("wellKnownUrl", blocksOidcWellKnownUrl, { shouldValidate: true });
+    }
+  }, [providerType, blocksOidcWellKnownUrl, setValue]);
 
   useEffect(() => {
     if (open && editItem) {
-      const isCustom = !PROVIDER_TYPES.some(
-        (t) => t.value !== "others" && t.value === editItem.providerType,
-      );
+      const matched = PROVIDER_OPTIONS.some((t) => t.value === editItem.providerType);
       reset({
-        displayName: editItem.displayName,
-        providerType: isCustom ? "others" : editItem.providerType,
+        providerType: matched ? editItem.providerType : "social",
         provider: editItem.provider,
         clientId: editItem.clientId,
         clientSecret: "",
-        jwksUri: editItem.jwksUri ?? "",
+        wellKnownUrl: editItem.wellKnownUrl ?? "",
+        audience: (editItem as any).audience ?? "",
       });
-      setCustomProviderType(isCustom ? editItem.providerType : "");
-      const uris = Array.isArray(editItem.redirectUri)
-        ? editItem.redirectUri
-        : editItem.redirectUri
-          ? [editItem.redirectUri as string]
-          : [""];
+      const uris = Array.isArray(editItem.redirectUris)
+        ? editItem.redirectUris
+        : editItem.redirectUris
+          ? [editItem.redirectUris as unknown as string]
+          : Array.isArray(editItem.redirectUri)
+            ? editItem.redirectUri
+            : editItem.redirectUri
+              ? [editItem.redirectUri as string]
+              : [""];
       setRedirectUris(uris.length ? uris : [""]);
+      setSelectedRoles(toRoleStubs(editItem.initialRoles ?? []));
+      setSelectedPermissions(toPermissionStubs(editItem.initialPermissions ?? []));
+      setRequirePkce(!!editItem.requirePkce);
+      setRedirectUrisError(null);
     } else if (open) {
       reset(BLANK_FORM);
-      setCustomProviderType("");
       setRedirectUris([""]);
+      setSelectedRoles([]);
+      setSelectedPermissions([]);
+      setRequirePkce(false);
+      setRedirectUrisError(null);
     }
   }, [open, editItem, reset]);
 
@@ -116,19 +152,31 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const isPending = isCreating || isUpdating;
 
   const onSubmit = async (values: FormValues) => {
+    const cleanedUris = redirectUris.map((u) => u.trim()).filter(Boolean);
+    if (cleanedUris.length === 0) {
+      setRedirectUrisError("At least one redirect URI is required");
+      return;
+    }
+    setRedirectUrisError(null);
     try {
-      const finalProviderType: IdentityProviderType =
-        isOthers && customProviderType.trim()
-          ? customProviderType.trim()
-          : values.providerType;
-
       const payload: IdentityProvider = {
-        ...values,
-        providerType: finalProviderType,
+        displayName: values.displayName,
+        providerType: values.providerType as IdentityProviderType,
+        provider: values.provider,
+        clientId: values.clientId,
+        clientSecret: values.clientSecret,
+        audience: values.audience,
+        wellKnownUrl:
+          values.providerType === "blocks-oidc"
+            ? blocksOidcWellKnownUrl || values.wellKnownUrl
+            : values.wellKnownUrl,
         tokenEndpointAuthMethod: "client_secret_basic",
         scope: "openid",
-        redirectUri: redirectUris.filter((u) => u.trim()),
+        redirectUris: cleanedUris,
         isActive: editItem?.isActive ?? true,
+        requirePkce,
+        initialRoles: selectedRoles.map((r) => r.slug),
+        initialPermissions: selectedPermissions.map((p) => p.resource),
         ...(isEditing ? { itemId: editItem!.itemId } : {}),
       };
 
@@ -158,43 +206,30 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Identity Provider" : "Add Identity Provider"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-[640px] flex-col gap-0 overflow-hidden p-0">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit Identity Provider" : "Add Identity Provider"}
+            </DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Display Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="displayName">
-              Display Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="displayName"
-              placeholder="My Identity Provider"
-              {...register("displayName", { required: "Display name is required" })}
-            />
-            {errors.displayName && (
-              <p className="text-xs text-destructive">{errors.displayName.message}</p>
-            )}
-          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-          {/* Provider Type */}
+          {/* Select Provider */}
           <div className="space-y-1.5">
             <Label htmlFor="providerType">
-              Provider Type <span className="text-destructive">*</span>
+              Select Provider <span className="text-destructive">*</span>
             </Label>
             <Select
               value={providerType}
               onValueChange={(v) => setValue("providerType", v, { shouldValidate: true })}
             >
               <SelectTrigger id="providerType">
-                <SelectValue placeholder="Select provider type" />
+                <SelectValue placeholder="Select Provider" />
               </SelectTrigger>
               <SelectContent>
-                {PROVIDER_TYPES.map((t) => (
+                {PROVIDER_OPTIONS.map((t) => (
                   <SelectItem key={t.value} value={t.value}>
                     {t.label}
                   </SelectItem>
@@ -203,31 +238,43 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </Select>
           </div>
 
-          {/* Custom Provider Type */}
-          {isOthers && (
-            <div className="space-y-1.5">
-              <Label htmlFor="customProviderType">
-                Custom Provider Type <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="customProviderType"
-                placeholder="e.g. twitter, github, custom-idp"
-                value={customProviderType}
-                onChange={(e) => setCustomProviderType(e.target.value)}
-              />
-            </div>
-          )}
-
           {/* Provider Name */}
           <div className="space-y-1.5">
             <Label htmlFor="provider">
               Provider Name <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="provider"
-              placeholder="my-identity-provider"
-              {...register("provider", { required: "Provider name is required" })}
-            />
+            {providerType === "social" ? (
+              <Select
+                value={watch("provider")}
+                onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
+              >
+                <SelectTrigger id="provider">
+                  <SelectValue placeholder="Select a provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
+                    .filter((c) => c.provider === "google" || c.provider === "microsoft")
+                    .map((config) => (
+                      <SelectItem key={config.provider} value={config.provider}>
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={config.imageSrc}
+                            alt={config.label}
+                            className="h-5 w-5 object-contain"
+                          />
+                          <span>{config.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="provider"
+                placeholder="my-identity-provider"
+                {...register("provider", { required: "Provider name is required" })}
+              />
+            )}
             {errors.provider && (
               <p className="text-xs text-destructive">{errors.provider.message}</p>
             )}
@@ -239,11 +286,22 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               <Label htmlFor="clientId">
                 Client ID <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="clientId"
-                placeholder="Enter client ID"
-                {...register("clientId", { required: "Client ID is required" })}
-              />
+              <div className="relative">
+                <Input
+                  id="clientId"
+                  type={showClientId ? "text" : "password"}
+                  placeholder="Enter client ID"
+                  className="pr-10"
+                  {...register("clientId", { required: "Client ID is required" })}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowClientId(!showClientId)}
+                >
+                  {showClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.clientId && (
                 <p className="text-xs text-destructive">{errors.clientId.message}</p>
               )}
@@ -257,42 +315,91 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                   </span>
                 )}
               </Label>
-              <Input
-                id="clientSecret"
-                type="password"
-                placeholder={isEditing ? "••••••••••••" : "Enter client secret"}
-                {...register("clientSecret", {
-                  required: isEditing ? false : "Client secret is required",
-                })}
-              />
+              <div className="relative">
+                <Input
+                  id="clientSecret"
+                  type={showClientSecret ? "text" : "password"}
+                  placeholder={isEditing ? "••••••••••••" : "Enter client secret"}
+                  className="pr-10"
+                  {...register("clientSecret", {
+                    required: isEditing ? false : "Client secret is required",
+                  })}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowClientSecret(!showClientSecret)}
+                >
+                  {showClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.clientSecret && (
                 <p className="text-xs text-destructive">{errors.clientSecret.message}</p>
               )}
             </div>
           </div>
 
-          {/* Well Known URL */}
-          <div className="space-y-1.5">
-            <Label htmlFor="jwksUri">Well Known URL</Label>
+          {/* Audience */}
+          {/* <div className="space-y-1.5">
+            <Label htmlFor="audience">Audience</Label>
             <Input
-              id="jwksUri"
-              placeholder="https://idp.example.com/.well-known/jwks.json"
-              {...register("jwksUri")}
+              id="audience"
+              placeholder="Enter audience"
+              {...register("audience")}
             />
-          </div>
+          </div> */}
 
-          {/* Scope(s) */}
-          <div className="space-y-1.5">
-            <Label>Scope(s)</Label>
-            <div className="flex items-center gap-2">
-              <Checkbox checked disabled />
-              <span className="text-sm text-muted-foreground">openid</span>
+          {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
+          {providerType === "blocks-oidc" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="generatedWellKnownUrl">Well Known URL</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="generatedWellKnownUrl"
+                  readOnly
+                  aria-readonly="true"
+                  tabIndex={-1}
+                  value={blocksOidcWellKnownUrl}
+                  className="cursor-default bg-muted font-mono text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                <CopyToClipboardButton
+                  textToCopy={blocksOidcWellKnownUrl}
+                >
+                  <span />
+                </CopyToClipboardButton>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Auto-generated discovery URL for this Blocks OIDC provider.
+              </p>
             </div>
-          </div>
+          )}
+
+          {/* Well Known URL - Hidden for social type */}
+          {/* {providerType !== "social" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="wellKnownUrl">
+                Well Known URL <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="wellKnownUrl"
+                placeholder="https://idp.example.com/.well-known/openid-configuration"
+                {...register("wellKnownUrl", {
+                  required: "Well Known URL is required",
+                  validate: (v) =>
+                    !v || /^https?:\/\/.+/.test(v) || "Enter a valid URL",
+                })}
+              />
+              {errors.wellKnownUrl && (
+                <p className="text-xs text-destructive">{errors.wellKnownUrl.message}</p>
+              )}
+            </div>
+          )} */}
 
           {/* Redirect URIs */}
           <div className="space-y-2">
-            <Label>Redirect URI(s)</Label>
+            <Label>
+              Redirect URI(s) <span className="text-destructive">*</span>
+            </Label>
             {redirectUris.map((uri, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <Input
@@ -313,16 +420,49 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 )}
               </div>
             ))}
+            {redirectUrisError && (
+              <p className="text-xs text-destructive">{redirectUrisError}</p>
+            )}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="mt-1 gap-1.5"
+              className="mt-1 h-7 gap-1 px-2 text-xs"
               onClick={addRedirectUri}
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-3 w-3" />
               Add Redirect URI
             </Button>
+          </div>
+
+          {/* Initial Roles */}
+          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
+
+          {/* Initial Permissions */}
+          <SSOInitialPermissions
+            permissions={selectedPermissions}
+            onChange={setSelectedPermissions}
+          />
+
+          {/* Scope(s) + PKCE */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Label>Scope(s)</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox checked disabled />
+                <span className="text-sm text-muted-foreground">openid</span>
+              </div>
+            </div>
+            {/* <div className="flex items-center gap-2">
+              <Checkbox
+                id="requirePkce"
+                checked={requirePkce}
+                onCheckedChange={(v) => setRequirePkce(!!v)}
+              />
+              <Label htmlFor="requirePkce" className="cursor-pointer">
+                Require PKCE
+              </Label>
+            </div> */}
           </div>
 
           <DialogFooter>
@@ -331,12 +471,13 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </Button>
             <Button
               type="submit"
-              disabled={isPending || !isValid || (isOthers && !customProviderType.trim())}
+              disabled={isPending || !isValid}
             >
               {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
             </Button>
           </DialogFooter>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,8 +1,8 @@
 import {
-  Wrench,
   FileCode,
   ShieldCheck,
   Lock,
+  SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react";
 import { NavItem, NavGroup } from "@/constants/secret-management-nav";
@@ -13,7 +13,7 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
   {
     label: "Configuration",
     items: [
-      { id: "general", label: "General", value: "general", icon: Wrench, desc: "General authentication settings" },
+      { id: "config", label: "Settings", value: "config", icon: SlidersHorizontal, desc: "Tenant IAM, auth, organization, and signup configuration" },
     ],
   },
   {

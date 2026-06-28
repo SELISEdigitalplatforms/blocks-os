@@ -27,9 +27,8 @@ export const SSOProviderList = () => {
   const { data } = useGetSsoCredentials({ projectKey: tenantId });
   const providers = useMemo(() => {
     const configuredMap = new Map(data?.map((item) => [item.provider, item]));
-    return Object.values(SSO_PROVIDERS).map((key) => {
-      const base = SOCIAL_AUTH_PROVIDERS_CONFIG[key];
-      const config = configuredMap.get(key) || {};
+    return Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG).map((base) => {
+      const config = configuredMap.get(base.provider) || {};
       return {
         ...base,
         ...config,
