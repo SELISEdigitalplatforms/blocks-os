@@ -190,7 +190,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="flex max-h-[90vh] max-w-[640px] flex-col gap-0 overflow-hidden p-0">
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
           <DialogHeader>
             <DialogTitle>
