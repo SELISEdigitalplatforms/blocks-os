@@ -150,7 +150,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     },
     {
       key: "PKCE",
-      value: item.requirePkce ? "Required" : "Not required",
+      value: item.requirePkce ? "required" : "not required",
     },
     {
       key: "Redirect automatically after authentication",
@@ -158,7 +158,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     },
     {
       key: "Status",
-      value: item.isActive ? "Active" : "Inactive",
+      value: item.isActive ? "active" : "inactive",
     },
     // {
     //   key: "Well Known URL",
