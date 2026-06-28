@@ -39,7 +39,7 @@ export function SidebarMobileView() {
 
   const isProjectOverviewRoute = pathname.startsWith("/project-overview");
   const isSecretManagementRoute = pathname.startsWith("/app/secret-management");
-  const isAuthenticationRoute = pathname.startsWith("/app/authentication");
+  const isAuthenticationRoute = pathname.startsWith("/app/idp");
 
   const currentTab =
     searchParams.get("tab") ??
@@ -179,7 +179,7 @@ export function SidebarMobileView() {
                     <MobileGroupedMenuItem
                       menu={menu}
                       groups={AUTHENTICATION_NAV_GROUPS}
-                      routePrefix="/app/authentication"
+                      routePrefix="/app/idp"
                     />
                   ) : menu.id === "service-identity__lmt" ? (
                     <MobileGroupedMenuItem

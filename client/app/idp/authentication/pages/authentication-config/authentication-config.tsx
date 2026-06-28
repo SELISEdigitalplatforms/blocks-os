@@ -33,7 +33,7 @@ export const AuthenticationConfigLayout = () => {
     <>
       {currentPath === "roles" && <AddRole />}
       {currentPath === "permissions" && (
-        <Link to="/app/authentication/permission-detail/new">
+        <Link to="/app/idp/permission-detail/new">
           <PrimaryButton label="Add Permission" />
         </Link>
       )}
