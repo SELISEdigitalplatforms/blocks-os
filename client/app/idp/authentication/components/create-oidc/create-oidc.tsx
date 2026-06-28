@@ -30,6 +30,7 @@ import {
   createOIDCFormDefaultValue,
   CreateOIDCFormValues,
   createOidcSchema,
+  redirectUriSubmitSchema,
 } from "./utils";
 import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
@@ -87,7 +88,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
             : [""];
       form.reset({
         redirectUris: uris.map((u) => ({ value: u })),
-        audienceUrlOidc: credential.audience,
         scope: credential.scope || "openid",
         clientBrandColor: credential.clientBrandColor || "#124091",
         clientDisplayName: credential.clientDisplayName || "",
@@ -109,9 +109,21 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   }, [existingOidc, isEditMode, open, form]);
 
   const onSubmit = async (data: CreateOIDCFormValues) => {
+    const redirectResult = redirectUriSubmitSchema.safeParse(data.redirectUris);
+    if (!redirectResult.success) {
+      redirectResult.error.issues.forEach((issue) => {
+        const path = issue.path as (string | number)[];
+        form.setError(
+          `redirectUris.${path[0]}.value` as keyof CreateOIDCFormValues,
+          { type: "validate", message: issue.message },
+          { shouldFocus: true },
+        );
+      });
+      return;
+    }
     try {
       const payload: ISaveOidcCredentialPayload = {
-        audience: data.audienceUrlOidc,
+        audience: "",
         redirectUris: data.redirectUris
           .map((entry) => entry.value.trim())
           .filter(Boolean),
@@ -158,14 +170,14 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex h-screen max-h-[95vh] w-screen flex-col rounded-none sm:h-auto sm:max-h-[95vh] sm:w-auto sm:rounded-lg md:h-auto md:w-[600px]">
+      <DialogContent className="flex h-screen max-h-[95vh] w-screen flex-col rounded-none sm:h-auto sm:max-h-[95vh] sm:w-auto sm:rounded-lg md:h-auto md:w-[640px]">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
-            <form id="oidc-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form id="oidc-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 px-1">
               <FormField
                 control={form.control}
                 name="clientDisplayName"
