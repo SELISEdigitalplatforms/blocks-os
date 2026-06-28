@@ -82,8 +82,6 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
   const [requirePkce, setRequirePkce] = useState(false);
-  const [scopes, setScopes] = useState<string[]>(["openid"]);
-  const [scopeInput, setScopeInput] = useState("");
 
   const {
     register,
@@ -123,35 +121,18 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setRequirePkce(!!editItem.requirePkce);
-      const existingScopes = editItem.scope
-        ? editItem.scope.split(" ").filter(Boolean)
-        : ["openid"];
-      setScopes(existingScopes.length ? existingScopes : ["openid"]);
     } else if (open) {
       reset(BLANK_FORM);
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setRequirePkce(false);
-      setScopes(["openid"]);
     }
   }, [open, editItem, reset]);
 
   const { mutateAsync: create, isPending: isCreating } = useCreateIdentityProvider();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIdentityProvider();
   const isPending = isCreating || isUpdating;
-
-  const addScope = () => {
-    const v = scopeInput.trim();
-    if (v && !scopes.includes(v)) {
-      setScopes((prev) => [...prev, v]);
-      setScopeInput("");
-    }
-  };
-
-  const removeScope = (s: string) => {
-    setScopes((prev) => prev.filter((x) => x !== s));
-  };
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -164,7 +145,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         audience: values.audience,
         jwksUri: values.jwksUri,
         tokenEndpointAuthMethod: "client_secret_basic",
-        scope: scopes.join(" "),
+        scope: "openid",
         redirectUris: redirectUris.filter((u) => u.trim()),
         isActive: editItem?.isActive ?? true,
         requirePkce,
@@ -397,61 +378,25 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </Button>
           </div>
 
-          {/* Scope(s) */}
-          <div className="space-y-1.5">
-            <Label>Scope(s)</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {scopes.map((s) => (
-                <span
-                  key={s}
-                  className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs"
-                >
-                  {s}
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => removeScope(s)}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-              <div className="flex items-center gap-1">
-                <Input
-                  value={scopeInput}
-                  onChange={(e) => setScopeInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addScope();
-                    }
-                  }}
-                  placeholder="Add scope (e.g. profile)"
-                  className="h-8 w-48"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  onClick={addScope}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
+          {/* Scope(s) + PKCE */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Label>Scope(s)</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox checked disabled />
+                <span className="text-sm text-muted-foreground">openid</span>
               </div>
             </div>
-          </div>
-
-          {/* PKCE */}
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="requirePkce"
-              checked={requirePkce}
-              onCheckedChange={(v) => setRequirePkce(!!v)}
-            />
-            <Label htmlFor="requirePkce" className="cursor-pointer">
-              Require PKCE
-            </Label>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="requirePkce"
+                checked={requirePkce}
+                onCheckedChange={(v) => setRequirePkce(!!v)}
+              />
+              <Label htmlFor="requirePkce" className="cursor-pointer">
+                Require PKCE
+              </Label>
+            </div>
           </div>
 
           <DialogFooter>

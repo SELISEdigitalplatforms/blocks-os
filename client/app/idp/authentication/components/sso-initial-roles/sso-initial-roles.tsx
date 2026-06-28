@@ -64,7 +64,7 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">No roles added</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add initial roles for SSO users
+            Add roles for SSO users
           </p>
         </div>
       ) : (

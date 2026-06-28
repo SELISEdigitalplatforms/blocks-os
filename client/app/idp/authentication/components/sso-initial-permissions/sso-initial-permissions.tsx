@@ -20,7 +20,7 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">Initial Permissions</Label>
+            <Label className="text-base font-medium">Permissions</Label>
             {permissions.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 {permissions.length}
@@ -55,7 +55,7 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">No permissions added</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add initial permissions for SSO users
+            Add permissions for SSO users
           </p>
         </div>
       ) : (
