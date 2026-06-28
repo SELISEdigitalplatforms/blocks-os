@@ -348,11 +348,6 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                   value={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
                   className="font-mono text-xs"
                 />
-                <CopyToClipboardButton
-                  textToCopy={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
-                >
-                  <span />
-                </CopyToClipboardButton>
               </div>
               <p className="text-xs text-muted-foreground">
                 Auto-generated discovery URL for this Blocks OIDC provider.
