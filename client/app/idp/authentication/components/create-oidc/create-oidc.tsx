@@ -54,7 +54,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
 
   const form = useForm<CreateOIDCFormValues>({
     resolver: zodResolver(createOidcSchema),
-    mode: "all",
+    mode: "onChange",
     defaultValues: createOIDCFormDefaultValue,
   });
 
@@ -165,7 +165,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         </DialogHeader>
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
-            <form id="oidc-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4">
+            <form id="oidc-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="clientDisplayName"
