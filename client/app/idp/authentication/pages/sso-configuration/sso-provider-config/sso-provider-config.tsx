@@ -10,18 +10,23 @@ type SSOProviderConfigProps = {
   provider: SSO_PROVIDERS;
   id: string;
 };
-export const SSOProviderConfig = ({ provider, id = "" }: SSOProviderConfigProps) => {
+export const SSOProviderConfig = ({
+  provider,
+  id = "",
+}: SSOProviderConfigProps) => {
   const [open, setOpen] = useState<boolean>(false);
   if (!provider) return null;
-  BREADCRUMB_CUSTOM_TITLES["/services/authentication?tab=social"] = "Authentication";
-  BREADCRUMB_CUSTOM_TITLES[`/services/authentication/sso-configuration`] = provider;
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/sso"] = "Authentication";
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/sso-configuration"] = provider;
   return (
     <div className="flex flex-col">
       <div className="hidden md:flex">
         <PageBreadcrumb breadcrumbIndex={2} />
       </div>
       <div className="mb-5 flex items-center justify-between rounded text-base">
-        <h3 className="text-2xl font-bold tracking-tight">{provider.toUpperCase()}</h3>
+        <h3 className="text-2xl font-bold tracking-tight">
+          {provider.toUpperCase()}
+        </h3>
         <Button variant="outline" onClick={() => setOpen((open) => !open)}>
           <BookText className="aspect-square w-4" />
           <span className="sr-only sm:not-sr-only sm:ml-2">Setup Guide</span>
@@ -29,7 +34,11 @@ export const SSOProviderConfig = ({ provider, id = "" }: SSOProviderConfigProps)
       </div>
       <div className="mt-4 flex-1">
         <SsoProviderConfigForms provider={provider} id={id} />
-        <SSoProviderSetupGuideLine open={open} onOpenChange={setOpen} provider={provider} />
+        <SSoProviderSetupGuideLine
+          open={open}
+          onOpenChange={setOpen}
+          provider={provider}
+        />
       </div>
     </div>
   );

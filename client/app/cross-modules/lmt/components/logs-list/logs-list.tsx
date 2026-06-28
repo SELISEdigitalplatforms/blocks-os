@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { LogItem } from "./log-item";
 import { InfiniteScroll } from "@/components/infinite-scroller";
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { LogsViewerContext } from "../logs-viewer";
 import { useLogs } from "../../hooks/use-logs";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
@@ -35,7 +35,10 @@ export const LogsList = () => {
     search: "",
   };
   const { serviceName } = selectedService || { serviceName: "" };
-  const initialTimeStamp = endDate ? endDate : new Date().toISOString();
+  const initialTimeStamp = useMemo(
+    () => (endDate ? endDate : new Date().toISOString()),
+    [endDate, serviceName],
+  );
   const { initialLogs, isLoading, hasTopMore, fetchOldLogs, fetchNewLogs } = useLogs({
     serviceName,
     search: search,

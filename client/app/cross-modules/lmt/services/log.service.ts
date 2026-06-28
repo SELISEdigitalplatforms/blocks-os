@@ -18,7 +18,7 @@ export class LogService {
   }
 
   async getLiveLog(paylaod: IGetLiveLogsPayload): Promise<IAPIResponse<ILog[]>> {
-    const url = `${LOG_ENDPOINTS.LIVE}?Name=${paylaod.serviceName}&LastDate=${paylaod.lastDate}&ProjectKey=${paylaod.projectKey}`;
+    const url = `${LOG_ENDPOINTS.LIVE}?Name=${paylaod.serviceName}&LastDate=${paylaod.lastDate}`;
     return http.get<IAPIResponse<ILog[]>>(url);
   }
 }
