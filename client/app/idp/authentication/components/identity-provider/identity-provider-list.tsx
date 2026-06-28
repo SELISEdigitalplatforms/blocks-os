@@ -81,10 +81,10 @@ const KVRow = ({ label, value, isSecret = false }: KVRowProps) => {
   return (
     <TableRow className="group bg-muted/20 hover:bg-muted/30">
       <TableCell className="w-8 pl-4" />
-      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground" colSpan={1}>
+      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground">
         {label}
       </TableCell>
-      <TableCell className="py-2" colSpan={2}>
+      <TableCell className="py-2" colSpan={3}>
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1 font-mono text-xs">
             {value ? (
@@ -116,7 +116,6 @@ const KVRow = ({ label, value, isSecret = false }: KVRowProps) => {
           )}
         </div>
       </TableCell>
-      <TableCell />
     </TableRow>
   );
 };
