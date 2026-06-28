@@ -36,6 +36,10 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
+import { toPermissionStubs, toRoleStubs } from "./identity-provider-form.util";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { getApiUrl } from "@/lib/get-api-path";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
@@ -53,7 +57,7 @@ type FormValues = {
   provider: string;
   clientId: string;
   clientSecret: string;
-  jwksUri?: string;
+  wellKnownUrl?: string;
   audience?: string;
 };
 
@@ -69,12 +73,13 @@ const BLANK_FORM: FormValues = {
   provider: "",
   clientId: "",
   clientSecret: "",
-  jwksUri: "",
+  wellKnownUrl: "",
   audience: "",
 };
 
 export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Props) {
   const isEditing = !!editItem?.itemId;
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
   const [showClientId, setShowClientId] = useState(false);
@@ -82,6 +87,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
   const [requirePkce, setRequirePkce] = useState(false);
+  const [redirectUrisError, setRedirectUrisError] = useState<string | null>(null);
 
   const {
     register,
@@ -105,7 +111,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         provider: editItem.provider,
         clientId: editItem.clientId,
         clientSecret: "",
-        jwksUri: editItem.jwksUri ?? "",
+        wellKnownUrl: editItem.wellKnownUrl ?? "",
         audience: (editItem as any).audience ?? "",
       });
       const uris = Array.isArray(editItem.redirectUris)
@@ -118,15 +124,17 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               ? [editItem.redirectUri as string]
               : [""];
       setRedirectUris(uris.length ? uris : [""]);
-      setSelectedRoles([]);
-      setSelectedPermissions([]);
+      setSelectedRoles(toRoleStubs(editItem.initialRoles ?? []));
+      setSelectedPermissions(toPermissionStubs(editItem.initialPermissions ?? []));
       setRequirePkce(!!editItem.requirePkce);
+      setRedirectUrisError(null);
     } else if (open) {
       reset(BLANK_FORM);
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setRequirePkce(false);
+      setRedirectUrisError(null);
     }
   }, [open, editItem, reset]);
 
@@ -135,6 +143,12 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const isPending = isCreating || isUpdating;
 
   const onSubmit = async (values: FormValues) => {
+    const cleanedUris = redirectUris.map((u) => u.trim()).filter(Boolean);
+    if (cleanedUris.length === 0) {
+      setRedirectUrisError("At least one redirect URI is required");
+      return;
+    }
+    setRedirectUrisError(null);
     try {
       const payload: IdentityProvider = {
         displayName: values.displayName,
@@ -143,10 +157,10 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         clientId: values.clientId,
         clientSecret: values.clientSecret,
         audience: values.audience,
-        jwksUri: values.jwksUri,
+        wellKnownUrl: values.wellKnownUrl,
         tokenEndpointAuthMethod: "client_secret_basic",
         scope: "openid",
-        redirectUris: redirectUris.filter((u) => u.trim()),
+        redirectUris: cleanedUris,
         isActive: editItem?.isActive ?? true,
         requirePkce,
         initialRoles: selectedRoles.map((r) => r.slug),
@@ -180,14 +194,15 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Identity Provider" : "Add Identity Provider"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-[640px] flex-col gap-0 overflow-hidden p-0">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit Identity Provider" : "Add Identity Provider"}
+            </DialogTitle>
+          </DialogHeader>
 
-<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
           {/* Select Provider */}
           <div className="space-y-1.5">
@@ -322,30 +337,55 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             />
           </div> */}
 
-          {/* Well Known URL - Hidden for social type */}
-          {providerType !== "social" && (
+          {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
+          {providerType === "blocks-oidc" && (
             <div className="space-y-1.5">
-              <Label htmlFor="jwksUri">Well Known URL</Label>
-              <Input
-                id="jwksUri"
-                placeholder="https://idp.example.com/.well-known/jwks.json"
-                {...register("jwksUri")}
-              />
+              <Label htmlFor="generatedWellKnownUrl">Well Known URL</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="generatedWellKnownUrl"
+                  readOnly
+                  value={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
+                  className="font-mono text-xs"
+                />
+                <CopyToClipboardButton
+                  textToCopy={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
+                >
+                  <span />
+                </CopyToClipboardButton>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Auto-generated discovery URL for this Blocks OIDC provider.
+              </p>
             </div>
           )}
 
-          {/* Initial Roles */}
-          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
-
-          {/* Initial Permissions */}
-          <SSOInitialPermissions
-            permissions={selectedPermissions}
-            onChange={setSelectedPermissions}
-          />
+          {/* Well Known URL - Hidden for social type */}
+          {providerType !== "social" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="wellKnownUrl">
+                Well Known URL <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="wellKnownUrl"
+                placeholder="https://idp.example.com/.well-known/openid-configuration"
+                {...register("wellKnownUrl", {
+                  required: "Well Known URL is required",
+                  validate: (v) =>
+                    !v || /^https?:\/\/.+/.test(v) || "Enter a valid URL",
+                })}
+              />
+              {errors.wellKnownUrl && (
+                <p className="text-xs text-destructive">{errors.wellKnownUrl.message}</p>
+              )}
+            </div>
+          )}
 
           {/* Redirect URIs */}
           <div className="space-y-2">
-            <Label>Redirect URI(s)</Label>
+            <Label>
+              Redirect URI(s) <span className="text-destructive">*</span>
+            </Label>
             {redirectUris.map((uri, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <Input
@@ -366,17 +406,29 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 )}
               </div>
             ))}
+            {redirectUrisError && (
+              <p className="text-xs text-destructive">{redirectUrisError}</p>
+            )}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="mt-1 gap-1.5"
+              className="mt-1 h-7 gap-1 px-2 text-xs"
               onClick={addRedirectUri}
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-3 w-3" />
               Add Redirect URI
             </Button>
           </div>
+
+          {/* Initial Roles */}
+          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
+
+          {/* Initial Permissions */}
+          <SSOInitialPermissions
+            permissions={selectedPermissions}
+            onChange={setSelectedPermissions}
+          />
 
           {/* Scope(s) + PKCE */}
           <div className="flex items-center justify-between gap-4">
@@ -410,7 +462,8 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
             </Button>
           </DialogFooter>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
