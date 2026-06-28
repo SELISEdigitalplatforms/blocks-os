@@ -163,6 +163,18 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
     { key: "Audience", value: item.audience ?? "" },
     { key: "Redirect URI(s)", value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "" },
     { key: "Token Auth Method", value: item.tokenEndpointAuthMethod ?? "" },
+    {
+      key: "Initial Roles",
+      value: item.initialRoles?.length ? item.initialRoles.join(", ") : "",
+    },
+    {
+      key: "Initial Permissions",
+      value: item.initialPermissions?.length ? item.initialPermissions.join(", ") : "",
+    },
+    {
+      key: "PKCE",
+      value: item.requirePkce ? "Required" : "",
+    },
   ].filter((pair) => pair.value);
 
   return (
