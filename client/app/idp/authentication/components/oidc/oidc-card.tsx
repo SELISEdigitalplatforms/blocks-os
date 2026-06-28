@@ -152,12 +152,12 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       value: item.requirePkce ? "Required" : "Not required",
     },
     {
-      key: "IsAutoRedirect",
+      key: "Redirect automatically after authentication",
       value: item.isAutoRedirect ? "true" : "false",
     },
     {
-      key: "IsActive",
-      value: item.isActive ? "true" : "false",
+      key: "Status",
+      value: item.isActive ? "Active" : "Inactive",
     },
     {
       key: "Well Known URL",
