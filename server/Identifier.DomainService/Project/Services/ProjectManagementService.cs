@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -308,7 +308,7 @@ namespace DomainService.Projects
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = applicationContext.CookieDomain, IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocksDomain } ],
+                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = applicationContext.CookieDomain, IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocksDomain }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
