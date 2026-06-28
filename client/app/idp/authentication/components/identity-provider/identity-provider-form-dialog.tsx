@@ -36,6 +36,7 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
+import { toPermissionStubs, toRoleStubs } from "./identity-provider-form.util";
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
@@ -119,8 +120,8 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               ? [editItem.redirectUri as string]
               : [""];
       setRedirectUris(uris.length ? uris : [""]);
-      setSelectedRoles([]);
-      setSelectedPermissions([]);
+      setSelectedRoles(toRoleStubs(editItem.initialRoles ?? []));
+      setSelectedPermissions(toPermissionStubs(editItem.initialPermissions ?? []));
       setRequirePkce(!!editItem.requirePkce);
       setRedirectUrisError(null);
     } else if (open) {
@@ -189,14 +190,15 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Identity Provider" : "Add Identity Provider"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col gap-0 overflow-hidden p-0">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit Identity Provider" : "Add Identity Provider"}
+            </DialogTitle>
+          </DialogHeader>
 
-<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
           {/* Select Provider */}
           <div className="space-y-1.5">
@@ -433,7 +435,8 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
             </Button>
           </DialogFooter>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
