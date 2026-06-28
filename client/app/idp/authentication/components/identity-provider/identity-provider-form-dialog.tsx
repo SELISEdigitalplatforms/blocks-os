@@ -37,6 +37,9 @@ import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
 import { toPermissionStubs, toRoleStubs } from "./identity-provider-form.util";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { getApiUrl } from "@/lib/get-api-path";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
@@ -76,6 +79,7 @@ const BLANK_FORM: FormValues = {
 
 export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Props) {
   const isEditing = !!editItem?.itemId;
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
   const [showClientId, setShowClientId] = useState(false);
@@ -332,6 +336,29 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               {...register("audience")}
             />
           </div> */}
+
+          {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
+          {providerType === "blocks-oidc" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="generatedWellKnownUrl">Well Known URL</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="generatedWellKnownUrl"
+                  readOnly
+                  value={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
+                  className="font-mono text-xs"
+                />
+                <CopyToClipboardButton
+                  textToCopy={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
+                >
+                  <span />
+                </CopyToClipboardButton>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Auto-generated discovery URL for this Blocks OIDC provider.
+              </p>
+            </div>
+          )}
 
           {/* Well Known URL - Hidden for social type */}
           {providerType !== "social" && (
