@@ -25,7 +25,6 @@ import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.m
 import {
   applyOidcIamConfigOverrides,
   buildSavePayload,
-  getBlocksIamBaseUrl,
   iamConfigFormSchema,
   toIamConfigFormValues,
   type IamConfigFormValues,
@@ -151,21 +150,16 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
 
   const { isDirty } = useFormState({ control: form.control })
   const isOidcEnabled = form.watch("isOidcEnabled")
-  const blocksIamBaseUrl = useMemo(() => getBlocksIamBaseUrl(), [])
 
   useEffect(() => {
     if (!isOidcEnabled) return
 
-    const currentBaseUrl = form.getValues("accountActionBaseUrl")
     const currentUseDefault = form.getValues("useAccountActionBaseUrlAsDefault")
 
-    if (currentBaseUrl !== blocksIamBaseUrl) {
-      form.setValue("accountActionBaseUrl", blocksIamBaseUrl, { shouldDirty: true })
-    }
     if (!currentUseDefault) {
       form.setValue("useAccountActionBaseUrlAsDefault", true, { shouldDirty: true })
     }
-  }, [blocksIamBaseUrl, form, isOidcEnabled])
+  }, [form, isOidcEnabled])
 
   const handleReset = useCallback(() => {
     form.reset(toIamConfigFormValues(config))
