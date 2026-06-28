@@ -2,11 +2,11 @@ import React, { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
-import { ArrowLeft, Download, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { LMT_BASE_PATH } from "@/constants/lmt-nav";
+import { ArrowLeft, Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import useIsMobile from "@/hooks/use-is-mobile";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetTraceById } from "@blocks-lmt/hooks/use-trace";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { TracingListBreadCrumb } from "./tracing-list-breadcrum/tracing-list-breadcrum";
@@ -41,11 +41,44 @@ export const timelineContext = createContext<{
   isPanelOpen: true,
   isLoading: false,
 });
-export const TraceDetails = ({ id }: { id: string }) => {
-  const navigate = useNavigate();
+const TraceDetailsEmptyState = ({
+  traceId,
+  isError,
+}: {
+  traceId: string
+  isError: boolean
+}) => (
+  <Card className="mt-6 rounded-sm shadow-none">
+    <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <GitBranch className="h-6 w-6 text-muted-foreground" aria-hidden />
+      </div>
+      <h2 className="text-lg font-semibold text-high-emphasis">
+        {isError ? "Unable to load trace" : "Trace not found"}
+      </h2>
+      <p className="mt-2 max-w-md text-sm text-medium-emphasis">
+        {isError
+          ? "Something went wrong while fetching trace details. Please try again in a moment."
+          : `No trace data exists for this ID in the current project. The trace may have expired, or it may not have been recorded yet.`}
+      </p>
+      {traceId ? (
+        <p className="mt-4 break-all font-mono text-xs text-low-emphasis">{traceId}</p>
+      ) : null}
+    </CardContent>
+  </Card>
+)
+export const TraceDetails = ({
+  id,
+  breadcrumbIndex = 2,
+  backHref = `${LMT_BASE_PATH}/tracing`,
+}: {
+  id: string
+  breadcrumbIndex?: number
+  backHref?: string
+}) => {
+  const navigate = useNavigate()
   const isMobile = useIsMobile();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [traceHistory, setTraceHistory] = useState<
     {
       rootId: string;
@@ -53,21 +86,27 @@ export const TraceDetails = ({ id }: { id: string }) => {
       root: TraceTree;
     }[]
   >([]);
-  const { isLoading, isFetching, data } = useGetTraceById({ traceId: id, projectKey: tenantId });
+  const { isLoading, isFetching, isError, data } = useGetTraceById({
+    traceId: id,
+  })
   const [selectedTrace, setSelectedTrace] = useState<TraceTree | null>(null);
   useEffect(() => {
-    if (data?.data) {
-      const trace = data.data;
-      setTraceHistory([
-        {
-          root: trace,
-          current: trace,
-          rootId: trace.spanId,
-        },
-      ]);
-      setSelectedTrace(trace);
+    if (!data?.data) {
+      setTraceHistory([])
+      setSelectedTrace(null)
+      return
     }
-  }, [data?.data]);
+
+    const trace = data.data
+    setTraceHistory([
+      {
+        root: trace,
+        current: trace,
+        rootId: trace.spanId,
+      },
+    ])
+    setSelectedTrace(trace)
+  }, [data?.data, id])
   const downloadJSONFile = () => {
     if (!data?.data) return;
     const jsonString = JSON.stringify(data.data, null, 2);
@@ -80,8 +119,16 @@ export const TraceDetails = ({ id }: { id: string }) => {
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
   };
-  BREADCRUMB_CUSTOM_TITLES["/tracing/timeline"] = "Tracing";
-  const selectedTraceHistory = traceHistory[traceHistory?.length - 1];
+  BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/tracing`] = "Tracing"
+  if (id) {
+    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/tracing/${id}`] = id
+  }
+  const selectedTraceHistory = traceHistory[traceHistory?.length - 1]
+  const handleBack = () => navigate(backHref)
+  const isPending = isLoading || isFetching
+  const hasTrace = Boolean(data?.data)
+  const isEmpty = !isPending && !hasTrace
+  const showTimelineLoading = isPending || (hasTrace && traceHistory.length === 0)
   return (
     <timelineContext.Provider
       value={{
@@ -90,33 +137,37 @@ export const TraceDetails = ({ id }: { id: string }) => {
         selectedTrace,
         setSelectedTrace,
         isPanelOpen,
-        isLoading: isLoading || isFetching,
+        isLoading: showTimelineLoading,
       }}
     >
-      {isLoading || isFetching ? (
+      {isPending ? (
         <Skeleton className="h-8 w-40" />
       ) : (
-        <div className="hidden md:flex">
-          <PageBreadcrumb breadcrumbIndex={2} />
-        </div>
+        <PageBreadcrumb breadcrumbIndex={breadcrumbIndex} listClassName="text-base sm:text-lg" />
       )}
-      <div className="flex items-center justify-between md:py-[24px]">
-        {isLoading || isFetching ? (
+      <div className="flex items-center justify-between md:py-6">
+        {isPending ? (
           <Skeleton className="h-8 w-1/3" />
         ) : (
           <div className="flex items-center">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(-1)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleBack}>
               <ArrowLeft className="h-6 w-6" />
             </Button>
             <h1 className="ml-2 break-all text-lg font-semibold md:ml-4 md:text-2xl">
-              {data?.data?.entryPoint?.method}{" "}
-              <span className="text-low-emphasis">{data?.data?.entryPoint?.actionName}</span>
+              {hasTrace ? (
+                <>
+                  {data?.data?.entryPoint?.method}{" "}
+                  <span className="text-low-emphasis">{data?.data?.entryPoint?.actionName}</span>
+                </>
+              ) : (
+                <span className="text-low-emphasis">{id}</span>
+              )}
             </h1>
           </div>
         )}
-        {isLoading || isFetching ? (
+        {isPending ? (
           <Skeleton className="h-8 w-40" />
-        ) : (
+        ) : hasTrace ? (
           <div className="ml-auto flex items-center gap-2">
             <Button
               size="default"
@@ -128,17 +179,20 @@ export const TraceDetails = ({ id }: { id: string }) => {
               <span className="sr-only lg:not-sr-only">Download JSON</span>
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
+      {isEmpty ? (
+        <TraceDetailsEmptyState traceId={id} isError={isError} />
+      ) : (
       <div className="mt-6 flex w-full flex-col gap-6 md:flex-row">
         <div className={`${isPanelOpen ? "w-full md:w-[68%]" : "w-full"}`}>
           <Card className="h-min rounded-sm shadow-none">
             <CardHeader>
               <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
                 <CardTitle className="text-xl">
-                  {isLoading || isFetching ? <Skeleton className="h-6 w-28" /> : "Timeline"}
+                  {isPending ? <Skeleton className="h-6 w-28" /> : "Timeline"}
                 </CardTitle>
-                {isLoading || isFetching ? (
+                {isPending ? (
                   <Skeleton className="h-6 w-64" />
                 ) : (
                   <div
@@ -197,6 +251,7 @@ export const TraceDetails = ({ id }: { id: string }) => {
           </div>
         )}
       </div>
+      )}
     </timelineContext.Provider>
   );
 };

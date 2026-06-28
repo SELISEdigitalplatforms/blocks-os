@@ -73,12 +73,12 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
     <>
       <Table>
         <TableHeader>
-          <TableRow className="px-4 py-3 hover:bg-transparent">
+          <TableRow className="hover:bg-transparent">
             {table
               .getHeaderGroups()
               .map((headerGroup) =>
                 headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="px-4 py-3">
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -105,7 +105,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
                 onClick={() => onRowClickHandler(row.original.itemId)}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell key={cell.id} className="px-4 py-3">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

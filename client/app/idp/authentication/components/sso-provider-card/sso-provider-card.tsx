@@ -1,6 +1,11 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,7 +54,7 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
           <CardTitle className="flex justify-between">
             <div className="flex items-center gap-4">
               <div className="relative aspect-square h-8 w-8">
-                <img src={imageSrc} alt="socical_icon"/>
+                <img src={imageSrc} alt="socical_icon" />
               </div>
               <div>
                 <div className="flex items-center justify-between gap-2 text-lg text-high-emphasis">
@@ -67,28 +72,30 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm font-normal text-low-emphasis">Social Connections</p>
+                <p className="text-sm font-normal text-low-emphasis">
+                  Social Connections
+                </p>
               </div>
             </div>
             {configuration.isAvailable && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="aspect-square w-10 rounded-full p-0">
+                  <Button
+                    variant="ghost"
+                    className="aspect-square w-10 rounded-full p-0">
                     <EllipsisVertical className="aspect-square w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <Link
-                    to={`/services/authentication/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`}
-                  >
+                    to={`/app/idp/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`}>
                     <DropdownMenuItem>Configure</DropdownMenuItem>
                   </Link>
                   {configuration.itemId && (
                     <DropdownMenuItem
                       onSelect={() => {
                         setOpen(true);
-                      }}
-                    >
+                      }}>
                       {configuration.isDisabled ? "Enable" : "Disable"}
                     </DropdownMenuItem>
                   )}
@@ -98,10 +105,16 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mt-4 text-medium-emphasis">{configuration.description}</div>
+          <div className="mt-4 text-medium-emphasis">
+            {configuration.description}
+          </div>
         </CardContent>
       </Card>
-      <SSoProviderStatusToggle open={open} setOpen={setOpen} configuration={configuration} />
+      <SSoProviderStatusToggle
+        open={open}
+        setOpen={setOpen}
+        configuration={configuration}
+      />
     </>
   );
 };

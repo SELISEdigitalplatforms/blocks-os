@@ -10,6 +10,7 @@ export type Menu =
       children?: Menu[];
       disabled?: boolean;
       badge?: "alpha" | "beta" | "new";
+      desc?: string;
     }
   | {
       type: "separator";
