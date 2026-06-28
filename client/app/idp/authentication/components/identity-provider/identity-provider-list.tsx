@@ -158,11 +158,10 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
     { key: "Authorization URL", value: item.authorizationUrl ?? "" },
     { key: "Token URL", value: item.tokenUrl ?? "" },
     { key: "User Info URL", value: item.userInfoUrl ?? "" },
-    { key: "JWKS URI", value: item.jwksUri ?? "" },
+    { key: "Well-known URI", value: item.jwksUri ?? "" },
     { key: "Scope", value: item.scope ?? "" },
     { key: "Audience", value: item.audience ?? "" },
     { key: "Redirect URI(s)", value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "" },
-    { key: "Token Auth Method", value: item.tokenEndpointAuthMethod ?? "" },
     {
       key: "Roles",
       value: item.initialRoles?.length ? item.initialRoles.join(", ") : "",
@@ -171,10 +170,10 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
       key: "Permissions",
       value: item.initialPermissions?.length ? item.initialPermissions.join(", ") : "",
     },
-    {
-      key: "PKCE",
-      value: item.requirePkce ? "Required" : "",
-    },
+    // {
+    //   key: "PKCE",
+    //   value: item.requirePkce ? "Required" : "",
+    // },
   ].filter((pair) => pair.value);
 
   return (

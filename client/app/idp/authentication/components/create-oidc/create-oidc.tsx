@@ -201,7 +201,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
                   {isUploadingImage && <div className="absolute inset-0 bg-muted/50" />}
                 </div>
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -228,7 +228,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                       Remove
                     </Button>
                   )}
-                </div>
+                </div> */}
               </div>
               <FormField
                 control={form.control}
@@ -269,7 +269,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   </FormItem>
                 )}
               />
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="clientBrandColor"
                 render={({ field }) => (
@@ -281,7 +281,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
               <FormField
                 control={form.control}
                 name="scope"
