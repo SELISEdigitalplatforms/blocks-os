@@ -53,7 +53,7 @@ const KVRow = ({ label, value, isSecret = false }: KVRowProps) => {
   return (
     <TableRow className="group bg-muted/20 hover:bg-muted/30">
       <TableCell className="w-8 pl-4" />
-      <TableCell className="w-48 py-2 pl-8 font-mono text-xs text-muted-foreground">
+      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground sm:w-48">
         {label}
       </TableCell>
       <TableCell className="py-2" colSpan={3}>
