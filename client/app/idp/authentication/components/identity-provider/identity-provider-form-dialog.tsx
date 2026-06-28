@@ -39,8 +39,8 @@ import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
-  // { value: "blocks-oidc", label: "Blocks OIDC" },
-  // { value: "byos", label: "Bring your own SSO (BYOS)" },
+  { value: "blocks-oidc", label: "Blocks OIDC" },
+  { value: "byos", label: "Bring your own SSO (BYOS)" },
   // { value: "google", label: "Google" },
   // { value: "microsoft", label: "Microsoft" },
   // { value: "linkedin", label: "LinkedIn" },
@@ -354,19 +354,13 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           )}
 
           {/* Initial Roles */}
-          <div className="space-y-1.5">
-            <Label>Initial Roles</Label>
-            <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
-          </div>
+          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
 
           {/* Initial Permissions */}
-          <div className="space-y-1.5">
-            <Label>Initial Permissions</Label>
-            <SSOInitialPermissions
-              permissions={selectedPermissions}
-              onChange={setSelectedPermissions}
-            />
-          </div>
+          <SSOInitialPermissions
+            permissions={selectedPermissions}
+            onChange={setSelectedPermissions}
+          />
 
           {/* Redirect URIs */}
           <div className="space-y-2">
