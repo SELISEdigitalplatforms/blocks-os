@@ -52,8 +52,8 @@ namespace Api.Controllers
             return await _projectManagementService.GetAllAsync(request);
         }
 
-        [HttpPost]
         // [ProtectedEndPoint("blocks-os::restore-project")]
+        [HttpPost]
         [Authorize]
         public async Task<RestoreProjectResponse> Restore([FromBody] RestoreProjectRequest restoreProjectRequest)
         {
