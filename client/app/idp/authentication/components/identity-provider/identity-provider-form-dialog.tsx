@@ -38,7 +38,7 @@ import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initi
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
 import { toPermissionStubs, toRoleStubs } from "./identity-provider-form.util";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { getApiUrl } from "@/lib/get-api-path";
+import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
@@ -102,6 +102,15 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   });
 
   const providerType = watch("providerType");
+  const blocksOidcWellKnownUrl = tenantId
+    ? getBlocksOidcWellKnownUrl(tenantId)
+    : "";
+
+  useEffect(() => {
+    if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
+      setValue("wellKnownUrl", blocksOidcWellKnownUrl, { shouldValidate: true });
+    }
+  }, [providerType, blocksOidcWellKnownUrl, setValue]);
 
   useEffect(() => {
     if (open && editItem) {
@@ -157,7 +166,10 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         clientId: values.clientId,
         clientSecret: values.clientSecret,
         audience: values.audience,
-        wellKnownUrl: values.wellKnownUrl,
+        wellKnownUrl:
+          values.providerType === "blocks-oidc"
+            ? blocksOidcWellKnownUrl || values.wellKnownUrl
+            : values.wellKnownUrl,
         tokenEndpointAuthMethod: "client_secret_basic",
         scope: "openid",
         redirectUris: cleanedUris,
@@ -345,11 +357,13 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 <Input
                   id="generatedWellKnownUrl"
                   readOnly
-                  value={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
-                  className="font-mono text-xs"
+                  aria-readonly="true"
+                  tabIndex={-1}
+                  value={blocksOidcWellKnownUrl}
+                  className="cursor-default bg-muted font-mono text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 <CopyToClipboardButton
-                  textToCopy={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
+                  textToCopy={blocksOidcWellKnownUrl}
                 >
                   <span />
                 </CopyToClipboardButton>
@@ -361,7 +375,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           )}
 
           {/* Well Known URL - Hidden for social type */}
-          {providerType !== "social" && (
+          {/* {providerType !== "social" && (
             <div className="space-y-1.5">
               <Label htmlFor="wellKnownUrl">
                 Well Known URL <span className="text-destructive">*</span>
@@ -379,7 +393,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 <p className="text-xs text-destructive">{errors.wellKnownUrl.message}</p>
               )}
             </div>
-          )}
+          )} */}
 
           {/* Redirect URIs */}
           <div className="space-y-2">
