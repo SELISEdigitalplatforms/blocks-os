@@ -205,7 +205,16 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
           </div>
         </TableCell>
         <TableCell className="py-3.5">
-          <Badge variant="outline" className="text-xs">
+          <Badge
+            variant="outline"
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.iconBg.replace(
+                "100",
+                "500",
+              )}`}
+            />
             {cfg.label}
           </Badge>
         </TableCell>
