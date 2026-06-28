@@ -218,14 +218,14 @@ export const navigationMenus: Menu[] = [
         type: "menu",
       },
 
-      {
-        id: "oidc-template",
-        name: "OIDC Template",
-        path: "/app/idp/oidc-template",
-        icon: FileCode,
-        desc: "Configure OIDC template",
-        type: "menu",
-      },
+      // {
+      //   id: "oidc-template",
+      //   name: "OIDC Template",
+      //   path: "/app/idp/oidc-template",
+      //   icon: FileCode,
+      //   desc: "Configure OIDC template",
+      //   type: "menu",
+      // },
       {
         id: "roles",
         name: "Roles",
