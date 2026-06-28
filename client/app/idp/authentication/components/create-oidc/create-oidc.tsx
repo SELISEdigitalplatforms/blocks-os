@@ -23,10 +23,10 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useFieldArray, useForm } from "react-hook-form";
-import { Plus, Camera, Pencil, X } from "lucide-react";
+import { Plus, Pencil, X } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { ISaveOidcCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
@@ -42,10 +42,6 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Button } from "@/components/ui-kits/button/button";
 import { isErrorWithErrors } from "@/lib/error";
-import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
-import { storageService } from "@blocks-storage/services/storage.service";
-import { ColorSwatch } from "@/components/color-swatch/color-swatch";
-import { ModuleName } from "@/constants/modules.constants";
 import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
 
 type CreateOIDCProps = {
@@ -55,18 +51,13 @@ type CreateOIDCProps = {
 
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
-  const [clientLogoUrl, setClientLogoUrl] = useState<string>("");
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const MAX_LOGO_FILE_SIZE = 5 * 1024 * 1024;
+  const [clientLogoUrl] = useState<string>("");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveAuthOidc();
   const { data: existingOidc, isLoading: isLoadingOidc } = useGetAuthOidcCredential(
     { projectKey: tenantId, clientId: itemId! },
     open && !!itemId,
   );
-  const { mutateAsync: getPreSign } = useGetPreSignedUrlForUpload();
-  const { mutateAsync: uploadFile } = useUploadFile();
 
   const form = useForm<CreateOIDCFormValues>({
     resolver: zodResolver(createOidcSchema),
@@ -117,71 +108,13 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
             : ["code"],
         allowedServiceAccessResources: credential.allowedServiceAccessResources ?? [],
       });
-      setClientLogoUrl(credential.clientLogoUrl || "");
     } else if (!isEditMode && open) {
       form.reset({
         ...createOIDCFormDefaultValue,
         clientBrandColor: "#124091",
       });
-      setClientLogoUrl("");
     }
   }, [existingOidc, isEditMode, open, form]);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const allowedImageTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "image/svg+xml",
-    ];
-    const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-    const fileName = file.name.toLowerCase();
-    if (
-      !allowedImageTypes.includes(file.type) &&
-      !allowedExtensions.some((ext) => fileName.endsWith(ext))
-    ) {
-      showErrorToast({
-        errors: "Invalid file type. Only JPG, JPEG, PNG, GIF, and WEBP files are allowed.",
-      });
-      e.target.value = "";
-      return;
-    }
-    if (file.size > MAX_LOGO_FILE_SIZE) {
-      showErrorToast({ errors: "Image size must be under 5 MB." });
-      e.target.value = "";
-      return;
-    }
-    try {
-      setIsUploadingImage(true);
-      const preSign = await getPreSign({
-        accessModifier: "Public",
-        configurationName: "Default",
-        name: file.name,
-        projectKey: tenantId ?? "",
-        tags: "",
-        metaData: "",
-        parentDirectoryId: "",
-        moduleName: ModuleName.IAMCloud,
-      });
-      if (!preSign.isSuccess) throw new Error("Failed to get upload URL");
-      await uploadFile({ url: preSign.uploadUrl, file });
-      const fileInfo = await storageService.file.getFileByFileId({
-        itemId: preSign.fileId,
-        projectKey: tenantId ?? "",
-      });
-      setClientLogoUrl(fileInfo.url);
-      showSuccessToast({ description: "Logo uploaded successfully" });
-    } catch (err: unknown) {
-      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
-      showErrorToast({ errors: "Something went wrong uploading logo" });
-    } finally {
-      setIsUploadingImage(false);
-      e.target.value = "";
-    }
-  };
 
   const onSubmit = async (data: CreateOIDCFormValues) => {
     try {
@@ -214,7 +147,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       return showErrorToast({ errors: "Something went wrong" });
     } finally {
       form.reset();
-      setClientLogoUrl("");
     }
   };
 
@@ -243,19 +175,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
             <form id="oidc-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4">
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative h-32 w-32 overflow-hidden rounded-lg border border-dashed border-border bg-muted">
-                  {clientLogoUrl ? (
-                    <img src={clientLogoUrl} alt="OIDC Logo" className="object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Camera className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                  )}
-                  {isUploadingImage && <div className="absolute inset-0 bg-muted/50" />}
-                </div>
-              </div>
-
               <FormField
                 control={form.control}
                 name="clientDisplayName"
@@ -303,10 +222,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="mt-1 gap-1.5"
+                  className="mt-1 h-7 gap-1 px-2 text-xs"
                   onClick={() => append({ value: "" })}
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-3 w-3" />
                   Add Redirect URI
                 </Button>
                 {form.formState.errors.redirectUris &&
