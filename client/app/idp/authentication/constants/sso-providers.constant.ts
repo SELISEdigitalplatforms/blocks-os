@@ -1,14 +1,14 @@
 const Google = "/assets/images/social-media-google.png";
 const Microsoft = "/assets/images/social-media-ms.png";
-const GithubDark = "/assets/images/github-dark-mode.png";
-const Github = "/assets/images/social-media-github.png";
-const LinkedIn = "/assets/images/social-media-in.png";
-const AppleDark = "/assets/images/apple-dark-mode-logo.png";
-const Apple = "/assets/images/social-media-apple.png";
-const Facebook = "/assets/images/social-media-facebook.png";
+// const GithubDark = "/assets/images/github-dark-mode.png";
+// const Github = "/assets/images/social-media-github.png";
+// const LinkedIn = "/assets/images/social-media-in.png";
+// const AppleDark = "/assets/images/apple-dark-mode-logo.png";
+// const Apple = "/assets/images/social-media-apple.png";
+// const Facebook = "/assets/images/social-media-facebook.png";
 // const Selise = "/assets/images/selise-globe-logo.png";
-const XDark = "/assets/images/twitter-x-dark-mode-logo.png";
-const X = "/assets/images/twitter-x-light-mode-logo.png";
+// const XDark = "/assets/images/twitter-x-dark-mode-logo.png";
+// const X = "/assets/images/twitter-x-light-mode-logo.png";
 import {
   ISsoProviderConfigurationWithMeta,
   ISsoProviderFrontendMeta,
@@ -64,18 +64,17 @@ function createProviderConfig(
   return { ...PROVIDER_DEFAULTS, provider, ...meta };
 }
 
-export const SOCIAL_AUTH_PROVIDERS_CONFIG: Record<
-  SSO_PROVIDERS,
-  ISsoProviderConfigurationWithMeta
+export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
+  Record<SSO_PROVIDERS, ISsoProviderConfigurationWithMeta>
 > = {
-  github: createProviderConfig(SSO_PROVIDERS.github, {
-    label: "GitHub",
-    description: "Enable the GitHub login option for your Auth0 applications",
-    imageSrc: Github,
-    imageSrcDark: GithubDark,
-    isAvailable: true,
-    isConfigured: false,
-  }),
+  // github: createProviderConfig(SSO_PROVIDERS.github, {
+  //   label: "GitHub",
+  //   description: "Enable the GitHub login option for your Auth0 applications",
+  //   imageSrc: Github,
+  //   imageSrcDark: GithubDark,
+  //   isAvailable: true,
+  //   isConfigured: false,
+  // }),
   google: createProviderConfig(SSO_PROVIDERS.google, {
     label: "Google",
     description: "Allow your users to seamlessly log in with their trusted Google Account.",
@@ -90,37 +89,37 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Record<
     isAvailable: true,
     isConfigured: false,
   }),
-  linkedin: createProviderConfig(SSO_PROVIDERS.linkedin, {
-    label: "LinkedIn",
-    description:
-      "Leverage the largest professional social network to enhance your sign-in experience",
-    imageSrc: LinkedIn,
-    isAvailable: true,
-    isConfigured: false,
-  }),
-  x: createProviderConfig(SSO_PROVIDERS.x, {
-    label: "X",
-    description: "Twitter allows users to enjoy the benefits of login with as little as one...",
-    imageSrc: X,
-    imageSrcDark: XDark,
-    isAvailable: true,
-    isConfigured: false,
-  }),
-  apple: createProviderConfig(SSO_PROVIDERS.apple, {
-    label: "Apple",
-    description: "The easy way to add Sign in with Apple to your app or website",
-    imageSrc: Apple,
-    imageSrcDark: AppleDark,
-    isAvailable: true,
-    isConfigured: false,
-  }),
-  facebook: createProviderConfig(SSO_PROVIDERS.facebook, {
-    label: "Facebook",
-    description: "A fast and convenient way for users to log into your app with Facebook",
-    imageSrc: Facebook,
-    isAvailable: false,
-    isConfigured: false,
-  }),
+  // linkedin: createProviderConfig(SSO_PROVIDERS.linkedin, {
+  //   label: "LinkedIn",
+  //   description:
+  //     "Leverage the largest professional social network to enhance your sign-in experience",
+  //   imageSrc: LinkedIn,
+  //   isAvailable: true,
+  //   isConfigured: false,
+  // }),
+  // x: createProviderConfig(SSO_PROVIDERS.x, {
+  //   label: "X",
+  //   description: "Twitter allows users to enjoy the benefits of login with as little as one...",
+  //   imageSrc: X,
+  //   imageSrcDark: XDark,
+  //   isAvailable: true,
+  //   isConfigured: false,
+  // }),
+  // apple: createProviderConfig(SSO_PROVIDERS.apple, {
+  //   label: "Apple",
+  //   description: "The easy way to add Sign in with Apple to your app or website",
+  //   imageSrc: Apple,
+  //   imageSrcDark: AppleDark,
+  //   isAvailable: true,
+  //   isConfigured: false,
+  // }),
+  // facebook: createProviderConfig(SSO_PROVIDERS.facebook, {
+  //   label: "Facebook",
+  //   description: "A fast and convenient way for users to log into your app with Facebook",
+  //   imageSrc: Facebook,
+  //   isAvailable: false,
+  //   isConfigured: false,
+  // }),
   ownsso: createProviderConfig(SSO_PROVIDERS.ownsso, {
     label: "Bring your own SSO",
     description: "Bring your own SSO provider",
