@@ -193,7 +193,7 @@ export const useProjectForm = () => {
       const environments = formData[2]?.environments || [];
       const shortGuid = shortGuidGenerator(5);
       const baseDomain =
-        import.meta.env.BLOCKS_BASE_DOMAIN || "blocksdevelopers.com";
+        import.meta.env.BLOCKS_BASE_DOMAIN || "seliseblocks.com";
       const applicationContexts =
         environments.map((env: { value: string }) => ({
           environment: env.value,
