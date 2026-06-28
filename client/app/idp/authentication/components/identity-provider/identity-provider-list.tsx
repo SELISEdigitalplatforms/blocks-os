@@ -164,11 +164,11 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
     { key: "Redirect URI(s)", value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "" },
     { key: "Token Auth Method", value: item.tokenEndpointAuthMethod ?? "" },
     {
-      key: "Initial Roles",
+      key: "Roles",
       value: item.initialRoles?.length ? item.initialRoles.join(", ") : "",
     },
     {
-      key: "Initial Permissions",
+      key: "Permissions",
       value: item.initialPermissions?.length ? item.initialPermissions.join(", ") : "",
     },
     {
