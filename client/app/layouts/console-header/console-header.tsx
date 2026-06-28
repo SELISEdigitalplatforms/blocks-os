@@ -1,24 +1,26 @@
 import { BackToConsoleNavigator } from "@/components/back-to-console-navigator/back-to-console-navigator";
-import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Notification } from "@/components/notification/notification";
 import { Button } from "@/components/ui-kits/button/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui-kits/sheet/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui-kits/sheet/sheet";
 import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
-import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { Menu } from "lucide-react";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 export function ConsoleHeader() {
-  const context = useContext(SidebarContext);
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const isConsoleButtonVisible = pathname.startsWith("/project-overview") || pathname.startsWith("/profile");
+  const isConsoleButtonVisible =
+    pathname.startsWith("/project-overview") || pathname.startsWith("/profile");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,12 +32,11 @@ export function ConsoleHeader() {
 
   return (
     <div
-      className={`fixed left-0 right-0 top-0 z-40 ${isScrolled || isConsoleButtonVisible ? "border-b bg-background" : "bg-transparent"}`}
-    >
+      className={`fixed left-0 right-0 top-0 z-40 ${isScrolled || isConsoleButtonVisible ? "border-b bg-background" : "bg-transparent"}`}>
       <header
-        className={`mx-5 flex h-12 items-center gap-4 lg:h-[59px] ${isConsoleButtonVisible ? "sm:ml-1 sm:mr-6" : "sm:mx-10"}`}
-      >
-        <div className={`flex h-full w-full flex-row items-center ${isMobile && "mx-0"}`}>
+        className={`mx-5 flex h-12 items-center gap-4 lg:h-[59px] ${isConsoleButtonVisible ? "sm:ml-1 sm:mr-6" : "sm:mx-10"}`}>
+        <div
+          className={`flex h-full w-full flex-row items-center ${isMobile && "mx-0"}`}>
           <div className="ml-2 flex h-full w-[228px] items-center">
             <Link to="/console" className="cursor-pointer">
               <Logo width={96} height={32} className="h-8 w-auto" />
@@ -52,8 +53,7 @@ export function ConsoleHeader() {
             <SheetContent
               hideClose
               side="top"
-              className={`flex w-full flex-wrap items-start gap-3 ${isConsoleButtonVisible ? "justify-between" : "justify-end"}`}
-            >
+              className={`flex w-full flex-wrap items-start gap-3 ${isConsoleButtonVisible ? "justify-between" : "justify-end"}`}>
               {isConsoleButtonVisible && (
                 <div className="min-w-fit flex-shrink">
                   <BackToConsoleNavigator />
@@ -62,7 +62,6 @@ export function ConsoleHeader() {
               <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3">
                 <ModeToggle />
                 <Notification />
-                <BlocksAppLauncher />
                 <UserDropdownMenu />
               </div>
             </SheetContent>
@@ -72,7 +71,6 @@ export function ConsoleHeader() {
           {isConsoleButtonVisible && <BackToConsoleNavigator />}
           <ModeToggle />
           <Notification />
-          <BlocksAppLauncher />
           <UserDropdownMenu />
         </div>
       </header>
