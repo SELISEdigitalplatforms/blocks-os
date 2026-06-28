@@ -81,7 +81,7 @@ const KVRow = ({ label, value, isSecret = false }: KVRowProps) => {
   return (
     <TableRow className="group bg-muted/20 hover:bg-muted/30">
       <TableCell className="w-8 pl-4" />
-      <TableCell className="w-48 py-2 pl-8 font-mono text-xs text-muted-foreground">
+      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground sm:w-48">
         {label}
       </TableCell>
       <TableCell className="py-2" colSpan={3}>
@@ -317,8 +317,8 @@ export function IdentityProviderList() {
 
   return (
     <Card>
-      <CardContent className="p-0">
-        <Table className="table-fixed">
+      <CardContent className="overflow-x-auto p-0">
+        <Table className="w-full min-w-[640px] sm:table-fixed sm:min-w-0">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />

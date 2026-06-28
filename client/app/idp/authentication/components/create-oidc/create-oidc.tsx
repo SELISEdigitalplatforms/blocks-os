@@ -82,7 +82,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   const dialogTitle = isEditMode ? "Edit OIDC Client" : "New OIDC Client";
   const dialogDescription = isEditMode
     ? "Update OIDC client details"
-    : "Enter details to create a new key";
+    : "Enter details to generate a new key";
 
   useEffect(() => {
     if (isEditMode && existingOidc?.oIDCClientCredential && open) {
@@ -238,6 +238,34 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
               </div>
 
+              <FormField
+                control={form.control}
+                name="allowedServiceAccessResources"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Allowed Services</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={allowedServicesValue}
+                        onValueChange={(v) => field.onChange(v ? [v] : [])}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a service" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DUMMY_LOG_SERVICES.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Status | Scope(s) | PKCE — single borderless row */}
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
                 <FormField
@@ -307,33 +335,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
               </div>
 
               {/* Allowed Services - dropdown bound to DUMMY_LOG_SERVICES id */}
-              <FormField
-                control={form.control}
-                name="allowedServiceAccessResources"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Allowed Services</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={allowedServicesValue}
-                        onValueChange={(v) => field.onChange(v ? [v] : [])}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DUMMY_LOG_SERVICES.map((service) => (
-                            <SelectItem key={service.id} value={service.id}>
-                              {service.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              
 
               {/* Auto Redirect — single borderless row */}
               <FormField
