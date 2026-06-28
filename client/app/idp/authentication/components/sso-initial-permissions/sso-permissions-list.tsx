@@ -44,7 +44,7 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
           </div>
         ),
         cell: (permission) => (
-          <div className="flex w-[180px] items-center break-all">
+          <div className="min-w-0 break-all">
             <span>{permission.row.original.resource}</span>
           </div>
         ),
@@ -75,9 +75,9 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
     <Table className="text-sm">
       <TableHeader>
         {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id} className="px-4 py-3 hover:bg-transparent">
+          <TableRow key={headerGroup.id} className="hover:bg-transparent">
             {headerGroup.headers.map((header) => (
-              <TableHead key={header.id} className="font-bold text-medium-emphasis">
+              <TableHead key={header.id} className="px-4 py-3 font-bold text-medium-emphasis">
                 {header.isPlaceholder
                   ? null
                   : flexRender(header.column.columnDef.header, header.getContext())}
@@ -95,7 +95,7 @@ export const SSOPermissionsList = ({ permissions, onDelete }: SSOPermissionsList
               className="cursor-pointer"
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} className="!py-4">
+                <TableCell key={cell.id} className="px-4 py-3">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}
