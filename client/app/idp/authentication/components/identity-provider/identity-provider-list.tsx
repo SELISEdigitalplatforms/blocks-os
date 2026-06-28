@@ -157,7 +157,7 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
     { key: "Authorization URL", value: item.authorizationUrl ?? "" },
     { key: "Token URL", value: item.tokenUrl ?? "" },
     { key: "User Info URL", value: item.userInfoUrl ?? "" },
-    { key: "Well-known URI", value: item.jwksUri ?? "" },
+    { key: "Well-known URI", value: item.wellKnownUrl ?? "" },
     { key: "Scope", value: item.scope ?? "" },
     { key: "Audience", value: item.audience ?? "" },
     { key: "Redirect URI(s)", value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "" },
