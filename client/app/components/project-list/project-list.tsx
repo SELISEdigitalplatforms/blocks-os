@@ -17,7 +17,7 @@ const redirectPaths: Record<string, string> = {
   "/services/iam/role-detail/*": "/services/iam?tab=roles",
   "/services/iam/organization-detail/*": "/services/iam",
   "/services/iam/permission-detail/*": "/services/iam",
-  "/app/authentication/sso-configuration": "/app/authentication",
+  "/app/idp/sso-configuration": "/app/idp",
 };
 const wildcardToRegex = (pattern: string) => {
   const escaped = pattern.replace(/[-/\\^$+?.()|[\]{}]/g, "\\$&");

@@ -61,11 +61,10 @@ import ManagedServicesPage from "./routes/dashboard/managed-services";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
 
 const redirectPaths: Record<string, string> = {
-  "/app/authentication/user-detail/*": "/app/authentication",
-  "/app/authentication/role-detail/*": "/app/authentication/roles",
-  "/app/authentication/organization-detail/*":
-    "/app/authentication/organizations",
-  "/app/authentication/permission-detail/*": "/app/authentication/permissions",
+  "/app/idp/user-detail/*": "/app/idp",
+  "/app/idp/role-detail/*": "/app/idp/roles",
+  "/app/idp/organization-detail/*": "/app/idp/organizations",
+  "/app/idp/permission-detail/*": "/app/idp/permissions",
 };
 
 export const router = createBrowserRouter([
@@ -271,15 +270,15 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
-                    path: "authentication",
+                    path: "idp",
                     element: <AuthenticationConfigLayout />,
                     children: [
                       {
                         index: true,
-                        element: <Navigate to="config" replace />,
+                        element: <Navigate to="settings" replace />,
                       },
                       {
-                        path: "config",
+                        path: "settings",
                         element: <IdpSettingsPage />,
                       },
                       {
