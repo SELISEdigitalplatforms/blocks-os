@@ -130,6 +130,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   )}?projectKey=${tenantId}`;
 
   const kvPairs: { key: string; value: string; isSecret?: boolean }[] = [
+    { key: "Client Id", value: item.itemId, isSecret: true },
     { key: "Client Secret", value: item.clientSecret, isSecret: true },
     {
       key: "Redirect URI(s)",
@@ -159,10 +160,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       key: "Status",
       value: item.isActive ? "Active" : "Inactive",
     },
-    {
-      key: "Well Known URL",
-      value: wellKnownUrl,
-    },
+    // {
+    //   key: "Well Known URL",
+    //   value: wellKnownUrl,
+    // },
   ].filter((pair) => pair.value);
 
   const handleConfirmDelete = async () => {
