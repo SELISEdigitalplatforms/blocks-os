@@ -51,7 +51,7 @@ export const SsoProviderConfigForms = ({
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       if (!id)
         navigate(
-          `/app/authentication/sso-configuration?provider=${provider}&id=${res.itemId}`,
+          `/app/idp/sso-configuration?provider=${provider}&id=${res.itemId}`,
         );
       showSuccessToast({
         description: `${provider} is configured successfully`,
