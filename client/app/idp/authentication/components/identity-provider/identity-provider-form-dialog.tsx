@@ -82,6 +82,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
   const [requirePkce, setRequirePkce] = useState(false);
+  const [redirectUrisError, setRedirectUrisError] = useState<string | null>(null);
 
   const {
     register,
@@ -121,12 +122,14 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setRequirePkce(!!editItem.requirePkce);
+      setRedirectUrisError(null);
     } else if (open) {
       reset(BLANK_FORM);
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setRequirePkce(false);
+      setRedirectUrisError(null);
     }
   }, [open, editItem, reset]);
 
@@ -135,6 +138,12 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const isPending = isCreating || isUpdating;
 
   const onSubmit = async (values: FormValues) => {
+    const cleanedUris = redirectUris.map((u) => u.trim()).filter(Boolean);
+    if (cleanedUris.length === 0) {
+      setRedirectUrisError("At least one redirect URI is required");
+      return;
+    }
+    setRedirectUrisError(null);
     try {
       const payload: IdentityProvider = {
         displayName: values.displayName,
@@ -146,7 +155,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         jwksUri: values.jwksUri,
         tokenEndpointAuthMethod: "client_secret_basic",
         scope: "openid",
-        redirectUris: redirectUris.filter((u) => u.trim()),
+        redirectUris: cleanedUris,
         isActive: editItem?.isActive ?? true,
         requirePkce,
         initialRoles: selectedRoles.map((r) => r.slug),
@@ -325,27 +334,29 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
           {/* Well Known URL - Hidden for social type */}
           {providerType !== "social" && (
             <div className="space-y-1.5">
-              <Label htmlFor="jwksUri">Well Known URL</Label>
+              <Label htmlFor="jwksUri">
+                Well Known URL <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="jwksUri"
                 placeholder="https://idp.example.com/.well-known/jwks.json"
-                {...register("jwksUri")}
+                {...register("jwksUri", {
+                  required: "Well Known URL is required",
+                  validate: (v) =>
+                    !v || /^https?:\/\/.+/.test(v) || "Enter a valid URL",
+                })}
               />
+              {errors.jwksUri && (
+                <p className="text-xs text-destructive">{errors.jwksUri.message}</p>
+              )}
             </div>
           )}
 
-          {/* Initial Roles */}
-          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
-
-          {/* Initial Permissions */}
-          <SSOInitialPermissions
-            permissions={selectedPermissions}
-            onChange={setSelectedPermissions}
-          />
-
           {/* Redirect URIs */}
           <div className="space-y-2">
-            <Label>Redirect URI(s)</Label>
+            <Label>
+              Redirect URI(s) <span className="text-destructive">*</span>
+            </Label>
             {redirectUris.map((uri, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <Input
@@ -366,6 +377,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                 )}
               </div>
             ))}
+            {redirectUrisError && (
+              <p className="text-xs text-destructive">{redirectUrisError}</p>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -377,6 +391,15 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               Add Redirect URI
             </Button>
           </div>
+
+          {/* Initial Roles */}
+          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
+
+          {/* Initial Permissions */}
+          <SSOInitialPermissions
+            permissions={selectedPermissions}
+            onChange={setSelectedPermissions}
+          />
 
           {/* Scope(s) + PKCE */}
           <div className="flex items-center justify-between gap-4">
