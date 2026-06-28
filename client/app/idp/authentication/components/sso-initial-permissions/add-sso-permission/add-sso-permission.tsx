@@ -95,13 +95,13 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
         <Button
           size="sm"
           variant="default"
-          className="h-10 bg-primary text-sm"
+          className="h-7 bg-primary text-xs px-2.5"
           onClick={(e) => {
             e.stopPropagation();
           }}
           disabled={permissions.length >= 5}
         >
-          <CirclePlus className="h-5 w-5 md:mr-2.5" />
+          <CirclePlus className="h-3.5 w-3.5 md:mr-1.5" />
           <span className="sr-only sm:not-sr-only">Assign Permissions</span>
         </Button>
       </DialogTrigger>

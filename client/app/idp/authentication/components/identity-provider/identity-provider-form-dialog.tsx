@@ -32,11 +32,19 @@ import {
 import {
   SOCIAL_AUTH_PROVIDERS_CONFIG,
 } from "@blocks-idp/authentication/constants/sso-providers.constant";
+import { IRole } from "@blocks-idp/iam/models/role";
+import { IPermission } from "@blocks-idp/iam/models/permission";
+import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
+import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
   { value: "blocks-oidc", label: "Blocks OIDC" },
   { value: "byos", label: "Bring your own SSO (BYOS)" },
+  // { value: "google", label: "Google" },
+  // { value: "microsoft", label: "Microsoft" },
+  // { value: "linkedin", label: "LinkedIn" },
+  // { value: "github", label: "GitHub" },
 ];
 
 type FormValues = {
@@ -71,6 +79,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
   const [showClientId, setShowClientId] = useState(false);
   const [showClientSecret, setShowClientSecret] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
+  const [requirePkce, setRequirePkce] = useState(false);
 
   const {
     register,
@@ -90,7 +101,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
     if (open && editItem) {
       const matched = PROVIDER_OPTIONS.some((t) => t.value === editItem.providerType);
       reset({
-        providerType: matched ? editItem.providerType : "blocks-oidc",
+        providerType: matched ? editItem.providerType : "social",
         provider: editItem.provider,
         clientId: editItem.clientId,
         clientSecret: "",
@@ -107,9 +118,15 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               ? [editItem.redirectUri as string]
               : [""];
       setRedirectUris(uris.length ? uris : [""]);
+      setSelectedRoles([]);
+      setSelectedPermissions([]);
+      setRequirePkce(!!editItem.requirePkce);
     } else if (open) {
       reset(BLANK_FORM);
       setRedirectUris([""]);
+      setSelectedRoles([]);
+      setSelectedPermissions([]);
+      setRequirePkce(false);
     }
   }, [open, editItem, reset]);
 
@@ -131,6 +148,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
         scope: "openid",
         redirectUris: redirectUris.filter((u) => u.trim()),
         isActive: editItem?.isActive ?? true,
+        requirePkce,
+        initialRoles: selectedRoles.map((r) => r.slug),
+        initialPermissions: selectedPermissions.map((p) => p.resource),
         ...(isEditing ? { itemId: editItem!.itemId } : {}),
       };
 
@@ -205,18 +225,20 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
                   <SelectValue placeholder="Select a provider" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG).map((config) => (
-                    <SelectItem key={config.provider} value={config.provider}>
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={config.imageSrc}
-                          alt={config.label}
-                          className="h-5 w-5 object-contain"
-                        />
-                        <span>{config.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
+                    .filter((c) => c.provider === "google" || c.provider === "microsoft")
+                    .map((config) => (
+                      <SelectItem key={config.provider} value={config.provider}>
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={config.imageSrc}
+                            alt={config.label}
+                            className="h-5 w-5 object-contain"
+                          />
+                          <span>{config.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             ) : (
@@ -312,16 +334,14 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </div>
           )}
 
-          {/* Scope(s) */}
-          {providerType !== "social" && providerType !== "byos" && (
-            <div className="space-y-1.5">
-              <Label>Scope(s)</Label>
-              <div className="flex items-center gap-2">
-                <Checkbox checked disabled />
-                <span className="text-sm text-muted-foreground">openid</span>
-              </div>
-            </div>
-          )}
+          {/* Initial Roles */}
+          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
+
+          {/* Initial Permissions */}
+          <SSOInitialPermissions
+            permissions={selectedPermissions}
+            onChange={setSelectedPermissions}
+          />
 
           {/* Redirect URIs */}
           <div className="space-y-2">
@@ -356,6 +376,27 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               <Plus className="h-3.5 w-3.5" />
               Add Redirect URI
             </Button>
+          </div>
+
+          {/* Scope(s) + PKCE */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Label>Scope(s)</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox checked disabled />
+                <span className="text-sm text-muted-foreground">openid</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="requirePkce"
+                checked={requirePkce}
+                onCheckedChange={(v) => setRequirePkce(!!v)}
+              />
+              <Label htmlFor="requirePkce" className="cursor-pointer">
+                Require PKCE
+              </Label>
+            </div>
           </div>
 
           <DialogFooter>
