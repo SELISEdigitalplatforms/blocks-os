@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Applications Section (Light)</title>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --primary: 206 100% 35%;
+    --primary-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --radius: 0.5rem;
+    --high-emphasis: 0 0% 15%;
+    --medium-emphasis: 0 0% 33%;
+    --low-emphasis: 0 0% 62%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 40% 96.1%;
+    --success: 146 79% 44%;
+    --destructive: 0 84.2% 60.2%;
+    --surface-app: 220 33% 96%;
+    --sidebar-bg: 0 0% 100%;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    background: hsl(var(--surface-app));
+    color: hsl(var(--high-emphasis));
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 260px; background: hsl(var(--sidebar-bg));
+    border-right: 1px solid hsl(var(--border));
+    padding: 20px 12px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-logo {
+    font-size: 15px; font-weight: 700; color: hsl(var(--high-emphasis));
+    padding: 0 12px 20px; letter-spacing: -.3px;
+  }
+  .sidebar-section {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    color: hsl(var(--low-emphasis)); letter-spacing: .6px;
+    padding: 16px 12px 6px;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 6px; font-size: 14px;
+    cursor: pointer; color: hsl(var(--medium-emphasis)); margin-bottom: 1px;
+    transition: background .1s;
+  }
+  .sidebar-item:hover { background: hsl(var(--muted)); }
+  .sidebar-item.active { background: hsl(var(--muted)); color: hsl(var(--high-emphasis)); font-weight: 500; }
+  .sidebar-item .icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+  .sidebar-item .icon svg { width: 16px; height: 16px; }
+
+  .main { flex: 1; padding: 24px 32px; overflow-y: auto; }
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .topbar h1 { font-size: 24px; font-weight: 600; }
+  .topbar-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 8px 16px; border-radius: 6px; font-size: 13px;
+    font-weight: 500; cursor: pointer; font-family: inherit;
+    transition: all .12s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-outline {
+    background: transparent; border: 1px solid hsl(var(--border));
+    color: hsl(var(--medium-emphasis));
+  }
+  .btn-outline:hover { border-color: hsl(var(--primary)); }
+  .btn-primary {
+    background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+    border: 1px solid hsl(var(--primary));
+  }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-ghost {
+    background: transparent; border: none; color: hsl(var(--medium-emphasis));
+    padding: 8px 12px;
+  }
+  .btn-ghost:hover { background: hsl(var(--muted)); }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+    border-radius: var(--radius); padding: 16px 20px;
+  }
+  .stat-label { font-size: 12px; color: hsl(var(--low-emphasis)); margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 600; color: hsl(var(--high-emphasis)); }
+
+  .card {
+    background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+    border-radius: var(--radius); margin-bottom: 24px;
+  }
+  .card-pad { padding: 20px 24px; }
+  .card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; border-bottom: 1px solid hsl(var(--border));
+  }
+  .card-header h3 { font-size: 15px; font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 16px;
+    font-weight: 600; color: hsl(var(--medium-emphasis)); font-size: 12px;
+    text-transform: uppercase; letter-spacing: .4px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid hsl(var(--border)); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: hsl(var(--muted)); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  }
+  .badge-success { background: hsl(146 79% 44% / 0.1); color: hsl(var(--success)); }
+  .mono { font-family: "SF Mono", Consolas, monospace; font-size: 13px; }
+  .text-muted { color: hsl(var(--muted-foreground)); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">blocks-os</div>
+    <div class="sidebar-item active"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Dashboard</div>
+    <div class="sidebar-section">IAM</div>
+    <div class="sidebar-item"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Users</div>
+    <div class="sidebar-item"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>Authentication</div>
+    <div class="sidebar-section">Settings</div>
+    <div class="sidebar-item"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Configure</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-outline btn-sm">Configure</button>
+        <button class="btn btn-primary btn-sm">+ Add App</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value">1,247</div></div>
+      <div class="stat-card"><div class="stat-label">Active Sessions</div><div class="stat-value">342</div></div>
+      <div class="stat-card"><div class="stat-label">Applications</div><div class="stat-value">3</div></div>
+      <div class="stat-card"><div class="stat-label">MFA Enabled</div><div class="stat-value">89%</div></div>
+    </div>
+
+    <!-- Applications Card (NEW - shown on dashboard) -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Applications</h3>
+        <button class="btn btn-outline btn-sm" style="gap:4px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Application
+        </button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th>Status</th>
+            <th>Cookie Domain</th>
+            <th>Environment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">https://dbaosi.dev.blocksdevelopers.com</td>
+            <td><span class="badge badge-success">✓ Verified</span></td>
+            <td class="text-muted">blocksdevelopers.com</td>
+            <td class="text-muted">dev</td>
+          </tr>
+          <tr>
+            <td class="mono">https://dev-construct.seliseblocks.com</td>
+            <td><span class="badge badge-success">✓ Verified</span></td>
+            <td class="text-muted">blocksdevelopers.com</td>
+            <td class="text-muted">dev</td>
+          </tr>
+          <tr>
+            <td class="mono">https://dev-api.seliseblocks.com</td>
+            <td><span class="badge badge-success">✓ Verified</span></td>
+            <td class="text-muted">blocksdevelopers.com</td>
+            <td class="text-muted">dev</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Other dashboard cards -->
+    <div class="card">
+      <div class="card-header"><h3>Recent Activity</h3></div>
+      <div class="card-pad">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid hsl(var(--border))"><span class="text-muted" style="width:140px">2 min ago</span><span>User login — jane@example.com</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid hsl(var(--border))"><span class="text-muted" style="width:140px">5 min ago</span><span>MFA configured — john@example.com</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0"><span class="text-muted" style="width:140px">12 min ago</span><span>Token renewed — api-service</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
