@@ -32,6 +32,7 @@ namespace DomainService.Shared
         public const string ConstructCookieDomain = "slsblx.com";
 
         public const string CertbotWebrootPath = "/var/www/html";
+        public const string CertbotEmail = "devsecops@selisegroup.com";
         public const string RemoteFeTemplate = "/home/nginxreverseproxy/fe-domain.conf";
         public const string RemoteBlocksapiTemplate = "/home/nginxreverseproxy/blocksapi-domain.conf";
 
