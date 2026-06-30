@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configure — Multi-Application (Light)</title>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --primary: 206 100% 35%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --border: 214.3 31.8% 91.4%;
+    --radius: 0.5rem;
+    --high-emphasis: 0 0% 15%;
+    --medium-emphasis: 0 0% 33%;
+    --low-emphasis: 0 0% 62%;
+    --success: 146 79% 44%;
+    --error: 0 100% 60%;
+    --destructive: 0 84.2% 60.2%;
+    --surface-app: 220 33% 96%;
+    --chart-blue: 211 96% 50%;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    background: hsl(var(--surface-app));
+    color: hsl(var(--high-emphasis));
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .page { max-width: 1100px; margin: 0 auto; padding: 24px 32px; }
+
+  .breadcrumb { font-size: 13px; color: hsl(var(--low-emphasis)); margin-bottom: 16px; }
+  .breadcrumb .cur { color: hsl(var(--high-emphasis)); font-weight: 500; }
+
+  .page-h1 { font-size: 24px; font-weight: 600; margin-bottom: 24px; color: hsl(var(--high-emphasis)); }
+
+  .card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .card-pad { padding: 24px; }
+
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 13px; color: hsl(var(--muted-foreground)); font-weight: 500; }
+  .form-input {
+    padding: 9px 12px; border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) - 2px); font-size: 14px;
+    font-family: inherit; color: hsl(var(--high-emphasis));
+    background: hsl(var(--background)); outline: none;
+  }
+  .form-input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(206 100% 35% / 0.1); }
+  .form-input::placeholder { color: hsl(var(--low-emphasis)); }
+
+  .checkbox-row {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px;
+  }
+  .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: hsl(var(--primary)); }
+
+  .btn-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .btn {
+    padding: 8px 16px; border-radius: calc(var(--radius) - 2px);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .btn-outline {
+    background: transparent; border: 1px solid hsl(var(--border));
+    color: hsl(var(--medium-emphasis));
+  }
+  .btn-outline:hover { border-color: hsl(var(--primary)); }
+  .btn-primary {
+    background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+    border: 1px solid hsl(var(--primary));
+  }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  .separator {
+    height: 1px; background: hsl(var(--border));
+    margin: 24px 0;
+  }
+  .section-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .section-head h3 { font-size: 18px; font-weight: 600; color: hsl(var(--high-emphasis)); }
+
+  .add-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; background: transparent;
+    border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px);
+    font-size: 13px; color: hsl(var(--medium-emphasis)); cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .add-btn:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 16px;
+    font-weight: 600; color: hsl(var(--medium-emphasis)); font-size: 12px;
+    text-transform: uppercase; letter-spacing: .4px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid hsl(var(--border)); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background .08s; }
+  tbody tr:hover { background: hsl(var(--accent)); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  }
+  .badge-success { background: hsl(146 79% 44% / 0.1); color: hsl(var(--success)); }
+  .badge-destructive { background: hsl(0 84.2% 60.2% / 0.1); color: hsl(var(--destructive)); }
+
+  .mono { font-family: "SF Mono", "Consolas", monospace; font-size: 13px; }
+  .text-muted { color: hsl(var(--muted-foreground)); }
+  .text-sm { font-size: 13px; }
+
+  .app-count { font-size: 12px; color: hsl(var(--low-emphasis)); margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="breadcrumb">
+    IAM <span style="color:hsl(var(--low-emphasis))">/</span> <span class="cur">Configure</span>
+  </div>
+
+  <h1 class="page-h1">User Configuration</h1>
+
+  <!-- Existing IAM Config Card -->
+  <div class="card">
+    <div class="card-pad">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Account activation url</label>
+          <input class="form-input" value="https://dbaosi.dev.blocksdevelopers.com/activate" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Account verification url</label>
+          <input class="form-input" value="https://dbaosi.dev.blocksdevelopers.com/verify" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Recovery account URL</label>
+          <input class="form-input" value="https://dbaosi.dev.blocksdevelopers.com/resetpassword" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Activation url lifetime (mins)</label>
+          <input class="form-input" value="1440" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Recovery account URL lifetime (mins)</label>
+          <input class="form-input" value="60" readonly>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" checked disabled>
+          <span class="text-sm text-muted">Logout on password change</span>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline">Reset</button>
+        <button class="btn btn-primary" disabled>Change</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW: Separator + Applications Section -->
+  <div class="separator"></div>
+
+  <div class="section-head">
+    <h3>Applications</h3>
+    <button class="add-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add
+    </button>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Status</th>
+          <th>Cookie Domain</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">https://dbaosi.dev.blocksdevelopers.com</td>
+          <td><span class="badge badge-success">✓ Verified</span></td>
+          <td class="text-sm text-muted">blocksdevelopers.com</td>
+        </tr>
+        <tr>
+          <td class="mono">https://dev-construct.seliseblocks.com</td>
+          <td><span class="badge badge-success">✓ Verified</span></td>
+          <td class="text-sm text-muted">blocksdevelopers.com</td>
+        </tr>
+        <tr>
+          <td class="mono">https://dev-api.seliseblocks.com</td>
+          <td><span class="badge badge-success">✓ Verified</span></td>
+          <td class="text-sm text-muted">blocksdevelopers.com</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="app-count" style="padding:0 16px 16px;">Showing 3 applications</div>
+  </div>
+</div>
+
+</body>
+</html>
