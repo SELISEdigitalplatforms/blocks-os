@@ -246,7 +246,6 @@ namespace DomainService.Projects
                 await Task.WhenAll(_messageClient.SendToConsumerAsync(new ConsumerMessage<Tenant> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = tenant }));
             }
 
-
             return new CreateProjectResponse { IsSuccess = true, TenantGroupId = groupId };
         }
 
@@ -308,7 +307,7 @@ namespace DomainService.Projects
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = applicationContext.CookieDomain, IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocksDomain }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
+                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = IdentifierConstants.ConstructCookieDomain == IdentifierConstants.BlocksDomain }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
