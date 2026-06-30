@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Application Dialog — Light</title>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --primary: 206 100% 35%;
+    --primary-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --radius: 0.5rem;
+    --high-emphasis: 0 0% 15%;
+    --medium-emphasis: 0 0% 33%;
+    --low-emphasis: 0 0% 62%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 40% 96.1%;
+    --success: 146 79% 44%;
+    --destructive: 0 84.2% 60.2%;
+    --surface-app: 220 33% 96%;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    background: hsl(var(--surface-app));
+    color: hsl(var(--high-emphasis));
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh;
+  }
+  .dialog-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 50;
+  }
+  .dialog {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    max-width: 440px; width: 100%; margin: 24px;
+  }
+  .dialog-header {
+    padding: 20px 24px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px;
+  }
+  .dialog-title { font-size: 16px; font-weight: 600; color: hsl(var(--high-emphasis)); }
+  .dialog-close {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; cursor: pointer; border: none; background: transparent;
+    color: hsl(var(--low-emphasis)); font-size: 18px;
+  }
+  .dialog-close:hover { background: hsl(var(--muted)); }
+  .dialog-body { padding: 20px 24px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .form-label { font-size: 13px; color: hsl(var(--muted-foreground)); font-weight: 500; }
+  .form-input {
+    padding: 9px 12px; border: 1px solid hsl(var(--border));
+    border-radius: 6px; font-size: 14px; font-family: inherit;
+    background: hsl(var(--background)); outline: none;
+    color: hsl(var(--high-emphasis));
+  }
+  .form-input:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsla(206, 100%, 35%, 0.1);
+  }
+  .form-input::placeholder { color: hsl(var(--low-emphasis)); }
+  .form-hint { font-size: 12px; color: hsl(var(--low-emphasis)); margin-top: 2px; }
+  .readonly-field {
+    padding: 9px 12px; background: hsl(var(--muted));
+    border: 1px solid hsl(var(--border)); border-radius: 6px;
+    font-size: 13px; color: hsl(var(--medium-emphasis));
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .dialog-footer {
+    padding: 0 24px 20px;
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .btn {
+    padding: 9px 20px; border-radius: 6px; font-size: 14px;
+    font-weight: 500; cursor: pointer; font-family: inherit;
+    transition: all .12s;
+  }
+  .btn-outline {
+    background: transparent; border: 1px solid hsl(var(--border));
+    color: hsl(var(--medium-emphasis));
+  }
+  .btn-outline:hover { border-color: hsl(var(--primary)); }
+  .btn-primary {
+    background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+    border: 1px solid hsl(var(--primary));
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .text-muted { color: hsl(var(--muted-foreground)); font-size: 13px; }
+  .mono { font-family: 'SF Mono', Consolas, monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- Background page (dimmed) -->
+<div style="position:fixed;inset:0;z-index:0;overflow:auto;">
+  <div style="max-width:900px;margin:0 auto;padding:24px 32px;opacity:0.2;">
+    <h1 style="font-size:24px;font-weight:600;margin-bottom:20px;">User Configuration</h1>
+    <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--radius);padding:24px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;">
+        <div><div class="text-muted" style="margin-bottom:6px">Account activation url</div><div style="padding:9px 12px;border:1px solid hsl(var(--border));border-radius:6px;background:hsl(var(--background))">https://dbaosi.dev.blocksdevelopers.com/activate</div></div>
+        <div><div class="text-muted" style="margin-bottom:6px">Account verification url</div><div style="padding:9px 12px;border:1px solid hsl(var(--border));border-radius:6px;background:hsl(var(--background))">https://dbaosi.dev.blocksdevelopers.com/verify</div></div>
+        <div><div class="text-muted" style="margin-bottom:6px">Recovery account URL</div><div style="padding:9px 12px;border:1px solid hsl(var(--border));border-radius:6px;background:hsl(var(--background))">https://dbaosi.dev.blocksdevelopers.com/resetpassword</div></div>
+        <div><div class="text-muted" style="margin-bottom:6px">Activation url lifetime (mins)</div><div style="padding:9px 12px;border:1px solid hsl(var(--border));border-radius:6px;background:hsl(var(--background))">1440</div></div>
+        <div><div class="text-muted" style="margin-bottom:6px">Recovery URL lifetime (mins)</div><div style="padding:9px 12px;border:1px solid hsl(var(--border));border-radius:6px;background:hsl(var(--background))">60</div></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:18px;height:18px;border:1px solid hsl(var(--border));border-radius:4px;background:hsl(var(--primary))"></div><span class="text-muted">Logout on password change</span></div>
+      </div>
+    </div>
+    <div style="height:1px;background:hsl(var(--border));margin:24px 0"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="font-size:18px;font-weight:600">Applications</h3>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid hsl(var(--border));border-radius:6px;font-size:13px;color:hsl(var(--medium-emphasis))">+ Add</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr><th style="text-align:left;padding:10px 16px;font-size:12px;font-weight:600;text-transform:uppercase;color:hsl(var(--medium-emphasis));border-bottom:1px solid hsl(var(--border))">Domain</th><th style="text-align:left;padding:10px 16px;font-size:12px;font-weight:600;text-transform:uppercase;color:hsl(var(--medium-emphasis));border-bottom:1px solid hsl(var(--border))">Status</th><th style="text-align:left;padding:10px 16px;font-size:12px;font-weight:600;text-transform:uppercase;color:hsl(var(--medium-emphasis));border-bottom:1px solid hsl(var(--border))">Cookie Domain</th></tr>
+      <tr><td class="mono" style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))">https://dbaosi.dev.blocksdevelopers.com</td><td style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))"><span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;background:hsl(146,79%,44%,0.1);color:hsl(var(--success))">✓ Verified</span></td><td class="text-muted" style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))">blocksdevelopers.com</td></tr>
+      <tr><td class="mono" style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))">https://dev-construct.seliseblocks.com</td><td style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))"><span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;background:hsl(146,79%,44%,0.1);color:hsl(var(--success))">✓ Verified</span></td><td class="text-muted" style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))">blocksdevelopers.com</td></tr>
+      <tr><td class="mono" style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))">https://dev-api.seliseblocks.com</td><td style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))"><span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;background:hsl(146,79%,44%,0.1);color:hsl(var(--success))">✓ Verified</span></td><td class="text-muted" style="padding:12px 16px;border-bottom:1px solid hsl(var(--border))">blocksdevelopers.com</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Dialog -->
+<div class="dialog-overlay">
+  <div class="dialog">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Add Application</h2>
+      <button class="dialog-close">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div class="form-group">
+        <label class="form-label">Domain URL</label>
+        <input class="form-input" type="text" placeholder="https://dev-new.example.com" value="">
+        <span class="form-hint">Full URL including https://</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cookie Domain</label>
+        <div class="readonly-field">blocksdevelopers.com</div>
+        <span class="form-hint">Auto-detected from the domain</span>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-outline">Cancel</button>
+      <button class="btn btn-primary">Add Application</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
