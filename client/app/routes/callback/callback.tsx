@@ -16,7 +16,10 @@ export default function CallbackPage() {
   });
   useEffect(() => {
     if (isSuccess) {
-      localStorage.setItem("isReload", "true");
+      // Use a unique value each time. The `storage` event does NOT fire when
+      // setItem is called with a value equal to the one already stored, so a
+      // fixed "true" can get stuck and never notify the opener tab again.
+      localStorage.setItem("isReload", `${Date.now()}`);
       // Clean up stored auth data
       localStorage.removeItem("github_auth_state");
       localStorage.removeItem("github_auth_project_key");
