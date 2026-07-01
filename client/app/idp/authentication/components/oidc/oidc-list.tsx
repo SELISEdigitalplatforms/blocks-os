@@ -87,7 +87,7 @@ export const OidcList = () => {
 
   return (
     <Card>
-      <CardContent className="overflow-x-auto p-0">
+      <CardContent className="overflow-x-clip p-0 sm:overflow-x-auto">
         <Table className="w-full min-w-[640px] sm:table-fixed sm:min-w-0">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
