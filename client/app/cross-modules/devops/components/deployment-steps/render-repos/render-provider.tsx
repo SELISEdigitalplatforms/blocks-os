@@ -44,9 +44,9 @@ const ProviderButtons = ({
           }
         } else {
           const reloadListener = (event: StorageEvent) => {
-            if (event.key === "isReload" && event.newValue === "true") {
+            if (event.key === "isReload" && event.newValue) {
               window.removeEventListener("storage", reloadListener);
-              localStorage.setItem("isReload", "false");
+              localStorage.removeItem("isReload");
               if (onClose) onClose(true);
             }
           };
