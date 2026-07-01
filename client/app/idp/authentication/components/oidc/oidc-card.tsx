@@ -1,3 +1,14 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import {
+  ChevronRight,
+  Eye,
+  EyeOff,
+  LayoutTemplate,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { MaskedText } from "@/components/masked-text";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -11,6 +22,11 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { TableCell, TableRow } from "@/components/ui-kits/table/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -21,9 +37,6 @@ import {
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { format } from "date-fns";
-import { ChevronRight, Eye, EyeOff, Shield, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 
 interface KVDetailItemProps {
@@ -40,7 +53,7 @@ const KVDetailItem = ({
   const [revealed, setRevealed] = useState(false);
 
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex min-w-0 items-start gap-4 overflow-hidden">
       <span className="w-48 shrink-0 font-mono text-xs text-muted-foreground sm:w-56">
         {label}
       </span>
@@ -89,6 +102,7 @@ interface OIDCRowProps {
 const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const navigate = useNavigate();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -217,22 +231,44 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           className="py-3.5 pr-4 text-right"
           onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                  aria-label="Template"
+                  onClick={() =>
+                    navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
+                  }
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Template</TooltipContent>
+            </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              onClick={() => setShowDeleteDialog(true)}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete"
+                  onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
           </div>
         </TableCell>
       </TableRow>
 
       {expanded && (
         <TableRow className="border-b-2 border-border hover:bg-transparent">
-          <TableCell colSpan={5} className="bg-muted/20 px-6 py-4 pl-12">
-            <div className="flex flex-col gap-3">
+          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-6 py-4 pl-12">
+            <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
               {kvPairs.map(({ key, value, isSecret }) => (
                 <KVDetailItem
                   key={key}
