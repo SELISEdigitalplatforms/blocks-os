@@ -62,6 +62,7 @@ import LmtPage from "./routes/dashboard/lmt";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
+import OidcBrandingPage from "./routes/dashboard/oidc-branding";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
 
 const redirectPaths: Record<string, string> = {
@@ -209,7 +210,16 @@ export const router = createBrowserRouter([
                       },
                       {
                         path: "oidc",
-                        element: <OIDC />,
+                        children: [
+                          {
+                            index: true,
+                            element: <OIDC />,
+                          },
+                          {
+                            path: ":clientId/branding",
+                            element: <OidcBrandingPage />,
+                          },
+                        ],
                       },
                       {
                         path: "client-credentials",
