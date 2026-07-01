@@ -6,6 +6,7 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { Accordion, AccordionItem } from "@/components/ui-kits/accordion/accordion";
+import { Layers } from "lucide-react";
 const ServiceListSkeleton = () => (
   <div className="grid gap-4">
     {Array.from({ length: 3 }).map((_, index) => (
@@ -20,12 +21,15 @@ const ServiceListSkeleton = () => (
   </div>
 );
 const EmptyServiceList = () => (
-  <Card className="p-8 text-center">
-    <CardContent>
-      <div className="text-muted-foreground">
-        <p className="mb-2 text-lg font-medium">No services found</p>
-        <p className="text-sm">Register your first service to get started</p>
+  <Card>
+    <CardContent className="flex flex-col items-center justify-center py-16">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <Layers className="h-6 w-6 text-muted-foreground" />
       </div>
+      <p className="text-sm font-medium text-high-emphasis">No services yet</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Register your first service to get started.
+      </p>
     </CardContent>
   </Card>
 );
