@@ -7,7 +7,7 @@ import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
 import QueryProvider from "./providers/query-provider";
 import { router } from "./router";
 import "./styles/globals.css";
-import { BlocksAppLayout } from "@seliseblocks/blocks-kit";
+import { BlocksAppLayout } from "@seliseblocks/blocks-kit/layouts";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
