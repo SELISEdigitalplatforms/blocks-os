@@ -1,0 +1,200 @@
+import { useEffect, useState } from "react";
+import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
+import { Separator } from "@/components/ui-kits/separator/separator";
+import { ArrowRight, Eye } from "lucide-react";
+import "@blocks-idp/authentication/pages/oidc/sci-fi-oidc.css";
+import { buildOidcBrandCssVars } from "./oidc-brand-css-vars";
+
+const DEFAULT_BRAND_COLOR = "#124091";
+
+export type OidcLoginPreviewProps = {
+  clientLogoUrl?: string | null;
+  clientBrandColor?: string | null;
+};
+
+const BlocksLogo = () => (
+  <svg
+    className="h-7 w-auto"
+    viewBox="0 0 246 360"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="var(--accent)"
+    aria-hidden
+  >
+    <path d="M245.455 68.162V129.87L168.982 156.65V93.9637L245.455 68.162Z" />
+    <path d="M240.389 62.3805L165.49 87.6573L5.30945 24.2563L85.3315 0L240.389 62.3805Z" />
+    <path d="M161.797 93.8295V156.43L81.1141 122.607V188.07L0 152.738V29.6846L161.797 93.8295Z" />
+    <path d="M76.4728 266.036L0 291.837V230.123L76.4728 203.329V266.036Z" />
+    <path d="M160.122 360L5.07166 297.619L79.9639 272.343L240.144 335.743L160.122 360Z" />
+    <path d="M245.454 330.315L83.6569 266.175V203.57L164.34 237.395V171.93L245.454 207.262V330.315Z" />
+  </svg>
+);
+
+const SectionHeading = ({ text, dimFirst = 3 }: { text: string; dimFirst?: number }) => {
+  const words = text.split(" ");
+  return (
+    <h1 className="mb-5 max-w-sm font-sans text-xl font-semibold leading-snug tracking-tight sm:text-2xl">
+      {words.map((word, i) => (
+        <span
+          key={`${word}-${i}`}
+          className="mr-1.5 inline-block"
+          style={{ color: i < dimFirst ? "var(--muted)" : "var(--fg)" }}
+        >
+          {word}
+        </span>
+      ))}
+    </h1>
+  );
+};
+
+export const OidcLoginPreview = ({
+  clientLogoUrl,
+  clientBrandColor = DEFAULT_BRAND_COLOR,
+}: OidcLoginPreviewProps) => {
+  const [htmlTheme, setHtmlTheme] = useState<"dark" | "light">(() =>
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light",
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setHtmlTheme(
+        document.documentElement.classList.contains("dark") ? "dark" : "light",
+      );
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const brandVars = buildOidcBrandCssVars(clientBrandColor || DEFAULT_BRAND_COLOR);
+
+  return (
+    <div
+      className="oidc-scifi-root pointer-events-none relative flex min-h-[420px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] sm:min-h-[480px] lg:min-h-[520px]"
+      data-theme={htmlTheme}
+      style={brandVars}
+      aria-label="Login page preview"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          background:
+            htmlTheme === "light"
+              ? "linear-gradient(180deg, rgba(0,102,178,0.06) 0%, rgba(245,247,251,0) 60%)"
+              : "radial-gradient(ellipse at 50% 0%, rgba(0,102,178,0.12) 0%, transparent 70%)",
+        }}
+        aria-hidden
+      />
+
+      <div className="relative z-10 flex flex-1 items-center justify-center p-3 sm:p-4">
+        <div
+          className="flex w-full max-w-[22rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl sm:max-w-[24rem] md:max-w-[26rem]"
+          style={{ minHeight: "min(460px, 100%)" }}
+        >
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
+            <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                {clientLogoUrl ? (
+                  <img
+                    src={clientLogoUrl}
+                    alt="Client logo"
+                    className="h-7 max-w-[140px] object-contain"
+                  />
+                ) : (
+                  <BlocksLogo />
+                )}
+                <Separator orientation="vertical" className="h-4 bg-[var(--border)]" />
+                <span className="truncate font-sans text-[10px] font-semibold uppercase tracking-[.14em] text-[var(--fg)] sm:text-xs sm:tracking-[.18em]">
+                  Blocks IAM
+                </span>
+              </div>
+              <div className="pointer-events-auto">
+                <ModeToggle />
+              </div>
+            </div>
+
+            <div className="flex flex-1 flex-col justify-center">
+              <SectionHeading
+                text="Sign in to continue to your application"
+                dimFirst={3}
+              />
+
+              <div className="flex w-full flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="oidc-preview-email" className="oidc-sci-fi-label">
+                    Work Email
+                  </label>
+                  <input
+                    id="oidc-preview-email"
+                    type="email"
+                    placeholder="name@company.com"
+                    className="oidc-sci-fi-input"
+                    disabled
+                    tabIndex={-1}
+                    readOnly
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="oidc-preview-password" className="oidc-sci-fi-label">
+                      Password
+                    </label>
+                    <span className="oidc-sci-fi-link" style={{ fontSize: "0.75rem" }}>
+                      Forgot?
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="oidc-preview-password"
+                      type="password"
+                      value="••••••••"
+                      className="oidc-sci-fi-input"
+                      style={{ paddingRight: "2.75rem" }}
+                      disabled
+                      tabIndex={-1}
+                      readOnly
+                    />
+                    <Eye
+                      className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+                      style={{ color: "var(--muted)" }}
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled
+                  tabIndex={-1}
+                  className="oidc-sci-fi-btn mt-3 flex w-full items-center justify-center gap-2"
+                >
+                  <span>Login</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <p className="oidc-font-rajdhani text-xs" style={{ color: "var(--muted)" }}>
+                  Not a member?{" "}
+                  <span className="oidc-sci-fi-link" style={{ fontSize: "0.75rem" }}>
+                    Create an account
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="font-sans text-xs text-[var(--muted)]">
+                © {new Date().getFullYear()} SELISE Digital Platforms. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
