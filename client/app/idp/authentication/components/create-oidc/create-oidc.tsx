@@ -35,6 +35,11 @@ import {
 import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Button } from "@/components/ui-kits/button/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
 import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
 
@@ -158,18 +163,30 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {isEditMode ? (
-          <Button variant={triggerVariant} size="sm">
-            <Pencil className="h-4 w-4" />
-          </Button>
-        ) : (
+      {isEditMode ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                variant={triggerVariant}
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                aria-label="Edit"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Edit</TooltipContent>
+        </Tooltip>
+      ) : (
+        <DialogTrigger asChild>
           <Button>
             <Plus className="aspect-square w-4" />
             <span className="sr-only sm:not-sr-only sm:ml-2">Create</span>
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      )}
       <DialogContent className="flex h-screen max-h-[95vh] w-screen flex-col rounded-none sm:h-auto sm:max-h-[95vh] sm:w-auto sm:rounded-lg md:h-auto md:w-[640px]">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
