@@ -1,16 +1,20 @@
 import {
   AuthResolver,
-  CallbackPage,
+  ProtectedGuard,
+  PublicGuard,
+} from "@seliseblocks/blocks-kit/guards";
+import {
   ConsoleLayout,
-  ConsolePage,
   DashboardLayout,
+  ProjectOverviewLayout,
+} from "@seliseblocks/blocks-kit/layouts";
+import {
+  CallbackPage,
+  ConsolePage,
   DashboardOverview,
   LoginPage,
   ProfilePage,
-  ProjectOverviewLayout,
-  ProtectedGuard,
-  PublicGuard,
-} from "@seliseblocks/blocks-kit";
+} from "@seliseblocks/blocks-kit/pages";
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { navigationMenus } from "./constants/navigation-menus";
 import { AIModels } from "./cross-modules/ai/pages/ai-models";

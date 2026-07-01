@@ -1,12 +1,12 @@
 import { Banner } from "@/components/ui-kits/banner/banner";
 import { Button } from "@/components/ui-kits/button/button";
+import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
 import { toast } from "@/hooks/use-toast";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
 import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
-import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication.constant";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import {
@@ -14,7 +14,6 @@ import {
   CAPTCHA_PROVIDERS_KEY,
 } from "@blocks-idp/captcha/models/captcha";
 import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
-import { DialogTrigger } from "@radix-ui/react-dialog";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { CirclePlus, Notebook } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
@@ -26,6 +25,8 @@ const HIDDEN_BANNER_PATHS = [
   "managed-services",
   "ai-models",
   "magic-url",
+  "oidc",
+  "client-credentials",
 ];
 
 export default function SecretManagementLayout() {
@@ -170,9 +171,9 @@ export default function SecretManagementLayout() {
       </div>
       <div className="flex-1 overflow-y-auto p-6">
         {!HIDDEN_BANNER_PATHS.includes(currentPath) && (
-          <Banner variant="warning" title="Secret values are hidden.">
-            Once entered, they can't be displayed again — you can only view and
-            manage configurations.
+          <Banner variant="info">
+            Saved secret values are masked for security. Review and update your
+            configurations below.
           </Banner>
         )}
         <Outlet />

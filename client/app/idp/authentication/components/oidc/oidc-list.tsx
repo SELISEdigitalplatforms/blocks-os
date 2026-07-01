@@ -104,7 +104,7 @@ export const OidcList = () => {
               <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&_tr:last-child]:border-b">
             {sortedOidcData.map((item, index) => (
               <OIDCRowExport
                 key={item.itemId}
