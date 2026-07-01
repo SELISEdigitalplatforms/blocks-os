@@ -1,3 +1,14 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import {
+  ChevronRight,
+  Eye,
+  EyeOff,
+  LayoutTemplate,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { MaskedText } from "@/components/masked-text";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -21,9 +32,6 @@ import {
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { format } from "date-fns";
-import { ChevronRight, Eye, EyeOff, Shield, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 
 interface KVDetailItemProps {
@@ -89,6 +97,7 @@ interface OIDCRowProps {
 const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const navigate = useNavigate();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -217,6 +226,17 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           className="py-3.5 pr-4 text-right"
           onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+              aria-label="Customize template"
+              onClick={() =>
+                navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
+              }
+            >
+              <LayoutTemplate className="h-3.5 w-3.5" />
+            </Button>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
             <Button
               variant="ghost"
