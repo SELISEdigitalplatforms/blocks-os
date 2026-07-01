@@ -383,7 +383,7 @@ namespace DomainService.Projects
             var project = new GetProjectResponseData
             {
                 Name = tenant.Name,
-                ApplicationDomain = tenant.Applications.FirstOrDefault()?.Domain ?? "",
+                Applications = tenant.Applications,
                 ItemId = tenant.ItemId,
                 CreatedDate = tenant.CreatedDate,
                 LastUpdatedDate = tenant.LastUpdatedDate,
