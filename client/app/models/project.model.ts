@@ -8,8 +8,7 @@ export interface IProject {
   tags: string[];
   name: string;
   applications: IApplication[];
-  applicationDomain: string;
-  customDomain: string;
+  customDomain: string | null;
   isProduction: true;
   tenantId: string;
   isCookieEnable: boolean;
