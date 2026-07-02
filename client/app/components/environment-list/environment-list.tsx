@@ -77,7 +77,7 @@ export function EnvironmentList({
   const environment =
     projectData?.data?.environment || selectedProject?.environment;
   const applicationDomain =
-    projectData?.data?.applicationDomain || selectedProject?.applicationDomain;
+    projectData?.data?.customDomain || selectedProject?.customDomain;
   const projects = useMemo(() => {
     if (!selectedProject) return [];
     const groupWithSelected = projectGroups.find((group) =>
