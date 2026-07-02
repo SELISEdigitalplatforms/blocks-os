@@ -406,14 +406,15 @@ namespace DomainService.Projects
 
         public async Task<BaseResponse> UpdateProjectAsync(UpdateProjectRequest request)
         {
-            var project = await _projectRepository.GetByTenantIdAsync(request.ProjectKey);
+            var blocksContext = BlocksContext.GetContext();
+            var project = await _projectRepository.GetByTenantIdAsync(blocksContext.TenantId);
 
             if (project == null)
             {
-                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {request.ProjectKey}" } } };
+                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
             }
 
-            var mainDomain = IdentifierHelper.ExtractMainDomain(request.ApplicationDomain);
+            var mainDomain = IdentifierHelper.ExtractMainDomain(request.Domain);
 
             //if (!string.Equals(request.ApplicationDomain, project.ApplicationDomain))
             //{
@@ -429,9 +430,9 @@ namespace DomainService.Projects
             // project.ApplicationDomain = request.ApplicationDomain;
             project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
             //  project.CookieDomain = mainDomain;
-           // project.CustomDomain = !string.IsNullOrWhiteSpace(request.CustomDomain) ? request.CustomDomain : project.CustomDomain;
-            project.JwtTokenParameters.Audiences.Add(request.ApplicationDomain);
-            project.Applications.Add(new Applications { Domain = request.ApplicationDomain, CookieDomain = mainDomain, IsDomainVerified = mainDomain == IdentifierConstants.BlocksDomain });
+            // project.CustomDomain = !string.IsNullOrWhiteSpace(request.CustomDomain) ? request.CustomDomain : project.CustomDomain;
+            // project.JwtTokenParameters.Audiences.Add(request.ApplicationDomain);
+            project.Applications.Add(new Applications { Domain = request.Domain, CookieDomain = request.CookieDomain, IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain });
 
 
             //if (!string.IsNullOrWhiteSpace(request.CustomDomain) && !project.AllowedDomains.Contains(request.ApplicationDomain, StringComparer.OrdinalIgnoreCase))
@@ -439,8 +440,7 @@ namespace DomainService.Projects
             //    project.AllowedDomains.Add(request.ApplicationDomain);
             //}   
 
-            await Task.WhenAll(_projectRepository.UpdateProjectAsync(project),
-                                _projectRepository.UpdateIamConfiguration(project));
+            await Task.WhenAll(_projectRepository.UpdateProjectAsync(project));
 
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
