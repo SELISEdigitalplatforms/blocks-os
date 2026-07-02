@@ -1,4 +1,3 @@
-import { Banner } from "@/components/ui-kits/banner/banner";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
@@ -23,16 +22,6 @@ import { CirclePlus, ArrowLeft, Loader2, Notebook } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-
-const HIDDEN_BANNER_PATHS = [
-  "my-secret",
-  "managed-services",
-  "ai-models",
-  "magic-url",
-  "oidc",
-  "client-credentials",
-  "branding",
-];
 
 function SecretManagementHeaderActions({
   isOidcBranding,
@@ -254,12 +243,6 @@ export default function SecretManagementLayout() {
           <div className="flex items-center gap-2">{headerActions}</div>
         </div>
         <div className="flex-1 overflow-y-auto p-6">
-          {!HIDDEN_BANNER_PATHS.includes(currentPath) && (
-            <Banner variant="info">
-              Saved secret values are masked for security. Review and update your
-              configurations below.
-            </Banner>
-          )}
           <Outlet />
         </div>
       </div>

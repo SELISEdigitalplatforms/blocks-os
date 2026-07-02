@@ -1,11 +1,73 @@
-import { useEffect, useState } from "react";
-import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
+import { useEffect, useState, type ElementType } from "react";
+import { ArrowRight, Eye, Monitor, Moon, Sun } from "lucide-react";
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { ArrowRight, Eye } from "lucide-react";
 import "@blocks-idp/authentication/pages/oidc/sci-fi-oidc.css";
 import { buildOidcBrandCssVars } from "./oidc-brand-css-vars";
 
 const DEFAULT_BRAND_COLOR = "#124091";
+
+type PreviewTheme = "light" | "dark";
+type PreviewThemeMode = PreviewTheme | "system";
+
+const PREVIEW_THEME_OPTIONS: Array<{
+  value: PreviewThemeMode;
+  Icon: ElementType;
+  label: string;
+}> = [
+  { value: "system", Icon: Monitor, label: "Auto" },
+  { value: "light", Icon: Sun, label: "Light" },
+  { value: "dark", Icon: Moon, label: "Dark" },
+];
+
+const readDocumentTheme = (): PreviewTheme =>
+  typeof document !== "undefined" &&
+  document.documentElement.classList.contains("dark")
+    ? "dark"
+    : "light";
+
+const getSystemTheme = (): PreviewTheme =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+
+/** Preview-only theme toggle — matches production ModeToggle UI without changing app theme. */
+const OidcPreviewModeToggle = ({
+  mode,
+  onModeChange,
+}: {
+  mode: PreviewThemeMode;
+  onModeChange: (mode: PreviewThemeMode) => void;
+}) => (
+  <div
+    role="tablist"
+    aria-label="Preview theme"
+    className="pointer-events-auto flex items-center gap-0.5 rounded-md p-0.5"
+  >
+    {PREVIEW_THEME_OPTIONS.map(({ value, Icon, label }) => {
+      const isActive = mode === value;
+      return (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={isActive}
+          aria-label={label}
+          onClick={() => onModeChange(value)}
+          className="group flex h-auto items-center rounded-sm px-2 py-1 text-xs font-medium transition-colors"
+          style={{
+            backgroundColor: isActive ? "var(--accent-soft)" : "transparent",
+            color: isActive ? "var(--accent)" : "var(--muted)",
+            boxShadow: isActive ? "0 1px 2px rgba(0, 0, 0, 0.06)" : "none",
+          }}
+        >
+          <Icon size={13} aria-hidden />
+          <span className={`ml-1.5 ${isActive ? "inline" : "hidden"}`}>{label}</span>
+        </button>
+      );
+    })}
+  </div>
+);
 
 export type OidcLoginPreviewProps = {
   clientLogoUrl?: string | null;
@@ -50,31 +112,26 @@ export const OidcLoginPreview = ({
   clientLogoUrl,
   clientBrandColor = DEFAULT_BRAND_COLOR,
 }: OidcLoginPreviewProps) => {
-  const [htmlTheme, setHtmlTheme] = useState<"dark" | "light">(() =>
-    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light",
-  );
+  const [previewMode, setPreviewMode] = useState<PreviewThemeMode>(readDocumentTheme);
+  const [systemTheme, setSystemTheme] = useState<PreviewTheme>(getSystemTheme);
 
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setHtmlTheme(
-        document.documentElement.classList.contains("dark") ? "dark" : "light",
-      );
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => observer.disconnect();
-  }, []);
+    if (previewMode !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => setSystemTheme(getSystemTheme());
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, [previewMode]);
+
+  const previewTheme: PreviewTheme =
+    previewMode === "system" ? systemTheme : previewMode;
 
   const brandVars = buildOidcBrandCssVars(clientBrandColor || DEFAULT_BRAND_COLOR);
 
   return (
     <div
-      className="oidc-scifi-root pointer-events-none relative flex min-h-[420px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] sm:min-h-[480px] lg:min-h-[520px]"
-      data-theme={htmlTheme}
+      className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[420px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] sm:min-h-[480px] lg:min-h-[520px]"
+      data-theme={previewTheme}
       style={brandVars}
       aria-label="Login page preview"
     >
@@ -82,7 +139,7 @@ export const OidcLoginPreview = ({
         className="pointer-events-none absolute inset-0 opacity-40"
         style={{
           background:
-            htmlTheme === "light"
+            previewTheme === "light"
               ? "linear-gradient(180deg, rgba(0,102,178,0.06) 0%, rgba(245,247,251,0) 60%)"
               : "radial-gradient(ellipse at 50% 0%, rgba(0,102,178,0.12) 0%, transparent 70%)",
         }}
@@ -91,7 +148,7 @@ export const OidcLoginPreview = ({
 
       <div className="relative z-10 flex flex-1 items-center justify-center p-3 sm:p-4">
         <div
-          className="flex w-full max-w-[22rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl sm:max-w-[24rem] md:max-w-[26rem]"
+          className="oidc-login-preview-card flex w-full max-w-[22rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl sm:max-w-[24rem] md:max-w-[26rem]"
           style={{ minHeight: "min(460px, 100%)" }}
         >
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
@@ -112,7 +169,10 @@ export const OidcLoginPreview = ({
                 </span>
               </div>
               <div className="pointer-events-auto">
-                <ModeToggle />
+                <OidcPreviewModeToggle
+                  mode={previewMode}
+                  onModeChange={setPreviewMode}
+                />
               </div>
             </div>
 
