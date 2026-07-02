@@ -215,8 +215,8 @@ export default function SecretManagementLayout() {
   return (
     <OidcBrandingHeaderProvider>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
             {isOidcBranding && (
               <Button
                 type="button"
@@ -240,9 +240,9 @@ export default function SecretManagementLayout() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">{headerActions}</div>
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">{headerActions}</div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </div>
       </div>
