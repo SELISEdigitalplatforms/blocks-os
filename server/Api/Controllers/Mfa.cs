@@ -29,51 +29,53 @@ namespace Api.Controllers
             _configurationService = configurationService;
         }
 
-        [Authorize]
-      //  [ProtectedEndPoint("blocks-os::mfa::generate-otp")]
-        [HttpPost]
-        public async Task<OtpGenerationResponse> GenerateOTP([FromBody] OtpGenerationRequest request)
-        {
-            return await _mfaManagementService.GenerateOTPAsync(request);
-        }
+      //  [Authorize]
+      ////  [ProtectedEndPoint("blocks-os::mfa::generate-otp")]
+      //  [HttpPost]
+      //  public async Task<OtpGenerationResponse> GenerateOTP([FromBody] OtpGenerationRequest request)
+      //  {
+      //      return await _mfaManagementService.GenerateOTPAsync(request);
+      //  }
 
-        [Authorize]
-       // [ProtectedEndPoint("blocks-os::mfa::verify-otp")]
-        [HttpPost]
-        public async Task<OtpVerificationResponse> VerifyOTP([FromBody] VerifyOtpRequest request)
-        {
-            return await _mfaManagementService.VerifyOTPAsync(request);
-        }
+      //  [Authorize]
+      // // [ProtectedEndPoint("blocks-os::mfa::verify-otp")]
+      //  [HttpPost]
+      //  public async Task<OtpVerificationResponse> VerifyOTP([FromBody] VerifyOtpRequest request)
+      //  {
+      //      return await _mfaManagementService.VerifyOTPAsync(request);
+      //  }
 
-        [Authorize]
-       // [ProtectedEndPoint("blocks-os::mfa::disable-user-mfa")]
-        [HttpPost]
-        public async Task<BaseResponse> DisableUserMfa([FromBody] DisableUserMfaRequest request)
-        {
-            return await _mfaManagementService.DisableUserMfa(request);
-        }
+      //  [Authorize]
+      // // [ProtectedEndPoint("blocks-os::mfa::disable-user-mfa")]
+      //  [HttpPost]
+      //  public async Task<BaseResponse> DisableUserMfa([FromBody] DisableUserMfaRequest request)
+      //  {
+      //      return await _mfaManagementService.DisableUserMfa(request);
+      //  }
 
-        [Authorize]
-       // [ProtectedEndPoint("blocks-os::mfa::setup-totp")]
-        [HttpGet]
-        public async Task<SetUpUserTotpResponse> SetUpTotp([FromQuery] SetUpUserTotpRequest request)
-        {
+      //  [Authorize]
+      // // [ProtectedEndPoint("blocks-os::mfa::setup-totp")]
+      //  [HttpGet]
+      //  public async Task<SetUpUserTotpResponse> SetUpTotp([FromQuery] SetUpUserTotpRequest request)
+      //  {
 
-            if (string.IsNullOrWhiteSpace(request.UserId))
-                return new SetUpUserTotpResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "empty_user_id", "User id should not be empty" } } };
+      //      if (string.IsNullOrWhiteSpace(request.UserId))
+      //          return new SetUpUserTotpResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "empty_user_id", "User id should not be empty" } } };
 
-            return await _totpService.GenerateTotpImageByUserAsync(request.UserId);
-        }
+      //      return await _totpService.GenerateTotpImageByUserAsync(request.UserId);
+      //  }
 
-        [Authorize]
-       // [ProtectedEndPoint("blocks-os::mfa::resend-otp")]
-        [HttpPost]
-        public async Task<OtpGenerationResponse> ResendOtp([FromBody] ResendOtpRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.MfaId)) return new OtpGenerationResponse { Errors = new Dictionary<string, string> { { "empty_mfa_id", "Mfa id should not be empty" } } };
+      //  [Authorize]
+      // // [ProtectedEndPoint("blocks-os::mfa::resend-otp")]
+      //  [HttpPost]
+      //  public async Task<OtpGenerationResponse> ResendOtp([FromBody] ResendOtpRequest request)
+      //  {
+      //      if (string.IsNullOrWhiteSpace(request.MfaId)) return new OtpGenerationResponse { Errors = new Dictionary<string, string> { { "empty_mfa_id", "Mfa id should not be empty" } } };
 
-            return await _mfaManagementService.ResendOtpAsync(request.MfaId, request.SendPhoneNumberAsEmailDomain);
-        }
+      //      return await _mfaManagementService.ResendOtpAsync(request.MfaId, request.SendPhoneNumberAsEmailDomain);
+      //  }
+
+
         #region Cloud Configuration
 
         [Authorize]
