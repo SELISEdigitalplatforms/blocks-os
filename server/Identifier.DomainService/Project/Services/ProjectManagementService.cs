@@ -414,34 +414,29 @@ namespace DomainService.Projects
                 return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
             }
 
-            var mainDomain = IdentifierHelper.ExtractMainDomain(request.Domain);
-
-            //if (!string.Equals(request.ApplicationDomain, project.ApplicationDomain))
-            //{
-            //    project.IsDomainVerified = mainDomain == IdentifierConstants.BlocksDomain;
-            //}
-
-            //if (request.ApplicationDomain.Contains(IdentifierConstants.BlocksDomain, StringComparison.OrdinalIgnoreCase))
-            //{
-            //    project.IsDomainVerified = true;
-            //}
-
             project.LastUpdatedDate = DateTime.UtcNow;
-            // project.ApplicationDomain = request.ApplicationDomain;
-            project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            //  project.CookieDomain = mainDomain;
-            // project.CustomDomain = !string.IsNullOrWhiteSpace(request.CustomDomain) ? request.CustomDomain : project.CustomDomain;
-            // project.JwtTokenParameters.Audiences.Add(request.ApplicationDomain);
-            project.Applications.Add(new Applications { Domain = request.Domain, CookieDomain = request.CookieDomain, IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain });
+            project.LastUpdatedBy = blocksContext.UserId;
 
+            switch (request.Action)
+            {
+                case ApplicationAction.Add:
+                    AddApplication(project, request);
+                    break;
 
-            //if (!string.IsNullOrWhiteSpace(request.CustomDomain) && !project.AllowedDomains.Contains(request.ApplicationDomain, StringComparer.OrdinalIgnoreCase))
-            //{
-            //    project.AllowedDomains.Add(request.ApplicationDomain);
-            //}   
+                case ApplicationAction.Edit:
+                    var editResult = EditApplication(project, request);
+                    if (!editResult.IsSuccess)
+                        return editResult;
+                    break;
 
-            await Task.WhenAll(_projectRepository.UpdateProjectAsync(project));
+                case ApplicationAction.Delete:
+                    var deleteResult = DeleteApplication(project, request);
+                    if (!deleteResult.IsSuccess)
+                        return deleteResult;
+                    break;
+            }
 
+            await _projectRepository.UpdateProjectAsync(project);
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
                 Action = "upsert",
@@ -449,23 +444,46 @@ namespace DomainService.Projects
                 Tenant = project
             });
 
-            //var domian = IdentifierConstants.CookieDomainPrefix + project.CookieDomain;
+            return new BaseResponse { IsSuccess = true };
+        }
 
-            //if (project.IsCookieEnable)
-            //{
+        private void AddApplication(Tenant project, UpdateProjectRequest request)
+        {
+            var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
+            var newApp = new Applications
+            {
+                Domain = request.Application.Domain,
+                CookieDomain = request.Application.CookieDomain,
+                IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain
+            };
+            project.Applications.Add(newApp);
+        }
 
-            //    if (applicationDomainBeforeUpdate != request.ApplicationDomain)
-            //    {
-            //        await _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest> { ConsumerName = IdentifierConstants.IdentifierName, Payload = new DisableDomainBindingRequest { ProjectId = project.ItemId, Domain = domian } });
-            //    }
+        private BaseResponse EditApplication(Tenant project, UpdateProjectRequest request)
+        {
+            var existingApp = project.Applications.FirstOrDefault(a => a.Domain == request.ApplicationDomain);
+            if (existingApp == null)
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "application_not_found", $"No application found with domain {request.ApplicationDomain}" } } };
+            }
 
-            //    await _messageClient.SendToConsumerAsync(new ConsumerMessage<ConfigureDomainRequest> { ConsumerName = IdentifierConstants.IdentifierName, Payload = new ConfigureDomainRequest { CookieDomain = domian, ProjectId = request.ProjectId } });
-            //}
-            //else
-            //{
-            //    await _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest> { ConsumerName = IdentifierConstants.IdentifierName, Payload = new DisableDomainBindingRequest { ProjectId = project.ItemId, Domain = domian } });
-            //}
+            var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
+            existingApp.Domain = request.Application.Domain;
+            existingApp.CookieDomain = request.Application.CookieDomain;
+            existingApp.IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain;
 
+            return new BaseResponse { IsSuccess = true };
+        }
+
+        private BaseResponse DeleteApplication(Tenant project, UpdateProjectRequest request)
+        {
+            var existingApp = project.Applications.FirstOrDefault(a => a.Domain == request.ApplicationDomain);
+            if (existingApp == null)
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "application_not_found", $"No application found with domain {request.ApplicationDomain}" } } };
+            }
+
+            project.Applications.Remove(existingApp);
             return new BaseResponse { IsSuccess = true };
         }
 
