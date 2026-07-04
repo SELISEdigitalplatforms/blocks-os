@@ -54,9 +54,9 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
               ? true
               : false,
           customDomain: data.data.customDomain || "",
-          applicationDomain: data.data.applicationDomain
-            ? data.data.applicationDomain.replace(
-                `.${getDomain(data.data.applicationDomain)}`,
+          applicationDomain: data.data.customDomain
+            ? data.data.customDomain.replace(
+                `.${getDomain(data.data.customDomain)}`,
                 "",
               )
             : "",
@@ -94,12 +94,11 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmitHandler)}
-        className="flex flex-col gap-4"
-      >
+        className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <div className="text-sm font-medium">Application Domain</div>
           <div className="text-sm text-muted-foreground">
-            {data?.data.applicationDomain}
+            {data?.data.customDomain}
           </div>
         </div>
         <FormField
@@ -136,8 +135,7 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
                         className="peer"
                         type="button"
                         onMouseEnter={() => setCustomDomainTooltipOpen(true)}
-                        onMouseLeave={() => setCustomDomainTooltipOpen(false)}
-                      >
+                        onMouseLeave={() => setCustomDomainTooltipOpen(false)}>
                         <CircleHelp className="h-4 w-4" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-96 text-sm font-normal">

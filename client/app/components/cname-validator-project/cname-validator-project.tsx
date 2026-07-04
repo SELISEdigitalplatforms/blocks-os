@@ -13,10 +13,10 @@ export const CnameValidatorProject = () => {
   const { mutateAsync, isPending } = useValidateCNameProject({ projectKey });
   const cNameValidator = async () => {
     try {
-      if (!data?.data.applicationDomain) return;
+      if (!data?.data.customDomain) return;
       const res = await mutateAsync({
         projectKey,
-        cookieDomain: data?.data.applicationDomain.split("//")[1],
+        cookieDomain: data?.data.customDomain.split("//")[1],
       });
       if (res.isSuccess)
         return showSuccessToast({

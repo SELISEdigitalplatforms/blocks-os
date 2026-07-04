@@ -1,4 +1,7 @@
-import { GRANT_TYPES, SSO_PROVIDERS } from "@blocks-idp/authentication/constants";
+import {
+  GRANT_TYPES,
+  SSO_PROVIDERS,
+} from "@blocks-idp/authentication/constants";
 
 export interface IProject {
   itemId: string;
@@ -9,7 +12,6 @@ export interface IProject {
   organizationIds: string[];
   tags: string[];
   name: string;
-  applicationDomain: string;
   customDomain: string;
   isProduction: true;
   tenantId: string;
