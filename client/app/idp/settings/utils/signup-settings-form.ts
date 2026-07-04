@@ -67,16 +67,31 @@ export const toSignupSettingsFormValues = (
   defaultPermissionsForNewUser: config.defaultPermissionsForNewUser,
 })
 
+/** When signup disabled, roles/permissions must stay at loaded backend values — not in-session edits. */
+export const applySignupDisabledOverrides = (
+  values: SignupSettingsFormValues,
+  config: ISettingsSignupConfig,
+): SignupSettingsFormValues =>
+  values.isEmailPasswordSignUpEnabled
+    ? values
+    : {
+        ...values,
+        defaultRolesForNewUser: config.defaultRolesForNewUser,
+        defaultPermissionsForNewUser: config.defaultPermissionsForNewUser,
+      }
+
 export const buildSignupSettingsSavePayload = (
   values: SignupSettingsFormValues,
+  config: ISettingsSignupConfig,
 ): ISettingsSaveSignupConfigPayload => {
-  const signUpEnabled = values.isEmailPasswordSignUpEnabled
+  const normalized = applySignupDisabledOverrides(values, config)
+  const signUpEnabled = normalized.isEmailPasswordSignUpEnabled
 
   return {
     isSignUpEnable: signUpEnabled,
     isEmailPasswordSignUpEnabled: signUpEnabled,
     isSSoSignUpEnabled: signUpEnabled,
-    defaultRolesForNewUserOnSignUp: values.defaultRolesForNewUser,
-    defaultPermissionsForNewUserOnSignUp: values.defaultPermissionsForNewUser,
+    defaultRolesForNewUserOnSignUp: normalized.defaultRolesForNewUser,
+    defaultPermissionsForNewUserOnSignUp: normalized.defaultPermissionsForNewUser,
   }
 }
