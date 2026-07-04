@@ -25,6 +25,8 @@ import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.m
 import {
   applyOidcIamConfigOverrides,
   buildSavePayload,
+  DEFAULT_PASSWORD_STRENGTH_REGEX_PLACEHOLDER,
+  getBlocksIamBaseUrl,
   iamConfigFormSchema,
   toIamConfigFormValues,
   type IamConfigFormValues,
@@ -71,6 +73,7 @@ type AccountActionBaseUrlInputProps = {
   onChange: (value: string) => void
   onBlur: () => void
   name: string
+  readOnly?: boolean
 }
 
 const stripUrlProtocol = (value: string) => value.replace(/^https?:\/\//, "")
@@ -87,17 +90,40 @@ const AccountActionBaseUrlInput = ({
   onChange,
   onBlur,
   name,
+  readOnly = false,
 }: AccountActionBaseUrlInputProps) => (
-  <div className="flex w-full min-w-0 overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-    <span className="flex shrink-0 items-center border-r border-input bg-muted px-3 text-sm text-muted-foreground">
+  <div
+    className={cn(
+      "flex h-10 w-full min-w-0 overflow-hidden rounded-md border",
+      readOnly
+        ? "cursor-not-allowed border-muted-foreground/20 bg-muted/80 shadow-none"
+        : "border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+    )}
+  >
+    <span
+      className={cn(
+        "flex h-full shrink-0 items-center border-r px-3 text-sm",
+        readOnly
+          ? "border-muted-foreground/20 bg-muted/80 text-muted-foreground"
+          : "border-input bg-muted text-muted-foreground",
+      )}
+    >
       https://
     </span>
     <Input
       name={name}
       value={stripUrlProtocol(value)}
       onBlur={onBlur}
+      readOnly={readOnly}
+      tabIndex={readOnly ? -1 : undefined}
+      aria-readonly={readOnly}
       onChange={(event) => onChange(toHttpsUrl(event.target.value))}
-      className="min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+      className={cn(
+        "h-full min-w-0 flex-1 rounded-none border-0 py-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
+        readOnly
+          ? "cursor-not-allowed bg-muted/80 text-muted-foreground opacity-100 focus-visible:outline-none"
+          : "bg-transparent",
+      )}
       placeholder="console.enterprise.cloud"
     />
   </div>
@@ -122,7 +148,7 @@ const SwitchRow = ({
     className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}
   >
     <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-      <FormLabel className="!mt-0">{label}</FormLabel>
+      <FormLabel className={cn("!mt-0", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
       {description ? (
         <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>{description}</p>
       ) : null}
@@ -150,6 +176,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
 
   const { isDirty } = useFormState({ control: form.control })
   const isOidcEnabled = form.watch("isOidcEnabled")
+  const blocksIamBaseUrl = useMemo(() => getBlocksIamBaseUrl(), [])
 
   useEffect(() => {
     if (!isOidcEnabled) return
@@ -278,7 +305,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
               <div className={cn("space-y-3", !isOidcEnabled && "pt-4")}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-                    <p className="text-sm font-medium leading-none">Account Action Base URL</p>
+                    <p className={SETTINGS_FORM_LAYOUT.toggleTitle}>Account Action Base URL</p>
                     <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>
                       {isOidcEnabled
                         ? "OIDC account actions use the Blocks IAM base URL."
@@ -293,7 +320,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         <FormItem className="flex shrink-0 items-center gap-2 space-y-0 self-start sm:self-center">
                           <FormLabel
                             htmlFor="use-account-action-base-url-as-default"
-                            className="!mt-0 cursor-pointer text-sm font-normal text-muted-foreground"
+                            className="!mt-0 cursor-pointer font-normal text-muted-foreground"
                           >
                             Use as default
                           </FormLabel>
@@ -318,9 +345,14 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                       <FormControl>
                         <AccountActionBaseUrlInput
                           name={field.name}
-                          value={field.value}
+                          value={
+                            isOidcEnabled
+                              ? blocksIamBaseUrl
+                              : field.value || blocksIamBaseUrl
+                          }
                           onBlur={field.onBlur}
                           onChange={field.onChange}
+                          readOnly={isOidcEnabled}
                         />
                       </FormControl>
                       <FormMessage className="mt-2" />
@@ -393,7 +425,11 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                   <FormItem>
                     <FormLabel>Password Strength Regex</FormLabel>
                     <FormControl>
-                      <Input className={cn(SETTINGS_FORM_LAYOUT.inputFull, "font-mono text-sm")} {...field} />
+                      <Input
+                        className={cn(SETTINGS_FORM_LAYOUT.inputFull, "font-mono text-sm")}
+                        placeholder={DEFAULT_PASSWORD_STRENGTH_REGEX_PLACEHOLDER}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
