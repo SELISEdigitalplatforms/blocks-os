@@ -32,7 +32,7 @@ export const ProjectCliSnippet = () => {
   const cliSetupCommand = "npm install -g @seliseblocks/cli";
   const blocksMicroservicesUrl = getProjectBlocksApiUrl(data?.data);
   const projectSetupCommand =
-    `blocks new web ${data?.data.name.replaceAll(" ", "_").toLowerCase()} --x-blocks-key ${data?.data.tenantId} --app-domain ${data?.data.applicationDomain} --project-slug ${data?.data.tenantSlug || ""} --blocks-api-url ${blocksMicroservicesUrl}`.trim();
+    `blocks new web ${data?.data.name.replaceAll(" ", "_").toLowerCase()} --x-blocks-key ${data?.data.tenantId} --app-domain ${data?.data.customDomain} --project-slug ${data?.data.tenantSlug || ""} --blocks-api-url ${blocksMicroservicesUrl}`.trim();
   if (isLoading) return <LoadingSkeleton />;
   return (
     <Card>
