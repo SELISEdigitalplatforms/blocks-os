@@ -85,10 +85,29 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
     form.reset(toSignupSettingsFormValues(config))
   }, [config, form])
 
+  const handleSignupEnabledChange = useCallback(
+    (checked: boolean, onChange: (value: boolean) => void) => {
+      onChange(checked)
+
+      if (checked) return
+
+      const backendValues = toSignupSettingsFormValues(config)
+      form.setValue("defaultRolesForNewUser", backendValues.defaultRolesForNewUser, {
+        shouldDirty: true,
+      })
+      form.setValue(
+        "defaultPermissionsForNewUser",
+        backendValues.defaultPermissionsForNewUser,
+        { shouldDirty: true },
+      )
+    },
+    [config, form],
+  )
+
   const handleSubmit = useCallback(
     async (values: SignupSettingsFormValues) => {
       try {
-        const res = await mutateAsync(buildSignupSettingsSavePayload(values))
+        const res = await mutateAsync(buildSignupSettingsSavePayload(values, config))
         if (!res.isSuccess) return showErrorToast({ errors: res.errors })
         showSuccessToast({ description: "Signup settings updated successfully" })
       } catch (error) {
@@ -96,7 +115,7 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
         showErrorToast({ errors: "Something went wrong" })
       }
     },
-    [mutateAsync],
+    [config, mutateAsync],
   )
 
   const tabActions = useMemo(
@@ -124,7 +143,9 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
                 label="Sign Up Enabled"
                 description="Allow users to register using an email address and password. SSO sign-up is enabled automatically when this is on."
                 checked={field.value}
-                onCheckedChange={field.onChange}
+                onCheckedChange={(checked) =>
+                  handleSignupEnabledChange(checked, field.onChange)
+                }
               />
             )}
           />
