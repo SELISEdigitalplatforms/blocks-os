@@ -1,9 +1,10 @@
-import { IProject } from "@blocks-identifier/models/project.model";
+import { IProject } from "@/models/project.model";
 
 export const domainRegex =
   /^(https?:\/\/)((?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,})$/;
 
-export const isValidDomain = (domain: string) => domainRegex.test(domain.trim());
+export const isValidDomain = (domain: string) =>
+  domainRegex.test(domain.trim());
 
 export const subdomainRegex =
   /^(https?:\/\/)(?!-)([A-Za-z0-9-]{1,63}\.)*[A-Za-z0-9-]{1,63}(?<!-)$/;
@@ -47,4 +48,3 @@ export const getProjectBlocksApiUrl = (project?: IProject): string => {
     ? "blocksapi." + getDomain(project.customDomain)
     : baseUrl;
 };
-

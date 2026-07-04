@@ -102,32 +102,35 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
     applyLogoFile(file);
   };
 
-  const uploadLogoToStorage = async (file: File): Promise<string> => {
-    const res = await getPresignedUrl({
-      itemId: "",
-      accessModifier: "Public",
-      configurationName: "Default",
-      name: file.name,
-      projectKey: tenantId,
-      tags: "",
-      metaData: "",
-      parentDirectoryId: "",
-      moduleName: ModuleName.IAMCloud,
-    });
+  const uploadLogoToStorage = useCallback(
+    async (file: File): Promise<string> => {
+      const res = await getPresignedUrl({
+        itemId: "",
+        accessModifier: "Public",
+        configurationName: "Default",
+        name: file.name,
+        projectKey: tenantId,
+        tags: "",
+        metaData: "",
+        parentDirectoryId: "",
+        moduleName: ModuleName.IAMCloud,
+      });
 
-    if (!res.isSuccess) {
-      throw new Error("Failed to get upload URL");
-    }
+      if (!res.isSuccess) {
+        throw new Error("Failed to get upload URL");
+      }
 
-    await uploadFile({ url: res.uploadUrl, file });
+      await uploadFile({ url: res.uploadUrl, file });
 
-    const fileRecord = await storageService.file.getFileByFileId({
-      itemId: res.fileId,
-      projectKey: tenantId,
-    });
+      const fileRecord = await storageService.file.getFileByFileId({
+        itemId: res.fileId,
+        projectKey: tenantId,
+      });
 
-    return fileRecord.url;
-  };
+      return fileRecord.url;
+    },
+    [getPresignedUrl, uploadFile, tenantId],
+  );
 
   const resetToSavedBranding = useCallback(() => {
     if (!credential) return;
@@ -186,6 +189,7 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
     previewLogoUrl,
     saveOidc,
     tenantId,
+    uploadLogoToStorage,
   ]);
 
   const handleUndo = useCallback(() => {
@@ -233,7 +237,9 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
       <CardContent className="p-6">
         <div className="grid min-w-0 gap-8 lg:grid-cols-2 lg:gap-6">
           <section className="flex min-w-0 flex-col gap-6">
-            <h2 className="text-base font-semibold text-high-emphasis">Configuration</h2>
+            <h2 className="text-base font-semibold text-high-emphasis">
+              Configuration
+            </h2>
 
             <div className="space-y-3">
               <Label htmlFor="client-logo-upload">Client logo</Label>
@@ -254,8 +260,7 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
                   setIsDragOver(false);
                   const file = e.dataTransfer.files?.[0];
                   if (file) applyLogoFile(file);
-                }}
-              >
+                }}>
                 <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-border bg-background">
                   {previewLogoUrl ? (
                     <img
@@ -281,13 +286,13 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
                   size="sm"
                   disabled={isBusy}
                   className="gap-2"
-                  onClick={() => fileInputRef.current?.click()}
-                >
+                  onClick={() => fileInputRef.current?.click()}>
                   <Upload className="h-4 w-4" />
                   Upload logo
                 </Button>
                 <p className="text-center text-xs text-muted-foreground">
-                  Drag and drop or browse. PNG, JPG, SVG, or WebP up to {MAX_LOGO_SIZE_MB}MB.
+                  Drag and drop or browse. PNG, JPG, SVG, or WebP up to{" "}
+                  {MAX_LOGO_SIZE_MB}MB.
                 </p>
               </div>
             </div>
@@ -314,7 +319,9 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
           </section>
 
           <section className="flex min-w-0 flex-col gap-3 lg:border-l lg:border-border lg:pl-6">
-            <h2 className="text-base font-semibold text-high-emphasis">Live preview</h2>
+            <h2 className="text-base font-semibold text-high-emphasis">
+              Live preview
+            </h2>
             <div className="min-w-0 overflow-hidden rounded-lg">
               <OidcLoginPreview
                 clientLogoUrl={previewLogoUrl}
