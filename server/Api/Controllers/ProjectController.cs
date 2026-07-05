@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
@@ -29,19 +29,19 @@ namespace Api.Controllers
         }
 
         //[ProtectedEndPoint("blocks-os::create-project")]
-        [Authorize]
-        [HttpPost]
-        public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
-        {
-            var validationResult = await _createProjectValidator.ValidateAsync(request);
+        //[Authorize]
+        //[HttpPost]
+        //public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
+        //{
+        //    var validationResult = await _createProjectValidator.ValidateAsync(request);
 
-            if (!validationResult.IsValid)
-            {
-                return new CreateProjectResponse { Errors = validationResult.Errors.ToDictionary(e => string.IsNullOrWhiteSpace(e.PropertyName) ? "validation_error" : e.PropertyName, e => e.ErrorMessage), IsSuccess = false };
-            }
+        //    if (!validationResult.IsValid)
+        //    {
+        //        return new CreateProjectResponse { Errors = validationResult.Errors.ToDictionary(e => string.IsNullOrWhiteSpace(e.PropertyName) ? "validation_error" : e.PropertyName, e => e.ErrorMessage), IsSuccess = false };
+        //    }
 
-            return await _projectManagementService.SaveProjectAsync(request);
-        }
+        //    return await _projectManagementService.SaveProjectAsync(request);
+        //}
 
 
         [HttpGet]
