@@ -42,12 +42,14 @@ export const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({
     }
   };
   return (
-    <div className="group flex items-center gap-2">
+    <div className="group flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 sm:flex-nowrap sm:items-center">
       {children}
       <div
         className={`${
-          isHoverable ? "opacity-0 group-hover:opacity-100" : "opacity-100"
-        } relative flex min-w-[70px] items-center gap-1 transition-opacity duration-200`}
+          isHoverable
+            ? "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+            : "opacity-100"
+        } relative flex shrink-0 items-center gap-1 transition-opacity duration-200`}
       >
         <Button
           variant="ghost"

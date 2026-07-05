@@ -41,7 +41,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
-import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
 
 type CreateOIDCProps = {
   itemId?: string;
@@ -71,7 +70,6 @@ export const CreateOIDC = ({
   const {
     formState: { isValid },
     control,
-    watch,
     register,
   } = form;
 
@@ -108,8 +106,6 @@ export const CreateOIDC = ({
           credential.allowedResponseTypes.length
             ? credential.allowedResponseTypes
             : ["code"],
-        allowedServiceAccessResources:
-          credential.allowedServiceAccessResources ?? [],
       });
     } else if (!isEditMode && open) {
       form.reset({
@@ -143,7 +139,6 @@ export const CreateOIDC = ({
         isActive: data.isActive,
         requirePkce: data.requirePkce,
         allowedResponseTypes: data.allowedResponseTypes,
-        allowedServiceAccessResources: data.allowedServiceAccessResources,
         itemId: isEditMode ? itemId : "",
         projectKey: tenantId,
         clientLogoUrl: clientLogoUrl || undefined,
@@ -165,8 +160,6 @@ export const CreateOIDC = ({
       form.reset();
     }
   };
-
-  const _selectedServices = watch("allowedServiceAccessResources") ?? [];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -268,53 +261,6 @@ export const CreateOIDC = ({
                   )}
               </div>
 
-              {/* Allowed Services — multi-select checkbox list (values are service ids) */}
-              <FormField
-                control={form.control}
-                name="allowedServiceAccessResources"
-                render={({ field }) => {
-                  const value = (field.value ?? []) as string[];
-                  const toggle = (id: string) => {
-                    const next = value.includes(id)
-                      ? value.filter((x) => x !== id)
-                      : [...value, id];
-                    field.onChange(next);
-                  };
-                  return (
-                    <FormItem>
-                      <FormLabel>
-                        Allowed Services{" "}
-                        <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {DUMMY_LOG_SERVICES.map((service) => {
-                            const checked = value.includes(service.id);
-                            return (
-                              <div
-                                key={service.id}
-                                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/40">
-                                <Checkbox
-                                  id={`allowed-service-${service.id}`}
-                                  checked={checked}
-                                  onCheckedChange={() => toggle(service.id)}
-                                />
-                                <label
-                                  htmlFor={`allowed-service-${service.id}`}
-                                  className="cursor-pointer text-sm text-high-emphasis">
-                                  {service.name}
-                                </label>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
-
               {/* Status | Scope(s) | PKCE — single borderless row */}
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
                 <FormField
@@ -411,17 +357,19 @@ export const CreateOIDC = ({
             </form>
           </Form>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             onClick={() => setOpen(false)}
             type="button"
-            variant="outline">
+            variant="outline"
+            className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
             form="oidc-form"
             type="submit"
-            disabled={!isValid || isPending}>
+            disabled={!isValid || isPending}
+            className="w-full sm:w-auto">
             {isEditMode ? "Update" : "Add"}
           </Button>
         </DialogFooter>
