@@ -1,4 +1,8 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace CloudConfiguration.DomainService.Storage.Entities;
+
+[BsonIgnoreExtraElements]
 public class CreateDefaultFolderEvent
 {
     public required string ItemId { get; set; }
