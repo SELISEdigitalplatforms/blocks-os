@@ -2,7 +2,6 @@
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
-using DomainService.Shared;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

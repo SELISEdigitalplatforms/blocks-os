@@ -215,8 +215,7 @@ namespace DomainService.Projects
                 Name = fileName,
                 Tags = "[\"File\"]",
                 ParentDirectoryId = string.Empty,
-                AccessModifier = "Public",
-                ProjectKey = BlocksContext.GetContext()?.TenantId
+                AccessModifier = "Public"
             };
 
             var presignedUrlResponse = await _storageDriverService.GetPerSignedUrlForUploadAsync(preSignedUriRequest);
@@ -490,13 +489,13 @@ namespace DomainService.Projects
             return new BaseResponse { IsSuccess = true };
         }
 
-        public async Task<BaseResponse> DisableProjectAsync(string projectKey)
+        public async Task<BaseResponse> DisableProjectAsync(string projectId)
         {
-            var project = _tenants.GetTenantByID(projectKey);
+            var project = _tenants.GetTenantByID(projectId);
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project exist with {projectKey}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project exist with {projectId}" } } };
             }
 
             project.IsDisabled = true;
