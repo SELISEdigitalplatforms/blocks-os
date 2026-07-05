@@ -22,7 +22,7 @@ namespace Worker.Consumers.Identifier
         {
             //if (project.Applications.FirstOrDefault()?.CookieDomain != IdentifierConstants.BlocksDomain)
             //{
-            //    await Task.WhenAll(_domainManagementService.ConfigureDomainAsync(new ConfigureDomainRequest { CookieDomain = project.Applications.FirstOrDefault()?.Domain, ProjectKey = project.ItemId }),
+            //    await Task.WhenAll(_domainManagementService.ConfigureDomainAsync(new ConfigureDomainRequest { CookieDomain = project.Applications.FirstOrDefault()?.Domain }),
             //                       _projectManagementService.ConfigureProjectAsync(project));
             //}
            // else
