@@ -94,7 +94,7 @@ const BlocksLogo = () => (
 const SectionHeading = ({ text, dimFirst = 3 }: { text: string; dimFirst?: number }) => {
   const words = text.split(" ");
   return (
-    <h1 className="mb-5 max-w-sm font-sans text-xl font-semibold leading-snug tracking-tight sm:text-2xl">
+    <h1 className="mb-5 font-sans text-xl font-semibold leading-snug tracking-tight sm:max-w-sm sm:text-2xl">
       {words.map((word, i) => (
         <span
           key={`${word}-${i}`}
@@ -130,7 +130,7 @@ export const OidcLoginPreview = ({
 
   return (
     <div
-      className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[420px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] sm:min-h-[480px] lg:min-h-[520px]"
+      className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[380px] select-none flex-col overflow-hidden rounded-none bg-[var(--bg)] sm:min-h-[460px] sm:rounded-lg lg:min-h-[520px]"
       data-theme={previewTheme}
       style={brandVars}
       aria-label="Login page preview"
@@ -146,12 +146,11 @@ export const OidcLoginPreview = ({
         aria-hidden
       />
 
-      <div className="relative z-10 flex flex-1 items-center justify-center p-3 sm:p-4">
+      <div className="relative z-10 flex flex-1 items-stretch sm:items-center sm:justify-center sm:p-4">
         <div
-          className="oidc-login-preview-card flex w-full max-w-[22rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl sm:max-w-[24rem] md:max-w-[26rem]"
-          style={{ minHeight: "min(460px, 100%)" }}
+          className="oidc-login-preview-card flex w-full min-h-0 flex-1 flex-col overflow-hidden rounded-none bg-[var(--surface)] shadow-none sm:max-w-[23rem] sm:min-h-[460px] sm:flex-none sm:rounded-[1.5rem] sm:shadow-xl md:max-w-[26rem]"
         >
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-4 sm:pt-5">
             <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 {clientLogoUrl ? (
@@ -182,7 +181,7 @@ export const OidcLoginPreview = ({
                 dimFirst={3}
               />
 
-              <div className="flex w-full flex-col gap-5">
+              <div className="flex w-full flex-col gap-4 sm:gap-5">
                 <div className="flex flex-col gap-2">
                   <label htmlFor="oidc-preview-email" className="oidc-sci-fi-label">
                     Work Email
@@ -230,14 +229,14 @@ export const OidcLoginPreview = ({
                   type="button"
                   disabled
                   tabIndex={-1}
-                  className="oidc-sci-fi-btn mt-3 flex w-full items-center justify-center gap-2"
+                  className="oidc-sci-fi-btn mt-2 flex w-full items-center justify-center gap-2 sm:mt-3"
                 >
                   <span>Login</span>
                   <ArrowRight size={16} />
                 </button>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-3 sm:mt-4">
                 <p className="oidc-font-rajdhani text-xs" style={{ color: "var(--muted)" }}>
                   Not a member?{" "}
                   <span className="oidc-sci-fi-link" style={{ fontSize: "0.75rem" }}>
@@ -247,7 +246,7 @@ export const OidcLoginPreview = ({
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-3 sm:mt-4">
               <p className="font-sans text-xs text-[var(--muted)]">
                 © {new Date().getFullYear()} SELISE Digital Platforms. All rights reserved.
               </p>

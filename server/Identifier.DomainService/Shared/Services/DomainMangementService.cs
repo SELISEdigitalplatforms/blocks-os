@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -40,6 +40,7 @@ namespace DomainService.Shared
 
         public async Task<BaseResponse> ConfigureDomainAsync(ConfigureDomainRequest request)
         {
+             request.ProjectKey = BlocksContext.GetContext().TenantId;
             _logger.LogInformation("Processing request {RequestId} for domain {Domain}", request.ProjectKey, request.CookieDomain);
             var cookieDomain = request.CookieDomain.Replace("https://", "");
 
