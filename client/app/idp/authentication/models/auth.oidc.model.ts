@@ -21,7 +21,7 @@ export interface IOidcConfig {
   isActive: boolean;
   requirePkce: boolean;
   allowedResponseTypes: string[];
-  allowedServiceAccessResources: string[];
+  allowedServiceAccessResources?: string[];
   tenantId: string;
   clientLogoUrl?: string;
   clientBrandColor?: string;
@@ -43,7 +43,7 @@ export interface ISaveOidcCredentialPayload {
   scope: string;
   requirePkce: boolean;
   allowedResponseTypes: string[];
-  allowedServiceAccessResources: string[];
+  allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;
   clientBrandColor?: string;
   clientDisplayName: string;
@@ -59,7 +59,7 @@ export interface ISaveOidcCredentialResponse {
   scope: string;
   requirePkce: boolean;
   allowedResponseTypes: string[];
-  allowedServiceAccessResources: string[];
+  allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;
   clientBrandColor?: string;
   clientDisplayName: string;
