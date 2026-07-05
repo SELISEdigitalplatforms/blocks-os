@@ -8,25 +8,28 @@ import QueryProvider from "./providers/query-provider";
 import { router } from "./router";
 import "./styles/globals.css";
 import { BlocksAppLayout } from "@seliseblocks/blocks-kit/layouts";
+import { ThemeProvider } from "./hooks/use-theme";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
-      <NuqsAdapter>
-        <TooltipProvider>
-          <BlocksAppLayout
-            config={{
-              name: "blocks-os",
-              appLogoUrl: {
-                dark: "/blocks-logos/os_dark_mode.svg",
-                light: "/blocks-logos/os_light_mode.svg",
-              },
-            }}>
-            <RouterProvider router={router} />
-          </BlocksAppLayout>
-          <Toaster />
-        </TooltipProvider>
-      </NuqsAdapter>
+      <ThemeProvider>
+        <NuqsAdapter>
+          <TooltipProvider>
+            <BlocksAppLayout
+              config={{
+                name: "blocks-os",
+                appLogoUrl: {
+                  dark: "/blocks-logos/os_dark_mode.svg",
+                  light: "/blocks-logos/os_light_mode.svg",
+                },
+              }}>
+              <RouterProvider router={router} />
+            </BlocksAppLayout>
+            <Toaster />
+          </TooltipProvider>
+        </NuqsAdapter>
+      </ThemeProvider>
     </QueryProvider>
   </StrictMode>,
 );

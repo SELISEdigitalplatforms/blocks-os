@@ -234,95 +234,107 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
 
   return (
     <Card className="bg-background">
-      <CardContent className="p-6">
-        <div className="grid min-w-0 gap-8 lg:grid-cols-2 lg:gap-6">
-          <section className="flex min-w-0 flex-col gap-6">
-            <h2 className="text-base font-semibold text-high-emphasis">
-              Configuration
-            </h2>
-
-            <div className="space-y-3">
-              <Label htmlFor="client-logo-upload">Client logo</Label>
-              <div
-                className={cn(
-                  "flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-6 transition-colors",
-                  isDragOver
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-muted/20 hover:bg-muted/30",
-                )}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={() => setIsDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(false);
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) applyLogoFile(file);
-                }}>
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-border bg-background">
-                  {previewLogoUrl ? (
-                    <img
-                      src={previewLogoUrl}
-                      alt="Logo preview"
-                      className="max-h-full max-w-full object-contain p-1"
-                    />
-                  ) : (
-                    <ImagePlus className="h-8 w-8 text-muted-foreground" />
-                  )}
-                </div>
-                <input
-                  id="client-logo-upload"
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                  className="sr-only"
-                  onChange={handleLogoFileChange}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isBusy}
-                  className="gap-2"
-                  onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="h-4 w-4" />
-                  Upload logo
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Drag and drop or browse. PNG, JPG, SVG, or WebP up to{" "}
-                  {MAX_LOGO_SIZE_MB}MB.
-                </p>
-              </div>
+      <CardContent className="p-3 sm:p-5 lg:p-6">
+        <div className="grid min-w-0 grid-cols-1 gap-4 md:gap-5 xl:grid-cols-2 xl:gap-6">
+          <section className="flex min-w-0 flex-col gap-5 rounded-xl border border-border bg-card p-4 sm:p-5">
+            <div className="border-b border-border pb-3">
+              <h2 className="text-base font-semibold text-high-emphasis">
+                Configuration
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Upload a client logo and set a brand color.
+              </p>
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="brand-color">Brand color</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  id="brand-color"
-                  type="color"
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent p-1"
-                  aria-label="Pick brand color"
-                />
-                <Input
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="max-w-[140px] font-mono text-sm uppercase"
-                  maxLength={7}
-                />
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <Label htmlFor="client-logo-upload">Client logo</Label>
+                <div
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-4 sm:p-6 transition-colors",
+                    isDragOver
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-muted/20 hover:bg-muted/30",
+                  )}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) applyLogoFile(file);
+                  }}>
+                  <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-border bg-background">
+                    {previewLogoUrl ? (
+                      <img
+                        src={previewLogoUrl}
+                        alt="Logo preview"
+                        className="max-h-full max-w-full object-contain p-1"
+                      />
+                    ) : (
+                      <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <input
+                    id="client-logo-upload"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    className="sr-only"
+                    onChange={handleLogoFileChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isBusy}
+                    className="gap-2"
+                    onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="h-4 w-4" />
+                    Upload logo
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Drag and drop or browse. PNG, JPG, SVG, or WebP up to{" "}
+                    {MAX_LOGO_SIZE_MB}MB.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="brand-color">Brand color</Label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    id="brand-color"
+                    type="color"
+                    value={brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent p-1"
+                    aria-label="Pick brand color"
+                  />
+                  <Input
+                    value={brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    className="w-[140px] min-w-[120px] font-mono text-sm uppercase"
+                    maxLength={7}
+                  />
+                </div>
               </div>
             </div>
           </section>
 
-          <section className="flex min-w-0 flex-col gap-3 lg:border-l lg:border-border lg:pl-6">
-            <h2 className="text-base font-semibold text-high-emphasis">
-              Live preview
-            </h2>
-            <div className="min-w-0 overflow-hidden rounded-lg">
+          <section className="flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+            <div className="border-b border-border pb-3">
+              <h2 className="text-base font-semibold text-high-emphasis">
+                Live Preview
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Changes appear here in real time.
+              </p>
+            </div>
+            <div className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-muted/20 p-0 sm:p-3">
               <OidcLoginPreview
                 clientLogoUrl={previewLogoUrl}
                 clientBrandColor={brandColor}
