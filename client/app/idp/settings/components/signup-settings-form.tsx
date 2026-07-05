@@ -37,24 +37,6 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
   const tenantId = useSettingsTenantId()
   const { mutateAsync, isPending } = useSaveSettingsSignUpSetting()
 
-  const { data: rolesData } = useGetRoles({
-    projectKey: tenantId,
-    page: 0,
-    pageSize: 1000,
-    sort: { property: "Name", isDescending: false },
-    filter: { search: "" },
-  })
-
-  const { data: permissionsData } = useGetPermissions({
-    projectKey: tenantId,
-    page: 0,
-    pageSize: 1000,
-    search: "",
-    isBuiltIn: "",
-    roles: [],
-    sort: { property: "Name", isDescending: false },
-  })
-
   const formValues = useMemo(() => toSignupSettingsFormValues(config), [config])
 
   const form = useForm<SignupSettingsFormValues>({
@@ -64,6 +46,31 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
 
   const { isDirty } = useFormState({ control: form.control })
   const isEmailPasswordSignUpEnabled = form.watch("isEmailPasswordSignUpEnabled")
+  const shouldLoadAssignments = isEmailPasswordSignUpEnabled && Boolean(tenantId)
+
+  const { data: rolesData } = useGetRoles(
+    {
+      projectKey: tenantId,
+      page: 0,
+      pageSize: 1000,
+      sort: { property: "Name", isDescending: false },
+      filter: { search: "" },
+    },
+    { enabled: shouldLoadAssignments },
+  )
+
+  const { data: permissionsData } = useGetPermissions(
+    {
+      projectKey: tenantId,
+      page: 0,
+      pageSize: 1000,
+      search: "",
+      isBuiltIn: "",
+      roles: [],
+      sort: { property: "Name", isDescending: false },
+    },
+    { enabled: shouldLoadAssignments },
+  )
   const defaultRolesForNewUser = form.watch("defaultRolesForNewUser")
   const defaultPermissionsForNewUser = form.watch("defaultPermissionsForNewUser")
 
@@ -150,32 +157,32 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
             )}
           />
 
-          <div className="flex flex-col gap-6">
-            <FormField
-              name="defaultRolesForNewUser"
-              control={form.control}
-              render={({ field }) => (
-                <SignupRolesSection
-                  roles={displayRoles}
-                  readOnly={!isEmailPasswordSignUpEnabled}
-                  onChange={(roles) => field.onChange(roles.map((role) => role.slug))}
-                />
-              )}
-            />
-            <FormField
-              name="defaultPermissionsForNewUser"
-              control={form.control}
-              render={({ field }) => (
-                <SignupPermissionsSection
-                  permissions={displayPermissions}
-                  readOnly={!isEmailPasswordSignUpEnabled}
-                  onChange={(permissions) =>
-                    field.onChange(permissions.map((permission) => permission.name))
-                  }
-                />
-              )}
-            />
-          </div>
+          {isEmailPasswordSignUpEnabled ? (
+            <div className="flex flex-col gap-6">
+              <FormField
+                name="defaultRolesForNewUser"
+                control={form.control}
+                render={({ field }) => (
+                  <SignupRolesSection
+                    roles={displayRoles}
+                    onChange={(roles) => field.onChange(roles.map((role) => role.slug))}
+                  />
+                )}
+              />
+              <FormField
+                name="defaultPermissionsForNewUser"
+                control={form.control}
+                render={({ field }) => (
+                  <SignupPermissionsSection
+                    permissions={displayPermissions}
+                    onChange={(permissions) =>
+                      field.onChange(permissions.map((permission) => permission.name))
+                    }
+                  />
+                )}
+              />
+            </div>
+          ) : null}
         </form>
       </Form>
     </div>

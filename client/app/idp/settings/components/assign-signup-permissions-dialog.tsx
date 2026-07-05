@@ -116,7 +116,7 @@ export const AssignSignupPermissionsDialog = ({
       <DialogTrigger asChild>
         <Button size="sm" variant="default" className="h-7 bg-primary px-2.5 text-xs" type="button">
           <CirclePlus className="h-3.5 w-3.5 md:mr-1.5" />
-          <span className="sr-only sm:not-sr-only">Assign Permissions</span>
+          <span className="sr-only sm:not-sr-only">Manage Permissions</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-2xl flex-col overflow-hidden sm:w-full">
