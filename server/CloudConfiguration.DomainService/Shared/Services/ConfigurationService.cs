@@ -106,8 +106,7 @@ namespace CloudConfiguration.DomainService.Shared.Services
                 {
                     ItemId = repoConfiguration.ItemId,
                     ConfigurationName = repoConfiguration.Name,
-                    StorageStrategy = repoConfiguration.StorageStrategy,
-                    ProjectKey = request.ProjectKey
+                    StorageStrategy = repoConfiguration.StorageStrategy
                 },
                 ConsumerName = Constants.StorageQueue,
             });
