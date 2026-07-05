@@ -3,31 +3,21 @@ import { AssignSignupPermissionsDialog } from "@blocks-idp/settings/components/a
 import { SettingsAssignmentChip } from "@blocks-idp/settings/components/settings-assignment-chip"
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
 import type { IPermission } from "@blocks-idp/iam/models/permission"
-import { Lock } from "lucide-react"
 
 type SignupPermissionsSectionProps = {
   permissions: IPermission[]
   onChange: (permissions: IPermission[]) => void
-  readOnly?: boolean
 }
 
 export const SignupPermissionsSection = ({
   permissions,
   onChange,
-  readOnly = false,
 }: SignupPermissionsSectionProps) => (
   <Card>
     <CardHeader className="mb-4 flex flex-row items-start justify-between gap-3">
       <CardTitle className={SETTINGS_FORM_LAYOUT.sectionTitle}>Permissions</CardTitle>
       <div className="flex shrink-0 items-center gap-2">
-        {readOnly ? (
-          <Lock
-            className="h-4 w-4 text-muted-foreground"
-            aria-label="Locked until sign up is enabled"
-          />
-        ) : (
-          <AssignSignupPermissionsDialog permissions={permissions} onAssign={onChange} />
-        )}
+        <AssignSignupPermissionsDialog permissions={permissions} onAssign={onChange} />
       </div>
     </CardHeader>
     <CardContent>
