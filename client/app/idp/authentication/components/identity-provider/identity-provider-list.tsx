@@ -2,8 +2,6 @@ import { useState } from "react";
 import {
   Building2,
   ChevronRight,
-  Eye,
-  EyeOff,
   Pencil,
   Power,
   PowerOff,
@@ -31,8 +29,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
-import { MaskedText } from "@/components/masked-text";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -41,6 +37,7 @@ import {
   useGetIdentityProviders,
   useUpdateIdentityProviderStatus,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
+import { KVDetailItem } from "../kv-detail-item";
 import { IdentityProviderFormDialog } from "./identity-provider-form-dialog";
 import { format } from "date-fns";
 
@@ -83,62 +80,6 @@ const PROVIDER_STATUS_DOT: Record<string, string> = {
 };
 
 const SKELETON_ROWS = 3;
-
-interface KVDetailItemProps {
-  label: string;
-  value: string;
-  isSecret?: boolean;
-}
-
-const KVDetailItem = ({
-  label,
-  value,
-  isSecret = false,
-}: KVDetailItemProps) => {
-  const [revealed, setRevealed] = useState(false);
-
-  return (
-    <div className="flex min-w-0 items-start gap-4 overflow-hidden">
-      <span className="w-48 shrink-0 font-mono text-xs text-muted-foreground sm:w-56">
-        {label}
-      </span>
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="min-w-0 flex-1 font-mono text-xs">
-          {value ? (
-            revealed || !isSecret ? (
-              <span className="break-all text-high-emphasis">{value}</span>
-            ) : (
-              <MaskedText text={value} length={Math.min(value.length, 36)} />
-            )
-          ) : (
-            <span className="italic text-muted-foreground">empty</span>
-          )}
-        </div>
-        {value && (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {isSecret && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-high-emphasis"
-                onClick={() => setRevealed((r) => !r)}
-              >
-                {revealed ? (
-                  <EyeOff className="h-3 w-3" />
-                ) : (
-                  <Eye className="h-3 w-3" />
-                )}
-              </Button>
-            )}
-            <CopyToClipboardButton textToCopy={value}>
-              <span />
-            </CopyToClipboardButton>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 interface IdentityProviderRowProps {
   item: IdentityProvider;
@@ -184,19 +125,20 @@ const IdentityProviderRow = ({
   const providerLabel = item.displayName || item.provider;
   const willEnable = !isActive;
 
-  const kvPairs: { key: string; value: string; isSecret?: boolean }[] = [
-    { key: "Client ID", value: item.clientId ?? "" },
-    { key: "Client Secret", value: item.clientSecret ?? "" },
-    { key: "Issuer URL", value: item.issuer ?? "" },
-    { key: "Authorization URL", value: item.authorizationUrl ?? "" },
-    { key: "Token URL", value: item.tokenUrl ?? "" },
-    { key: "User Info URL", value: item.userInfoUrl ?? "" },
-    { key: "Well-known URI", value: item.wellKnownUrl ?? "" },
+  const kvPairs: { key: string; value: string; copyable?: boolean }[] = [
+    { key: "Client ID", value: item.clientId ?? "", copyable: true },
+    { key: "Client Secret", value: item.clientSecret ?? "", copyable: true },
+    { key: "Issuer URL", value: item.issuer ?? "", copyable: true },
+    { key: "Authorization URL", value: item.authorizationUrl ?? "", copyable: true },
+    { key: "Token URL", value: item.tokenUrl ?? "", copyable: true },
+    { key: "User Info URL", value: item.userInfoUrl ?? "", copyable: true },
+    { key: "Well-known URI", value: item.wellKnownUrl ?? "", copyable: true },
     { key: "Scope", value: item.scope ?? "" },
     { key: "Audience", value: item.audience ?? "" },
     {
       key: "Redirect URI(s)",
       value: (item.redirectUris ?? item.redirectUri)?.join(", ") ?? "",
+      copyable: true,
     },
     {
       key: "Roles",
@@ -255,7 +197,7 @@ const IdentityProviderRow = ({
             </div>
           </div>
         </TableCell>
-        <TableCell className="py-3.5">
+        <TableCell className="hidden py-3.5 sm:table-cell">
           <Badge
             variant="outline"
             className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
@@ -269,7 +211,7 @@ const IdentityProviderRow = ({
             {cfg.label}
           </Badge>
         </TableCell>
-        <TableCell className="py-3.5 text-sm text-muted-foreground">
+        <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
         <TableCell
@@ -310,14 +252,14 @@ const IdentityProviderRow = ({
 
       {expanded && (
         <TableRow className="border-b-2 border-border hover:bg-transparent">
-          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-6 py-4 pl-12">
+          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, isSecret }) => (
+              {kvPairs.map(({ key, value, copyable }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
-                  isSecret={isSecret}
+                  copyable={copyable}
                 />
               ))}
             </div>
@@ -447,17 +389,17 @@ export function IdentityProviderList() {
   return (
     <Card>
       <CardContent className="overflow-x-clip p-0 sm:overflow-x-auto">
-        <Table className="w-full min-w-[640px] sm:table-fixed sm:min-w-0">
+        <Table className="w-full min-w-0 sm:table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
-              <TableHead className="w-64 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:w-64">
                 Provider
               </TableHead>
-              <TableHead className="w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
                 Type
               </TableHead>
-              <TableHead className="w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
                 Created On
               </TableHead>
               <TableHead className="w-20" />
