@@ -1,14 +1,13 @@
-﻿using Blocks.Genesis;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Blocks.Genesis;
 
 namespace Cloud.LmtService.Models.Trace
 {
-    public class GetTracesRequest : BaseGetsRequest<GetTracesRequestFilter>, IProjectKey
+    public class GetTracesRequest : BaseGetsRequest<GetTracesRequestFilter>
     {
         public string? Search { get; set; }
-        public string? ProjectKey { get; set; }
     }
 
     public class GetTracesRequestFilter

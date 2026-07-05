@@ -557,11 +557,12 @@ namespace DomainService.Projects
         public async Task<BaseResponse> UpdateTokenValidationParametersAsync(UpdateTokenValidationParametersRequest request)
         {
 
-            var project = await _projectRepository.GetByTenantIdAsync(request.ProjectKey);
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var project = await _projectRepository.GetByTenantIdAsync(tenantId);
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {request.ProjectKey}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } } };
             }
 
             project.ThirdPartyJwtTokenParameters ??= new();
@@ -582,7 +583,7 @@ namespace DomainService.Projects
                 Action = "upsert",
                 TenantId = project.TenantId,
                 Tenant = project
-            }), _cacheClient.RemoveKeyAsync($"{_tenantTokenPublicCertificateCachePrefix}{request.ProjectKey}"));
+            }), _cacheClient.RemoveKeyAsync($"{_tenantTokenPublicCertificateCachePrefix}{tenantId}"));
 
             return new BaseResponse { IsSuccess = true };
         }
