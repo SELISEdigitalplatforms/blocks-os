@@ -1,14 +1,11 @@
 using Blocks.Genesis;
 using BlocksTemplate.Api;
-using Captcha.DomainService.Configuration;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using CloudConfiguration.DomainService.Shared.Utilities;
 using DomainService.Shared;
-using DomainService.Utilities;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
 using Secrets.DomainService.Services;
 using SeliseBlocks.ConfigurationDriver;
 
@@ -21,7 +18,7 @@ Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString}");
 
-ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
+ApplicationConfigurations.ConfigureServices(builder.Services, GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Configuration.AddMongoDbConfiguration(options =>
 {
@@ -51,7 +48,6 @@ Directory.CreateDirectory(wwwrootPath);
 
 ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath);
 
-services.RegisterAllServices();
 services.AddApplicationServices();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
@@ -95,6 +91,36 @@ await app.RunAsync();
 //        : VaultType.Azure;
 //}
 
+static MessageConfiguration GetMessageConfiguration(string messageConnectionString)
+{
+    const string DefaultProvider = "azure";
+    const string RabbitMqProvider = "rabbitmq";
+
+    string provider;
+    if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri) &&
+        (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
+         uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)))
+    {
+        provider = RabbitMqProvider;
+    }
+    else
+    {
+        provider = DefaultProvider;
+    }
+
+    return provider switch
+    {
+        RabbitMqProvider => new MessageConfiguration
+        {
+            RabbitMqConfiguration = new RabbitMqConfiguration()
+        },
+        _ => new MessageConfiguration
+        {
+            AzureServiceBusConfiguration = new AzureServiceBusConfiguration()
+        }
+    };
+}
+
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)
 {
     // ACTIVE path: read frontend runtime values from the "FrontendRuntime" section. These
@@ -105,46 +131,11 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
     var section = configuration.GetSection("FrontendRuntime");
     var replacements = new Dictionary<string, string?>
     {
-        ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
-        ["__BLOCKS_X_BLOCKS_KEY__"] = section["BLOCKS_X_BLOCKS_KEY"],
-        ["__BLOCKS_GOOGLE_SITE_KEY__"] = section["BLOCKS_GOOGLE_SITE_KEY"],
-        ["__BLOCKS_CONSTRUCT_URL__"] = section["BLOCKS_CONSTRUCT_URL"],
-        ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = section["BLOCKS_GITHUB_SSO_CLIENT_ID"],
-        ["__BLOCKS_APP_URL__"] = section["BLOCKS_APP_URL"],
-        ["__BLOCKS_IDP_BASE_URL__"] = section["BLOCKS_IDP_BASE_URL"],
-        ["__BLOCKS_OS_URL__"] = section["BLOCKS_OS_URL"],
-        ["__BLOCKS_OIDC_CLIENT_ID__"] = section["BLOCKS_OIDC_CLIENT_ID"],
-        ["__BLOCKS_BASE_DOMAIN__"] = section["BLOCKS_BASE_DOMAIN"],
         ["__BLOCKS_IAM_BASE_URL__"] = section["BLOCKS_IAM_BASE_URL"],
         ["__BLOCKS_IAM_CALLBACK_URL__"] = section["BLOCKS_IAM_CALLBACK_URL"],
-        ["__BLOCKS_LOCALIZATION_BASE_URL__"] = section["BLOCKS_LOCALIZATION_BASE_URL"],
-        ["__BLOCKS_LOCALIZATION_CALLBACK_URL__"] = section["BLOCKS_LOCALIZATION_CALLBACK_URL"],
-        ["__BLOCKS_AGENTS_BASE_URL__"] = section["BLOCKS_AGENTS_BASE_URL"],
-        ["__BLOCKS_AGENTS_CALLBACK_URL__"] = section["BLOCKS_AGENTS_CALLBACK_URL"],
-        ["__BLOCKS_DATA_BASE_URL__"] = section["BLOCKS_DATA_BASE_URL"],
-        ["__BLOCKS_DATA_CALLBACK_URL__"] = section["BLOCKS_DATA_CALLBACK_URL"],
+        ["__BLOCKS_IAM_CLIENT_ID__"] = section["BLOCKS_IAM_CLIENT_ID"],
         ["__BLOCKS_OS_BASE_URL__"] = section["BLOCKS_OS_BASE_URL"],
         ["__BLOCKS_OS_CALLBACK_URL__"] = section["BLOCKS_OS_CALLBACK_URL"],
-        ["__BLOCKS_UTILITIES_BASE_URL__"] = section["BLOCKS_UTILITIES_BASE_URL"],
-        ["__BLOCKS_UTILITIES_CALLBACK_URL__"] = section["BLOCKS_UTILITIES_CALLBACK_URL"],
-        ["__BLOCKS_LOGIC_BASE_URL__"] = section["BLOCKS_LOGIC_BASE_URL"],
-        ["__BLOCKS_LOGIC_CALLBACK_URL__"] = section["BLOCKS_LOGIC_CALLBACK_URL"],
-        ["__BLOCKS_MONITOR_BASE_URL__"] = section["BLOCKS_MONITOR_BASE_URL"],
-        ["__BLOCKS_MONITOR_CALLBACK_URL__"] = section["BLOCKS_MONITOR_CALLBACK_URL"],
-        ["__BLOCKS_RELEASE_BASE_URL__"] = section["BLOCKS_RELEASE_BASE_URL"],
-        ["__BLOCKS_RELEASE_CALLBACK_URL__"] = section["BLOCKS_RELEASE_CALLBACK_URL"],
-        ["__BLOCKS_STUDIO_BASE_URL__"] = section["BLOCKS_STUDIO_BASE_URL"],
-        ["__BLOCKS_STUDIO_CALLBACK_URL__"] = section["BLOCKS_STUDIO_CALLBACK_URL"],
-        ["__BLOCKS_IAM_CLIENT_ID__"] = section["BLOCKS_IAM_CLIENT_ID"],
-        ["__BLOCKS_DATA_CLIENT_ID__"] = section["BLOCKS_DATA_CLIENT_ID"],
-        ["__BLOCKS_LOCALIZATION_CLIENT_ID__"] = section["BLOCKS_LOCALIZATION_CLIENT_ID"],
-        ["__BLOCKS_AGENTS_CLIENT_ID__"] = section["BLOCKS_AGENTS_CLIENT_ID"],
-        ["__BLOCKS_OS_CLIENT_ID__"] = section["BLOCKS_OS_CLIENT_ID"],
-        ["__BLOCKS_UTILITIES_CLIENT_ID__"] = section["BLOCKS_UTILITIES_CLIENT_ID"],
-        ["__BLOCKS_LOGIC_CLIENT_ID__"] = section["BLOCKS_LOGIC_CLIENT_ID"],
-        ["__BLOCKS_MONITOR_CLIENT_ID__"] = section["BLOCKS_MONITOR_CLIENT_ID"],
-        ["__BLOCKS_RELEASE_CLIENT_ID__"] = section["BLOCKS_RELEASE_CLIENT_ID"],
-        ["__BLOCKS_STUDIO_CLIENT_ID__"] = section["BLOCKS_STUDIO_CLIENT_ID"],
     };
 
     var files = Directory.EnumerateFiles(webRootPath, "*", SearchOption.AllDirectories)
