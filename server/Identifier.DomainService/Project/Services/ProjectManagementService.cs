@@ -329,8 +329,11 @@ namespace DomainService.Projects
         {
             var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
             var certificateStorageTypeString = configuration.GetValue<string>("CertificateStorageType");
-
-            if (!Enum.TryParse<CertificateStorageType>(certificateStorageTypeString, out var certificateStorageType))
+           if (string.IsNullOrEmpty(certificateStorageTypeString))
+           {
+            certificateStorageTypeString = _configuration["CertificateStorageType"];
+           }
+          if (!Enum.TryParse<CertificateStorageType>(certificateStorageTypeString, out var certificateStorageType))
             {
                 certificateStorageType = CertificateStorageType.Azure;
             }
