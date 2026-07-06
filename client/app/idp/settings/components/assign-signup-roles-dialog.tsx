@@ -34,7 +34,6 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
     {
       page: filter.page,
       pageSize: filter.pageSize,
-      projectKey: tenantId,
       sort: { property: "Name", isDescending: false },
       filter: { search: filter.search },
     },
