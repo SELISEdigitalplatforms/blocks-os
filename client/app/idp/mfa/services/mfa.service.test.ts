@@ -40,8 +40,14 @@ describe("MFAService", () => {
   describe("getConfigurations", () => {
     it("should map controller response to MFA configuration shape", async () => {
       vi.mocked(http.get).mockResolvedValue({
-        enableMfa: true,
-        userMfaType: [1, 2],
+        enabled: true,
+        allowedMethods: [1, 2],
+        requireMfaForAllUsers: false,
+        mfaRequiredRoles: [],
+        mfaExemptRoles: [],
+        allowUserOptOut: true,
+        allowBackupCodes: true,
+        backupCodesCount: 10,
         mfaTemplate: { templateName: "t", templateId: "id" },
       });
 
@@ -50,8 +56,8 @@ describe("MFAService", () => {
       expect(http.get).toHaveBeenCalledWith(MFA_CONFIG_ENDPOINTS.GET, undefined, {
         absoluteUrl: true,
       });
-      expect(result.enableMfa).toBe(true);
-      expect(result.userMfaType).toEqual([1, 2]);
+      expect(result.enabled).toBe(true);
+      expect(result.allowedMethods).toEqual([1, 2]);
     });
   });
 
@@ -85,10 +91,9 @@ describe("MFAService", () => {
       expect(http.post).toHaveBeenCalledWith(
         MFA_CONFIG_ENDPOINTS.SAVE,
         {
-          enableMfa: mockSaveMfaConfigPayload.enableMfa,
-          userMfaType: mockSaveMfaConfigPayload.userMfaType,
+          enabled: mockSaveMfaConfigPayload.enabled,
+          allowedMethods: mockSaveMfaConfigPayload.allowedMethods,
           mfaTemplate: mockSaveMfaConfigPayload.mfaTemplate,
-          projectKey: mockSaveMfaConfigPayload.projectKey,
         },
         undefined,
         { absoluteUrl: true },

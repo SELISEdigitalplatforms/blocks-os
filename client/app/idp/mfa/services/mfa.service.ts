@@ -32,15 +32,21 @@ export class MFAService {
         absoluteUrl: true,
       })
       .then((response) => ({
-        enableMfa: response?.enableMfa ?? false,
+        enabled: response?.enabled ?? false,
+        allowedMethods: Array.isArray(response?.allowedMethods)
+          ? response.allowedMethods.map(Number)
+          : [],
+        requireMfaForAllUsers: response?.requireMfaForAllUsers ?? false,
+        mfaRequiredRoles: response?.mfaRequiredRoles ?? [],
+        mfaExemptRoles: response?.mfaExemptRoles ?? [],
+        allowUserOptOut: response?.allowUserOptOut ?? true,
+        allowBackupCodes: response?.allowBackupCodes ?? true,
+        backupCodesCount: response?.backupCodesCount ?? 10,
         mfaTemplate: {
           templateName: response?.mfaTemplate?.templateName ?? '',
           templateId: response?.mfaTemplate?.templateId ?? '',
         },
         projectKey: null,
-        userMfaType: Array.isArray(response?.userMfaType)
-          ? response.userMfaType.map(Number)
-          : [],
       }))
   }
 
@@ -57,10 +63,23 @@ export class MFAService {
       .post<{ isSuccess: boolean; errors: unknown | null }>(
         MFA_CONFIG_ENDPOINTS.SAVE,
         {
-          enableMfa: payload.enableMfa,
-          userMfaType: payload.userMfaType,
+          enabled: payload.enabled,
+          allowedMethods: payload.allowedMethods,
+          ...(typeof payload.requireMfaForAllUsers === "boolean"
+            ? { requireMfaForAllUsers: payload.requireMfaForAllUsers }
+            : {}),
+          ...(payload.mfaRequiredRoles ? { mfaRequiredRoles: payload.mfaRequiredRoles } : {}),
+          ...(payload.mfaExemptRoles ? { mfaExemptRoles: payload.mfaExemptRoles } : {}),
+          ...(typeof payload.allowUserOptOut === "boolean"
+            ? { allowUserOptOut: payload.allowUserOptOut }
+            : {}),
+          ...(typeof payload.allowBackupCodes === "boolean"
+            ? { allowBackupCodes: payload.allowBackupCodes }
+            : {}),
+          ...(typeof payload.backupCodesCount === "number"
+            ? { backupCodesCount: payload.backupCodesCount }
+            : {}),
           ...(payload.mfaTemplate ? { mfaTemplate: payload.mfaTemplate } : {}),
-          projectKey: payload.projectKey,
         },
         undefined,
         { absoluteUrl: true },
