@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   DialogContent,
@@ -9,9 +7,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { Input } from "@/components/ui-kits/input/input";
-import { showErrorToast, showSuccessToast, useToast } from "@/hooks/use-toast";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -20,13 +15,22 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
+import { Input } from "@/components/ui-kits/input/input";
+import { Textarea } from "@/components/ui-kits/textarea/textarea";
+import { isErrorWithErrors } from "@/lib/error";
+import { useUpdateRole } from "@blocks-idp/iam/hooks/use-roles";
+import { IRole } from "@blocks-idp/iam/models/role";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useToast } from "@seliseblocks/blocks-kit/hooks";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
+import { useEffect } from "react";
+import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 import { updateRoleFormSchema } from "./utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { IRole } from "@blocks-idp/iam/models/role";
-import { useUpdateRole } from "@blocks-idp/iam/hooks/use-roles";
-import { isErrorWithErrors } from "@/lib/error";
-import { Textarea } from "@/components/ui-kits/textarea/textarea";
 type UpdateRoleProps = { role: IRole; isOpen: boolean; onClose: () => void };
 export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
   const { toast } = useToast();
@@ -39,7 +43,9 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
   const {
     formState: { isDirty },
   } = form;
-  const onSubmit: SubmitHandler<z.infer<typeof updateRoleFormSchema>> = async (data) => {
+  const onSubmit: SubmitHandler<z.infer<typeof updateRoleFormSchema>> = async (
+    data,
+  ) => {
     const newRole = {
       ...data,
       projectKey: tenantId,
@@ -71,7 +77,9 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
         <DialogDescription></DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-col gap-4">
           <FormField
             name="name"
             control={form.control}
@@ -100,11 +108,17 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
           />
           <DialogFooter className="mt-6">
             <DialogTrigger asChild>
-              <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
+              <Button
+                className="min-w-[80px]"
+                variant="outline"
+                disabled={isPending}>
                 Cancel
               </Button>
             </DialogTrigger>
-            <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
+            <Button
+              className="min-w-[80px]"
+              type="submit"
+              disabled={isPending || !isDirty}>
               {isPending ? "Updating..." : "Update"}
             </Button>
           </DialogFooter>

@@ -6,11 +6,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY, ICaptchaConfig } from "../../models/captcha";
+import {
+  CAPTCHA_PROVIDERS,
+  CAPTCHA_PROVIDERS_KEY,
+  ICaptchaConfig,
+} from "../../models/captcha";
 import { ConfigureGeneralCaptchaFormField } from "./configure-general-captcha-from-field";
 import { ConfigureBlockCaptchaFormField } from "./configure-block-captcha-form-field";
-import { useGetCaptchaConfigs, useSaveCaptcha } from "../../hooks/use-captcha-config";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  useGetCaptchaConfigs,
+  useSaveCaptcha,
+} from "../../hooks/use-captcha-config";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import {
   Form,
@@ -22,7 +32,10 @@ import {
 } from "@/components/ui-kits/form/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ConfigureCaptchaFormDefaultValue, ConfigureCaptchaFormSchema } from "./utils";
+import {
+  ConfigureCaptchaFormDefaultValue,
+  ConfigureCaptchaFormSchema,
+} from "./utils";
 import {
   Select,
   SelectContent,
@@ -38,10 +51,15 @@ type ConfigureCaptchaModalProps = {
   configuration?: ICaptchaConfig | null;
   children: ReactNode;
 };
-export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCaptchaModalProps) => {
+export const ConfigureCaptchaModal = ({
+  configuration,
+  children,
+}: ConfigureCaptchaModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { isLoading, isFetching, data } = useGetCaptchaConfigs({ projectKey: tenantId });
+  const { isLoading, isFetching, data } = useGetCaptchaConfigs({
+    projectKey: tenantId,
+  });
   const form = useForm({
     defaultValues: configuration || ConfigureCaptchaFormDefaultValue,
     resolver: zodResolver(ConfigureCaptchaFormSchema),
@@ -57,7 +75,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     return Object.keys(CAPTCHA_PROVIDERS)
       .filter(
         (item) =>
-          !data.configurations.find((config: { provider: string }) => config?.provider === item),
+          !data.configurations.find(
+            (config: { provider: string }) => config?.provider === item,
+          ),
       )
       .map((item) => CAPTCHA_PROVIDERS[item as CAPTCHA_PROVIDERS_KEY]);
   }, [data]);
@@ -69,7 +89,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       form.setValue("provider", unConfiguredProviders[0].value);
     }
   }, [unConfiguredProviders]);
-  const onSubmitHandler = async (values: typeof ConfigureCaptchaFormDefaultValue) => {
+  const onSubmitHandler = async (
+    values: typeof ConfigureCaptchaFormDefaultValue,
+  ) => {
     try {
       const payload = {
         projectKey: tenantId,
@@ -80,7 +102,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       const res = await mutateAsync(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
-        description: configuration ? "Captcha updated successfully" : "Captcha added successfully",
+        description: configuration
+          ? "Captcha updated successfully"
+          : "Captcha added successfully",
       });
       form.reset();
       setOpen(false);
@@ -98,8 +122,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
       onOpenChange={(value) => {
         form.reset(configuration || ConfigureCaptchaFormDefaultValue);
         setOpen(value);
-      }}
-    >
+      }}>
       {children}
       <DialogContent aria-describedby={undefined}>
         <DialogHeader>
@@ -111,19 +134,23 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
         </DialogHeader>
         <div className="mt-2">
           <Form {...form}>
-            <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmitHandler)}>
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={form.handleSubmit(onSubmitHandler)}>
               <FormField
                 control={form.control}
                 name="provider"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Captcha Provider <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel>
+                      Captcha Provider{" "}
+                      <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={!!configuration}
-                      >
+                        disabled={!!configuration}>
                         <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                           <SelectValue placeholder="Select configuration provider" />
                         </SelectTrigger>
@@ -150,9 +177,10 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 </DialogTrigger>
                 <Button
                   size="sm"
-                  disabled={isPending || isLoading || isFetching || !isDirty || !isValid}
-                  type="submit"
-                >
+                  disabled={
+                    isPending || isLoading || isFetching || !isDirty || !isValid
+                  }
+                  type="submit">
                   Save
                 </Button>
               </DialogFooter>

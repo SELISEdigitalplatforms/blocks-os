@@ -7,7 +7,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
 import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
@@ -52,14 +55,18 @@ export const ToggleOrganizationStatus = ({
       <DialogHeader className="mb-4">
         <DialogTitle>{actionLabel} Organization</DialogTitle>
         <DialogDescription>
-          Are you sure you want to {action} the organization &quot;{organization.name}&quot;?
+          Are you sure you want to {action} the organization &quot;
+          {organization.name}&quot;?
           {!isEnabling && " This will make it inactive."}
           {isEnabling && " This will make it active again."}
         </DialogDescription>
       </DialogHeader>
       <DialogFooter className="mt-6">
         <DialogTrigger asChild>
-          <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
+          <Button
+            className="min-w-[80px]"
+            variant="outline"
+            disabled={isPending}>
             Cancel
           </Button>
         </DialogTrigger>
@@ -67,8 +74,7 @@ export const ToggleOrganizationStatus = ({
           className="min-w-[80px]"
           variant={isEnabling ? "default" : "destructive"}
           onClick={handleConfirm}
-          disabled={isPending}
-        >
+          disabled={isPending}>
           {isPending ? actioningLabel : actionLabel}
         </Button>
       </DialogFooter>

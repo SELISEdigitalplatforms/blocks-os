@@ -28,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@seliseblocks/blocks-kit/hooks";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";

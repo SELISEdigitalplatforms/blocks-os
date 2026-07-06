@@ -16,7 +16,10 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
@@ -29,7 +32,10 @@ type UpdateOrganizationProps = {
   organization: IOrganization;
   isOpen: boolean;
 };
-export const UpdateOrganization = ({ organization, isOpen }: UpdateOrganizationProps) => {
+export const UpdateOrganization = ({
+  organization,
+  isOpen,
+}: UpdateOrganizationProps) => {
   const { mutateAsync, isPending } = useSaveOrganization();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const form = useForm({
@@ -39,7 +45,9 @@ export const UpdateOrganization = ({ organization, isOpen }: UpdateOrganizationP
   const {
     formState: { isDirty },
   } = form;
-  const onSubmit: SubmitHandler<z.infer<typeof updateOrganizationFormSchema>> = async (data) => {
+  const onSubmit: SubmitHandler<
+    z.infer<typeof updateOrganizationFormSchema>
+  > = async (data) => {
     try {
       const res = await mutateAsync({
         projectKey: tenantId,
@@ -70,7 +78,9 @@ export const UpdateOrganization = ({ organization, isOpen }: UpdateOrganizationP
         <DialogDescription>Update the organization name</DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-col gap-4">
           <FormField
             name="name"
             control={form.control}
@@ -86,11 +96,17 @@ export const UpdateOrganization = ({ organization, isOpen }: UpdateOrganizationP
           />
           <DialogFooter className="mt-6">
             <DialogClose asChild>
-              <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
+              <Button
+                className="min-w-[80px]"
+                variant="outline"
+                disabled={isPending}>
                 Cancel
               </Button>
             </DialogClose>
-            <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
+            <Button
+              className="min-w-[80px]"
+              type="submit"
+              disabled={isPending || !isDirty}>
               {isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
