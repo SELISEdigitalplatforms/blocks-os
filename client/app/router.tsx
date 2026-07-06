@@ -114,6 +114,10 @@ export const router = createBrowserRouter([
               </ProtectedGuard>
             ),
             children: [
+              {
+                index: true,
+                element: <Navigate to="console" replace />,
+              },
               // ── Console routes (profile, console, create-project, etc.) ──
               {
                 element: (
