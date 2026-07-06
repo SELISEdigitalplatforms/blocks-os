@@ -18,7 +18,10 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetMe, useUpdateUser } from "@blocks-idp/iam/hooks/use-user";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +35,11 @@ type UpdateUserProps = {
   projectKey: string;
   own?: boolean;
 };
-export const UpdateUser = ({ id, projectKey, own = false }: UpdateUserProps) => {
+export const UpdateUser = ({
+  id,
+  projectKey,
+  own = false,
+}: UpdateUserProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { data, isLoading, isFetching } = useGetMe();
   const { isPending, mutateAsync } = useUpdateUser({ id, projectKey, own });
@@ -44,7 +51,9 @@ export const UpdateUser = ({ id, projectKey, own = false }: UpdateUserProps) => 
   const {
     formState: { isDirty },
   } = form;
-  const onSubmitHandler = async (values: z.infer<typeof inviteUserFormSchema>) => {
+  const onSubmitHandler = async (
+    values: z.infer<typeof inviteUserFormSchema>,
+  ) => {
     try {
       const res = await mutateAsync({
         ...data?.data,
@@ -57,7 +66,8 @@ export const UpdateUser = ({ id, projectKey, own = false }: UpdateUserProps) => 
       form.reset();
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -67,8 +77,7 @@ export const UpdateUser = ({ id, projectKey, own = false }: UpdateUserProps) => 
       onOpenChange={(value) => {
         form.reset(data?.data || inviteUserFormDefaultValue);
         setOpen(value);
-      }}
-    >
+      }}>
       <DialogTrigger asChild>
         <PrimaryButton label="Edit User" Icon={Pen} />
       </DialogTrigger>
@@ -112,7 +121,10 @@ export const UpdateUser = ({ id, projectKey, own = false }: UpdateUserProps) => 
                   Cancel
                 </Button>
               </DialogClose>
-              <Button disabled={isPending || isLoading || isFetching || !isDirty}>Save</Button>
+              <Button
+                disabled={isPending || isLoading || isFetching || !isDirty}>
+                Save
+              </Button>
             </DialogFooter>
           </form>
         </Form>

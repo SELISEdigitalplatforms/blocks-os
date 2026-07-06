@@ -13,7 +13,10 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
@@ -36,7 +39,10 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
       search: filter.search,
     },
   });
-  const { isPending, addRoles, slugs } = useUserRoles({ id: userId, projectKey });
+  const { isPending, addRoles, slugs } = useUserRoles({
+    id: userId,
+    projectKey,
+  });
   const onClickHandler = async () => {
     try {
       const res = await addRoles(selectedRolos);
@@ -45,7 +51,8 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
       setSelectedRoles([]);
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -56,7 +63,8 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
     selectedRolos.splice(selectedRolos.indexOf(slug), 1);
     setSelectedRoles(() => [...selectedRolos]);
   };
-  const pageChangeHandler = (page: number) => setFilter((prev) => ({ ...prev, page }));
+  const pageChangeHandler = (page: number) =>
+    setFilter((prev) => ({ ...prev, page }));
   const reset = () => {
     setSelectedRoles([]);
     setFilter({ page: 0, pageSize: 10, search: "" });
@@ -67,8 +75,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
       onOpenChange={(value) => {
         if (!value) reset();
         setOpen(value);
-      }}
-    >
+      }}>
       <DialogTrigger>
         <Button size="sm" variant="default" className="h-10 bg-primary text-sm">
           <CirclePlus className="h-5 w-5 md:mr-2.5" />
@@ -83,7 +90,9 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
         <div>
           <FilterControls.SearchInput
             value={filter.search}
-            onChange={(value) => setFilter((prev) => ({ ...prev, search: value, page: 0 }))}
+            onChange={(value) =>
+              setFilter((prev) => ({ ...prev, search: value, page: 0 }))
+            }
             className="h-fit w-full py-3"
             placeholder="Search by roles name"
           />
@@ -94,7 +103,9 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
               {isLoading ? (
                 // Show skeletons while loading
                 Array.from({ length: filter.pageSize }).map((_, idx) => (
-                  <div key={idx} className="flex animate-pulse items-center space-x-2 py-2">
+                  <div
+                    key={idx}
+                    className="flex animate-pulse items-center space-x-2 py-2">
                     <div className="h-4 w-4 rounded bg-gray-200" />
                     <div className="h-4 w-24 rounded bg-gray-200" />
                     <div className="h-4 w-20 rounded bg-gray-200" />
@@ -102,11 +113,18 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                 ))
               ) : data && data.data && data.data.length > 0 ? (
                 data.data.map((item) => (
-                  <div key={item.itemId} className="col-span-1 flex items-center py-2">
+                  <div
+                    key={item.itemId}
+                    className="col-span-1 flex items-center py-2">
                     <Checkbox
-                      checked={slugs.includes(item.slug) || selectedRolos.includes(item.slug)}
+                      checked={
+                        slugs.includes(item.slug) ||
+                        selectedRolos.includes(item.slug)
+                      }
                       disabled={slugs.includes(item.slug)}
-                      onCheckedChange={(value) => onCheckedChangeHandler(!!value, item.slug)}
+                      onCheckedChange={(value) =>
+                        onCheckedChangeHandler(!!value, item.slug)
+                      }
                     />
                     <div className="ml-2 flex flex-col">
                       <div className="max-w-[150px] truncate" title={item.name}>
@@ -114,15 +132,16 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
                       </div>
                       <div
                         className="max-w-[150px] truncate text-sm text-muted-foreground"
-                        title={item.slug}
-                      >
+                        title={item.slug}>
                         {item.slug}
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="flex h-24 items-center justify-center">No roles found</div>
+                <div className="flex h-24 items-center justify-center">
+                  No roles found
+                </div>
               )}
             </div>
             {/* <Table>
@@ -190,8 +209,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
           <Button
             size="default"
             onClick={onClickHandler}
-            disabled={isPending || !selectedRolos.length}
-          >
+            disabled={isPending || !selectedRolos.length}>
             {isPending ? "Including" : "Include"}
           </Button>
         </DialogFooter>

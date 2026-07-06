@@ -1,4 +1,8 @@
-import { ChipsInput, ChipsInputField, ChipsInputList } from "@/components/chip-input/chips-input";
+import {
+  ChipsInput,
+  ChipsInputField,
+  ChipsInputList,
+} from "@/components/chip-input/chips-input";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -26,7 +30,10 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,7 +42,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRegisterService } from "@blocks-identifier/hooks/use-services";
 import { IRegisterServicePayload } from "@blocks-identifier/types/services.type";
-import { addServiceDefaultValues, AddServiceForm, addServiceSchema } from "./utils";
+import {
+  addServiceDefaultValues,
+  AddServiceForm,
+  addServiceSchema,
+} from "./utils";
 export const AddService = () => {
   const [open, onOpenChange] = useState(false);
   const { mutateAsync: registerService, isPending } = useRegisterService();
@@ -55,12 +66,15 @@ export const AddService = () => {
       };
       const response = await registerService(payload);
       if (!response.isSuccess)
-        return showErrorToast({ errors: response.errors || "Failed to register the service." });
+        return showErrorToast({
+          errors: response.errors || "Failed to register the service.",
+        });
       showSuccessToast({ description: "Service Registered successfully" });
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong." });
     }
   };
@@ -70,12 +84,13 @@ export const AddService = () => {
       onOpenChange={(isOpen) => {
         onOpenChange(isOpen);
         if (!isOpen) form.reset();
-      }}
-    >
+      }}>
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4" />
-          <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">Register Service</span>
+          <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
+            Register Service
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="md:max-w-md">
@@ -110,7 +125,9 @@ export const AddService = () => {
                   <FormItem>
                     <FormLabel>Type</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -134,8 +151,7 @@ export const AddService = () => {
                       <ChipsInput
                         {...field}
                         customValidator={(val) => !field.value?.includes(val)}
-                        validatorRegexErrorMessage="Duplicate tags are not allowed"
-                      >
+                        validatorRegexErrorMessage="Duplicate tags are not allowed">
                         <ChipsInputList />
                         <ChipsInputField />
                       </ChipsInput>

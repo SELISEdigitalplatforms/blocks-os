@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
 import { EllipsisVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
@@ -25,7 +30,10 @@ import { MFA_Provider_Data } from "../../utils/mfa-config";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Link } from "react-router-dom";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 type MethodInfo = {
   enable: boolean;
   name: string;
@@ -43,7 +51,8 @@ const LoadingSkelton = () => {
 export const ConfigureMFA = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { isLoading, isFetching, data } = useGetMFAConfig();
-  const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
+  const [openEnableDisableModal, setOpenEnableDisableModal] =
+    useState<boolean>(false);
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
     enable: false,
     name: "",
@@ -66,8 +75,15 @@ export const ConfigureMFA = () => {
         header: "Status",
         cell: ({ row }) => (
           <div className="flex max-w-[200px]">
-            <Badge variant={data?.userMfaType.includes(row.original.type) ? "success" : "error"}>
-              {data?.userMfaType.includes(row.original.type) ? "Enabled" : "Disabled"}
+            <Badge
+              variant={
+                data?.userMfaType.includes(row.original.type)
+                  ? "success"
+                  : "error"
+              }>
+              {data?.userMfaType.includes(row.original.type)
+                ? "Enabled"
+                : "Disabled"}
             </Badge>
           </div>
         ),
@@ -101,9 +117,10 @@ export const ConfigureMFA = () => {
                       name: row.original.label,
                       type: row.original.type,
                     }));
-                  }}
-                >
-                  {data?.userMfaType.includes(row.original.type) ? "Disable" : "Enable"}
+                  }}>
+                  {data?.userMfaType.includes(row.original.type)
+                    ? "Disable"
+                    : "Enable"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -151,44 +168,57 @@ export const ConfigureMFA = () => {
   return (
     <>
       <div>
-          <Card className="border-none shadow-none">
-            <CardContent>
-              {loading ? (
-                <LoadingSkelton />
-              ) : mfaConfigData.length === 0 ? (
-                <div className="flex h-32 flex-wrap items-center justify-center rounded-sm border-none bg-background p-4 text-center">
-                  <p className="text-muted-foreground">No configurations found. MFA is not yet configured for this project.</p>
-                </div>
-              ) : (
-                <Table className="text-sm md:table-fixed">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id}>
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      <Dialog open={openEnableDisableModal} onOpenChange={setOpenEnableDisableModal}>
+        <Card className="border-none shadow-none">
+          <CardContent>
+            {loading ? (
+              <LoadingSkelton />
+            ) : mfaConfigData.length === 0 ? (
+              <div className="flex h-32 flex-wrap items-center justify-center rounded-sm border-none bg-background p-4 text-center">
+                <p className="text-muted-foreground">
+                  No configurations found. MFA is not yet configured for this
+                  project.
+                </p>
+              </div>
+            ) : (
+              <Table className="text-sm md:table-fixed">
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow
+                      key={headerGroup.id}
+                      className="hover:bg-transparent">
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <Dialog
+        open={openEnableDisableModal}
+        onOpenChange={setOpenEnableDisableModal}>
         <ConfirmationModal
           onCancel={() => {}}
           onConfirm={() => onSaveHandler(methodInfo)}

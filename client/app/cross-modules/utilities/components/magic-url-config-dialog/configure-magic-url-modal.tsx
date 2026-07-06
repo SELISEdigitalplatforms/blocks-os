@@ -11,8 +11,14 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
 import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url-config";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { getDefaultShortUrlBase, isValidUrl } from "@blocks-utilities/utils/url.util";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
+import {
+  getDefaultShortUrlBase,
+  isValidUrl,
+} from "@blocks-utilities/utils/url.util";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
 import { v4 as uuidv4 } from "uuid";
@@ -40,7 +46,8 @@ export const ConfigureMagicUrlModal = ({
   const [contextName, setContextName] = useState("");
   const [shortUrlBase, setShortUrlBase] = useState("");
   const [errors, setErrors] = useState({ contextName: "", shortUrlBase: "" });
-  const { mutateAsync: saveConfig, isPending: isSaving } = useSaveMagicUrlConfig();
+  const { mutateAsync: saveConfig, isPending: isSaving } =
+    useSaveMagicUrlConfig();
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +59,12 @@ export const ConfigureMagicUrlModal = ({
       setShortUrlBase(getDefaultShortUrlBase());
     }
     setErrors({ contextName: "", shortUrlBase: "" });
-  }, [open, configuration?.itemId, configuration?.contextName, configuration?.shortUrlBase]);
+  }, [
+    open,
+    configuration?.itemId,
+    configuration?.contextName,
+    configuration?.shortUrlBase,
+  ]);
 
   const validateFields = (): boolean => {
     const newErrors = { contextName: "", shortUrlBase: "" };
@@ -97,13 +109,14 @@ export const ConfigureMagicUrlModal = ({
       open={open}
       onOpenChange={(value) => {
         setOpen(value);
-      }}
-    >
+      }}>
       {children}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {configuration ? "Edit Magic URL Configuration" : "Add Magic URL Configuration"}
+            {configuration
+              ? "Edit Magic URL Configuration"
+              : "Add Magic URL Configuration"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -117,12 +130,15 @@ export const ConfigureMagicUrlModal = ({
               value={contextName}
               onChange={(e) => {
                 setContextName(e.target.value);
-                if (errors.contextName) setErrors((prev) => ({ ...prev, contextName: "" }));
+                if (errors.contextName)
+                  setErrors((prev) => ({ ...prev, contextName: "" }));
               }}
               disabled={isSaving}
               className={errors.contextName ? "border-error" : ""}
             />
-            {errors.contextName && <p className="text-sm text-error">{errors.contextName}</p>}
+            {errors.contextName && (
+              <p className="text-sm text-error">{errors.contextName}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="shortUrlBase">
@@ -134,12 +150,15 @@ export const ConfigureMagicUrlModal = ({
               value={shortUrlBase}
               onChange={(e) => {
                 setShortUrlBase(e.target.value);
-                if (errors.shortUrlBase) setErrors((prev) => ({ ...prev, shortUrlBase: "" }));
+                if (errors.shortUrlBase)
+                  setErrors((prev) => ({ ...prev, shortUrlBase: "" }));
               }}
               disabled={isSaving}
               className={errors.shortUrlBase ? "border-error" : ""}
             />
-            {errors.shortUrlBase && <p className="text-sm text-error">{errors.shortUrlBase}</p>}
+            {errors.shortUrlBase && (
+              <p className="text-sm text-error">{errors.shortUrlBase}</p>
+            )}
           </div>
         </div>
         <DialogFooter>

@@ -22,7 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
@@ -33,7 +36,10 @@ type AddUserPermissionProps = {
   userId: string;
   projectKey: string;
 };
-export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps) => {
+export const AddUserPermission = ({
+  userId,
+  projectKey,
+}: AddUserPermissionProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [selectedPermisson, setSelectedPermissions] = useState<string[]>([]);
   const [filter, setFilter] = useState({
@@ -61,14 +67,18 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
       setSelectedPermissions([]);
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
   const onCheckedChangeHandler = (checked: boolean, resource: string) => {
     if (checked && resources.length + selectedPermisson.length > 4) return;
     if (checked) {
-      return setSelectedPermissions((permissions) => [...permissions, resource]);
+      return setSelectedPermissions((permissions) => [
+        ...permissions,
+        resource,
+      ]);
     }
     selectedPermisson.splice(selectedPermisson.indexOf(resource), 1);
     setSelectedPermissions(() => [...selectedPermisson]);
@@ -89,8 +99,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
       onOpenChange={(v) => {
         if (!v) resetFilter();
         setOpen(v);
-      }}
-    >
+      }}>
       <DialogTrigger asChild>
         <Button
           size="sm"
@@ -99,8 +108,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
           disabled={resources.length >= 5}
           onClick={(e) => {
             e.stopPropagation();
-          }}
-        >
+          }}>
           <CirclePlus className="h-5 w-5 md:mr-2.5" />
           <span className="sr-only sm:not-sr-only">Assign Permissions</span>
         </Button>
@@ -108,12 +116,16 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-left">Include Permissions</DialogTitle>
-          <DialogDescription>Maximum 5 permissions are allowed</DialogDescription>
+          <DialogDescription>
+            Maximum 5 permissions are allowed
+          </DialogDescription>
         </DialogHeader>
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"
-            onChange={(search) => setFilter((prev) => ({ ...prev, search, page: 0 }))}
+            onChange={(search) =>
+              setFilter((prev) => ({ ...prev, search, page: 0 }))
+            }
             value={filter.search}
             className="h-fit w-full py-3"
           />
@@ -139,7 +151,10 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                         }
                         disabled={!!resources.includes(item.resource)}
                         onCheckedChange={(checked) =>
-                          onCheckedChangeHandler(checked as boolean, item.resource)
+                          onCheckedChangeHandler(
+                            checked as boolean,
+                            item.resource,
+                          )
                         }
                       />
                     </TableCell>
@@ -150,8 +165,9 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
                     </TableCell>
                     <TableCell>
                       {
-                        RESOURCE_TYPE.find((resoruce) => resoruce.value === item.type.toString())
-                          ?.label
+                        RESOURCE_TYPE.find(
+                          (resoruce) => resoruce.value === item.type.toString(),
+                        )?.label
                       }
                     </TableCell>
                   </TableRow>
@@ -179,8 +195,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
           <Button
             size="default"
             onClick={onClickHandler}
-            disabled={isPending || !selectedPermisson.length}
-          >
+            disabled={isPending || !selectedPermisson.length}>
             {isPending ? "Including" : "Include"}
           </Button>
         </DialogFooter>

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@seliseblocks/blocks-kit/hooks";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
 import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
@@ -51,8 +51,7 @@ function SecretManagementHeaderActions({
           variant="outline"
           size="sm"
           onClick={onUndo}
-          disabled={isBusy}
-        >
+          disabled={isBusy}>
           Undo
         </Button>
         <Button type="button" size="sm" onClick={onSave} disabled={isBusy}>
@@ -224,8 +223,7 @@ export default function SecretManagementLayout() {
                 size="icon"
                 className="h-8 w-8 shrink-0"
                 aria-label="Back to OIDC"
-                onClick={() => navigate("/app/secret-management/oidc")}
-              >
+                onClick={() => navigate("/app/secret-management/oidc")}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
@@ -240,7 +238,9 @@ export default function SecretManagementLayout() {
               </div>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">{headerActions}</div>
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+            {headerActions}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />

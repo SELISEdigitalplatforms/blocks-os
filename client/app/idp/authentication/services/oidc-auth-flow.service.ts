@@ -1,7 +1,10 @@
 import { API_BASES } from "@/constants/endpoint.constant";
-import { showErrorToast } from "@/hooks/use-toast";
+import { showErrorToast } from "@seliseblocks/blocks-kit/utils";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { AUTH_OIDC_ENDPOINTS, OIDC_FLOW_ENDPOINTS } from "../constants/endpoint.constant";
+import {
+  AUTH_OIDC_ENDPOINTS,
+  OIDC_FLOW_ENDPOINTS,
+} from "../constants/endpoint.constant";
 import { ACCOUNT_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
 export {
   redirectToLogin,
