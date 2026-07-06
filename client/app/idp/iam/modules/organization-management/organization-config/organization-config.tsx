@@ -46,7 +46,6 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveOrganizationConfig();
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
-    projectKey: tenantId,
     page: 0,
     pageSize: 1000,
     sort: { property: "Name", isDescending: false },

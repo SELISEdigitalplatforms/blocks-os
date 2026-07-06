@@ -50,7 +50,6 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
 
   const { data: rolesData } = useGetRoles(
     {
-      projectKey: tenantId,
       page: 0,
       pageSize: 1000,
       sort: { property: "Name", isDescending: false },

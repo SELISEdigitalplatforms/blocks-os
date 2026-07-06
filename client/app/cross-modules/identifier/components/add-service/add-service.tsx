@@ -28,7 +28,6 @@ import {
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useState } from "react";
@@ -39,7 +38,6 @@ import { addServiceDefaultValues, AddServiceForm, addServiceSchema } from "./uti
 export const AddService = () => {
   const [open, onOpenChange] = useState(false);
   const { mutateAsync: registerService, isPending } = useRegisterService();
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const form = useForm<AddServiceForm>({
     defaultValues: addServiceDefaultValues,
     resolver: zodResolver(addServiceSchema),
@@ -51,7 +49,6 @@ export const AddService = () => {
     try {
       const payload: IRegisterServicePayload = {
         ...formValues,
-        projectKey,
       };
       const response = await registerService(payload);
       if (!response.isSuccess)
