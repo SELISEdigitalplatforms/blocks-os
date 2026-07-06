@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace DomainService.Entities
 {
+    [BsonIgnoreExtraElements]
     public class ProjectStatusTracer
     {
         [BsonId]

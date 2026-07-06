@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 
 namespace DomainService.Shared
 {
@@ -29,9 +29,10 @@ namespace DomainService.Shared
         public const string MigrationCompletionTopic = "migration_topic";
         public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
         public const string BlocksDomain = "seliseblocks.com";
+        public const string ConstructCookieDomain = "slsblx.com";
 
-        public const string CertbotEmail = "devsecops@selisegroup.com";
         public const string CertbotWebrootPath = "/var/www/html";
+        public const string CertbotEmail = "devsecops@selisegroup.com";
         public const string RemoteFeTemplate = "/home/nginxreverseproxy/fe-domain.conf";
         public const string RemoteBlocksapiTemplate = "/home/nginxreverseproxy/blocksapi-domain.conf";
 
