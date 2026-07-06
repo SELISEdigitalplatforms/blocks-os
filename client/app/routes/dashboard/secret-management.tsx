@@ -230,11 +230,11 @@ export default function SecretManagementLayout() {
               </Button>
             )}
             {currentItem && (
-              <div>
-                <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
+              <div className="space-y-1">
+                <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
                   {currentItem.label}
                 </h1>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {currentItem.desc}
                 </p>
               </div>
