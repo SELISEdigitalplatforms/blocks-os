@@ -65,7 +65,6 @@ export class MFAService {
         {
           enableMfa: payload.enabled,
           userMfaType: payload.allowedMethods,
-          ...(payload.projectKey ? { projectKey: payload.projectKey } : {}),
           ...(payload.mfaTemplate ? { mfaTemplate: payload.mfaTemplate } : {}),
         },
         undefined,

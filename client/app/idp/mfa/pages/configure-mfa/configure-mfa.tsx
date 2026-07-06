@@ -25,7 +25,6 @@ import { MFA_Provider_Data } from "../../utils/mfa-config";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 type MethodInfo = {
   enable: boolean;
   name: string;
@@ -41,7 +40,6 @@ const LoadingSkelton = () => {
   );
 };
 export const ConfigureMFA = () => {
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { isLoading, isFetching, data } = useGetMFAConfig();
   const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
@@ -119,7 +117,6 @@ export const ConfigureMFA = () => {
     const payload = {
       enabled: !!userMfaTypes.size,
       allowedMethods: Array.from(userMfaTypes),
-      projectKey: tenantId,
     };
     const res = await mutateAsync(payload);
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });
