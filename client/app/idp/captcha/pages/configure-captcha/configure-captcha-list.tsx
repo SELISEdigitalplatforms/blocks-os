@@ -4,7 +4,7 @@ import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../../models/captcha";
 import { ConfigureCaptchaModal } from "../../modals/configure-captcha-modal";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { cn } from "@/lib/utils";
-import { Pencil, Settings, ShieldCheck, ShieldOff } from "lucide-react";
+import { Pencil, Power, PowerOff, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { MaskedText } from "@/components/masked-text";
@@ -22,14 +22,13 @@ const LoadingSkelton = () => (
     {Array.from({ length: 2 }).map((_, index) => (
       <Card key={index}>
         <CardHeader className="flex-row items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-9 w-9 rounded-md" />
-            <div className="flex flex-col gap-1">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-20" />
-            </div>
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-4 w-32" />
           </div>
-          <Skeleton className="h-6 w-11 rounded-full" />
+          <div className="flex items-center gap-1">
+            <Skeleton className="h-7 w-7 rounded" />
+            <Skeleton className="h-7 w-7 rounded" />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2">
@@ -67,25 +66,12 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
   );
 };
 
-const CaptchaSwitcher = ({ enabled }: { enabled: boolean }) => (
-  <span
-    role="img"
-    aria-label={enabled ? "Enabled" : "Disabled"}
-    className={cn(
-      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors duration-200",
-      enabled
-        ? "border-emerald-500 bg-emerald-500"
-        : "border-neutral-300 bg-neutral-200",
-    )}
-  >
-    <span
-      className={cn(
-        "pointer-events-none inline-block size-5 translate-x-[1px] rounded-full bg-white shadow-sm transition-transform duration-200",
-        enabled && "translate-x-[23px]",
-      )}
-    />
-  </span>
-);
+const CaptchaSwitcher = ({ enabled }: { enabled: boolean }) =>
+  enabled ? (
+    <Power className="h-3.5 w-3.5" />
+  ) : (
+    <PowerOff className="h-3.5 w-3.5" />
+  );
 
 type ConfigureCaptchaListProps = {
   isLoading: boolean;
@@ -100,37 +86,18 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
         const provider = CAPTCHA_PROVIDERS[configuration.provider];
         if (!provider) return null;
         const enabled = !!configuration.isEnable;
-        const StatusIcon = enabled ? ShieldCheck : ShieldOff;
         return (
           <Card
             key={configuration.itemId}
             className={cn(
               "transition-colors",
-              enabled ? "border-emerald-200/60" : "border-border",
+              enabled ? "border-border" : "border-border",
             )}
           >
             <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
               <div className="flex min-w-0 items-center gap-3">
-                <div
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-                    enabled
-                      ? "bg-emerald-100 text-emerald-600"
-                      : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  <StatusIcon className="h-5 w-5" />
-                </div>
                 <div className="flex min-w-0 flex-col">
                   <CardTitle className="truncate text-base">{provider.label}</CardTitle>
-                  <p
-                    className={cn(
-                      "text-xs font-medium",
-                      enabled ? "text-emerald-600" : "text-muted-foreground",
-                    )}
-                  >
-                    {enabled ? "Active" : "Inactive"}
-                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -154,11 +121,20 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <ToggleCaptchaStatusModal configuration={configuration}>
-                      <DialogTrigger
-                        aria-label={enabled ? "Disable" : "Enable"}
-                        className="inline-flex"
-                      >
-                        <CaptchaSwitcher enabled={enabled} />
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            "h-7 w-7 p-0",
+                            enabled
+                              ? "text-emerald-600 hover:text-destructive"
+                              : "text-destructive hover:text-emerald-600",
+                          )}
+                          aria-label={enabled ? "Disable" : "Enable"}
+                        >
+                          <CaptchaSwitcher enabled={enabled} />
+                        </Button>
                       </DialogTrigger>
                     </ToggleCaptchaStatusModal>
                   </TooltipTrigger>

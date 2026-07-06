@@ -1,52 +1,42 @@
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { Banner } from "@/components/ui-kits/banner/banner";
+import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
-import { Pencil, Shield, Waypoints } from "lucide-react";
+import { Pencil, Waypoints } from "lucide-react";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyConfiguration } from "./empty-configuration";
 import { AddEditProviderModal } from "./add-edit-provider-modal";
 import { providers } from "@blocks-idp/authentication/constants/authentication.constant";
 import MapJwtClaimModal from "./map-jwt-claim-modal";
 import { useGetJwtClaim } from "@blocks-idp/authentication/hooks/use-jwt-claim";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
+
 const LoadingSkelton = () => {
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-9 w-9 rounded-lg" />
-          <div className="flex flex-col gap-1">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-48" />
-          </div>
+    <>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Skeleton className="h-6 w-40" />
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-36" />
+          <Skeleton className="h-9 w-28" />
         </div>
-        <div className="flex items-center gap-1">
-          <Skeleton className="h-7 w-7 rounded" />
-          <Skeleton className="h-7 w-7 rounded" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 border-t pt-4">
-        {Array.from({ length: 4 }).map((_, idx) => (
-          <div key={idx} className="flex flex-col gap-1">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+      </div>
+      <Card>
+        <CardContent className="space-y-3 pt-4">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div key={idx} className="flex flex-col gap-1">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </>
   );
 };
+
 export const Certificates = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const { isLoading, data: existingCertificate } = useGetSavedPublicCertificates(projectKey);
@@ -65,7 +55,6 @@ export const Certificates = () => {
   if (!existingCertificate?.isConfigured) {
     return <EmptyConfiguration />;
   }
-  const providerLabel = existingCertificate.providerName ?? "External IdP";
   return (
     <>
       {!isLoading && !isJwtClaimLoading && !hasJwtClaimData && (
@@ -81,52 +70,24 @@ export const Certificates = () => {
           .
         </Banner>
       )}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold tracking-tight text-high-emphasis sm:text-2xl">
+          External IdP
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={handleJwtClaim}>
+            <Waypoints className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+              Map JWT Claim
+            </span>
+          </Button>
+          <AddEditProviderModal existingData={existingCertificate}>
+            <PrimaryButton Icon={Pencil} label="Edit" />
+          </AddEditProviderModal>
+        </div>
+      </div>
       <Card>
-        <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-              <Shield className="h-4 w-4" />
-            </div>
-            <div className="flex min-w-0 flex-col">
-              <p className="truncate text-sm font-medium">{providerLabel}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {existingCertificate.jwksUrl || existingCertificate.publicCertificatePath || "External identity provider"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                  aria-label="Map JWT Claim"
-                  onClick={handleJwtClaim}
-                >
-                  <Waypoints className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Map JWT Claim</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <AddEditProviderModal existingData={existingCertificate}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                    aria-label="Edit"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                </AddEditProviderModal>
-              </TooltipTrigger>
-              <TooltipContent>Edit</TooltipContent>
-            </Tooltip>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3 border-t pt-4">
+        <CardContent className="space-y-3 pt-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Provider</p>
