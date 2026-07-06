@@ -2,6 +2,7 @@ import ConfirmationModal from "@/components/confirmation-modal/confirmation-moda
 import { Button } from "@/components/ui-kits/button/button"
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog"
 import { cn } from "@/lib/utils"
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
 import { X } from "lucide-react"
 import { useState } from "react"
 
@@ -45,7 +46,7 @@ export const SettingsDismissibleChip = ({
       <p
         className={cn(
           "truncate text-foreground",
-          variant === "badge" ? "text-xs font-medium" : "text-sm font-semibold",
+          variant === "badge" ? SETTINGS_FORM_LAYOUT.chipTitleBadge : "text-sm font-semibold",
         )}
         title={title}
       >
@@ -55,7 +56,7 @@ export const SettingsDismissibleChip = ({
         <p
           className={cn(
             "truncate text-muted-foreground",
-            variant === "badge" ? "text-[11px]" : "mt-1 text-xs",
+            variant === "badge" ? SETTINGS_FORM_LAYOUT.chipSubtitleBadge : "mt-1 text-xs",
           )}
           title={subtitle}
         >
