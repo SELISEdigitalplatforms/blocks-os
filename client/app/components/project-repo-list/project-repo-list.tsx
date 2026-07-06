@@ -1,12 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Check, Pencil } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Card, CardTitle } from "@/components/ui-kits/card/card";
-import { IProject } from "@blocks-identifier/models/project.model";
-import { useGetEnvRepositories, useUpdateProject } from "@/hooks/use-project";
+import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { EditDomainForm } from "@/components/edit-domain-form/edit-domain-form";
 import { Button } from "@/components/ui-kits/button/button";
+import { Card, CardTitle } from "@/components/ui-kits/card/card";
 import {
   Dialog,
   DialogContent,
@@ -15,11 +10,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { formatFullDate } from "@/lib/utils";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { useGetEnvRepositories, useUpdateProject } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { formatFullDate } from "@/lib/utils";
+import { IProject } from "@/models/project.model";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { EditDomainForm } from "@/components/edit-domain-form/edit-domain-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { Check, Pencil } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 export const ProjectRepoList = ({
   project,
   isLoading,
@@ -42,9 +42,9 @@ export const ProjectRepoList = ({
   const [isSetApplicationDomainModalOpen, setIsSetApplicationDomainModalOpen] =
     useState<boolean>(false);
   const [applicationDomain, setApplicationDomain] = useState<string>(
-    project?.applicationDomain || "",
+    project?.customDomain || "",
   );
-  const [customDomain, setCustomDomain] = useState<string>("");
+  const [_customDomain, setCustomDomain] = useState<string>("");
   const confirmationModalData = {
     dialogTitle: "Set as application domain?",
     dialogSubtitle:
@@ -78,7 +78,7 @@ export const ProjectRepoList = ({
       }
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
-        showErrorToast({ errors: (error as any).errors });
+        showErrorToast({ errors: error.errors });
       }
     }
   };
@@ -108,8 +108,7 @@ export const ProjectRepoList = ({
                 !project?.customDomain ||
                 project?.customDomain === ""
               }
-              variant="outline"
-            >
+              variant="outline">
               <Pencil className="mr-2 h-3.5 w-3.5" />
               Edit domain
             </Button>
@@ -141,8 +140,7 @@ export const ProjectRepoList = ({
                 return (
                   <div
                     key={index}
-                    className="mt-4 space-y-3 rounded-sm border border-border p-4"
-                  >
+                    className="mt-4 space-y-3 rounded-sm border border-border p-4">
                     <div>
                       <div className="text-xs font-medium text-medium-emphasis">
                         Name
@@ -175,7 +173,7 @@ export const ProjectRepoList = ({
                           const cd = hasCustomUrl
                             ? repo.customDeploymentUrl
                             : "";
-                          return activeDomain !== project?.applicationDomain ? (
+                          return activeDomain !== project?.customDomain ? (
                             <Button
                               variant="outline"
                               size="xxs"
@@ -184,8 +182,7 @@ export const ProjectRepoList = ({
                                 setApplicationDomain(activeDomain);
                                 setCustomDomain(cd);
                                 setIsSetApplicationDomainModalOpen(true);
-                              }}
-                            >
+                              }}>
                               <span className="px-2">Set</span>
                             </Button>
                           ) : (
@@ -208,8 +205,7 @@ export const ProjectRepoList = ({
                           className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 hover:underline"
                           onClick={() =>
                             navigate(`/devops/repo/${repo.itemId}`)
-                          }
-                        >
+                          }>
                           {!repo.lastDeploymentDate || isDefaultDate
                             ? "Not deployed"
                             : formatFullDate(new Date(repo.lastDeploymentDate))}
@@ -252,7 +248,7 @@ export const ProjectRepoList = ({
                           ? repo.customDeploymentUrl
                           : repo.defaultDeploymentUrl;
                         const cd = hasCustomUrl ? repo.customDeploymentUrl : "";
-                        return activeDomain !== project?.applicationDomain ? (
+                        return activeDomain !== project?.customDomain ? (
                           <Button
                             variant="outline"
                             size="xxs"
@@ -261,8 +257,7 @@ export const ProjectRepoList = ({
                               setApplicationDomain(activeDomain);
                               setCustomDomain(cd);
                               setIsSetApplicationDomainModalOpen(true);
-                            }}
-                          >
+                            }}>
                             <span className="px-2">Set</span>
                           </Button>
                         ) : (
@@ -273,8 +268,7 @@ export const ProjectRepoList = ({
                     <div className="text-sm text-medium-emphasis">
                       <div
                         className="cursor-pointer text-blue-600 hover:text-blue-800 hover:underline"
-                        onClick={() => navigate(`/devops/repo/${repo.itemId}`)}
-                      >
+                        onClick={() => navigate(`/devops/repo/${repo.itemId}`)}>
                         {!repo.lastDeploymentDate || isDefaultDate
                           ? "Not deployed"
                           : formatFullDate(new Date(repo.lastDeploymentDate))}
@@ -293,8 +287,7 @@ export const ProjectRepoList = ({
       </div>
       <Dialog
         open={isSetApplicationDomainModalOpen}
-        onOpenChange={setIsSetApplicationDomainModalOpen}
-      >
+        onOpenChange={setIsSetApplicationDomainModalOpen}>
         <ConfirmationModal
           onCancel={() => setIsSetApplicationDomainModalOpen(false)}
           onConfirm={saveApplicationDomain}

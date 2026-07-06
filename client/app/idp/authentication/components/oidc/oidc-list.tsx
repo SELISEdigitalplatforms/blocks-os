@@ -87,24 +87,24 @@ export const OidcList = () => {
 
   return (
     <Card>
-      <CardContent className="overflow-x-auto p-0">
-        <Table className="w-full min-w-[640px] sm:table-fixed sm:min-w-0">
+      <CardContent className="overflow-x-clip p-0 sm:overflow-x-auto">
+        <Table className="w-full min-w-0 sm:table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8 pl-4" />
-              <TableHead className="w-64 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:w-64">
                 Client
               </TableHead>
-              <TableHead className="w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="hidden w-32 text-xs font-semibold uppercase tracking-wide text-high-emphasis sm:table-cell">
                 Type
               </TableHead>
-              <TableHead className="w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+              <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
                 Created On
               </TableHead>
               <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&_tr:last-child]:border-b">
             {sortedOidcData.map((item, index) => (
               <OIDCRowExport
                 key={item.itemId}
