@@ -209,7 +209,7 @@ namespace DomainService.Projects
             var projectCollection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Project>.Filter.In(p => p.TenantId, documents?.Select(doc => doc?.TenantId)) &
                          Builders<Project>.Filter.Where(p => p.IsDisabled == false) &
-                         Builders<Project>.Filter.Ne(p => p.CreatedBy, BlocksContext.GetContext().UserId);
+                         Builders<Project>.Filter.Ne(p => p.CreatedBy, BlocksContext.GetContext()?.UserId ?? string.Empty);
 
             if (!string.IsNullOrEmpty(tenantGroupId))
             {
@@ -293,10 +293,9 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageKeys", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "Organizations", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "SignUpSettings", project.TenantId),
-                CopyAndCustomizeIamConfigurationAsync(sourceDatabase, consumerDb, project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project.TenantId),
+                CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "DmsArtifacts", project.TenantId));
@@ -318,22 +317,20 @@ namespace DomainService.Projects
 
         }
 
-        private async Task CopyAndCustomizeIamConfigurationAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project)
+        private async Task CopyAndCustomizeIdentityConfigurationAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project)
         {
-            var sourceCollection = sourceDb.GetCollection<BsonDocument>("IamConfigurations");
-            var iamConfiguration = await sourceCollection.Find(_ => true).FirstOrDefaultAsync();
+            var sourceCollection = sourceDb.GetCollection<BsonDocument>("IdentityConfigurations");
+            var identityConfiguration = await sourceCollection.Find(_ => true).FirstOrDefaultAsync();
             var userId = BlocksContext.GetContext()?.UserId;
 
-            if (iamConfiguration != null)
+            if (identityConfiguration != null)
             {
-                iamConfiguration["AccountActivationUrl"] = $"{project.Applications.FirstOrDefault().Domain}/activate";
-                iamConfiguration["AccountVerificationUrl"] = $"{project.Applications.FirstOrDefault().Domain}/verify";
-                iamConfiguration["RecoverAccountUrl"] = $"{project.Applications.FirstOrDefault().Domain}/resetpassword";
-                iamConfiguration["CreatedBy"] = userId;
-                iamConfiguration["LastUpdatedBy"] = userId;
+                identityConfiguration["AccountActionBaseUrl"] = $"{project.Applications.FirstOrDefault().Domain}";
+                identityConfiguration["CreatedBy"] = userId;
+                identityConfiguration["LastUpdatedBy"] = userId;
 
-                var targetCollection = targetDb.GetCollection<BsonDocument>("IamConfigurations");
-                await targetCollection.InsertOneAsync(iamConfiguration);
+                var targetCollection = targetDb.GetCollection<BsonDocument>("IdentityConfigurations");
+                await targetCollection.InsertOneAsync(identityConfiguration);
             }
         }
 
@@ -428,7 +425,7 @@ namespace DomainService.Projects
                 ["RepoUrl"] = resource.Link,
                 ["CreatedDate"] = DateTime.UtcNow,
                 ["LastUpdatedDate"] = DateTime.UtcNow,
-                ["CreatedBy"] = BlocksContext.GetContext().UserId,
+                ["CreatedBy"] = BlocksContext.GetContext()?.UserId ?? string.Empty,
                 ["Branch"] = project.Environment == "prod" ? "main" : project.Environment,
                 ["ProjectId"] = project.TenantId,
                 ["ProjectName"] = project.Name,
@@ -474,7 +471,9 @@ namespace DomainService.Projects
         {
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
-            var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId);
+            var filter = Builders<Tenant>.Filter.And(Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId),
+                                                     Builders<Tenant>.Filter.Eq(mc => mc.IsDisabled, false));
+
             return await (await collection.FindAsync(filter)).FirstOrDefaultAsync();
         }
 
@@ -537,12 +536,18 @@ namespace DomainService.Projects
             var tenantIds = await GetProjectIdsByGroupId(request.TenantGroupId);
             var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
-           await collection.UpdateManyAsync(
-                Builders<Tenant>.Filter.In(t => t.TenantId, tenantIds),
-                Builders<Tenant>.Update.Set(t => t.Name, request.Name)
-                                       .Set(t=>t.LastUpdatedBy, BlocksContext.GetContext()?.UserId)
-                                       .Set(t=>t.LastUpdatedDate, DateTime.UtcNow));
+            await collection.UpdateManyAsync(
+                 Builders<Tenant>.Filter.In(t => t.TenantId, tenantIds),
+                 Builders<Tenant>.Update.Set(t => t.Name, request.Name)
+                                        .Set(t => t.LastUpdatedBy, BlocksContext.GetContext()?.UserId)
+                                        .Set(t => t.LastUpdatedDate, DateTime.UtcNow));
         }
 
+        public async Task DeletePrjectPeopleAsync(string tenantId)
+        {
+            var collection = _dbContextProvider.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
+            await collection.DeleteManyAsync(Builders<ProjectPeople>.Filter.Eq(p => p.TenantId, tenantId));
+
+        }
     }
 }

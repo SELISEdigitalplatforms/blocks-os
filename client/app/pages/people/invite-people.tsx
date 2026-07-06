@@ -197,10 +197,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
           <span>Invite</span>
         </Button>
       </DialogTrigger>
-      <DialogContent
-        hideCloseButton
-        className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-md md:min-w-[900px]"
-      >
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-md md:min-w-[900px]">
         <DialogHeader>
           <DialogTitle>Invite people</DialogTitle>
           <DialogDescription className="!mt-2 text-sm text-medium-emphasis">

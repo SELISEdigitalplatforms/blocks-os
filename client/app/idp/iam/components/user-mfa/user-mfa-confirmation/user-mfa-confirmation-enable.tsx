@@ -38,7 +38,7 @@ export const UserMFAConfirmationEnable = () => {
     }
   };
   const onTriggerHandler = () => {
-    if (!userData?.data.isVarified) {
+    if (!userData?.data.isVerified) {
       return toast({
         variant: "info",
         title: "Info",

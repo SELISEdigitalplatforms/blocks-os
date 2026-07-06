@@ -1,12 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { Button } from "@/components/ui-kits/button/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
+import { createContext, useContext, useState } from "react";
+import { Link } from "react-router-dom";
 import { UserMFAConfirmationDisable } from "./user-mfa-confirmation/user-mfa-confirmation-disable";
 import { UserMFADetails } from "./user-mfa-detail";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui-kits/button/button";
-import { createContext, useContext, useState } from "react";
 type UserMFAProps = {
   userId: string;
   projectKey: string;
@@ -14,7 +19,10 @@ type UserMFAProps = {
 };
 export const UserConfigMFA = () => {
   const { projectKey, userId } = useContext(userMfaContext);
-  const { isLoading, isFetching, data } = useGetUserById({ id: userId, projectKey });
+  const { isLoading, isFetching, data } = useGetUserById({
+    id: userId,
+    projectKey,
+  });
   const loading = isFetching || isLoading;
   return (
     <Card>
@@ -24,9 +32,7 @@ export const UserConfigMFA = () => {
           {loading ? (
             <Skeleton className="h-6 w-1/6" />
           ) : (
-            <>
-              {data?.data?.mfaEnabled && <UserMFAConfirmationDisable />}
-            </>
+            <>{data?.data?.mfaEnabled && <UserMFAConfirmationDisable />}</>
           )}
         </div>
       </CardHeader>
@@ -43,16 +49,16 @@ export const ProjectMFA = () => {
         <div className="flex items-center justify-between">
           <CardTitle>Multi-factor Authentication</CardTitle>
           <Button asChild variant="outline" size="sm">
-            <Link to="/services/secret-management?tab=mfa">Go to MFA Settings</Link>
+            <Link to="/app/secret-management/mfa">Go to MFA Settings</Link>
           </Button>
         </div>
       </CardHeader>
       <CardContent className="!pt-0">
         <div className="space-y-2 text-base font-normal text-high-emphasis">
           <p>
-            Multi-Factor Authentication (MFA) enhances your account security by requiring an
-            additional verification step. To enable MFA, you need to first activate it for your
-            project.
+            Multi-Factor Authentication (MFA) enhances your account security by
+            requiring an additional verification step. To enable MFA, you need
+            to first activate it for your project.
           </p>
         </div>
       </CardContent>
@@ -64,7 +70,9 @@ const LoadingSkelton = () => {
     <Card className="rounded shadow-none">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl text-high-emphasis">Multi-factor Authentication</CardTitle>
+          <CardTitle className="text-xl text-high-emphasis">
+            Multi-factor Authentication
+          </CardTitle>
           <Skeleton className="h-6 w-1/6" />
         </div>
       </CardHeader>
@@ -93,7 +101,6 @@ export const userMfaContext = createContext<
   mfaMethodType: 0,
 });
 export const UserMFA = (props: UserMFAProps) => {
-  const { projectKey } = props;
   const [isTotpModalOpen, setIsTotpModalOpen] = useState<boolean>(false);
   const [mfaMethodType, setMfaMethodType] = useState<number>(0);
   const { isLoading, data } = useGetMFAConfig();
@@ -105,8 +112,13 @@ export const UserMFA = (props: UserMFAProps) => {
   };
   return (
     <userMfaContext.Provider
-      value={{ ...props, isTotpModalOpen, setIsTotpModalOpen, showTotpModal, mfaMethodType }}
-    >
+      value={{
+        ...props,
+        isTotpModalOpen,
+        setIsTotpModalOpen,
+        showTotpModal,
+        mfaMethodType,
+      }}>
       <UserConfigMFA />
     </userMfaContext.Provider>
   );

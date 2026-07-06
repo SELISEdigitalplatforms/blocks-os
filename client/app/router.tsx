@@ -1,56 +1,76 @@
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import {
   AuthResolver,
-  PublicGuard,
-  LoginPage,
   ProtectedGuard,
+  PublicGuard,
+} from "@seliseblocks/blocks-kit/guards";
+import {
   ConsoleLayout,
-  ImpersonationChecker,
-  ImpersonationTerminator,
-  ImpersonationSynchronizer,
+  DashboardLayout,
+  ProjectOverviewLayout,
+} from "@seliseblocks/blocks-kit/layouts";
+import {
   CallbackPage,
   ConsolePage,
-} from "@seliseblocks/blocks-kit";
-import { DashboardLayout } from "./layouts/dashboard-layout";
-
-import IamPage from "./routes/dashboard/iam";
-import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
-import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
-import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
-import IamOrgDetailPage from "./routes/dashboard/iam-org-detail";
-import IamLogsPage from "./routes/dashboard/iam-logs";
-import IamConfigurePage from "./routes/dashboard/iam-configure";
-import AuthenticationConfigPage from "./routes/dashboard/authentication-config";
-import SsoConfigurationPage from "./routes/dashboard/sso-configuration";
-import AuthLogsPage from "./routes/dashboard/auth-logs";
-import MfaLogsPage from "./routes/dashboard/mfa-logs";
-import CaptchaLogsPage from "./routes/dashboard/captcha-logs";
-import ApiSettingsPage from "./routes/dashboard/api-settings";
-import RateLimiterPage from "./routes/dashboard/rate-limiter";
-import LmtPage from "./routes/dashboard/lmt";
-import LmtServiceLogsPage from "./routes/dashboard/lmt-service-logs";
-import LmtTraceDetailsPage from "./routes/dashboard/lmt-trace-details";
-import SecretManagementPage from "./routes/dashboard/secret-management";
-import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
-import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
-import ManagedServicesPage from "./routes/dashboard/managed-services";
-import { DashboardOverview } from "./pages/dashboard/dashboard-overview";
+  DashboardOverview,
+  LoginPage,
+  ProfilePage,
+} from "@seliseblocks/blocks-kit/pages";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { navigationMenus } from "./constants/navigation-menus";
+import { AIModels } from "./cross-modules/ai/pages/ai-models";
+import { EmailConfigurationPage } from "./cross-modules/communication/mail";
+import { NotificationConfigurationListPage } from "./cross-modules/communication/notification/components/notification-configuration-list";
+import { SecretsList } from "./cross-modules/secrets/components/secrets-list/secrets-list";
+import { StorageContents } from "./cross-modules/storage/pages/storage/storage-contents";
+import { MagicUrls } from "./cross-modules/utilities/pages/magic-urls/magic-urls";
+import { ClientCredentials } from "./idp/authentication/components/client-credentials";
+import { IdentityProviderPage } from "./idp/authentication/components/identity-provider/identity-provider";
+import { OIDC } from "./idp/authentication/components/oidc";
+import OidcTemplate from "./idp/authentication/components/oidc/oidc-template";
+import { AuthenticationConfigLayout } from "./idp/authentication/pages/authentication-config";
+import { Certificates } from "./idp/authentication/pages/authentication-config/general/certificates/certificates";
+import { SSO } from "./idp/authentication/pages/authentication-config/sso";
+import { ConfigureCaptcha } from "./idp/captcha/pages/configure-captcha";
+import { Permissions } from "./idp/iam/modules/permission-management";
+import { Roles } from "./idp/iam/modules/role-management";
+import { ConfigureMFA } from "./idp/mfa/pages/configure-mfa/configure-mfa";
+import { IdpSettingsPage } from "./idp/settings/pages/settings-page";
+import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import {
-  EnvironmentsPage,
   EnvironmentMigrationPage,
+  EnvironmentsPage,
 } from "./pages/environments/environments";
+import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
+import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
+import { LogsRoute } from "./pages/lmt/logs";
+import { LmtServiceLogTraceRoute } from "./pages/lmt/service-log-trace";
+import { LmtServiceLogsRoute } from "./pages/lmt/service-logs";
+import { LmtTraceDetailRoute } from "./pages/lmt/trace-detail";
+import { TracingRoute } from "./pages/lmt/tracing";
+import { UsageRoute } from "./pages/lmt/usage";
 import { PeopleManagement } from "./pages/people/people-management";
 import { PersonDetailPage } from "./pages/people/person-detail-page";
 import { RepositoriesPage } from "./pages/repositories/repositories";
 import { SettingsPage } from "./pages/settings/settings";
-import { CreateProjectWrapper } from "./pages/create-project/create-project";
-import GitHubCallbackPage from "./routes/callback/callback";
-import { ProjectOverviewLayout } from "./layouts/project-overview-layout";
 import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-usage-page";
-import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
-import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
 import ActivatePage from "./routes/auth/activate-page";
-import { ProfilePage } from "@seliseblocks/blocks-kit";
+import GitHubCallbackPage from "./routes/callback/callback";
+import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
+import ApiSettingsPage from "./routes/dashboard/api-settings";
+import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
+import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
+import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
+import ManagedServicesPage from "./routes/dashboard/managed-services";
+import OidcBrandingPage from "./routes/dashboard/oidc-branding";
+import SecretManagementLayout from "./routes/dashboard/secret-management";
+import LmtLayout from "@/layouts/lmt/lmt-layout";
+
+const redirectPaths: Record<string, string> = {
+  "/app/idp/user-detail/*": "/app/idp",
+  "/app/idp/role-detail/*": "/app/idp/roles",
+  "/app/idp/organization-detail/*": "/app/idp/organizations",
+  "/app/idp/permission-detail/*": "/app/idp/permissions",
+};
 
 export const router = createBrowserRouter([
   // ── Public invitation accept flow (no auth guard) ──
@@ -64,7 +84,7 @@ export const router = createBrowserRouter([
       // Login callback outside AuthResolver (handled by blocks-kit)
       {
         path: "/login/callback",
-        element: <CallbackPage redirectUrl="/console" />,
+        element: <CallbackPage />,
       },
 
       {
@@ -87,6 +107,7 @@ export const router = createBrowserRouter([
 
           // protected
           {
+            path: "/app",
             element: (
               <ProtectedGuard>
                 <Outlet />
@@ -96,38 +117,65 @@ export const router = createBrowserRouter([
               // ── Console routes (profile, console, create-project, etc.) ──
               {
                 element: (
-                  <ImpersonationChecker>
-                    <ImpersonationTerminator>
-                      <ConsoleLayout>
-                        <Outlet />
-                      </ConsoleLayout>
-                    </ImpersonationTerminator>
-                  </ImpersonationChecker>
+                  <ConsoleLayout>
+                    <Outlet />
+                  </ConsoleLayout>
                 ),
                 children: [
-                  { path: "/profile", element: <ProfilePage /> },
-                  { path: "/console", element: <ConsolePage canCreateProject /> },
-                  { path: "/create-project", element: <CreateProjectWrapper /> },
-                  { path: "/data-migration", element: <EnvironmentMigrationPage /> },
-                  { path: "/callback", element: <GitHubCallbackPage /> },
+                  { path: "profile", element: <ProfilePage /> },
+                  {
+                    path: "console",
+                    element: <ConsolePage canCreateProject />,
+                  },
+                  {
+                    path: "create-project",
+                    element: <CreateProjectWrapper />,
+                  },
+                  {
+                    path: "data-migration",
+                    element: <EnvironmentMigrationPage />,
+                  },
+                  { path: "callback", element: <GitHubCallbackPage /> },
                 ],
               },
 
               // ── Project overview layout ──
               {
-                element: <ProjectOverviewLayout />,
+                path: "project-overview",
+                element: (
+                  <ProjectOverviewLayout
+                    redirectPaths={redirectPaths}
+                    navigationMenus={navigationMenus}>
+                    <Outlet />
+                  </ProjectOverviewLayout>
+                ),
                 children: [
                   {
-                    path: "/project-overview",
-                    element: <Navigate to="/project-overview/environments" replace />,
+                    index: true,
+                    element: <Navigate to="environments" replace />,
                   },
-                  { path: "/project-overview/environments", element: <EnvironmentsPage /> },
-                  { path: "/project-overview/people", element: <PeopleManagement /> },
-                  { path: "/project-overview/people/:id", element: <PersonDetailPage /> },
-                  { path: "/project-overview/repositories", element: <RepositoriesPage /> },
-                  { path: "/project-overview/settings", element: <SettingsPage /> },
                   {
-                    path: "/project-overview/subscription-usage",
+                    path: "environments",
+                    element: <EnvironmentsPage />,
+                  },
+                  {
+                    path: "people",
+                    element: <PeopleManagement />,
+                  },
+                  {
+                    path: "people/:id",
+                    element: <PersonDetailPage />,
+                  },
+                  {
+                    path: "repositories",
+                    element: <RepositoriesPage />,
+                  },
+                  {
+                    path: "settings",
+                    element: <SettingsPage />,
+                  },
+                  {
+                    path: "subscription-usage",
                     element: <SubscriptionUsagePage />,
                   },
                 ],
@@ -136,72 +184,177 @@ export const router = createBrowserRouter([
               // ── Dashboard layout (impersonated routes) ──
               {
                 element: (
-                  <ImpersonationChecker>
-                    <ImpersonationSynchronizer>
-                      <DashboardLayout />
-                    </ImpersonationSynchronizer>
-                  </ImpersonationChecker>
+                  <DashboardLayout
+                    redirectPaths={redirectPaths}
+                    navigationMenus={navigationMenus}>
+                    <Outlet />
+                  </DashboardLayout>
                 ),
                 children: [
-                  { path: "/dashboard", element: <DashboardOverview /> },
-                  { path: "/services/iam", element: <IamPage /> },
-                  { path: "/services/iam/role-detail/:id", element: <IamRoleDetailPage /> },
+                  { path: "dashboard", element: <DashboardOverview /> },
                   {
-                    path: "/services/iam/permission-detail/new",
-                    element: <IamAddPermissionPage />,
+                    path: "secret-management",
+                    element: <SecretManagementLayout />,
+                    children: [
+                      {
+                        index: true,
+                        element: <Navigate to="my-secret" replace />,
+                      },
+                      {
+                        path: "my-secret",
+                        element: <SecretsList />,
+                      },
+                      {
+                        path: "managed-services",
+                        element: <ManagedServicesPage />,
+                      },
+                      {
+                        path: "oidc",
+                        children: [
+                          {
+                            index: true,
+                            element: <OIDC />,
+                          },
+                          {
+                            path: ":clientId/branding",
+                            element: <OidcBrandingPage />,
+                          },
+                        ],
+                      },
+                      {
+                        path: "client-credentials",
+                        element: <ClientCredentials />,
+                      },
+                      {
+                        path: "identity-providers",
+                        element: <IdentityProviderPage />,
+                      },
+                      {
+                        path: "sso",
+                        element: <SSO />,
+                      },
+                      {
+                        path: "external-idp",
+                        element: <Certificates />,
+                      },
+                      {
+                        path: "captcha",
+                        element: <ConfigureCaptcha />,
+                      },
+                      {
+                        path: "mfa",
+                        element: <ConfigureMFA />,
+                      },
+                      {
+                        path: "magic-url",
+                        element: <MagicUrls />,
+                        children: [
+                          {
+                            path: ":id",
+                            element: <MagicUrlDetailsPage />,
+                          },
+                        ],
+                      },
+                      {
+                        path: "storage",
+                        element: <StorageContents />,
+                      },
+                      {
+                        path: "email",
+                        element: <EmailConfigurationPage />,
+                      },
+                      {
+                        path: "notification",
+                        element: <NotificationConfigurationListPage />,
+                      },
+                      {
+                        path: "external-idp",
+                        element: <Certificates />,
+                      },
+                      {
+                        path: "ai-models",
+                        element: <AIModels />,
+                        children: [
+                          {
+                            path: ":provider",
+                            element: <AiModelSelectedRoute />,
+                          },
+                        ],
+                      },
+                    ],
                   },
                   {
-                    path: "/services/iam/permission-detail/:id",
-                    element: <IamPermissionDetailPage />,
+                    path: "idp",
+                    element: <AuthenticationConfigLayout />,
+                    children: [
+                      {
+                        index: true,
+                        element: <Navigate to="settings" replace />,
+                      },
+                      {
+                        path: "settings",
+                        element: <IdpSettingsPage />,
+                      },
+                      {
+                        path: "oidc-template",
+                        element: <OidcTemplate />,
+                      },
+                      {
+                        path: "roles",
+                        element: <Roles />,
+                      },
+                      {
+                        path: "permissions",
+                        element: <Permissions />,
+                      },
+                      {
+                        path: "permission-detail/new",
+                        element: <IamAddPermissionPage />,
+                      },
+                    ],
                   },
                   {
-                    path: "/services/iam/organization-detail/:itemId",
-                    element: <IamOrgDetailPage />,
-                  },
-                  { path: "/services/iam/logs", element: <IamLogsPage /> },
-                  { path: "/services/iam/configure", element: <IamConfigurePage /> },
-                  {
-                    path: "/services/authentication",
-                    element: <AuthenticationConfigPage />,
+                    path: "api-settings",
+                    element: <ApiSettingsPage />,
                   },
                   {
-                    path: "/services/authentication/sso-configuration",
-                    element: <SsoConfigurationPage />,
+                    path: "lmt",
+                    element: <LmtLayout />,
+                    children: [
+                      {
+                        index: true,
+                        element: <Navigate to="usage" replace />,
+                      },
+                      { path: "usage", element: <UsageRoute /> },
+                      { path: "tracing", element: <TracingRoute /> },
+                      {
+                        path: "tracing/:traceId",
+                        element: <LmtTraceDetailRoute />,
+                      },
+                      {
+                        path: "tracing/timeline/:traceId",
+                        element: <LmtTraceDetailsRedirect />,
+                      },
+                      {
+                        path: "logs",
+                        element: <Outlet />,
+                        children: [
+                          {
+                            index: true,
+                            element: <LogsRoute />,
+                          },
+                          {
+                            path: ":serviceName",
+                            element: <LmtServiceLogsRoute />,
+                          },
+                          {
+                            path: ":serviceName/trace/:traceId",
+                            element: <LmtServiceLogTraceRoute />,
+                          },
+                        ],
+                      },
+                    ],
                   },
-                  { path: "/services/authentication/logs", element: <AuthLogsPage /> },
-                  {
-                    path: "/services/mfa",
-                    element: <Navigate to="/services/secret-management?tab=mfa" replace />,
-                  },
-                  { path: "/services/mfa/logs", element: <MfaLogsPage /> },
-                  { path: "/services/api-settings", element: <ApiSettingsPage /> },
-                  { path: "/services/rate-limiter", element: <RateLimiterPage /> },
-                  { path: "/services/lmt", element: <LmtPage /> },
-                  {
-                    path: "/services/lmt/logs/:serviceName",
-                    element: <LmtServiceLogsPage />,
-                  },
-                  { path: "/tracing/timeline/:traceId", element: <LmtTraceDetailsPage /> },
-                  {
-                    path: "/services/secret-management",
-                    element: <SecretManagementPage />,
-                  },
-                  {
-                    path: "/services/secret-management/magic-url/:id",
-                    element: <MagicUrlDetailsPage />,
-                  },
-                  {
-                    path: "/services/secret-management/ai-models/:provider",
-                    element: <AiModelSelectedRoute />,
-                  },
-                  { path: "/managed-services", element: <ManagedServicesPage /> },
-                  {
-                    path: "/services/captcha",
-                    element: (
-                      <Navigate to="/services/secret-management?tab=captcha" replace />
-                    ),
-                  },
-                  { path: "/services/captcha/logs", element: <CaptchaLogsPage /> },
                 ],
               },
             ],
@@ -211,7 +364,7 @@ export const router = createBrowserRouter([
           // { path: "/", element: <Navigate to="/console" replace /> },
           // ── Catch-all: redirect to login ──
 
-          { path: "*", element: <Navigate to="/console" replace /> },
+          { path: "*", element: <Navigate to="/app/console" replace /> },
         ],
       },
     ],

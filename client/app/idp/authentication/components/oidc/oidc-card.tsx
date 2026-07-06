@@ -1,161 +1,254 @@
-import { Badge } from "@/components/ui-kits/badge/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { MaskedText } from "@/components/masked-text";
-import { ReactNode, useState } from "react";
-import { getApiUrl } from "@/lib/get-api-path";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import {
+  ChevronRight,
+  LayoutTemplate,
+  Shield,
+  Trash2,
+} from "lucide-react";
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { Button } from "@/components/ui-kits/button/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui-kits/dialog/dialog";
+import { TableCell, TableRow } from "@/components/ui-kits/table/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
+import { cn } from "@/lib/utils";
+import { useDeleteAuthOidc } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import {
   IDeleteOidcClientPayload,
   IOidcConfig,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
-import { useDeleteAuthOidc } from "@blocks-idp/authentication/hooks/use-auth-oidc";
-import { isErrorWithErrors } from "@/lib/error";
-import { Trash } from "lucide-react";
 import { CreateOIDC } from "../create-oidc/create-oidc";
-const Item = ({ label, children }: { label: string; children: ReactNode }) => {
-  return (
-    <div className="min-w-0">
-      <p className="mb-2 text-sm font-medium text-low-emphasis">{label}</p>
-      <div className="break-words text-base font-normal text-high-emphasis">{children}</div>
-    </div>
-  );
-};
-type OIDCCardProps = {
-  oidc: IOidcConfig;
-};
-export const OIDCCard = ({ oidc }: OIDCCardProps) => {
-  const [open, setOpen] = useState<boolean>(false);
+import { KVDetailItem } from "../kv-detail-item";
+
+interface OIDCRowProps {
+  item: IOidcConfig;
+  defaultExpanded?: boolean;
+}
+
+const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const navigate = useNavigate();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { mutateAsync, isPending } = useDeleteAuthOidc({
+  const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
   });
-  const handleConfirmDelete = async (id: string) => {
+
+  const createdAt = item.createdDate
+    ? format(new Date(item.createdDate), "dd MMM yyyy")
+    : "—";
+
+  const redirectUris =
+    item.redirectUris && item.redirectUris.length
+      ? item.redirectUris
+      : item.redirectUri
+        ? [item.redirectUri]
+        : [];
+
+  const responseTypes = item.allowedResponseTypes?.length
+    ? item.allowedResponseTypes
+    : ["code"];
+
+  const kvPairs: {
+    key: string;
+    value: string;
+    copyable?: boolean;
+  }[] = [
+    { key: "Client Id", value: item.itemId, copyable: true },
+    { key: "Client Secret", value: item.clientSecret, copyable: true },
+    {
+      key: "Redirect URI(s)",
+      value: redirectUris.join(", "),
+      copyable: true,
+    },
+    {
+      key: "Allowed Response Types",
+      value: responseTypes.join(", "),
+    },
+    {
+      key: "Scope(s)",
+      value: item.scope ?? "",
+    },
+    {
+      key: "PKCE",
+      value: item.requirePkce ? "required" : "not required",
+    },
+    {
+      key: "Redirect automatically after authentication",
+      value: item.isAutoRedirect ? "true" : "false",
+    },
+    {
+      key: "Status",
+      value: item.isActive ? "active" : "inactive",
+    },
+  ].filter((pair) => pair.value);
+
+  const handleConfirmDelete = async () => {
     try {
       const payload: IDeleteOidcClientPayload = {
-        itemId: id,
+        itemId: item.itemId,
         projectKey: tenantId,
       };
-      const res = await mutateAsync(payload);
+      const res = await deleteOidc(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.error });
       showSuccessToast({ description: "OIDC credential deleted successfully" });
-      setOpen(false);
+      setShowDeleteDialog(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      return showErrorToast({ errors: "Something went wrong" });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
+      showErrorToast({ errors: "Something went wrong" });
     }
   };
+
   return (
-    <div className="grid gap-4">
-      <Card className="py-6">
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {oidc.clientLogoUrl && (
-                <div className="relative h-12 w-12 overflow-hidden rounded-lg">
-                  <img src={oidc.clientLogoUrl} alt="OIDC Logo" className="object-cover" />
-                </div>
-              )}
-              <CardTitle>{oidc.clientDisplayName}</CardTitle>
+    <>
+      <TableRow
+        className={cn(
+          "hover:bg-muted/50",
+          kvPairs.length > 0 && "cursor-pointer",
+          expanded && kvPairs.length > 0
+            ? "border-b-0"
+            : "border-b-2 border-border",
+        )}
+        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}>
+        <TableCell className="w-8 py-3.5 pl-4">
+          {kvPairs.length > 0 ? (
+            <ChevronRight
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+            />
+          ) : (
+            <span className="block h-4 w-4" />
+          )}
+        </TableCell>
+        <TableCell className="py-3.5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950">
+              <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div className="flex">
-              <div className="mt-0.5">
-                <CreateOIDC itemId={oidc.itemId} triggerVariant="ghost" />
-              </div>
-              <Button onClick={() => setOpen(true)} variant="ghost" className="hover:text-error">
-                <Trash size={16} />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-8">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Item label="Client Id">
-                <CopyToClipboardButton textToCopy={oidc.itemId}>
-                  <MaskedText text={oidc.itemId} length={30} showFirstN={4} showLastN={4} />
-                </CopyToClipboardButton>
-              </Item>
-              <Item label="Client Secret">
-                <CopyToClipboardButton textToCopy={oidc.clientSecret}>
-                  <MaskedText text={oidc.clientSecret} length={30} showFirstN={4} showLastN={4} />
-                </CopyToClipboardButton>
-              </Item>
-              <Item label="Redirect URL">
-                <CopyToClipboardButton textToCopy={oidc.redirectUri}>
-                  {oidc.redirectUri}
-                </CopyToClipboardButton>
-              </Item>
-              <Item label="Audience">
-                <CopyToClipboardButton textToCopy={oidc.audience}>
-                  <div className="flex items-center gap-2">
-                    <div className="flex flex-wrap gap-1.5">{oidc.audience}</div>
-                  </div>
-                </CopyToClipboardButton>
-              </Item>
-              <Item label="Scope(s)">
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    {oidc.scope ? (
-                      <Badge variant="secondary" className="text-xs">
-                        {oidc.scope}
-                      </Badge>
-                    ) : (
-                      <span>N/A</span>
-                    )}
-                  </div>
-                </div>
-              </Item>
-              <Item label="Created on">
-                <span className="whitespace-nowrap">
-                  {format(oidc.createdDate, "dd/MM/yyyy HH:mm")}
-                </span>
-              </Item>
-              <Item label="Theme Color">
-                <div className="flex items-center gap-3">
-                  {oidc.clientBrandColor && (
-                    <div
-                      className="h-8 w-8 rounded-lg border border-border"
-                      style={{ backgroundColor: oidc.clientBrandColor }}
-                      title={oidc.clientBrandColor}
-                    />
-                  )}
-                  <span className="font-mono">{oidc.clientBrandColor || "N/A"}</span>
-                </div>
-              </Item>
-              <div className="md:col-span-2">
-                <Item label="Well Known URL">
-                  <CopyToClipboardButton
-                    textToCopy={`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
-                  >
-                    <span className="break-all">
-                      {`${getApiUrl("idp/v1", ".well-known/openid-configuration")}?projectKey=${tenantId}`}
-                    </span>
-                  </CopyToClipboardButton>
-                </Item>
-              </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">
+                {item.clientDisplayName || item.itemId}
+              </p>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {item.itemId}
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <ConfirmationModal
-          onCancel={() => setOpen(false)}
-          onConfirm={() => handleConfirmDelete(oidc.itemId)}
-          data={{
-            dialogTitle: "Delete",
-            dialogSubtitle: `Are you sure you want to delete this OIDC credential?`,
-          }}
-          buttonState={{
-            confirm: { disable: isPending },
-          }}
-        />
+        </TableCell>
+        <TableCell className="hidden py-3.5 sm:table-cell">
+          <Badge
+            variant="outline"
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+            OIDC
+          </Badge>
+        </TableCell>
+        <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
+          {createdAt}
+        </TableCell>
+        <TableCell
+          className="py-3.5 pr-4 text-right"
+          onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-end gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                  aria-label="Template"
+                  onClick={() =>
+                    navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
+                  }
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Template</TooltipContent>
+            </Tooltip>
+            <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete"
+                  onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+          </div>
+        </TableCell>
+      </TableRow>
+
+      {expanded && (
+        <TableRow className="border-b-2 border-border hover:bg-transparent">
+          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+            <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
+              {kvPairs.map(({ key, value, copyable }) => (
+                <KVDetailItem
+                  key={key}
+                  label={key}
+                  value={value}
+                  copyable={copyable}
+                />
+              ))}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete OIDC Client</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <strong>{item.clientDisplayName || item.itemId}</strong>? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}>
+              {isDeleting ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
+};
+
+export const OIDCRowExport = OIDCRow;
+
+export const OIDCCard = ({ oidc }: { oidc: IOidcConfig }) => {
+  return <OIDCRow item={oidc} defaultExpanded />;
 };

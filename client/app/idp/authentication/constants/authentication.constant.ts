@@ -9,27 +9,24 @@ export const UserCreationType: Record<number, string> = {
 export enum GRANT_TYPES {
   password = "password",
   social = "social",
-  clientCredential = "client_credential",
+  clientCredential = "client_credentials",
   authorizationCode = "authorization_code",
 }
 
 export const GRANT_TYPES_OPTIONS: { id: GRANT_TYPES; label: string; value: string }[] = [
-  { id: GRANT_TYPES.password, label: "Email/Password", value: GRANT_TYPES.password },
-  { id: GRANT_TYPES.social, label: "SSO", value: GRANT_TYPES.social },
-  {
-    id: GRANT_TYPES.clientCredential,
-    label: "Client Credential",
-    value: GRANT_TYPES.clientCredential,
-  },
   {
     id: GRANT_TYPES.authorizationCode,
     label: "Authorization Code",
     value: GRANT_TYPES.authorizationCode,
   },
+  {
+    id: GRANT_TYPES.clientCredential,
+    label: "Client Credential",
+    value: GRANT_TYPES.clientCredential,
+  },
 ];
 
 export const AuthenticationTabs: { id: string; label: string; value: string }[] = [
-  { id: "general", label: "General", value: "general" },
   { id: "oidc-template", label: "OIDC template", value: "oidc-template" },
   { id: "roles", label: "Roles", value: "roles" },
   { id: "permissions", label: "Permissions", value: "permissions" },

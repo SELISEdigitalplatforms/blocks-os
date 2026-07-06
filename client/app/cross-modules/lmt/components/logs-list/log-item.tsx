@@ -1,7 +1,22 @@
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
-import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
-import { ILog } from "../../models/log.model";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button"
+import { LMT_BASE_PATH } from "@/constants/lmt-nav"
+import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils"
+import { useContext } from "react"
+import { Link, useSearchParams } from "react-router-dom"
+import { LogsViewerContext } from "../logs-viewer/logs-viewer"
+import { ILog } from "../../models/log.model"
+
 export const LogItem = ({ log }: { log: ILog }) => {
+  const { logsRouteServiceName, selectedService } = useContext(LogsViewerContext)
+  const [searchParams] = useSearchParams()
+  const activeTab = searchParams.get("tab") ?? selectedService?.serviceName
+  const traceHref =
+    log.traceId && logsRouteServiceName
+      ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${
+          activeTab ? `?tab=${encodeURIComponent(activeTab)}` : ""
+        }`
+      : undefined
+
   return (
     <div className="flex flex-col">
       <div className="flex flex-col md:flex-row md:items-center">
@@ -12,9 +27,21 @@ export const LogItem = ({ log }: { log: ILog }) => {
           </span>
         </div>
         <div className="flex h-6 items-center">
-          <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
-            <span className="text-warning-700">[{log.traceId}]</span>
-          </CopyToClipboardButton>
+          {traceHref ? (
+            <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
+              <Link
+                to={traceHref}
+                className="text-warning-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`View trace details for ${log.traceId}`}
+              >
+                [{log.traceId}]
+              </Link>
+            </CopyToClipboardButton>
+          ) : (
+            <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
+              <span className="text-warning-700">[{log.traceId}]</span>
+            </CopyToClipboardButton>
+          )}
         </div>
       </div>
       <div
@@ -24,5 +51,5 @@ export const LogItem = ({ log }: { log: ILog }) => {
         {log.message}
       </div>
     </div>
-  );
-};
+  )
+}

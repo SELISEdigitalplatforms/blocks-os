@@ -1,5 +1,5 @@
 import { ArchivedProject } from "@/components/archive-project/archive-project";
-import { EditProject } from "@/components/edit-project/edit-project";
+// import { EditProject } from "@/components/edit-project/edit-project";
 import { useGetProject } from "@/hooks/use-project";
 import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
@@ -15,13 +15,13 @@ export const ActionsListProject = () => {
       {!isLoading && !isFetching && !data?.data?.isDisabled && isOwner && (
         <ArchivedProject />
       )}
-      {!data?.data?.isDisabled && (
+      {/* {!data?.data?.isDisabled && (
         <>
           {!isLoading && !isFetching && (
             <EditProject data={data} isLoading={isLoading} />
           )}
         </>
-      )}
+      )} */}
     </div>
   );
 };

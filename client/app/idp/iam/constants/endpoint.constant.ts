@@ -73,8 +73,8 @@ export const ORGANIZATION_ENDPOINTS = {
   GET_ORGANIZATIONS: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
   GET_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organization`,
   SAVE_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
-  GET_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organization/config`,
-  SAVE_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organization/config`,
+  GET_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,
+  SAVE_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,
 } as const;
 
 // ─── IAM configuration endpoints (configuration.service) ───────────────────
