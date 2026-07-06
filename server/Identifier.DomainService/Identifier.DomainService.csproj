@@ -4,6 +4,8 @@
 	  <!--<PackageReference Include="Azure.Identity" />-->
 	  <PackageReference Include="Azure.ResourceManager.ServiceBus" />
 	  <PackageReference Include="FluentValidation" />
+	  <PackageReference Include="MongoDB.Driver" />
+	  <PackageReference Include="SeliseBlocks.Genesis" />
 	  <PackageReference Include="SeliseBlocks.MailDriver" />
 	  <PackageReference Include="SeliseBlocks.StorageDriver" />
 	  <PackageReference Include="SixLabors.Fonts" />
@@ -11,10 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Captcha.DomainService\Captcha.DomainService.csproj" />
-    <ProjectReference Include="..\Iam.DomainService\Iam.DomainService.csproj" />
   </ItemGroup>
 
-  
+
 
 </Project>
