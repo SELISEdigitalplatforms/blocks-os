@@ -54,11 +54,11 @@ namespace Secrets.DomainService.Services
             var secret = await _secretRepository.GetSecretByIdAsync(saveSecretRequest.ItemId) ?? new Secret
             {
                 ItemId = Guid.NewGuid().ToString(),
-                CreatedBy = BlocksContext.GetContext().UserId,
+                CreatedBy = BlocksContext.GetContext()?.UserId ?? string.Empty,
                 CreatedDate = DateTime.UtcNow,
             };
 
-            secret.LastUpdatedBy = BlocksContext.GetContext().UserId;
+            secret.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? string.Empty;
             secret.LastUpdatedDate = DateTime.UtcNow;
             secret.SecretKey = saveSecretRequest.SecretKey.ToLower();
             secret.KeyValuePairs = saveSecretRequest.KeyValuePairs;

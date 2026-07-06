@@ -1,90 +1,91 @@
-import { useQueryState } from "nuqs";
-import { SSO } from "@blocks-idp/authentication/pages/authentication-config/sso";
-import { GRANT_TYPES } from "@blocks-idp/authentication/constants/authentication.constant";
-import { AIModels } from "@blocks-ai/pages/aimodels";
-import { OIDC } from "@blocks-idp/authentication/components/oidc";
-import { IdentityProviders } from "@blocks-idp/authentication/components/identity-provider";
-import { ClientCredentials } from "@blocks-idp/authentication/components/client-credentials";
-import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
-import { Certificates } from "@blocks-idp/authentication/pages/authentication-config/general/certificates/certificates";
-import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
-import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
-import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
-import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
-import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
-import { MagicUrls } from "@blocks-utilities/pages/magic-urls/magic-urls";
-import { StorageContents } from "@blocks-storage/pages/storage/storage-contents";
-import { ManagedServices } from "@blocks-identifier/pages/services/managed-services";
-import { AddService } from "@blocks-identifier/components/add-service/add-service";
-import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
-import NotificationConfigurationList from "@blocks-communication/notification/components/notification-configuration-list";
 import { Button } from "@/components/ui-kits/button/button";
-import { CirclePlus, ChevronsLeft, Menu, Notebook } from "lucide-react";
-import { MouseEvent, useMemo, useState } from "react";
-import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
-import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { DialogTrigger } from "@radix-ui/react-dialog";
-import { toast } from "@/hooks/use-toast";
-import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui-kits/sheet/sheet";
+import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
-import { cn } from "@/lib/utils";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
-import { SecretsList } from "@/cross-modules/secrets/components/secrets-list/secrets-list";
-import { Banner } from "@/components/ui-kits/banner/banner";
-import { SecretType } from "@/cross-modules/secrets/constants/secret-key.enum";
+import { toast } from "@/hooks/use-toast";
+import { AddService } from "@blocks-identifier/components/add-service/add-service";
+import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
+import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
+import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
+import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
+import {
+  CAPTCHA_PROVIDERS,
+  CAPTCHA_PROVIDERS_KEY,
+} from "@blocks-idp/captcha/models/captcha";
+import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
+import {
+  OidcBrandingHeaderProvider,
+  useOidcBrandingHeaderOptional,
+} from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { Plus, ArrowLeft, Loader2, Notebook } from "lucide-react";
+import { parseAsBoolean, useQueryState } from "nuqs";
+import { MouseEvent, useMemo } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
-const HIDDEN_BANNER_TABS = ["my-secret", "managed-services", "ai-models", "magic-url"];
-export default function SecretManagementPage() {
-  const [selectedTab, setSelectedTab] = useQueryState("tab", { defaultValue: "my-secret" });
-  const [secretType, setSecretType] = useQueryState("secretType", {
-    defaultValue: SecretType.OIDC,
-    parse: (v) => (Object.values(SecretType).includes(v as SecretType) ? (v as SecretType) : SecretType.OIDC),
-  });
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
-  const [isManagedServicesGuideOpen, setIsManagedServicesGuideOpen] = useState(false);
-  const [isEmailConfigOpen, setIsEmailConfigOpen] = useState(false);
-  const [isNotificationConfigOpen, setIsNotificationConfigOpen] = useState(false);
-  const [isAddIdpOpen, setIsAddIdpOpen] = useState(false);
-  const currentItem = SECRET_MANAGEMENT_NAV_GROUPS
-    .flatMap((g) => g.items)
-    .find((item) => item.value === (selectedTab ?? "my-secret"));
-  const areAllProvidersConfigured = useMemo(() => {
-    if (!captchaData?.configurations) return false;
-    const allProviderKeys = Object.keys(CAPTCHA_PROVIDERS) as CAPTCHA_PROVIDERS_KEY[];
-    const configuredProviders = new Set(
-      captchaData.configurations.map((config: { provider: string }) => config.provider),
+function SecretManagementHeaderActions({
+  isOidcBranding,
+  currentPath,
+  handleAddCaptchaConfig,
+  setIsAddIdpOpen,
+  setIsEmailConfigOpen,
+  setIsNotificationConfigOpen,
+  setIsManagedServicesGuideOpen,
+}: {
+  isOidcBranding: boolean;
+  currentPath: string;
+  handleAddCaptchaConfig: (e: MouseEvent) => void;
+  setIsAddIdpOpen: (value: boolean) => void;
+  setIsEmailConfigOpen: (value: boolean) => void;
+  setIsNotificationConfigOpen: (value: boolean) => void;
+  setIsManagedServicesGuideOpen: (value: boolean) => void;
+}) {
+  const brandingHeader = useOidcBrandingHeaderOptional();
+
+  if (isOidcBranding && brandingHeader?.actions) {
+    const { onSave, onUndo, isBusy } = brandingHeader.actions;
+    return (
+      <>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onUndo}
+          disabled={isBusy}
+        >
+          Undo
+        </Button>
+        <Button type="button" size="sm" onClick={onSave} disabled={isBusy}>
+          {isBusy ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            "Save"
+          )}
+        </Button>
+      </>
     );
-    return allProviderKeys.every((key) => configuredProviders.has(key));
-  }, [captchaData]);
-  const addConfigurationHandler = (e: MouseEvent) => {
-    if (areAllProvidersConfigured) {
-      toast({
-        variant: "info",
-        title: "Info",
-        description: "No additional captcha configurations can be added.",
-      });
-      return e.preventDefault();
-    }
-  };
-  const headerActions = (
+  }
+
+  return (
     <>
-      {selectedTab === GRANT_TYPES.authorizationCode && <CreateOIDC />}
-      {selectedTab === "client-credentials" && <CreateClientCredential />}
-      {selectedTab === "identity-providers" && (
+      {!isOidcBranding && currentPath === "oidc" && <CreateOIDC />}
+      {currentPath === "client-credentials" && <CreateClientCredential />}
+      {currentPath === "identity-providers" && (
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Identity Provider
           </span>
         </Button>
       )}
-      {selectedTab === "captcha" && (
+      {currentPath === "captcha" && (
         <ConfigureCaptchaModal>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={addConfigurationHandler}>
-              <CirclePlus className="h-5 w-5" />
+            <Button size="sm" onClick={handleAddCaptchaConfig}>
+              <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                 Add Configuration
               </span>
@@ -92,11 +93,11 @@ export default function SecretManagementPage() {
           </DialogTrigger>
         </ConfigureCaptchaModal>
       )}
-      {selectedTab === "magic-url" && (
+      {currentPath === "magic-url" && (
         <ConfigureMagicUrlModal>
           <DialogTrigger asChild>
             <Button size="sm">
-              <CirclePlus className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                 Add Configuration
               </span>
@@ -104,9 +105,12 @@ export default function SecretManagementPage() {
           </DialogTrigger>
         </ConfigureMagicUrlModal>
       )}
-      {selectedTab === "managed-services" && (
+      {currentPath === "managed-services" && (
         <>
-          <Button variant="outline" size="sm" onClick={() => setIsManagedServicesGuideOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsManagedServicesGuideOpen(true)}>
             <Notebook className="aspect-square w-4" />
             <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
               Setup Guide
@@ -115,83 +119,133 @@ export default function SecretManagementPage() {
           <AddService />
         </>
       )}
-      {selectedTab === "email" && (
+      {currentPath === "email" && (
         <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Configuration
           </span>
         </Button>
       )}
-      {selectedTab === "notification" && (
+      {currentPath === "notification" && (
         <Button size="sm" onClick={() => setIsNotificationConfigOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Configuration
           </span>
         </Button>
       )}
-      {selectedTab === "my-secret" && (
-        <AddSecretModal />
-      )}
-    </> 
+      {currentPath === "my-secret" && <AddSecretModal />}
+    </>
   );
+}
+
+export default function SecretManagementLayout() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const currentPath = pathname.split("/").pop() ?? "my-secret";
+  const isOidcBranding = /\/oidc\/[^/]+\/branding$/.test(pathname);
+
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
+
+  // Shared via URL so child routes can read/close the same modal
+  const [, setIsAddIdpOpen] = useQueryState(
+    "addIdp",
+    parseAsBoolean.withDefault(false),
+  );
+  const [, setIsEmailConfigOpen] = useQueryState(
+    "emailConfig",
+    parseAsBoolean.withDefault(false),
+  );
+  const [, setIsNotificationConfigOpen] = useQueryState(
+    "notificationConfig",
+    parseAsBoolean.withDefault(false),
+  );
+  const [, setIsManagedServicesGuideOpen] = useQueryState(
+    "guideOpen",
+    parseAsBoolean.withDefault(false),
+  );
+
+  const currentItem = isOidcBranding
+    ? {
+        label: "Template",
+        desc: "Customize the template appearance",
+      }
+    : SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items).find(
+        (item) => item.value === currentPath,
+      );
+
+  const areAllProvidersConfigured = useMemo(() => {
+    if (!captchaData?.configurations) return false;
+    const allProviderKeys = Object.keys(
+      CAPTCHA_PROVIDERS,
+    ) as CAPTCHA_PROVIDERS_KEY[];
+    const configuredProviders = new Set(
+      captchaData.configurations.map(
+        (config: { provider: string }) => config.provider,
+      ),
+    );
+    return allProviderKeys.every((key) => configuredProviders.has(key));
+  }, [captchaData]);
+
+  const handleAddCaptchaConfig = (e: MouseEvent) => {
+    if (areAllProvidersConfigured) {
+      toast({
+        variant: "info",
+        title: "Info",
+        description: "No additional captcha configurations can be added.",
+      });
+      e.preventDefault();
+    }
+  };
+
+  const headerActions = (
+    <SecretManagementHeaderActions
+      isOidcBranding={isOidcBranding}
+      currentPath={currentPath}
+      handleAddCaptchaConfig={handleAddCaptchaConfig}
+      setIsAddIdpOpen={setIsAddIdpOpen}
+      setIsEmailConfigOpen={setIsEmailConfigOpen}
+      setIsNotificationConfigOpen={setIsNotificationConfigOpen}
+      setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
+    />
+  );
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
-          {currentItem && (
-            <div>
-              <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
-                {currentItem.label}
-              </h1>
-              <p className="text-xs text-muted-foreground">{currentItem.desc}</p>
-            </div>
-          )}
+    <OidcBrandingHeaderProvider>
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="flex shrink-0 flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            {isOidcBranding && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label="Back to OIDC"
+                onClick={() => navigate("/app/secret-management/oidc")}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
+            {currentItem && (
+              <div className="space-y-1">
+                <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
+                  {currentItem.label}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {currentItem.desc}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">{headerActions}</div>
         </div>
-        <div className="flex items-center gap-2">{headerActions}</div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <Outlet />
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-6">
-        {!HIDDEN_BANNER_TABS.includes(selectedTab ?? "") && (
-          <Banner
-            variant="warning"
-            title="Secret values are hidden."
-          >
-            Once entered, they can't be displayed again — you can only view and manage configurations.
-          </Banner>
-        )}
-        {selectedTab === GRANT_TYPES.authorizationCode && <OIDC />}
-        {selectedTab === "identity-providers" && (
-          <IdentityProviders addOpen={isAddIdpOpen} onAddOpenChange={setIsAddIdpOpen} />
-        )}
-        {selectedTab === "client-credentials" && <ClientCredentials />}
-        {selectedTab === "managed-services" && (
-          <ManagedServices
-            guideOpen={isManagedServicesGuideOpen}
-            onGuideOpenChange={setIsManagedServicesGuideOpen}
-          />
-        )}
-        {selectedTab === "my-secret" && <SecretsList />}
-        {selectedTab === GRANT_TYPES.social && <SSO />}
-        {selectedTab === "external-idp" && <Certificates />}
-        {selectedTab === "captcha" && <ConfigureCaptcha />}
-        {selectedTab === "mfa" && <ConfigureMFA />}
-        {selectedTab === "magic-url" && <MagicUrls />}
-        {selectedTab === "storage" && <StorageContents />}
-        {selectedTab === "email" && (
-          <EmailConfiguration
-            addConfigOpen={isEmailConfigOpen}
-            onAddConfigOpenChange={setIsEmailConfigOpen}
-          />
-        )}
-        {selectedTab === "notification" && (
-          <NotificationConfigurationList
-            addConfigOpen={isNotificationConfigOpen}
-            onAddConfigOpenChange={setIsNotificationConfigOpen}
-          />
-        )}
-        {selectedTab === "ai-models" && <AIModels />}
-      </div>
-    </div>
+    </OidcBrandingHeaderProvider>
   );
 }

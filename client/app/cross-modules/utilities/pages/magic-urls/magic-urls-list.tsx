@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { formatDate, parseDateString } from "@/lib/utils";
 import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
 import { Button } from "@/components/ui-kits/button/button";
-import { EllipsisVertical, Pencil, Trash } from "lucide-react";
+import { EllipsisVertical, Link2, Pencil, Trash } from "lucide-react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
 import {
@@ -26,6 +26,7 @@ import { useDeleteMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url-c
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
@@ -147,24 +148,24 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
 
   return (
     <>
-      <ScrollArea className="w-full">
-        <Table className="text-sm">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="px-4 py-2 hover:bg-transparent">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="font-bold text-medium-emphasis">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+      {table.getRowModel().rows?.length ? (
+        <ScrollArea className="w-full">
+          <Table className="text-sm">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="px-4 py-2 hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className="font-bold text-medium-emphasis">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
@@ -177,21 +178,18 @@ export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps)
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={table.getAllColumns().length}
-                  className="h-[240px] align-middle text-center text-muted-foreground"
-                >
-                  No configurations found. Use Add Configuration to create one.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+              ))}
+            </TableBody>
+          </Table>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      ) : (
+        <EmptyState
+          icon={Link2}
+          title="No configurations found"
+          description="Use Add Configuration to create one."
+        />
+      )}
       {selectedConfig && (
         <ConfigureMagicUrlModal
           configuration={selectedConfig}

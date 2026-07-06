@@ -9,10 +9,10 @@ import {
 } from "../test-utils/__mocks__";
 import type { IAPIResponse } from "@/models/api-response";
 import type { TraceTree } from "../models/trace.model";
-import { lmtService } from "../services/lmt.service";
+import { lmtService } from "../lmt.service";
 import { useGetTraces, useGetTraceById } from "./use-trace";
 
-vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
+vi.mock("@blocks-lmt/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("use-trace hooks", () => {
@@ -32,23 +32,36 @@ describe("use-trace hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockResponse);
-      expect(lmtService.trace.getTraces).toHaveBeenCalledWith(mockGetTracesPayload);
+      expect(lmtService.trace.getTraces).toHaveBeenCalledWith(
+        mockGetTracesPayload,
+      );
     });
   });
 
   // ─── useGetTraceById ──────────────────────────────────────────────────────
   describe("useGetTraceById", () => {
     it("should fetch a trace by ID successfully", async () => {
-      const mockResponse = { data: {} as TraceTree, errors: [], totalCount: 0 } as IAPIResponse<TraceTree>;
-      vi.mocked(lmtService.trace.getTraceByTraceId).mockResolvedValue(mockResponse);
+      const mockResponse = {
+        data: {} as TraceTree,
+        errors: [],
+        totalCount: 0,
+      } as IAPIResponse<TraceTree>;
+      vi.mocked(lmtService.trace.getTraceByTraceId).mockResolvedValue(
+        mockResponse,
+      );
 
-      const { result } = renderHook(() => useGetTraceById(mockGetTraceByIdPayload), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => useGetTraceById(mockGetTraceByIdPayload),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockResponse);
-      expect(lmtService.trace.getTraceByTraceId).toHaveBeenCalledWith(mockGetTraceByIdPayload);
+      expect(lmtService.trace.getTraceByTraceId).toHaveBeenCalledWith(
+        mockGetTraceByIdPayload,
+      );
     });
   });
 });
