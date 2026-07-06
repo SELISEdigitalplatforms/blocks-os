@@ -48,7 +48,6 @@ export const CreateClientCredential = () => {
   const { data, isLoading } = useGetRoles({
     page: 0,
     pageSize: 0,
-    projectKey: tenantId,
     sort: { property: "Name", isDescending: false },
     filter: {
       search: filter,
