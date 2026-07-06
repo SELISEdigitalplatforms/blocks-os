@@ -6,6 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
 import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
+import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import {
@@ -17,8 +18,9 @@ import {
   OidcBrandingHeaderProvider,
   useOidcBrandingHeaderOptional,
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
+import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { Plus, ArrowLeft, Loader2, Notebook } from "lucide-react";
+import { Pencil, Plus, ArrowLeft, Loader2, Notebook, Waypoints } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -31,6 +33,9 @@ function SecretManagementHeaderActions({
   setIsEmailConfigOpen,
   setIsNotificationConfigOpen,
   setIsManagedServicesGuideOpen,
+  setIsJwtClaimOpen,
+  setIsEditExternalIdpOpen,
+  externalIdpConfigured,
 }: {
   isOidcBranding: boolean;
   currentPath: string;
@@ -39,6 +44,9 @@ function SecretManagementHeaderActions({
   setIsEmailConfigOpen: (value: boolean) => void;
   setIsNotificationConfigOpen: (value: boolean) => void;
   setIsManagedServicesGuideOpen: (value: boolean) => void;
+  setIsJwtClaimOpen: (value: boolean) => void;
+  setIsEditExternalIdpOpen: (value: boolean) => void;
+  externalIdpConfigured: boolean;
 }) {
   const brandingHeader = useOidcBrandingHeaderOptional();
 
@@ -136,6 +144,23 @@ function SecretManagementHeaderActions({
         </Button>
       )}
       {currentPath === "my-secret" && <AddSecretModal />}
+      {currentPath === "external-idp" && (
+        <>
+          {externalIdpConfigured ? (
+            <>
+              <Button size="sm" variant="outline" onClick={() => setIsJwtClaimOpen(true)}>
+                <Waypoints className="h-5 w-5" />
+                <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+                  Map JWT Claim
+                </span>
+              </Button>
+              <PrimaryButton Icon={Pencil} label="Edit" onClick={() => setIsEditExternalIdpOpen(true)} />
+            </>
+          ) : (
+            <PrimaryButton Icon={Plus} label="Add provider" onClick={() => setIsEditExternalIdpOpen(true)} />
+          )}
+        </>
+      )}
     </>
   );
 }
@@ -148,6 +173,7 @@ export default function SecretManagementLayout() {
 
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
+  const { data: externalIdpData } = useGetSavedPublicCertificates(tenantId);
 
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState(
@@ -164,6 +190,14 @@ export default function SecretManagementLayout() {
   );
   const [, setIsManagedServicesGuideOpen] = useQueryState(
     "guideOpen",
+    parseAsBoolean.withDefault(false),
+  );
+  const [, setIsJwtClaimOpen] = useQueryState(
+    "jwtClaim",
+    parseAsBoolean.withDefault(false),
+  );
+  const [, setIsEditExternalIdpOpen] = useQueryState(
+    "editExternalIdp",
     parseAsBoolean.withDefault(false),
   );
 
@@ -209,6 +243,9 @@ export default function SecretManagementLayout() {
       setIsEmailConfigOpen={setIsEmailConfigOpen}
       setIsNotificationConfigOpen={setIsNotificationConfigOpen}
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
+      setIsJwtClaimOpen={setIsJwtClaimOpen}
+      setIsEditExternalIdpOpen={setIsEditExternalIdpOpen}
+      externalIdpConfigured={!!externalIdpData?.isConfigured}
     />
   );
 
