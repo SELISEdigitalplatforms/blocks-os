@@ -25,7 +25,7 @@ import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useForm } from "react-hook-form";
-import { CirclePlus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { ISaveClientCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
@@ -100,7 +100,7 @@ export const CreateClientCredential = () => {
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Client Credential
           </span>
