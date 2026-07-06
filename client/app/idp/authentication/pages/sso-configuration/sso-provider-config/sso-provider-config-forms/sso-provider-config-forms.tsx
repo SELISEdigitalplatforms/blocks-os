@@ -6,7 +6,10 @@ import { SSO_PROVIDERS } from "@blocks-idp/authentication/constants/sso-provider
 import { SSOProviderConfigMicrosoftForm } from "./sso-provider-config-microsoft-form";
 import { SSOProviderConfigXForm } from "./sso-provider-config-x-form";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useGetSsoCredentialById, useSaveSsoCredential } from "@blocks-idp/authentication/hooks/use-sso";
+import {
+  useGetSsoCredentialById,
+  useSaveSsoCredential,
+} from "@blocks-idp/authentication/hooks/use-sso";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { ISsoProviderConfiguration } from "@blocks-idp/authentication/models/sso.model";
@@ -20,7 +23,10 @@ export type SsoConfigForms = {
   configuration: ISsoProviderConfiguration | null;
   save: (data: unknown) => void;
 };
-export const SsoProviderConfigForms = ({ provider, id }: SsoConfigFormsProps) => {
+export const SsoProviderConfigForms = ({
+  provider,
+  id,
+}: SsoConfigFormsProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const navigate = useNavigate();
   const { data } = useGetSsoCredentialById({
@@ -35,17 +41,24 @@ export const SsoProviderConfigForms = ({ provider, id }: SsoConfigFormsProps) =>
         audience: data.audience,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
-        initialPermissions: data.userPermissions?.map((item) => item.resource) || [],
+        initialPermissions:
+          data.userPermissions?.map((item) => item.resource) || [],
         initialRoles: data.userRoles.map((item) => item.slug) || [],
         provider: data.provider,
         redirectUrl: data.redirectUrl,
         projectKey: tenantId,
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      if (!id) navigate(`/services/authentication/sso-configuration?provider=${provider}&id=${res.itemId}`);
-      showSuccessToast({ description: `${provider} is configured successfully` });
+      if (!id)
+        navigate(
+          `/app/idp/sso-configuration?provider=${provider}&id=${res.itemId}`,
+        );
+      showSuccessToast({
+        description: `${provider} is configured successfully`,
+      });
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };

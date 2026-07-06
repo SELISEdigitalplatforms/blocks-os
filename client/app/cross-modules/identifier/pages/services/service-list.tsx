@@ -1,11 +1,13 @@
 import { ServiceCard } from "@blocks-identifier/components/service-card/service-card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { Accordion, AccordionItem } from "@/components/ui-kits/accordion/accordion";
+import { Layers } from "lucide-react";
 const ServiceListSkeleton = () => (
   <div className="grid gap-4">
     {Array.from({ length: 3 }).map((_, index) => (
@@ -20,14 +22,11 @@ const ServiceListSkeleton = () => (
   </div>
 );
 const EmptyServiceList = () => (
-  <Card className="p-8 text-center">
-    <CardContent>
-      <div className="text-muted-foreground">
-        <p className="mb-2 text-lg font-medium">No services found</p>
-        <p className="text-sm">Register your first service to get started</p>
-      </div>
-    </CardContent>
-  </Card>
+  <EmptyState
+    icon={Layers}
+    title="No services yet"
+    description="Register your first service to get started."
+  />
 );
 export const ServiceList = () => {
   const [queryParams, setQueryParams] = useQueryStates({

@@ -1,4 +1,4 @@
-import { IProject } from "@blocks-identifier/models/project.model";
+import { IProject } from "@/models/project.model";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -45,11 +45,9 @@ export const useProjectStore = create<IProjectStore>()(
         }));
       },
       setTennantGroup(tenantGroupId) {
-        console.log("Setting tenant group to", tenantGroupId);
         set((state) => ({ ...state, selectedTenantGroup: tenantGroupId }));
       },
       resetTennantGroup() {
-        console.log("Resetting tenant group");
         set((state) => ({ ...state, selectedTenantGroup: null }));
       },
     }),

@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
-import { CirclePlus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 type AddSSOPermissionProps = {
   permissions: IPermission[];
@@ -43,10 +43,13 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
     roles: [],
     search: "",
   });
-  const { data, isLoading } = useGetPermissions({
-    ...filter,
-    projectKey: tenantId,
-  });
+  const { data, isLoading } = useGetPermissions(
+    {
+      ...filter,
+      projectKey: tenantId,
+    },
+    { enabled: open && Boolean(tenantId) },
+  );
   const onClickHandler = async () => {
     onAdd(selectedPermission);
     resetFilter();
@@ -92,17 +95,17 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
         <Button
           size="sm"
           variant="default"
-          className="h-10 bg-primary text-sm"
+          className="h-7 bg-primary text-xs px-2.5"
           onClick={(e) => {
             e.stopPropagation();
           }}
           disabled={permissions.length >= 5}
         >
-          <CirclePlus className="h-5 w-5 md:mr-2.5" />
+          <Plus className="h-3.5 w-3.5 md:mr-1.5" />
           <span className="sr-only sm:not-sr-only">Assign Permissions</span>
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-2xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
           <DialogTitle className="text-left">Assign Permissions</DialogTitle>
           <DialogDescription></DialogDescription>
@@ -120,8 +123,8 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
         >
           *You can select up to 5 permissions. <span>{`(${selectedPermission.length}/5)`}</span>
         </h1>
-        <Card>
-          <CardContent>
+        <Card className="min-h-0 flex-1 overflow-hidden">
+          <CardContent className="max-h-[min(50vh,360px)] overflow-x-auto overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -172,7 +175,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
             />
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <DialogClose asChild>
             <Button variant="outline" size="default">
               Cancel

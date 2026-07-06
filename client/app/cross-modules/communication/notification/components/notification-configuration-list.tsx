@@ -12,10 +12,14 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { EllipsisVertical, Pencil, Trash } from "lucide-react";
+import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
 import NewNotificationConfiguration from "../modals/new-notification-configuration";
-import { channelsToNotify, notificationTypes } from "../constants/notification.constant";
+import {
+  channelsToNotify,
+  notificationTypes,
+} from "../constants/notification.constant";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
@@ -33,6 +37,8 @@ import {
   NotificationConfigsFilterToolBar,
   useNotificationConfigsFilterQueryParams,
 } from "./notification-configs-filter-toolbar";
+import { useQueryState, parseAsBoolean } from "nuqs";
+import { EmailConfiguration } from "../../mail";
 
 const columns = [
   { key: "name", label: "Name" },
@@ -47,12 +53,12 @@ interface NotificationConfigurationListProps {
   onAddConfigOpenChange?: (open: boolean) => void;
 }
 
-const NotificationConfigurationList: React.FC<NotificationConfigurationListProps> = ({
-  addConfigOpen,
-  onAddConfigOpenChange,
-}) => {
+const NotificationConfigurationList: React.FC<
+  NotificationConfigurationListProps
+> = ({ addConfigOpen, onAddConfigOpenChange }) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
+  const { queryParams, setQueryParams } =
+    useNotificationConfigsFilterQueryParams();
   const { data, isLoading, isFetching } = useGetNotificationConfigs({
     projectKey: tenantId,
     page: queryParams.notificationPage,
@@ -63,9 +69,8 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
 
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedConfigData, setSelectedConfigData] = useState<INotificationConfigRow | null>(
-    null,
-  );
+  const [selectedConfigData, setSelectedConfigData] =
+    useState<INotificationConfigRow | null>(null);
   const internalOpen = addConfigOpen ?? false;
   const setOpen = onAddConfigOpenChange ?? (() => {});
 
@@ -126,19 +131,18 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
             pageSizeOptions={[queryParams.notificationPageSize]}
             onChange={onPageChangeHandler}
           />
-        }
-      >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, idx) => (
+        }>
+        {loading ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((col) => (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, idx) => (
                 <TableRow key={idx}>
                   {columns.map((col) => (
                     <TableCell key={col.key}>
@@ -146,18 +150,39 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
-            ) : data && data.configurations?.length > 0 ? (
-              data.configurations.map((config) => (
+              ))}
+            </TableBody>
+          </Table>
+        ) : data && data.configurations?.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((col) => (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.configurations.map((config) => (
                 <TableRow key={config.itemId}>
                   <TableCell>{config.name}</TableCell>
                   <TableCell>
-                    {channelsToNotify.find((x) => x.value === config.channelToNotify)?.label}
+                    {
+                      channelsToNotify.find(
+                        (x) => x.value === config.channelToNotify,
+                      )?.label
+                    }
                   </TableCell>
                   <TableCell>
-                    {notificationTypes.find((x) => x.value === config.notificationType)?.label}
+                    {
+                      notificationTypes.find(
+                        (x) => x.value === config.notificationType,
+                      )?.label
+                    }
                   </TableCell>
-                  <TableCell>{config.enablePersistence ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    {config.enablePersistence ? "Yes" : "No"}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -171,8 +196,7 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
                           onClick={(e) => {
                             e.stopPropagation();
                             onEditNotificationConfig(config);
-                          }}
-                        >
+                          }}>
                           <Pencil className="mr-2 h-4 w-4" />
                           <span>Edit</span>
                         </DropdownMenuItem>
@@ -181,8 +205,7 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteNotificationConfig(config);
-                          }}
-                        >
+                          }}>
                           <Trash className="mr-2 h-4 w-4" />
                           <span>Delete</span>
                         </DropdownMenuItem>
@@ -190,19 +213,16 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-[240px] align-middle text-center text-muted-foreground"
-                >
-                  No notification configurations found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <EmptyState
+            icon={Bell}
+            title="No notification configurations found"
+            description="Use Add Configuration to create one."
+          />
+        )}
       </ConfigsTableShell>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         {!loading && selectedConfigData && (
@@ -233,3 +253,16 @@ const NotificationConfigurationList: React.FC<NotificationConfigurationListProps
 };
 
 export default NotificationConfigurationList;
+
+export function NotificationConfigurationListPage() {
+  const [addOpen, setAddOpen] = useQueryState(
+    "notificationConfig",
+    parseAsBoolean.withDefault(false),
+  );
+  return (
+    <NotificationConfigurationList
+      addConfigOpen={addOpen}
+      onAddConfigOpenChange={setAddOpen}
+    />
+  );
+}
