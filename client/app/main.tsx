@@ -16,6 +16,7 @@ createRoot(document.getElementById("root")!).render(
         <TooltipProvider>
           <BlocksAppLayout
             config={{
+              name:"blocks-os",
               userBaseUrlKey: "BLOCKS_IAM_BASE_URL",
               projectBaseUrlKey: "BLOCKS_OS_BASE_URL",
               appLogoUrl: {
