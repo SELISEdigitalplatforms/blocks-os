@@ -1,6 +1,11 @@
-import { Button } from "@/components/ui-kits/button/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox"
+import { Button } from "@/components/ui-kits/button/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Form,
   FormControl,
@@ -8,53 +13,59 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui-kits/form/form"
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
-import { isErrorWithErrors } from "@/lib/error"
-import { GRANT_TYPES_OPTIONS } from "@blocks-idp/authentication/constants/authentication.constant"
+} from "@/components/ui-kits/form/form";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
+import { isErrorWithErrors } from "@/lib/error";
+import { GRANT_TYPES_OPTIONS } from "@blocks-idp/authentication/constants/authentication.constant";
 import {
   canonicalizeGrantType,
   isGrantTypeSelected,
-} from "@blocks-idp/authentication/utils/grant-types.util"
-import { RequiredFieldLabel } from "@blocks-idp/settings/components/required-field-label"
-import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config"
-import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model"
+} from "@blocks-idp/authentication/utils/grant-types.util";
+import { RequiredFieldLabel } from "@blocks-idp/settings/components/required-field-label";
+import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config";
+import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model";
 import {
   buildSavePayload,
   grantTypesFormSchema,
   type GrantTypesFormValues,
-} from "@blocks-idp/settings/utils/auth-config-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+} from "@blocks-idp/settings/utils/auth-config-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
-type CheckboxCheckedState = boolean | "indeterminate"
+type CheckboxCheckedState = boolean | "indeterminate";
 
 type SettingsGrantTypesCardProps = {
-  config: ISettingsAuthConfig
-}
+  config: ISettingsAuthConfig;
+};
 
-export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) => {
-  const { mutateAsync, isPending } = useSaveSettingsAuthConfig()
+export const SettingsGrantTypesCard = ({
+  config,
+}: SettingsGrantTypesCardProps) => {
+  const { mutateAsync, isPending } = useSaveSettingsAuthConfig();
   const form = useForm<GrantTypesFormValues>({
     defaultValues: { allowedGrantTypes: config.allowedGrantTypes },
     values: { allowedGrantTypes: config.allowedGrantTypes },
     resolver: zodResolver(grantTypesFormSchema),
-  })
+  });
 
   const handleSubmit = async (values: GrantTypesFormValues) => {
     try {
-      const payload = buildSavePayload(config, values)
-      const res = await mutateAsync(payload)
-      if (!res.isSuccess) return showErrorToast({ errors: res.errors })
-      showSuccessToast({ description: "Grant types updated successfully" })
-      form.reset(values)
+      const payload = buildSavePayload(config, values);
+      const res = await mutateAsync(payload);
+      if (!res.isSuccess) return showErrorToast({ errors: res.errors });
+      showSuccessToast({ description: "Grant types updated successfully" });
+      form.reset(values);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors })
-      showErrorToast({ errors: "Something went wrong" })
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
+      showErrorToast({ errors: "Something went wrong" });
     }
-  }
+  };
 
-  const { isValid, isDirty } = form.formState
+  const { isValid, isDirty } = form.formState;
 
   return (
     <Card>
@@ -65,7 +76,9 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="grid grid-cols-1 gap-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="grid grid-cols-1 gap-4">
             {GRANT_TYPES_OPTIONS.map((item) => (
               <FormField
                 key={item.id}
@@ -77,16 +90,19 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
                       <Checkbox
                         checked={isGrantTypeSelected(field.value, item.value)}
                         onCheckedChange={(checked: CheckboxCheckedState) => {
-                          const current = field.value ?? []
-                          const canonicalOption = canonicalizeGrantType(item.value)
+                          const current = field.value ?? [];
+                          const canonicalOption = canonicalizeGrantType(
+                            item.value,
+                          );
                           const withoutOption = current.filter(
-                            (value) => canonicalizeGrantType(value) !== canonicalOption,
-                          )
+                            (value) =>
+                              canonicalizeGrantType(value) !== canonicalOption,
+                          );
                           if (checked === true) {
-                            field.onChange([...withoutOption, canonicalOption])
-                            return
+                            field.onChange([...withoutOption, canonicalOption]);
+                            return;
                           }
-                          field.onChange(withoutOption)
+                          field.onChange(withoutOption);
                         }}
                       />
                     </FormControl>
@@ -97,7 +113,9 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
             ))}
             <FormMessage />
             <div>
-              <Button type="submit" disabled={isPending || !isValid || !isDirty}>
+              <Button
+                type="submit"
+                disabled={isPending || !isValid || !isDirty}>
                 Save
               </Button>
             </div>
@@ -105,5 +123,5 @@ export const SettingsGrantTypesCard = ({ config }: SettingsGrantTypesCardProps) 
         </Form>
       </CardContent>
     </Card>
-  )
-}
+  );
+};

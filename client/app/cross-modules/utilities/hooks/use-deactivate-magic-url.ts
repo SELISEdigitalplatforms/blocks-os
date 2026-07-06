@@ -1,5 +1,5 @@
 import { useRemoveMagicUrl } from "./use-magic-url";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@seliseblocks/blocks-kit/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const useDeactivateMagicUrl = () => {

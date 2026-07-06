@@ -9,7 +9,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
 import { IRole } from "@blocks-idp/iam/models/role";
@@ -20,7 +23,11 @@ type DeleteUserRoleProps = {
   userId: string;
   projectKey: string;
 };
-export const DeleteUserRole = ({ role, userId, projectKey }: DeleteUserRoleProps) => {
+export const DeleteUserRole = ({
+  role,
+  userId,
+  projectKey,
+}: DeleteUserRoleProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { deleteRoles, isPending } = useUserRoles({ id: userId, projectKey });
   const onClickHandler = async () => {
@@ -30,7 +37,8 @@ export const DeleteUserRole = ({ role, userId, projectKey }: DeleteUserRoleProps
       showSuccessToast({ description: "Role is excluded successfully" });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -42,11 +50,17 @@ export const DeleteUserRole = ({ role, userId, projectKey }: DeleteUserRoleProps
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Exclude Role</DialogTitle>
-          <DialogDescription>Are you sure you want to exclude role?</DialogDescription>
+          <DialogDescription>
+            Are you sure you want to exclude role?
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
           <DialogClose asChild>
-            <Button className="min-w-[80px]" variant="outline" size="default" disabled={isPending}>
+            <Button
+              className="min-w-[80px]"
+              variant="outline"
+              size="default"
+              disabled={isPending}>
               Cancel
             </Button>
           </DialogClose>
@@ -54,8 +68,7 @@ export const DeleteUserRole = ({ role, userId, projectKey }: DeleteUserRoleProps
             className="min-w-[80px]"
             size="default"
             disabled={isPending}
-            onClick={onClickHandler}
-          >
+            onClick={onClickHandler}>
             {isPending ? "Processing" : "Yes"}
           </Button>
         </DialogFooter>

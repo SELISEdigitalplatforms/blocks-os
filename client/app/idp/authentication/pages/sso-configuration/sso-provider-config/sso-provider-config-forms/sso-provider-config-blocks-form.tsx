@@ -1,7 +1,15 @@
 import { Button } from "@/components/ui-kits/button/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import { Form } from "@/components/ui-kits/form/form";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import {
   useSaveGetOIDCCredential,
@@ -20,18 +28,26 @@ const SCOPE_OPTIONS = [
   { label: "Open Id", value: "openid" },
   { label: "Email", value: "email" },
 ];
-const SCOPE_VALUE_SET = new Set(SCOPE_OPTIONS.map((option) => option.value.toLowerCase()));
+const SCOPE_VALUE_SET = new Set(
+  SCOPE_OPTIONS.map((option) => option.value.toLowerCase()),
+);
 const toUniqueList = (values: string[]) => {
   const uniqueValues: string[] = [];
   values.forEach((value) => {
     const normalized = value.trim().toLowerCase();
-    if (normalized && SCOPE_VALUE_SET.has(normalized) && !uniqueValues.includes(normalized)) {
+    if (
+      normalized &&
+      SCOPE_VALUE_SET.has(normalized) &&
+      !uniqueValues.includes(normalized)
+    ) {
       uniqueValues.push(normalized);
     }
   });
   return uniqueValues;
 };
-const DEFAULT_SCOPE_SELECTION = toUniqueList(SCOPE_OPTIONS.map((option) => option.value));
+const DEFAULT_SCOPE_SELECTION = toUniqueList(
+  SCOPE_OPTIONS.map((option) => option.value),
+);
 const parseScopeValue = (scope?: string | string[]) => {
   if (!scope) return DEFAULT_SCOPE_SELECTION;
   if (Array.isArray(scope)) return toUniqueList(scope);
@@ -73,14 +89,18 @@ type FormValue = {
   isAutoRedirect: "true" | "false";
 };
 const schema = ssoProviderConfigBaseSchema.extend({
-  scope: z.array(z.string().trim()).nonempty({ message: "Select at least one scope." }),
+  scope: z
+    .array(z.string().trim())
+    .nonempty({ message: "Select at least one scope." }),
   isAutoRedirect: z.enum(["true", "false"]),
 });
 export const SSOProviderConfigBlocksForm: React.FC<SsoConfigForms> = () => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { data: existingConfiguration } = useSaveGetOIDCCredential(tenantId);
   const { mutateAsync } = useSaveOIDCCredential();
-  const mapResponseToFormValue = (configuration?: IGetOIDCCredentialResponse): FormValue => ({
+  const mapResponseToFormValue = (
+    configuration?: IGetOIDCCredentialResponse,
+  ): FormValue => ({
     provider: "SELISE OIDC",
     audience: configuration?.audience || "",
     clientId: configuration?.itemId || "",
@@ -110,14 +130,16 @@ export const SSOProviderConfigBlocksForm: React.FC<SsoConfigForms> = () => {
     <Form {...form}>
       <form
         className="flex h-full flex-col justify-between gap-6"
-        onSubmit={form.handleSubmit(onFormSubmit)}
-      >
+        onSubmit={form.handleSubmit(onFormSubmit)}>
         <Card>
           <CardHeader>
             <CardTitle>General</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <SSOProviderConfigFormField fields={SSOBlocksFormFields} form={form} />
+            <SSOProviderConfigFormField
+              fields={SSOBlocksFormFields}
+              form={form}
+            />
           </CardContent>
         </Card>
         <div className="flex items-center justify-end gap-2">

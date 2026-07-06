@@ -8,18 +8,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { showErrorToast, showSuccessToast, toast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useState } from "react";
 import { ProfileMFAMethodList } from "./profile-mfa-methods-list";
 import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
 import { profileMfaContext } from "../profile-mfa";
+import { toast } from "@seliseblocks/blocks-kit/hooks";
 export const UserMFAConfirmationEnable = () => {
   const { projectKey, userId, showVerifyModal } = useContext(profileMfaContext);
   const [open, setOpen] = useState<boolean>(false);
   const [type, setType] = useState(0);
-  const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
+  const { isPending, mutateAsync } = useConfigureUserMFA({
+    id: userId,
+    projectKey,
+  });
   const { data: userData, isLoading, isFetching } = useGetMe();
   const onClickHandler = async () => {
     try {
@@ -66,7 +73,9 @@ export const UserMFAConfirmationEnable = () => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Enable MFA?</DialogTitle>
-          <DialogDescription>Select the method of MFA for this user.</DialogDescription>
+          <DialogDescription>
+            Select the method of MFA for this user.
+          </DialogDescription>
         </DialogHeader>
         <ProfileMFAMethodList selected={type} setSelected={setType} />
         <DialogFooter className="mt-4 flex flex-row gap-2">
@@ -78,8 +87,7 @@ export const UserMFAConfirmationEnable = () => {
           <Button
             size="sm"
             onClick={onClickHandler}
-            disabled={isPending || type === 0 || isLoading || isFetching}
-          >
+            disabled={isPending || type === 0 || isLoading || isFetching}>
             {isPending ? "Saving" : "Save"}
           </Button>
         </DialogFooter>

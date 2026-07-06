@@ -10,7 +10,10 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Input } from "@/components/ui-kits/input/input";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { useForm } from "react-hook-form";
 import { inviteUserFormDefaultValue, inviteUserFormSchema } from "./utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,7 +48,9 @@ export const InviteUser = () => {
   const {
     formState: { isDirty },
   } = form;
-  const onSubmitHandler = async (values: z.infer<typeof inviteUserFormSchema>) => {
+  const onSubmitHandler = async (
+    values: z.infer<typeof inviteUserFormSchema>,
+  ) => {
     try {
       const res = await mutateAsync({
         ...values,
@@ -128,7 +133,9 @@ export const InviteUser = () => {
                   Cancel
                 </Button>
               </DialogClose>
-              <Button disabled={isPending || !isDirty}>{isPending ? "Sending..." : "Send"}</Button>
+              <Button disabled={isPending || !isDirty}>
+                {isPending ? "Sending..." : "Send"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

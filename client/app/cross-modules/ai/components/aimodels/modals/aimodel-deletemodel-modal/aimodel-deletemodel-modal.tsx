@@ -1,6 +1,9 @@
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useDeleteModel } from "@blocks-ai/hooks/use-aimodel";
@@ -9,7 +12,11 @@ type DeleteModelProps = {
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) => {
+export const DeleteModel = ({
+  modelId,
+  open,
+  onOpenChange,
+}: DeleteModelProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync } = useDeleteModel();
   const confirmHandler = async () => {
@@ -20,7 +27,11 @@ export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) =
       }
       const res = await mutateAsync({ modelId, project_key });
       if (!res?.is_success) {
-        return showErrorToast({ errors: (res as unknown as { error?: string; detail?: string }).error ?? (res as unknown as { detail?: string }).detail });
+        return showErrorToast({
+          errors:
+            (res as unknown as { error?: string; detail?: string }).error ??
+            (res as unknown as { detail?: string }).detail,
+        });
       }
       showSuccessToast({ description: "Model deleted successfully" });
       onOpenChange(false);
@@ -32,7 +43,11 @@ export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) =
     }
   };
   return (
-    <Dialog open={open} onOpenChange={(value) => { if (!value) onOpenChange(false); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) onOpenChange(false);
+      }}>
       <ConfirmationModal
         data={{
           dialogTitle: "Delete Model",

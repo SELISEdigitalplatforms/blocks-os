@@ -6,43 +6,46 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui-kits/form/form"
-import { Input } from "@/components/ui-kits/input/input"
-import { Switch } from "@/components/ui-kits/switch/switch"
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
-import { isErrorWithErrors } from "@/lib/error"
-import { cn } from "@/lib/utils"
-import { SettingsFieldGrid } from "@blocks-idp/settings/components/settings-field-grid"
-import { SettingsFormSection } from "@blocks-idp/settings/components/settings-form-section"
+} from "@/components/ui-kits/form/form";
+import { Input } from "@/components/ui-kits/input/input";
+import { Switch } from "@/components/ui-kits/switch/switch";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
+import { isErrorWithErrors } from "@/lib/error";
+import { cn } from "@/lib/utils";
+import { SettingsFieldGrid } from "@blocks-idp/settings/components/settings-field-grid";
+import { SettingsFormSection } from "@blocks-idp/settings/components/settings-form-section";
 import {
   SettingsFormTabButtons,
   SettingsTabActions,
-} from "@blocks-idp/settings/components/settings-tab-actions"
-import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
-import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config"
-import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model"
+} from "@blocks-idp/settings/components/settings-tab-actions";
+import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card";
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config";
+import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model";
 import {
   applyOidcIamConfigOverrides,
   buildSavePayload,
   iamConfigFormSchema,
   toIamConfigFormValues,
   type IamConfigFormValues,
-} from "@blocks-idp/settings/utils/auth-config-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useCallback, useEffect, useMemo } from "react"
-import { useForm, useFormState } from "react-hook-form"
+} from "@blocks-idp/settings/utils/auth-config-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useEffect, useMemo } from "react";
+import { useForm, useFormState } from "react-hook-form";
 
 type IamSettingsFormProps = {
-  config: ISettingsAuthConfig
-}
+  config: ISettingsAuthConfig;
+};
 
 type MinutesInputProps = {
-  value: number
-  onChange: (value: number) => void
-  onBlur: () => void
-  name: string
-}
+  value: number;
+  onChange: (value: number) => void;
+  onBlur: () => void;
+  name: string;
+};
 
 const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => (
   <div className="relative w-full">
@@ -59,28 +62,27 @@ const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => (
       className={cn(
         "pointer-events-none absolute inset-y-0 right-3 flex items-center",
         SETTINGS_FORM_LAYOUT.inputSuffix,
-      )}
-    >
+      )}>
       Minutes
     </span>
   </div>
-)
+);
 
 type AccountActionBaseUrlInputProps = {
-  value: string
-  onChange: (value: string) => void
-  onBlur: () => void
-  name: string
-}
+  value: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+  name: string;
+};
 
-const stripUrlProtocol = (value: string) => value.replace(/^https?:\/\//, "")
+const stripUrlProtocol = (value: string) => value.replace(/^https?:\/\//, "");
 
 const toHttpsUrl = (value: string) => {
-  const trimmed = value.trim()
-  if (!trimmed) return ""
-  if (/^https?:\/\//i.test(trimmed)) return trimmed
-  return `https://${trimmed}`
-}
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
 
 const AccountActionBaseUrlInput = ({
   value,
@@ -101,15 +103,15 @@ const AccountActionBaseUrlInput = ({
       placeholder="console.enterprise.cloud"
     />
   </div>
-)
+);
 
 type SwitchRowProps = {
-  label: string
-  description?: string
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-  disabled?: boolean
-}
+  label: string;
+  description?: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+};
 
 const SwitchRow = ({
   label,
@@ -118,9 +120,7 @@ const SwitchRow = ({
   onCheckedChange,
   disabled,
 }: SwitchRowProps) => (
-  <FormItem
-    className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}
-  >
+  <FormItem className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}>
     <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
       <FormLabel className="!mt-0">{label}</FormLabel>
       {description ? (
@@ -136,49 +136,59 @@ const SwitchRow = ({
       />
     </FormControl>
   </FormItem>
-)
+);
 
 export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
-  const { mutateAsync, isPending } = useSaveSettingsAuthConfig()
+  const { mutateAsync, isPending } = useSaveSettingsAuthConfig();
 
-  const formValues = useMemo(() => toIamConfigFormValues(config), [config])
+  const formValues = useMemo(() => toIamConfigFormValues(config), [config]);
 
   const form = useForm<IamConfigFormValues>({
     values: formValues,
     resolver: zodResolver(iamConfigFormSchema),
-  })
+  });
 
-  const { isDirty } = useFormState({ control: form.control })
-  const isOidcEnabled = form.watch("isOidcEnabled")
+  const { isDirty } = useFormState({ control: form.control });
+  const isOidcEnabled = form.watch("isOidcEnabled");
 
   useEffect(() => {
-    if (!isOidcEnabled) return
+    if (!isOidcEnabled) return;
 
-    const currentUseDefault = form.getValues("useAccountActionBaseUrlAsDefault")
+    const currentUseDefault = form.getValues(
+      "useAccountActionBaseUrlAsDefault",
+    );
 
     if (!currentUseDefault) {
-      form.setValue("useAccountActionBaseUrlAsDefault", true, { shouldDirty: true })
+      form.setValue("useAccountActionBaseUrlAsDefault", true, {
+        shouldDirty: true,
+      });
     }
-  }, [form, isOidcEnabled])
+  }, [form, isOidcEnabled]);
 
   const handleReset = useCallback(() => {
-    form.reset(toIamConfigFormValues(config))
-  }, [config, form])
+    form.reset(toIamConfigFormValues(config));
+  }, [config, form]);
 
   const handleSubmit = useCallback(
     async (values: IamConfigFormValues) => {
       try {
-        const payload = buildSavePayload(config, applyOidcIamConfigOverrides(values))
-        const res = await mutateAsync(payload)
-        if (!res.isSuccess) return showErrorToast({ errors: res.errors })
-        showSuccessToast({ description: "IAM configuration updated successfully" })
+        const payload = buildSavePayload(
+          config,
+          applyOidcIamConfigOverrides(values),
+        );
+        const res = await mutateAsync(payload);
+        if (!res.isSuccess) return showErrorToast({ errors: res.errors });
+        showSuccessToast({
+          description: "IAM configuration updated successfully",
+        });
       } catch (error) {
-        if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors })
-        showErrorToast({ errors: "Something went wrong" })
+        if (isErrorWithErrors(error))
+          return showErrorToast({ errors: error.errors });
+        showErrorToast({ errors: "Something went wrong" });
       }
     },
     [config, mutateAsync],
-  )
+  );
 
   const tabActions = useMemo(
     () => (
@@ -190,7 +200,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
       />
     ),
     [form, handleReset, handleSubmit, isDirty, isPending],
-  )
+  );
 
   return (
     <div className={SETTINGS_FORM_LAYOUT.formRoot}>
@@ -198,8 +208,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
         <SettingsTabActions tabId="iam-config">{tabActions}</SettingsTabActions>
         <form
           className={SETTINGS_FORM_LAYOUT.formStack}
-          onSubmit={form.handleSubmit(handleSubmit)}
-        >
+          onSubmit={form.handleSubmit(handleSubmit)}>
           <FormField
             name="isOidcEnabled"
             control={form.control}
@@ -278,7 +287,9 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
               <div className={cn("space-y-3", !isOidcEnabled && "pt-4")}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
-                    <p className="text-sm font-medium leading-none">Account Action Base URL</p>
+                    <p className="text-sm font-medium leading-none">
+                      Account Action Base URL
+                    </p>
                     <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>
                       {isOidcEnabled
                         ? "OIDC account actions use the Blocks IAM base URL."
@@ -293,8 +304,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         <FormItem className="flex shrink-0 items-center gap-2 space-y-0 self-start sm:self-center">
                           <FormLabel
                             htmlFor="use-account-action-base-url-as-default"
-                            className="!mt-0 cursor-pointer text-sm font-normal text-muted-foreground"
-                          >
+                            className="!mt-0 cursor-pointer text-sm font-normal text-muted-foreground">
                             Use as default
                           </FormLabel>
                           <FormControl>
@@ -393,7 +403,13 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                   <FormItem>
                     <FormLabel>Password Strength Regex</FormLabel>
                     <FormControl>
-                      <Input className={cn(SETTINGS_FORM_LAYOUT.inputFull, "font-mono text-sm")} {...field} />
+                      <Input
+                        className={cn(
+                          SETTINGS_FORM_LAYOUT.inputFull,
+                          "font-mono text-sm",
+                        )}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -404,5 +420,5 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
         </form>
       </Form>
     </div>
-  )
-}
+  );
+};

@@ -12,7 +12,10 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetEnvRepositories, useUpdateProject } from "@/hooks/use-project";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { formatFullDate } from "@/lib/utils";
 import { IProject } from "@/models/project.model";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
