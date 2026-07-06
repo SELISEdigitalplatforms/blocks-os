@@ -4,6 +4,7 @@ using DomainService.Projects;
 using DomainService.Shared;
 using DomainService.Shared.Dtos;
 using DomainService.Shared.Entities;
+using SeliseBlocks.ConfigurationDriver;
 using Worker;
 using Worker.Configuration;
 using Worker.Consumers.Identifier;
@@ -19,7 +20,14 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
         .ConfigureAppConfiguration((context, builder) =>
         {
-            // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
+         // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
+         builder.AddMongoDbConfiguration(options =>
+         {
+          options.ConnectionString = secret.DatabaseConnectionString;
+          options.DatabaseName = secret.RootDatabaseName;
+          options.CollectionName = "Secrets";
+          options.SecretKey = "blocks-secret-os";
+         });
         })
         .ConfigureServices((services) =>
         {
