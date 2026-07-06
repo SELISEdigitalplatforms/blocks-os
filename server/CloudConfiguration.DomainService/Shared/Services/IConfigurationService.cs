@@ -1,13 +1,11 @@
 ﻿using Blocks.Genesis;
-using Microsoft.AspNetCore.Mvc;
 using CloudConfiguration.DomainService.Notification.RequestModel;
 using CloudConfiguration.DomainService.Notification.ResponseModel;
 using CloudConfiguration.DomainService.Notification.Entities;
 using CloudConfiguration.DomainService.Storage.RequestModel;
 using CloudConfiguration.DomainService.Storage.Entities;
-using CloudConfiguration.DomainService.Storage.Enums;
-using System.Collections.Immutable;
-using Microsoft.Extensions.Logging;
+using CloudConfiguration.DomainService.Mail.RequestModel;
+using CloudConfiguration.DomainService.Mail.Entities;
 
 namespace CloudConfiguration.DomainService.Shared.Services
 {
@@ -28,6 +26,16 @@ namespace CloudConfiguration.DomainService.Shared.Services
         Task<List<StorageConfiguration>> GetStorageConfigurationsAsync();
         Task<StorageConfiguration> GetStorageConfigurationAsync(string configurationName);
         Task<BaseResponse> DeleteStorageConfigurationAsync(string configurationName);
+
+        #endregion
+
+        #region Mail
+
+        Task<BaseMutationResponse> SaveMailConfigurationAsync(MailConfiguration configuration);
+        Task<MailConfiguration> GetMailConfigurationAsync(GetMailConfigurationRequest request);
+        Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
+        Task<BaseMutationResponse> DeleteMailConfigurationAsync(DeleteMailConfigurationRequest request);
+        Task<BaseMutationResponse> DuplicateMailConfigurationAsync(DuplicateMailConfigurationRequest request);
 
         #endregion
     }
