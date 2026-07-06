@@ -4,8 +4,9 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../../models/captcha";
 import { ConfigureCaptchaModal } from "../../modals/configure-captcha-modal";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
-import { Pencil } from "lucide-react";
+import { Pencil, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { MaskedText } from "@/components/masked-text";
 import { ReactNode } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
@@ -42,9 +43,11 @@ const LoadingSkelton = () => (
 );
 const EmptyCaptchaConfig = () => {
   return (
-    <div className="text-muted- flex h-32 flex-wrap items-center justify-center rounded-sm border bg-background p-4 text-center text-muted-foreground">
-      No configurations found. Please create a new configuration.
-    </div>
+    <EmptyState
+      icon={Settings}
+      title="No configurations found"
+      description="Please create a new configuration."
+    />
   );
 };
 const Item = ({ label, children }: { label: string; children: ReactNode }) => {
