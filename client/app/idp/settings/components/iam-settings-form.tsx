@@ -412,7 +412,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                 render={({ field }) => (
                   <SwitchRow
                     label="Logout on Password Change"
-                    description="Sign users out of all active sessions when their password is changed."
+                    description="Sign users out of all active sessions when their password is changed"
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
