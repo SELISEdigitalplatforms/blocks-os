@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
@@ -214,35 +215,33 @@ export default function SecretManagementLayout() {
   return (
     <OidcBrandingHeaderProvider>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex shrink-0 flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
-            {isOidcBranding && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                aria-label="Back to OIDC"
-                onClick={() => navigate("/app/secret-management/oidc")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
-            {currentItem && (
-              <div>
-                <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
-                  {currentItem.label}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {currentItem.desc}
-                </p>
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+          {currentItem &&
+            (isOidcBranding ? (
+              <div className="mb-4 flex items-start gap-2 sm:mb-6">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="mt-0.5 h-8 w-8 shrink-0"
+                  aria-label="Back to OIDC"
+                  onClick={() => navigate("/app/secret-management/oidc")}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <PageHeader
+                  title={currentItem.label}
+                  description={currentItem.desc}
+                  actions={headerActions}
+                  className="mb-0 min-w-0 flex-1"
+                />
               </div>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-            {headerActions}
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            ) : (
+              <PageHeader
+                title={currentItem.label}
+                description={currentItem.desc}
+                actions={headerActions}
+              />
+            ))}
           <Outlet />
         </div>
       </div>
