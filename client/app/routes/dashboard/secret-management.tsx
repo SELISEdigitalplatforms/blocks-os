@@ -154,10 +154,10 @@ function SecretManagementHeaderActions({
                   Map JWT Claim
                 </span>
               </Button>
-              <PrimaryButton Icon={Pencil} label="Edit" onClick={() => setIsEditExternalIdpOpen(true)} />
+              <PrimaryButton Icon={Pencil} label="Edit" size="sm" onClick={() => setIsEditExternalIdpOpen(true)} />
             </>
           ) : (
-            <PrimaryButton Icon={Plus} label="Add provider" onClick={() => setIsEditExternalIdpOpen(true)} />
+            <PrimaryButton Icon={Plus} label="Add provider" size="sm" onClick={() => setIsEditExternalIdpOpen(true)} />
           )}
         </>
       )}
