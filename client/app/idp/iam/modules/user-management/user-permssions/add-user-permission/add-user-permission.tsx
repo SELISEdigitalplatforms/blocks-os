@@ -27,7 +27,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
 import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
-import { CirclePlus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 type AddUserPermissionProps = {
   userId: string;
@@ -101,7 +101,7 @@ export const AddUserPermission = ({ userId, projectKey }: AddUserPermissionProps
             e.stopPropagation();
           }}
         >
-          <CirclePlus className="h-5 w-5 md:mr-2.5" />
+          <Plus className="h-5 w-5 md:mr-2.5" />
           <span className="sr-only sm:not-sr-only">Assign Permissions</span>
         </Button>
       </DialogTrigger>

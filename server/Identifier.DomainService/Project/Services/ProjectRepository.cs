@@ -209,7 +209,7 @@ namespace DomainService.Projects
             var projectCollection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Project>.Filter.In(p => p.TenantId, documents?.Select(doc => doc?.TenantId)) &
                          Builders<Project>.Filter.Where(p => p.IsDisabled == false) &
-                         Builders<Project>.Filter.Ne(p => p.CreatedBy, BlocksContext.GetContext().UserId);
+                         Builders<Project>.Filter.Ne(p => p.CreatedBy, BlocksContext.GetContext()?.UserId ?? string.Empty);
 
             if (!string.IsNullOrEmpty(tenantGroupId))
             {
@@ -425,7 +425,7 @@ namespace DomainService.Projects
                 ["RepoUrl"] = resource.Link,
                 ["CreatedDate"] = DateTime.UtcNow,
                 ["LastUpdatedDate"] = DateTime.UtcNow,
-                ["CreatedBy"] = BlocksContext.GetContext().UserId,
+                ["CreatedBy"] = BlocksContext.GetContext()?.UserId ?? string.Empty,
                 ["Branch"] = project.Environment == "prod" ? "main" : project.Environment,
                 ["ProjectId"] = project.TenantId,
                 ["ProjectName"] = project.Name,

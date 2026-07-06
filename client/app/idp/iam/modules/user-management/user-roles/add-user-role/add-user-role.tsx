@@ -17,7 +17,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
-import { CirclePlus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 type AddUserRoleProps = {
   userId: string;
@@ -71,7 +71,7 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
     >
       <DialogTrigger>
         <Button size="sm" variant="default" className="h-10 bg-primary text-sm">
-          <CirclePlus className="h-5 w-5 md:mr-2.5" />
+          <Plus className="h-5 w-5 md:mr-2.5" />
           <span className="sr-only sm:not-sr-only">Assign Role</span>
         </Button>
       </DialogTrigger>

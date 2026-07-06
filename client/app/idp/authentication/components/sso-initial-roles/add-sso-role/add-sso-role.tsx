@@ -16,7 +16,7 @@ import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
-import { CirclePlus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 type AddSSORoleProps = {
   roles: IRole[];
@@ -66,7 +66,7 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
     >
       <DialogTrigger asChild>
         <Button size="sm" variant="default" className="h-7 bg-primary text-xs px-2.5" type="button">
-          <CirclePlus className="h-3.5 w-3.5 md:mr-1.5" />
+          <Plus className="h-3.5 w-3.5 md:mr-1.5" />
           <span className="sr-only sm:not-sr-only">Assign Role</span>
         </Button>
       </DialogTrigger>
