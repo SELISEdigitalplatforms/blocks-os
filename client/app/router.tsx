@@ -58,12 +58,12 @@ import GitHubCallbackPage from "./routes/callback/callback";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ApiSettingsPage from "./routes/dashboard/api-settings";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
-import LmtPage from "./routes/dashboard/lmt";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
 import OidcBrandingPage from "./routes/dashboard/oidc-branding";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
+import LmtLayout from "@/layouts/lmt/lmt-layout";
 
 const redirectPaths: Record<string, string> = {
   "/app/idp/user-detail/*": "/app/idp",
@@ -319,7 +319,7 @@ export const router = createBrowserRouter([
                   },
                   {
                     path: "lmt",
-                    element: <LmtPage />,
+                    element: <LmtLayout />,
                     children: [
                       {
                         index: true,
@@ -335,14 +335,23 @@ export const router = createBrowserRouter([
                         path: "tracing/timeline/:traceId",
                         element: <LmtTraceDetailsRedirect />,
                       },
-                      { path: "logs", element: <LogsRoute /> },
                       {
-                        path: "logs/:serviceName",
-                        element: <LmtServiceLogsRoute />,
-                      },
-                      {
-                        path: "logs/:serviceName/trace/:traceId",
-                        element: <LmtServiceLogTraceRoute />,
+                        path: "logs",
+                        element: <Outlet />,
+                        children: [
+                          {
+                            index: true,
+                            element: <LogsRoute />,
+                          },
+                          {
+                            path: ":serviceName",
+                            element: <LmtServiceLogsRoute />,
+                          },
+                          {
+                            path: ":serviceName/trace/:traceId",
+                            element: <LmtServiceLogTraceRoute />,
+                          },
+                        ],
                       },
                     ],
                   },

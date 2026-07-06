@@ -2,7 +2,6 @@
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
-using DomainService.Shared;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -100,12 +99,7 @@ namespace Api.Controllers
         [HttpPost]
         public async Task<BaseResponse> Disable([FromBody] DisableProjectRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.ProjectKey))
-            {
-                return new AuthConfigResponse { Errors = new Dictionary<string, string> { { "missing_projectKey", "ProjectKey is required" } } };
-            }
-
-            return await _projectManagementService.DisableProjectAsync(request.ProjectKey);
+            return await _projectManagementService.DisableProjectAsync(BlocksContext.GetContext()?.TenantId ?? string.Empty);
         }
 
         [HttpGet]
@@ -143,7 +137,7 @@ namespace Api.Controllers
         [Authorize]
         public async Task<IActionResult> GetTokenValidationParameters([FromQuery] GetTokenValidationParametersRequest request)
         {
-            return await _projectManagementService.GetProjectTokenValidationParametersAsync(request.ProjectKey);
+            return await _projectManagementService.GetProjectTokenValidationParametersAsync(BlocksContext.GetContext()?.TenantId ?? string.Empty);
         }
 
         [HttpPost]
