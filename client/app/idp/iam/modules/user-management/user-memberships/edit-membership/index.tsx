@@ -40,7 +40,6 @@ export const EditMembership = ({
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const { data: userData } = useGetUserById({ id: userId, projectKey });
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
-    projectKey,
     page: 0,
     pageSize: 1000,
     sort: { property: "Name", isDescending: false },

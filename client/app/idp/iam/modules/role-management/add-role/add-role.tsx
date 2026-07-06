@@ -23,14 +23,12 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { z } from "zod";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useAddRole } from "@blocks-idp/iam/hooks/use-roles";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 export const AddRole = () => {
   const [isAddRoleOpenModal, setIsAddRoleOpenModal] = useState(false);
   const { mutateAsync, isPending } = useAddRole();
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const form = useForm({
     defaultValues: addRoleFormDefaultValue,
     resolver: zodResolver(addRoleFormSchema),
@@ -43,7 +41,6 @@ export const AddRole = () => {
       name: data.name,
       description: data.description || "",
       slug: data.slug,
-      projectKey: tenantId,
     };
     try {
       await mutateAsync(newRole);

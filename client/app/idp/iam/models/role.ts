@@ -1,9 +1,20 @@
 export interface IRole {
   itemId: string;
   name: string;
-  description: string;
-  count?: number;
   slug: string;
+  description: string;
+  ancestorRoleSlugs: string[];
+  parentRoleSlug: string | null;
+  canCreateOwn: boolean;
+  count: number;
+  createdFromDefault: boolean;
+  createdDate: string;
+  lastUpdatedDate: string;
+  createdBy: string;
+  language: string | null;
+  lastUpdatedBy: string;
+  organizationId: string;
+  tags: string[];
   projectKey?: string;
 }
 
@@ -18,7 +29,6 @@ export interface GetRolesPayload {
   };
   page?: number;
   pageSize?: number;
-  projectKey: string;
 }
 export interface GetRolesResponse {
   data: IRole[];
@@ -39,7 +49,6 @@ export interface CreateRolePayload {
   name: string;
   description: string;
   slug: string;
-  projectKey: string;
 }
 export interface UpdateRolePayload extends Partial<Omit<CreateRolePayload, "slug">> {
   itemId: string;
@@ -56,7 +65,6 @@ export interface EditRole {
   itemId: string;
   name: string;
   description: string;
-  projectKey: string;
 }
 
 export interface GetRolePermission {

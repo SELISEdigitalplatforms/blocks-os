@@ -30,7 +30,6 @@ export const AddUserRole = ({ userId, projectKey }: AddUserRoleProps) => {
   const { data, isLoading } = useGetRoles({
     page: filter.page,
     pageSize: filter.pageSize,
-    projectKey,
     sort: { property: "Name", isDescending: false },
     filter: {
       search: filter.search,

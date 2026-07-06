@@ -1,5 +1,6 @@
 import type { IPermission } from "@blocks-idp/iam/models/permission"
 import type { IRole } from "@blocks-idp/iam/models/role"
+import { createRoleStub } from "@blocks-idp/iam/utils/role-stub"
 import { z } from "zod"
 import type {
   ISettingsSaveSignupConfigPayload,
@@ -21,13 +22,7 @@ export const resolveSignupRoles = (
   const bySlug = new Map(availableRoles.map((role) => [role.slug, role]))
 
   return roleSlugs.map(
-    (slug) =>
-      bySlug.get(slug) ?? {
-        itemId: slug,
-        name: slug,
-        slug,
-        description: "",
-      },
+    (slug) => bySlug.get(slug) ?? createRoleStub({ slug }),
   )
 }
 

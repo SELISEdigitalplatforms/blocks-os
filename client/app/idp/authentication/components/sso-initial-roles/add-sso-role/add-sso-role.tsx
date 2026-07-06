@@ -31,7 +31,6 @@ export const AddSSORole = ({ onAdd, roles }: AddSSORoleProps) => {
     {
       page: filter.page,
       pageSize: filter.pageSize,
-      projectKey: tenantId,
       sort: { property: "Name", isDescending: false },
       filter: {
         search: filter.search,
