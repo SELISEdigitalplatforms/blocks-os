@@ -1,37 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import {
-  Eye,
-  EyeOff,
   ChevronRight,
-  Pencil,
-  Trash2,
+  LayoutTemplate,
   Shield,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import { Card, CardContent } from "@/components/ui-kits/card/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui-kits/table/table";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
-import { MaskedText } from "@/components/masked-text";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { isErrorWithErrors } from "@/lib/error";
-import { getApiUrl } from "@/lib/get-api-path";
-import {
-  IDeleteOidcClientPayload,
-  IOidcConfig,
-} from "@blocks-idp/authentication/models/auth.oidc.model";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useDeleteAuthOidc } from "@blocks-idp/authentication/hooks/use-auth-oidc";
-import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
-import { format } from "date-fns";
-import { CreateOIDC } from "../create-oidc/create-oidc";
 import {
   Dialog,
   DialogContent,
@@ -40,57 +17,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-
-interface KVRowProps {
-  label: string;
-  value: string;
-  isSecret?: boolean;
-}
-
-const KVRow = ({ label, value, isSecret = false }: KVRowProps) => {
-  const [revealed, setRevealed] = useState(false);
-
-  return (
-    <TableRow className="group bg-muted/20 hover:bg-muted/30">
-      <TableCell className="w-8 pl-4" />
-      <TableCell className="py-2 pl-8 font-mono text-xs text-muted-foreground sm:w-48">
-        {label}
-      </TableCell>
-      <TableCell className="py-2" colSpan={3}>
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1 font-mono text-xs">
-            {value ? (
-              revealed || !isSecret ? (
-                <span className="break-all text-high-emphasis">{value}</span>
-              ) : (
-                <MaskedText text={value} length={Math.min(value.length, 36)} />
-              )
-            ) : (
-              <span className="italic text-muted-foreground">empty</span>
-            )}
-          </div>
-          {value && (
-            <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-              {isSecret && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-high-emphasis"
-                  onClick={() => setRevealed((r) => !r)}
-                >
-                  {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                </Button>
-              )}
-              <CopyToClipboardButton textToCopy={value}>
-                <span />
-              </CopyToClipboardButton>
-            </div>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-};
+import { TableCell, TableRow } from "@/components/ui-kits/table/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
+import { cn } from "@/lib/utils";
+import { useDeleteAuthOidc } from "@blocks-idp/authentication/hooks/use-auth-oidc";
+import {
+  IDeleteOidcClientPayload,
+  IOidcConfig,
+} from "@blocks-idp/authentication/models/auth.oidc.model";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { CreateOIDC } from "../create-oidc/create-oidc";
+import { KVDetailItem } from "../kv-detail-item";
 
 interface OIDCRowProps {
   item: IOidcConfig;
@@ -100,6 +43,7 @@ interface OIDCRowProps {
 const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const navigate = useNavigate();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -120,29 +64,21 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     ? item.allowedResponseTypes
     : ["code"];
 
-  const allowedServices = (item.allowedServiceAccessResources ?? [])
-    .map((id) => DUMMY_LOG_SERVICES.find((s) => s.id === id)?.name ?? id)
-    .join(", ");
-
-  const wellKnownUrl = `${getApiUrl(
-    "idp/v1",
-    ".well-known/openid-configuration",
-  )}?projectKey=${tenantId}`;
-
-  const kvPairs: { key: string; value: string; isSecret?: boolean }[] = [
-    { key: "Client Id", value: item.itemId, isSecret: true },
-    { key: "Client Secret", value: item.clientSecret, isSecret: true },
+  const kvPairs: {
+    key: string;
+    value: string;
+    copyable?: boolean;
+  }[] = [
+    { key: "Client Id", value: item.itemId, copyable: true },
+    { key: "Client Secret", value: item.clientSecret, copyable: true },
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),
+      copyable: true,
     },
     {
       key: "Allowed Response Types",
       value: responseTypes.join(", "),
-    },
-    {
-      key: "Allowed Services",
-      value: allowedServices,
     },
     {
       key: "Scope(s)",
@@ -160,10 +96,6 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       key: "Status",
       value: item.isActive ? "active" : "inactive",
     },
-    // {
-    //   key: "Well Known URL",
-    //   value: wellKnownUrl,
-    // },
   ].filter((pair) => pair.value);
 
   const handleConfirmDelete = async () => {
@@ -177,7 +109,8 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       showSuccessToast({ description: "OIDC credential deleted successfully" });
       setShowDeleteDialog(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -185,9 +118,14 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   return (
     <>
       <TableRow
-        className={`${kvPairs.length > 0 ? "cursor-pointer" : ""} hover:bg-muted/50`}
-        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}
-      >
+        className={cn(
+          "hover:bg-muted/50",
+          kvPairs.length > 0 && "cursor-pointer",
+          expanded && kvPairs.length > 0
+            ? "border-b-0"
+            : "border-b-2 border-border",
+        )}
+        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}>
         <TableCell className="w-8 py-3.5 pl-4">
           {kvPairs.length > 0 ? (
             <ChevronRight
@@ -212,35 +150,71 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             </div>
           </div>
         </TableCell>
-        <TableCell className="py-3.5">
+        <TableCell className="hidden py-3.5 sm:table-cell">
           <Badge
             variant="outline"
-            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
-          >
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
             OIDC
           </Badge>
         </TableCell>
-        <TableCell className="py-3.5 text-sm text-muted-foreground">{createdAt}</TableCell>
-        <TableCell className="py-3.5 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
+        <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
+          {createdAt}
+        </TableCell>
+        <TableCell
+          className="py-3.5 pr-4 text-right"
+          onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                  aria-label="Template"
+                  onClick={() =>
+                    navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
+                  }
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Template</TooltipContent>
+            </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete"
+                  onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
           </div>
         </TableCell>
       </TableRow>
 
-      {expanded &&
-        kvPairs.map(({ key, value, isSecret }) => (
-          <KVRow key={key} label={key} value={value} isSecret={isSecret} />
-        ))}
+      {expanded && (
+        <TableRow className="border-b-2 border-border hover:bg-transparent">
+          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+            <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
+              {kvPairs.map(({ key, value, copyable }) => (
+                <KVDetailItem
+                  key={key}
+                  label={key}
+                  value={value}
+                  copyable={copyable}
+                />
+              ))}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
@@ -248,24 +222,22 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             <DialogTitle>Delete OIDC Client</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{" "}
-              <strong>{item.clientDisplayName || item.itemId}</strong>? This action
-              cannot be undone.
+              <strong>{item.clientDisplayName || item.itemId}</strong>? This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowDeleteDialog(false)}
-            >
+              onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
+              disabled={isDeleting}>
               {isDeleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>

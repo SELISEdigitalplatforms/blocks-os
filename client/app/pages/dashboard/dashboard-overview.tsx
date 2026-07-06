@@ -20,25 +20,20 @@ export const DashboardOverview = () => {
   const cNameValidator = useCallback(async () => {
     try {
       if (
-        !data?.data.applicationDomain ||
-        getDomain(data.data.applicationDomain) === "seliseblocks.com"
+        !data?.data.customDomain ||
+        getDomain(data.data.customDomain) === "seliseblocks.com"
       )
         return;
       await mutateAsync({
         projectKey: projectKey,
-        cookieDomain: new URL(data?.data.customDomain).hostname,
+        cookieDomain: new URL(data?.data?.customDomain).hostname,
       });
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
-        showErrorToast({ errors: (error as any).errors });
+        showErrorToast({ errors: error.errors });
       }
     }
-  }, [
-    data?.data.applicationDomain,
-    data?.data.customDomain,
-    mutateAsync,
-    projectKey,
-  ]);
+  }, [data?.data.customDomain, mutateAsync, projectKey]);
   useEffect(() => {
     cNameValidator();
   }, [cNameValidator]);

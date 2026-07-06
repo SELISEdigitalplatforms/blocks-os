@@ -2,16 +2,16 @@ import { API_BASES } from "@/constants/endpoint.constant";
 
 export const CLOUD_BUILD_ENDPOINTS = {
   // Authentication & Authorization
-  ACCESS_TOKEN: `${API_BASES.RELEASE}/auth/accessToken`,
-  IS_AUTHORIZED: `${API_BASES.RELEASE}/auth/isAuthorized`,
-  REMOVE_AUTHORIZATION: `${API_BASES.RELEASE}/auth/removeAuthorization`,
-  REMOVE_ACCESS_TOKEN: `${API_BASES.RELEASE}/auth/removeAccessToken`,
+  ACCESS_TOKEN: `${API_BASES.LOGIC}/deployment/accessToken`,
+  IS_AUTHORIZED: `${API_BASES.LOGIC}/deployment/isAuthorized`,
+  REMOVE_AUTHORIZATION: `${API_BASES.LOGIC}/deployment/removeAuthorization`,
+  REMOVE_ACCESS_TOKEN: `${API_BASES.LOGIC}/deployment/removeAccessToken`,
 
   // GitHub Repositories
-  GITHUB_REPOS: `${API_BASES.RELEASE}/github/repos`,
-  GITHUB_USER: `${API_BASES.RELEASE}/github/user`,
-  GITHUB_BRANCHES: `${API_BASES.RELEASE}/github/branches`,
-  GITHUB_BRANCH_EXISTS: `${API_BASES.RELEASE}/github/branchExists`,
+  GITHUB_REPOS: `${API_BASES.LOGIC}/deployment/getrepos`,
+  GITHUB_USER: `${API_BASES.LOGIC}/deployment/getuser`,
+  GITHUB_BRANCHES: `${API_BASES.LOGIC}/deployment/getbranches`,
+  GITHUB_BRANCH_EXISTS: `${API_BASES.LOGIC}/deployment/githubbranchExists`,
 
   // Build & Deployment
   BUILD_BUILD: "/api/build/clone",
