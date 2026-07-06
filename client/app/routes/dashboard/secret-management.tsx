@@ -18,7 +18,7 @@ import {
   useOidcBrandingHeaderOptional,
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { CirclePlus, ArrowLeft, Loader2, Notebook } from "lucide-react";
+import { Plus, ArrowLeft, Loader2, Notebook } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -75,7 +75,7 @@ function SecretManagementHeaderActions({
       {currentPath === "client-credentials" && <CreateClientCredential />}
       {currentPath === "identity-providers" && (
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Identity Provider
           </span>
@@ -85,7 +85,7 @@ function SecretManagementHeaderActions({
         <ConfigureCaptchaModal>
           <DialogTrigger asChild>
             <Button size="sm" onClick={handleAddCaptchaConfig}>
-              <CirclePlus className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                 Add Configuration
               </span>
@@ -97,7 +97,7 @@ function SecretManagementHeaderActions({
         <ConfigureMagicUrlModal>
           <DialogTrigger asChild>
             <Button size="sm">
-              <CirclePlus className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                 Add Configuration
               </span>
@@ -121,7 +121,7 @@ function SecretManagementHeaderActions({
       )}
       {currentPath === "email" && (
         <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Configuration
           </span>
@@ -129,7 +129,7 @@ function SecretManagementHeaderActions({
       )}
       {currentPath === "notification" && (
         <Button size="sm" onClick={() => setIsNotificationConfigOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Configuration
           </span>
@@ -230,11 +230,11 @@ export default function SecretManagementLayout() {
               </Button>
             )}
             {currentItem && (
-              <div>
-                <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
+              <div className="space-y-1">
+                <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
                   {currentItem.label}
                 </h1>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {currentItem.desc}
                 </p>
               </div>
