@@ -1,13 +1,11 @@
-﻿using Blocks.Genesis;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Secrets.DomainService.ResponseModel
 {
-    public class GetSecretRequest : IProjectKey
+    public class GetSecretRequest
     {
         public string ItemId { get; set; }
-        public string? ProjectKey { get ; set ; }
     }
 }

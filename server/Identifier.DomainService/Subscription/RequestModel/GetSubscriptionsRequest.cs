@@ -1,9 +1,6 @@
-﻿using Blocks.Genesis;
-
-namespace DomainService.Subscription.RequestModel
+﻿namespace DomainService.Subscription.RequestModel
 {
-    public class GetSubscriptionsRequest : IProjectKey
+    public class GetSubscriptionsRequest
     {
-        public string? ProjectKey { get ; set ; }
     }
 }
