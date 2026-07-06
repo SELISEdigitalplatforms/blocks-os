@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import {
   Table,
   TableBody,
@@ -156,9 +157,11 @@ export const ConfigureMFA = () => {
               {loading ? (
                 <LoadingSkelton />
               ) : mfaConfigData.length === 0 ? (
-                <div className="flex h-32 flex-wrap items-center justify-center rounded-sm border-none bg-background p-4 text-center">
-                  <p className="text-muted-foreground">No configurations found. MFA is not yet configured for this project.</p>
-                </div>
+                <EmptyState
+                  icon={ShieldCheck}
+                  title="No configurations found"
+                  description="MFA is not yet configured for this project."
+                />
               ) : (
                 <Table className="text-sm md:table-fixed">
                   <TableHeader>
