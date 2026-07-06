@@ -16,8 +16,9 @@ import { isErrorWithErrors } from "@/lib/error";
 import { Check, X } from "lucide-react";
 type ToggleCaptchaStatusModalProps = {
   configuration: ICaptchaConfig;
+  children?: React.ReactNode;
 };
-export const ToggleCaptchaStatusModal = ({ configuration }: ToggleCaptchaStatusModalProps) => {
+export const ToggleCaptchaStatusModal = ({ configuration, children }: ToggleCaptchaStatusModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { isPending, mutateAsync } = useToggleCaptchaConfigStatus();
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];
@@ -46,11 +47,13 @@ export const ToggleCaptchaStatusModal = ({ configuration }: ToggleCaptchaStatusM
   const IconComponent = configuration?.isEnable ? X : Check;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button size="sm" variant="outline">
-          <IconComponent className="h-4 w-4" />
-          <span className="ml-2.5">{configuration?.isEnable ? "Disable" : "Enable"}</span>
-        </Button>
+      <DialogTrigger asChild>
+        {children ?? (
+          <Button size="sm" variant="outline">
+            <IconComponent className="h-4 w-4" />
+            <span className="ml-2.5">{configuration?.isEnable ? "Disable" : "Enable"}</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

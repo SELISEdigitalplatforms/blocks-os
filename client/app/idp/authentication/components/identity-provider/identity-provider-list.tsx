@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -370,19 +371,11 @@ export function IdentityProviderList() {
 
   if (providers.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Building2 className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-medium text-high-emphasis">
-            No identity providers yet
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add your first identity provider to get started.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={Building2}
+        title="No identity providers yet"
+        description="Add your first identity provider to get started."
+      />
     );
   }
 
