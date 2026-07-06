@@ -3,7 +3,6 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { Accordion, AccordionItem } from "@/components/ui-kits/accordion/accordion";
@@ -33,9 +32,7 @@ export const ServiceList = () => {
     page: parseAsInteger.withDefault(0),
     pageSize: parseAsInteger.withDefault(10),
   });
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading, isFetching } = useGetAllServices({
-    projectKey: tenantId,
     page: queryParams.page,
     pageSize: queryParams.pageSize,
   });
