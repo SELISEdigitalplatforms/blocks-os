@@ -1,7 +1,9 @@
 ﻿using Blocks.Genesis;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace CloudConfiguration.DomainService.Storage.Entities
 {
+    [BsonIgnoreExtraElements]
     public class StorageConfiguration : BaseEntity
     {
         public string Name { get; set; }

@@ -1,9 +1,6 @@
-﻿using Blocks.Genesis;
-
-namespace DomainService.Projects
+﻿namespace DomainService.Projects
 {
-    public class GetTokenValidationParametersRequest 
+    public class GetTokenValidationParametersRequest
     {
-        public string ProjectKey { get; set; }
     }
 }

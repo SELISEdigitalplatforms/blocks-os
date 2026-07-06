@@ -214,7 +214,8 @@ namespace DomainService.ManagedService.Services
 
         public BlocksManagedService Map(RegisterServiceRequest request)
         {
-            var userId = BlocksContext.GetContext()?.UserId ?? "";
+            var context = BlocksContext.GetContext();
+            var userId = context?.UserId ?? "";
 
             return new BlocksManagedService
             {
@@ -228,7 +229,7 @@ namespace DomainService.ManagedService.Services
                 LastUpdatedBy = userId,
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
-                TenantId = request.ProjectKey ?? "",
+                TenantId = context?.TenantId ?? "",
                 ServiceType = request.ServiceType
             };
         }

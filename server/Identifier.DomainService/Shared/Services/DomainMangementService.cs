@@ -40,8 +40,8 @@ namespace DomainService.Shared
 
         public async Task<BaseResponse> ConfigureDomainAsync(ConfigureDomainRequest request)
         {
-             request.ProjectKey = BlocksContext.GetContext().TenantId;
-            _logger.LogInformation("Processing request {RequestId} for domain {Domain}", request.ProjectKey, request.CookieDomain);
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            _logger.LogInformation("Processing request {RequestId} for domain {Domain}", tenantId, request.CookieDomain);
             var cookieDomain = request.CookieDomain.Replace("https://", "");
 
             var (domain, blocksApiDomain) = ExtractDomainParts(cookieDomain);
@@ -71,7 +71,7 @@ namespace DomainService.Shared
             }
 
             _logger.LogInformation("Successfully configured domain {Domain}", request.CookieDomain);
-            await UpdateDomainValidationStatusAsync(request.ProjectKey, true);
+            await UpdateDomainValidationStatusAsync(tenantId, true);
 
             return new BaseResponse { IsSuccess = true };
         }
