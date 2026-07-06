@@ -178,7 +178,7 @@ export const AuthSettingsForm = ({ config }: AuthSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Remember Me Refresh Token Validity</FormLabel>
+                    <FormLabel>&quot;Remember Me&quot; Refresh Token Validity</FormLabel>
                     <FormControl>
                       <MinutesInput
                         name={field.name}

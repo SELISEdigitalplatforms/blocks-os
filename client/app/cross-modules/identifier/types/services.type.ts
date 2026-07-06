@@ -5,7 +5,6 @@ export interface IRegisterServicePayload {
   serviceName: string;
   description?: string;
   metadata?: string;
-  projectKey: string;
   tags: string[];
 }
 
@@ -28,7 +27,6 @@ export interface IGetAllServicesPayload {
     serviceName: string;
     serviceType: number | string;
   };
-  projectKey: string;
 }
 
 export interface IGetAllServicesResponse {

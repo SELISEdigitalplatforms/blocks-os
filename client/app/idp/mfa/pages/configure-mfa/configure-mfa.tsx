@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import {
   Table,
   TableBody,
@@ -151,43 +152,45 @@ export const ConfigureMFA = () => {
   return (
     <>
       <div>
+        {loading ? (
+          <LoadingSkelton />
+        ) : mfaConfigData.length === 0 ? (
+          <EmptyState
+            icon={ShieldCheck}
+            title="No configurations found"
+            description="MFA is not yet configured for this project."
+          />
+        ) : (
           <Card className="border-none shadow-none">
             <CardContent>
-              {loading ? (
-                <LoadingSkelton />
-              ) : mfaConfigData.length === 0 ? (
-                <div className="flex h-32 flex-wrap items-center justify-center rounded-sm border-none bg-background p-4 text-center">
-                  <p className="text-muted-foreground">No configurations found. MFA is not yet configured for this project.</p>
-                </div>
-              ) : (
-                <Table className="text-sm md:table-fixed">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id}>
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+              <Table className="text-sm md:table-fixed">
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        </div>
+        )}
+      </div>
       <Dialog open={openEnableDisableModal} onOpenChange={setOpenEnableDisableModal}>
         <ConfirmationModal
           onCancel={() => {}}

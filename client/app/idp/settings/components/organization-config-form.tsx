@@ -26,7 +26,6 @@ import {
   type OrganizationConfigFormValues,
 } from "@blocks-idp/settings/utils/organization-config-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Lock } from "lucide-react"
 import { useCallback, useId, useMemo, useState } from "react"
 import { useForm, useFormState } from "react-hook-form"
 
@@ -37,17 +36,17 @@ type OrganizationConfigFormProps = {
 const CREATION_WORKFLOWS = [
   {
     name: "allowOrgCreationFromCloud" as const,
-    label: "Allow Organization Creation from Cloud",
+    label: "Allow Creation from Cloud",
     description: "Automated provisioning via Global Cloud API.",
   },
   {
     name: "allowOrgCreationFromSignup" as const,
-    label: "Allow Organization Creation from Construct Signup",
+    label: "Allow Creation from Construct Signup",
     description: "Self-service creation during construct user signup.",
   },
   {
     name: "allowOrgCreationFromPortal" as const,
-    label: "Allow Organization Creation from Construct Portal",
+    label: "Allow Creation from Construct",
     description: "Manual provisioning via construct admin dashboard.",
   },
 ]
@@ -167,45 +166,42 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
         <form className={SETTINGS_FORM_LAYOUT.formStack} onSubmit={form.handleSubmit(handleSubmit)}>
           <SettingsToggleCard
             label="Multi-Organization Environment"
-            description="Enable this to manage multiple isolated organization units under a single administrative umbrella. This enables hierarchical resource management."
+            description="Manage multiple organizations from one workspace. Keep resources organized with a clear hierarchy."
             checked={isMultiOrgEnabled}
             onCheckedChange={handleMultiOrgToggle}
             disabled={isMultiOrgEnabled}
           />
 
-          <Card>
-            <CardHeader className="mb-4 flex flex-row items-start justify-between gap-3">
-              <CardTitle className="text-base sm:text-lg">Organization Creation Workflows</CardTitle>
-              {fieldsReadOnly ? (
-                <Lock
-                  className="h-4 w-4 shrink-0 text-muted-foreground"
-                  aria-label="Locked until multi-organization mode is enabled"
-                />
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col divide-y overflow-hidden rounded-lg border bg-muted/20 lg:flex-row lg:divide-x lg:divide-y-0">
-                {CREATION_WORKFLOWS.map((workflow) => (
-                  <FormField
-                    key={workflow.name}
-                    name={workflow.name}
-                    control={form.control}
-                    render={({ field }) => (
-                      <div className="w-full min-w-0 flex-1">
-                        <CreationWorkflowTile
-                          label={workflow.label}
-                          description={workflow.description}
-                          checked={field.value}
-                          disabled={fieldsReadOnly}
-                          onCheckedChange={field.onChange}
-                        />
-                      </div>
-                    )}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {isMultiOrgEnabled ? (
+            <Card>
+              <CardHeader className={SETTINGS_FORM_LAYOUT.sectionHeader}>
+                <CardTitle className={SETTINGS_FORM_LAYOUT.sectionTitle}>
+                  Organization Creation Workflows
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col divide-y overflow-hidden rounded-lg border bg-muted/20 lg:flex-row lg:divide-x lg:divide-y-0">
+                  {CREATION_WORKFLOWS.map((workflow) => (
+                    <FormField
+                      key={workflow.name}
+                      name={workflow.name}
+                      control={form.control}
+                      render={({ field }) => (
+                        <div className="w-full min-w-0 flex-1">
+                          <CreationWorkflowTile
+                            label={workflow.label}
+                            description={workflow.description}
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </div>
+                      )}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </form>
       </Form>
 
