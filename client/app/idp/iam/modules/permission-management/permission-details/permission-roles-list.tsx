@@ -27,7 +27,6 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
     pageSize: parseAsInteger.withDefault(10),
   });
   const { data, isLoading } = useGetRoles({
-    projectKey: tenantId,
     page: queryParams.page,
     pageSize: queryParams.pageSize,
     filter: {
