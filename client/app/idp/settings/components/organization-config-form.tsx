@@ -36,17 +36,17 @@ type OrganizationConfigFormProps = {
 const CREATION_WORKFLOWS = [
   {
     name: "allowOrgCreationFromCloud" as const,
-    label: "Allow Organization Creation from Cloud",
+    label: "Allow Creation from Cloud",
     description: "Automated provisioning via Global Cloud API.",
   },
   {
     name: "allowOrgCreationFromSignup" as const,
-    label: "Allow Organization Creation from Construct Signup",
+    label: "Allow Creation from Construct Signup",
     description: "Self-service creation during construct user signup.",
   },
   {
     name: "allowOrgCreationFromPortal" as const,
-    label: "Allow Organization Creation from Construct Portal",
+    label: "Allow Creation from Construct",
     description: "Manual provisioning via construct admin dashboard.",
   },
 ]
@@ -166,7 +166,7 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
         <form className={SETTINGS_FORM_LAYOUT.formStack} onSubmit={form.handleSubmit(handleSubmit)}>
           <SettingsToggleCard
             label="Multi-Organization Environment"
-            description="Enable this to manage multiple isolated organization units under a single administrative umbrella. This enables hierarchical resource management."
+            description="Manage multiple organizations from one workspace. Keep resources organized with a clear hierarchy."
             checked={isMultiOrgEnabled}
             onCheckedChange={handleMultiOrgToggle}
             disabled={isMultiOrgEnabled}
