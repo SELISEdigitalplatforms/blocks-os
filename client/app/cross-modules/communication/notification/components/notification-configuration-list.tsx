@@ -72,7 +72,7 @@ const NotificationConfigurationList: React.FC<
     pageSize: queryParams.notificationPageSize,
     searchText: queryParams.notificationSearch || undefined,
   });
-  const loading = isLoadingProp ?? isLoading || isFetching;
+  const loading = isLoadingProp ?? (isLoading || isFetching);
   const configurationsLength =
     configurationsLengthProp ?? data?.configurations?.length ?? 0;
 
