@@ -97,7 +97,7 @@ export const ProfileMFA = (props: ProfileMFAProps) => {
   const [mfaMethodType, setMfaMethodType] = useState<number>(0);
   const { isLoading, data } = useGetProfileMFAConfig();
   if (isLoading) return <LoadingSkelton />;
-  if (!data?.enableMfa) return <ProjectMFA />;
+  if (!data?.enabled) return <ProjectMFA />;
   const showVerifyModal = (type: number) => {
     setMfaMethodType(type);
     setIsVerifyModalOpen(true);
