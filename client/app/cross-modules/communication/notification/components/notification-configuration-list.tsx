@@ -51,11 +51,18 @@ const columns = [
 interface NotificationConfigurationListProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
+  isLoading?: boolean;
+  configurationsLength?: number;
 }
 
 const NotificationConfigurationList: React.FC<
   NotificationConfigurationListProps
-> = ({ addConfigOpen, onAddConfigOpenChange }) => {
+> = ({
+  addConfigOpen,
+  onAddConfigOpenChange,
+  isLoading: isLoadingProp,
+  configurationsLength: configurationsLengthProp,
+}) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } =
     useNotificationConfigsFilterQueryParams();
@@ -65,7 +72,9 @@ const NotificationConfigurationList: React.FC<
     pageSize: queryParams.notificationPageSize,
     searchText: queryParams.notificationSearch || undefined,
   });
-  const loading = isLoading || isFetching;
+  const loading = isLoadingProp ?? isLoading || isFetching;
+  const configurationsLength =
+    configurationsLengthProp ?? data?.configurations?.length ?? 0;
 
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -153,7 +162,7 @@ const NotificationConfigurationList: React.FC<
               ))}
             </TableBody>
           </Table>
-        ) : data && data.configurations?.length > 0 ? (
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -163,7 +172,7 @@ const NotificationConfigurationList: React.FC<
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.configurations.map((config) => (
+              {data?.configurations?.map((config) => (
                 <TableRow key={config.itemId}>
                   <TableCell>{config.name}</TableCell>
                   <TableCell>
@@ -216,12 +225,6 @@ const NotificationConfigurationList: React.FC<
               ))}
             </TableBody>
           </Table>
-        ) : (
-          <EmptyState
-            icon={Bell}
-            title="No notification configurations found"
-            description="Use Add Configuration to create one."
-          />
         )}
       </ConfigsTableShell>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -259,10 +262,34 @@ export function NotificationConfigurationListPage() {
     "notificationConfig",
     parseAsBoolean.withDefault(false),
   );
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  const { queryParams } = useNotificationConfigsFilterQueryParams();
+  const { data, isLoading, isFetching } = useGetNotificationConfigs({
+    projectKey: tenantId,
+    page: queryParams.notificationPage,
+    pageSize: queryParams.notificationPageSize,
+    searchText: queryParams.notificationSearch || undefined,
+  });
+  const loading = isLoading || isFetching;
+  const configurations = data?.configurations ?? [];
+  const isEmpty = !loading && configurations.length === 0;
+
+  if (isEmpty) {
+    return (
+      <EmptyState
+        icon={Bell}
+        title="No notification configurations found"
+        description="Use Add Configuration to create one."
+      />
+    );
+  }
+
   return (
     <NotificationConfigurationList
       addConfigOpen={addOpen}
       onAddConfigOpenChange={setAddOpen}
+      isLoading={loading}
+      configurationsLength={configurations.length}
     />
   );
 }
