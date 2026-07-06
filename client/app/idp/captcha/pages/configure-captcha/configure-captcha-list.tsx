@@ -126,10 +126,8 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
                           variant="ghost"
                           size="sm"
                           className={cn(
-                            "h-7 w-7 p-0",
-                            enabled
-                              ? "text-emerald-600 hover:text-destructive"
-                              : "text-destructive hover:text-emerald-600",
+                            "h-7 w-7 p-0 hover:bg-transparent",
+                            enabled ? "text-emerald-600" : "text-destructive",
                           )}
                           aria-label={enabled ? "Disable" : "Enable"}
                         >

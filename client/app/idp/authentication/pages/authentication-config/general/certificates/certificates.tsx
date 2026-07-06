@@ -1,39 +1,27 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { Button } from "@/components/ui-kits/button/button";
 import { Banner } from "@/components/ui-kits/banner/banner";
-import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
-import { Pencil, Waypoints } from "lucide-react";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyConfiguration } from "./empty-configuration";
 import { AddEditProviderModal } from "./add-edit-provider-modal";
 import { providers } from "@blocks-idp/authentication/constants/authentication.constant";
 import MapJwtClaimModal from "./map-jwt-claim-modal";
 import { useGetJwtClaim } from "@blocks-idp/authentication/hooks/use-jwt-claim";
+import { parseAsBoolean, useQueryState } from "nuqs";
 
 const LoadingSkelton = () => {
   return (
-    <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-6 w-40" />
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-36" />
-          <Skeleton className="h-9 w-28" />
-        </div>
-      </div>
-      <Card>
-        <CardContent className="space-y-3 pt-4">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="flex flex-col gap-1">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </>
+    <Card>
+      <CardContent className="space-y-3 pt-4">
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <div key={idx} className="flex flex-col gap-1">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 };
 
@@ -44,10 +32,15 @@ export const Certificates = () => {
     { projectKey, itemId: "" },
     !!projectKey && !!existingCertificate?.isConfigured,
   );
-  const [isJwtClaimModalOpen, setIsJwtClaimModalOpen] = useState<boolean>(false);
-  const handleJwtClaim = () => {
-    setIsJwtClaimModalOpen(true);
-  };
+  const [isJwtClaimModalOpen, setIsJwtClaimModalOpen] = useQueryState(
+    "jwtClaim",
+    parseAsBoolean.withDefault(false),
+  );
+  const [isEditModalOpen, setIsEditModalOpen] = useQueryState(
+    "editExternalIdp",
+    parseAsBoolean.withDefault(false),
+  );
+  const openJwtClaimModal = () => void setIsJwtClaimModalOpen(true);
   const hasJwtClaimData = !!jwtClaimData?.itemId;
   if (isLoading) {
     return <LoadingSkelton />;
@@ -62,7 +55,7 @@ export const Certificates = () => {
           You didn&apos;t map the jwt claims. To ignore 401(Unauthorized) in api request please{" "}
           <button
             type="button"
-            onClick={handleJwtClaim}
+            onClick={openJwtClaimModal}
             className="font-semibold underline"
           >
             Map JWT Claims
@@ -70,22 +63,6 @@ export const Certificates = () => {
           .
         </Banner>
       )}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold tracking-tight text-high-emphasis sm:text-2xl">
-          External IdP
-        </h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleJwtClaim}>
-            <Waypoints className="h-5 w-5" />
-            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-              Map JWT Claim
-            </span>
-          </Button>
-          <AddEditProviderModal existingData={existingCertificate}>
-            <PrimaryButton Icon={Pencil} label="Edit" />
-          </AddEditProviderModal>
-        </div>
-      </div>
       <Card>
         <CardContent className="space-y-3 pt-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -142,7 +119,15 @@ export const Certificates = () => {
           </div>
         </CardContent>
       </Card>
-      <MapJwtClaimModal open={isJwtClaimModalOpen} onOpenChange={setIsJwtClaimModalOpen} />
+      <MapJwtClaimModal
+        open={isJwtClaimModalOpen}
+        onOpenChange={(open) => void setIsJwtClaimModalOpen(open)}
+      />
+      <AddEditProviderModal
+        open={isEditModalOpen}
+        onOpenChange={(open) => void setIsEditModalOpen(open)}
+        existingData={existingCertificate}
+      />
     </>
   );
 };

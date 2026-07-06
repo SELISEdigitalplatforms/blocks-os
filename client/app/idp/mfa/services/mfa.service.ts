@@ -63,22 +63,9 @@ export class MFAService {
       .post<{ isSuccess: boolean; errors: unknown | null }>(
         MFA_CONFIG_ENDPOINTS.SAVE,
         {
-          enabled: payload.enabled,
-          allowedMethods: payload.allowedMethods,
-          ...(typeof payload.requireMfaForAllUsers === "boolean"
-            ? { requireMfaForAllUsers: payload.requireMfaForAllUsers }
-            : {}),
-          ...(payload.mfaRequiredRoles ? { mfaRequiredRoles: payload.mfaRequiredRoles } : {}),
-          ...(payload.mfaExemptRoles ? { mfaExemptRoles: payload.mfaExemptRoles } : {}),
-          ...(typeof payload.allowUserOptOut === "boolean"
-            ? { allowUserOptOut: payload.allowUserOptOut }
-            : {}),
-          ...(typeof payload.allowBackupCodes === "boolean"
-            ? { allowBackupCodes: payload.allowBackupCodes }
-            : {}),
-          ...(typeof payload.backupCodesCount === "number"
-            ? { backupCodesCount: payload.backupCodesCount }
-            : {}),
+          enableMfa: payload.enabled,
+          userMfaType: payload.allowedMethods,
+          ...(payload.projectKey ? { projectKey: payload.projectKey } : {}),
           ...(payload.mfaTemplate ? { mfaTemplate: payload.mfaTemplate } : {}),
         },
         undefined,

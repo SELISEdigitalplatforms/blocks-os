@@ -91,8 +91,8 @@ describe("MFAService", () => {
       expect(http.post).toHaveBeenCalledWith(
         MFA_CONFIG_ENDPOINTS.SAVE,
         {
-          enabled: mockSaveMfaConfigPayload.enabled,
-          allowedMethods: mockSaveMfaConfigPayload.allowedMethods,
+          enableMfa: mockSaveMfaConfigPayload.enabled,
+          userMfaType: mockSaveMfaConfigPayload.allowedMethods,
           mfaTemplate: mockSaveMfaConfigPayload.mfaTemplate,
         },
         undefined,
