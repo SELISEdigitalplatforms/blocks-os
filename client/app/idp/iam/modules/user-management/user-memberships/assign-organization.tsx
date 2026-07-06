@@ -49,7 +49,6 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
     pageSize: 1000,
   });
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
-    projectKey,
     page: 0,
     pageSize: 1000,
     sort: { property: "Name", isDescending: false },
