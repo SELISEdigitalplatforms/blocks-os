@@ -12,8 +12,9 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { EllipsisVertical, Pencil, Trash } from "lucide-react";
+import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
 import NewNotificationConfiguration from "../modals/new-notification-configuration";
 import {
   channelsToNotify,
@@ -131,17 +132,17 @@ const NotificationConfigurationList: React.FC<
             onChange={onPageChangeHandler}
           />
         }>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, idx) => (
+        {loading ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((col) => (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, idx) => (
                 <TableRow key={idx}>
                   {columns.map((col) => (
                     <TableCell key={col.key}>
@@ -149,9 +150,20 @@ const NotificationConfigurationList: React.FC<
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
-            ) : data && data.configurations?.length > 0 ? (
-              data.configurations.map((config) => (
+              ))}
+            </TableBody>
+          </Table>
+        ) : data && data.configurations?.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((col) => (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.configurations.map((config) => (
                 <TableRow key={config.itemId}>
                   <TableCell>{config.name}</TableCell>
                   <TableCell>
@@ -201,18 +213,16 @@ const NotificationConfigurationList: React.FC<
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-[240px] align-middle text-center text-muted-foreground">
-                  No notification configurations found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <EmptyState
+            icon={Bell}
+            title="No notification configurations found"
+            description="Use Add Configuration to create one."
+          />
+        )}
       </ConfigsTableShell>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         {!loading && selectedConfigData && (
