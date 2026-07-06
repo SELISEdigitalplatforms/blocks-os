@@ -3,13 +3,9 @@ using DomainService.Certificate;
 using DomainService.ManagedService;
 using DomainService.ManagedService.Services;
 using DomainService.ManagedService.Validator;
-using DomainService.Migration;
-using DomainService.Migration.Services;
-using DomainService.People;
 using DomainService.Projects;
 using DomainService.Shared.Services;
 using DomainService.Shared.Utilities;
-using DomainService.Storage;
 using DomainService.Subscription.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,9 +23,6 @@ namespace DomainService.Shared
             services.AddTransient<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
             services.AddTransient<IValidator<UpdateAuthConfigRequest>, UpdateAuthConfigRequestValidator>();
             services.AddTransient<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
-            services.AddTransient<IValidator<SignupRequest>, SignupRequestValidator>();
-            services.AddTransient<IValidator<TransferOwnershipRequest>, TransferOwnershipRequestValidator>();
-            services.AddTransient<IValidator<MigrationRequest>, MigrationRequestValidator>();
             services.AddTransient<IValidator<RegisterServiceRequest>, RegisterServiceRequestValidator>();
 
 
@@ -37,12 +30,7 @@ namespace DomainService.Shared
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
-            services.AddSingleton<IPeopleService, PeopleService>();
-            services.AddSingleton<IPeopleRepository, PeopleRepository>();
             services.AddSingleton<IDomainManagementService, DomainManagementService>();
-            services.AddSingleton<IMigrationService, MigrationService>();
-            services.AddSingleton<IMigrationRepository, MigrationRepository>();
-            services.AddSingleton<IMigrationNotificationService, MigrationNotificationService>();
             services.AddSingleton<ICertificateManager, CertificateManager>();
             services.AddSingleton<ICertificateStorageFactory, CertificateStorageFactory>();
             services.AddSingleton<IEncodingService, EncodingService>();
@@ -53,8 +41,7 @@ namespace DomainService.Shared
 
             // Drivers
             services.AddSingleton<DmsArtifactBuilderFactory>();
-            services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>(); 
-            services.AddTransient<AwsS3CompatibleStorageService>();
+            services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
             services.AddSingleton<FileArtifactBuilder>();
             services.AddSingleton<FolderArtifactBuilder>();
 
