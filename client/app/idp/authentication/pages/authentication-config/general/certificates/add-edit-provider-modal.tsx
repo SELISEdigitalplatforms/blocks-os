@@ -34,6 +34,8 @@ import { z } from "zod";
 interface AddEditProviderModalProps {
   existingData?: IGetPublicCertificateResponse | null;
   children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 const formSchema = z.object({
   url: z.string().trim().optional().or(z.literal("")),
@@ -42,9 +44,20 @@ const formSchema = z.object({
   audience: z.string().trim().optional().or(z.literal("")),
 });
 type FormData = z.infer<typeof formSchema>;
-export const AddEditProviderModal = ({ existingData, children }: AddEditProviderModalProps) => {
+export const AddEditProviderModal = ({
+  existingData,
+  children,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: AddEditProviderModalProps) => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (!isControlled) setInternalOpen(value);
+    onOpenChangeProp?.(value);
+  };
   const [selectedProvider, setSelectedProvider] = useState("Keycloak");
   const [certificateMethod, setCertificateMethod] = useState("public-url");
   const [showPassword, setShowPassword] = useState(false);
