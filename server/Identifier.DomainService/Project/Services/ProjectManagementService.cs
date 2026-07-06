@@ -422,7 +422,9 @@ namespace DomainService.Projects
             switch (request.Action)
             {
                 case ApplicationAction.Add:
-                    AddApplication(project, request);
+                    var addResult = AddApplication(project, request);
+                    if (!addResult.IsSuccess)
+                        return addResult;
                     break;
 
                 case ApplicationAction.Edit:
@@ -449,8 +451,24 @@ namespace DomainService.Projects
             return new BaseResponse { IsSuccess = true };
         }
 
-        private void AddApplication(Tenant project, UpdateProjectRequest request)
+        // Domains are stored inconsistently ("https://x", "x", trailing slash,
+        // mixed case) — normalize before comparing so duplicates can't sneak in
+        private static string NormalizeDomain(string domain) =>
+            (domain ?? string.Empty)
+                .Trim()
+                .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace("http://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .TrimEnd('/')
+                .ToLowerInvariant();
+
+        private BaseResponse AddApplication(Tenant project, UpdateProjectRequest request)
         {
+            var incomingDomain = NormalizeDomain(request.Application.Domain);
+            if (project.Applications.Any(a => NormalizeDomain(a.Domain) == incomingDomain))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
+            }
+
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
             var newApp = new Applications
             {
@@ -459,6 +477,7 @@ namespace DomainService.Projects
                 IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain
             };
             project.Applications.Add(newApp);
+            return new BaseResponse { IsSuccess = true };
         }
 
         private BaseResponse EditApplication(Tenant project, UpdateProjectRequest request)
@@ -467,6 +486,12 @@ namespace DomainService.Projects
             if (existingApp == null)
             {
                 return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "application_not_found", $"No application found with domain {request.ApplicationDomain}" } } };
+            }
+
+            var incomingDomain = NormalizeDomain(request.Application.Domain);
+            if (project.Applications.Any(a => !ReferenceEquals(a, existingApp) && NormalizeDomain(a.Domain) == incomingDomain))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
             }
 
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
