@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -29,10 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
@@ -132,11 +130,7 @@ const IdentityProviderRow = ({
     { key: "Client ID", value: item.clientId ?? "", copyable: true },
     { key: "Client Secret", value: item.clientSecret ?? "", copyable: true },
     { key: "Issuer URL", value: item.issuer ?? "", copyable: true },
-    {
-      key: "Authorization URL",
-      value: item.authorizationUrl ?? "",
-      copyable: true,
-    },
+    { key: "Authorization URL", value: item.authorizationUrl ?? "", copyable: true },
     { key: "Token URL", value: item.tokenUrl ?? "", copyable: true },
     { key: "User Info URL", value: item.userInfoUrl ?? "", copyable: true },
     { key: "Well-known URI", value: item.wellKnownUrl ?? "", copyable: true },
@@ -170,7 +164,8 @@ const IdentityProviderRow = ({
             : "border-b-2 border-border",
           !isActive && "opacity-75",
         )}
-        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}>
+        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}
+      >
         <TableCell className="w-8 py-3.5 pl-4">
           {kvPairs.length > 0 ? (
             <ChevronRight
@@ -186,7 +181,8 @@ const IdentityProviderRow = ({
               className={cn(
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                 isActive ? cfg.iconBg : "bg-muted",
-              )}>
+              )}
+            >
               <Icon
                 className={cn(
                   "h-4 w-4",
@@ -205,7 +201,8 @@ const IdentityProviderRow = ({
         <TableCell className="hidden py-3.5 sm:table-cell">
           <Badge
             variant="outline"
-            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
             <span
               className={cn(
                 "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -220,13 +217,15 @@ const IdentityProviderRow = ({
         </TableCell>
         <TableCell
           className="py-3.5 pr-4 text-right"
-          onClick={(e) => e.stopPropagation()}>
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={() => setShowEditModal(true)}>
+              onClick={() => setShowEditModal(true)}
+            >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
             <Button
@@ -240,7 +239,8 @@ const IdentityProviderRow = ({
               )}
               aria-label={isActive ? "Disable provider" : "Enable provider"}
               onClick={() => setShowStatusDialog(true)}
-              disabled={isUpdating}>
+              disabled={isUpdating}
+            >
               {isActive ? (
                 <Power className="h-3.5 w-3.5" />
               ) : (
@@ -253,9 +253,7 @@ const IdentityProviderRow = ({
 
       {expanded && (
         <TableRow className="border-b-2 border-border hover:bg-transparent">
-          <TableCell
-            colSpan={5}
-            className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
               {kvPairs.map(({ key, value, copyable }) => (
                 <KVDetailItem
@@ -282,22 +280,20 @@ const IdentityProviderRow = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {willEnable
-                ? "Enable identity provider"
-                : "Disable identity provider"}
+              {willEnable ? "Enable identity provider" : "Disable identity provider"}
             </DialogTitle>
             <DialogDescription>
               {willEnable ? (
                 <>
                   Users will be able to sign in with{" "}
-                  <strong>{providerLabel}</strong>. Are you sure you want to
-                  enable this provider?
+                  <strong>{providerLabel}</strong>. Are you sure you want to enable
+                  this provider?
                 </>
               ) : (
                 <>
                   Users will no longer be able to sign in with{" "}
-                  <strong>{providerLabel}</strong>. Are you sure you want to
-                  disable this provider?
+                  <strong>{providerLabel}</strong>. Are you sure you want to disable
+                  this provider?
                 </>
               )}
             </DialogDescription>
@@ -307,14 +303,16 @@ const IdentityProviderRow = ({
               variant="outline"
               size="sm"
               onClick={() => setShowStatusDialog(false)}
-              disabled={isUpdating}>
+              disabled={isUpdating}
+            >
               Cancel
             </Button>
             <Button
               variant={willEnable ? "default" : "destructive"}
               size="sm"
               onClick={handleConfirmStatusChange}
-              disabled={isUpdating}>
+              disabled={isUpdating}
+            >
               {isUpdating
                 ? willEnable
                   ? "Enabling…"
@@ -342,7 +340,8 @@ const LoadingSkeleton = () => (
       {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-4 border-b px-4 py-4 last:border-0">
+          className="flex items-center gap-4 border-b px-4 py-4 last:border-0"
+        >
           <Skeleton className="h-4 w-4 rounded" />
           <div className="flex flex-1 items-center gap-2">
             <Skeleton className="h-9 w-9 rounded-lg" />
@@ -372,19 +371,11 @@ export function IdentityProviderList() {
 
   if (providers.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Building2 className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-medium text-high-emphasis">
-            No identity providers yet
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add your first identity provider to get started.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={Building2}
+        title="No identity providers yet"
+        description="Add your first identity provider to get started."
+      />
     );
   }
 

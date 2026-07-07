@@ -1,14 +1,28 @@
 export interface IMFAConfiguration {
-  enableMfa: boolean;
-  mfaTemplate: { templateName: string; templateId: string };
+  enabled: boolean;
+  allowedMethods: number[];
+  requireMfaForAllUsers: boolean;
+  mfaRequiredRoles: string[];
+  mfaExemptRoles: string[];
+  allowUserOptOut: boolean;
+  allowBackupCodes: boolean;
+  backupCodesCount: number;
+  mfaTemplate?: { templateName: string; templateId: string };
   projectKey: string | null;
-  userMfaType: number[];
 }
 
 export interface IMFASecretKeyValuePairs {
-  enableMfa: boolean | string;
-  userMfaType: number[] | string;
+  enabled?: boolean | string;
+  allowedMethods?: number[] | string;
+  requireMfaForAllUsers?: boolean | string;
+  mfaRequiredRoles?: string[];
+  mfaExemptRoles?: string[];
+  allowUserOptOut?: boolean | string;
+  allowBackupCodes?: boolean | string;
+  backupCodesCount?: number;
   mfaTemplate?: { templateName: string; templateId: string } | string;
+  enableMfa?: boolean | string;
+  userMfaType?: number[] | string;
 }
 
 export interface IMFASecretResponse {
@@ -28,14 +42,18 @@ export interface IGetConfigurationPayload {
 }
 
 export interface IMFAConfigurationSavePayload {
-  itemId?: string;
-  enableMfa: boolean;
-  userMfaType: number[];
+  enabled: boolean;
+  allowedMethods: number[];
+  requireMfaForAllUsers?: boolean;
+  mfaRequiredRoles?: string[];
+  mfaExemptRoles?: string[];
+  allowUserOptOut?: boolean;
+  allowBackupCodes?: boolean;
+  backupCodesCount?: number;
   mfaTemplate?: {
     templateName: string;
     templateId: string;
   };
-  projectKey: string;
 }
 export interface IMFAConfigurationSaveResponse {
   errors: unknown | null;
@@ -46,8 +64,14 @@ export interface IGetConfigurationResponse extends IMFAConfiguration {
 }
 
 export interface MfaConfigControllerResponse {
-  enableMfa: boolean;
-  userMfaType: number[] | string;
+  enabled: boolean;
+  allowedMethods: number[];
+  requireMfaForAllUsers?: boolean;
+  mfaRequiredRoles?: string[];
+  mfaExemptRoles?: string[];
+  allowUserOptOut?: boolean;
+  allowBackupCodes?: boolean;
+  backupCodesCount?: number;
   mfaTemplate?: { templateName: string; templateId: string };
 }
 

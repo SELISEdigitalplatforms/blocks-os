@@ -1,9 +1,4 @@
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -14,10 +9,7 @@ import {
 } from "@/components/ui-kits/table/table";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useMemo, useState } from "react";
-import {
-  IEmailConfig,
-  IEmailTemplate,
-} from "@blocks-communication/mail/models/email";
+import { IEmailConfig, IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { checkValidDate, formatDate, parseDateString } from "@/lib/utils";
 import { FilterControls } from "@/components/filter-toolbar";
 import { useTemplatesSortQueryParams } from "./template-filter-toolbar";
@@ -31,7 +23,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { AlignLeft, Copy, MoreVertical, Trash } from "lucide-react";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { toast } from "@seliseblocks/blocks-kit/hooks";
+import { toast } from "@/hooks/use-toast";
 import {
   useCloneTemplate,
   useDeleteEmailTemplate,
@@ -59,14 +51,11 @@ export const EmailTemplateList = ({
 }: EmailTemplateListProps) => {
   const navigate = useNavigate();
   const { sortQueryParams, setSortQueryParams } = useTemplatesSortQueryParams();
-  const { isPending: isClonePending, mutateAsync: cloneMailTemplate } =
-    useCloneTemplate();
-  const { isPending: isDeletePending, mutateAsync: deleteMailTemplate } =
-    useDeleteEmailTemplate();
+  const { isPending: isClonePending, mutateAsync: cloneMailTemplate } = useCloneTemplate();
+  const { isPending: isDeletePending, mutateAsync: deleteMailTemplate } = useDeleteEmailTemplate();
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedTemplateData, setSelectedTemplateData] =
-    useState<IEmailTemplate | null>(null);
+  const [selectedTemplateData, setSelectedTemplateData] = useState<IEmailTemplate | null>(null);
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const cloneEmailTemplate = (rowData: IEmailTemplate) => {
     setSelectedTemplateData(rowData);
@@ -147,9 +136,7 @@ export const EmailTemplateList = ({
             onChange={setSortQueryParams}
           />
         ),
-        cell: ({ row }) => (
-          <div className="truncate">{row.getValue("name")}</div>
-        ),
+        cell: ({ row }) => <div className="truncate">{row.getValue("name")}</div>,
       },
       {
         accessorKey: "MailConfigurationId",
@@ -157,9 +144,8 @@ export const EmailTemplateList = ({
         cell: ({ row }) => (
           <div className="truncate">
             {
-              emailConfigsData?.find(
-                (config) => config.itemId === row.original.mailConfigurationId,
-              )?.name
+              emailConfigsData?.find((config) => config.itemId === row.original.mailConfigurationId)
+                ?.name
             }
           </div>
         ),
@@ -174,9 +160,7 @@ export const EmailTemplateList = ({
             onChange={setSortQueryParams}
           />
         ),
-        cell: ({ row }) => (
-          <div className="truncate">{row.getValue("templateSubject")}</div>
-        ),
+        cell: ({ row }) => <div className="truncate">{row.getValue("templateSubject")}</div>,
       },
       {
         accessorKey: "lastUpdatedDate",
@@ -209,7 +193,8 @@ export const EmailTemplateList = ({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   className="cursor-pointer hover:no-underline"
-                  onClick={() => onRowClick(row.original.itemId)}>
+                  onClick={() => onRowClick(row.original.itemId)}
+                >
                   <AlignLeft className="mr-2 h-4 w-4" />
                   <span>View details</span>
                 </DropdownMenuItem>
@@ -218,7 +203,8 @@ export const EmailTemplateList = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     cloneEmailTemplate(row.original);
-                  }}>
+                  }}
+                >
                   <Copy className="mr-2 h-4 w-4" />
                   <span>Clone Template</span>
                 </DropdownMenuItem>
@@ -228,7 +214,8 @@ export const EmailTemplateList = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       DeleteEmailTemplate(row.original);
-                    }}>
+                    }}
+                  >
                     <Trash className="mr-2 h-4 w-4" />
                     <span>Delete</span>
                   </DropdownMenuItem>
@@ -260,15 +247,10 @@ export const EmailTemplateList = ({
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
-              <TableHead
-                key={header.id}
-                className={header.id === "actions" ? "w-10" : ""}>
+              <TableHead key={header.id} className={header.id === "actions" ? "w-10" : ""}>
                 {header.isPlaceholder
                   ? null
-                  : flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
+                  : flexRender(header.column.columnDef.header, header.getContext())}
               </TableHead>
             ))}
           </TableRow>
@@ -281,11 +263,13 @@ export const EmailTemplateList = ({
               key={row.id}
               className="cursor-pointer hover:no-underline"
               onClick={() => onRowClick(row.original.itemId)}
-              isHoverable>
+              isHoverable
+            >
               {row.getVisibleCells().map((cell) => (
                 <TableCell
                   key={cell.id}
-                  className={cell.column.id === "actions" ? "text-right" : ""}>
+                  className={cell.column.id === "actions" ? "text-right" : ""}
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

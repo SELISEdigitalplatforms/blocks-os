@@ -10,26 +10,21 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { useToggleCaptchaConfigStatus } from "../hooks/use-captcha-config";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../models/captcha";
 import { isErrorWithErrors } from "@/lib/error";
 import { Check, X } from "lucide-react";
 type ToggleCaptchaStatusModalProps = {
   configuration: ICaptchaConfig;
+  children?: React.ReactNode;
 };
-export const ToggleCaptchaStatusModal = ({
-  configuration,
-}: ToggleCaptchaStatusModalProps) => {
+export const ToggleCaptchaStatusModal = ({ configuration, children }: ToggleCaptchaStatusModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { isPending, mutateAsync } = useToggleCaptchaConfigStatus();
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];
   const onConfirm = async () => {
     try {
-      if (!configuration)
-        return showErrorToast({ errors: "Something went wrong" });
+      if (!configuration) return showErrorToast({ errors: "Something went wrong" });
       const res = await mutateAsync({
         itemId: configuration.itemId,
         isEnable: !configuration.isEnable,
@@ -52,22 +47,19 @@ export const ToggleCaptchaStatusModal = ({
   const IconComponent = configuration?.isEnable ? X : Check;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button size="sm" variant="outline">
-          <IconComponent className="h-4 w-4" />
-          <span className="ml-2.5">
-            {configuration?.isEnable ? "Disable" : "Enable"}
-          </span>
-        </Button>
+      <DialogTrigger asChild>
+        {children ?? (
+          <Button size="sm" variant="outline">
+            <IconComponent className="h-4 w-4" />
+            <span className="ml-2.5">{configuration?.isEnable ? "Disable" : "Enable"}</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {configuration?.isEnable ? "Disable" : "Enable"} CAPTCHA?
-          </DialogTitle>
+          <DialogTitle>{configuration?.isEnable ? "Disable" : "Enable"} CAPTCHA?</DialogTitle>
           <DialogDescription>
-            Are you sure you want to{" "}
-            {configuration?.isEnable ? "disable" : "enable"}{" "}
+            Are you sure you want to {configuration?.isEnable ? "disable" : "enable"}{" "}
             {providerType.label}
           </DialogDescription>
         </DialogHeader>
