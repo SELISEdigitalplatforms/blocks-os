@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { showErrorToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast } from "@/hooks/use-toast";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useEffect, useState } from "react";
 import { ProfileMFAMethodList } from "./profile-mfa-methods-list";
@@ -20,10 +20,7 @@ export const ProfileMFAConfigManage = () => {
   const { projectKey, userId, showVerifyModal } = useContext(profileMfaContext);
   const [open, setOpen] = useState<boolean>(false);
   const [type, setType] = useState(0);
-  const { isPending, mutateAsync } = useConfigureUserMFA({
-    id: userId,
-    projectKey,
-  });
+  const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
   const { data: userData, isLoading, isFetching } = useGetMe();
   useEffect(() => {
     if (userData?.data.userMfaType) {
@@ -63,9 +60,7 @@ export const ProfileMFAConfigManage = () => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Switch MFA?</DialogTitle>
-          <DialogDescription>
-            Select the method of MFA for this user.
-          </DialogDescription>
+          <DialogDescription>Select the method of MFA for this user.</DialogDescription>
         </DialogHeader>
         <ProfileMFAMethodList selected={type} setSelected={setType} />
         <DialogFooter className="mt-4 flex flex-row gap-2">
@@ -77,7 +72,8 @@ export const ProfileMFAConfigManage = () => {
           <Button
             size="sm"
             onClick={onClickHandler}
-            disabled={isPending || type === 0 || isLoading || isFetching}>
+            disabled={isPending || type === 0 || isLoading || isFetching}
+          >
             {isPending ? "Saving" : "Save"}
           </Button>
         </DialogFooter>

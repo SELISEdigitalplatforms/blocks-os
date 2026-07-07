@@ -3,10 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Archive } from "lucide-react";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useDisableProject } from "@/hooks/use-project";
@@ -48,8 +45,8 @@ export const ArchivedProject = () => {
             <>
               <p>Are you sure you want to delete this environment?</p>
               <p>
-                This will permanently delete the environment and you&apos;ll
-                need to contact support to recover it.
+                This will permanently delete the environment and you&apos;ll need to contact support
+                to recover it.
               </p>
             </>
           ),

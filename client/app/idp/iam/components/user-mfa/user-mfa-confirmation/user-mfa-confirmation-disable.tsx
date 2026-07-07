@@ -8,10 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useState } from "react";
@@ -19,10 +16,7 @@ import { userMfaContext } from "../user-mfa";
 export const UserMFAConfirmationDisable = () => {
   const { projectKey, userId } = useContext(userMfaContext);
   const [open, setOpen] = useState<boolean>(false);
-  const { isPending, mutateAsync } = useConfigureUserMFA({
-    id: userId,
-    projectKey,
-  });
+  const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
   const onClickHandler = async () => {
     try {
       const res = await mutateAsync({
@@ -51,9 +45,8 @@ export const UserMFAConfirmationDisable = () => {
         <DialogHeader>
           <DialogTitle>Disable MFA?</DialogTitle>
           <DialogDescription>
-            Are you sure you want to disable Multi-Factor Authentication (MFA)
-            for this account? Disabling MFA may reduce the security of this
-            account.
+            Are you sure you want to disable Multi-Factor Authentication (MFA) for this account?
+            Disabling MFA may reduce the security of this account.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4 flex flex-row gap-2">

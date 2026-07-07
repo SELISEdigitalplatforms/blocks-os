@@ -14,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, CirclePlus, FileClock, Settings } from "lucide-react";
+import { ArrowUpDown, Plus, FileClock, Settings } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -254,7 +254,7 @@ export function MessagingServiceTable() {
                     variant="default"
                     className="bg-primary text-primary-foreground shadow-none"
                   >
-                    <CirclePlus className="h-5 w-5 lg:mr-2" />
+                    <Plus className="h-5 w-5 lg:mr-2" />
                     <span className="sr-only lg:not-sr-only">Add</span>
                   </Button>
                 </DialogTrigger>
