@@ -190,7 +190,7 @@ export const CreateClientCredential = ({
         </DialogTrigger>
       )}
       <DialogContent className="max-w-2xl overflow-hidden p-0">
-        <DialogHeader className="border-b px-6 pb-4 pt-6">
+        <DialogHeader className="border-b px-6 pb-4 pt-6 pr-12">
           <DialogTitle>{isEdit ? "Edit Access Token" : "New Access Token"}</DialogTitle>
           <DialogDescription>
             {isEdit
@@ -199,8 +199,8 @@ export const CreateClientCredential = ({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[70vh] flex-col">
-            <div className="space-y-8 overflow-y-auto px-6 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[70vh] min-h-0 flex-col">
+            <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
                   <KeyRound className="h-4 w-4" />
@@ -288,11 +288,11 @@ export const CreateClientCredential = ({
                         />
                       </div>
                       <FormControl>
-                        <div className="grid grid-cols-2 gap-4 rounded border p-3">
+                        <div className="grid grid-cols-1 gap-3 rounded border p-3 sm:grid-cols-2 sm:gap-4">
                           {filteredRoles?.map((type) => {
                             const isChecked = field.value?.includes(type.slug);
                             return (
-                              <div key={type.slug} className="flex items-center gap-2">
+                              <div key={type.slug} className="flex min-w-0 items-center gap-2">
                                 <Checkbox
                                   checked={isChecked}
                                   onCheckedChange={(checked) => {
@@ -304,7 +304,11 @@ export const CreateClientCredential = ({
                                     field.onChange(updated);
                                   }}
                                 />
-                                <label htmlFor={type.slug} className="cursor-pointer">
+                                <label
+                                  htmlFor={type.slug}
+                                  className="min-w-0 flex-1 cursor-pointer truncate"
+                                  title={type.slug}
+                                >
                                   {type.slug}
                                 </label>
                               </div>
