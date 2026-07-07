@@ -200,7 +200,7 @@ export const CreateClientCredential = ({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[70vh] min-h-0 flex-col">
-            <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
+            <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-4 pr-12">
               <section className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
                   <KeyRound className="h-4 w-4" />
