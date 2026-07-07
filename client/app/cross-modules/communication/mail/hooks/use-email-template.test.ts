@@ -23,7 +23,6 @@ import {
   useSaveMailTemplate,
   useSendTestMail,
 } from "./use-email-template";
-import { TEST_TENANT_ID } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
@@ -221,7 +220,6 @@ describe("Email Template Hooks", () => {
       expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith(
         0,
         10,
-        TEST_TENANT_ID,
         "welcome",
         "Name",
         false,
@@ -243,7 +241,6 @@ describe("Email Template Hooks", () => {
       expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith(
         2,
         20,
-        TEST_TENANT_ID,
         "test",
         "CreatedDate",
         true,
@@ -264,7 +261,6 @@ describe("Email Template Hooks", () => {
       expect(emailService.fetchEmailTemplates).toHaveBeenCalledWith(
         0,
         10,
-        TEST_TENANT_ID,
         "",
         "Name",
         false,
@@ -316,7 +312,7 @@ describe("Email Template Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toEqual(mockEmailTemplate);
-      expect(emailService.fetchEmailTemplate).toHaveBeenCalledWith(TEST_TENANT_ID, "template-1");
+      expect(emailService.fetchEmailTemplate).toHaveBeenCalledWith("template-1");
     });
 
     it("should use correct query key for caching", async () => {
@@ -328,7 +324,7 @@ describe("Email Template Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.fetchEmailTemplate).toHaveBeenCalledWith(TEST_TENANT_ID, "template-2");
+      expect(emailService.fetchEmailTemplate).toHaveBeenCalledWith("template-2");
     });
 
     it("should have staleTime of 0", async () => {
@@ -385,7 +381,6 @@ describe("Email Template Hooks", () => {
 
       expect(emailService.saveMailTemplate).toHaveBeenCalledWith({
         ...mockEmailTemplate,
-        projectKey: TEST_TENANT_ID,
       });
       expect(response).toEqual(mockSuccessResponse);
     });
@@ -403,7 +398,6 @@ describe("Email Template Hooks", () => {
       expect(emailService.saveMailTemplate).toHaveBeenCalledWith({
         ...templateWithoutId,
         itemId: "",
-        projectKey: TEST_TENANT_ID,
       });
     });
 
@@ -423,7 +417,7 @@ describe("Email Template Hooks", () => {
       await waitFor(() => expect(result.current.isPending).toBe(false));
     });
 
-    it("should include projectKey from tenantId", async () => {
+    it("should save email template without projectKey", async () => {
       vi.mocked(emailService.saveMailTemplate).mockResolvedValue(mockSuccessResponse);
 
       const { result } = renderHook(() => useSaveEmailTemplate(), {
@@ -433,7 +427,7 @@ describe("Email Template Hooks", () => {
       await result.current.saveEmailTemplate(mockEmailTemplate);
 
       const callArgs = vi.mocked(emailService.saveMailTemplate).mock.calls[0][0];
-      expect(callArgs.projectKey).toBe(TEST_TENANT_ID);
+      expect(callArgs.projectKey).toBeUndefined();
     });
   });
 

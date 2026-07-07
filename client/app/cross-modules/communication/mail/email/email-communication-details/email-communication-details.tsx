@@ -11,7 +11,6 @@ import EditCommunication from "@blocks-communication/mail/components/email-servi
 import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useNavigate } from "react-router-dom";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { langConfigureData } from "@blocks-localization/constants/language-dummy-data";
@@ -31,7 +30,6 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
     data: emailConfigsData,
   } = useGetEmailConfigs(0, 100);
   const { isPending, mutateAsync } = useSendTestMail();
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const navigate = useNavigate();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSendTestEmailModalOpen, setIsSendTestEmailModalOpen] = useState(false);
@@ -82,7 +80,6 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
         to: loggedInUser?.data?.email || "",
         purpose: emailDetails.name || "",
         language: emailDetails.language || "",
-        projectKey: tenantId,
       };
       const res = await mutateAsync(payload);
       if (res?.isSuccess) {
