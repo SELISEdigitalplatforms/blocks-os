@@ -32,7 +32,6 @@ namespace DomainService.People
         private readonly IMessageClient _messageClient;
         private readonly IConfiguration _configuration;
         private readonly ICacheClient _cacheClient;
-        private readonly IValidator<TransferOwnershipRequest> _transferOwnerShipValidator;
         private readonly IProjectRepository _projectRepository;
         private readonly ITenants _tenants;
 
@@ -42,7 +41,6 @@ namespace DomainService.People
             IMessageClient messageClient,
             IConfiguration configuration,
             ICacheClient cacheClient,
-            IValidator<TransferOwnershipRequest> transferOwnerShipValidator,
             IProjectRepository projectRepository,
             ITenants tenants)
         {
@@ -51,7 +49,6 @@ namespace DomainService.People
             _messageClient = messageClient ?? throw new ArgumentNullException(nameof(messageClient));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _cacheClient = cacheClient ?? throw new ArgumentNullException(nameof(cacheClient));
-            _transferOwnerShipValidator = transferOwnerShipValidator;
             _projectRepository = projectRepository;
             _tenants = tenants;
         }
@@ -733,10 +730,23 @@ namespace DomainService.People
 
         public async Task<BaseResponse> TransferOwnershipAsync(TransferOwnershipRequest request)
         {
-            var validationResult = await _transferOwnerShipValidator.ValidateAsync(request);
+            if(string.IsNullOrWhiteSpace(request.TenantGroupId))
+            {
+                return new BaseResponse { Errors = new Dictionary<string, string> {{"TenantGroupId", "TenantGroupId is required."}} };
+            }
 
-            if (!validationResult.IsValid)
-                return new BaseResponse { Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage) };
+            if(string.IsNullOrWhiteSpace(request.TransferToUserEmail))
+            {
+                return new BaseResponse { Errors = new Dictionary<string, string> {{"TransferToUserEmail", "TransferToUserEmail is required."}} };
+            }
+            
+            var user = await _peopleRepository.GetUserByEmailAsync(request.TransferToUserEmail);
+
+            if(user == null)
+            {
+                return new BaseResponse { Errors = new Dictionary<string, string> {{"TransferToUserEmail", "Must be an existing user"}} };
+            }
+            
 
             var tenantids = await _projectRepository.GetProjectIdsByGroupId(request.TenantGroupId);
             var bc = BlocksContext.GetContext();
@@ -749,7 +759,6 @@ namespace DomainService.People
             var ownerProjectPeoples = await _peopleRepository.GetProjectPeoplesAsync(bc.UserId, tenantids);
             await _peopleRepository.UpdateProjectPeopleOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.ItemId)], false);
 
-            var user = (await _peopleRepository.GetUsersByEmailAsync([request.TransferToUserEmail])).FirstOrDefault();
             await _peopleRepository.UpdateProjectOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.TenantId)], user.ItemId);
 
             List<string> projectPeopleIds = [];

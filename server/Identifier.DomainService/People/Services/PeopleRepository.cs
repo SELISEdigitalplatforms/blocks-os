@@ -186,5 +186,11 @@ namespace DomainService.People
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.TenantId, tenantId) & Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId);
             return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).Find(filter).FirstOrDefaultAsync();
         }
+
+        public async Task<User> GetUserByEmailAsync(string email)
+        {
+            var filter = Builders<User>.Filter.Eq(x => x.Email, email);
+            return await _dbContextProvider.GetCollection<User>("Users").Find(filter).FirstOrDefaultAsync();
+        }
     }
 }
