@@ -2,9 +2,15 @@ import {
   IPermission,
   PermissionSeverityLevel,
 } from "@blocks-idp/iam/models/permission";
-import { toRoleStubs } from "@blocks-idp/iam/utils/role-stub"
+import { IRole } from "@blocks-idp/iam/models/role";
 
-export { toRoleStubs }
+export const toRoleStubs = (slugs: string[]): IRole[] =>
+  slugs.map((slug) => ({
+    itemId: slug,
+    name: slug,
+    description: "",
+    slug,
+  }));
 
 export const toPermissionStub = (resource: string): IPermission => ({
   itemId: resource,

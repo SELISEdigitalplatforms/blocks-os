@@ -12,9 +12,8 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { ConfigsTableShell } from "@/components/configs-table-shell/configs-table-shell";
-import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
+import { EllipsisVertical, Pencil, Trash } from "lucide-react";
 import NewNotificationConfiguration from "../modals/new-notification-configuration";
 import {
   channelsToNotify,
@@ -29,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@seliseblocks/blocks-kit/hooks";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
@@ -51,18 +50,11 @@ const columns = [
 interface NotificationConfigurationListProps {
   addConfigOpen?: boolean;
   onAddConfigOpenChange?: (open: boolean) => void;
-  isLoading?: boolean;
-  configurationsLength?: number;
 }
 
 const NotificationConfigurationList: React.FC<
   NotificationConfigurationListProps
-> = ({
-  addConfigOpen,
-  onAddConfigOpenChange,
-  isLoading: isLoadingProp,
-  configurationsLength: configurationsLengthProp,
-}) => {
+> = ({ addConfigOpen, onAddConfigOpenChange }) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } =
     useNotificationConfigsFilterQueryParams();
@@ -72,9 +64,7 @@ const NotificationConfigurationList: React.FC<
     pageSize: queryParams.notificationPageSize,
     searchText: queryParams.notificationSearch || undefined,
   });
-  const loading = isLoadingProp ?? (isLoading || isFetching);
-  const configurationsLength =
-    configurationsLengthProp ?? data?.configurations?.length ?? 0;
+  const loading = isLoading || isFetching;
 
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -141,17 +131,17 @@ const NotificationConfigurationList: React.FC<
             onChange={onPageChangeHandler}
           />
         }>
-        {loading ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead key={col.key}>{col.label}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from({ length: 5 }).map((_, idx) => (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map((col) => (
+                <TableHead key={col.key}>{col.label}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, idx) => (
                 <TableRow key={idx}>
                   {columns.map((col) => (
                     <TableCell key={col.key}>
@@ -159,20 +149,9 @@ const NotificationConfigurationList: React.FC<
                     </TableCell>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead key={col.key}>{col.label}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.configurations?.map((config) => (
+              ))
+            ) : data && data.configurations?.length > 0 ? (
+              data.configurations.map((config) => (
                 <TableRow key={config.itemId}>
                   <TableCell>{config.name}</TableCell>
                   <TableCell>
@@ -222,10 +201,18 @@ const NotificationConfigurationList: React.FC<
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-[240px] align-middle text-center text-muted-foreground">
+                  No notification configurations found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </ConfigsTableShell>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         {!loading && selectedConfigData && (
@@ -262,34 +249,10 @@ export function NotificationConfigurationListPage() {
     "notificationConfig",
     parseAsBoolean.withDefault(false),
   );
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  const { queryParams } = useNotificationConfigsFilterQueryParams();
-  const { data, isLoading, isFetching } = useGetNotificationConfigs({
-    projectKey: tenantId,
-    page: queryParams.notificationPage,
-    pageSize: queryParams.notificationPageSize,
-    searchText: queryParams.notificationSearch || undefined,
-  });
-  const loading = isLoading || isFetching;
-  const configurations = data?.configurations ?? [];
-  const isEmpty = !loading && configurations.length === 0;
-
-  if (isEmpty) {
-    return (
-      <EmptyState
-        icon={Bell}
-        title="No notification configurations found"
-        description="Use Add Configuration to create one."
-      />
-    );
-  }
-
   return (
     <NotificationConfigurationList
       addConfigOpen={addOpen}
       onAddConfigOpenChange={setAddOpen}
-      isLoading={loading}
-      configurationsLength={configurations.length}
     />
   );
 }

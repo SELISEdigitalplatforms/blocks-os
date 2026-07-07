@@ -2,7 +2,6 @@ import { useGetAuthOidcCredentials } from "@blocks-idp/authentication/hooks/use-
 import { useMemo } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Shield } from "lucide-react";
 import {
@@ -70,11 +69,19 @@ export const OidcList = () => {
 
   if (!sortedOidcData.length) {
     return (
-      <EmptyState
-        icon={Shield}
-        title="No OIDC clients yet"
-        description="Add your first OIDC client to get started."
-      />
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <Shield className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-high-emphasis">
+            No OIDC clients yet
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add your first OIDC client to get started.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 

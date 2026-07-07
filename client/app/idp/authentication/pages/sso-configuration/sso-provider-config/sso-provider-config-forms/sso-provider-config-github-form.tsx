@@ -10,7 +10,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { createCommonOAuthFields } from "../sso-provider-config-field-factory.util";
 import { ssoOAuthProviderSchema } from "../sso-provider-config.schema";
 import { SSOProviderConfigFormField } from "./sso-provider-config-form-fields";
-import { createRoleStub } from "@blocks-idp/iam/utils/role-stub";
 import { SsoConfigForms } from "./sso-provider-config-forms";
 const SSOGithubFormFields = createCommonOAuthFields();
 export const SSOProviderConfigGithubForm: React.FC<SsoConfigForms> = ({ save, configuration }) => {
@@ -24,7 +23,7 @@ export const SSOProviderConfigGithubForm: React.FC<SsoConfigForms> = ({ save, co
       initialRoles: [],
       initialPermissions: [],
       // Hardcoded default role for now; will use API response later
-      userRoles: [createRoleStub({ slug: "user", name: "user", description: "default role", itemId: "1234" })],
+      userRoles: [{ name: "user", slug: "user", description: "default role", itemId: "1234" }],
       userPermissions: [],
     },
     resolver: zodResolver(ssoOAuthProviderSchema),

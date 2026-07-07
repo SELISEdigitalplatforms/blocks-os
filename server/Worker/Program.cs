@@ -4,15 +4,15 @@ using DomainService.Projects;
 using DomainService.Shared;
 using DomainService.Shared.Dtos;
 using DomainService.Shared.Entities;
-using SeliseBlocks.ConfigurationDriver;
 using Worker;
 using Worker.Configuration;
 using Worker.Consumers.Identifier;
 
 const string _serviceName = "blocks-os-worker";
 
-var vaultType = ApplicationConfigurations.ResolveVaultType();
-var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, vaultType);
+//var vaultType = ResolveVaultType();
+//Console.WriteLine($"Using Genesis vault type: {vaultType}");
+var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, VaultType.Azure);
 
 await CreateHostBuilder(args).Build().RunAsync();
 
@@ -20,14 +20,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
         .ConfigureAppConfiguration((context, builder) =>
         {
-         // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
-         builder.AddMongoDbConfiguration(options =>
-         {
-          options.ConnectionString = secret.DatabaseConnectionString;
-          options.DatabaseName = secret.RootDatabaseName;
-          options.CollectionName = "Secrets";
-          options.SecretKey = "blocks-secret-os";
-         });
+            // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
         })
         .ConfigureServices((services) =>
         {

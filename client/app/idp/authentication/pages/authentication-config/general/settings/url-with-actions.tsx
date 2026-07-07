@@ -74,7 +74,7 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
         href={certificatePath}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-sm font-medium text-high-emphasis underline"
+        className="text-base font-normal text-high-emphasis underline"
         title={certificatePath}
       >
         Public Certificate

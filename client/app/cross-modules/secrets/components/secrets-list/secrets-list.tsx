@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { KeyRound, Pencil, Trash2, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
@@ -218,11 +217,17 @@ export function SecretsList() {
 
   if (items.length === 0) {
     return (
-      <EmptyState
-        icon={KeyRound}
-        title="No secrets yet"
-        description="Add your first secret to get started."
-      />
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <KeyRound className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-high-emphasis">No secrets yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add your first secret to get started.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 

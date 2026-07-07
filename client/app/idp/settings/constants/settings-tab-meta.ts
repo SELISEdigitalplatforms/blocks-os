@@ -8,8 +8,7 @@ export type SettingsTabMeta = {
 export const SETTINGS_TAB_META: Record<SettingsTabValue, SettingsTabMeta> = {
   "auth-config": {
     title: "Auth Configuration",
-    description:
-      "Configure authentication policies, token validity, account lockout rules, and certificate settings.",
+    description: "Manage token lifetimes, account lockout, and certificates.",
   },
   "iam-config": {
     title: "IAM Configuration",

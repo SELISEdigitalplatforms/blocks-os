@@ -7,10 +7,13 @@ import {
   useRolesFilterQueryParams,
   useRolesSortQueryParams,
 } from "./roles-filter-toolbar";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 export const Roles = () => {
   const { queryParams, setQueryParams } = useRolesFilterQueryParams();
   const { sortQueryParams } = useRolesSortQueryParams();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading, isFetching } = useGetRoles({
+    projectKey: tenantId,
     page: queryParams.page,
     pageSize: queryParams.pageSize,
     filter: {

@@ -11,6 +11,7 @@ export const SignupSettingsTab = () => {
   const tenantId = useSettingsTenantId()
   const configQuery = useSettingsSignUpSetting()
   const rolesQuery = useGetRoles({
+    projectKey: tenantId,
     page: 0,
     pageSize: 1000,
     sort: { property: "Name", isDescending: false },

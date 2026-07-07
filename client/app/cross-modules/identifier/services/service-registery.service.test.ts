@@ -22,6 +22,7 @@ describe("ServiceRegistryService", () => {
 
       const payload = {
         serviceName: "Test Service",
+        projectKey: "proj-key",
         tags: ["api"],
       };
       const result = await service.registerService(payload);
@@ -37,6 +38,7 @@ describe("ServiceRegistryService", () => {
         serviceName: "Full Service",
         description: "A test service",
         metadata: '{"version":"1.0.0"}',
+        projectKey: "proj-key",
         tags: ["api", "production"],
       };
       await service.registerService(payload);
@@ -50,6 +52,7 @@ describe("ServiceRegistryService", () => {
       await expect(
         service.registerService({
           serviceName: "Test",
+          projectKey: "key",
           tags: [],
         }),
       ).rejects.toThrow("Registration failed");
@@ -65,6 +68,7 @@ describe("ServiceRegistryService", () => {
       const payload = {
         page: 1,
         pageSize: 10,
+        projectKey: "proj-key",
       };
       const result = await service.getAllServices(payload);
 
@@ -78,6 +82,7 @@ describe("ServiceRegistryService", () => {
       const payload = {
         page: 1,
         pageSize: 10,
+        projectKey: "proj-key",
         sort: { property: "name", isDescending: false },
         filter: { serviceId: "", serviceName: "api", serviceType: "" },
       };
@@ -89,9 +94,9 @@ describe("ServiceRegistryService", () => {
     it("should handle API errors", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Failed to fetch services"));
 
-      await expect(service.getAllServices({ page: 1, pageSize: 10 })).rejects.toThrow(
-        "Failed to fetch services",
-      );
+      await expect(
+        service.getAllServices({ page: 1, pageSize: 10, projectKey: "key" }),
+      ).rejects.toThrow("Failed to fetch services");
     });
   });
 });
