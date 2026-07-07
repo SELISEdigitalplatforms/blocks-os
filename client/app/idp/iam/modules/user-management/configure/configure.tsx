@@ -14,7 +14,10 @@ import {
 import { iamConfigFormDefaultValues, iamConfigFormSchema } from "./utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import {
   useGetIamConfiguration,
@@ -69,7 +72,9 @@ export function Configure() {
             </div>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(submitHandler)} onReset={() => form.reset()}>
+              <form
+                onSubmit={form.handleSubmit(submitHandler)}
+                onReset={() => form.reset()}>
                 <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 lg:gap-6">
                   <FormField
                     name="accountActivationUrl"
@@ -80,7 +85,10 @@ export function Configure() {
                           Account activation url
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter account activation url" {...field} />
+                          <Input
+                            placeholder="Enter account activation url"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -95,7 +103,10 @@ export function Configure() {
                           Account verification url
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter account verification url" {...field} />
+                          <Input
+                            placeholder="Enter account verification url"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -110,7 +121,10 @@ export function Configure() {
                           Recovery account URL
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter recovery account URL" {...field} />
+                          <Input
+                            placeholder="Enter recovery account URL"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -175,7 +189,11 @@ export function Configure() {
                   />
                 </div>
                 <div className="mt-6 flex items-center justify-end gap-2">
-                  <Button variant="outline" size="sm" className="h-10" type="reset">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10"
+                    type="reset">
                     <Undo2 className="mr-2 h-5 w-4" />
                     Reset
                   </Button>
@@ -183,8 +201,7 @@ export function Configure() {
                     size="sm"
                     variant="default"
                     className="h-10 text-primary-foreground"
-                    disabled={isPending || !form.formState.isDirty}
-                  >
+                    disabled={isPending || !form.formState.isDirty}>
                     <Edit className="mr-2 h-5 w-4" />
                     {isPending ? "Changing" : "Change"}
                   </Button>

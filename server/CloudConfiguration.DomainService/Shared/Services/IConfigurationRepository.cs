@@ -1,6 +1,4 @@
 ﻿using Blocks.Genesis;
-using CloudConfiguration.DomainService.Mail.Entities;
-using CloudConfiguration.DomainService.Mail.RequestModel;
 using CloudConfiguration.DomainService.Notification.Entities;
 using CloudConfiguration.DomainService.Notification.RequestModel;
 using CloudConfiguration.DomainService.Notification.ResponseModel;
@@ -29,16 +27,6 @@ namespace CloudConfiguration.DomainService.Shared.Services
         Task DeleteStorageConfigurationByNameAsync(string configurationName);
         Task<StorageConfiguration> GetStorageConfigurationByIdAsync(string itemId);
         Task<StorageConfiguration?> GetStorageConfigurationStrategyAsync(string storageStrategy);
-
-        #endregion
-
-        #region Mail
-
-        Task SaveMailConfigurationAsync(MailServerConfiguration configuration);
-        Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
-        Task<MailConfiguration> GetMailConfigurationByNameAsync(string configurationName);
-        Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
-        Task DeleteMailConfigurationAsync(string configurationId);
 
         #endregion
 

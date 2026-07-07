@@ -47,10 +47,6 @@ export const iamConfigFormSchema = z.object({
 
 export type IamConfigFormValues = z.infer<typeof iamConfigFormSchema>
 
-/** Matches server default in SaveIamConfigurationRequest */
-export const DEFAULT_PASSWORD_STRENGTH_REGEX_PLACEHOLDER =
-  "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_])[A-Za-z\\d\\W_]{8,30}$"
-
 export const toAuthSettingsFormValues = (
   config: {
     accessTokenValidForNumberMinutes: number

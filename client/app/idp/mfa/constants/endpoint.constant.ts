@@ -1,10 +1,10 @@
-// ─── MFA configuration endpoints (mfa.service — Blocks IAM base URL, absolute) ───────────
+// ─── MFA configuration endpoints (mfa.service — Logic MFA API) ───────────
 
 import { API_BASES } from "@/constants/endpoint.constant";
 
 export const MFA_CONFIG_ENDPOINTS = {
-  GET: `${API_BASES.IAM}/Mfa/Config`,
-  SAVE: `${API_BASES.IAM}/Mfa/Config`,
+  GET: `${API_BASES.MFA}/Mfa/Get`,
+  SAVE: `${API_BASES.MFA}/Mfa/Save`,
 } as const
 
 /** Profile page MFA gate — Logic cloud config (not secrets). */

@@ -14,7 +14,7 @@ import { PasswordInput } from "@/components/password-input";
 import { z } from "zod";
 import { Input } from "@/components/ui-kits/input/input";
 import { useNavigate } from "react-router-dom";
-import { showErrorToast } from "@/hooks/use-toast";
+import { showErrorToast } from "@seliseblocks/blocks-kit/utils";
 import { useAccountActivation } from "@blocks-idp/iam/hooks/use-account";
 import { useEffect, useState } from "react";
 import { isErrorWithErrors } from "@/lib/error";
@@ -51,7 +51,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
   useEffect(() => {
     if (!code) return navigate("/login");
   }, [code, navigate]);
-  const onSubmitHandler = async (values: z.infer<typeof activationFormSchema>) => {
+  const onSubmitHandler = async (
+    values: z.infer<typeof activationFormSchema>,
+  ) => {
     try {
       // console.log("captchaCode", captchaCode);
       // return;
@@ -84,7 +86,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
   const { isValid } = form.formState;
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
+      <form
+        onSubmit={form.handleSubmit(onSubmitHandler)}
+        className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="firstname"
@@ -146,8 +150,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
         <Button
           type="submit"
           className="w-full"
-          disabled={isPending || !captchaCode || !requirementsMet || !isValid}
-        >
+          disabled={isPending || !captchaCode || !requirementsMet || !isValid}>
           Activate BTN
         </Button>
       </form>

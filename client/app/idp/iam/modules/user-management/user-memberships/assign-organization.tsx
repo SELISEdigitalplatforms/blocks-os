@@ -16,13 +16,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetOrganizations } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useUpdateUser, useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { ChevronsUpDown, Check, Plus } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui-kits/popover/popover";
 import {
   Command,
   CommandEmpty,
@@ -37,7 +44,10 @@ type AssignOrganizationProps = {
   userId: string;
   projectKey: string;
 };
-export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationProps) => {
+export const AssignOrganization = ({
+  userId,
+  projectKey,
+}: AssignOrganizationProps) => {
   const [open, setOpen] = useState(false);
   const [rolesPopoverOpen, setRolesPopoverOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
@@ -49,6 +59,7 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
     pageSize: 1000,
   });
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
+    projectKey,
     page: 0,
     pageSize: 1000,
     sort: { property: "Name", isDescending: false },
@@ -75,12 +86,18 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
 
   const handleOrgChange = (orgId: string) => {
     setSelectedOrgId(orgId);
-    setSelectedRoles(existingOrgIds.includes(orgId) ? userData?.data?.roles?.[orgId] || [] : []);
+    setSelectedRoles(
+      existingOrgIds.includes(orgId)
+        ? userData?.data?.roles?.[orgId] || []
+        : [],
+    );
   };
 
   const onConfirm = async () => {
     if (!selectedOrgId || selectedRoles.length === 0) {
-      showErrorToast({ errors: "Please select an organization and at least one role" });
+      showErrorToast({
+        errors: "Please select an organization and at least one role",
+      });
       return;
     }
     try {
@@ -90,7 +107,9 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
         : [...existingOrgIds, selectedOrgId];
       const otherOrgRoles = Object.values(
         Object.fromEntries(
-          Object.entries(userData?.data?.roles || {}).filter(([orgId]) => orgId !== selectedOrgId),
+          Object.entries(userData?.data?.roles || {}).filter(
+            ([orgId]) => orgId !== selectedOrgId,
+          ),
         ),
       ).flat();
       const updatedRoles = [...new Set([...otherOrgRoles, ...selectedRoles])];
@@ -132,8 +151,7 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
       onOpenChange={(value) => {
         if (!value) reset();
         setOpen(value);
-      }}
-    >
+      }}>
       <DialogTrigger asChild>
         <Button size="sm" variant="ghost" className="h-10 text-sm text-primary">
           <Plus className="h-5 w-5 text-primary md:mr-2.5" />
@@ -172,19 +190,32 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select at least one role to assign</label>
+            <label className="text-sm font-medium">
+              Select at least one role to assign
+            </label>
             {isRolesLoading ? (
-              <div className="p-2 text-sm text-muted-foreground">Loading roles...</div>
+              <div className="p-2 text-sm text-muted-foreground">
+                Loading roles...
+              </div>
             ) : roles.length === 0 ? (
-              <div className="p-2 text-sm text-muted-foreground">No roles available</div>
+              <div className="p-2 text-sm text-muted-foreground">
+                No roles available
+              </div>
             ) : (
-              <Popover open={rolesPopoverOpen} onOpenChange={setRolesPopoverOpen}>
+              <Popover
+                open={rolesPopoverOpen}
+                onOpenChange={setRolesPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between">
                     {selectedRoles.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {selectedRoles.length > 2 ? (
-                          <Badge variant="secondary">{selectedRoles.length} selected</Badge>
+                          <Badge variant="secondary">
+                            {selectedRoles.length} selected
+                          </Badge>
                         ) : (
                           selectedRoles.map((slug) => {
                             const role = roles.find((r) => r.slug === slug);
@@ -209,17 +240,20 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
                       <CommandEmpty>No roles found.</CommandEmpty>
                       <CommandGroup>
                         {roleOptions.map((option) => {
-                          const isSelected = selectedRoles.includes(option.value);
+                          const isSelected = selectedRoles.includes(
+                            option.value,
+                          );
                           return (
                             <CommandItem
                               key={option.value}
                               onSelect={() => {
                                 const newSelected = isSelected
-                                  ? selectedRoles.filter((v) => v !== option.value)
+                                  ? selectedRoles.filter(
+                                      (v) => v !== option.value,
+                                    )
                                   : [...selectedRoles, option.value];
                                 setSelectedRoles(newSelected);
-                              }}
-                            >
+                              }}>
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
@@ -244,14 +278,14 @@ export const AssignOrganization = ({ userId, projectKey }: AssignOrganizationPro
             onClick={() => {
               reset();
               setOpen(false);
-            }}
-          >
+            }}>
             Cancel
           </Button>
           <Button
             onClick={onConfirm}
-            disabled={isPending || !selectedOrgId || selectedRoles.length === 0}
-          >
+            disabled={
+              isPending || !selectedOrgId || selectedRoles.length === 0
+            }>
             {isPending ? "Assigning..." : "Confirm"}
           </Button>
         </DialogFooter>

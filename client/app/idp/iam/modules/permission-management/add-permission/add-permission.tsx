@@ -5,7 +5,10 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { PermissionForm } from "../permission-form";
 import { permissionFormSchemaType } from "../permission-form/utils";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { useNavigate } from "react-router-dom";
 export const AddPermission = () => {

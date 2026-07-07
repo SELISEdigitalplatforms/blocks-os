@@ -1,22 +1,36 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
+import {
+  useGetPreSignedUrlForUpload,
+  useUploadFile,
+} from "@blocks-storage/hooks/use-storage-file";
 import { storageService } from "@blocks-storage/services/storage.service";
 import { useGetMe, useUpdateUser } from "@blocks-idp/iam/hooks/use-user";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 const emptyProfilePhoto = "/assets/images/empty-profile-photo.png";
 import { ModuleName } from "@/constants/modules.constants";
 type ProfileImageUploaderProps = { projectKey: string; id: string };
-export const ProfileImageUploader = ({ projectKey, id }: ProfileImageUploaderProps) => {
+export const ProfileImageUploader = ({
+  projectKey,
+  id,
+}: ProfileImageUploaderProps) => {
   const [image, setImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data } = useGetMe();
   const { mutateAsync } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadImageMutate } = useUploadFile();
-  const { mutateAsync: updateUserMutate } = useUpdateUser({ projectKey, id, own: true });
-  const [isProfileImageUploading, setIsProfileImageUploading] = useState<boolean>(false);
+  const { mutateAsync: updateUserMutate } = useUpdateUser({
+    projectKey,
+    id,
+    own: true,
+  });
+  const [isProfileImageUploading, setIsProfileImageUploading] =
+    useState<boolean>(false);
   useEffect(() => {
     if (data?.data) {
       setImage(data.data.profileImageUrl);
@@ -51,7 +65,8 @@ export const ProfileImageUploader = ({ projectKey, id }: ProfileImageUploaderPro
         profileImageId: userProfileFile.itemId,
         profileImageUrl: userProfileFile.url,
       });
-      if (!updatedUser.isSuccess) return showErrorToast({ errors: updatedUser.errors });
+      if (!updatedUser.isSuccess)
+        return showErrorToast({ errors: updatedUser.errors });
       showSuccessToast({ description: "Profile pic updated successfully" });
     } catch (error) {
       if (isErrorWithErrors(error)) {
@@ -82,7 +97,9 @@ export const ProfileImageUploader = ({ projectKey, id }: ProfileImageUploaderPro
     }
     if (selectedFile.size > MAX_SIZE_MB * 1024 * 1024) {
       event.target.value = "";
-      return showErrorToast({ errors: `File size must be less than ${MAX_SIZE_MB}MB` });
+      return showErrorToast({
+        errors: `File size must be less than ${MAX_SIZE_MB}MB`,
+      });
     }
     setImage(URL.createObjectURL(selectedFile)); // Generate preview
     uploadImage(selectedFile);
@@ -123,8 +140,7 @@ export const ProfileImageUploader = ({ projectKey, id }: ProfileImageUploaderPro
         onClick={(e) => {
           e.stopPropagation();
           fileInputRef.current?.click();
-        }}
-      >
+        }}>
         <Camera className="h-5 w-5" />
         <span className="ml-2.5">Change Image</span>
       </Button>

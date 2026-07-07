@@ -5,8 +5,6 @@ using CloudConfiguration.DomainService.Notification.Entities;
 using CloudConfiguration.DomainService.Notification.ResponseModel;
 using CloudConfiguration.DomainService.Notification.RequestModel;
 using CloudConfiguration.DomainService.Storage.Entities;
-using CloudConfiguration.DomainService.Mail.Entities;
-using CloudConfiguration.DomainService.Mail.RequestModel;
 
 namespace CloudConfiguration.DomainService.Shared.Services
 {
@@ -16,7 +14,6 @@ namespace CloudConfiguration.DomainService.Shared.Services
 
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
         private const string _storageCollectionName = "StorageConfigurations";
-        private const string _mailConfigurationCollectionName = "MailServerConfigurations";
 
         public ConfigurationRepository(IDbContextProvider dbContextProvider)
         {
@@ -150,51 +147,6 @@ namespace CloudConfiguration.DomainService.Shared.Services
 
         #endregion
 
-        #region Mail
-
-        public async Task SaveMailConfigurationAsync(MailServerConfiguration configuration)
-        {
-            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-
-            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
-
-            await collection.ReplaceOneAsync(filter, configuration, new ReplaceOptions { IsUpsert = true });
-        }
-
-        public async Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId)
-        {
-            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
-
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<MailConfiguration> GetMailConfigurationByNameAsync(string configurationName)
-        {
-            var collection = _dbContextProvider.GetCollection<MailConfiguration>(_mailConfigurationCollectionName);
-            var filter = Builders<MailConfiguration>.Filter.Eq(mc => mc.ConfigurationName, configurationName);
-
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync()
-        {
-            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var document = collection.Find(_ => true).SortByDescending(doc => doc.IsDefault);
-
-            return await document.ToListAsync();
-        }
-
-        public async Task DeleteMailConfigurationAsync(string configurationId)
-        {
-            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
-            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
-
-            await collection.DeleteOneAsync(filter);
-        }
-
-        #endregion
-        
         public async Task UpsertAsync<T>(T data, Expression<Func<T, bool>> filterExpression, string collectionName = "")
         {
             IMongoCollection<T> collection = _dbContextProvider.GetCollection<T>(string.IsNullOrWhiteSpace(collectionName) ? (typeof(T).Name + "s") : collectionName);

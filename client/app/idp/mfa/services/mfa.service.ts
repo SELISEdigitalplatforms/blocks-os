@@ -32,21 +32,15 @@ export class MFAService {
         absoluteUrl: true,
       })
       .then((response) => ({
-        enabled: response?.enabled ?? false,
-        allowedMethods: Array.isArray(response?.allowedMethods)
-          ? response.allowedMethods.map(Number)
-          : [],
-        requireMfaForAllUsers: response?.requireMfaForAllUsers ?? false,
-        mfaRequiredRoles: response?.mfaRequiredRoles ?? [],
-        mfaExemptRoles: response?.mfaExemptRoles ?? [],
-        allowUserOptOut: response?.allowUserOptOut ?? true,
-        allowBackupCodes: response?.allowBackupCodes ?? true,
-        backupCodesCount: response?.backupCodesCount ?? 10,
+        enableMfa: response?.enableMfa ?? false,
         mfaTemplate: {
           templateName: response?.mfaTemplate?.templateName ?? '',
           templateId: response?.mfaTemplate?.templateId ?? '',
         },
         projectKey: null,
+        userMfaType: Array.isArray(response?.userMfaType)
+          ? response.userMfaType.map(Number)
+          : [],
       }))
   }
 
@@ -63,9 +57,10 @@ export class MFAService {
       .post<unknown>(
         MFA_CONFIG_ENDPOINTS.SAVE,
         {
-          enableMfa: payload.enabled,
-          userMfaType: payload.allowedMethods,
+          enableMfa: payload.enableMfa,
+          userMfaType: payload.userMfaType,
           ...(payload.mfaTemplate ? { mfaTemplate: payload.mfaTemplate } : {}),
+          projectKey: payload.projectKey,
         },
         undefined,
         { absoluteUrl: true },

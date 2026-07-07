@@ -18,7 +18,10 @@ import { DialogClose, DialogFooter } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetProject, useUpdateProject } from "@/hooks/use-project";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import {
   Tooltip,
   TooltipContent,
