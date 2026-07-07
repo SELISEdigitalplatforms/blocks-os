@@ -138,14 +138,12 @@ export const mockSaveConfigPayload = {
   senderAddress: "sender@example.com",
   senderUserName: "sender@example.com",
   accountPassword: "password123",
-  projectKey: "test-project-key-123",
   isInbound: false,
   provider: 0,
 };
 
 export const mockDeleteConfigPayload = {
   configurationId: "config-1",
-  projectKey: "test-project-key-123",
 };
 
 export const mockSaveTemplatePayload = {
@@ -157,7 +155,6 @@ export const mockSaveTemplatePayload = {
   generatedBy: "BeeJS",
   templateBody: "<html><body>New template body</body></html>",
   jsonContent: "{}",
-  projectKey: "test-project-key-123",
 };
 
 export const mockCloneTemplatePayload = {
@@ -166,19 +163,16 @@ export const mockCloneTemplatePayload = {
   language: "en",
   name: "Cloned Welcome Email",
   templateSubject: "Welcome to our platform (Copy)",
-  projectKey: "test-project-key-123",
 };
 
 export const mockDeleteTemplatePayload = {
   itemId: "template-1",
-  projectKey: "test-project-key-123",
 };
 
 export const mockSendTestMailPayload = {
   to: "test@example.com",
   purpose: "welcome",
   language: "en",
-  projectKey: "test-project-key-123",
 };
 
 // ─── Service factory ──────────────────────────────────────────────────────────
