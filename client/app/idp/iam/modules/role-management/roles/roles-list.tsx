@@ -108,7 +108,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
               variant="ghost"
               onClick={(event) => {
                 event.stopPropagation();
-                setSelectedRole(() => row.original);
+                setSelectedRole(row.original);
               }}
             >
               <Pencil className="h-4 w-4" />

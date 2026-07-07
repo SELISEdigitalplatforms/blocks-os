@@ -8,31 +8,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast, toast } from "@/hooks/use-toast";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useState } from "react";
 import { UserMFAMethodList } from "./user-mfa-methods-list";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
 import { userMfaContext } from "../user-mfa";
-import { toast } from "@seliseblocks/blocks-kit/hooks";
 export const UserMFAConfirmationEnable = () => {
-  const { projectKey, userId, enableTotpModal, showTotpModal } =
-    useContext(userMfaContext);
+  const { projectKey, userId, enableTotpModal, showTotpModal } = useContext(userMfaContext);
   const [open, setOpen] = useState<boolean>(false);
   const [type, setType] = useState(0);
-  const { isPending, mutateAsync } = useConfigureUserMFA({
-    id: userId,
-    projectKey,
-  });
-  const {
-    data: userData,
-    isLoading,
-    isFetching,
-  } = useGetUserById({ id: userId, projectKey });
+  const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
+  const { data: userData, isLoading, isFetching } = useGetUserById({ id: userId, projectKey });
   const onClickHandler = async () => {
     try {
       const res = await mutateAsync({
@@ -78,15 +66,9 @@ export const UserMFAConfirmationEnable = () => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Enable MFA?</DialogTitle>
-          <DialogDescription>
-            Select the method of MFA for this user.
-          </DialogDescription>
+          <DialogDescription>Select the method of MFA for this user.</DialogDescription>
         </DialogHeader>
-        <UserMFAMethodList
-          selected={type}
-          setSelected={setType}
-          projectKey={projectKey}
-        />
+        <UserMFAMethodList selected={type} setSelected={setType} projectKey={projectKey} />
         <DialogFooter className="mt-4 flex flex-row gap-2">
           <DialogTrigger asChild>
             <Button size="sm" variant="outline" disabled={isPending}>
@@ -96,7 +78,8 @@ export const UserMFAConfirmationEnable = () => {
           <Button
             size="sm"
             onClick={onClickHandler}
-            disabled={isPending || type === 0 || isLoading || isFetching}>
+            disabled={isPending || type === 0 || isLoading || isFetching}
+          >
             {isPending ? "Saving" : "Save"}
           </Button>
         </DialogFooter>

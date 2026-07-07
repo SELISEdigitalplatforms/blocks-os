@@ -8,10 +8,7 @@ import {
   useCreateProjectFormState,
   shortGuidGenerator,
 } from "@/components/create-project/utils";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 
 export const useGetProjects = (tenantGroupId = "") => {
   const { setProjects } = useProjectStore();
@@ -41,6 +38,7 @@ export const useGetProject = (options?: { projectId: string }) => {
     enabled: Boolean(projectId),
   });
 };
+
 
 export const useGetAssets = (
   tenantGroupId: string,
@@ -166,9 +164,7 @@ export const useInitiateMigration = () => {
     mutationKey: ["identifier", "migration", "initiate"],
     mutationFn: crossProjectService.initiateMigration,
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["identifier", "migration-status"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["identifier", "migration-status"] });
     },
   });
 };
@@ -179,9 +175,7 @@ export const useVerifyMigration = () => {
     mutationKey: ["identifier", "migration", "verify"],
     mutationFn: crossProjectService.verifyMigration,
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["identifier", "migration-status"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["identifier", "migration-status"] });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
     },
   });

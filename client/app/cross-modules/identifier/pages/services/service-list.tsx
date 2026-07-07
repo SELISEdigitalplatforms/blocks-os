@@ -1,8 +1,8 @@
 import { ServiceCard } from "@blocks-identifier/components/service-card/service-card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { Accordion, AccordionItem } from "@/components/ui-kits/accordion/accordion";
@@ -21,26 +21,18 @@ const ServiceListSkeleton = () => (
   </div>
 );
 const EmptyServiceList = () => (
-  <Card>
-    <CardContent className="flex flex-col items-center justify-center py-16">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <Layers className="h-6 w-6 text-muted-foreground" />
-      </div>
-      <p className="text-sm font-medium text-high-emphasis">No services yet</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Register your first service to get started.
-      </p>
-    </CardContent>
-  </Card>
+  <EmptyState
+    icon={Layers}
+    title="No services yet"
+    description="Register your first service to get started."
+  />
 );
 export const ServiceList = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),
     pageSize: parseAsInteger.withDefault(10),
   });
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading, isFetching } = useGetAllServices({
-    projectKey: tenantId,
     page: queryParams.page,
     pageSize: queryParams.pageSize,
   });
