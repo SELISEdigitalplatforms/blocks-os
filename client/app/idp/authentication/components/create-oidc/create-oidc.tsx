@@ -20,10 +20,7 @@ import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Plus, Pencil, X } from "lucide-react";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { ISaveOidcCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
   useGetAuthOidcCredential,

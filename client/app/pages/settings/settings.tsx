@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { toast } from "@seliseblocks/blocks-kit/hooks";
+import { toast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
