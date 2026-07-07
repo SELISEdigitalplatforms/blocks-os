@@ -28,7 +28,6 @@ export interface ISaveMailConfigPayload {
 
 class EmailService {
   fetchEmailConfigs = (
-    projectKey: string,
     pageNumber: number,
     pageSize: number,
   ): Promise<IEmailConfig[]> => {
@@ -40,7 +39,6 @@ class EmailService {
   };
 
   getEmailSecretConfigs = (
-    _projectKey: string,
     pageNumber: number = 0,
     pageSize: number = 10,
   ): Promise<{ configurations: IEmailConfig[] }> => {
@@ -66,27 +64,25 @@ class EmailService {
   fetchEmailTemplates = (
     pageNumber: number,
     pageSize: number,
-    projectKey: string,
     searchKey: string,
     sortProperty: string = "Name",
     isDescending: boolean = false,
     language: string,
     mailConfigurationId: string,
   ): Promise<{ templates: IEmailTemplate[]; totalCount: number }> => {
-    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&projectKey=${projectKey}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}`;
+    const url = `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=${pageNumber}&pageSize=${pageSize}&searchKey=${searchKey}&sortProperty=${sortProperty}&isDescending=${isDescending}&language=${language}&mailConfigurationId=${mailConfigurationId}`;
     return http.get(url, undefined, { absoluteUrl: true });
   };
 
-  fetchEmailTemplate = (projectKey: string, itemId: string): Promise<IEmailTemplate> => {
+  fetchEmailTemplate = (itemId: string): Promise<IEmailTemplate> => {
     return http.get(
-      `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=${itemId}&projectKey=${projectKey}`,
+      `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=${itemId}`,
       undefined,
       { absoluteUrl: true },
     );
   };
 
   getMailBoxMails = (
-    projectKey: string,
     pageNumber: number,
     pageSize: number,
     isInbound: boolean,
@@ -96,7 +92,6 @@ class EmailService {
     endDate?: string,
   ): Promise<IEmailUsageResponse> => {
     const params = new URLSearchParams({
-      ProjectKey: projectKey,
       PageNumber: pageNumber.toString(),
       PageSize: pageSize.toString(),
       IsInbound: isInbound.toString(),
@@ -118,7 +113,7 @@ class EmailService {
     return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, { absoluteUrl: true });
   };
 
-  getMailBoxMail = (projectKey: string, messageId: string): Promise<IGetMailBoxMailResponse> => {
+  getMailBoxMail = (messageId: string): Promise<IGetMailBoxMailResponse> => {
     return http.get(
       `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=${messageId}`,
       undefined,
@@ -149,7 +144,6 @@ class EmailService {
     to: string;
     purpose: string;
     language: string;
-    projectKey: string;
   }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
@@ -160,7 +154,6 @@ class EmailService {
       purpose: data.purpose,
       language: data.language,
       replyTo: [data.to],
-      projectKey: data.projectKey,
       isTestMail: true,
     };
     return http.post(MAIL_ENDPOINTS.SEND_TO_ANY, payload, undefined, { absoluteUrl: true });
@@ -175,7 +168,6 @@ class EmailService {
     generatedBy?: string;
     templateBody?: string;
     jsonContent?: string;
-    projectKey?: string;
   }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
@@ -196,7 +188,6 @@ class EmailService {
     language?: string;
     name?: string;
     templateSubject?: string;
-    projectKey: string;
   }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
@@ -211,7 +202,7 @@ class EmailService {
       .then((response) => response);
   }
 
-  deleteMailTemplate(payload: { itemId: string; projectKey: string }): Promise<{
+  deleteMailTemplate(payload: { itemId: string }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
   }> {
@@ -220,18 +211,17 @@ class EmailService {
         errors: unknown;
         isSuccess: boolean;
       }>(
-        `${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=${payload.itemId}&projectKey=${payload.projectKey}`,
+        `${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=${payload.itemId}`,
         undefined,
         { absoluteUrl: true },
       )
       .then((response) => response);
   }
 
-  deleteMailConfig(payload: { configurationId: string; projectKey: string }): Promise<{
+  deleteMailConfig(payload: { configurationId: string }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
   }> {
-    void payload.projectKey;
     return http
       .delete<{ errors: unknown; isSuccess: boolean }>(
         `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${encodeURIComponent(payload.configurationId)}`,
