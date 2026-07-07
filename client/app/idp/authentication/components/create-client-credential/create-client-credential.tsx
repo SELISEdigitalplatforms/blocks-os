@@ -189,8 +189,8 @@ export const CreateClientCredential = ({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl overflow-hidden p-0">
+        <DialogHeader className="border-b px-6 pb-4 pt-6">
           <DialogTitle>{isEdit ? "Edit Access Token" : "New Access Token"}</DialogTitle>
           <DialogDescription>
             {isEdit
@@ -199,8 +199,8 @@ export const CreateClientCredential = ({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-            <div className="max-h-[60vh] space-y-8 overflow-y-auto pr-1">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[70vh] flex-col">
+            <div className="space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
                   <KeyRound className="h-4 w-4" />
@@ -433,7 +433,7 @@ export const CreateClientCredential = ({
                 />
               </section>
             </div>
-            <DialogFooter>
+            <DialogFooter className="border-t bg-muted/20 px-6 py-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
