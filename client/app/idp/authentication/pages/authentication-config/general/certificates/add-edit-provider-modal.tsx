@@ -58,6 +58,7 @@ export const AddEditProviderModal = ({
     if (!isControlled) setInternalOpen(value);
     onOpenChangeProp?.(value);
   };
+  const isExternallyControlled = isControlled && !children;
   const [selectedProvider, setSelectedProvider] = useState("Keycloak");
   const [certificateMethod, setCertificateMethod] = useState("public-url");
   const [showPassword, setShowPassword] = useState(false);
@@ -255,21 +256,23 @@ export const AddEditProviderModal = ({
   };
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {children ?? (
-          <Button variant="outline" size="sm" className="mb-4">
-            {existingData ? (
-              <>
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" /> Add
-              </>
-            )}
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isExternallyControlled && (
+        <DialogTrigger asChild>
+          {children ?? (
+            <Button variant="outline" size="sm" className="mb-4">
+              {existingData ? (
+                <>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" /> Add
+                </>
+              )}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="flex max-h-[80vh] w-[95vw] max-w-md flex-col sm:w-full">
         <DialogHeader>
           <DialogTitle>{existingData ? "Edit provider" : "Add provider"}</DialogTitle>
