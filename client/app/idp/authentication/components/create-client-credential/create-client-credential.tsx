@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui-kits/switch/switch";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Search, Plus, KeyRound, UserCog, ShieldCheck } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useForm } from "react-hook-form";
@@ -35,6 +35,7 @@ import {
   ISaveClientCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
+  IPermission,
   PERMISSION_SEVERITY_OPTIONS,
   PermissionSeverityLevel,
 } from "@blocks-idp/iam/models/permission";
@@ -75,6 +76,9 @@ export const CreateClientCredential = ({
 
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [permFilter, setPermFilter] = useState<string>("");
+  const [permPage, setPermPage] = useState(0);
+  const [permItems, setPermItems] = useState<IPermission[]>([]);
+  const [permTotalCount, setPermTotalCount] = useState(0);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const isEdit = Boolean(editClient);
 
@@ -89,14 +93,15 @@ export const CreateClientCredential = ({
     filter: { search: roleFilter },
   });
 
-  const { data: permsData, isLoading: permsLoading } = useGetPermissions({
-    projectKey: tenantId,
-    page: 0,
-    pageSize: PERMISSION_PAGE_SIZE,
-    isBuiltIn: "",
-    roles: [],
-    search: permFilter,
-  });
+  const { data: permsData, isLoading: permsLoading, isFetching: permsFetching } =
+    useGetPermissions({
+      projectKey: tenantId,
+      page: permPage,
+      pageSize: PERMISSION_PAGE_SIZE,
+      isBuiltIn: "",
+      roles: [],
+      search: permFilter,
+    });
 
   const filteredRoles = useMemo(() => {
     if (!rolesData?.data) return [];
@@ -105,7 +110,49 @@ export const CreateClientCredential = ({
     return rolesData.data.filter((role) => role.slug.toLowerCase().includes(lowered));
   }, [rolesData, roleFilter]);
 
-  const permissions = useMemo(() => permsData?.data ?? [], [permsData]);
+  const permissions = permItems;
+  const permTotal = permTotalCount;
+  const permHasMore = permItems.length < permTotal;
+
+  useEffect(() => {
+    setPermPage(0);
+    setPermItems([]);
+    setPermTotalCount(0);
+  }, [permFilter, open]);
+
+  useEffect(() => {
+    if (!permsData) return;
+    const pageItems: IPermission[] = (permsData.data ?? []) as IPermission[];
+    setPermTotalCount((permsData.totalCount ?? pageItems.length) as number);
+    setPermItems((prev) => {
+      if (permPage === 0) return pageItems;
+      const seen = new Set(prev.map((p) => p.itemId));
+      const additions = pageItems.filter((p) => !seen.has(p.itemId));
+      return [...prev, ...additions];
+    });
+  }, [permsData, permPage]);
+
+  const permSentinelRef = useRef<HTMLLIElement | null>(null);
+  const loadMorePerms = useCallback(() => {
+    if (permsFetching) return;
+    if (!permHasMore) return;
+    setPermPage((prev) => prev + 1);
+  }, [permsFetching, permHasMore]);
+
+  useEffect(() => {
+    const target = permSentinelRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMorePerms();
+        }
+      },
+      { rootMargin: "120px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMorePerms]);
 
   const form = useForm<CreateClientModalFormValues>({
     resolver: zodResolver(createClientSchema),
@@ -189,8 +236,8 @@ export const CreateClientCredential = ({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-2xl overflow-hidden p-0">
-        <DialogHeader className="border-b px-6 pb-4 pt-6 pr-12">
+      <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6 pr-12">
           <DialogTitle>{isEdit ? "Edit Access Token" : "New Access Token"}</DialogTitle>
           <DialogDescription>
             {isEdit
@@ -199,8 +246,11 @@ export const CreateClientCredential = ({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[70vh] min-h-0 flex-col">
-            <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-4 pr-12">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+          >
+            <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
                   <KeyRound className="h-4 w-4" />
@@ -369,18 +419,16 @@ export const CreateClientCredential = ({
                       </div>
                       <FormControl>
                         <div className="rounded border">
-                          {permsLoading && (
+                          {permsLoading && permItems.length === 0 ? (
                             <div className="grid gap-2 p-3">
                               <Skeleton className="h-10 w-full rounded" />
                               <Skeleton className="h-10 w-full rounded" />
                             </div>
-                          )}
-                          {!permsLoading && permissions.length === 0 && (
+                          ) : permissions.length === 0 ? (
                             <p className="py-4 text-center text-sm text-muted-foreground">
                               No permissions found
                             </p>
-                          )}
-                          {!permsLoading && permissions.length > 0 && (
+                          ) : (
                             <ul className="max-h-72 divide-y overflow-y-auto">
                               {permissions.map((perm) => {
                                 const isChecked = field.value?.includes(perm.resource);
@@ -421,6 +469,29 @@ export const CreateClientCredential = ({
                                   </li>
                                 );
                               })}
+                              {permHasMore && (
+                                <li
+                                  ref={permSentinelRef}
+                                  className="flex items-center justify-center gap-2 px-3 py-3 text-xs text-muted-foreground"
+                                  aria-hidden
+                                >
+                                  {permsFetching ? (
+                                    <>
+                                      <span className="size-2 animate-pulse rounded-full bg-muted-foreground" />
+                                      <span className="size-2 animate-pulse rounded-full bg-muted-foreground [animation-delay:120ms]" />
+                                      <span className="size-2 animate-pulse rounded-full bg-muted-foreground [animation-delay:240ms]" />
+                                      <span className="ml-1">Loading more permissions…</span>
+                                    </>
+                                  ) : (
+                                    <span>Scroll for more</span>
+                                  )}
+                                </li>
+                              )}
+                              {!permHasMore && permissions.length > 0 && (
+                                <li className="px-3 py-2 text-center text-xs text-muted-foreground">
+                                  End of list ({permissions.length}/{permTotal})
+                                </li>
+                              )}
                             </ul>
                           )}
                         </div>
@@ -437,7 +508,7 @@ export const CreateClientCredential = ({
                 />
               </section>
             </div>
-            <DialogFooter className="border-t bg-muted/20 px-6 py-4">
+            <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4 pr-12">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
