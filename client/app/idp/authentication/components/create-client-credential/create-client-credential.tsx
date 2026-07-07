@@ -21,7 +21,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Search, Plus, Settings, UserCog, ShieldCheck } from "lucide-react";
+import { Search, Plus, KeyRound, UserCog, ShieldCheck } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
@@ -190,7 +190,7 @@ export const CreateClientCredential = ({
         </DialogTrigger>
       )}
       <DialogContent className="max-w-2xl">
-        <DialogHeader className="pl-1">
+        <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Access Token" : "New Access Token"}</DialogTitle>
           <DialogDescription>
             {isEdit
@@ -200,10 +200,10 @@ export const CreateClientCredential = ({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-            <div className="max-h-[60vh] space-y-6 overflow-y-auto pl-1 pr-2">
+            <div className="max-h-[60vh] space-y-8 overflow-y-auto pr-1">
               <section className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-medium-emphasis">
-                  <Settings className="h-4 w-4" />
+                <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
+                  <KeyRound className="h-4 w-4" />
                   General
                 </div>
                 <FormField
@@ -269,7 +269,7 @@ export const CreateClientCredential = ({
               </section>
 
               <section className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-medium-emphasis">
+                <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
                   <UserCog className="h-4 w-4" />
                   Roles
                 </div>
@@ -328,8 +328,8 @@ export const CreateClientCredential = ({
               </section>
 
               <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-medium text-medium-emphasis">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
                     <ShieldCheck className="h-4 w-4" />
                     Permissions
                   </div>
