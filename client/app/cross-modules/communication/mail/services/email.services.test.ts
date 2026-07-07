@@ -19,6 +19,9 @@ import {
 
 vi.mock("@/lib/http-client", () => mockHttpClientFactory());
 
+const ABSOLUTE_OPTIONS = undefined;
+const ABSOLUTE_FLAGS = { absoluteUrl: true };
+
 describe("EmailService", () => {
   let service: EmailService;
 
@@ -38,7 +41,9 @@ describe("EmailService", () => {
       const result = await service.fetchEmailConfigs(TEST_PROJECT_KEY, 0, 10);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=1&pageSize=10`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=1&pageSize=10`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockEmailConfigList);
     });
@@ -49,7 +54,9 @@ describe("EmailService", () => {
       await service.fetchEmailConfigs(TEST_PROJECT_KEY, 2, 20);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=3&pageSize=20`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=3&pageSize=20`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
@@ -68,8 +75,50 @@ describe("EmailService", () => {
       await service.fetchEmailConfigs(TEST_PROJECT_KEY, 0, 50);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=1&pageSize=50`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=1&pageSize=50`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
+    });
+  });
+
+  describe("getEmailSecretConfigs", () => {
+    it("should GET Mail/Gets with projectKey and 1-based pageNumber", async () => {
+      vi.mocked(http.get).mockResolvedValue([
+        {
+          itemId: "cfg-1",
+          name: "Default",
+          host: "smtp.example.com",
+          port: 587,
+          enableSSL: false,
+          senderName: "Sender",
+          senderAddress: "test@example.com",
+          senderUserName: "user",
+          accountPassword: "pwd",
+          isDefault: true,
+          isInbound: false,
+          provider: 0,
+        },
+      ]);
+
+      const result = await service.getEmailSecretConfigs(TEST_PROJECT_KEY, 0, 10);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=1&pageSize=10`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(result.configurations).toHaveLength(1);
+      expect(result.configurations[0].itemId).toBe("cfg-1");
+      expect(result.configurations[0].configurationName).toBe("Default");
+    });
+
+    it("should return empty configurations on empty response", async () => {
+      vi.mocked(http.get).mockResolvedValue([]);
+
+      const result = await service.getEmailSecretConfigs(TEST_PROJECT_KEY);
+
+      expect(result).toEqual({ configurations: [] });
     });
   });
 
@@ -90,6 +139,8 @@ describe("EmailService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=1&pageSize=10&projectKey=${TEST_PROJECT_KEY}&searchKey=welcome&sortProperty=Name&isDescending=false&language=en&mailConfigurationId=config-1`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockEmailTemplatesResponse);
     });
@@ -101,6 +152,8 @@ describe("EmailService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&projectKey=${TEST_PROJECT_KEY}&searchKey=&sortProperty=Name&isDescending=false&language=&mailConfigurationId=`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
@@ -111,6 +164,8 @@ describe("EmailService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&projectKey=${TEST_PROJECT_KEY}&searchKey=&sortProperty=CreatedDate&isDescending=true&language=en&mailConfigurationId=`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
@@ -132,6 +187,8 @@ describe("EmailService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=template-1&projectKey=${TEST_PROJECT_KEY}`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockEmailTemplate);
     });
@@ -154,13 +211,17 @@ describe("EmailService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?`),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining(`ProjectKey=${TEST_PROJECT_KEY}`),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageNumber=1"));
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageSize=10"));
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("IsInbound=false"));
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageNumber=1"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageSize=10"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("IsInbound=false"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
       expect(result).toEqual(mockEmailUsageResponse);
     });
 
@@ -169,7 +230,7 @@ describe("EmailService", () => {
 
       await service.getMailBoxMails(TEST_PROJECT_KEY, 0, 10, false, "test search");
 
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("SearchText=test+search"));
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("SearchText=test+search"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
     });
 
     it("should include optional status parameter", async () => {
@@ -177,7 +238,7 @@ describe("EmailService", () => {
 
       await service.getMailBoxMails(TEST_PROJECT_KEY, 0, 10, false, undefined, "Delivered");
 
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("Status=Delivered"));
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("Status=Delivered"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
     });
 
     it("should include optional date range parameters", async () => {
@@ -196,9 +257,13 @@ describe("EmailService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining("SendDateRange.StartDate=2024-01-01"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining("SendDateRange.EndDate=2024-01-31"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
@@ -235,13 +300,15 @@ describe("EmailService", () => {
   });
 
   describe("getMailBoxMail", () => {
-    it("should call correct endpoint with messageId and projectKey", async () => {
+    it("should call correct endpoint with messageId", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetMailBoxMailResponse);
 
       const result = await service.getMailBoxMail(TEST_PROJECT_KEY, "msg-123");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ProjectKey=${TEST_PROJECT_KEY}&MessageId=msg-123`,
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=msg-123`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockGetMailBoxMailResponse);
     });
@@ -257,7 +324,7 @@ describe("EmailService", () => {
   });
 
   describe("saveMailConfig", () => {
-    it("should call correct endpoint with payload", async () => {
+    it("should call correct endpoint with flat payload", async () => {
       const payload = {
         configurationId: "",
         configurationName: "New Config",
@@ -268,19 +335,24 @@ describe("EmailService", () => {
         senderAddress: "test@example.com",
         senderUserName: "test@example.com",
         accountPassword: "password",
-        projectKey: TEST_PROJECT_KEY,
         isInbound: false,
         provider: 1,
       };
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
 
       const result = await service.saveMailConfig(payload);
 
-      expect(http.post).toHaveBeenCalledWith(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload);
-      expect(result).toEqual(mockSuccessResponse);
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,
+        payload,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(result.isSuccess).toBe(true);
+      expect(result.itemId).toBe("");
     });
 
-    it("should handle update request with configurationId", async () => {
+    it("should echo configurationId back as itemId for updates", async () => {
       const payload = {
         configurationId: "config-123",
         configurationName: "Updated Config",
@@ -291,15 +363,20 @@ describe("EmailService", () => {
         senderAddress: "test@example.com",
         senderUserName: "test@example.com",
         accountPassword: "password",
-        projectKey: TEST_PROJECT_KEY,
         isInbound: false,
         provider: 1,
       };
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
 
-      await service.saveMailConfig(payload);
+      const result = await service.saveMailConfig(payload);
 
-      expect(http.post).toHaveBeenCalledWith(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload);
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,
+        payload,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(result.itemId).toBe("config-123");
     });
 
     it("should handle API errors", async () => {
@@ -316,7 +393,6 @@ describe("EmailService", () => {
         senderAddress: "test@example.com",
         senderUserName: "test@example.com",
         accountPassword: "password",
-        projectKey: TEST_PROJECT_KEY,
         isInbound: false,
         provider: 1,
       };
@@ -345,7 +421,12 @@ describe("EmailService", () => {
 
       const result = await service.sendTestMail(data);
 
-      expect(http.post).toHaveBeenCalledWith(MAIL_ENDPOINTS.SEND_TO_ANY, expectedPayload);
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_ENDPOINTS.SEND_TO_ANY,
+        expectedPayload,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -381,7 +462,12 @@ describe("EmailService", () => {
 
       const result = await service.saveMailTemplate(requestBody);
 
-      expect(http.post).toHaveBeenCalledWith(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody);
+      expect(http.post).toHaveBeenCalledWith(
+        EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE,
+        requestBody,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -395,7 +481,12 @@ describe("EmailService", () => {
 
       await service.saveMailTemplate(requestBody);
 
-      expect(http.post).toHaveBeenCalledWith(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody);
+      expect(http.post).toHaveBeenCalledWith(
+        EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE,
+        requestBody,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
     });
 
     it("should handle API errors", async () => {
@@ -428,7 +519,12 @@ describe("EmailService", () => {
 
       const result = await service.cloneMailTemplate(requestBody);
 
-      expect(http.post).toHaveBeenCalledWith(EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE, requestBody);
+      expect(http.post).toHaveBeenCalledWith(
+        EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE,
+        requestBody,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -460,6 +556,8 @@ describe("EmailService", () => {
 
       expect(http.delete).toHaveBeenCalledWith(
         `${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=template-1&projectKey=${TEST_PROJECT_KEY}`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -485,14 +583,15 @@ describe("EmailService", () => {
         configurationId: "config-1",
         projectKey: TEST_PROJECT_KEY,
       };
-      vi.mocked(http.delete).mockResolvedValue(mockSuccessResponse);
+      vi.mocked(http.delete).mockResolvedValue({ isSuccess: true, errors: null });
 
-      const result = await service.deleteMailConfig(payload);
+      await service.deleteMailConfig(payload);
 
       expect(http.delete).toHaveBeenCalledWith(
         `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=config-1&projectKey=${TEST_PROJECT_KEY}`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
-      expect(result).toEqual(mockSuccessResponse);
     });
 
     it("should handle API errors", async () => {
