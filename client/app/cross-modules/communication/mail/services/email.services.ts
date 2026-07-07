@@ -40,11 +40,11 @@ class EmailService {
   };
 
   getEmailSecretConfigs = (
-    projectKey: string,
+    _projectKey: string,
     pageNumber: number = 0,
     pageSize: number = 10,
   ): Promise<{ configurations: IEmailConfig[] }> => {
-    const url = `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${encodeURIComponent(projectKey)}&pageNumber=${pageNumber + 1}&pageSize=${pageSize}`;
+    const url = `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=${pageNumber + 1}&pageSize=${pageSize}`;
     return http
       .get<IEmailConfig[]>(url, undefined, { absoluteUrl: true })
       .then((response) => {
@@ -231,9 +231,10 @@ class EmailService {
     errors: null | unknown;
     isSuccess: boolean;
   }> {
+    void payload.projectKey;
     return http
       .delete<{ errors: unknown; isSuccess: boolean }>(
-        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${encodeURIComponent(payload.configurationId)}&projectKey=${encodeURIComponent(payload.projectKey)}`,
+        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${encodeURIComponent(payload.configurationId)}`,
         undefined,
         { absoluteUrl: true },
       )

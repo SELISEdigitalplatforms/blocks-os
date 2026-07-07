@@ -83,7 +83,7 @@ describe("EmailService", () => {
   });
 
   describe("getEmailSecretConfigs", () => {
-    it("should GET Mail/Gets with projectKey and 1-based pageNumber", async () => {
+    it("should GET Mail/Gets with 1-based pageNumber and no projectKey", async () => {
       vi.mocked(http.get).mockResolvedValue([
         {
           itemId: "cfg-1",
@@ -104,7 +104,7 @@ describe("EmailService", () => {
       const result = await service.getEmailSecretConfigs(TEST_PROJECT_KEY, 0, 10);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=1&pageSize=10`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=10`,
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );
@@ -588,7 +588,7 @@ describe("EmailService", () => {
       await service.deleteMailConfig(payload);
 
       expect(http.delete).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=config-1&projectKey=${TEST_PROJECT_KEY}`,
+        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=config-1`,
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );
