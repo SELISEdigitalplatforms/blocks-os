@@ -18,7 +18,7 @@ Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString}");
 
-ApplicationConfigurations.ConfigureServices(builder.Services, GetMessageConfiguration(secret.MessageConnectionString));
+ApplicationConfigurations.ConfigureServices(builder.Services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Configuration.AddMongoDbConfiguration(options =>
 {
@@ -91,35 +91,6 @@ await app.RunAsync();
 //        : VaultType.Azure;
 //}
 
-static MessageConfiguration GetMessageConfiguration(string messageConnectionString)
-{
-    const string DefaultProvider = "azure";
-    const string RabbitMqProvider = "rabbitmq";
-
-    string provider;
-    if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri) &&
-        (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
-         uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)))
-    {
-        provider = RabbitMqProvider;
-    }
-    else
-    {
-        provider = DefaultProvider;
-    }
-
-    return provider switch
-    {
-        RabbitMqProvider => new MessageConfiguration
-        {
-            RabbitMqConfiguration = new RabbitMqConfiguration()
-        },
-        _ => new MessageConfiguration
-        {
-            AzureServiceBusConfiguration = new AzureServiceBusConfiguration()
-        }
-    };
-}
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)
 {

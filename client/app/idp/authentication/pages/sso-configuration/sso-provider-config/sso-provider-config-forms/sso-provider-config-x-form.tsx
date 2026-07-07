@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { Form, FormField } from "@/components/ui-kits/form/form";
 import { Button } from "@/components/ui-kits/button/button";
 import { SSOProviderConfigFormField } from "./sso-provider-config-form-fields";
+import { createRoleStub } from "@blocks-idp/iam/utils/role-stub";
 import { SsoConfigForms } from "./sso-provider-config-forms";
 import { SSO_PROVIDERS } from "@blocks-idp/authentication/constants/sso-providers.constant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -23,7 +24,7 @@ export const SSOProviderConfigXForm: React.FC<SsoConfigForms> = ({ save, configu
       initialRoles: [],
       initialPermissions: [],
       // Hardcoded default role for now; will use API response later
-      userRoles: [{ name: "user", slug: "user", description: "default role", itemId: "1234" }],
+      userRoles: [createRoleStub({ slug: "user", name: "user", description: "default role", itemId: "1234" })],
       userPermissions: [],
     },
     resolver: zodResolver(ssoOAuthProviderSchema),

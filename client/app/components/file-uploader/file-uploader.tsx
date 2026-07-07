@@ -19,7 +19,7 @@ import {
 } from "react-dropzone";
 import { Trash2 as RemoveIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui-kits/button/button";
-import { showErrorToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast } from "@/hooks/use-toast";
 type DirectionOptions = "rtl" | "ltr" | undefined;
 type FileUploaderContextType = {
   dropzoneState: DropzoneState;
@@ -169,7 +169,6 @@ export const FileUploader = forwardRef<
               break;
             }
             if (rejectedFiles[i].errors[0]?.code === "file-invalid-type") {
-              console.log(rejectedFiles[i].errors[0]);
               showErrorToast({
                 errors: "Invalid file type",
               });
@@ -244,7 +243,6 @@ export const FileUploaderContent = forwardRef<
   const { orientation } = useFileUpload();
   const containerRef = useRef<HTMLDivElement>(null);
   return (
-    // eslint-disable-next-line jsx-a11y/aria-props
     <div
       className={cn("w-full px-1")}
       ref={containerRef}
