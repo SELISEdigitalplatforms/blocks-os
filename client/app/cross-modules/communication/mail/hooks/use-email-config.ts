@@ -6,7 +6,7 @@ export const useGetEmailConfigs = (pageNumber: number, pageSize: number) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
     queryKey: ["email-configs", tenantId, pageNumber, pageSize],
-    queryFn: () => emailService.fetchEmailConfigs(tenantId, pageNumber, pageSize),
+    queryFn: () => emailService.fetchEmailConfigs(pageNumber, pageSize),
   });
 };
 
@@ -14,7 +14,7 @@ export const useGetEmailSecretConfigs = () => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
     queryKey: ["email-configs", tenantId],
-    queryFn: () => emailService.getEmailSecretConfigs(tenantId),
+    queryFn: () => emailService.getEmailSecretConfigs(),
   });
 };
 
