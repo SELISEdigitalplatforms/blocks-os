@@ -1,13 +1,12 @@
 using Blocks.Genesis;
-using DomainService.Dtos;
 using DomainService.Projects;
 using DomainService.Shared;
 using DomainService.Shared.Dtos;
 using DomainService.Shared.Entities;
-using SeliseBlocks.ConfigurationDriver;
 using Worker;
 using Worker.Configuration;
 using Worker.Consumers.Identifier;
+using SeliseBlocks.ConfigurationDriver;
 
 const string _serviceName = "blocks-os-worker";
 
@@ -45,39 +44,10 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
 
-            ApplicationConfigurations.ConfigureWorker(services, GetMessageConfiguration(secret.MessageConnectionString));
+            ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
             #endregion
         });
 
-static MessageConfiguration GetMessageConfiguration(string messageConnectionString)
-{
-    const string DefaultProvider = "azure";
-    const string RabbitMqProvider = "rabbitmq";
-
-    string provider;
-    if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri) &&
-        (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
-         uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)))
-    {
-        provider = RabbitMqProvider;
-    }
-    else
-    {
-        provider = DefaultProvider;
-    }
-
-    return provider switch
-    {
-        RabbitMqProvider => new MessageConfiguration
-        {
-            RabbitMqConfiguration = new RabbitMqConfiguration()
-        },
-        _ => new MessageConfiguration
-        {
-            AzureServiceBusConfiguration = new AzureServiceBusConfiguration()
-        }
-    };
-}
 
 static VaultType ResolveVaultType()
 {

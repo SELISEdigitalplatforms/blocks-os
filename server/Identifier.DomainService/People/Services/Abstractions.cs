@@ -30,5 +30,6 @@ namespace DomainService.People
         Task<bool> UpdateProjectPeopleOwnerShipAsync(List<string> ids, bool ownerShipStatus);
         Task<ProjectPeople> GetProjectPeopleByTenantIdAndUserIdAsync(string tenantId, string userId);
         Task<bool> UpdateProjectOwnerShipAsync(List<string> tenantIds, string userId);
+        Task<User> GetUserByEmailAsync(string email);
     }
 }
