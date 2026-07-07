@@ -10,6 +10,7 @@ import {
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__";
 import { authClientService } from "@blocks-idp/authentication/services/auth-clients.service";
 import {
+  useListAuthClientCredentials,
   useGetAuthClientCredentials,
   useSaveAuthClient,
   useDeleteAuthClient,
@@ -24,9 +25,28 @@ describe("use-auth-clients hooks", () => {
     vi.resetAllMocks();
   });
 
-  describe("useGetAuthClientCredentials", () => {
+  describe("useListAuthClientCredentials", () => {
     it("should fetch client credentials successfully", async () => {
-      vi.mocked(authClientService.clients.getClientCredentials).mockResolvedValue(
+      vi.mocked(authClientService.clients.list).mockResolvedValue(
+        mockClientCredentialsResponse,
+      );
+
+      const { result } = renderHook(
+        () => useListAuthClientCredentials({ projectKey: TEST_PROJECT_KEY }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockClientCredentialsResponse);
+      expect(authClientService.clients.list).toHaveBeenCalledWith({
+        projectKey: TEST_PROJECT_KEY,
+      });
+    });
+  });
+
+  describe("useGetAuthClientCredentials", () => {
+    it("aliases useListAuthClientCredentials", async () => {
+      vi.mocked(authClientService.clients.list).mockResolvedValue(
         mockClientCredentialsResponse,
       );
 
@@ -36,8 +56,7 @@ describe("use-auth-clients hooks", () => {
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data).toEqual(mockClientCredentialsResponse);
-      expect(authClientService.clients.getClientCredentials).toHaveBeenCalledWith({
+      expect(authClientService.clients.list).toHaveBeenCalledWith({
         projectKey: TEST_PROJECT_KEY,
       });
     });
@@ -45,9 +64,7 @@ describe("use-auth-clients hooks", () => {
 
   describe("useSaveAuthClient", () => {
     it("should save client credential successfully", async () => {
-      vi.mocked(authClientService.clients.saveClientCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authClientService.clients.save).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useSaveAuthClient({ projectKey: TEST_PROJECT_KEY }), {
         wrapper: createWrapper(),
@@ -55,7 +72,7 @@ describe("use-auth-clients hooks", () => {
 
       result.current.mutate(mockSaveClientPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(authClientService.clients.saveClientCredential).toHaveBeenCalledWith(
+      expect(authClientService.clients.save).toHaveBeenCalledWith(
         mockSaveClientPayload,
         expect.anything(),
       );
@@ -64,20 +81,17 @@ describe("use-auth-clients hooks", () => {
 
   describe("useDeleteAuthClient", () => {
     it("should delete client credential successfully", async () => {
-      vi.mocked(authClientService.clients.deleteClientCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authClientService.clients.delete).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useDeleteAuthClient({ projectKey: TEST_PROJECT_KEY }), {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate(mockDeleteClientPayload);
+      result.current.mutate({ itemId: mockDeleteClientPayload.itemId });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(authClientService.clients.deleteClientCredential).toHaveBeenCalledWith(
-        mockDeleteClientPayload,
-        expect.anything(),
-      );
+      expect(authClientService.clients.delete).toHaveBeenCalledWith({
+        itemId: mockDeleteClientPayload.itemId,
+      });
     });
   });
 });

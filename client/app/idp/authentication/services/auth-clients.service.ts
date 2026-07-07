@@ -1,10 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { http } from "@/lib/http-client";
 import { APIResponse } from "@/models/api-response";
 import {
-  IClientConfigResponse,
-  IDeleteOidcClientPayload,
-  IDeleteOidcClientResponse,
+  IClientCredentialsConfig,
   IGetClientsPayload,
   ISaveClientCredentialPayload,
   ISaveClientCredentialResponse,
@@ -12,24 +9,26 @@ import {
 import { AUTH_CLIENT_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class AuthClientsService {
-  getClientCredentials(payload: IGetClientsPayload): Promise<IClientConfigResponse[]> {
+  list(_payload: IGetClientsPayload): Promise<IClientCredentialsConfig[]> {
     return http.get(
-      `${AUTH_CLIENT_ENDPOINTS.GET_CLIENT_CREDENTIALS}`,
+      `${AUTH_CLIENT_ENDPOINTS.LIST}?ItemId=&Name=`,
       undefined,
       { absoluteUrl: true },
     );
   }
 
-  saveClientCredential(
+  save(
     payload: ISaveClientCredentialPayload,
   ): Promise<APIResponse<ISaveClientCredentialResponse>> {
-    return http.post(AUTH_CLIENT_ENDPOINTS.SAVE_CLIENT_CREDENTIAL, payload, undefined, { absoluteUrl: true });
+    return http.post(AUTH_CLIENT_ENDPOINTS.SAVE, payload, undefined, { absoluteUrl: true });
   }
 
-  deleteClientCredential(
-    payload: IDeleteOidcClientPayload,
-  ): Promise<APIResponse<IDeleteOidcClientResponse>> {
-    return http.post(AUTH_CLIENT_ENDPOINTS.DELETE_CLIENT_CREDENTIAL, payload, undefined, { absoluteUrl: true });
+  delete(payload: { itemId: string }): Promise<APIResponse<{ isSuccess: boolean }>> {
+    return http.delete(
+      `${AUTH_CLIENT_ENDPOINTS.DELETE}/${payload.itemId}`,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 }
 

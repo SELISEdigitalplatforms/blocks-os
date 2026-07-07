@@ -22,9 +22,9 @@ import {
 const LOGOUT_PATTERN = new RegExp(AUTH_ENDPOINTS.LOGOUT);
 
 // Client Credentials
-const GET_CLIENT_CREDENTIALS_PATTERN = new RegExp(AUTH_CLIENT_ENDPOINTS.GET_CLIENT_CREDENTIALS);
-const SAVE_CLIENT_CREDENTIAL_PATTERN = new RegExp(AUTH_CLIENT_ENDPOINTS.SAVE_CLIENT_CREDENTIAL);
-const DELETE_CLIENT_CREDENTIAL_PATTERN = new RegExp(AUTH_CLIENT_ENDPOINTS.DELETE_CLIENT_CREDENTIAL);
+const LIST_CLIENT_CREDENTIALS_PATTERN = new RegExp(`${AUTH_CLIENT_ENDPOINTS.LIST}\\?`);
+const SAVE_CLIENT_CREDENTIAL_PATTERN = new RegExp(AUTH_CLIENT_ENDPOINTS.SAVE);
+const DELETE_CLIENT_CREDENTIAL_PATTERN = new RegExp(`${AUTH_CLIENT_ENDPOINTS.DELETE}/[^/?]+`);
 
 // OIDC
 const GET_OIDC_CLIENTS_PATTERN = new RegExp(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS);
@@ -53,9 +53,9 @@ export const authHandlers = [
   http.post(LOGOUT_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
 
   // Client Credentials
-  http.get(GET_CLIENT_CREDENTIALS_PATTERN, () => HttpResponse.json(mockClientCredentialsResponse)),
+  http.get(LIST_CLIENT_CREDENTIALS_PATTERN, () => HttpResponse.json(mockClientCredentialsResponse)),
   http.post(SAVE_CLIENT_CREDENTIAL_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
-  http.post(DELETE_CLIENT_CREDENTIAL_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
+  http.delete(DELETE_CLIENT_CREDENTIAL_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
 
   // OIDC
   http.get(GET_OIDC_CLIENTS_PATTERN, () => HttpResponse.json(mockOidcCredentialsResponse)),
@@ -85,10 +85,10 @@ export const authHandlers = [
 // Client Credentials
 export const getClientCredentialsHandler = (
   response: JsonBodyType = mockClientCredentialsResponse,
-) => http.get(GET_CLIENT_CREDENTIALS_PATTERN, () => HttpResponse.json(response));
+) => http.get(LIST_CLIENT_CREDENTIALS_PATTERN, () => HttpResponse.json(response));
 
 export const getClientCredentialsErrorHandler = (status = 500) =>
-  http.get(GET_CLIENT_CREDENTIALS_PATTERN, () =>
+  http.get(LIST_CLIENT_CREDENTIALS_PATTERN, () =>
     HttpResponse.json({ message: "Internal server error" }, { status }),
   );
 
@@ -97,7 +97,7 @@ export const saveClientCredentialHandler = (
 ) => http.post(SAVE_CLIENT_CREDENTIAL_PATTERN, () => HttpResponse.json(response));
 
 export const deleteClientCredentialHandler = (response: JsonBodyType = mockSuccessResponse) =>
-  http.post(DELETE_CLIENT_CREDENTIAL_PATTERN, () => HttpResponse.json(response));
+  http.delete(DELETE_CLIENT_CREDENTIAL_PATTERN, () => HttpResponse.json(response));
 
 // OIDC
 export const getOidcClientsHandler = (response: JsonBodyType = mockOidcCredentialsResponse) =>
