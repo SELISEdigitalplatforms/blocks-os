@@ -219,6 +219,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       serviceRegistryService.getAllServices({
         page: 0,
         pageSize: 1000,
+        projectKey,
         filter: { serviceId: "", serviceName: "", serviceType: "" },
       }),
     enabled: !!projectKey,

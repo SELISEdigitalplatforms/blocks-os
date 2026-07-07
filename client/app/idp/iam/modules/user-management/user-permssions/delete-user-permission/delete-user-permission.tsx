@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@seliseblocks/blocks-kit/hooks";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
 import { IPermission } from "@blocks-idp/iam/models/permission";
@@ -19,10 +19,16 @@ type DeleteUserPermissionProps = {
   permission: IPermission;
   userId: string;
 };
-export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissionProps) => {
+export const DeleteUserPermission = ({
+  permission,
+  userId,
+}: DeleteUserPermissionProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
-  const { deletePermissions, isPending } = useUserPermissions({ userId, projectKey: tenantId });
+  const { deletePermissions, isPending } = useUserPermissions({
+    userId,
+    projectKey: tenantId,
+  });
   const onClickHandler = async () => {
     try {
       const res = await deletePermissions([permission.resource]);
@@ -56,11 +62,17 @@ export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissio
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Exclude Permission</DialogTitle>
-          <DialogDescription>Are you sure you want to exclude permssion?</DialogDescription>
+          <DialogDescription>
+            Are you sure you want to exclude permssion?
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
           <DialogClose asChild>
-            <Button className="min-w-[80px]" variant="outline" size="default" disabled={isPending}>
+            <Button
+              className="min-w-[80px]"
+              variant="outline"
+              size="default"
+              disabled={isPending}>
               Cancel
             </Button>
           </DialogClose>
@@ -68,8 +80,7 @@ export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissio
             className="min-w-[80px]"
             size="default"
             disabled={isPending}
-            onClick={onClickHandler}
-          >
+            onClick={onClickHandler}>
             {isPending ? "Processing" : "Yes"}
           </Button>
         </DialogFooter>

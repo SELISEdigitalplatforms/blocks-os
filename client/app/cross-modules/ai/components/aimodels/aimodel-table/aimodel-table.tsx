@@ -20,7 +20,10 @@ import { IModelInfo } from "@blocks-ai/types/aimodel.service.type";
 import { DeleteModel } from "@blocks-ai/components/aimodels/modals/aimodel-deletemodel-modal/aimodel-deletemodel-modal";
 import { ModelEditKeyModal } from "@blocks-ai/components/aimodels/modals/aimodel-editkey-modal/aimodel-editkey-modal";
 import { CustomModelEditKeyModal } from "@blocks-ai/components/aimodels/modals/aimodel-editkey-modal-custom/aimodel-editkey-modal-custom";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { useValidateModel } from "@blocks-ai/hooks/use-aimodel";
 type AIModelsTableProps = {
   custom: boolean;
@@ -34,7 +37,11 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps) => {
+export const AIModelsTable = ({
+  custom,
+  models,
+  isLoading,
+}: AIModelsTableProps) => {
   const [deleteTarget, setDeleteTarget] = useState<IModelInfo | null>(null);
   const [editTarget, setEditTarget] = useState<IModelInfo | null>(null);
   const [editKeyModalOpen, setEditKeyModalOpen] = useState(false);
@@ -56,14 +63,17 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
         {
           onSuccess: (res) => {
             const isValid = !!res.valid?.valid;
-            const messageFromBackend = res.valid?.message || res.message || "Validation completed.";
+            const messageFromBackend =
+              res.valid?.message || res.message || "Validation completed.";
             if (isValid) showSuccessToast({ description: messageFromBackend });
             else showErrorToast({ errors: messageFromBackend });
             setValidatingRowId(null);
           },
           onError: (error) => {
             const fallbackMessage =
-              error instanceof Error ? error.message : "Failed to validate model. Please try again.";
+              error instanceof Error
+                ? error.message
+                : "Failed to validate model. Please try again.";
             showErrorToast({ errors: fallbackMessage });
             setValidatingRowId(null);
           },
@@ -84,7 +94,14 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
           setActionMenuRowId(open ? rowId : null);
         },
       }),
-    [custom, handleEditClick, handleDeleteClick, handleValidateClick, isValidating, validatingRowId],
+    [
+      custom,
+      handleEditClick,
+      handleDeleteClick,
+      handleValidateClick,
+      isValidating,
+      validatingRowId,
+    ],
   );
   const table = useReactTable({
     data: models,
@@ -105,8 +122,13 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
           <TableRow>
             {table.getHeaderGroups().map((headerGroup) =>
               headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className={`${getClass(header.column.id)} truncate`}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
+                <TableHead
+                  key={header.id}
+                  className={`${getClass(header.column.id)} truncate`}>
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  )}
                 </TableHead>
               )),
             )}
@@ -115,7 +137,9 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
         <TableBody>
           {!models.length ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground">
                 No models found.
               </TableCell>
             </TableRow>
@@ -124,10 +148,11 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
               <TableRow
                 key={row.id}
                 className={`group cursor-pointer ${actionMenuRowId === row.original._id ? "bg-muted" : ""}`}
-                isHoverable
-              >
+                isHoverable>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className={`${getClass(cell.column.id)} truncate`}>
+                  <TableCell
+                    key={cell.id}
+                    className={`${getClass(cell.column.id)} truncate`}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -158,7 +183,10 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
         ) : (
           <ModelEditKeyModal
             modelOptions={[
-              { model: editTarget.ModelName || "", goodName: editTarget.DisplayName || "" },
+              {
+                model: editTarget.ModelName || "",
+                goodName: editTarget.DisplayName || "",
+              },
             ]}
             editKeyModalOpen={editKeyModalOpen}
             setEditKeyModalOpen={(open) => {

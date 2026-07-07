@@ -1,44 +1,63 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import { AssignSignupPermissionsDialog } from "@blocks-idp/settings/components/assign-signup-permissions-dialog"
-import { SettingsAssignmentChip } from "@blocks-idp/settings/components/settings-assignment-chip"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
+import { AddSSOPermission } from "@blocks-idp/authentication/components/sso-initial-permissions/add-sso-permission"
 import type { IPermission } from "@blocks-idp/iam/models/permission"
+import { SettingsDismissibleChip } from "@blocks-idp/settings/components/settings-dismissible-chip"
+import { Lock } from "lucide-react"
 
 type SignupPermissionsSectionProps = {
   permissions: IPermission[]
   onChange: (permissions: IPermission[]) => void
+  readOnly?: boolean
 }
 
 export const SignupPermissionsSection = ({
   permissions,
   onChange,
-}: SignupPermissionsSectionProps) => (
-  <Card>
-    <CardHeader className="mb-4 flex flex-row items-start justify-between gap-3">
-      <CardTitle className={SETTINGS_FORM_LAYOUT.sectionTitle}>Permissions</CardTitle>
-      <div className="flex shrink-0 items-center gap-2">
-        <AssignSignupPermissionsDialog permissions={permissions} onAssign={onChange} />
-      </div>
-    </CardHeader>
-    <CardContent>
-      {permissions.length === 0 ? (
-        <p className={SETTINGS_FORM_LAYOUT.emptyState}>No permissions found</p>
-      ) : (
-        <div
-          className="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
-          role="list"
-          aria-label="Assigned permissions"
-        >
-          {permissions.map((permission) => (
-            <SettingsAssignmentChip
-              key={permission.resource}
-              label={permission.name}
-              meta={permission.resource}
-              className="sm:max-w-[320px]"
+  readOnly = false,
+}: SignupPermissionsSectionProps) => {
+  const handleAdd = (newPermissions: IPermission[]) => {
+    onChange([...permissions, ...newPermissions])
+  }
+
+  const handleRemove = (permission: IPermission) => {
+    onChange(permissions.filter((item) => item.resource !== permission.resource))
+  }
+
+  return (
+    <Card>
+      <CardHeader className="mb-4 flex flex-row items-start justify-between gap-3">
+        <CardTitle className="text-base sm:text-lg">Permissions</CardTitle>
+        <div className="flex shrink-0 items-center gap-2">
+          {readOnly ? (
+            <Lock
+              className="h-4 w-4 text-muted-foreground"
+              aria-label="Locked until sign up is enabled"
             />
-          ))}
+          ) : (
+            <AddSSOPermission onAdd={handleAdd} permissions={permissions} />
+          )}
         </div>
-      )}
-    </CardContent>
-  </Card>
-)
+      </CardHeader>
+      <CardContent>
+        {permissions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No permissions found</p>
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {permissions.map((permission) => (
+              <SettingsDismissibleChip
+                key={permission.name}
+                title={permission.name}
+                subtitle={permission.resource}
+                confirmTitle="Remove Permission"
+                confirmSubtitle="Are you sure you want to remove this permission?"
+                onDismiss={() => handleRemove(permission)}
+                readOnly={readOnly}
+                variant="badge"
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import {
-  ChevronRight,
-  LayoutTemplate,
-  Shield,
-  Trash2,
-} from "lucide-react";
+import { ChevronRight, LayoutTemplate, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -23,7 +18,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { useDeleteAuthOidc } from "@blocks-idp/authentication/hooks/use-auth-oidc";
@@ -173,9 +171,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
                   aria-label="Template"
                   onClick={() =>
-                    navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
-                  }
-                >
+                    navigate(
+                      `/app/secret-management/oidc/${item.itemId}/branding`,
+                    )
+                  }>
                   <LayoutTemplate className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -201,7 +200,9 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
 
       {expanded && (
         <TableRow className="border-b-2 border-border hover:bg-transparent">
-          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+          <TableCell
+            colSpan={5}
+            className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
               {kvPairs.map(({ key, value, copyable }) => (
                 <KVDetailItem

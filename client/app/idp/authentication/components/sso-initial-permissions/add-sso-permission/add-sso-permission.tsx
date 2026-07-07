@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
-import { Plus } from "lucide-react";
+import { CirclePlus } from "lucide-react";
 import { useMemo, useState } from "react";
 type AddSSOPermissionProps = {
   permissions: IPermission[];
@@ -101,7 +101,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
           }}
           disabled={permissions.length >= 5}
         >
-          <Plus className="h-3.5 w-3.5 md:mr-1.5" />
+          <CirclePlus className="h-3.5 w-3.5 md:mr-1.5" />
           <span className="sr-only sm:not-sr-only">Assign Permissions</span>
         </Button>
       </DialogTrigger>

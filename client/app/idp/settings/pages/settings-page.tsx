@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/page-header/page-header"
 import { useQueryState } from "nuqs"
 import {
   Select,
@@ -8,8 +7,6 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs"
-import { cn } from "@/lib/utils"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
 import { SETTINGS_TAB_META } from "@blocks-idp/settings/constants/settings-tab-meta"
 import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model"
 import {
@@ -55,10 +52,12 @@ export const IdpSettingsPage = () => {
       onValueChange={handleTabChange}
       className="flex w-full flex-col"
     >
-      <PageHeader
-        title={activeTabMeta.title}
-        description={activeTabMeta.description}
-      />
+      <header className="mb-4 space-y-1 sm:mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
+          {activeTabMeta.title}
+        </h1>
+        <p className="text-sm text-muted-foreground">{activeTabMeta.description}</p>
+      </header>
 
       <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-3">
         <div className="flex min-w-0 items-center gap-4">
@@ -79,11 +78,7 @@ export const IdpSettingsPage = () => {
           <div className="hidden items-center md:flex">
             <TabsList className="h-[42px] bg-blocks-primary-shades-300">
               {SETTINGS_TABS.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className={cn("h-8 px-4", SETTINGS_FORM_LAYOUT.tabLabel)}
-                >
+                <TabsTrigger key={tab.value} value={tab.value} className="h-8">
                   {tab.label}
                 </TabsTrigger>
               ))}

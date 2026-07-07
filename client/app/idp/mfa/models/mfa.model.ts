@@ -1,28 +1,14 @@
 export interface IMFAConfiguration {
-  enabled: boolean;
-  allowedMethods: number[];
-  requireMfaForAllUsers: boolean;
-  mfaRequiredRoles: string[];
-  mfaExemptRoles: string[];
-  allowUserOptOut: boolean;
-  allowBackupCodes: boolean;
-  backupCodesCount: number;
-  mfaTemplate?: { templateName: string; templateId: string };
+  enableMfa: boolean;
+  mfaTemplate: { templateName: string; templateId: string };
   projectKey: string | null;
+  userMfaType: number[];
 }
 
 export interface IMFASecretKeyValuePairs {
-  enabled?: boolean | string;
-  allowedMethods?: number[] | string;
-  requireMfaForAllUsers?: boolean | string;
-  mfaRequiredRoles?: string[];
-  mfaExemptRoles?: string[];
-  allowUserOptOut?: boolean | string;
-  allowBackupCodes?: boolean | string;
-  backupCodesCount?: number;
+  enableMfa: boolean | string;
+  userMfaType: number[] | string;
   mfaTemplate?: { templateName: string; templateId: string } | string;
-  enableMfa?: boolean | string;
-  userMfaType?: number[] | string;
 }
 
 export interface IMFASecretResponse {
@@ -42,18 +28,14 @@ export interface IGetConfigurationPayload {
 }
 
 export interface IMFAConfigurationSavePayload {
-  enabled: boolean;
-  allowedMethods: number[];
-  requireMfaForAllUsers?: boolean;
-  mfaRequiredRoles?: string[];
-  mfaExemptRoles?: string[];
-  allowUserOptOut?: boolean;
-  allowBackupCodes?: boolean;
-  backupCodesCount?: number;
+  itemId?: string;
+  enableMfa: boolean;
+  userMfaType: number[];
   mfaTemplate?: {
     templateName: string;
     templateId: string;
   };
+  projectKey: string;
 }
 export interface IMFAConfigurationSaveResponse {
   errors: unknown | null;
@@ -64,14 +46,8 @@ export interface IGetConfigurationResponse extends IMFAConfiguration {
 }
 
 export interface MfaConfigControllerResponse {
-  enabled: boolean;
-  allowedMethods: number[];
-  requireMfaForAllUsers?: boolean;
-  mfaRequiredRoles?: string[];
-  mfaExemptRoles?: string[];
-  allowUserOptOut?: boolean;
-  allowBackupCodes?: boolean;
-  backupCodesCount?: number;
+  enableMfa: boolean;
+  userMfaType: number[] | string;
   mfaTemplate?: { templateName: string; templateId: string };
 }
 

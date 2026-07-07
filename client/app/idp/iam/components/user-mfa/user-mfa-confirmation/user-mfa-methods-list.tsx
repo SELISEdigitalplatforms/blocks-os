@@ -16,9 +16,9 @@ export const UserMFAMethodList = ({
 }: UserMFAMethodListProps) => {
   const { isLoading, isFetching, data } = useGetMFAConfig();
   const availableMFaMethod = useMemo(() => {
-    if (!data?.allowedMethods.length) return [];
-    return MFA_Provider_Data.filter((item) => data?.allowedMethods.includes(item.type));
-  }, [data?.allowedMethods]);
+    if (!data?.userMfaType.length) return [];
+    return MFA_Provider_Data.filter((item) => data?.userMfaType.includes(item.type));
+  }, [data?.userMfaType]);
   return (
     <>
       {isLoading || isFetching ? (

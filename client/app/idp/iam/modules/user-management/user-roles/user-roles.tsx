@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import { AddUserRole } from "./add-user-role";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
 import { UserRolesList } from "./user-roles-list";
 import { Button } from "@/components/ui-kits/button/button";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { IRole } from "@blocks-idp/iam/models/role";
 type UserRolesProps = {

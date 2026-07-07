@@ -10,7 +10,10 @@ import {
   useGetSsoCredentialById,
   useSaveSsoCredential,
 } from "@blocks-idp/authentication/hooks/use-sso";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@seliseblocks/blocks-kit/utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { ISsoProviderConfiguration } from "@blocks-idp/authentication/models/sso.model";
 import { useNavigate } from "react-router-dom";
