@@ -8,10 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useDisableMfa } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext } from "react";
@@ -41,9 +38,8 @@ export const UserMFAConfirmationDisable = () => {
         <DialogHeader>
           <DialogTitle>Disable MFA?</DialogTitle>
           <DialogDescription>
-            Are you sure you want to disable Multi-Factor Authentication (MFA)
-            for this account? Disabling MFA may reduce the security of this
-            account.
+            Are you sure you want to disable Multi-Factor Authentication (MFA) for this account?
+            Disabling MFA may reduce the security of this account.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4 flex flex-row gap-2">

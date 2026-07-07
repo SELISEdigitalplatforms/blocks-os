@@ -4,17 +4,11 @@ import type { INotificationConfigRow } from "../models/notification-config.model
 import { useSaveNotificationConfig } from "../hooks/use-notification-config";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  channelsToNotify,
-  notificationTypes,
-} from "../constants/notification.constant";
+import { channelsToNotify, notificationTypes } from "../constants/notification.constant";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { useEffect } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, toast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import {
   DialogContent,
@@ -40,7 +34,6 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
-import { toast } from "@seliseblocks/blocks-kit/hooks";
 interface NewNotificationConfigurationProps {
   dialogTitle: string;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
@@ -64,12 +57,8 @@ const schema = z.object({
     .refine((val) => val.trim().length > 0, {
       message: "Name cannot contain only whitespace",
     }),
-  channelToNotify: z
-    .number()
-    .min(0, { message: "Channel to notify is required" }),
-  notificationType: z
-    .number()
-    .min(0, { message: "Notification type is required" }),
+  channelToNotify: z.number().min(0, { message: "Channel to notify is required" }),
+  notificationType: z.number().min(0, { message: "Notification type is required" }),
   enablePersistence: z.boolean(),
   notifyMethod: z
     .string()
@@ -79,9 +68,12 @@ const schema = z.object({
       message: "Notify method cannot contain only whitespace",
     }),
 });
-const NewNotificationConfiguration: React.FC<
-  NewNotificationConfigurationProps
-> = ({ dialogTitle, onClose, previousData, isEdit }) => {
+const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> = ({
+  dialogTitle,
+  onClose,
+  previousData,
+  isEdit,
+}) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { isPending, mutateAsync } = useSaveNotificationConfig();
   if (isEdit && previousData?.itemId == "") {
@@ -142,9 +134,7 @@ const NewNotificationConfiguration: React.FC<
         toast({
           variant: "success",
           title: "Success",
-          description: isEdit
-            ? "Configuration updated"
-            : "New configuration added",
+          description: isEdit ? "Configuration updated" : "New configuration added",
         });
         form.reset();
         onClose(false);
@@ -153,9 +143,7 @@ const NewNotificationConfiguration: React.FC<
       }
     } catch (error) {
       if (isErrorWithErrors(error)) {
-        showErrorToast({
-          errors: error.errors as Record<string, string | string[]>,
-        });
+        showErrorToast({ errors: error.errors as Record<string, string | string[]> });
       } else {
         showErrorToast({ errors: "Something went wrong" });
       }
@@ -203,13 +191,13 @@ const NewNotificationConfiguration: React.FC<
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Channel to Notify{" "}
-                          <span className="text-destructive">*</span>
+                          Channel to Notify <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           disabled={true}
                           onValueChange={(val) => field.onChange(Number(val))}
-                          defaultValue={String(field.value)}>
+                          defaultValue={String(field.value)}
+                        >
                           <FormControl>
                             <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
                               <SelectValue placeholder="Select Configuration" />
@@ -217,9 +205,7 @@ const NewNotificationConfiguration: React.FC<
                           </FormControl>
                           <SelectContent>
                             {channelsToNotify.map((channel) => (
-                              <SelectItem
-                                key={channel.value}
-                                value={String(channel.value)}>
+                              <SelectItem key={channel.value} value={String(channel.value)}>
                                 {channel.label}
                               </SelectItem>
                             ))}
@@ -235,12 +221,12 @@ const NewNotificationConfiguration: React.FC<
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notification Type{" "}
-                          <span className="text-destructive">*</span>
+                          Notification Type <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={(val) => field.onChange(Number(val))}
-                          defaultValue={String(field.value)}>
+                          defaultValue={String(field.value)}
+                        >
                           <FormControl>
                             <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none">
                               <SelectValue placeholder="Select Notification Type" />
@@ -248,9 +234,7 @@ const NewNotificationConfiguration: React.FC<
                           </FormControl>
                           <SelectContent>
                             {notificationTypes.map((type) => (
-                              <SelectItem
-                                key={type.value}
-                                value={String(type.value)}>
+                              <SelectItem key={type.value} value={String(type.value)}>
                                 {type.label}
                               </SelectItem>
                             ))}
@@ -268,8 +252,7 @@ const NewNotificationConfiguration: React.FC<
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
-                          Notify Method{" "}
-                          <span className="text-destructive">*</span>
+                          Notify Method <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -302,9 +285,7 @@ const NewNotificationConfiguration: React.FC<
                           />
                         </FormControl>
                         <FormMessage />
-                        <FormLabel className="flex-start inline-flex">
-                          Enable Persistence
-                        </FormLabel>
+                        <FormLabel className="flex-start inline-flex">Enable Persistence</FormLabel>
                       </FormItem>
                     )}
                   />
@@ -319,9 +300,7 @@ const NewNotificationConfiguration: React.FC<
                   Cancel
                 </Button>
               </DialogTrigger>
-              <Button
-                disabled={isPending || !form.formState.isValid}
-                size="default">
+              <Button disabled={isPending || !form.formState.isValid} size="default">
                 Save
               </Button>
             </div>
