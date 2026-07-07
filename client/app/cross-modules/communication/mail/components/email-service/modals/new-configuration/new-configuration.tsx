@@ -29,10 +29,9 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { showErrorToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, toast } from "@/hooks/use-toast";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { isErrorWithErrors } from "@/lib/error";
-import { toast } from "@seliseblocks/blocks-kit/hooks";
 interface NewConfigurationProps {
   dialogTitle: string;
   onClose: () => void;
@@ -44,14 +43,10 @@ const schema = z
     configurationName: z
       .string()
       .min(3, { message: "Configuration name must be at least 3 characters" })
-      .max(100, {
-        message: "Configuration name must be at most 100 characters",
-      }),
+      .max(100, { message: "Configuration name must be at most 100 characters" }),
     host: z
       .string()
-      .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, {
-        message: "Host must be a valid domain",
-      }),
+      .regex(/^([\w-]+\.)*[\w-]+\.[a-z]{2,}$/, { message: "Host must be a valid domain" }),
     port: z.coerce
       .number()
       .min(1, { message: "Port must be between 1 and 65535" })
@@ -59,9 +54,7 @@ const schema = z
     enableSSL: z.boolean(),
     senderName: z.string().optional(),
     senderAddress: z.string().optional(),
-    senderUserName: z
-      .string()
-      .min(1, { message: "Sender username is required" }),
+    senderUserName: z.string().min(1, { message: "Sender username is required" }),
     accountPassword: z.string().superRefine((val, ctx) => {
       if (!val || val.length === 0) {
         ctx.addIssue({
@@ -87,11 +80,7 @@ const schema = z
       });
     }
     if (!data.isInbound) {
-      if (
-        !data.senderName ||
-        data.senderName.length < 3 ||
-        data.senderName.length > 100
-      ) {
+      if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Amazon SES is not supported for inbound configurations",
@@ -99,11 +88,7 @@ const schema = z
         });
       }
       if (!data.isInbound) {
-        if (
-          !data.senderName ||
-          data.senderName.length < 3 ||
-          data.senderName.length > 100
-        ) {
+        if (!data.senderName || data.senderName.length < 3 || data.senderName.length > 100) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "Sender name must be between 3 and 100 characters",
@@ -112,9 +97,7 @@ const schema = z
         }
         if (
           !data.senderAddress ||
-          !/^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
-            data.senderAddress,
-          )
+          !/^(?=.{1,320}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(data.senderAddress)
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -175,10 +158,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   });
   const isInbound = form.watch("isInbound");
   useEffect(() => {
-    if (
-      isInbound &&
-      form.getValues("provider") === MailServiceProvider.AmazonSes
-    ) {
+    if (isInbound && form.getValues("provider") === MailServiceProvider.AmazonSes) {
       form.setValue("provider", MailServiceProvider.Zoho);
     }
   }, [isInbound, form]);
@@ -202,18 +182,14 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
           provider: String(data.provider),
           isDefault: "false",
         },
-        ...(isEdit && previousData?.itemId
-          ? { itemId: previousData.itemId }
-          : {}),
+        ...(isEdit && previousData?.itemId ? { itemId: previousData.itemId } : {}),
       };
       const res = await mutateAsync(payload);
       if (res?.isSuccess) {
         toast({
           variant: "success",
           title: "Success",
-          description: isEdit
-            ? "Configuration updated"
-            : "New configuration added",
+          description: isEdit ? "Configuration updated" : "New configuration added",
         });
         form.reset();
         onClose();
@@ -226,9 +202,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
       }
     } catch (error) {
       if (isErrorWithErrors(error)) {
-        showErrorToast({
-          errors: error.errors as Record<string, string | string[]>,
-        });
+        showErrorToast({ errors: error.errors as Record<string, string | string[]> });
       }
     }
   };
@@ -274,10 +248,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           Type <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
-                          onValueChange={(value) =>
-                            field.onChange(value === "true")
-                          }
-                          value={field.value ? "true" : "false"}>
+                          onValueChange={(value) => field.onChange(value === "true")}
+                          value={field.value ? "true" : "false"}
+                        >
                           <FormControl>
                             <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
                               <SelectValue placeholder="Select type" />
@@ -301,26 +274,22 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           Provider <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
-                          onValueChange={(value) =>
-                            field.onChange(parseInt(value))
-                          }
-                          value={field.value?.toString()}>
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          value={field.value?.toString()}
+                        >
                           <FormControl>
                             <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
                               <SelectValue placeholder="Select provider" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {(isInbound
-                              ? INBOUND_PROVIDERS
-                              : OUTBOUND_PROVIDERS
-                            ).map((provider) => (
-                              <SelectItem
-                                key={provider.value}
-                                value={provider.value.toString()}>
-                                {provider.label}
-                              </SelectItem>
-                            ))}
+                            {(isInbound ? INBOUND_PROVIDERS : OUTBOUND_PROVIDERS).map(
+                              (provider) => (
+                                <SelectItem key={provider.value} value={provider.value.toString()}>
+                                  {provider.label}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -336,14 +305,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          {isInbound ? "Server Name" : "Host"}{" "}
-                          <span className="text-destructive">*</span>
+                          {isInbound ? "Server Name" : "Host"} <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder={
-                              isInbound ? "Enter Server Name" : "Enter Host"
-                            }
+                            placeholder={isInbound ? "Enter Server Name" : "Enter Host"}
                             className="border-default col-span-3 mt-1 border shadow-none"
                             {...field}
                           />
@@ -384,8 +350,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              Sender Name{" "}
-                              <span className="text-destructive">*</span>
+                              Sender Name <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -407,8 +372,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              Sender Address{" "}
-                              <span className="text-destructive">*</span>
+                              Sender Address <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -433,16 +397,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
                             {" "}
-                            {isInbound ? "Username" : "Sender Username"}{" "}
-                            <span className="text-destructive">*</span>
+                            {isInbound ? "Username" : "Sender Username"} <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder={
-                                isInbound
-                                  ? "Enter username"
-                                  : "Enter sender username"
-                              }
+                              placeholder={isInbound ? "Enter username" : "Enter sender username"}
                               className="border-default col-span-3 mt-1 border shadow-none"
                               {...field}
                             />
@@ -460,8 +419,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
                             {" "}
-                            Account password{" "}
-                            <span className="text-destructive">*</span>
+                            Account password <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -491,10 +449,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           />
                         </FormControl>
                         <FormMessage />
-                        <FormLabel className="flex-start inline-flex">
-                          {" "}
-                          Enable SSL{" "}
-                        </FormLabel>
+                        <FormLabel className="flex-start inline-flex"> Enable SSL </FormLabel>
                       </FormItem>
                     )}
                   />
@@ -509,9 +464,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                   Cancel
                 </Button>
               </DialogTrigger>
-              <Button
-                disabled={isPending || !form.formState.isValid}
-                size="default">
+              <Button disabled={isPending || !form.formState.isValid} size="default">
                 Save
               </Button>
             </div>

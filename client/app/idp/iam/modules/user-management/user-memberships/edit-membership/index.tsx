@@ -1,14 +1,6 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui-kits/sheet/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui-kits/sheet/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
@@ -43,31 +35,25 @@ export const EditMembership = ({
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   // Permissions state
   const [permissionsSearch, setPermissionsSearch] = useState("");
-  const [permissionsTypeFilter, setPermissionsTypeFilter] =
-    useState<string>("all");
+  const [permissionsTypeFilter, setPermissionsTypeFilter] = useState<string>("all");
   const [permissionsPage, setPermissionsPage] = useState(0);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const { data: userData } = useGetUserById({ id: userId, projectKey });
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
-    projectKey,
     page: 0,
     pageSize: 1000,
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
   });
-  const { data: permissionsData, isLoading: isPermissionsLoading } =
-    useGetPermissions({
-      projectKey,
-      page: permissionsPage,
-      pageSize: 10,
-      search: permissionsSearch,
-      isBuiltIn: "",
-      roles: [],
-      type:
-        permissionsTypeFilter !== "all"
-          ? parseInt(permissionsTypeFilter)
-          : null,
-    });
+  const { data: permissionsData, isLoading: isPermissionsLoading } = useGetPermissions({
+    projectKey,
+    page: permissionsPage,
+    pageSize: 10,
+    search: permissionsSearch,
+    isBuiltIn: "",
+    roles: [],
+    type: permissionsTypeFilter !== "all" ? parseInt(permissionsTypeFilter) : null,
+  });
   const { mutateAsync, isPending } = useUpdateUser({ id: userId, projectKey });
   const allRoles = rolesData?.data || [];
   const allPermissions = permissionsData?.data || [];
@@ -102,9 +88,7 @@ export const EditMembership = ({
   }, []);
   const handleRoleToggle = useCallback((roleSlug: string) => {
     setSelectedRoles((prev) =>
-      prev.includes(roleSlug)
-        ? prev.filter((r) => r !== roleSlug)
-        : [...prev, roleSlug],
+      prev.includes(roleSlug) ? prev.filter((r) => r !== roleSlug) : [...prev, roleSlug],
     );
   }, []);
   const handlePermissionsSearchChange = useCallback((value: string) => {
@@ -179,7 +163,8 @@ export const EditMembership = ({
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
-            className="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto">
+            className="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto"
+          >
             <TabsList className="w-fit">
               <TabsTrigger value="roles">Roles</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>

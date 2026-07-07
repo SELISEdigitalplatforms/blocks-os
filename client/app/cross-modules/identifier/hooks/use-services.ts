@@ -15,8 +15,7 @@ export const useRegisterService = () => {
 
 export const useGetAllServices = (options: IGetAllServicesPayload) => {
   return useQuery({
-    queryKey: ["services", options.projectKey, options.page, options.pageSize],
+    queryKey: ["services", options.page, options.pageSize, options.sort, options.filter],
     queryFn: () => serviceRegistryService.getAllServices(options),
-    enabled: !!options.projectKey,
   });
 };

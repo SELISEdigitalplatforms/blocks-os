@@ -1,15 +1,9 @@
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import {
-  useGetPermissionById,
-  useUpdatePermission,
-} from "@blocks-idp/iam/hooks/use-permission";
+import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { PermissionForm } from "../permission-form";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { permissionFormSchemaType } from "../permission-form/utils";
 import { PermissionRolesList } from "./permission-roles-list";
@@ -36,14 +30,8 @@ const FormLOadingSkeleton = () => (
 );
 export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
   const selectedTenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data, isLoading } = useGetPermissionById({
-    id,
-    projectKey: selectedTenantId,
-  });
-  const { isPending, mutateAsync } = useUpdatePermission({
-    id,
-    projectKey: selectedTenantId,
-  });
+  const { data, isLoading } = useGetPermissionById({ id, projectKey: selectedTenantId });
+  const { isPending, mutateAsync } = useUpdatePermission({ id, projectKey: selectedTenantId });
   const onSubmit = async (data: permissionFormSchemaType) => {
     try {
       const res = await mutateAsync({
@@ -57,14 +45,12 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Permission Updated successfully" });
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
   BREADCRUMB_CUSTOM_TITLES["/services/iam/permission-detail"] = "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/services/iam/permission-detail/${id}`] =
-    data?.data.name || "";
+  BREADCRUMB_CUSTOM_TITLES[`/services/iam/permission-detail/${id}`] = data?.data.name || "";
   return (
     <div className="px-4 pt-4 md:px-6 md:pt-6">
       <div className="hidden md:flex">
@@ -74,11 +60,8 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
         {data?.data.name || ""}
         {data?.data && (
           <Badge
-            className={cn(
-              data?.data.isBuiltIn
-                ? "!bg-gray-300 !text-gray-800"
-                : "!bg-purple-100 !text-purple-700",
-            )}>
+            className={cn(data?.data.isBuiltIn ? "!bg-gray-300 !text-gray-800" : "!bg-purple-100 !text-purple-700")}
+          >
             {data?.data.isBuiltIn ? "Built In" : "Custom"}
           </Badge>
         )}
@@ -87,11 +70,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
         {isLoading ? (
           <FormLOadingSkeleton />
         ) : (
-          <PermissionForm
-            onSave={onSubmit}
-            isPending={isPending}
-            values={data?.data || null}
-          />
+          <PermissionForm onSave={onSubmit} isPending={isPending} values={data?.data || null} />
         )}
       </div>
       {/* temporary solutions */}
