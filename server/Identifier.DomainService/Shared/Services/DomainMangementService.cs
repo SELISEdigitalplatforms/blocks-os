@@ -153,7 +153,7 @@ namespace DomainService.Shared
 
         private async Task<(bool Success, string Message)> CheckPingBlocksApi(string domain)
         {
-            var url = $"https://{domain}/identifier/v1/ping";
+            var url = $"https://{domain}/iam/v4/ping";
             _logger.LogInformation("Checking blocksapi ping: {Url}", url);
 
             try
