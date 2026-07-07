@@ -113,6 +113,7 @@ export const CreateClientCredential = ({
   const permissions = permItems;
   const permTotal = permTotalCount;
   const permHasMore = permItems.length < permTotal;
+  const permFirstLoad = permsLoading && permItems.length === 0;
 
   useEffect(() => {
     setPermPage(0);
@@ -130,7 +131,9 @@ export const CreateClientCredential = ({
       const additions = pageItems.filter((p) => !seen.has(p.itemId));
       return [...prev, ...additions];
     });
-  }, [permsData, permPage]);
+    // intentional: also depend on permFilter/open so cached permsData
+    // re-applies when the user resets pagination via filter change or modal reopen
+  }, [permsData, permPage, permFilter, open]);
 
   const permSentinelRef = useRef<HTMLLIElement | null>(null);
   const loadMorePerms = useCallback(() => {
@@ -419,7 +422,7 @@ export const CreateClientCredential = ({
                       </div>
                       <FormControl>
                         <div className="rounded border">
-                          {permsLoading && permItems.length === 0 ? (
+                          {permFirstLoad ? (
                             <div className="grid gap-2 p-3">
                               <Skeleton className="h-10 w-full rounded" />
                               <Skeleton className="h-10 w-full rounded" />
