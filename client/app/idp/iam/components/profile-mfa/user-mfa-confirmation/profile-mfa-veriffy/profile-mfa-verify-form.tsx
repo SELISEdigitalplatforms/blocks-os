@@ -6,21 +6,14 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui-kits/input-otp/input-otp";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui-kits/input-otp/input-otp";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useContext } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { profileMfaContext } from "../../profile-mfa";
 import { useVerifyMfaOTP } from "@blocks-idp/mfa/hooks/use-mfa-config";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { isErrorWithErrors } from "@/lib/error";
 const CustomInputOTPSlot = ({ index }: { index: number }) => {
@@ -35,13 +28,8 @@ const FormSchema = z.object({
   code: z.string().min(5),
 });
 export const ProfileMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
-  const { projectKey, setIsVerifyModalOpen, mfaMethodType, userId } =
-    useContext(profileMfaContext);
-  const { mutateAsync, isPending } = useVerifyMfaOTP({
-    id: userId,
-    projectKey,
-    own: true,
-  });
+  const { projectKey, setIsVerifyModalOpen, mfaMethodType, userId } = useContext(profileMfaContext);
+  const { mutateAsync, isPending } = useVerifyMfaOTP({ id: userId, projectKey, own: true });
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -56,17 +44,13 @@ export const ProfileMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
         authType: mfaMethodType,
         projectKey,
       });
-      if (!verifyOtpResponse.isSuccess)
-        return showErrorToast({ errors: verifyOtpResponse.errors });
+      if (!verifyOtpResponse.isSuccess) return showErrorToast({ errors: verifyOtpResponse.errors });
       if (!verifyOtpResponse.isValid)
-        return showErrorToast({
-          errors: verifyOtpResponse.errors || "Code is not valid",
-        });
+        return showErrorToast({ errors: verifyOtpResponse.errors || "Code is not valid" });
       setIsVerifyModalOpen(false);
       showSuccessToast({ description: "MFA is verified successfully" });
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -96,10 +80,7 @@ export const ProfileMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
         />
         <div className="mt-6 flex items-center justify-end gap-4">
           <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setIsVerifyModalOpen(false)}>
+            <Button variant="outline" type="button" onClick={() => setIsVerifyModalOpen(false)}>
               Cancel
             </Button>
           </DialogTrigger>
