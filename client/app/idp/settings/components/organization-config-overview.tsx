@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui-kits/badge/badge"
 import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model"
 import { cn } from "@/lib/utils"
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
 import { Check, X } from "lucide-react"
 import type { ReactNode } from "react"
 
@@ -17,8 +18,10 @@ type OverviewSectionProps = {
 const OverviewSection = ({ title, description, children }: OverviewSectionProps) => (
   <section className="space-y-3">
     <div className="space-y-0.5">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      <h3 className={SETTINGS_FORM_LAYOUT.overviewSectionTitle}>{title}</h3>
+      {description ? (
+        <p className={SETTINGS_FORM_LAYOUT.fieldDescription}>{description}</p>
+      ) : null}
     </div>
     {children}
   </section>
@@ -43,7 +46,7 @@ const SourceTile = ({ label, enabled }: SourceTileProps) => (
     ) : (
       <X className="h-4 w-4 text-muted-foreground" aria-hidden />
     )}
-    <span className="text-xs font-medium leading-tight text-foreground sm:text-sm">{label}</span>
+    <span className={cn(SETTINGS_FORM_LAYOUT.chipTitleBadge, "leading-tight")}>{label}</span>
     <span className="sr-only">{enabled ? "Enabled" : "Disabled"}</span>
   </div>
 )
@@ -62,11 +65,12 @@ export const OrganizationConfigOverview = ({ config }: OrganizationConfigOvervie
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Config ID
-          </p>
+          <p className={SETTINGS_FORM_LAYOUT.overviewMetaLabel}>Config ID</p>
           <p
-            className="break-all font-mono text-sm text-foreground"
+            className={cn(
+              SETTINGS_FORM_LAYOUT.fieldValue,
+              "break-all font-mono",
+            )}
             title={config.itemId || undefined}
           >
             {config.itemId || "—"}
@@ -93,8 +97,8 @@ export const OrganizationConfigOverview = ({ config }: OrganizationConfigOvervie
         </OverviewSection>
       ) : (
         <div className="rounded-lg border border-dashed px-4 py-8 text-center">
-          <p className="text-sm font-medium text-foreground">Single-organization mode</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className={SETTINGS_FORM_LAYOUT.toggleTitle}>Single-organization mode</p>
+          <p className={cn(SETTINGS_FORM_LAYOUT.toggleDescription, "mt-1")}>
             Enable multi-organization mode to configure creation sources.
           </p>
         </div>

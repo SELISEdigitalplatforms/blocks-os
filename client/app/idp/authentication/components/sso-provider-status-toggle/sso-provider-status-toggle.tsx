@@ -1,9 +1,6 @@
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useUpdateSsoCredentialStatus } from "@blocks-idp/authentication/hooks/use-sso";
@@ -35,8 +32,7 @@ export const SSoProviderStatusToggle = ({
       });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
