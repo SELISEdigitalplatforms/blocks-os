@@ -1,29 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http } from "@/lib/http-client";
-import { secretsService } from "@/services/secrets.service";
-import { SECRETS_ENDPOINTS } from "@/services/secrets.service";
 import { NotificationConfigService } from "./notification-config.service";
-import { NOTIFICATION_CONFIG_SECRET_KEY } from "../models/notification-config.model";
 
 vi.mock("@/lib/http-client", () => ({
   http: {
     get: vi.fn(),
     post: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
-vi.mock("@/services/secrets.service", () => ({
-  secretsService: {
-    save: vi.fn(),
-    delete: vi.fn(),
-  },
-  SECRETS_ENDPOINTS: {
-    GETS: "/api/Secrets/Gets",
-    SAVE: "/api/Secrets/Save",
-    GET: "/api/Secrets/Get",
-    DELETE: "/api/Secrets/Delete",
-  },
-}));
+const NOTIFICATION_GETS_ENDPOINT = "/api/Notification/Gets";
+const NOTIFICATION_GET_ENDPOINT = "/api/Notification/Get";
+const NOTIFICATION_SAVE_ENDPOINT = "/api/Notification/Save";
+const NOTIFICATION_DELETE_ENDPOINT = "/api/Notification/Delete";
 
 describe("NotificationConfigService", () => {
   let service: NotificationConfigService;
@@ -38,20 +28,21 @@ describe("NotificationConfigService", () => {
   });
 
   describe("getNotificationConfigs", () => {
-    it("should GET with secretKey, pagination, and map configurations", async () => {
-      vi.mocked(http.get).mockResolvedValue([
-        {
-          itemId: "cfg-1",
-          secretKey: NOTIFICATION_CONFIG_SECRET_KEY,
-          keyValuePairs: {
+    it("should GET Notification/Gets with projectKey and pagination", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        isSuccess: true,
+        totalCount: 1,
+        configurations: [
+          {
+            itemId: "cfg-1",
             name: "Test",
-            channelToNotify: "0",
-            notificationType: "0",
-            enablePersistence: "true",
+            channelToNotify: 0,
+            notificationType: 0,
+            enablePersistence: true,
             notifyMethod: "SendAsync",
           },
-        },
-      ]);
+        ],
+      });
 
       const result = await service.getNotificationConfigs({
         projectKey: "proj-1",
@@ -60,7 +51,7 @@ describe("NotificationConfigService", () => {
       });
 
       expect(http.get).toHaveBeenCalledWith(
-        `${SECRETS_ENDPOINTS.GETS}?secretKey=${NOTIFICATION_CONFIG_SECRET_KEY}&PageSize=10&PageNumber=0`,
+        `${NOTIFICATION_GETS_ENDPOINT}?page=0&pageSize=10&projectKey=proj-1`,
       );
       expect(result.configurations[0]).toMatchObject({
         itemId: "cfg-1",
@@ -70,12 +61,13 @@ describe("NotificationConfigService", () => {
         enablePersistence: true,
         notifyMethod: "SendAsync",
       });
+      expect(result.totalCount).toBe(1);
     });
   });
 
   describe("saveNotificationConfig", () => {
-    it("should save via secretsService with string keyValuePairs", async () => {
-      vi.mocked(secretsService.save).mockResolvedValue({ itemId: "cfg-1" } as never);
+    it("should POST /api/Notification/Save with flat payload and isUpdateRequest flag for edits", async () => {
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
 
       const result = await service.saveNotificationConfig({
         projectKey: "proj-1",
@@ -87,18 +79,72 @@ describe("NotificationConfigService", () => {
         itemId: "cfg-1",
       });
 
-      expect(secretsService.save).toHaveBeenCalledWith({
-        secretKey: NOTIFICATION_CONFIG_SECRET_KEY,
-        keyValuePairs: {
-          name: "Test",
-          channelToNotify: "0",
-          notificationType: "1",
-          enablePersistence: "true",
-          notifyMethod: "SendAsync",
-        },
+      expect(http.post).toHaveBeenCalledWith(NOTIFICATION_SAVE_ENDPOINT, {
+        name: "Test",
+        channelToNotify: 0,
+        notificationType: 1,
+        enablePersistence: true,
+        notifyMethod: "SendAsync",
         itemId: "cfg-1",
+        isUpdateRequest: true,
       });
       expect(result.isSuccess).toBe(true);
+    });
+
+    it("should POST /api/Notification/Save with empty itemId and isUpdateRequest=false for new configs", async () => {
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
+
+      const result = await service.saveNotificationConfig({
+        projectKey: "proj-1",
+        name: "Test",
+        channelToNotify: 0,
+        notificationType: 1,
+        enablePersistence: true,
+        notifyMethod: "SendAsync",
+      });
+
+      expect(http.post).toHaveBeenCalledWith(NOTIFICATION_SAVE_ENDPOINT, {
+        name: "Test",
+        channelToNotify: 0,
+        notificationType: 1,
+        enablePersistence: true,
+        notifyMethod: "SendAsync",
+        itemId: "",
+        isUpdateRequest: false,
+      });
+      expect(result.isSuccess).toBe(true);
+    });
+  });
+
+  describe("getNotificationConfig", () => {
+    it("should GET Notification/Get with itemId", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        itemId: "cfg-1",
+        name: "Test",
+        channelToNotify: 0,
+        notificationType: 0,
+        enablePersistence: true,
+        notifyMethod: "SendAsync",
+      });
+
+      const result = await service.getNotificationConfig("cfg-1");
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${NOTIFICATION_GET_ENDPOINT}?itemId=cfg-1`,
+      );
+      expect(result.itemId).toBe("cfg-1");
+    });
+  });
+
+  describe("deleteNotificationConfig", () => {
+    it("should DELETE Notification/Delete with itemId", async () => {
+      vi.mocked(http.delete).mockResolvedValue({ isSuccess: true, errors: null });
+
+      await service.deleteNotificationConfig("cfg-1");
+
+      expect(http.delete).toHaveBeenCalledWith(
+        `${NOTIFICATION_DELETE_ENDPOINT}?itemId=cfg-1`,
+      );
     });
   });
 });
