@@ -3,10 +3,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { Input } from "@/components/ui-kits/input/input";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import {
-  forgotPasswordFormSchema,
-  forgotPasswordFormDefaultValue,
-} from "./utils";
+import { forgotPasswordFormSchema, forgotPasswordFormDefaultValue } from "./utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -17,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { z } from "zod";
-import { showErrorToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Captcha } from "@/components/captcha";
 import { useEffect } from "react";
@@ -42,9 +39,7 @@ export const ForgotPasswordForm = () => {
     type: "reCaptcha-v2-checkbox",
   });
   const { isValid } = form.formState;
-  const onSubmitHandler = async (
-    values: z.infer<typeof forgotPasswordFormSchema>,
-  ) => {
+  const onSubmitHandler = async (values: z.infer<typeof forgotPasswordFormSchema>) => {
     try {
       if (!x_blocks_key) return;
       const res = await mutateAsync({
@@ -59,8 +54,7 @@ export const ForgotPasswordForm = () => {
       navigate(`/forgot-email-sent?email=${values.email}`);
     } catch (error) {
       resetCaptcha();
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -78,11 +72,7 @@ export const ForgotPasswordForm = () => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    {...field}
-                  />
+                  <Input type="email" placeholder="Enter your email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -97,7 +87,8 @@ export const ForgotPasswordForm = () => {
           <Button
             type="submit"
             className="w-full rounded"
-            disabled={isPending || !isValid || !captchaCode}>
+            disabled={isPending || !isValid || !captchaCode}
+          >
             Continue
           </Button>
         </div>

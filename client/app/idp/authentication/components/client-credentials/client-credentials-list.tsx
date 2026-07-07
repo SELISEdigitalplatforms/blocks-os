@@ -3,7 +3,9 @@ import { useGetAuthClientCredentials } from "@blocks-idp/authentication/hooks/us
 import { useMemo } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { KeyRound } from "lucide-react";
 const LoadingSkeleton = () => (
   <Card className="py-6">
     <CardHeader>
@@ -62,9 +64,11 @@ export const ClientCredentialList = () => {
   if (isLoading || isFetching) return <LoadingSkeleton />;
   if (!sortedClientsData.length)
     return (
-      <div className="text-muted- flex h-32 flex-wrap items-center justify-center rounded-sm border bg-background p-4 text-center">
-        No client credential found. Please create a new client credential.
-      </div>
+      <EmptyState
+        icon={KeyRound}
+        title="No client credential found"
+        description="Please create a new client credential."
+      />
     );
   return (
     <div>

@@ -6,21 +6,14 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui-kits/input-otp/input-otp";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui-kits/input-otp/input-otp";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useContext } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { userMfaContext } from "../../user-mfa";
 import { useVerifyMfaOTP } from "@blocks-idp/mfa/hooks/use-mfa-config";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 const CustomInputOTPSlot = ({ index }: { index: number }) => {
   return (
     <InputOTPSlot
@@ -33,8 +26,7 @@ const FormSchema = z.object({
   code: z.string().min(5),
 });
 export const UserMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
-  const { projectKey, setIsTotpModalOpen, mfaMethodType, userId } =
-    useContext(userMfaContext);
+  const { projectKey, setIsTotpModalOpen, mfaMethodType, userId } = useContext(userMfaContext);
   const { mutateAsync } = useVerifyMfaOTP({ id: userId, projectKey });
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -50,8 +42,7 @@ export const UserMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
         authType: mfaMethodType,
         projectKey,
       });
-      if (!verifyOtpResponse.isSuccess)
-        return showErrorToast({ errors: verifyOtpResponse.errors });
+      if (!verifyOtpResponse.isSuccess) return showErrorToast({ errors: verifyOtpResponse.errors });
       setIsTotpModalOpen(false);
       showSuccessToast({ description: "MFA enabled successfully" });
     } catch (_error) {
@@ -83,10 +74,7 @@ export const UserMfaVerifyForm = ({ mfaId }: { mfaId: string }) => {
           )}
         />
         <div className="mt-6 flex items-center justify-end gap-4">
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => setIsTotpModalOpen(false)}>
+          <Button variant="outline" type="button" onClick={() => setIsTotpModalOpen(false)}>
             Cancel
           </Button>
           <Button>Verify</Button>
