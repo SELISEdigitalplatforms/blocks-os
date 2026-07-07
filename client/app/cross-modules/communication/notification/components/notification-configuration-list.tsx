@@ -33,12 +33,8 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import {
-  NotificationConfigsFilterToolBar,
-  useNotificationConfigsFilterQueryParams,
-} from "./notification-configs-filter-toolbar";
+import { useNotificationConfigsFilterQueryParams } from "./notification-configs-filter-toolbar";
 import { useQueryState, parseAsBoolean } from "nuqs";
-import { EmailConfiguration } from "../../mail";
 
 const columns = [
   { key: "name", label: "Name" },
@@ -130,8 +126,6 @@ const NotificationConfigurationList: React.FC<
         />
       </Dialog>
       <ConfigsTableShell
-        title="Configurations"
-        toolbar={<NotificationConfigsFilterToolBar />}
         footer={
           <Pagination
             page={queryParams.notificationPage}
@@ -274,22 +268,30 @@ export function NotificationConfigurationListPage() {
   const configurations = data?.configurations ?? [];
   const isEmpty = !loading && configurations.length === 0;
 
-  if (isEmpty) {
-    return (
-      <EmptyState
-        icon={Bell}
-        title="No notification configurations found"
-        description="Use Add Configuration to create one."
-      />
-    );
-  }
-
   return (
-    <NotificationConfigurationList
-      addConfigOpen={addOpen}
-      onAddConfigOpenChange={setAddOpen}
-      isLoading={loading}
-      configurationsLength={configurations.length}
-    />
+    <>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <NewNotificationConfiguration
+          key={addOpen ? "open" : "closed"}
+          dialogTitle="Add Configuration"
+          onClose={() => setAddOpen(false)}
+          isEdit={false}
+        />
+      </Dialog>
+      {isEmpty ? (
+        <EmptyState
+          icon={Bell}
+          title="No notification configurations found"
+          description="Use Add Configuration to create one."
+        />
+      ) : (
+        <NotificationConfigurationList
+          addConfigOpen={false}
+          onAddConfigOpenChange={() => {}}
+          isLoading={loading}
+          configurationsLength={configurations.length}
+        />
+      )}
+    </>
   );
 }
