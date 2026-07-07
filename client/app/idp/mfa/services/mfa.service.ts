@@ -60,7 +60,7 @@ export class MFAService {
     payload: IMFAConfigurationSavePayload,
   ): Promise<IMFAConfigurationSaveResponse> {
     return http
-      .post<{ isSuccess: boolean; errors: unknown | null }>(
+      .post<unknown>(
         MFA_CONFIG_ENDPOINTS.SAVE,
         {
           enableMfa: payload.enabled,
@@ -70,10 +70,18 @@ export class MFAService {
         undefined,
         { absoluteUrl: true },
       )
-      .then((response) => ({
-        isSuccess: response?.isSuccess ?? false,
-        errors: response?.errors ?? null,
-      }))
+      .then((response) => {
+        const body = (response ?? {}) as {
+          isSuccess?: boolean;
+          success?: boolean;
+          errors?: unknown | null;
+        };
+        const isSuccess = body.isSuccess ?? body.success ?? true;
+        return {
+          isSuccess,
+          errors: body.errors ?? null,
+        };
+      })
   }
 
   generateUserMfaOTP(
