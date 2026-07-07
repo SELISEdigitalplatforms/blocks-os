@@ -14,7 +14,9 @@ type ChildMenuItemProps = {
 
 const ChildMenuItem = ({ menu }: ChildMenuItemProps) => {
   const { pathname } = useLocation()
-  const isActiveMenu = pathname.startsWith(menu.path)
+  const isActiveMenu =
+    pathname.startsWith(menu.path) ||
+    (menu.path === "/app/idp/roles" && pathname.startsWith("/app/idp/role-detail"))
 
   return (
     <Link
@@ -43,7 +45,9 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
         }
       })
     }
-    return allPaths.some((item) => pathname.startsWith(item))
+    return allPaths.some((item) => pathname.startsWith(item)) ||
+      (pathname.startsWith("/app/idp/role-detail") &&
+        menu.children?.some((child) => child.type === "menu" && child.path === "/app/idp/roles"))
   }, [menu.children, menu.path, pathname])
 
   const hasChildren = Boolean(menu.children?.length)
