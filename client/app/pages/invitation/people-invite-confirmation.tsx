@@ -54,7 +54,7 @@ export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps
       </div>
       <Card className="mx-auto w-full rounded border-solid border-background shadow-none sm:max-w-md sm:border-[#95ADC4]">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl leading-9">Blocks Cloud</CardTitle>
+          <CardTitle className="text-3xl leading-9">Blocks OS</CardTitle>
           <CardDescription className="mt-4 text-xl font-semibold text-foreground">
             Accept Invitation
           </CardDescription>
