@@ -12,7 +12,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { PasswordInput } from "@/components/password-input";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { showErrorToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast } from "@/hooks/use-toast";
 import { useAccountResetPassword } from "@blocks-idp/iam/hooks/use-account";
 import { Captcha } from "@/components/captcha";
 import { useEffect, useState } from "react";
@@ -20,10 +20,7 @@ import { isErrorWithErrors } from "@/lib/error";
 import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
 import { PasswordStrengthChecker } from "@blocks-idp/authentication/components/password-strength-checker/password-strength-checker";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  activationFormDefaultValue,
-  activationFormSchema,
-} from "../activation/utils";
+import { activationFormDefaultValue, activationFormSchema } from "../activation/utils";
 type ResetPasswordFormProps = {
   code: string;
 };
@@ -48,9 +45,7 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
   useEffect(() => {
     if (!isValid && !requirementsMet && captchaCode) resetCaptcha();
   }, [captchaCode, isValid, requirementsMet, resetCaptcha]);
-  const onSubmitHandler = async (
-    values: z.infer<typeof activationFormSchema>,
-  ) => {
+  const onSubmitHandler = async (values: z.infer<typeof activationFormSchema>) => {
     try {
       const res = await mutateAsync({
         code: code,
@@ -66,8 +61,7 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
       navigate("/reset-password-success");
     } catch (error: unknown) {
       resetCaptcha();
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -75,9 +69,7 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
   const confirmPassword = form.watch("confirmPassword");
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmitHandler)}
-        className="flex flex-col gap-4">
+      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="password"
@@ -113,7 +105,8 @@ export const ResetPasswordForm = ({ code }: ResetPasswordFormProps) => {
         <Button
           type="submit"
           className="w-full"
-          disabled={isPending || !captchaCode || !isValid || !requirementsMet}>
+          disabled={isPending || !captchaCode || !isValid || !requirementsMet}
+        >
           Reset Password
         </Button>
       </form>

@@ -28,11 +28,6 @@ export const SettingsToggleCard = ({
         ) : null}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1 self-start sm:self-center">
-        {disabled ? (
-          <span className="text-xs font-medium text-muted-foreground">
-            {checked ? "Enabled" : "Disabled"}
-          </span>
-        ) : null}
         <FormControl>
           <Switch
             checked={checked}

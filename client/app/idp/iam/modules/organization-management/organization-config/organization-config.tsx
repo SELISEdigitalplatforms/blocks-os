@@ -12,18 +12,9 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui-kits/form/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui-kits/form/form";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSaveOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
@@ -33,11 +24,7 @@ import {
   organizationConfigFormDefaultValues,
   organizationConfigFormSchema,
 } from "@blocks-idp/iam/models/organization-config.model";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui-kits/popover/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import {
   Command,
   CommandEmpty,
@@ -53,16 +40,12 @@ interface OrganizationConfigProps {
   configData: IOrganizationConfigResponse | null | undefined;
   isLoading: boolean;
 }
-export const OrganizationConfig = ({
-  configData,
-  isLoading,
-}: OrganizationConfigProps) => {
+export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfigProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveOrganizationConfig();
   const { data: rolesData, isLoading: isRolesLoading } = useGetRoles({
-    projectKey: tenantId,
     page: 0,
     pageSize: 1000,
     sort: { property: "Name", isDescending: false },
@@ -86,8 +69,7 @@ export const OrganizationConfig = ({
       form.reset({
         isMultiOrgEnabled: configData?.isMultiOrgEnabled ?? false,
         allowCreationFromCloud: configData?.allowCreationFromCloud ?? true,
-        allowCreationFromConstruct:
-          configData?.allowCreationFromConstruct ?? false,
+        allowCreationFromConstruct: configData?.allowCreationFromConstruct ?? false,
       });
       setSelectedRoles(configData?.defaultRoleOnOrgCreation ?? []);
     }
@@ -99,8 +81,7 @@ export const OrganizationConfig = ({
       form.reset({
         isMultiOrgEnabled: configData.isMultiOrgEnabled ?? false,
         allowCreationFromCloud: configData.allowCreationFromCloud ?? true,
-        allowCreationFromConstruct:
-          configData.allowCreationFromConstruct ?? false,
+        allowCreationFromConstruct: configData.allowCreationFromConstruct ?? false,
       });
       setSelectedRoles(configData.defaultRoleOnOrgCreation ?? []);
     }
@@ -115,9 +96,7 @@ export const OrganizationConfig = ({
   const onSubmit: SubmitHandler<IOrganizationConfigForm> = async (data) => {
     try {
       const res = await mutateAsync({
-        allowOrgCreationFromCloud: data.isMultiOrgEnabled
-          ? data.allowCreationFromCloud
-          : true,
+        allowOrgCreationFromCloud: data.isMultiOrgEnabled ? data.allowCreationFromCloud : true,
         allowOrgCreationFromConstruct: data.isMultiOrgEnabled
           ? data.allowCreationFromConstruct
           : false,
@@ -125,9 +104,7 @@ export const OrganizationConfig = ({
         allowOrgCreationFromPortal: false,
         isMultiOrgEnabled: data.isMultiOrgEnabled,
         defaultRolesOnOrgCreation:
-          data.isMultiOrgEnabled && data.allowCreationFromConstruct
-            ? selectedRoles
-            : [],
+          data.isMultiOrgEnabled && data.allowCreationFromConstruct ? selectedRoles : [],
         defaultPermissionsOnOrgCreation: [],
         keepOrgRolesSameAsDefaultRoles: true,
         keepOrgPermissionsSameAsDefaultPermissions: true,
@@ -136,9 +113,7 @@ export const OrganizationConfig = ({
         showErrorToast({ errors: res.errors });
         return;
       }
-      showSuccessToast({
-        description: "Organization config saved successfully",
-      });
+      showSuccessToast({ description: "Organization config saved successfully" });
       setIsModalOpen(false);
     } catch (error: unknown) {
       if (error && typeof error === "object" && "errors" in error) {
@@ -151,27 +126,19 @@ export const OrganizationConfig = ({
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <Settings className="h-5 w-5" />
-          <span className="sr-only sm:not-sr-only sm:ml-2.5">
-            Configure Organization
-          </span>
+          <span className="sr-only sm:not-sr-only sm:ml-2.5">Configure Organization</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader className="mb-4">
           <DialogTitle>Organization Configuration</DialogTitle>
-          <DialogDescription>
-            Configure organization settings for your project.
-          </DialogDescription>
+          <DialogDescription>Configure organization settings for your project.</DialogDescription>
         </DialogHeader>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            Loading...
-          </div>
+          <div className="flex items-center justify-center py-8">Loading...</div>
         ) : (
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="flex flex-col gap-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
               <FormField
                 name="isMultiOrgEnabled"
                 control={form.control}
@@ -184,9 +151,7 @@ export const OrganizationConfig = ({
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <FormLabel className="!mt-0">
-                      Enable Multi-Organization
-                    </FormLabel>
+                    <FormLabel className="!mt-0">Enable Multi-Organization</FormLabel>
                   </FormItem>
                 )}
               />
@@ -204,9 +169,7 @@ export const OrganizationConfig = ({
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <FormLabel className="!mt-0">
-                          Allow Creation From Cloud
-                        </FormLabel>
+                        <FormLabel className="!mt-0">Allow Creation From Cloud</FormLabel>
                       </FormItem>
                     )}
                   />
@@ -223,32 +186,25 @@ export const OrganizationConfig = ({
                             disabled={true}
                           />
                         </FormControl>
-                        <FormLabel className="!mt-0">
-                          Allow Creation From Construct
-                        </FormLabel>
+                        <FormLabel className="!mt-0">Allow Creation From Construct</FormLabel>
                       </FormItem>
                     )}
                   />
                   {form.watch("allowCreationFromConstruct") && (
                     <div className="mt-3 space-y-2">
-                      <label className="text-sm font-medium">
-                        Default Roles
-                      </label>
+                      <label className="text-sm font-medium">Default Roles</label>
                       {isRolesLoading ? (
-                        <div className="p-2 text-sm text-muted-foreground">
-                          Loading roles...
-                        </div>
+                        <div className="p-2 text-sm text-muted-foreground">Loading roles...</div>
                       ) : roles.length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground">
-                          No roles available
-                        </div>
+                        <div className="p-2 text-sm text-muted-foreground">No roles available</div>
                       ) : (
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="w-full justify-between">
+                              className="w-full justify-between"
+                            >
                               {selectedRoles.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                   {selectedRoles.length > 2 ? (
@@ -257,9 +213,7 @@ export const OrganizationConfig = ({
                                     </Badge>
                                   ) : (
                                     selectedRoles.map((slug) => {
-                                      const role = roles.find(
-                                        (r) => r.slug === slug,
-                                      );
+                                      const role = roles.find((r) => r.slug === slug);
                                       return (
                                         <Badge key={slug} variant="secondary">
                                           {role?.name || slug}
@@ -281,26 +235,21 @@ export const OrganizationConfig = ({
                                 <CommandEmpty>No roles found.</CommandEmpty>
                                 <CommandGroup>
                                   {roleOptions.map((option) => {
-                                    const isSelected = selectedRoles.includes(
-                                      option.value,
-                                    );
+                                    const isSelected = selectedRoles.includes(option.value);
                                     return (
                                       <CommandItem
                                         key={option.value}
                                         onSelect={() => {
                                           const newSelected = isSelected
-                                            ? selectedRoles.filter(
-                                                (v) => v !== option.value,
-                                              )
+                                            ? selectedRoles.filter((v) => v !== option.value)
                                             : [...selectedRoles, option.value];
                                           setSelectedRoles(newSelected);
-                                        }}>
+                                        }}
+                                      >
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            isSelected
-                                              ? "opacity-100"
-                                              : "opacity-0",
+                                            isSelected ? "opacity-100" : "opacity-0",
                                           )}
                                         />
                                         {option.label}
@@ -319,17 +268,11 @@ export const OrganizationConfig = ({
               )}
               <DialogFooter className="mt-6">
                 <DialogClose asChild>
-                  <Button
-                    className="min-w-[80px]"
-                    variant="outline"
-                    disabled={isPending}>
+                  <Button className="min-w-[80px]" variant="outline" disabled={isPending}>
                     Cancel
                   </Button>
                 </DialogClose>
-                <Button
-                  className="min-w-[80px]"
-                  type="submit"
-                  disabled={isPending || !isDirty}>
+                <Button className="min-w-[80px]" type="submit" disabled={isPending || !isDirty}>
                   {isPending ? "Saving..." : "Save"}
                 </Button>
               </DialogFooter>
