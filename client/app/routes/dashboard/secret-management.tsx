@@ -3,9 +3,10 @@ import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
+import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential/create-client-credential";
+import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { toast } from "@/hooks/use-toast";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
-import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
@@ -22,7 +23,7 @@ import {
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Pencil, Plus, ArrowLeft, Loader2, Notebook, Waypoints } from "lucide-react";
-import { parseAsBoolean, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
@@ -36,6 +37,7 @@ function SecretManagementHeaderActions({
   setIsManagedServicesGuideOpen,
   setIsJwtClaimOpen,
   setIsEditExternalIdpOpen,
+  setIsClientCredentialOpen,
   externalIdpConfigured,
 }: {
   isOidcBranding: boolean;
@@ -47,6 +49,7 @@ function SecretManagementHeaderActions({
   setIsManagedServicesGuideOpen: (value: boolean) => void;
   setIsJwtClaimOpen: (value: boolean) => void;
   setIsEditExternalIdpOpen: (value: boolean) => void;
+  setIsClientCredentialOpen: (value: boolean) => void;
   externalIdpConfigured: boolean;
 }) {
   const brandingHeader = useOidcBrandingHeaderOptional();
@@ -81,7 +84,14 @@ function SecretManagementHeaderActions({
   return (
     <>
       {!isOidcBranding && currentPath === "oidc" && <CreateOIDC />}
-      {currentPath === "client-credentials" && <CreateClientCredential />}
+      {currentPath === "client-credentials" && (
+        <Button size="sm" onClick={() => setIsClientCredentialOpen(true)}>
+          <Plus className="h-5 w-5" />
+          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+            Add Client Credential
+          </span>
+        </Button>
+      )}
       {currentPath === "identity-providers" && (
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
           <Plus className="h-5 w-5" />
@@ -175,6 +185,7 @@ export default function SecretManagementLayout() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
   const { data: externalIdpData } = useGetSavedPublicCertificates(tenantId);
+  const { data: clientsData } = useListAuthClientCredentials({ projectKey: tenantId });
 
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState(
@@ -200,6 +211,14 @@ export default function SecretManagementLayout() {
   const [, setIsEditExternalIdpOpen] = useQueryState(
     "editExternalIdp",
     parseAsBoolean.withDefault(false),
+  );
+  const [isClientCredentialOpen, setIsClientCredentialOpen] = useQueryState(
+    "clientCredentialOpen",
+    parseAsBoolean.withDefault(false),
+  );
+  const [clientCredentialItemId, setClientCredentialItemId] = useQueryState(
+    "clientCredentialItemId",
+    parseAsString.withDefault(""),
   );
 
   const currentItem = isOidcBranding
@@ -246,6 +265,7 @@ export default function SecretManagementLayout() {
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
       setIsJwtClaimOpen={setIsJwtClaimOpen}
       setIsEditExternalIdpOpen={setIsEditExternalIdpOpen}
+      setIsClientCredentialOpen={setIsClientCredentialOpen}
       externalIdpConfigured={!!externalIdpData?.isConfigured}
     />
   );
@@ -283,6 +303,21 @@ export default function SecretManagementLayout() {
           <Outlet />
         </div>
       </div>
+      {currentPath === "client-credentials" && (
+        <CreateClientCredential
+          editClient={
+            clientCredentialItemId
+              ? (clientsData ?? []).find((c) => c.itemId === clientCredentialItemId) ?? null
+              : null
+          }
+          open={isClientCredentialOpen}
+          onOpenChange={(open) => {
+            setIsClientCredentialOpen(open);
+            if (!open) setClientCredentialItemId("");
+          }}
+          hideTrigger
+        />
+      )}
     </OidcBrandingHeaderProvider>
   );
 }

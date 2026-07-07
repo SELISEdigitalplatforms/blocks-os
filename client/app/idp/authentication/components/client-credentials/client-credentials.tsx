@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { ClientCredentialList } from "./client-credentials-list";
-import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential/create-client-credential";
 import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { IClientCredentialsConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
+import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 
 type SummaryTileProps = {
   label: string;
@@ -20,7 +18,23 @@ const SummaryTile = ({ label, value }: SummaryTileProps) => (
 export const ClientCredentials = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading, isFetching } = useListAuthClientCredentials({ projectKey: tenantId });
-  const [editingClient, setEditingClient] = useState<IClientCredentialsConfig | null>(null);
+  const [, setIsClientCredentialOpen] = useQueryState(
+    "clientCredentialOpen",
+    parseAsBoolean.withDefault(false),
+  );
+  const [, setClientCredentialItemId] = useQueryState(
+    "clientCredentialItemId",
+    parseAsString.withDefault(""),
+  );
+
+  const handleEdit = (client: { itemId: string } | null | undefined) => {
+    if (!client) {
+      setClientCredentialItemId("");
+    } else {
+      setClientCredentialItemId(client.itemId);
+    }
+    setIsClientCredentialOpen(true);
+  };
 
   const credentials = data ?? [];
   const total = credentials.length;
@@ -41,17 +55,9 @@ export const ClientCredentials = () => {
         <ClientCredentialList
           data={credentials}
           isLoading={isLoading || isFetching}
-          onEdit={setEditingClient}
+          onEdit={handleEdit}
         />
       </div>
-      <CreateClientCredential
-        editClient={editingClient}
-        open={Boolean(editingClient)}
-        onOpenChange={(open) => {
-          if (!open) setEditingClient(null);
-        }}
-        hideTrigger
-      />
     </div>
   );
 };
