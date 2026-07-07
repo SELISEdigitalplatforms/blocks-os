@@ -4,8 +4,6 @@ import { CreateClientCredential } from "@blocks-idp/authentication/components/cr
 import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IClientCredentialsConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { Button } from "@/components/ui-kits/button/button";
-import { Plus } from "lucide-react";
 
 type SummaryTileProps = {
   label: string;
@@ -23,7 +21,6 @@ export const ClientCredentials = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading, isFetching } = useListAuthClientCredentials({ projectKey: tenantId });
   const [editingClient, setEditingClient] = useState<IClientCredentialsConfig | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
 
   const credentials = data ?? [];
   const total = credentials.length;
@@ -40,12 +37,6 @@ export const ClientCredentials = () => {
           <SummaryTile label="Inactive" value={inactive} />
         </div>
       )}
-      <div className="mb-4 flex items-center justify-end">
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="h-5 w-5" />
-          <span className="ml-2.5 text-sm">Add Client Credential</span>
-        </Button>
-      </div>
       <div className="relative">
         <ClientCredentialList
           data={credentials}
@@ -53,7 +44,6 @@ export const ClientCredentials = () => {
           onEdit={setEditingClient}
         />
       </div>
-      <CreateClientCredential open={createOpen} onOpenChange={setCreateOpen} hideTrigger />
       <CreateClientCredential
         editClient={editingClient}
         open={Boolean(editingClient)}

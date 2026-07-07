@@ -12,7 +12,6 @@ import {
 import { emailService } from "@blocks-communication/mail/services/email.services";
 import { useGetEmailUsage, useGetEmailUsageById } from "./use-email-usage";
 import { act } from "react";
-import { TEST_TENANT_ID } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
@@ -46,7 +45,6 @@ describe("Email Usage Hooks", () => {
         totalCount: mockEmailUsageResponse.totalCount,
       });
       expect(emailService.getMailBoxMails).toHaveBeenCalledWith(
-        TEST_TENANT_ID,
         0,
         10,
         false,
@@ -67,7 +65,6 @@ describe("Email Usage Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(emailService.getMailBoxMails).toHaveBeenCalledWith(
-        TEST_TENANT_ID,
         0,
         10,
         true,
@@ -90,7 +87,6 @@ describe("Email Usage Hooks", () => {
 
       // Query key should include all parameters
       expect(emailService.getMailBoxMails).toHaveBeenCalledWith(
-        TEST_TENANT_ID,
         2,
         20,
         false,
@@ -175,7 +171,6 @@ describe("Email Usage Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(emailService.getMailBoxMails).toHaveBeenCalledWith(
-        TEST_TENANT_ID,
         0,
         10,
         false,
@@ -216,7 +211,7 @@ describe("Email Usage Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toEqual(mockGetMailBoxMailResponse.mail);
-      expect(emailService.getMailBoxMail).toHaveBeenCalledWith(TEST_TENANT_ID, "msg-123");
+      expect(emailService.getMailBoxMail).toHaveBeenCalledWith("msg-123");
     });
 
     it("should use correct query key for caching", async () => {
@@ -228,7 +223,7 @@ describe("Email Usage Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.getMailBoxMail).toHaveBeenCalledWith(TEST_TENANT_ID, "msg-456");
+      expect(emailService.getMailBoxMail).toHaveBeenCalledWith("msg-456");
     });
 
     it("should be disabled when tenantId is empty", async () => {
