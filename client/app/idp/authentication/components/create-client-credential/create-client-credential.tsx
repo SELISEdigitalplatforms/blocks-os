@@ -159,7 +159,10 @@ export const CreateClientCredential = ({
         projectKey: tenantId,
       };
       const res = await saveServiceClient(payload);
-      if (!res?.isSuccess) return showErrorToast({ errors: res?.errors ?? "Save failed" });
+      if (!res?.isSuccess) {
+        const apiError = res?.error as { errors?: string[] } | undefined;
+        return showErrorToast({ errors: apiError?.errors ?? "Save failed" });
+      }
       showSuccessToast({
         description: isEdit
           ? "Client credential updated successfully"
