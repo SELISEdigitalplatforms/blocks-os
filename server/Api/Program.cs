@@ -107,6 +107,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
         ["__BLOCKS_IAM_CLIENT_ID__"] = section["BLOCKS_IAM_CLIENT_ID"],
         ["__BLOCKS_OS_BASE_URL__"] = section["BLOCKS_OS_BASE_URL"],
         ["__BLOCKS_OS_CALLBACK_URL__"] = section["BLOCKS_OS_CALLBACK_URL"],
+        ["__BLOCKS_CNAME_BASE_URL__"] = section["BLOCKS_CNAME_BASE_URL"],
     };
 
     var files = Directory.EnumerateFiles(webRootPath, "*", SearchOption.AllDirectories)
