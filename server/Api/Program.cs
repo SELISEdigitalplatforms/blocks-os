@@ -18,7 +18,7 @@ Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString}");
 
-ApplicationConfigurations.ConfigureServices(builder.Services, GetMessageConfiguration(secret.MessageConnectionString));
+ApplicationConfigurations.ConfigureServices(builder.Services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Configuration.AddMongoDbConfiguration(options =>
 {
@@ -91,35 +91,6 @@ await app.RunAsync();
 //        : VaultType.Azure;
 //}
 
-static MessageConfiguration GetMessageConfiguration(string messageConnectionString)
-{
-    const string DefaultProvider = "azure";
-    const string RabbitMqProvider = "rabbitmq";
-
-    string provider;
-    if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri) &&
-        (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
-         uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)))
-    {
-        provider = RabbitMqProvider;
-    }
-    else
-    {
-        provider = DefaultProvider;
-    }
-
-    return provider switch
-    {
-        RabbitMqProvider => new MessageConfiguration
-        {
-            RabbitMqConfiguration = new RabbitMqConfiguration()
-        },
-        _ => new MessageConfiguration
-        {
-            AzureServiceBusConfiguration = new AzureServiceBusConfiguration()
-        }
-    };
-}
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)
 {
@@ -136,6 +107,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
         ["__BLOCKS_IAM_CLIENT_ID__"] = section["BLOCKS_IAM_CLIENT_ID"],
         ["__BLOCKS_OS_BASE_URL__"] = section["BLOCKS_OS_BASE_URL"],
         ["__BLOCKS_OS_CALLBACK_URL__"] = section["BLOCKS_OS_CALLBACK_URL"],
+        ["__BLOCKS_CNAME_BASE_URL__"] = section["BLOCKS_CNAME_BASE_URL"],
     };
 
     var files = Directory.EnumerateFiles(webRootPath, "*", SearchOption.AllDirectories)

@@ -1,5 +1,4 @@
 using Blocks.Genesis;
-using DomainService.Dtos;
 using DomainService.Projects;
 using DomainService.Shared;
 using DomainService.Shared.Dtos;
@@ -7,12 +6,12 @@ using DomainService.Shared.Entities;
 using Worker;
 using Worker.Configuration;
 using Worker.Consumers.Identifier;
+using SeliseBlocks.ConfigurationDriver;
 
 const string _serviceName = "blocks-os-worker";
 
-//var vaultType = ResolveVaultType();
-//Console.WriteLine($"Using Genesis vault type: {vaultType}");
-var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, VaultType.Azure);
+var vaultType = ApplicationConfigurations.ResolveVaultType();
+var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, vaultType);
 
 await CreateHostBuilder(args).Build().RunAsync();
 
@@ -20,7 +19,14 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
         .ConfigureAppConfiguration((context, builder) =>
         {
-            // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
+         // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
+         builder.AddMongoDbConfiguration(options =>
+         {
+          options.ConnectionString = secret.DatabaseConnectionString;
+          options.DatabaseName = secret.RootDatabaseName;
+          options.CollectionName = "Secrets";
+          options.SecretKey = "blocks-secret-os";
+         });
         })
         .ConfigureServices((services) =>
         {
@@ -38,39 +44,10 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
 
-            ApplicationConfigurations.ConfigureWorker(services, GetMessageConfiguration(secret.MessageConnectionString));
+            ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
             #endregion
         });
 
-static MessageConfiguration GetMessageConfiguration(string messageConnectionString)
-{
-    const string DefaultProvider = "azure";
-    const string RabbitMqProvider = "rabbitmq";
-
-    string provider;
-    if (Uri.TryCreate(messageConnectionString, UriKind.Absolute, out var uri) &&
-        (uri.Scheme.Equals("amqp", StringComparison.OrdinalIgnoreCase) ||
-         uri.Scheme.Equals("amqps", StringComparison.OrdinalIgnoreCase)))
-    {
-        provider = RabbitMqProvider;
-    }
-    else
-    {
-        provider = DefaultProvider;
-    }
-
-    return provider switch
-    {
-        RabbitMqProvider => new MessageConfiguration
-        {
-            RabbitMqConfiguration = new RabbitMqConfiguration()
-        },
-        _ => new MessageConfiguration
-        {
-            AzureServiceBusConfiguration = new AzureServiceBusConfiguration()
-        }
-    };
-}
 
 static VaultType ResolveVaultType()
 {
