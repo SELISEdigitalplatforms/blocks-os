@@ -33,10 +33,7 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import {
-  NotificationConfigsFilterToolBar,
-  useNotificationConfigsFilterQueryParams,
-} from "./notification-configs-filter-toolbar";
+import { useNotificationConfigsFilterQueryParams } from "./notification-configs-filter-toolbar";
 import { useQueryState, parseAsBoolean } from "nuqs";
 
 const columns = [
@@ -129,8 +126,6 @@ const NotificationConfigurationList: React.FC<
         />
       </Dialog>
       <ConfigsTableShell
-        title="Configurations"
-        toolbar={<NotificationConfigsFilterToolBar />}
         footer={
           <Pagination
             page={queryParams.notificationPage}
