@@ -39,7 +39,7 @@ import {
   useTransferOwnership,
 } from "@/hooks/use-people"
 import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { PeopleGroupedByEnvironments } from "@/models/people"
 import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { environmentOptions } from "@/constants/environment-options"
@@ -55,6 +55,7 @@ type PeopleTableProps = {
 
 export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: PeopleTableProps) => {
   const navigate = useNavigate()
+  const { tenantGroupId = "" } = useParams<{ tenantGroupId: string }>()
   const [isResendInvitationDialogOpen, setIsResendInvitationDialogOpen] = useState(false)
   const [isResendActivationDialogOpen, setIsResendActivationDialogOpen] = useState(false)
   const [isRemoveAccessDialogOpen, setIsRemoveAccessDialogOpen] = useState(false)
@@ -374,7 +375,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 key={row.id}
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() =>
-                  navigate(`/project-overview/people/${row.original.peopleDetails.userId}`)
+                  navigate(
+                    `/app/project-overview/${tenantGroupId}/people/${row.original.peopleDetails.userId}`,
+                  )
                 }
               >
                 {row.getVisibleCells().map((cell) => (

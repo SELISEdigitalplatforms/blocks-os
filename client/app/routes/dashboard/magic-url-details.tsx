@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import {
   Card,
   CardContent,
@@ -31,6 +32,7 @@ import { toast } from "@/hooks/use-toast";
 export default function MagicUrlDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const {
     data: magicUrl,
@@ -78,7 +80,7 @@ export default function MagicUrlDetailsPage() {
     }
     deactivateMagicUrl(magicUrl.itemId, tenantId, () => {
       setIsDeactivateModalOpen(false);
-      navigate("/app/secret-management/magic-url");
+      navigate(scoped("secret-management/magic-url"));
     });
   };
 
@@ -88,7 +90,7 @@ export default function MagicUrlDetailsPage() {
         variant="ghost"
         size="sm"
         className="w-fit gap-2"
-        onClick={() => navigate("/app/secret-management/magic-url")}>
+        onClick={() => navigate(scoped("secret-management/magic-url"))}>
         <ArrowLeft className="h-4 w-4" />
         Back to Magic URL
       </Button>
