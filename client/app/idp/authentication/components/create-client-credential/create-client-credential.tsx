@@ -114,13 +114,13 @@ export const CreateClientCredential = ({
   const permTotal = permTotalCount;
   const permHasMore = permItems.length < permTotal;
   const permFirstLoad = permsLoading && permItems.length === 0;
-  const requestedPageRef = useRef<number>(-1);
+  const inFlightPageRef = useRef<number | null>(null);
 
   useEffect(() => {
     setPermPage(0);
     setPermItems([]);
     setPermTotalCount(0);
-    requestedPageRef.current = -1;
+    inFlightPageRef.current = null;
   }, [permFilter, open]);
 
   useEffect(() => {
@@ -136,7 +136,7 @@ export const CreateClientCredential = ({
       const additions = pageItems.filter((p) => !seen.has(p.itemId));
       return [...prev, ...additions];
     });
-    requestedPageRef.current = permPage;
+    inFlightPageRef.current = null;
     // intentional: also depend on permFilter/open so cached permsData
     // re-applies when the user resets pagination via filter change or modal reopen
   }, [permsData, permPage, permFilter, open]);
@@ -145,12 +145,10 @@ export const CreateClientCredential = ({
   const loadMorePerms = useCallback(() => {
     if (permsFetching) return;
     if (!permHasMore) return;
-    setPermPage((prev) => {
-      if (requestedPageRef.current >= prev) return prev;
-      requestedPageRef.current = prev;
-      return prev + 1;
-    });
-  }, [permsFetching, permHasMore]);
+    if (inFlightPageRef.current !== null) return;
+    inFlightPageRef.current = permPage;
+    setPermPage((prev) => prev + 1);
+  }, [permsFetching, permHasMore, permPage]);
 
   useEffect(() => {
     const target = permSentinelRef.current;
