@@ -114,23 +114,29 @@ export const CreateClientCredential = ({
   const permTotal = permTotalCount;
   const permHasMore = permItems.length < permTotal;
   const permFirstLoad = permsLoading && permItems.length === 0;
+  const requestedPageRef = useRef<number>(-1);
 
   useEffect(() => {
     setPermPage(0);
     setPermItems([]);
     setPermTotalCount(0);
+    requestedPageRef.current = -1;
   }, [permFilter, open]);
 
   useEffect(() => {
     if (!permsData) return;
     const pageItems: IPermission[] = (permsData.data ?? []) as IPermission[];
-    setPermTotalCount((permsData.totalCount ?? pageItems.length) as number);
+    const total = (permsData.totalCount ?? pageItems.length) as number;
+    setPermTotalCount(total);
     setPermItems((prev) => {
       if (permPage === 0) return pageItems;
+      // Dedupe by itemId so the same row from a cached/stale page isn't appended twice,
+      // but trust the API to return disjoint pages otherwise.
       const seen = new Set(prev.map((p) => p.itemId));
       const additions = pageItems.filter((p) => !seen.has(p.itemId));
       return [...prev, ...additions];
     });
+    requestedPageRef.current = permPage;
     // intentional: also depend on permFilter/open so cached permsData
     // re-applies when the user resets pagination via filter change or modal reopen
   }, [permsData, permPage, permFilter, open]);
@@ -139,7 +145,11 @@ export const CreateClientCredential = ({
   const loadMorePerms = useCallback(() => {
     if (permsFetching) return;
     if (!permHasMore) return;
-    setPermPage((prev) => prev + 1);
+    setPermPage((prev) => {
+      if (requestedPageRef.current >= prev) return prev;
+      requestedPageRef.current = prev;
+      return prev + 1;
+    });
   }, [permsFetching, permHasMore]);
 
   useEffect(() => {
@@ -476,7 +486,6 @@ export const CreateClientCredential = ({
                                 <li
                                   ref={permSentinelRef}
                                   className="flex items-center justify-center gap-2 px-3 py-3 text-xs text-muted-foreground"
-                                  aria-hidden
                                 >
                                   {permsFetching ? (
                                     <>
@@ -486,7 +495,13 @@ export const CreateClientCredential = ({
                                       <span className="ml-1">Loading more permissions…</span>
                                     </>
                                   ) : (
-                                    <span>Scroll for more</span>
+                                    <button
+                                      type="button"
+                                      className="text-primary hover:underline"
+                                      onClick={() => loadMorePerms()}
+                                    >
+                                      Load more
+                                    </button>
                                   )}
                                 </li>
                               )}

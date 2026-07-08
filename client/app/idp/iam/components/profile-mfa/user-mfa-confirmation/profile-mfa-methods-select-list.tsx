@@ -52,16 +52,22 @@ const MethodsOption = ({ method, onSaveClick, activeType, isVerified }: MethodsO
 export const ProfileMfaMethodSelectList = () => {
   const { userId, projectKey, showVerifyModal, setIsDisableModalOpen } =
     useContext(profileMfaContext);
-  const { data } = useGetProfileMFAConfig();
+  const { data: projectMfaConfig } = useGetProfileMFAConfig();
   const { data: userData } = useGetProfileUserById({ id: userId, projectKey });
   const [type, setType] = useState<string>("");
+  const projectMfaEnabled = projectMfaConfig?.enabled === true;
   const availableMFaMethod = useMemo(() => {
-    if (!data?.allowedMethods.length) return [];
-    return MFA_Provider_Data.filter((item) => data?.allowedMethods.includes(item.type));
-  }, [data?.allowedMethods]);
+    if (!projectMfaEnabled) return [];
+    if (!projectMfaConfig?.allowedMethods?.length) return [];
+    return MFA_Provider_Data.filter((item) =>
+      projectMfaConfig.allowedMethods.includes(item.type),
+    );
+  }, [projectMfaEnabled, projectMfaConfig?.allowedMethods]);
   useEffect(() => {
-    if (userData && userData.data) setType(userData.data.userMfaType.toString());
-  }, [userData, userData?.data]);
+    if (userData?.data?.userMfaType !== undefined) {
+      setType(userData.data.userMfaType.toString());
+    }
+  }, [userData?.data?.userMfaType]);
   const saveHandler = (type: number) => {
     showVerifyModal(type);
   };
