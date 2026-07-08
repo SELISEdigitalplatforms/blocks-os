@@ -113,7 +113,6 @@ export interface IGetPermissionsPayload {
 }
 export interface IGetPermissionByIdPayload {
   id: string;
-  projectKey: string;
 }
 export interface IGetPermissionByIdResponse {
   data: IPermission;
@@ -129,7 +128,7 @@ export interface CreatePermissionPayload {
   tags: string[];
   dependentPermissions: string[];
   isBuiltIn: boolean;
-  projectKey: string;
+  permissionSeverity?: PermissionSeverityLevel;
 }
 export interface CreatePermissionResponse {
   errors: unknown;
@@ -197,3 +196,36 @@ export type IGetPermissionsSeverityResponse = {
   severityLevel: string;
   count: number;
 }[];
+
+export interface IGetPermissionsSeverityRequestPayload {
+  projectKey: string;
+}
+
+export const normalizePermissionSeverity = (
+  value: PermissionSeverityLevel | string | number | null | undefined,
+): PermissionSeverityLevel | undefined => {
+  if (value === null || value === undefined || value === "" || value === 0) return undefined;
+  if (typeof value === "number" && PermissionSeverityLevel[value] !== undefined) {
+    return value as PermissionSeverityLevel;
+  }
+  if (typeof value === "string") {
+    const numericValue = Number(value);
+    if (!Number.isNaN(numericValue) && PermissionSeverityLevel[numericValue] !== undefined) {
+      return numericValue as PermissionSeverityLevel;
+    }
+    const matchedOption = PERMISSION_SEVERITY_OPTIONS.find(
+      (option) => option.id.toLowerCase() === value.toLowerCase() || option.label.toLowerCase() === value.toLowerCase(),
+    );
+    return matchedOption?.value;
+  }
+  return undefined;
+};
+
+export const getSeverityOptionsFromResponse = (
+  data: IGetPermissionsSeverityResponse | undefined,
+) => {
+  if (!data?.length) return PERMISSION_SEVERITY_OPTIONS;
+  return data
+    .map((item) => PERMISSION_SEVERITY_OPTIONS.find((option) => option.id === item.severityLevel))
+    .filter((option): option is (typeof PERMISSION_SEVERITY_OPTIONS)[number] => !!option);
+};
