@@ -10,7 +10,6 @@ import {
 } from "../../test-utils/__mocks__";
 import { http } from "@/lib/http-client";
 import EmailService from "./email.services";
-import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import {
   EMAIL_TEMPLATE_ENDPOINTS,
   MAIL_CONFIG_ENDPOINTS,
@@ -18,6 +17,9 @@ import {
 } from "../constants/endpoint.constant";
 
 vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+
+const ABSOLUTE_OPTIONS = undefined;
+const ABSOLUTE_FLAGS = { absoluteUrl: true };
 
 describe("EmailService", () => {
   let service: EmailService;
@@ -35,10 +37,12 @@ describe("EmailService", () => {
     it("should call correct endpoint with pagination params", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailConfigList);
 
-      const result = await service.fetchEmailConfigs(TEST_PROJECT_KEY, 0, 10);
+      const result = await service.fetchEmailConfigs(0, 10);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=1&pageSize=10`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=1&pageSize=10`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockEmailConfigList);
     });
@@ -46,10 +50,12 @@ describe("EmailService", () => {
     it("should convert pageNumber from 0-based to 1-based", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailConfigList);
 
-      await service.fetchEmailConfigs(TEST_PROJECT_KEY, 2, 20);
+      await service.fetchEmailConfigs(2, 20);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=3&pageSize=20`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=3&pageSize=20`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
@@ -57,7 +63,7 @@ describe("EmailService", () => {
       const error = new Error("Network error");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.fetchEmailConfigs(TEST_PROJECT_KEY, 0, 10)).rejects.toThrow(
+      await expect(service.fetchEmailConfigs(0, 10)).rejects.toThrow(
         "Network error",
       );
     });
@@ -65,11 +71,53 @@ describe("EmailService", () => {
     it("should handle different page sizes", async () => {
       vi.mocked(http.get).mockResolvedValue([]);
 
-      await service.fetchEmailConfigs(TEST_PROJECT_KEY, 0, 50);
+      await service.fetchEmailConfigs(0, 50);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?projectKey=${TEST_PROJECT_KEY}&pageNumber=1&pageSize=50`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=1&pageSize=50`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
+    });
+  });
+
+  describe("getEmailSecretConfigs", () => {
+    it("should GET Mail/Gets with 1-based pageNumber", async () => {
+      vi.mocked(http.get).mockResolvedValue([
+        {
+          itemId: "cfg-1",
+          name: "Default",
+          host: "smtp.example.com",
+          port: 587,
+          enableSSL: false,
+          senderName: "Sender",
+          senderAddress: "test@example.com",
+          senderUserName: "user",
+          accountPassword: "pwd",
+          isDefault: true,
+          isInbound: false,
+          provider: 0,
+        },
+      ]);
+
+      const result = await service.getEmailSecretConfigs(0, 10);
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=10`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(result.configurations).toHaveLength(1);
+      expect(result.configurations[0].itemId).toBe("cfg-1");
+      expect(result.configurations[0].configurationName).toBe("Default");
+    });
+
+    it("should return empty configurations on empty response", async () => {
+      vi.mocked(http.get).mockResolvedValue([]);
+
+      const result = await service.getEmailSecretConfigs();
+
+      expect(result).toEqual({ configurations: [] });
     });
   });
 
@@ -80,7 +128,6 @@ describe("EmailService", () => {
       const result = await service.fetchEmailTemplates(
         1,
         10,
-        TEST_PROJECT_KEY,
         "welcome",
         "Name",
         false,
@@ -89,7 +136,9 @@ describe("EmailService", () => {
       );
 
       expect(http.get).toHaveBeenCalledWith(
-        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=1&pageSize=10&projectKey=${TEST_PROJECT_KEY}&searchKey=welcome&sortProperty=Name&isDescending=false&language=en&mailConfigurationId=config-1`,
+        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=1&pageSize=10&searchKey=welcome&sortProperty=Name&isDescending=false&language=en&mailConfigurationId=config-1`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockEmailTemplatesResponse);
     });
@@ -97,20 +146,24 @@ describe("EmailService", () => {
     it("should use default sort property and direction", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      await service.fetchEmailTemplates(0, 10, TEST_PROJECT_KEY, "", "Name", false, "", "");
+      await service.fetchEmailTemplates(0, 10, "", "Name", false, "", "");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&projectKey=${TEST_PROJECT_KEY}&searchKey=&sortProperty=Name&isDescending=false&language=&mailConfigurationId=`,
+        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&searchKey=&sortProperty=Name&isDescending=false&language=&mailConfigurationId=`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
     it("should handle descending sort", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplatesResponse);
 
-      await service.fetchEmailTemplates(0, 10, TEST_PROJECT_KEY, "", "CreatedDate", true, "en", "");
+      await service.fetchEmailTemplates(0, 10, "", "CreatedDate", true, "en", "");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&projectKey=${TEST_PROJECT_KEY}&searchKey=&sortProperty=CreatedDate&isDescending=true&language=en&mailConfigurationId=`,
+        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATES}?pageNumber=0&pageSize=10&searchKey=&sortProperty=CreatedDate&isDescending=true&language=en&mailConfigurationId=`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
@@ -119,19 +172,21 @@ describe("EmailService", () => {
       vi.mocked(http.get).mockRejectedValue(error);
 
       await expect(
-        service.fetchEmailTemplates(0, 10, TEST_PROJECT_KEY, "", "Name", false, "", ""),
+        service.fetchEmailTemplates(0, 10, "", "Name", false, "", ""),
       ).rejects.toThrow("Failed to fetch templates");
     });
   });
 
   describe("fetchEmailTemplate", () => {
-    it("should call correct endpoint with itemId and projectKey", async () => {
+    it("should call correct endpoint with itemId", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailTemplate);
 
-      const result = await service.fetchEmailTemplate(TEST_PROJECT_KEY, "template-1");
+      const result = await service.fetchEmailTemplate("template-1");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=template-1&projectKey=${TEST_PROJECT_KEY}`,
+        `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=template-1`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockEmailTemplate);
     });
@@ -140,7 +195,7 @@ describe("EmailService", () => {
       const error = new Error("Template not found");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.fetchEmailTemplate(TEST_PROJECT_KEY, "invalid-id")).rejects.toThrow(
+      await expect(service.fetchEmailTemplate("invalid-id")).rejects.toThrow(
         "Template not found",
       );
     });
@@ -150,41 +205,39 @@ describe("EmailService", () => {
     it("should call correct endpoint with required params only", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
-      const result = await service.getMailBoxMails(TEST_PROJECT_KEY, 1, 10, false);
+      const result = await service.getMailBoxMails(1, 10, false);
 
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?`),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
-      expect(http.get).toHaveBeenCalledWith(
-        expect.stringContaining(`ProjectKey=${TEST_PROJECT_KEY}`),
-      );
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageNumber=1"));
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageSize=10"));
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("IsInbound=false"));
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageNumber=1"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageSize=10"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("IsInbound=false"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
       expect(result).toEqual(mockEmailUsageResponse);
     });
 
     it("should include optional searchText parameter", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
-      await service.getMailBoxMails(TEST_PROJECT_KEY, 0, 10, false, "test search");
+      await service.getMailBoxMails(0, 10, false, "test search");
 
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("SearchText=test+search"));
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("SearchText=test+search"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
     });
 
     it("should include optional status parameter", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
-      await service.getMailBoxMails(TEST_PROJECT_KEY, 0, 10, false, undefined, "Delivered");
+      await service.getMailBoxMails(0, 10, false, undefined, "Delivered");
 
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("Status=Delivered"));
+      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("Status=Delivered"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
     });
 
     it("should include optional date range parameters", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
       await service.getMailBoxMails(
-        TEST_PROJECT_KEY,
         0,
         10,
         false,
@@ -196,9 +249,13 @@ describe("EmailService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining("SendDateRange.StartDate=2024-01-01"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining("SendDateRange.EndDate=2024-01-31"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
     });
 
@@ -206,7 +263,6 @@ describe("EmailService", () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
       await service.getMailBoxMails(
-        TEST_PROJECT_KEY,
         0,
         10,
         true,
@@ -228,20 +284,22 @@ describe("EmailService", () => {
       const error = new Error("Failed to fetch emails");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.getMailBoxMails(TEST_PROJECT_KEY, 0, 10, false)).rejects.toThrow(
+      await expect(service.getMailBoxMails(0, 10, false)).rejects.toThrow(
         "Failed to fetch emails",
       );
     });
   });
 
   describe("getMailBoxMail", () => {
-    it("should call correct endpoint with messageId and projectKey", async () => {
+    it("should call correct endpoint with messageId", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetMailBoxMailResponse);
 
-      const result = await service.getMailBoxMail(TEST_PROJECT_KEY, "msg-123");
+      const result = await service.getMailBoxMail("msg-123");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ProjectKey=${TEST_PROJECT_KEY}&MessageId=msg-123`,
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=msg-123`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockGetMailBoxMailResponse);
     });
@@ -250,14 +308,14 @@ describe("EmailService", () => {
       const error = new Error("Email not found");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.getMailBoxMail(TEST_PROJECT_KEY, "invalid-id")).rejects.toThrow(
+      await expect(service.getMailBoxMail("invalid-id")).rejects.toThrow(
         "Email not found",
       );
     });
   });
 
   describe("saveMailConfig", () => {
-    it("should call correct endpoint with payload", async () => {
+    it("should call correct endpoint with flat payload", async () => {
       const payload = {
         configurationId: "",
         configurationName: "New Config",
@@ -268,19 +326,24 @@ describe("EmailService", () => {
         senderAddress: "test@example.com",
         senderUserName: "test@example.com",
         accountPassword: "password",
-        projectKey: TEST_PROJECT_KEY,
         isInbound: false,
         provider: 1,
       };
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
 
       const result = await service.saveMailConfig(payload);
 
-      expect(http.post).toHaveBeenCalledWith(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload);
-      expect(result).toEqual(mockSuccessResponse);
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,
+        payload,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(result.isSuccess).toBe(true);
+      expect(result.itemId).toBe("");
     });
 
-    it("should handle update request with configurationId", async () => {
+    it("should echo configurationId back as itemId for updates", async () => {
       const payload = {
         configurationId: "config-123",
         configurationName: "Updated Config",
@@ -291,15 +354,20 @@ describe("EmailService", () => {
         senderAddress: "test@example.com",
         senderUserName: "test@example.com",
         accountPassword: "password",
-        projectKey: TEST_PROJECT_KEY,
         isInbound: false,
         provider: 1,
       };
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+      vi.mocked(http.post).mockResolvedValue({ isSuccess: true, errors: null });
 
-      await service.saveMailConfig(payload);
+      const result = await service.saveMailConfig(payload);
 
-      expect(http.post).toHaveBeenCalledWith(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload);
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,
+        payload,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(result.itemId).toBe("config-123");
     });
 
     it("should handle API errors", async () => {
@@ -316,7 +384,6 @@ describe("EmailService", () => {
         senderAddress: "test@example.com",
         senderUserName: "test@example.com",
         accountPassword: "password",
-        projectKey: TEST_PROJECT_KEY,
         isInbound: false,
         provider: 1,
       };
@@ -331,21 +398,24 @@ describe("EmailService", () => {
         to: "test@example.com",
         purpose: "test-purpose",
         language: "en",
-        projectKey: TEST_PROJECT_KEY,
       };
       const expectedPayload = {
         to: ["test@example.com"],
         purpose: "test-purpose",
         language: "en",
         replyTo: ["test@example.com"],
-        projectKey: TEST_PROJECT_KEY,
         isTestMail: true,
       };
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.sendTestMail(data);
 
-      expect(http.post).toHaveBeenCalledWith(MAIL_ENDPOINTS.SEND_TO_ANY, expectedPayload);
+      expect(http.post).toHaveBeenCalledWith(
+        MAIL_ENDPOINTS.SEND_TO_ANY,
+        expectedPayload,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -357,7 +427,6 @@ describe("EmailService", () => {
         to: "test@example.com",
         purpose: "test-purpose",
         language: "en",
-        projectKey: TEST_PROJECT_KEY,
       };
 
       await expect(service.sendTestMail(data)).rejects.toThrow("Failed to send test email");
@@ -375,13 +444,17 @@ describe("EmailService", () => {
         generatedBy: "BeeJS",
         templateBody: "<html></html>",
         jsonContent: "{}",
-        projectKey: TEST_PROJECT_KEY,
       };
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.saveMailTemplate(requestBody);
 
-      expect(http.post).toHaveBeenCalledWith(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody);
+      expect(http.post).toHaveBeenCalledWith(
+        EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE,
+        requestBody,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -389,13 +462,17 @@ describe("EmailService", () => {
       const requestBody = {
         itemId: "template-123",
         name: "Updated Template",
-        projectKey: TEST_PROJECT_KEY,
       };
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       await service.saveMailTemplate(requestBody);
 
-      expect(http.post).toHaveBeenCalledWith(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody);
+      expect(http.post).toHaveBeenCalledWith(
+        EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE,
+        requestBody,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
     });
 
     it("should handle API errors", async () => {
@@ -405,7 +482,6 @@ describe("EmailService", () => {
       const requestBody = {
         itemId: "",
         name: "New Template",
-        projectKey: TEST_PROJECT_KEY,
       };
 
       await expect(service.saveMailTemplate(requestBody)).rejects.toThrow(
@@ -422,13 +498,17 @@ describe("EmailService", () => {
         language: "en",
         name: "Cloned Template",
         templateSubject: "Cloned Subject",
-        projectKey: TEST_PROJECT_KEY,
       };
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.cloneMailTemplate(requestBody);
 
-      expect(http.post).toHaveBeenCalledWith(EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE, requestBody);
+      expect(http.post).toHaveBeenCalledWith(
+        EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE,
+        requestBody,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -439,7 +519,6 @@ describe("EmailService", () => {
       const requestBody = {
         itemId: "template-1",
         name: "Cloned Template",
-        projectKey: TEST_PROJECT_KEY,
       };
 
       await expect(service.cloneMailTemplate(requestBody)).rejects.toThrow(
@@ -449,17 +528,18 @@ describe("EmailService", () => {
   });
 
   describe("deleteMailTemplate", () => {
-    it("should call correct endpoint with itemId and projectKey", async () => {
+    it("should call correct endpoint with itemId", async () => {
       const payload = {
         itemId: "template-1",
-        projectKey: TEST_PROJECT_KEY,
       };
       vi.mocked(http.delete).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.deleteMailTemplate(payload);
 
       expect(http.delete).toHaveBeenCalledWith(
-        `${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=template-1&projectKey=${TEST_PROJECT_KEY}`,
+        `${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=template-1`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -470,7 +550,6 @@ describe("EmailService", () => {
 
       const payload = {
         itemId: "template-1",
-        projectKey: TEST_PROJECT_KEY,
       };
 
       await expect(service.deleteMailTemplate(payload)).rejects.toThrow(
@@ -480,19 +559,19 @@ describe("EmailService", () => {
   });
 
   describe("deleteMailConfig", () => {
-    it("should call correct endpoint with configurationId and projectKey", async () => {
+    it("should call correct endpoint with configurationId", async () => {
       const payload = {
         configurationId: "config-1",
-        projectKey: TEST_PROJECT_KEY,
       };
-      vi.mocked(http.delete).mockResolvedValue(mockSuccessResponse);
+      vi.mocked(http.delete).mockResolvedValue({ isSuccess: true, errors: null });
 
-      const result = await service.deleteMailConfig(payload);
+      await service.deleteMailConfig(payload);
 
       expect(http.delete).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=config-1&projectKey=${TEST_PROJECT_KEY}`,
+        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=config-1`,
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
       );
-      expect(result).toEqual(mockSuccessResponse);
     });
 
     it("should handle API errors", async () => {
@@ -501,7 +580,6 @@ describe("EmailService", () => {
 
       const payload = {
         configurationId: "config-1",
-        projectKey: TEST_PROJECT_KEY,
       };
 
       await expect(service.deleteMailConfig(payload)).rejects.toThrow("Failed to delete config");

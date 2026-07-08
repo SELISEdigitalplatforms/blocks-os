@@ -6,7 +6,7 @@ import type {
 } from "../../authentication/models/auth-configuration.model";
 import type {
   IGetClientsPayload,
-  IClientConfigResponse,
+  IClientCredentialsConfig,
   ISaveClientCredentialPayload,
   IDeleteOidcClientPayload,
   IOidcConfigResponse,
@@ -38,28 +38,32 @@ export const mockGetClientsPayload: IGetClientsPayload = {
   projectKey: TEST_PROJECT_KEY,
 };
 
-export const mockClientCredential: IClientConfigResponse = {
-  scope: "api",
+export const mockClientCredential: IClientCredentialsConfig = {
   itemId: MOCK_CLIENT_ITEM_ID,
   name: "Test Client",
+  clientSecret: "mock-client-secret",
+  accessTokenValidForNumberMinutes: 60,
+  roles: ["admin"],
+  permissions: ["resource:read"],
+  isActive: true,
   createdDate: "2026-01-15T10:00:00Z",
   lastUpdatedDate: "2026-01-15T10:00:00Z",
   createdBy: "admin",
   language: "en",
   lastUpdatedBy: "admin",
-  organizationIds: [],
+  organizationId: "org-123",
   tags: [],
-  clientSecret: "mock-client-secret",
-  roles: ["admin"],
-  isActive: true,
-  audiences: ["blocks-cloud"],
 };
 
 export const mockClientCredentialsResponse = [mockClientCredential];
 
 export const mockSaveClientPayload: ISaveClientCredentialPayload = {
+  itemId: null,
   name: "New Client",
+  isActive: true,
+  accessTokenValidForNumberMinutes: 60,
   roles: ["admin"],
+  permissions: ["resource:read"],
   projectKey: TEST_PROJECT_KEY,
 };
 

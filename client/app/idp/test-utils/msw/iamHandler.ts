@@ -59,9 +59,8 @@ const SET_ROLES_PATTERN = new RegExp(ROLE_ENDPOINTS.SET_ROLES);
 
 // Permission
 const GET_PERMISSIONS_PATTERN = new RegExp(PERMISSION_ENDPOINTS.GET_PERMISSIONS);
-const GET_PERMISSION_PATTERN = new RegExp(`${PERMISSION_ENDPOINTS.GET_PERMISSION}\\?`);
+const GET_PERMISSION_BY_ID_PATTERN = new RegExp(`${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/[^/]+$`);
 const CREATE_PERMISSION_PATTERN = new RegExp(PERMISSION_ENDPOINTS.CREATE_PERMISSION);
-const UPDATE_PERMISSION_PATTERN = new RegExp(PERMISSION_ENDPOINTS.UPDATE_PERMISSION);
 const GET_RESOURCE_GROUPS_PATTERN = new RegExp(`${PERMISSION_ENDPOINTS.GET_RESOURCE_GROUPS}\\?`);
 
 // Organization
@@ -129,9 +128,9 @@ export const iamHandlers = [
 
   // Permission
   http.post(GET_PERMISSIONS_PATTERN, () => HttpResponse.json(mockPermissionsResponse)),
-  http.get(GET_PERMISSION_PATTERN, () => HttpResponse.json(mockGetPermissionByIdResponse)),
+  http.get(GET_PERMISSION_BY_ID_PATTERN, () => HttpResponse.json(mockGetPermissionByIdResponse)),
   http.post(CREATE_PERMISSION_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
-  http.post(UPDATE_PERMISSION_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
+  http.post(GET_PERMISSION_BY_ID_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
   http.get(GET_RESOURCE_GROUPS_PATTERN, () => HttpResponse.json(mockResourceGroupResponse)),
 
   // Organization
@@ -239,13 +238,13 @@ export const getPermissionsErrorHandler = (status = 500) =>
   );
 
 export const getPermissionHandler = (response: JsonBodyType = mockGetPermissionByIdResponse) =>
-  http.get(GET_PERMISSION_PATTERN, () => HttpResponse.json(response));
+  http.get(GET_PERMISSION_BY_ID_PATTERN, () => HttpResponse.json(response));
 
 export const createPermissionHandler = (response: JsonBodyType = mockSuccessResponseWithItemId) =>
   http.post(CREATE_PERMISSION_PATTERN, () => HttpResponse.json(response));
 
 export const updatePermissionHandler = (response: JsonBodyType = mockSuccessResponseWithItemId) =>
-  http.post(UPDATE_PERMISSION_PATTERN, () => HttpResponse.json(response));
+  http.post(GET_PERMISSION_BY_ID_PATTERN, () => HttpResponse.json(response));
 
 export const getResourceGroupsHandler = (response: JsonBodyType = mockResourceGroupResponse) =>
   http.get(GET_RESOURCE_GROUPS_PATTERN, () => HttpResponse.json(response));
