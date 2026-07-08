@@ -5,6 +5,7 @@ import { permissionService } from "@blocks-idp/iam/services/permission.service";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState } from "react";
 import { createStore, useStore } from "zustand";
+import { isChecked } from "./permission-selection-utils";
 type RoleDetailsStore = ReturnType<typeof createRoleDetailsStore>;
 export type PermissionState = IPermission & {
   modified: boolean;
@@ -28,6 +29,7 @@ interface RoleDetailsState {
   changePermissionGroupSelection: (permissions: PermissionState[], isChecked: boolean) => void;
   changeEditMode: (isEditMode: boolean) => void;
   discardChanges: () => void;
+  commitChanges: () => void;
 }
 const createRoleDetailsStore = () => {
   return createStore<RoleDetailsState>()((set, get) => ({
@@ -70,18 +72,20 @@ const createRoleDetailsStore = () => {
       });
     },
     changePermissionSelection(changes: { permissionResource: string; isChecked: boolean }[]) {
+      if (!get().isEditMode) return;
       const { permissionMap } = get();
-      for (const { permissionResource, isChecked } of changes) {
+      for (const { permissionResource, isChecked: checked } of changes) {
         const permission = permissionMap.get(permissionResource);
         if (!permission) continue;
-        const modified = isChecked !== permission.isInitiallyAssigned;
-        const changeState = isChecked ? (modified ? "added" : null) : modified ? "removed" : null;
+        const modified = checked !== permission.isInitiallyAssigned;
+        const changeState = checked ? (modified ? "added" : null) : modified ? "removed" : null;
         permission.modified = modified;
         permission.changeState = changeState;
       }
       set({ permissionMap: new Map(permissionMap) });
     },
     changePermissionGroupSelection(permissions: PermissionState[], isChecked: boolean) {
+      if (!get().isEditMode) return;
       const { changePermissionSelection } = get();
       changePermissionSelection(permissions.map((p) => ({ permissionResource: p.resource, isChecked })));
     },
@@ -97,6 +101,19 @@ const createRoleDetailsStore = () => {
           ...perm,
           modified: false,
           changeState: null,
+        });
+      }
+      set({ permissionMap: newMap, isEditMode: false });
+    },
+    commitChanges() {
+      const { permissionMap } = get();
+      const newMap = new Map<string, PermissionState>();
+      for (const perm of permissionMap.values()) {
+        newMap.set(perm.resource, {
+          ...perm,
+          modified: false,
+          changeState: null,
+          isInitiallyAssigned: isChecked(perm.resource, permissionMap),
         });
       }
       set({ permissionMap: newMap, isEditMode: false });
@@ -130,14 +147,23 @@ export const RoleDetailsProvider = ({
       }),
     refetchOnMount: "always",
   });
+
+  useEffect(() => {
+    store.setState({ isEditMode: false, isInitialized: false });
+  }, [id, store]);
+
   // initilize store when role data changes
   useEffect(() => {
     if (!role?.data) return;
     store.setState((state) => ({ ...state, role: role.data }));
   }, [role?.data, store]);
-  // initilize store when permissions data changes
+  // initilize store when permissions data changes (skip while there are unsaved edits)
   useEffect(() => {
     if (!permissionsData?.data || !role?.data) return;
+    const hasUnsavedChanges = Array.from(store.getState().permissionMap.values()).some(
+      (permission) => permission.modified,
+    );
+    if (hasUnsavedChanges) return;
     store.getState().initializeStore(permissionsData.data);
   }, [permissionsData?.data, role?.data, store]);
   return <RoleDetailsContext.Provider value={store}>{children}</RoleDetailsContext.Provider>;

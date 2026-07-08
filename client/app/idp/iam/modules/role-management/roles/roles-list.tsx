@@ -125,7 +125,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {
-    navigate(`/services/iam/role-detail/${itemId}`);
+    navigate(`/app/idp/role-detail/${itemId}`);
   };
   if (isLoading) return <LoadingSkelton />;
   return (

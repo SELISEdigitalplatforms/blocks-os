@@ -52,7 +52,8 @@ export const ROLE_ENDPOINTS = {
   GET_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/role`,
   CREATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/create`,
   UPDATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/update`,
-  SET_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assign`,
+  SET_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assign-permissions`,
+  GET_ALL_ASSIGNED_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assignable`,
 } as const;
 
 // ─── Permission endpoints (permission.service) ─────────────────────────────
