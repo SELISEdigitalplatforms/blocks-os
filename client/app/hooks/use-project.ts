@@ -239,7 +239,9 @@ export const useProjectForm = () => {
           showErrorToast({ errors: response.errors });
         }
 
-        navigate("/project-overview");
+        navigate(
+          `/app/project-overview/${response.tenantGroupId}/environments`,
+        );
         resetFormData();
       } else {
         showErrorToast({ errors: response.errors });

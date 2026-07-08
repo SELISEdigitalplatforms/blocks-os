@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { format } from "date-fns";
 import {
   ChevronRight,
@@ -44,6 +45,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -173,7 +175,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
                   aria-label="Template"
                   onClick={() =>
-                    navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
+                    navigate(scoped(`secret-management/oidc/${item.itemId}/branding`))
                   }
                 >
                   <LayoutTemplate className="h-3.5 w-3.5" />
