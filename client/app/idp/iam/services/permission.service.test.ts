@@ -54,13 +54,15 @@ describe("PermissionService", () => {
 
   // ─── getPermissionById ────────────────────────────────────────────────────
   describe("getPermissionById", () => {
-    it("should GET with correct query params", async () => {
+    it("should GET permission by id from the permissions endpoint", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetPermissionByIdResponse);
 
       const result = await service.getPermissionById(mockGetPermissionByIdPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${PERMISSION_ENDPOINTS.GET_PERMISSION}?Id=${mockGetPermissionByIdPayload.id}&ProjectKey=${mockGetPermissionByIdPayload.projectKey}`,
+        `${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${mockGetPermissionByIdPayload.id}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetPermissionByIdResponse);
     });
@@ -99,14 +101,16 @@ describe("PermissionService", () => {
 
   // ─── updatePermission ─────────────────────────────────────────────────────
   describe("updatePermission", () => {
-    it("should POST to the correct endpoint with payload", async () => {
+    it("should POST to the permission id endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.updatePermission(mockUpdatePermissionPayload);
 
       expect(http.post).toHaveBeenCalledWith(
-        PERMISSION_ENDPOINTS.UPDATE_PERMISSION,
+        `${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${mockUpdatePermissionPayload.itemId}`,
         mockUpdatePermissionPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });

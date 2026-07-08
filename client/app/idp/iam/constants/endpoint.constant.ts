@@ -60,10 +60,8 @@ export const ROLE_ENDPOINTS = {
 
 export const PERMISSION_ENDPOINTS = {
   GET_PERMISSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/permissions`,
-  GET_PERMISSION: `${API_BASES.IAM}${IAM_SUBPATH}/permission`,
   GET_PERMISSIONS_GROUP_BY_SEVERITY: `${API_BASES.IAM}${IAM_SUBPATH}/permissions/by-severity`,
   CREATE_PERMISSION: `${API_BASES.IAM}${IAM_SUBPATH}/permissions/create`,
-  UPDATE_PERMISSION: `${API_BASES.IAM}${IAM_SUBPATH}/permissions/update`,
   GET_RESOURCE_GROUPS: `${API_BASES.IAM}${IAM_SUBPATH}/resource-groups`,
 } as const;
 
