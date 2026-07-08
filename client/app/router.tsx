@@ -58,6 +58,8 @@ import GitHubCallbackPage from "./routes/callback/callback";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ApiSettingsPage from "./routes/dashboard/api-settings";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
+import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
+import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
@@ -308,12 +310,28 @@ export const router = createBrowserRouter([
                         element: <Roles />,
                       },
                       {
+                        path: "role-detail",
+                        element: <Navigate to="../roles" replace />,
+                      },
+                      {
+                        path: "role-detail/:id",
+                        element: <IamRoleDetailPage />,
+                      },
+                      {
                         path: "permissions",
                         element: <Permissions />,
                       },
                       {
+                        path: "permission-detail",
+                        element: <Navigate to="../permissions" replace />,
+                      },
+                      {
                         path: "permission-detail/new",
                         element: <IamAddPermissionPage />,
+                      },
+                      {
+                        path: "permission-detail/:id",
+                        element: <IamPermissionDetailPage />,
                       },
                     ],
                   },

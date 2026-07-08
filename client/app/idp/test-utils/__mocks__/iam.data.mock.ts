@@ -361,7 +361,6 @@ export const mockGetPermissionsPayload: IGetPermissionsPayload = {
 
 export const mockGetPermissionByIdPayload: IGetPermissionByIdPayload = {
   id: MOCK_PERMISSION_ITEM_ID,
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockGetPermissionByIdResponse = {
@@ -378,7 +377,6 @@ export const mockCreatePermissionPayload: CreatePermissionPayload = {
   tags: [],
   dependentPermissions: [],
   isBuiltIn: false,
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockUpdatePermissionPayload: UpdatePermissionPayload = {

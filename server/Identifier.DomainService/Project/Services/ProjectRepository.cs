@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Shared;
@@ -287,7 +287,6 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "StorageConfigurations", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "AuthenticationConfigurations", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "UilmFiles", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageModules", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageKeys", project.TenantId),
@@ -295,6 +294,7 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project.TenantId),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "IdentityConfigurations", project.TenantId),
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project.TenantId),
