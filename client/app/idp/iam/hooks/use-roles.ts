@@ -47,8 +47,8 @@ export const useSetRoles = (slug: string) => {
   return useMutation({
     mutationKey: ["permissions", "set roles"],
     mutationFn: roleService.setRoles,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["permissions", slug] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["permissions"] });
       queryClient.invalidateQueries({ queryKey: ["roles"] });
     },
   });

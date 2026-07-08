@@ -49,13 +49,15 @@ describe("RoleService", () => {
 
   // ─── getRoleById ──────────────────────────────────────────────────────────
   describe("getRoleById", () => {
-    it("should GET with correct query params", async () => {
+    it("should GET role by id without query params", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetRoleResponse);
 
       const result = await service.getRoleById(mockGetRolePayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${ROLE_ENDPOINTS.GET_ROLE}?projectKey=${mockGetRolePayload.projectKey}&id=${mockGetRolePayload.id}`,
+        `${ROLE_ENDPOINTS.GET_ROLE}/${mockGetRolePayload.id}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetRoleResponse);
     });
