@@ -22,7 +22,14 @@ import {
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { Pencil, Plus, ArrowLeft, Loader2, Notebook, Waypoints } from "lucide-react";
+import {
+  Pencil,
+  Plus,
+  ArrowLeft,
+  Loader2,
+  Notebook,
+  Waypoints,
+} from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -63,8 +70,7 @@ function SecretManagementHeaderActions({
           variant="outline"
           size="sm"
           onClick={onUndo}
-          disabled={isBusy}
-        >
+          disabled={isBusy}>
           Undo
         </Button>
         <Button type="button" size="sm" onClick={onSave} disabled={isBusy}>
@@ -88,7 +94,7 @@ function SecretManagementHeaderActions({
         <Button size="sm" onClick={() => setIsClientCredentialOpen(true)}>
           <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add Client Credential
+            Add
           </span>
         </Button>
       )}
@@ -96,7 +102,7 @@ function SecretManagementHeaderActions({
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
           <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add Identity Provider
+            Add
           </span>
         </Button>
       )}
@@ -159,16 +165,29 @@ function SecretManagementHeaderActions({
         <>
           {externalIdpConfigured ? (
             <>
-              <Button size="sm" variant="outline" onClick={() => setIsJwtClaimOpen(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsJwtClaimOpen(true)}>
                 <Waypoints className="h-5 w-5" />
                 <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                   Map JWT Claim
                 </span>
               </Button>
-              <PrimaryButton Icon={Pencil} label="Edit" size="sm" onClick={() => setIsEditExternalIdpOpen(true)} />
+              <PrimaryButton
+                Icon={Pencil}
+                label="Edit"
+                size="sm"
+                onClick={() => setIsEditExternalIdpOpen(true)}
+              />
             </>
           ) : (
-            <PrimaryButton Icon={Plus} label="Add provider" size="sm" onClick={() => setIsEditExternalIdpOpen(true)} />
+            <PrimaryButton
+              Icon={Plus}
+              label="Add provider"
+              size="sm"
+              onClick={() => setIsEditExternalIdpOpen(true)}
+            />
           )}
         </>
       )}
@@ -185,7 +204,9 @@ export default function SecretManagementLayout() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
   const { data: externalIdpData } = useGetSavedPublicCertificates(tenantId);
-  const { data: clientsData } = useListAuthClientCredentials({ projectKey: tenantId });
+  const { data: clientsData } = useListAuthClientCredentials({
+    projectKey: tenantId,
+  });
 
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState(
@@ -307,7 +328,9 @@ export default function SecretManagementLayout() {
         <CreateClientCredential
           editClient={
             clientCredentialItemId
-              ? (clientsData ?? []).find((c) => c.itemId === clientCredentialItemId) ?? null
+              ? ((clientsData ?? []).find(
+                  (c) => c.itemId === clientCredentialItemId,
+                ) ?? null)
               : null
           }
           open={isClientCredentialOpen}
