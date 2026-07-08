@@ -10,14 +10,18 @@ type SummaryTileProps = {
 
 const SummaryTile = ({ label, value }: SummaryTileProps) => (
   <div className="rounded-sm border bg-card px-5 py-4 shadow-sm">
-    <p className="text-xs font-medium uppercase tracking-wide text-low-emphasis">{label}</p>
+    <p className="text-xs font-medium uppercase tracking-wide text-low-emphasis">
+      {label}
+    </p>
     <p className="mt-1 text-2xl font-semibold text-high-emphasis">{value}</p>
   </div>
 );
 
 export const ClientCredentials = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data, isLoading, isFetching } = useListAuthClientCredentials({ projectKey: tenantId });
+  const { data, isLoading, isFetching } = useListAuthClientCredentials({
+    projectKey: tenantId,
+  });
   const [, setIsClientCredentialOpen] = useQueryState(
     "clientCredentialOpen",
     parseAsBoolean.withDefault(false),
