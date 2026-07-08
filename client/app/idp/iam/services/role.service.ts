@@ -17,7 +17,7 @@ export class RoleService {
   }
 
   getRoleById(payload: IGetRolePayload): Promise<IGetRoleResponse> {
-    return http.get(`${ROLE_ENDPOINTS.GET_ROLE}?projectKey=${payload.projectKey}&id=${payload.id}`, undefined, { absoluteUrl: true });
+    return http.get(`${ROLE_ENDPOINTS.GET_ROLES}/${payload.id}`, undefined, { absoluteUrl: true });
   }
 
   addRole(payload: CreateRolePayload): Promise<IRole> {

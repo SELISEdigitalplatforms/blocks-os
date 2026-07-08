@@ -15,9 +15,9 @@ export const AUTH_ENDPOINTS = {
 // ─── Client credential endpoints (auth-clients.service) ─────────────────────
 
 export const AUTH_CLIENT_ENDPOINTS = {
-  GET_CLIENT_CREDENTIALS: `${API_BASES.IAM}${AUTH_SUBPATH}/GetClientCredentials`,
-  SAVE_CLIENT_CREDENTIAL: `${API_BASES.IAM}${AUTH_SUBPATH}/SaveClientCredential`,
-  DELETE_CLIENT_CREDENTIAL: `${API_BASES.IAM}${AUTH_SUBPATH}/DeleteClientCredential`,
+  LIST: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
+  SAVE: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
+  DELETE: `${API_BASES.IAM}${AUTH_SUBPATH}/client-credentials`,
 } as const;
 
 // ─── OIDC client endpoints (auth-clients-oidc.service) ──────────────────────

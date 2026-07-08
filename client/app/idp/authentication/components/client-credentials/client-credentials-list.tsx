@@ -1,12 +1,12 @@
 import { ClientCredentialsCard } from "./client-credential-card";
-import { useGetAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
-import { useMemo } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { IClientCredentialsConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { KeyRound } from "lucide-react";
-const LoadingSkeleton = () => (
+import { useMemo } from "react";
+
+const CardSkeleton = () => (
   <Card className="py-6">
     <CardHeader>
       <div className="flex items-center justify-between gap-4">
@@ -48,11 +48,21 @@ const LoadingSkeleton = () => (
     </CardContent>
   </Card>
 );
-export const ClientCredentialList = () => {
-  const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
-  const { isLoading, isFetching, data } = useGetAuthClientCredentials({
-    projectKey: tenantId,
-  });
+
+const LoadingSkeleton = () => (
+  <div className="grid gap-4">
+    <CardSkeleton />
+    <CardSkeleton />
+  </div>
+);
+
+type ClientCredentialListProps = {
+  data: IClientCredentialsConfig[];
+  isLoading: boolean;
+  onEdit?: (client: IClientCredentialsConfig) => void;
+};
+
+export const ClientCredentialList = ({ data, isLoading, onEdit }: ClientCredentialListProps) => {
   const sortedClientsData = useMemo(() => {
     if (!data || data.length === 0) return [];
     return [...data].sort((a, b) => {
@@ -61,19 +71,24 @@ export const ClientCredentialList = () => {
       return dateB - dateA;
     });
   }, [data]);
-  if (isLoading || isFetching) return <LoadingSkeleton />;
+
+  if (isLoading) return <LoadingSkeleton />;
   if (!sortedClientsData.length)
     return (
       <EmptyState
         icon={KeyRound}
-        title="No client credential found"
-        description="Please create a new client credential."
+        title="No client credentials yet"
+        description="Create one to issue OAuth client credentials for service-to-service access."
       />
     );
   return (
     <div>
       {sortedClientsData?.map((item) => (
-        <ClientCredentialsCard key={item.itemId} clientCredential={item} />
+        <ClientCredentialsCard
+          key={item.itemId}
+          clientCredential={item}
+          onEdit={onEdit}
+        />
       ))}
     </div>
   );

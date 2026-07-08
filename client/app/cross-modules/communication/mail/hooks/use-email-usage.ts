@@ -29,7 +29,6 @@ export const useGetEmailUsage = (
     queryFn: async () => {
       if (!tenantId) return { data: [], totalCount: 0 };
       const response = await emailService.getMailBoxMails(
-        tenantId,
         page,
         pageSize,
         isInbound,
@@ -54,7 +53,7 @@ export const useGetEmailUsageById = (id: string) => {
     queryKey: ["email-usage-details", id, tenantId],
     queryFn: async () => {
       if (!tenantId) return null;
-      const response = await emailService.getMailBoxMail(tenantId, id);
+      const response = await emailService.getMailBoxMail(id);
       return response.mail;
     },
     enabled: !!tenantId && !!id,

@@ -17,12 +17,13 @@ export function RoleDetailsContainer() {
   const role = useRoleDetailsStore((state) => state.role);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
   const discardChanges = useRoleDetailsStore((state) => state.discardChanges);
+  const commitChanges = useRoleDetailsStore((state) => state.commitChanges);
   const changeEditMode = useRoleDetailsStore((state) => state.changeEditMode);
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles(role?.slug);
-  BREADCRUMB_CUSTOM_TITLES["/services/iam/role-detail"] = "Roles";
-  BREADCRUMB_CUSTOM_TITLES["/services/iam/role-detail/" + role?.itemId] = role?.name || "";
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail"] = "Roles";
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role?.itemId] = role?.name || "";
   const onSaveClick = async () => {
     const changedPermissions = Array.from(permissionMap.values()).reduce(
       (acc, item) => {
@@ -48,8 +49,9 @@ export function RoleDetailsContainer() {
         projectKey: tenantId,
         slug: role.slug,
       });
+      commitChanges();
+      await queryClient.refetchQueries({ queryKey: ["permissions"] });
       showSuccessToast({ description: "Role permissions updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ["permissions"] });
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
         const { errors } = error;
@@ -68,13 +70,14 @@ export function RoleDetailsContainer() {
         })
         .reduce(
           (acc, item: IPermission) => {
-            if (!acc[item.permissionSeverity]) {
-              acc[item.permissionSeverity] = {
-                severityLevel: PermissionSeverityLevel[item.permissionSeverity],
+            const severityKey = item.permissionSeverity;
+            if (!acc[severityKey]) {
+              acc[severityKey] = {
+                severityLevel: PermissionSeverityLevel[severityKey],
                 count: 0,
               };
             }
-            acc[item.permissionSeverity].count += 1;
+            acc[severityKey].count += 1;
             return acc;
           },
           {} as Record<string, { severityLevel: string; count: number }>,
@@ -82,39 +85,33 @@ export function RoleDetailsContainer() {
     );
   }, [permissionMap]);
   return (
-    <div className="px-4 pt-4 md:px-6 md:pt-6">
-      <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
-      </div>
-      <div className="mt-4 grid gap-4">
-        <div className="flex items-center justify-between rounded text-base">
+    <>
+      <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
+        <PageBreadcrumb breadcrumbIndex={3} className="flex min-w-0 flex-1" />
+        <div className="flex shrink-0 items-center gap-2">
           {!isInitialized ? (
-            <Skeleton className="h-8 w-1/3 rounded-sm" />
+            <Skeleton className="h-9 w-32 rounded-sm" />
+          ) : !isEditMode ? (
+            <Button variant="outline" onClick={() => changeEditMode(true)}>
+              <span>Edit Permissions</span>
+            </Button>
           ) : (
-            <h3 className="text-2xl font-bold tracking-tight">{role?.name}</h3>
-          )}
-          <div className="flex items-center gap-2">
-            {!isEditMode && (
-              <Button variant="outline" onClick={() => changeEditMode(true)}>
-                <span>Edit Permissions</span>
+            <>
+              <Button variant="outline" disabled={isPending} onClick={() => discardChanges()}>
+                <span>Discard</span>
               </Button>
-            )}
-            {isEditMode && (
-              <>
-                <Button variant="outline" disabled={isPending} onClick={() => discardChanges()}>
-                  <span>Discard</span>
-                </Button>
-                <Button disabled={isPending || !isInitialized} onClick={onSaveClick}>
-                  <span>Save Changes</span>
-                </Button>
-              </>
-            )}
-          </div>
+              <Button disabled={isPending || !isInitialized} onClick={onSaveClick}>
+                <span>Save Changes</span>
+              </Button>
+            </>
+          )}
         </div>
+      </div>
+      <div className="grid gap-4">
         <PermissionSeverity data={permissionSeverityData} isLoading={!isInitialized} />
         <PermissionsSelectionPanel />
       </div>
-    </div>
+    </>
   );
 }
 export function RoleDetails({ params }: { params: { id: string } }) {
