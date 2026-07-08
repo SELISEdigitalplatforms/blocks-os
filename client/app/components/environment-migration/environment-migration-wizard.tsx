@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { X } from "lucide-react"
 import StepVerticalTrackBar from "@/components/stepper/vertical-track-bar"
 import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar"
@@ -22,6 +23,10 @@ export const EnvironmentMigrationWizard = () => (
 const EnvironmentMigrationWizardContent = () => {
   const { resetFormData } = useDataMigrationFormState()
   const { currentStep } = useStepper()
+  const selectedTenantGroup = useProjectStore((state) => state.selectedTenantGroup)
+  const environmentsPath = selectedTenantGroup
+    ? `/app/project-overview/${selectedTenantGroup}/environments`
+    : "/app/console"
 
   return (
     <>
@@ -30,7 +35,7 @@ const EnvironmentMigrationWizardContent = () => {
           <div className="flex flex-col items-center justify-center md:hidden">
             <div className="flex gap-2">
               <Link
-                to="/project-overview/environments"
+                to={environmentsPath}
                 onClick={resetFormData}
                 aria-label="Close migration"
               >
@@ -55,7 +60,7 @@ const EnvironmentMigrationWizardContent = () => {
           <div className="mx-2 my-3">
             <div className="flex gap-2">
               <Link
-                to="/project-overview/environments"
+                to={environmentsPath}
                 onClick={resetFormData}
                 aria-label="Close migration"
               >
