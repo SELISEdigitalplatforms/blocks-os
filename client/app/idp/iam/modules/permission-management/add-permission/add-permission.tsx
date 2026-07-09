@@ -1,4 +1,3 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { CreatePermissionPayload } from "@blocks-idp/iam/models/permission";
 import { useAddPermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
@@ -12,15 +11,18 @@ import { useScopedPath } from "@/hooks/use-scoped-path";
 export const AddPermission = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  const selectedTenantId = useProjectStore().selectedProject?.tenantId || "";
   const { isPending, mutateAsync } = useAddPermission();
   const onSubmit = async (data: permissionFormSchemaType) => {
+    if (!data.permissionSeverity) {
+      showErrorToast({ errors: "Severity is required" });
+      return;
+    }
     try {
       const newPermission: CreatePermissionPayload = {
         ...data,
         type: +data.type,
-        projectKey: selectedTenantId,
         isBuiltIn: false,
+        permissionSeverity: data.permissionSeverity,
         dependentPermissions: +data.type === 2 ? data.dependentPermissions : [],
       };
       const res = await mutateAsync(newPermission);
@@ -34,9 +36,9 @@ export const AddPermission = () => {
     }
   };
   BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail"] = "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permissions/new`] = "New";
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail/new"] = "New";
   return (
-    <div className="px-4 pt-4 md:px-6 md:pt-6">
+    <div>
       <div className="hidden md:flex">
         <PageBreadcrumb breadcrumbIndex={3} />
       </div>
