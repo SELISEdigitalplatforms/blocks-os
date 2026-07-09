@@ -185,7 +185,7 @@ function SecretManagementHeaderActions({
           ) : (
             <PrimaryButton
               Icon={Plus}
-              label="Add provider"
+              label="Add"
               size="sm"
               onClick={() => setIsEditExternalIdpOpen(true)}
             />
