@@ -37,7 +37,7 @@ export function SidebarMobileView() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const isProjectOverviewRoute = pathname.startsWith("/project-overview");
+  const isProjectOverviewRoute = pathname.startsWith("/project");
   const isSecretManagementRoute = pathname.startsWith("/app/secret-management");
   const isAuthenticationRoute = pathname.startsWith("/app/idp");
 

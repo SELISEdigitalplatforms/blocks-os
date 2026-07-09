@@ -1,49 +1,30 @@
 import { http } from "@/lib/http-client";
-import { secretsService, SECRETS_ENDPOINTS } from "@/services/secrets.service";
-import type { SecretItem } from "@/cross-modules/secrets/constants/secret-key.enum";
 import type { IAPIResponse } from "@/models/api-response";
+import { NOTIFICATION_ENDPOINTS } from "../constants/endpoint.constant";
 import {
   IGetNotificationConfigsPayload,
   IGetNotificationConfigsResponse,
   INotificationConfigRow,
   ISaveNotificationConfigPayload,
   ISaveNotificationConfigResponse,
-  NOTIFICATION_CONFIG_SECRET_KEY,
 } from "../models/notification-config.model";
 
-const parseNumber = (value: string | undefined, fallback = 0): number => {
-  if (value === undefined || value === "") return fallback;
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? fallback : parsed;
-};
+export interface INotificationGetsApiResponse {
+  errors?: Record<string, string> | null;
+  isSuccess?: boolean;
+  totalCount?: number;
+  configurations?: INotificationConfigRow[];
+}
 
-const parseBoolean = (value: string | undefined): boolean => {
-  if (value === undefined) return false;
-  return value === "true" || value === "1";
-};
+export interface INotificationSaveApiResponse {
+  errors?: Record<string, string> | null;
+  isSuccess?: boolean;
+}
 
-const mapSecretToConfig = (secret: SecretItem): INotificationConfigRow => {
-  const kv = secret.keyValuePairs;
-  return {
-    itemId: secret.itemId,
-    createdDate: secret.createdDate,
-    lastUpdatedDate: secret.lastUpdatedDate,
-    createdBy: secret.createdBy,
-    lastUpdatedBy: secret.lastUpdatedBy,
-    name: kv.name ?? "",
-    channelToNotify: parseNumber(kv.channelToNotify),
-    notificationType: parseNumber(kv.notificationType),
-    enablePersistence: parseBoolean(kv.enablePersistence),
-    notifyMethod: kv.notifyMethod ?? "",
-  };
-};
-
-const normalizeSecretsResponse = (
-  response: SecretItem[] | IAPIResponse<SecretItem[]>,
-): SecretItem[] => {
-  if (Array.isArray(response)) return response;
-  return response.data ?? [];
-};
+export interface INotificationDeleteApiResponse {
+  errors?: Record<string, string> | null;
+  isSuccess?: boolean;
+}
 
 const filterBySearch = (
   configs: INotificationConfigRow[],
@@ -63,29 +44,33 @@ export class NotificationConfigService {
     payload: IGetNotificationConfigsPayload,
   ): Promise<IGetNotificationConfigsResponse> {
     const params = new URLSearchParams({
-      secretKey: NOTIFICATION_CONFIG_SECRET_KEY,
-      PageSize: payload.pageSize.toString(),
-      PageNumber: payload.page.toString(),
+      page: payload.page.toString(),
+      pageSize: payload.pageSize.toString(),
+      projectKey: payload.projectKey,
     });
     if (payload.searchText?.trim()) {
       params.append("SearchText", payload.searchText.trim());
     }
 
     return http
-      .get<SecretItem[] | IAPIResponse<SecretItem[]>>(
-        `${SECRETS_ENDPOINTS.GETS}?${params.toString()}`,
+      .get<INotificationGetsApiResponse | IAPIResponse<INotificationGetsApiResponse>>(
+        `${NOTIFICATION_ENDPOINTS.GET_CONFIGS}?${params.toString()}`,
       )
       .then((response) => {
-        const secrets = normalizeSecretsResponse(response);
-        const mapped = secrets.map(mapSecretToConfig);
-        const filtered = filterBySearch(mapped, payload.searchText);
-        const totalCount = Array.isArray(response)
-          ? filtered.length
-          : (response.totalCount ?? filtered.length);
+        const data: INotificationGetsApiResponse = Array.isArray(
+          (response as IAPIResponse<INotificationGetsApiResponse>).data,
+        )
+          ? (response as IAPIResponse<INotificationGetsApiResponse>).data
+          : ((response as INotificationGetsApiResponse).configurations !== undefined
+              ? (response as INotificationGetsApiResponse)
+              : { configurations: [], totalCount: 0 });
+
+        const configurations = data.configurations ?? [];
+        const filtered = filterBySearch(configurations, payload.searchText);
 
         return {
           configurations: filtered,
-          totalCount,
+          totalCount: data.totalCount ?? filtered.length,
         };
       });
   }
@@ -93,23 +78,45 @@ export class NotificationConfigService {
   saveNotificationConfig(
     payload: ISaveNotificationConfigPayload,
   ): Promise<ISaveNotificationConfigResponse> {
-    return secretsService
-      .save({
-        secretKey: NOTIFICATION_CONFIG_SECRET_KEY,
-        keyValuePairs: {
-          name: payload.name,
-          channelToNotify: String(payload.channelToNotify),
-          notificationType: String(payload.notificationType),
-          enablePersistence: String(payload.enablePersistence),
-          notifyMethod: payload.notifyMethod,
-        },
-        ...(payload.itemId ? { itemId: payload.itemId } : {}),
+    return http
+      .post<INotificationSaveApiResponse>(NOTIFICATION_ENDPOINTS.SAVE_CONFIG, {
+        name: payload.name,
+        channelToNotify: payload.channelToNotify,
+        notificationType: payload.notificationType,
+        enablePersistence: payload.enablePersistence,
+        notifyMethod: payload.notifyMethod,
+        itemId: payload.itemId ?? "",
+        isUpdateRequest: !!payload.itemId,
       })
-      .then((item) => ({ isSuccess: true, errors: null, itemId: item.itemId }));
+      .then(
+        (response): ISaveNotificationConfigResponse => ({
+          isSuccess: !!response?.isSuccess,
+          errors: response?.errors ?? null,
+          itemId: payload.itemId ?? "",
+        }),
+      );
   }
 
   deleteNotificationConfig(itemId: string): Promise<void> {
-    return secretsService.delete(itemId);
+    return http
+      .delete<INotificationDeleteApiResponse>(
+        `${NOTIFICATION_ENDPOINTS.DELETE_CONFIG}?itemId=${encodeURIComponent(itemId)}`,
+      )
+      .then(() => undefined);
+  }
+
+  getNotificationConfig(
+    itemId: string,
+  ): Promise<INotificationConfigRow> {
+    return http
+      .get<INotificationConfigRow | IAPIResponse<INotificationConfigRow>>(
+        `${NOTIFICATION_ENDPOINTS.GET_CONFIG}?itemId=${encodeURIComponent(itemId)}`,
+      )
+      .then((response) =>
+        (response as IAPIResponse<INotificationConfigRow>).data
+          ? (response as IAPIResponse<INotificationConfigRow>).data
+          : (response as INotificationConfigRow),
+      );
   }
 }
 

@@ -169,6 +169,17 @@
   --atm-canvas-blend:       multiply;
 }
 
+/* ─── Branding embed — lift outer frame when previewing dark login ─── */
+.oidc-scifi-root.oidc-login-preview-embed[data-theme="dark"] {
+  --bg: #1e2438;
+}
+
+.oidc-scifi-root.oidc-login-preview-embed[data-theme="dark"] .oidc-login-preview-card {
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
 /* ─────────────────────────────────────────────────────────────
    Utility classes (scoped to .oidc-scifi-root children)
    ───────────────────────────────────────────────────────────── */

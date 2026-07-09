@@ -5,7 +5,7 @@ namespace DomainService.People
     public class RemoveAccessRequest
     {
         public string Email { get; set; }
-        public List<string> ProjectKeys { get; set; } = new List<string>();
+        public List<string> TenantIds { get; set; } = new List<string>();
         public required string GroupId { get; set; }
     }
 

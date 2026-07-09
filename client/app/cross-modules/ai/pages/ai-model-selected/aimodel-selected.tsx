@@ -25,6 +25,7 @@ import {
   useSeedProviders,
 } from "@blocks-ai/hooks/use-aimodel";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Plus, ArrowLeft } from "lucide-react";
 const PROVIDER_PNG_MAP: Record<string, string> = {
@@ -42,6 +43,7 @@ type AIModelSelectedPageProps = {
 };
 export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { data: providers } = useSeedProviders();
   const servicePlatform = ProviderToPlatformMap[
@@ -96,7 +98,7 @@ export const AIModelSelectedPage = ({ provider }: AIModelSelectedPageProps) => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate("/app/secret-management/ai-models")}
+          onClick={() => navigate(scoped("secret-management/ai-models"))}
           className="gap-1 pl-0">
           <ArrowLeft className="h-4 w-4" />
           Back

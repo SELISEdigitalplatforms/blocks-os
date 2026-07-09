@@ -1,8 +1,6 @@
-﻿using Blocks.Genesis;
-
-namespace DomainService.Projects
+﻿namespace DomainService.Projects
 {
-    public class UpdateTokenValidationParametersRequest 
+    public class UpdateTokenValidationParametersRequest
     {
         public string ProviderName { get; set; } = string.Empty;
         public string PublicCertificatePassword { get; set; } = string.Empty;
@@ -11,6 +9,5 @@ namespace DomainService.Projects
         public string PublicCertificatePath { get; set; } = string.Empty;
         public string JwksUrl { get; set; } = string.Empty;
         public string CookieKey { get; set; } = string.Empty;
-        public string ProjectKey { get; set; } = string.Empty;
     }
 }

@@ -1,8 +1,9 @@
 ﻿using Blocks.Genesis;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace DomainService.Entities
 {
-    
+    [BsonIgnoreExtraElements]
     public class ResourceLimit : BaseEntity
     {
         public string Resource { get; set; }

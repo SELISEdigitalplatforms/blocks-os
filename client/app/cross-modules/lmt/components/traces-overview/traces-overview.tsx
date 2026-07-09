@@ -1,7 +1,7 @@
 import { FilterControls, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
-import { LMT_BASE_PATH } from "@/constants/lmt-nav"
+import { useLmtBasePath } from "@/hooks/use-scoped-path"
 import { useNavigate } from "react-router-dom";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import {
@@ -87,6 +87,7 @@ function TracesList({
 }) {
   const { sortQueryParams, setSortQueryParams } = useTraceSortQueryParams();
   const navigate = useNavigate();
+  const LMT_BASE_PATH = useLmtBasePath();
   const columns = useMemo<ColumnDef<TraceTree>[]>(
     () => [
       {
@@ -219,7 +220,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       serviceRegistryService.getAllServices({
         page: 0,
         pageSize: 1000,
-        projectKey,
         filter: { serviceId: "", serviceName: "", serviceType: "" },
       }),
     enabled: !!projectKey,

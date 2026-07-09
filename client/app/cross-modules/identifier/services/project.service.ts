@@ -24,7 +24,6 @@ import {
   IVerifyMigrationRequest,
 } from "@blocks-identifier/models/project.model";
 import {
-  GetJwtClaimPayload,
   JwtClaimPayload,
   JwtClaimResponse,
 } from "@blocks-idp/authentication/models/jwt.claim.model";
@@ -199,9 +198,8 @@ export class ProjectService {
     }
   }
 
-  getJwtClaim(payload: GetJwtClaimPayload): Promise<JwtClaimResponse> {
-    const url = `${PROJECT_ENDPOINTS.GET_JWT_CLAIMS}?ProjectKey=${payload.projectKey}&ItemId=${payload.itemId}`;
-    return http.get(url);
+  getJwtClaim(): Promise<JwtClaimResponse> {
+    return http.get(PROJECT_ENDPOINTS.GET_JWT_CLAIMS);
   }
 
   addJwtClaim(payload: JwtClaimPayload): Promise<{

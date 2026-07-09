@@ -50,9 +50,6 @@ export const createOidcSchema = z.object({
   isActive: z.boolean(),
   requirePkce: z.boolean(),
   allowedResponseTypes: z.array(z.string()).min(1, "At least one response type is required"),
-  allowedServiceAccessResources: z
-    .array(z.string())
-    .min(1, "Select at least one allowed service"),
 });
 
 export type CreateOIDCFormValues = z.infer<typeof createOidcSchema>;
@@ -66,5 +63,4 @@ export const createOIDCFormDefaultValue: CreateOIDCFormValues = {
   isActive: true,
   requirePkce: true,
   allowedResponseTypes: ["code"],
-  allowedServiceAccessResources: [],
 };

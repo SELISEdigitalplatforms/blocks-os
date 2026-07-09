@@ -17,6 +17,7 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./app/*"],
+      "@/layout/*": ["./app/layouts/*"],
       "@blocks-idp/*": ["./app/idp/*"],
       "@blocks-lmt/*": ["./app/cross-modules/lmt/*"],
       "@blocks-storage/*": ["./app/cross-modules/storage/*"],
@@ -28,5 +29,12 @@
     }
   },
   "include": ["app"],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/test-utils/**", "**/__mocks__/**"]
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/test-utils/**",
+    "**/__mocks__/**"
+  ]
 }

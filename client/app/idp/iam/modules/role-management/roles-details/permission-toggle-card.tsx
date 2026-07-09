@@ -40,8 +40,11 @@ export const PermissionToggleCard = ({
         className=" flex-shrink-0"
       />
       <label
-        htmlFor={id}
-        className={cn("w-full h-full font-medium text-foreground flex flex-1 flex-col md:flex-row gap-2")}
+        htmlFor={isEditMode ? id : undefined}
+        className={cn(
+          "w-full h-full font-medium text-foreground flex flex-1 flex-col md:flex-row gap-2",
+          !isEditMode && "pointer-events-none",
+        )}
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">

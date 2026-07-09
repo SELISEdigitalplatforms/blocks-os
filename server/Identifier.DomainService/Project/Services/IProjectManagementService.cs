@@ -23,7 +23,7 @@ namespace DomainService.Projects
         Task<BaseResponse> UpdateTokenValidationParametersAsync(UpdateTokenValidationParametersRequest request);
         Task<IActionResult> GetProjectTokenValidationParametersAsync(string projectId);
         Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request);
-        Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync(GetThirdPartyJWTClaimsRequest request);
+        Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync();
         Task<BaseResponse> UpdateTenantGroupAsync(UpdateTenantGroupRequest request);
     }
 }
