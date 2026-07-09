@@ -12,7 +12,7 @@ import {
   abbreviateNumber,
   abbreviateDurationMs,
 } from "@/cross-modules/lmt/utils";
-import { LMT_BASE_PATH } from "@/constants/lmt-nav";
+import { useLmtBasePath } from "@/hooks/use-scoped-path";
 import {
   Card,
   CardContent,
@@ -26,6 +26,7 @@ import { parseAsString, useQueryState } from "nuqs";
 // usage-route.tsx
 export function UsageRoute() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const LMT_BASE_PATH = useLmtBasePath();
   const [timeRange] = useQueryState(
     "timeRange",
     parseAsString.withDefault("1h"),

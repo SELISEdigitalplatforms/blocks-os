@@ -7,8 +7,10 @@ import { permissionFormSchemaType } from "../permission-form/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 export const AddPermission = () => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const { isPending, mutateAsync } = useAddPermission();
   const onSubmit = async (data: permissionFormSchemaType) => {
     if (!data.permissionSeverity) {
@@ -26,7 +28,7 @@ export const AddPermission = () => {
       const res = await mutateAsync(newPermission);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Permission created successfully" });
-      navigate(`/app/idp/permissions`);
+      navigate(scoped(`idp/permissions`));
     } catch (error) {
       if (isErrorWithErrors(error))
         return showErrorToast({ errors: error.errors });
