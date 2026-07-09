@@ -111,7 +111,7 @@ export const PeopleEnvironmentsTab = ({
         if (!user.email || !projectId) return
         const res = await removeEnvAsync({
           email: user.email,
-          projectKeys: [projectId],
+          tenantIds: [projectId],
           groupId,
         })
         if (!res?.isSuccess) {
