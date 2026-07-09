@@ -10,11 +10,13 @@ import { EmailConfiguration } from "@blocks-communication/mail/email/email-confi
 import { Settings } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { AddRole } from "@/idp/iam/modules/role-management";
 
 export const AuthenticationConfigLayout = () => {
   const { pathname } = useLocation();
+  const scoped = useScopedPath();
   const currentPath = pathname.split("/").pop() ?? "config";
 
   // Shared via URL — the email-template child route reads the same key to know when to open
@@ -33,7 +35,7 @@ export const AuthenticationConfigLayout = () => {
     <>
       {currentPath === "roles" && <AddRole />}
       {currentPath === "permissions" && (
-        <Link to="/app/idp/permission-detail/new">
+        <Link to={scoped("idp/permission-detail/new")}>
           <PrimaryButton label="Add Permission" />
         </Link>
       )}

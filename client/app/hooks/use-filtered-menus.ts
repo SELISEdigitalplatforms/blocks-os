@@ -8,7 +8,7 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
   return useMemo(() => {
     const blockedMenu = import.meta.env.BLOCKS_BLOCKED_MENU || "[]";
     let parsedBlockedMenu: string[] = [];
-    const isProjectOverviewRoute = pathname.startsWith("/project-overview");
+    const isProjectOverviewRoute = pathname.startsWith("/project");
     const projectOverviewMenuIds = new Set([
       "environments",
       "people",
@@ -25,8 +25,7 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
       "service-identity__api-settings",
       "service-identity__secret-management",
       "service-identity__lmt",
-            "service-identity__apps",
-
+      "service-identity__apps",
     ]);
 
     try {
@@ -38,10 +37,12 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
     const filteredMenus = menus.filter((item) => {
       if (item.type === "separator") return true;
       if (item.disabled) return false;
-      // Hide project menus when NOT on /project-overview
-      if (!isProjectOverviewRoute && projectOverviewMenuIds.has(item.id)) return false;
-      // Hide non-project menus when ON /project-overview
-      if (isProjectOverviewRoute && nonProjectMenuIds.has(item.id)) return false;
+      // Hide project menus when NOT on /project
+      if (!isProjectOverviewRoute && projectOverviewMenuIds.has(item.id))
+        return false;
+      // Hide non-project menus when ON /project
+      if (isProjectOverviewRoute && nonProjectMenuIds.has(item.id))
+        return false;
       return !parsedBlockedMenu.includes(item.id);
     });
 
@@ -50,7 +51,7 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
 
       const previousItem = filteredMenus[index - 1];
       const nextItem = filteredMenus[index + 1];
-      const separatorId = (item as any).id;
+      const separatorId = item.id;
 
       // Hide separator-overview on project overview routes (Overview is hidden there)
       if (separatorId === "separator-overview" && isProjectOverviewRoute) {
@@ -58,12 +59,17 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
       }
 
       // Keep separator-overview if Overview is before it and not on project route
-      if (separatorId === "separator-overview" && previousItem?.type !== "separator" && !isProjectOverviewRoute) {
+      if (
+        separatorId === "separator-overview" &&
+        previousItem?.type !== "separator" &&
+        !isProjectOverviewRoute
+      ) {
         return true;
       }
 
       if (!previousItem || !nextItem) return false;
-      if (previousItem.type === "separator" || nextItem.type === "separator") return false;
+      if (previousItem.type === "separator" || nextItem.type === "separator")
+        return false;
 
       return true;
     });
