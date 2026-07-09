@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { LMT_BASE_PATH } from "@/constants/lmt-nav";
+import { useLmtBasePath } from "@/hooks/use-scoped-path";
 import { useNavigate } from "react-router-dom";
 import { RegisteredService } from "@blocks-identifier/models/service.model";
 import { Button } from "@/components/ui-kits/button/button";
@@ -61,6 +61,7 @@ const LinkButton = ({
   </button>
 );
 export const ServiceCard = ({ service }: { service: RegisteredService }) => {
+  const LMT_BASE_PATH = useLmtBasePath();
   const [showAllTags, setShowAllTags] = useState(false);
   const navigate = useNavigate();
   const swaggerUrl = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}/identifier/v1/swagger/index.html`;

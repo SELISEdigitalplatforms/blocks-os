@@ -20,7 +20,7 @@ export function DashboardHeader() {
   const { selectedProject } = useProjectStore();
   const projectName = selectedProject?.name;
   const environment = selectedProject?.environment;
-  const isProjectOverviewRoute = pathname.startsWith("/project-overview");
+  const isProjectOverviewRoute = pathname.startsWith("/project");
   return (
     <>
       <header className="flex h-[60px] items-center justify-between gap-4 border-b bg-background px-5 sm:px-6">
