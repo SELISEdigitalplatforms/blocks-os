@@ -11,7 +11,6 @@ import {
 } from "../../test-utils/__mocks__";
 import { emailService } from "@blocks-communication/mail/services/email.services";
 import { useGetEmailConfigs, useSaveEmailConfig, useDeleteEmailConfig } from "./use-email-config";
-import { TEST_TENANT_ID } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
@@ -34,7 +33,7 @@ describe("Email Config Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toEqual(mockEmailConfigList);
-      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith(TEST_TENANT_ID, 0, 10);
+      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith(0, 10);
     });
 
     it("should handle errors", async () => {
@@ -60,7 +59,7 @@ describe("Email Config Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith(TEST_TENANT_ID, 2, 20);
+      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith(2, 20);
     });
 
     it("should handle empty tenantId", async () => {
@@ -77,7 +76,7 @@ describe("Email Config Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith("", 0, 10);
+      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith(0, 10);
     });
 
     it("should handle different page sizes", async () => {
@@ -89,7 +88,7 @@ describe("Email Config Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith(TEST_TENANT_ID, 0, 50);
+      expect(emailService.fetchEmailConfigs).toHaveBeenCalledWith(0, 50);
     });
   });
 

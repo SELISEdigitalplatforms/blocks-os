@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast } from "@/hooks/use-toast";
-import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
+import { useConfigureUserMFA, useGetProfileMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useContext, useEffect, useState } from "react";
 import { ProfileMFAMethodList } from "./profile-mfa-methods-list";
 import { useGetMe } from "@blocks-idp/iam/hooks/use-user";
@@ -22,6 +22,12 @@ export const ProfileMFAConfigManage = () => {
   const [type, setType] = useState(0);
   const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
   const { data: userData, isLoading, isFetching } = useGetMe();
+  const { data: projectMfaConfig } = useGetProfileMFAConfig();
+  const projectMfaEnabled = projectMfaConfig?.enabled === true;
+  const isTypeAllowedForProject =
+    projectMfaEnabled &&
+    (projectMfaConfig?.allowedMethods?.length ?? 0) > 0 &&
+    (projectMfaConfig?.allowedMethods ?? []).includes(type);
   useEffect(() => {
     if (userData?.data.userMfaType) {
       setType(userData?.data.userMfaType);
@@ -72,7 +78,13 @@ export const ProfileMFAConfigManage = () => {
           <Button
             size="sm"
             onClick={onClickHandler}
-            disabled={isPending || type === 0 || isLoading || isFetching}
+            disabled={
+              isPending ||
+              type === 0 ||
+              isLoading ||
+              isFetching ||
+              !isTypeAllowedForProject
+            }
           >
             {isPending ? "Saving" : "Save"}
           </Button>

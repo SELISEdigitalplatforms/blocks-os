@@ -1,27 +1,20 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
 using DomainService.Shared;
 using FluentValidation;
-using Iam.DomainService.Entities;
-using Iam.DomainService.Users;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
-using System.Text;
 using System.Text.Json;
 
 namespace DomainService.People
 {
-    /// <summary>
-    /// Service for managing people and project invitations
-    /// </summary>
     public class PeopleService : IPeopleService
     {
         private static class CacheConstants
         {
-            public const int InvitationCacheExpirationSeconds = 3600; // 1 hour
+            public const int InvitationCacheExpirationSeconds = 3600;
         }
 
         private static class ErrorCodes
@@ -39,12 +32,8 @@ namespace DomainService.People
         private readonly IMessageClient _messageClient;
         private readonly IConfiguration _configuration;
         private readonly ICacheClient _cacheClient;
-        private readonly IValidator<SignupRequest> _validator;
-        private readonly IValidator<TransferOwnershipRequest> _transferOwnerShipValidator;
         private readonly IProjectRepository _projectRepository;
-        private readonly IUserManagementMutationService _iamDriverService;
         private readonly ITenants _tenants;
-
 
         public PeopleService(
             ILogger<PeopleService> logger,
@@ -52,9 +41,6 @@ namespace DomainService.People
             IMessageClient messageClient,
             IConfiguration configuration,
             ICacheClient cacheClient,
-            IUserManagementMutationService iamDriverService,
-            IValidator<SignupRequest> validator,
-            IValidator<TransferOwnershipRequest> transferOwnerShipValidator,
             IProjectRepository projectRepository,
             ITenants tenants)
         {
@@ -63,16 +49,10 @@ namespace DomainService.People
             _messageClient = messageClient ?? throw new ArgumentNullException(nameof(messageClient));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _cacheClient = cacheClient ?? throw new ArgumentNullException(nameof(cacheClient));
-            _iamDriverService = iamDriverService ?? throw new ArgumentNullException(nameof(iamDriverService));
-            _validator = validator ?? throw new ArgumentNullException(nameof(validator));
-            _transferOwnerShipValidator = transferOwnerShipValidator;
             _projectRepository = projectRepository;
             _tenants = tenants;
         }
 
-        /// <summary>
-        /// Retrieves people associated with a project group
-        /// </summary>
         public async Task<GetPeoplesResponse> GetPeoplesAsync(GetPeoplesRequest request)
         {
             _logger.LogInformation("GetPeoplesAsync started for GroupId: {GroupId}", request?.ProjectGroupId);
@@ -143,9 +123,6 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Invites people to projects within a group
-        /// </summary>
         public async Task<InviteResponse> InvitePeoplesAsync(InviteRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.GroupId))
@@ -160,7 +137,6 @@ namespace DomainService.People
                     }
                 };
             }
-
 
             _logger.LogInformation("InvitePeoplesAsync started for GroupId: {GroupId}", request.GroupId);
 
@@ -203,8 +179,6 @@ namespace DomainService.People
                         continue;
                     }
 
-                    //var envDetails = envDetails?.Where(env => tenants.Contains(env.TenantId)).ToList();
-
                     if (envDetails == null || envDetails.Count == 0)
                     {
                         _logger.LogWarning("No valid project keys found for email: {Email}", email);
@@ -225,9 +199,6 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Processes invitation for a single email address
-        /// </summary>
         private async Task ProcessInvitationForEmail(string email, List<EnviromentDetails> enviromentDetails, List<string> tenants)
         {
             var existingUsers = await _peopleRepository.GetUsersByEmailAsync(new List<string> { email });
@@ -248,16 +219,13 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Processes invitation requests for existing user
-        /// </summary>
         private async Task<List<ProjectPeople>> ProcessInviteRequests(List<string> tenants, List<EnviromentDetails> enviromentDetails, User user)
         {
             var projectPeoples = new List<ProjectPeople>();
 
             var existingPeople = await _peopleRepository.GetProjectPeoplesAsync(user.ItemId, tenants) ?? new List<ProjectPeople>();
-            var existingProjectKeys = existingPeople.Select(p => p.TenantId).ToList();
-            var newEnviroments = enviromentDetails.Where(e => !existingProjectKeys.Contains(e.TenantId)).ToList();
+            var existingTenantIds = existingPeople.Select(p => p.TenantId).ToList();
+            var newEnviroments = enviromentDetails.Where(e => !existingTenantIds.Contains(e.TenantId)).ToList();
 
             if (newEnviroments.Count == 0)
             {
@@ -295,25 +263,19 @@ namespace DomainService.People
             return projectPeoples;
         }
 
-        /// <summary>
-        /// Creates a new project people record
-        /// </summary>
-        private ProjectPeople CreateProjectPeople(User user, string projectKey, string email)
+        private ProjectPeople CreateProjectPeople(User user, string tenantId, string email)
         {
             return new ProjectPeople
             {
                 ItemId = Guid.NewGuid().ToString(),
-                TenantId = projectKey,
+                TenantId = tenantId,
                 Email = email,
                 IsInvitationSent = true,
                 UserId = user.ItemId,
             };
         }
 
-        /// <summary>
-        /// Initiates user creation and invitation process
-        /// </summary>
-        public async Task<bool> ProcessUserCreateAndInvitation(string email, string projectKeys)
+        public async Task<bool> ProcessUserCreateAndInvitation(string email, string tenantIds)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -328,7 +290,7 @@ namespace DomainService.People
                     Email = email,
                     EventQueue = IdentifierConstants.IdentifierQueueName,
                     EventType = IdentifierConstants.ProjectPeopleInvitationMailPurpose,
-                    ProjectKey = projectKeys
+                    TenantId = tenantIds
                 };
 
                 await _messageClient.SendToConsumerAsync(
@@ -349,9 +311,6 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Processes and sends invitation to user
-        /// </summary>
         public async Task<bool> ProcessInvitation(User user, List<string> ids, Tenant project, string activationKey)
         {
             if (user == null)
@@ -380,9 +339,6 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Sends invitation email to user
-        /// </summary>
         public async Task<string> SendInvitationEmail(User user, Tenant project)
         {
             var invitationCode = Guid.NewGuid().ToString("n");
@@ -401,26 +357,20 @@ namespace DomainService.People
             return invitationCode;
         }
 
-        /// <summary>
-        /// Generates invitation link with code
-        /// </summary>
         private string GenerateInvitationLink(string code)
         {
             var blocksAppHost = _configuration["FrontendRuntime:BLOCKS_OS_URL"];
             if (string.IsNullOrWhiteSpace(blocksAppHost))
             {
                 _logger.LogWarning("BlocksAppHost configuration is missing");
-                blocksAppHost = "https://app.blocks.com"; // Fallback
+                blocksAppHost = "https://app.blocks.com";
                 return $"{blocksAppHost}/invitation?code={code}";
             }
-            var url =$"{blocksAppHost}/invitation?code={code}";
+            var url = $"{blocksAppHost}/invitation?code={code}";
             _logger.LogInformation("Generated invitation link: {Url}", url);
             return url;
         }
 
-        /// <summary>
-        /// Creates send mail command
-        /// </summary>
         private SendMail CreateSendMailCommand(User user, Tenant project, string invitationLink)
         {
             var displayName = string.IsNullOrWhiteSpace(user.FirstName)
@@ -428,7 +378,6 @@ namespace DomainService.People
                 : $"{user.FirstName} {user.LastName}".Trim();
 
             var projectName = project.Name;
-
 
             return new SendMail
             {
@@ -446,9 +395,6 @@ namespace DomainService.People
             };
         }
 
-        /// <summary>
-        /// Caches invitation data
-        /// </summary>
         private async Task CacheInvitation(List<string> ids, string activationKey, string invitationCode)
         {
             var cacheData = new CacheProjectPeopleInvitation
@@ -466,12 +412,9 @@ namespace DomainService.People
             _logger.LogInformation("Invitation cached with code: {Code}", invitationCode);
         }
 
-        /// <summary>
-        /// Removes user access from projects
-        /// </summary>
         public async Task<BaseResponse> RemoveAccessFromProjectAsync(RemoveAccessRequest request)
         {
-            if (request == null || request.ProjectKeys.Count == 0 || string.IsNullOrWhiteSpace(request.Email))
+            if (request == null || request.TenantIds.Count == 0 || string.IsNullOrWhiteSpace(request.Email))
             {
                 _logger.LogWarning("RemoveAccessFromProjectAsync called with invalid request");
                 return new BaseResponse
@@ -515,8 +458,8 @@ namespace DomainService.People
 
             try
             {
-                request.ProjectKeys = request.ProjectKeys.Where(pk => tenants.Contains(pk)).ToList();
-                if (request.ProjectKeys.Count == 0)
+                request.TenantIds = request.TenantIds.Where(pk => tenants.Contains(pk)).ToList();
+                if (request.TenantIds.Count == 0)
                 {
                     _logger.LogWarning("No valid project keys found for GroupId: {GroupId}", request.GroupId);
                     return new BaseResponse
@@ -544,20 +487,7 @@ namespace DomainService.People
                     };
                 }
 
-                var result = await _peopleRepository.RemovePeoplesAsync(request.Email, request.ProjectKeys);
-
-                //await _messageClient.SendToConsumerAsync(
-                //    new ConsumerMessage<UpdateResourceUsageCommand>
-                //    {
-                //        ConsumerName = IdentifierConstants.IdentifierQueueName,
-                //        Payload = new UpdateResourceUsageCommand
-                //        {
-                //            Resource = "blocks-identifier-api::people::invite",
-                //            TenantId = request.ProjectKey,
-                //            Amount = -1
-                //        }
-                //    }
-                //);
+                var result = await _peopleRepository.RemovePeoplesAsync(request.Email, request.TenantIds);
 
                 _logger.LogInformation("Access removed for Email: {Email}, Result: {Result}", request.Email, result);
 
@@ -570,12 +500,9 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Sends project invitation to newly created user
-        /// </summary>
         public async Task<bool> SendProjectInvitationToNewUser(CreateUserByEmailPostEvent @event)
         {
-            if (@event == null || string.IsNullOrWhiteSpace(@event.UserId) || string.IsNullOrWhiteSpace(@event.ProjectKey))
+            if (@event == null || string.IsNullOrWhiteSpace(@event.UserId) || string.IsNullOrWhiteSpace(@event.TenantId))
             {
                 _logger.LogWarning("SendProjectInvitationToNewUser called with invalid event");
                 return false;
@@ -585,18 +512,18 @@ namespace DomainService.People
 
             try
             {
-                var projectKeys = @event.ProjectKey.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                var tenantIds = @event.TenantId.Split(';', StringSplitOptions.RemoveEmptyEntries);
 
-                if (projectKeys.Length == 0)
+                if (tenantIds.Length == 0)
                 {
-                    _logger.LogWarning("No valid project keys found in event");
+                    _logger.LogWarning("No valid tenant ids found in event");
                     return false;
                 }
 
-                var project = await _peopleRepository.GetProjectByIdAsync(projectKeys[0]);
+                var project = await _peopleRepository.GetProjectByIdAsync(tenantIds[0]);
                 if (project == null)
                 {
-                    _logger.LogWarning("Project not found with ID: {ProjectId}", projectKeys[0]);
+                    _logger.LogWarning("Project not found with ID: {ProjectId}", tenantIds[0]);
                     return false;
                 }
 
@@ -607,8 +534,8 @@ namespace DomainService.People
                     return false;
                 }
 
-                var projectPeoples = projectKeys
-                    .Select(projectKey => CreateProjectPeople(user, projectKey, user.Email))
+                var projectPeoples = tenantIds
+                    .Select(tenantId => CreateProjectPeople(user, tenantId, user.Email))
                     .ToList();
 
                 await _peopleRepository.InsertPeoplesAsync(projectPeoples);
@@ -626,9 +553,6 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Confirms user invitation
-        /// </summary>
         public async Task<ConfirmInvitationResponse> ConfirmInvitationAsync(ConfirmInvitationRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Code))
@@ -694,9 +618,6 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Resends invitation to user
-        /// </summary>
         public async Task<BaseResponse> ResendInvitationAsync(ResendInvitationRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.GroupId) || string.IsNullOrWhiteSpace(request.Email))
@@ -807,103 +728,37 @@ namespace DomainService.People
             }
         }
 
-        /// <summary>
-        /// Handles user signup
-        /// </summary>
-        public async Task<SignupResponse> SignupAsync(SignupRequest request)
-        {
-            try
-            {
-                var validationResult = await _validator.ValidateAsync(request);
-
-                if (!validationResult.IsValid)
-                {
-                    return new SignupResponse
-                    {
-                        IsSuccess = false,
-                        Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage)
-                    };
-                }
-
-                var existingUsers = await _peopleRepository.GetUsersByEmailAsync(new List<string> { request.Email });
-
-                if (existingUsers != null && existingUsers.Count > 0 && existingUsers.All(u=>u.Active) && existingUsers.All(u=>u.IsVarified))
-                {
-                    _logger.LogWarning("User already exists with email: {Email}", request.Email);
-                    return new SignupResponse
-                    {
-                        IsSuccess = false,
-                        Errors = new Dictionary<string, string>
-                        {
-                            { ErrorCodes.AlreadySignedUp, $"{request.Email} is already registered" }
-                        }
-                    };
-                }
-
-                var createUserRequest = new CreateUserRequest
-                {
-                    Email = request.Email,
-                    MailPurpose = string.Empty,
-                    Memberships = new List<Iam.DomainService.Shared.Entities.OrganizationMembership>
-                    {
-                        new Iam.DomainService.Shared.Entities.OrganizationMembership
-                        {
-                            OrganizationId = "default",
-                            Roles = new List<string> { "user" }
-                        }
-                    }
-                };
-
-                var result = await _iamDriverService.CreateUserAsync(createUserRequest);
-
-                if (result == null)
-                {
-                    _logger.LogError("CreateUser returned null for email: {Email}", request.Email);
-                    return new SignupResponse
-                    {
-                        IsSuccess = false,
-                        Errors = new Dictionary<string, string>
-                        {
-                            { "creation_failed", "User creation failed" }
-                        }
-                    };
-                }
-
-                _logger.LogInformation("User signup completed for email: {Email}, Success: {Success}",
-                    request.Email, result.IsSuccess);
-
-                return new SignupResponse
-                {
-                    IsSuccess = result.IsSuccess,
-                    Errors = result.Errors
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during signup for email: {Email}", request.Email);
-                throw;
-            }
-        }
-
         public async Task<BaseResponse> TransferOwnershipAsync(TransferOwnershipRequest request)
         {
-            var validationResult = await _transferOwnerShipValidator.ValidateAsync(request);
+            if(string.IsNullOrWhiteSpace(request.TenantGroupId))
+            {
+                return new BaseResponse { Errors = new Dictionary<string, string> {{"TenantGroupId", "TenantGroupId is required."}} };
+            }
 
-            if(!validationResult.IsValid)
-                return new BaseResponse { Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage) };
+            if(string.IsNullOrWhiteSpace(request.TransferToUserEmail))
+            {
+                return new BaseResponse { Errors = new Dictionary<string, string> {{"TransferToUserEmail", "TransferToUserEmail is required."}} };
+            }
+            
+            var user = await _peopleRepository.GetUserByEmailAsync(request.TransferToUserEmail);
+
+            if(user == null)
+            {
+                return new BaseResponse { Errors = new Dictionary<string, string> {{"TransferToUserEmail", "Must be an existing user"}} };
+            }
+            
 
             var tenantids = await _projectRepository.GetProjectIdsByGroupId(request.TenantGroupId);
             var bc = BlocksContext.GetContext();
 
-            if(! await _peopleRepository.IsOwner(bc.UserId, tenantids) || bc.UserName == request.TransferToUserEmail)
+            if (!await _peopleRepository.IsOwner(bc.UserId, tenantids) || bc.UserName == request.TransferToUserEmail)
             {
                 return new BaseResponse { Errors = new Dictionary<string, string> { { "own_project", "You are not allowed to transfer ownership of this projects" } } };
             }
 
             var ownerProjectPeoples = await _peopleRepository.GetProjectPeoplesAsync(bc.UserId, tenantids);
             await _peopleRepository.UpdateProjectPeopleOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.ItemId)], false);
-            
-            var user = (await _peopleRepository.GetUsersByEmailAsync([request.TransferToUserEmail])).FirstOrDefault();
+
             await _peopleRepository.UpdateProjectOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.TenantId)], user.ItemId);
 
             List<string> projectPeopleIds = [];
@@ -912,9 +767,9 @@ namespace DomainService.People
             {
                 var projectPeople = await _peopleRepository.GetProjectPeopleByTenantIdAndUserIdAsync(tenantdId, user.ItemId);
 
-                if(projectPeople == null)
+                if (projectPeople == null)
                 {
-                    projectPeople =  new ProjectPeople { ItemId = Guid.NewGuid().ToString(), UserId = user.ItemId, TenantId = tenantdId, Email = user?.Email?? "", IsCreator = true, LastUpdatedDate = DateTime.UtcNow, LastUpdatedBy = bc.UserId, IsInvitationConfirmed = true, IsInvitationSent = true};
+                    projectPeople = new ProjectPeople { ItemId = Guid.NewGuid().ToString(), UserId = user.ItemId, TenantId = tenantdId, Email = user?.Email ?? "", IsCreator = true, LastUpdatedDate = DateTime.UtcNow, LastUpdatedBy = bc.UserId, IsInvitationConfirmed = true, IsInvitationSent = true };
                     await _peopleRepository.InsertPeoplesAsync([projectPeople]);
                 }
                 else
@@ -931,8 +786,8 @@ namespace DomainService.People
                 }));
             }
 
-            if(projectPeopleIds.Count > 0)
-            await _peopleRepository.UpdateProjectPeopleOwnerShipAsync(projectPeopleIds, true);
+            if (projectPeopleIds.Count > 0)
+                await _peopleRepository.UpdateProjectPeopleOwnerShipAsync(projectPeopleIds, true);
 
             return new BaseResponse { IsSuccess = true };
         }

@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { format } from "date-fns";
 import {
   ChevronRight,
-  Eye,
-  EyeOff,
   LayoutTemplate,
   Shield,
   Trash2,
 } from "lucide-react";
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
-import { MaskedText } from "@/components/masked-text";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -22,6 +19,11 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { TableCell, TableRow } from "@/components/ui-kits/table/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -30,64 +32,9 @@ import {
   IDeleteOidcClientPayload,
   IOidcConfig,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { CreateOIDC } from "../create-oidc/create-oidc";
-
-interface KVDetailItemProps {
-  label: string;
-  value: string;
-  isSecret?: boolean;
-}
-
-const KVDetailItem = ({
-  label,
-  value,
-  isSecret = false,
-}: KVDetailItemProps) => {
-  const [revealed, setRevealed] = useState(false);
-
-  return (
-    <div className="flex items-start gap-4">
-      <span className="w-48 shrink-0 font-mono text-xs text-muted-foreground sm:w-56">
-        {label}
-      </span>
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="min-w-0 flex-1 font-mono text-xs">
-          {value ? (
-            revealed || !isSecret ? (
-              <span className="break-all text-high-emphasis">{value}</span>
-            ) : (
-              <MaskedText text={value} length={Math.min(value.length, 36)} />
-            )
-          ) : (
-            <span className="italic text-muted-foreground">empty</span>
-          )}
-        </div>
-        {value && (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {isSecret && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-high-emphasis"
-                onClick={() => setRevealed((r) => !r)}>
-                {revealed ? (
-                  <EyeOff className="h-3 w-3" />
-                ) : (
-                  <Eye className="h-3 w-3" />
-                )}
-              </Button>
-            )}
-            <CopyToClipboardButton textToCopy={value}>
-              <span />
-            </CopyToClipboardButton>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+import { KVDetailItem } from "../kv-detail-item";
 
 interface OIDCRowProps {
   item: IOidcConfig;
@@ -98,6 +45,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -118,24 +66,21 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     ? item.allowedResponseTypes
     : ["code"];
 
-  const allowedServices = (item.allowedServiceAccessResources ?? [])
-    .map((id) => DUMMY_LOG_SERVICES.find((s) => s.id === id)?.name ?? id)
-    .join(", ");
-
-  const kvPairs: { key: string; value: string; isSecret?: boolean }[] = [
-    { key: "Client Id", value: item.itemId },
-    { key: "Client Secret", value: item.clientSecret, isSecret: true },
+  const kvPairs: {
+    key: string;
+    value: string;
+    copyable?: boolean;
+  }[] = [
+    { key: "Client Id", value: item.itemId, copyable: true },
+    { key: "Client Secret", value: item.clientSecret, copyable: true },
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),
+      copyable: true,
     },
     {
       key: "Allowed Response Types",
       value: responseTypes.join(", "),
-    },
-    {
-      key: "Allowed Services",
-      value: allowedServices,
     },
     {
       key: "Scope(s)",
@@ -153,10 +98,6 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       key: "Status",
       value: item.isActive ? "active" : "inactive",
     },
-    // {
-    //   key: "Well Known URL",
-    //   value: wellKnownUrl,
-    // },
   ].filter((pair) => pair.value);
 
   const handleConfirmDelete = async () => {
@@ -211,7 +152,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             </div>
           </div>
         </TableCell>
-        <TableCell className="py-3.5">
+        <TableCell className="hidden py-3.5 sm:table-cell">
           <Badge
             variant="outline"
             className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
@@ -219,46 +160,57 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             OIDC
           </Badge>
         </TableCell>
-        <TableCell className="py-3.5 text-sm text-muted-foreground">
+        <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
         <TableCell
           className="py-3.5 pr-4 text-right"
           onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-              aria-label="Customize template"
-              onClick={() =>
-                navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
-              }
-            >
-              <LayoutTemplate className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                  aria-label="Template"
+                  onClick={() =>
+                    navigate(scoped(`secret-management/oidc/${item.itemId}/branding`))
+                  }
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Template</TooltipContent>
+            </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              onClick={() => setShowDeleteDialog(true)}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete"
+                  onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
           </div>
         </TableCell>
       </TableRow>
 
       {expanded && (
         <TableRow className="border-b-2 border-border hover:bg-transparent">
-          <TableCell colSpan={5} className="bg-muted/20 px-6 py-4 pl-12">
-            <div className="flex flex-col gap-3">
-              {kvPairs.map(({ key, value, isSecret }) => (
+          <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+            <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
+              {kvPairs.map(({ key, value, copyable }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
-                  isSecret={isSecret}
+                  copyable={copyable}
                 />
               ))}
             </div>

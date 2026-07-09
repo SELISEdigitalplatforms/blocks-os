@@ -7,6 +7,7 @@ import {
 import { ProfileMFADetails } from "./profile-mfa-detail";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Link } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { Button } from "@/components/ui-kits/button/button";
 import { createContext, useState } from "react";
 import { ProfileMfaMethodSelectList } from "./user-mfa-confirmation/profile-mfa-methods-select-list";
@@ -31,13 +32,14 @@ export const ProfileConfigMFA = () => {
   );
 };
 export const ProjectMFA = () => {
+  const scoped = useScopedPath();
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Multi-factor Authentication</CardTitle>
           <Button asChild variant="outline" size="sm">
-            <Link to="/app/secret-management/mfa">Go to MFA Settings</Link>
+            <Link to={scoped("secret-management/mfa")}>Go to MFA Settings</Link>
           </Button>
         </div>
       </CardHeader>
@@ -97,7 +99,7 @@ export const ProfileMFA = (props: ProfileMFAProps) => {
   const [mfaMethodType, setMfaMethodType] = useState<number>(0);
   const { isLoading, data } = useGetProfileMFAConfig();
   if (isLoading) return <LoadingSkelton />;
-  if (!data?.enableMfa) return <ProjectMFA />;
+  if (!data?.enabled) return <ProjectMFA />;
   const showVerifyModal = (type: number) => {
     setMfaMethodType(type);
     setIsVerifyModalOpen(true);

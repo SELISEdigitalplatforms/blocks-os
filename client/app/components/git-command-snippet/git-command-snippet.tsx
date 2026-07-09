@@ -42,8 +42,8 @@ export const GitCommandSnippet = () => {
     data?.data.environment === "prod" ? "main" : data?.data.environment;
   const repo = envRepositoriesResponse?.data?.find(
     (repo) =>
-      repo.defaultDeploymentUrl === data?.data.applicationDomain ||
-      repo.customDeploymentUrl === data?.data.applicationDomain,
+      repo.defaultDeploymentUrl === data?.data.customDomain ||
+      repo.customDeploymentUrl === data?.data.customDomain,
   );
   const repoLink = repo?.repoUrl || "<your-repo-link>";
   const hasRepository = !!repo?.repoUrl;
@@ -60,7 +60,9 @@ export const GitCommandSnippet = () => {
               Please add a repository and set the Application Domain above to
               enable git commands.
             </p>
-            <Link to="/project-overview/repositories">
+            <Link
+              to={`/app/project/${selectedProject?.tenantGroupId ?? ""}/repositories`}
+            >
               <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Repository
@@ -73,8 +75,7 @@ export const GitCommandSnippet = () => {
             !hasRepository
               ? "pointer-events-none mt-4 select-none opacity-50"
               : ""
-          }
-        >
+          }>
           <CopyableSnippet code={gitCommands} isCopyable={hasRepository} />
         </div>
       </CardContent>

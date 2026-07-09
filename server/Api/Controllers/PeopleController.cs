@@ -1,4 +1,4 @@
-﻿using DomainService.People;
+using DomainService.People;
 using Microsoft.AspNetCore.Mvc;
 using Blocks.Genesis;
 using Microsoft.AspNetCore.Authorization;
@@ -56,13 +56,6 @@ namespace Api.Controllers
         public async Task<IActionResult> ConfirmInvitation([FromBody] ConfirmInvitationRequest command)
         {
             var result = await _peopleService.ConfirmInvitationAsync(command);
-            return result.IsSuccess ? Ok(result) : BadRequest(result);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> Signup([FromBody] SignupRequest command)
-        {
-            var result = await _peopleService.SignupAsync(command);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 

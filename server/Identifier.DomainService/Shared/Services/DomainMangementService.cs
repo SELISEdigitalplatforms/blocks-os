@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -40,10 +40,22 @@ namespace DomainService.Shared
 
         public async Task<BaseResponse> ConfigureDomainAsync(ConfigureDomainRequest request)
         {
-            _logger.LogInformation("Processing request {RequestId} for domain {Domain}", request.ProjectKey, request.CookieDomain);
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            _logger.LogInformation("Processing request {RequestId} for domain {Domain}", tenantId, request.CookieDomain);
             var cookieDomain = request.CookieDomain.Replace("https://", "");
 
             var (domain, blocksApiDomain) = ExtractDomainParts(cookieDomain);
+
+            // Already-verified domains have their nginx config and certificate in
+            // place — skip the DNS/SSH/certbot pipeline instead of re-running it
+            var existingApplication = _tenants.GetTenantByID(tenantId)?.Applications?
+                .FirstOrDefault(a => NormalizeDomain(a.Domain) == NormalizeDomain(domain));
+
+            if (existingApplication?.IsDomainVerified == true)
+            {
+                _logger.LogInformation("Domain {Domain} is already verified; skipping configuration", domain);
+                return new BaseResponse { IsSuccess = true };
+            }
 
             var (verifySuccess, verifyMessage) = await VerifyDomainAsync(domain);
 
@@ -70,19 +82,38 @@ namespace DomainService.Shared
             }
 
             _logger.LogInformation("Successfully configured domain {Domain}", request.CookieDomain);
-            await UpdateDomainValidationStatusAsync(request.ProjectKey, true);
+            await UpdateDomainValidationStatusAsync(tenantId, domain, true);
 
             return new BaseResponse { IsSuccess = true };
         }
 
-        private async Task UpdateDomainValidationStatusAsync(string tenantId, bool status)
+        // Domains are stored inconsistently ("https://x", "x", trailing slash,
+        // mixed case) — normalize before comparing
+        private static string NormalizeDomain(string domain) =>
+            (domain ?? string.Empty)
+                .Trim()
+                .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace("http://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .TrimEnd('/')
+                .ToLowerInvariant();
+
+        private async Task UpdateDomainValidationStatusAsync(string tenantId, string domain, bool status)
         {
             var project = _tenants.GetTenantByID(tenantId);
 
             if (project is not null)
             {
-                //TODO: need to dicide later
-                // project.IsDomainVerified = status;
+                var normalizedDomain = NormalizeDomain(domain);
+                var application = project.Applications?
+                    .FirstOrDefault(a => NormalizeDomain(a.Domain) == normalizedDomain);
+
+                if (application is null)
+                {
+                    _logger.LogWarning("No application found with domain {Domain} for tenant {TenantId}; verification status not updated", domain, tenantId);
+                    return;
+                }
+
+                application.IsDomainVerified = status;
                 await _projectRepository.UpdateProjectAsync(project);
                 await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
                 {
@@ -122,7 +153,7 @@ namespace DomainService.Shared
 
         private async Task<(bool Success, string Message)> CheckPingBlocksApi(string domain)
         {
-            var url = $"https://{domain}/identifier/v1/ping";
+            var url = $"https://{domain}/iam/v4/ping";
             _logger.LogInformation("Checking blocksapi ping: {Url}", url);
 
             try
@@ -413,7 +444,7 @@ namespace DomainService.Shared
             };
 
             var executionResult = await ExecuteRemoteCommandsAsync(commands);
-            await UpdateDomainValidationStatusAsync(request.ProjectId, false);
+            await UpdateDomainValidationStatusAsync(request.ProjectId, domain, false);
             return executionResult;
         }
 

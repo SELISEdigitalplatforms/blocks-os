@@ -28,7 +28,6 @@ import {
   useCloneTemplate,
   useDeleteEmailTemplate,
 } from "@blocks-communication/mail/hooks/use-email-template";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useNavigate } from "react-router-dom";
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
@@ -56,7 +55,6 @@ export const EmailTemplateList = ({
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTemplateData, setSelectedTemplateData] = useState<IEmailTemplate | null>(null);
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const cloneEmailTemplate = (rowData: IEmailTemplate) => {
     setSelectedTemplateData(rowData);
     setIsCloneDialogOpen(true);
@@ -68,7 +66,6 @@ export const EmailTemplateList = ({
   const onConfirmDeleteTemplate = async () => {
     try {
       const payload = {
-        projectKey: tenantId,
         itemId: selectedTemplateData?.itemId ?? "",
       };
       const res = await deleteMailTemplate(payload);
@@ -97,7 +94,6 @@ export const EmailTemplateList = ({
   const onConfirmCloneTemplate = async () => {
     try {
       const payload = {
-        projectKey: tenantId,
         itemId: selectedTemplateData?.itemId ?? "",
       };
       const res = await cloneMailTemplate(payload);

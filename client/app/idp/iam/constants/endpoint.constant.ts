@@ -52,17 +52,16 @@ export const ROLE_ENDPOINTS = {
   GET_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/role`,
   CREATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/create`,
   UPDATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/update`,
-  SET_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assign`,
+  SET_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assign-permissions`,
+  GET_ALL_ASSIGNED_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assignable`,
 } as const;
 
 // ─── Permission endpoints (permission.service) ─────────────────────────────
 
 export const PERMISSION_ENDPOINTS = {
   GET_PERMISSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/permissions`,
-  GET_PERMISSION: `${API_BASES.IAM}${IAM_SUBPATH}/permission`,
   GET_PERMISSIONS_GROUP_BY_SEVERITY: `${API_BASES.IAM}${IAM_SUBPATH}/permissions/by-severity`,
   CREATE_PERMISSION: `${API_BASES.IAM}${IAM_SUBPATH}/permissions/create`,
-  UPDATE_PERMISSION: `${API_BASES.IAM}${IAM_SUBPATH}/permissions/update`,
   GET_RESOURCE_GROUPS: `${API_BASES.IAM}${IAM_SUBPATH}/resource-groups`,
 } as const;
 

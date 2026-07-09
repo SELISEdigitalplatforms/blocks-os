@@ -1,12 +1,14 @@
-import { Banner } from "@/components/ui-kits/banner/banner";
+import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
 import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
+import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential/create-client-credential";
+import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { toast } from "@/hooks/use-toast";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
-import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
+import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import {
@@ -18,21 +20,20 @@ import {
   OidcBrandingHeaderProvider,
   useOidcBrandingHeaderOptional,
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
+import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { CirclePlus, ArrowLeft, Loader2, Notebook } from "lucide-react";
-import { parseAsBoolean, useQueryState } from "nuqs";
+import {
+  Pencil,
+  Plus,
+  ArrowLeft,
+  Loader2,
+  Notebook,
+  Waypoints,
+} from "lucide-react";
+import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-
-const HIDDEN_BANNER_PATHS = [
-  "my-secret",
-  "managed-services",
-  "ai-models",
-  "magic-url",
-  "oidc",
-  "client-credentials",
-  "branding",
-];
+import { useScopedPath } from "@/hooks/use-scoped-path";
 
 function SecretManagementHeaderActions({
   isOidcBranding,
@@ -42,6 +43,10 @@ function SecretManagementHeaderActions({
   setIsEmailConfigOpen,
   setIsNotificationConfigOpen,
   setIsManagedServicesGuideOpen,
+  setIsJwtClaimOpen,
+  setIsEditExternalIdpOpen,
+  setIsClientCredentialOpen,
+  externalIdpConfigured,
 }: {
   isOidcBranding: boolean;
   currentPath: string;
@@ -50,6 +55,10 @@ function SecretManagementHeaderActions({
   setIsEmailConfigOpen: (value: boolean) => void;
   setIsNotificationConfigOpen: (value: boolean) => void;
   setIsManagedServicesGuideOpen: (value: boolean) => void;
+  setIsJwtClaimOpen: (value: boolean) => void;
+  setIsEditExternalIdpOpen: (value: boolean) => void;
+  setIsClientCredentialOpen: (value: boolean) => void;
+  externalIdpConfigured: boolean;
 }) {
   const brandingHeader = useOidcBrandingHeaderOptional();
 
@@ -62,8 +71,7 @@ function SecretManagementHeaderActions({
           variant="outline"
           size="sm"
           onClick={onUndo}
-          disabled={isBusy}
-        >
+          disabled={isBusy}>
           Undo
         </Button>
         <Button type="button" size="sm" onClick={onSave} disabled={isBusy}>
@@ -83,12 +91,19 @@ function SecretManagementHeaderActions({
   return (
     <>
       {!isOidcBranding && currentPath === "oidc" && <CreateOIDC />}
-      {currentPath === "client-credentials" && <CreateClientCredential />}
+      {currentPath === "client-credentials" && (
+        <Button size="sm" onClick={() => setIsClientCredentialOpen(true)}>
+          <Plus className="h-5 w-5" />
+          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+            Add
+          </span>
+        </Button>
+      )}
       {currentPath === "identity-providers" && (
         <Button size="sm" onClick={() => setIsAddIdpOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add Identity Provider
+            Add
           </span>
         </Button>
       )}
@@ -96,7 +111,7 @@ function SecretManagementHeaderActions({
         <ConfigureCaptchaModal>
           <DialogTrigger asChild>
             <Button size="sm" onClick={handleAddCaptchaConfig}>
-              <CirclePlus className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                 Add Configuration
               </span>
@@ -108,7 +123,7 @@ function SecretManagementHeaderActions({
         <ConfigureMagicUrlModal>
           <DialogTrigger asChild>
             <Button size="sm">
-              <CirclePlus className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                 Add Configuration
               </span>
@@ -132,7 +147,7 @@ function SecretManagementHeaderActions({
       )}
       {currentPath === "email" && (
         <Button size="sm" onClick={() => setIsEmailConfigOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Configuration
           </span>
@@ -140,13 +155,43 @@ function SecretManagementHeaderActions({
       )}
       {currentPath === "notification" && (
         <Button size="sm" onClick={() => setIsNotificationConfigOpen(true)}>
-          <CirclePlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
             Add Configuration
           </span>
         </Button>
       )}
       {currentPath === "my-secret" && <AddSecretModal />}
+      {currentPath === "external-idp" && (
+        <>
+          {externalIdpConfigured ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsJwtClaimOpen(true)}>
+                <Waypoints className="h-5 w-5" />
+                <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+                  Map JWT Claim
+                </span>
+              </Button>
+              <PrimaryButton
+                Icon={Pencil}
+                label="Edit"
+                size="sm"
+                onClick={() => setIsEditExternalIdpOpen(true)}
+              />
+            </>
+          ) : (
+            <PrimaryButton
+              Icon={Plus}
+              label="Add"
+              size="sm"
+              onClick={() => setIsEditExternalIdpOpen(true)}
+            />
+          )}
+        </>
+      )}
     </>
   );
 }
@@ -154,11 +199,16 @@ function SecretManagementHeaderActions({
 export default function SecretManagementLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const currentPath = pathname.split("/").pop() ?? "my-secret";
   const isOidcBranding = /\/oidc\/[^/]+\/branding$/.test(pathname);
 
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
+  const { data: externalIdpData } = useGetSavedPublicCertificates(tenantId);
+  const { data: clientsData } = useListAuthClientCredentials({
+    projectKey: tenantId,
+  });
 
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState(
@@ -176,6 +226,22 @@ export default function SecretManagementLayout() {
   const [, setIsManagedServicesGuideOpen] = useQueryState(
     "guideOpen",
     parseAsBoolean.withDefault(false),
+  );
+  const [, setIsJwtClaimOpen] = useQueryState(
+    "jwtClaim",
+    parseAsBoolean.withDefault(false),
+  );
+  const [, setIsEditExternalIdpOpen] = useQueryState(
+    "editExternalIdp",
+    parseAsBoolean.withDefault(false),
+  );
+  const [isClientCredentialOpen, setIsClientCredentialOpen] = useQueryState(
+    "clientCredentialOpen",
+    parseAsBoolean.withDefault(false),
+  );
+  const [clientCredentialItemId, setClientCredentialItemId] = useQueryState(
+    "clientCredentialItemId",
+    parseAsString.withDefault(""),
   );
 
   const currentItem = isOidcBranding
@@ -220,49 +286,63 @@ export default function SecretManagementLayout() {
       setIsEmailConfigOpen={setIsEmailConfigOpen}
       setIsNotificationConfigOpen={setIsNotificationConfigOpen}
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
+      setIsJwtClaimOpen={setIsJwtClaimOpen}
+      setIsEditExternalIdpOpen={setIsEditExternalIdpOpen}
+      setIsClientCredentialOpen={setIsClientCredentialOpen}
+      externalIdpConfigured={!!externalIdpData?.isConfigured}
     />
   );
 
   return (
     <OidcBrandingHeaderProvider>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            {isOidcBranding && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                aria-label="Back to OIDC"
-                onClick={() => navigate("/app/secret-management/oidc")}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
-            {currentItem && (
-              <div>
-                <h1 className="text-lg font-semibold text-[hsl(var(--high-emphasis))]">
-                  {currentItem.label}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {currentItem.desc}
-                </p>
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+          {currentItem &&
+            (isOidcBranding ? (
+              <div className="mb-4 flex items-start gap-2 sm:mb-6">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="mt-0.5 h-8 w-8 shrink-0"
+                  aria-label="Back to OIDC"
+                  onClick={() => navigate(scoped("secret-management/oidc"))}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <PageHeader
+                  title={currentItem.label}
+                  description={currentItem.desc}
+                  actions={headerActions}
+                  className="mb-0 min-w-0 flex-1"
+                />
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">{headerActions}</div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6">
-          {!HIDDEN_BANNER_PATHS.includes(currentPath) && (
-            <Banner variant="info">
-              Saved secret values are masked for security. Review and update your
-              configurations below.
-            </Banner>
-          )}
+            ) : (
+              <PageHeader
+                title={currentItem.label}
+                description={currentItem.desc}
+                actions={headerActions}
+              />
+            ))}
           <Outlet />
         </div>
       </div>
+      {currentPath === "client-credentials" && (
+        <CreateClientCredential
+          editClient={
+            clientCredentialItemId
+              ? ((clientsData ?? []).find(
+                  (c) => c.itemId === clientCredentialItemId,
+                ) ?? null)
+              : null
+          }
+          open={isClientCredentialOpen}
+          onOpenChange={(open) => {
+            setIsClientCredentialOpen(open);
+            if (!open) setClientCredentialItemId("");
+          }}
+          hideTrigger
+        />
+      )}
     </OidcBrandingHeaderProvider>
   );
 }
