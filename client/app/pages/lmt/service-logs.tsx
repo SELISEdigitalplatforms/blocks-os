@@ -1,7 +1,7 @@
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
-import { LMT_BASE_PATH } from "@/constants/lmt-nav";
+import { useLmtBasePath } from "@/hooks/use-scoped-path";
 import {
   LOG_SERVICE_AI_DESCRIPTION,
   LOG_SERVICE_AI_QUERIES,
@@ -14,11 +14,34 @@ import { useParams } from "react-router-dom";
 
 export function LmtServiceLogsRoute() {
   const { serviceName } = useParams<{ serviceName: string }>();
+  const LMT_BASE_PATH = useLmtBasePath();
 
   const service = useMemo(
     () => SERVICES.find((item) => item.name === serviceName && item.showInLogs),
     [serviceName],
   );
+
+  const logServices = useMemo(() => {
+    if (!service) {
+      return [];
+    }
+
+    const { api: apiServiceName, worker: workerServiceName } =
+      getLmtLogCollections(service.serviceName);
+
+    return [
+      {
+        id: apiServiceName,
+        label: "Api",
+        serviceName: apiServiceName,
+      },
+      {
+        id: workerServiceName,
+        label: "Worker",
+        serviceName: workerServiceName,
+      },
+    ];
+  }, [service]);
 
   BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs`] = "Logs";
   if (serviceName) {
@@ -41,25 +64,6 @@ export function LmtServiceLogsRoute() {
       </div>
     );
   }
-
-  const { api: apiServiceName, worker: workerServiceName } =
-    getLmtLogCollections(service.serviceName);
-
-  const logServices = useMemo(
-    () => [
-      {
-        id: apiServiceName,
-        label: "Api",
-        serviceName: apiServiceName,
-      },
-      {
-        id: workerServiceName,
-        label: "Worker",
-        serviceName: workerServiceName,
-      },
-    ],
-    [apiServiceName, workerServiceName],
-  );
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
