@@ -530,25 +530,20 @@ describe("ProjectService", () => {
   // ─── getJwtClaim ────────────────────────────────────────────────────────────
 
   describe("getJwtClaim", () => {
-    it("should call correct endpoint with query params", async () => {
+    it("should call correct endpoint", async () => {
       const mockResponse = { data: [], errors: null };
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const payload = { projectKey: "proj-key", itemId: "item-1" };
-      const result = await service.getJwtClaim(payload);
+      const result = await service.getJwtClaim();
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${PROJECT_ENDPOINTS.GET_JWT_CLAIMS}?ProjectKey=proj-key&ItemId=item-1`,
-      );
+      expect(http.get).toHaveBeenCalledWith(PROJECT_ENDPOINTS.GET_JWT_CLAIMS);
       expect(result).toEqual(mockResponse);
     });
 
     it("should handle API errors", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("JWT claim fetch failed"));
 
-      await expect(service.getJwtClaim({ projectKey: "key", itemId: "item" })).rejects.toThrow(
-        "JWT claim fetch failed",
-      );
+      await expect(service.getJwtClaim()).rejects.toThrow("JWT claim fetch failed");
     });
   });
 
@@ -559,7 +554,6 @@ describe("ProjectService", () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       const payload = {
-        projectKey: "proj-key",
         userId: "u1",
         email: "a@b.com",
         name: "Test",
@@ -577,7 +571,6 @@ describe("ProjectService", () => {
 
       await expect(
         service.addJwtClaim({
-          projectKey: "key",
           userId: "u",
           email: "e",
           name: "n",
