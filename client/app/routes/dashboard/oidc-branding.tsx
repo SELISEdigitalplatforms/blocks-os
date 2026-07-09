@@ -5,4 +5,4 @@ export default function OidcBrandingPage() {
   const { clientId = "" } = useParams<{ clientId: string }>();
 
   return <OidcBrandingForm clientId={clientId} />;
-};
+}

@@ -22,7 +22,6 @@ import {
 } from "@/components/ui-kits/form/form";
 import { z } from "zod";
 import { updateRoleFormSchema } from "./utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { useUpdateRole } from "@blocks-idp/iam/hooks/use-roles";
 import { isErrorWithErrors } from "@/lib/error";
@@ -31,7 +30,6 @@ type UpdateRoleProps = { role: IRole; isOpen: boolean; onClose: () => void };
 export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
   const { toast } = useToast();
   const { mutateAsync, isPending } = useUpdateRole();
-  const tenantId = useProjectStore().selectedProject?.itemId || "";
   const form = useForm({
     defaultValues: role,
     resolver: zodResolver(updateRoleFormSchema),
@@ -42,7 +40,6 @@ export const UpdateRole = ({ role, isOpen, onClose }: UpdateRoleProps) => {
   const onSubmit: SubmitHandler<z.infer<typeof updateRoleFormSchema>> = async (data) => {
     const newRole = {
       ...data,
-      projectKey: tenantId,
       itemId: role.itemId,
     };
     try {

@@ -1,15 +1,14 @@
-﻿using Blocks.Genesis;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Blocks.Genesis;
 
 namespace Cloud.LmtService.Models.Logs
 {
-    public class LogsByDateRequest : BaseGetsRequest<LogsByLastDateRequestFilter>, IProjectKey
+    public class LogsByDateRequest : BaseGetsRequest<LogsByLastDateRequestFilter>
     {
         public string? Search { get; set; }
         public required string ServiceName { get; set; }
-        public string? ProjectKey { get; set; }
     }
 
     public class LogsByLastDateRequestFilter

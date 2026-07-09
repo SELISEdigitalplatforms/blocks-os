@@ -35,23 +35,31 @@ import {
 import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Button } from "@/components/ui-kits/button/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
-import { DUMMY_LOG_SERVICES } from "@blocks-lmt/constants/logs-dummy.constant";
 
 type CreateOIDCProps = {
   itemId?: string;
   triggerVariant?: "default" | "ghost" | "outline";
 };
 
-export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
+export const CreateOIDC = ({
+  itemId,
+  triggerVariant = "default",
+}: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [clientLogoUrl] = useState<string>("");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveAuthOidc();
-  const { data: existingOidc, isLoading: isLoadingOidc } = useGetAuthOidcCredential(
-    { projectKey: tenantId, clientId: itemId! },
-    open && !!itemId,
-  );
+  const { data: existingOidc, isLoading: _isLoadingOidc } =
+    useGetAuthOidcCredential(
+      { projectKey: tenantId, clientId: itemId! },
+      open && !!itemId,
+    );
 
   const form = useForm<CreateOIDCFormValues>({
     resolver: zodResolver(createOidcSchema),
@@ -62,7 +70,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   const {
     formState: { isValid },
     control,
-    watch,
     register,
   } = form;
 
@@ -95,10 +102,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         isActive: credential.isActive ?? true,
         requirePkce: credential.requirePkce ?? true,
         allowedResponseTypes:
-          credential.allowedResponseTypes && credential.allowedResponseTypes.length
+          credential.allowedResponseTypes &&
+          credential.allowedResponseTypes.length
             ? credential.allowedResponseTypes
             : ["code"],
-        allowedServiceAccessResources: credential.allowedServiceAccessResources ?? [],
       });
     } else if (!isEditMode && open) {
       form.reset({
@@ -132,7 +139,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         isActive: data.isActive,
         requirePkce: data.requirePkce,
         allowedResponseTypes: data.allowedResponseTypes,
-        allowedServiceAccessResources: data.allowedServiceAccessResources,
         itemId: isEditMode ? itemId : "",
         projectKey: tenantId,
         clientLogoUrl: clientLogoUrl || undefined,
@@ -147,29 +153,39 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       showSuccessToast({ description: message });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
     } finally {
       form.reset();
     }
   };
 
-  const selectedServices = watch("allowedServiceAccessResources") ?? [];
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {isEditMode ? (
-          <Button variant={triggerVariant} size="sm">
-            <Pencil className="h-4 w-4" />
-          </Button>
-        ) : (
+      {isEditMode ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                variant={triggerVariant}
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                aria-label="Edit">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Edit</TooltipContent>
+        </Tooltip>
+      ) : (
+        <DialogTrigger asChild>
           <Button>
             <Plus className="aspect-square w-4" />
             <span className="sr-only sm:not-sr-only sm:ml-2">Create</span>
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      )}
       <DialogContent className="flex h-screen max-h-[95vh] w-screen flex-col rounded-none sm:h-auto sm:max-h-[95vh] sm:w-auto sm:rounded-lg md:h-auto md:w-[640px]">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
@@ -177,7 +193,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         </DialogHeader>
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
-            <form id="oidc-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 px-1">
+            <form
+              id="oidc-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-5 px-1">
               <FormField
                 control={form.control}
                 name="clientDisplayName"
@@ -207,7 +226,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                         {...register(`redirectUris.${idx}.value` as const)}
                       />
                       <FormMessage>
-                        {form.formState.errors.redirectUris?.[idx]?.value?.message as string}
+                        {
+                          form.formState.errors.redirectUris?.[idx]?.value
+                            ?.message as string
+                        }
                       </FormMessage>
                     </div>
                     {fields.length > 1 && (
@@ -216,8 +238,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                         variant="ghost"
                         size="icon"
                         className="mt-0 h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => remove(idx)}
-                      >
+                        onClick={() => remove(idx)}>
                         <X className="h-4 w-4" />
                       </Button>
                     )}
@@ -228,8 +249,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   variant="outline"
                   size="sm"
                   className="mt-1 h-7 gap-1 px-2 text-xs"
-                  onClick={() => append({ value: "" })}
-                >
+                  onClick={() => append({ value: "" })}>
                   <Plus className="h-3 w-3" />
                   Add Redirect URI
                 </Button>
@@ -240,54 +260,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                     </p>
                   )}
               </div>
-
-              {/* Allowed Services — multi-select checkbox list (values are service ids) */}
-              <FormField
-                control={form.control}
-                name="allowedServiceAccessResources"
-                render={({ field }) => {
-                  const value = (field.value ?? []) as string[];
-                  const toggle = (id: string) => {
-                    const next = value.includes(id)
-                      ? value.filter((x) => x !== id)
-                      : [...value, id];
-                    field.onChange(next);
-                  };
-                  return (
-                    <FormItem>
-                      <FormLabel>
-                        Allowed Services <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {DUMMY_LOG_SERVICES.map((service) => {
-                            const checked = value.includes(service.id);
-                            return (
-                              <div
-                                key={service.id}
-                                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/40"
-                              >
-                                <Checkbox
-                                  id={`allowed-service-${service.id}`}
-                                  checked={checked}
-                                  onCheckedChange={() => toggle(service.id)}
-                                />
-                                <label
-                                  htmlFor={`allowed-service-${service.id}`}
-                                  className="cursor-pointer text-sm text-high-emphasis"
-                                >
-                                  {service.name}
-                                </label>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
 
               {/* Status | Scope(s) | PKCE — single borderless row */}
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
@@ -303,7 +275,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           checked={!!field.value}
                           onCheckedChange={(v) => field.onChange(!!v)}
                         />
-                        <label htmlFor="isActive" className="cursor-pointer text-sm text-high-emphasis">
+                        <label
+                          htmlFor="isActive"
+                          className="cursor-pointer text-sm text-high-emphasis">
                           Active
                         </label>
                       </div>
@@ -321,7 +295,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <Checkbox id="scope-openid" checked disabled />
-                          <label htmlFor="scope-openid" className="cursor-not-allowed text-sm text-muted-foreground">
+                          <label
+                            htmlFor="scope-openid"
+                            className="cursor-not-allowed text-sm text-muted-foreground">
                             openid
                           </label>
                         </div>
@@ -345,8 +321,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                         />
                         <label
                           htmlFor="requirePkce"
-                          className="cursor-pointer text-sm text-high-emphasis"
-                        >
+                          className="cursor-pointer text-sm text-high-emphasis">
                           Enabled
                         </label>
                       </div>
@@ -355,7 +330,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
                 />
               </div>
-
 
               {/* Auto Redirect — single borderless row */}
               <FormField
@@ -370,7 +344,9 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                         checked={!!field.value}
                         onCheckedChange={(v) => field.onChange(!!v)}
                       />
-                      <label htmlFor="isAutoRedirect" className="cursor-pointer text-sm text-high-emphasis">
+                      <label
+                        htmlFor="isAutoRedirect"
+                        className="cursor-pointer text-sm text-high-emphasis">
                         Redirect automatically after authentication
                       </label>
                     </div>
@@ -381,15 +357,19 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
             </form>
           </Form>
         </div>
-        <DialogFooter>
-          <Button onClick={() => setOpen(false)} type="button" variant="outline">
+        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            onClick={() => setOpen(false)}
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
             form="oidc-form"
             type="submit"
             disabled={!isValid || isPending}
-          >
+            className="w-full sm:w-auto">
             {isEditMode ? "Update" : "Add"}
           </Button>
         </DialogFooter>

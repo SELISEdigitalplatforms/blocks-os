@@ -1,5 +1,5 @@
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
-import { LMT_BASE_PATH } from "@/constants/lmt-nav";
+import { useLmtBasePath } from "@/hooks/use-scoped-path";
 import { TraceDetails } from "@blocks-lmt/components/trace-details";
 import { SERVICES } from "@blocks-lmt/constants/services.constant";
 import { useMemo } from "react";
@@ -12,6 +12,7 @@ export function LmtServiceLogTraceRoute() {
   }>();
   const [searchParams] = useSearchParams();
   const tab = searchParams.get("tab");
+  const LMT_BASE_PATH = useLmtBasePath();
 
   const service = useMemo(
     () => SERVICES.find((item) => item.name === serviceName && item.showInLogs),

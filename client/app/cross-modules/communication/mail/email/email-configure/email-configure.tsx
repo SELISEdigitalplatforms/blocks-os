@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pencil, Trash } from "lucide-react";
+import { Pencil, Trash, Mail } from "lucide-react";
 import DeleteEmailConfig from "@blocks-communication/mail/components/email-service/modals/delete-email-config/delete-email-config";
 import NewConfiguration from "@blocks-communication/mail/components/email-service/modals/new-configuration/new-configuration";
 import {
@@ -10,6 +10,11 @@ import {
 } from "@/components/ui-kits/accordion/accordion";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { useMediaQuery } from "@/components/ui-kits/stepper/use-media-query";
 import { cn } from "@/lib/utils";
 import {
@@ -18,6 +23,7 @@ import {
 } from "@blocks-communication/mail/models/email";
 import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { parseAsBoolean, useQueryState } from "nuqs";
 interface EmailConfigurationProps {
   addConfigOpen?: boolean;
@@ -113,18 +119,21 @@ export function EmailConfiguration({
                   <div className="flex gap-1">
                     {!config.isDefault && (
                       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-9 gap-2 px-4 py-1"
-                            onClick={(e) => e.stopPropagation()}>
-                            <Pencil className="h-3.5 w-3.5" />
-                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                              Edit
-                            </span>
-                          </Button>
-                        </DialogTrigger>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                aria-label="Edit"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                                onClick={(e) => e.stopPropagation()}>
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </DialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
                         <NewConfiguration
                           dialogTitle="Edit Configuration"
                           previousData={config}
@@ -137,18 +146,21 @@ export function EmailConfiguration({
                       <Dialog
                         open={deleteModalOpen}
                         onOpenChange={setDeleteModalOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-9 gap-2 px-4 py-1 text-red-500 hover:bg-red-400 hover:text-white"
-                            onClick={(e) => e.stopPropagation()}>
-                            <Trash className="h-3.5 w-3.5" />
-                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                              Delete
-                            </span>
-                          </Button>
-                        </DialogTrigger>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                aria-label="Delete"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={(e) => e.stopPropagation()}>
+                                <Trash className="h-3.5 w-3.5" />
+                              </Button>
+                            </DialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
                         <DeleteEmailConfig
                           configId={config.itemId}
                           onClose={() => setDeleteModalOpen(false)}
@@ -258,12 +270,11 @@ export function EmailConfiguration({
           ))}
         </Accordion>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground bg-background">
-          <p>
-            No email configurations found. Use the Add Configuration button
-            above to create one.
-          </p>
-        </div>
+        <EmptyState
+          icon={Mail}
+          title="No email configurations found"
+          description="Use the Add Configuration button above to create one."
+        />
       )}
     </div>
   );

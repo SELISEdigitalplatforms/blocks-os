@@ -30,7 +30,6 @@ import {
 } from "@/components/ui-kits/select/select";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { showErrorToast, toast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { isErrorWithErrors } from "@/lib/error";
 interface NewConfigurationProps {
   dialogTitle: string;
@@ -120,7 +119,6 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   isEdit,
 }) => {
   // const { saveEmailConfig, isPending } = useSaveEmailConfig();
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { isPending, mutateAsync } = useSaveEmailConfig();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const form = useForm<IEmailConfig>({
@@ -168,21 +166,17 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   const formSubmitHandler = async (data: IEmailConfig) => {
     try {
       const payload = {
-        secretKey: "email",
-        keyValuePairs: {
-          configurationName: data.configurationName,
-          host: data.host,
-          port: String(data.port),
-          enableSSL: String(data.enableSSL),
-          senderName: data.senderName || "",
-          senderAddress: data.senderAddress || "",
-          senderUserName: data.senderUserName,
-          accountPassword: data.accountPassword || "",
-          isInbound: String(data.isInbound),
-          provider: String(data.provider),
-          isDefault: "false",
-        },
-        ...(isEdit && previousData?.itemId ? { itemId: previousData.itemId } : {}),
+        configurationName: data.configurationName,
+        configurationId: isEdit && previousData?.itemId ? previousData.itemId : "",
+        host: data.host,
+        port: data.port,
+        enableSSL: data.enableSSL,
+        senderName: data.senderName || "",
+        senderAddress: data.senderAddress || "",
+        senderUserName: data.senderUserName,
+        accountPassword: data.accountPassword || "",
+        isInbound: data.isInbound,
+        provider: data.provider,
       };
       const res = await mutateAsync(payload);
       if (res?.isSuccess) {

@@ -9,7 +9,6 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import React from "react";
 import { toast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useDeleteEmailConfig } from "../../../../hooks/use-email-config";
 interface DeleteEmailConfigProps {
   configId: string;
@@ -17,10 +16,9 @@ interface DeleteEmailConfigProps {
 }
 const DeleteEmailConfig: React.FC<DeleteEmailConfigProps> = ({ configId, onClose }) => {
   const { isPending, mutateAsync } = useDeleteEmailConfig();
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const deleteConfig = async () => {
     try {
-      const res = await mutateAsync({ configurationId: configId, projectKey: tenantId });
+      const res = await mutateAsync({ configurationId: configId });
       if (res?.isSuccess) {
         toast({
           variant: "success",

@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
-import { IProject } from "@blocks-identifier/models/project.model";
+import { IProject } from "@/models/project.model";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useStartImpersonation } from "@seliseblocks/blocks-kit/hooks";
 import {
   Tooltip,
   TooltipContent,
@@ -25,11 +26,23 @@ export const EnvironmentCard = ({
 }: EnvironmentCardProps) => {
   const navigate = useNavigate();
   const { setSelectedProject } = useProjectStore();
+  const { mutateAsync: startImpersonation } = useStartImpersonation();
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
-  const onClickHandler = (): void => {
-    setSelectedProject(project);
-    navigate("/app/dashboard");
+  const onClickHandler = async (): Promise<void> => {
+    try {
+      // Start impersonation for the target env (a clean start — this card lives
+      // on console/project-overview where impersonation is terminated). The
+      // dashboard's ImpersonationChecker/Synchronizer hydrate the impersonated
+      // context after navigation, so no full page reload is needed. Reloading
+      // here can abort an in-flight refresh-token rotation, orphaning the
+      // rotating RT cookie and 401'ing the later `stop` call.
+      await startImpersonation({ targeted_tenant_id: project.tenantId });
+      setSelectedProject(project);
+      navigate(`/app/${project.itemId}/dashboard`);
+    } catch (err) {
+      console.error("Failed to switch environment", err);
+    }
   };
   const handleCardClick = (): void => {
     if (isMigrationOngoing) {

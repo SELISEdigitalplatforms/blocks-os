@@ -1,5 +1,5 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button"
-import { LMT_BASE_PATH } from "@/constants/lmt-nav"
+import { useLmtBasePath } from "@/hooks/use-scoped-path"
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils"
 import { useContext } from "react"
 import { Link, useSearchParams } from "react-router-dom"
@@ -10,6 +10,7 @@ export const LogItem = ({ log }: { log: ILog }) => {
   const { logsRouteServiceName, selectedService } = useContext(LogsViewerContext)
   const [searchParams] = useSearchParams()
   const activeTab = searchParams.get("tab") ?? selectedService?.serviceName
+  const LMT_BASE_PATH = useLmtBasePath()
   const traceHref =
     log.traceId && logsRouteServiceName
       ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${

@@ -13,10 +13,10 @@ import { Globe, Loader } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 const redirectPaths: Record<string, string> = {
-  "/services/iam/user-detail/*": "/services/iam",
-  "/services/iam/role-detail/*": "/services/iam?tab=roles",
-  "/services/iam/organization-detail/*": "/services/iam",
-  "/services/iam/permission-detail/*": "/services/iam",
+  "/app/idp/user-detail/*": "/app/idp",
+  "/app/idp/role-detail/*": "/app/idp/roles",
+  "/app/idp/organization-detail/*": "/app/idp/organizations",
+  "/app/idp/permission-detail/*": "/app/idp/permissions",
   "/app/idp/sso-configuration": "/app/idp",
 };
 const wildcardToRegex = (pattern: string) => {
@@ -77,7 +77,7 @@ export function EnvironmentList({
   const environment =
     projectData?.data?.environment || selectedProject?.environment;
   const applicationDomain =
-    projectData?.data?.applicationDomain || selectedProject?.applicationDomain;
+    projectData?.data?.customDomain || selectedProject?.customDomain;
   const projects = useMemo(() => {
     if (!selectedProject) return [];
     const groupWithSelected = projectGroups.find((group) =>
