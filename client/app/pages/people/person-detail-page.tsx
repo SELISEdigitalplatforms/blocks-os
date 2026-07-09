@@ -38,7 +38,10 @@ const tabs = [
 ]
 
 export const PersonDetailPage = () => {
-  const { id = "" } = useParams<{ id: string }>()
+  const { id = "", tenantGroupId = "" } = useParams<{
+    id: string
+    tenantGroupId: string
+  }>()
   const navigate = useNavigate()
   const [currentTab, setCurrentTab] = useQueryState("tab", { defaultValue: "details" })
   const { selectedTenantGroup } = useProjectStore()
@@ -79,7 +82,10 @@ export const PersonDetailPage = () => {
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <button type="button" onClick={() => navigate("/project-overview/people")}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/app/project/${tenantGroupId}/people`)}
+                >
                   People
                 </button>
               </BreadcrumbLink>
