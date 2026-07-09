@@ -3,7 +3,9 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
-import { IPermission, PERMISSION_SEVERITY_OPTIONS, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
+import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
+import { usePermissionSeverityOptions } from "@blocks-idp/iam/hooks/use-permission";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { permissionFormDefaultValue, permissionFormSchema, permissionFormSchemaType } from "./utils";
@@ -14,9 +16,12 @@ import { Textarea } from "@/components/ui-kits/textarea/textarea";
 type PermissionFormProps = {
   onSave: (data: permissionFormSchemaType) => void;
   isPending: boolean;
-  values?: IPermission | null;
+  values?: permissionFormSchemaType | null;
+  isBuiltIn?: boolean;
 };
-export const PermissionForm = ({ onSave, isPending, values = null }: PermissionFormProps) => {
+export const PermissionForm = ({ onSave, isPending, values = null, isBuiltIn = false }: PermissionFormProps) => {
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
+  const { severityOptions } = usePermissionSeverityOptions({ projectKey });
   const form = useForm({
     values: values || permissionFormDefaultValue,
     resolver: zodResolver(permissionFormSchema),
@@ -37,7 +42,7 @@ export const PermissionForm = ({ onSave, isPending, values = null }: PermissionF
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter name" disabled={!!values?.isBuiltIn} />
+                    <Input {...field} placeholder="Enter name" disabled={isBuiltIn} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -51,12 +56,12 @@ export const PermissionForm = ({ onSave, isPending, values = null }: PermissionF
                   <FormLabel>Type</FormLabel>
                   <FormControl>
                     <Select
-                      value={field.value.toString()}
+                      value={field.value > 0 ? field.value.toString() : undefined}
                       onValueChange={(val) => field.onChange(Number(val))}
-                      disabled={!!values?.isBuiltIn}
+                      disabled={isBuiltIn}
                     >
                       <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder="Select Type" />
                       </SelectTrigger>
                       <SelectContent>
                         {RESOURCE_TYPE.map((item) => (
@@ -81,7 +86,7 @@ export const PermissionForm = ({ onSave, isPending, values = null }: PermissionF
                     <Input
                       {...field}
                       placeholder={resourceType === 1 ? "Enter service::controller::name" : "Enter resource"}
-                      disabled={!!values?.isBuiltIn}
+                      disabled={isBuiltIn}
                     />
                   </FormControl>
                   <FormMessage />
@@ -100,7 +105,7 @@ export const PermissionForm = ({ onSave, isPending, values = null }: PermissionF
                       onChange={(value) => {
                         field.onChange(value);
                       }}
-                      disabled={!!values?.isBuiltIn}
+                      disabled={isBuiltIn}
                     />
                   </FormControl>
                   <FormMessage />
@@ -115,15 +120,14 @@ export const PermissionForm = ({ onSave, isPending, values = null }: PermissionF
                   <FormLabel>Severity</FormLabel>
                   <FormControl>
                     <Select
-                      value={field.value?.toString() || ""}
+                      value={field.value && field.value > 0 ? field.value.toString() : undefined}
                       onValueChange={(val) => field.onChange(Number(val))}
-                      disabled={!!values?.isBuiltIn}
                     >
                       <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                        <SelectValue placeholder="Select severity" />
+                        <SelectValue placeholder="Select Severity" />
                       </SelectTrigger>
                       <SelectContent>
-                        {PERMISSION_SEVERITY_OPTIONS.map((item) => (
+                        {severityOptions.map((item) => (
                           <SelectItem key={item.value} value={item.value.toString()}>
                             {item.label}
                           </SelectItem>
