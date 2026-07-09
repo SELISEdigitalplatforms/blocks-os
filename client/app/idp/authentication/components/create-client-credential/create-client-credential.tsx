@@ -57,6 +57,28 @@ const formatPermissionSeverity = (
   );
 };
 
+const getBackendErrorMap = (response: unknown) => {
+  if (!response || typeof response !== "object") return undefined;
+
+  const typedResponse = response as {
+    errors?: unknown;
+    error?: { errors?: unknown };
+  };
+
+  if (typedResponse.errors && typeof typedResponse.errors === "object") {
+    return typedResponse.errors as Record<string, string | string[]>;
+  }
+
+  if (
+    typedResponse.error?.errors &&
+    typeof typedResponse.error.errors === "object"
+  ) {
+    return typedResponse.error.errors as Record<string, string | string[]>;
+  }
+
+  return undefined;
+};
+
 type CreateClientCredentialProps = {
   editClient?: IClientCredentialsConfig | null;
   open?: boolean;
@@ -229,8 +251,10 @@ export const CreateClientCredential = ({
       };
       const res = await saveServiceClient(payload);
       if (!res?.isSuccess) {
-        const apiError = res?.error as { errors?: string[] } | undefined;
-        return showErrorToast({ errors: apiError?.errors ?? "Save failed" });
+        const apiErrors = getBackendErrorMap(res);
+        return showErrorToast({
+          errors: apiErrors ?? "Failed to save client credential.",
+        });
       }
       showSuccessToast({
         description: isEdit
