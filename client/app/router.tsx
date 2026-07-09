@@ -146,7 +146,7 @@ export const router = createBrowserRouter([
 
               // ── Project overview layout ──
               {
-                path: "project-overview/:tenantGroupId",
+                path: "project/:tenantGroupId",
                 element: (
                   <ProjectOverviewRoute
                     redirectPaths={redirectPaths}

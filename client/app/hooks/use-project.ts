@@ -240,7 +240,7 @@ export const useProjectForm = () => {
         }
 
         navigate(
-          `/app/project-overview/${response.tenantGroupId}/environments`,
+          `/app/project/${response.tenantGroupId}/environments`,
         );
         resetFormData();
       } else {
