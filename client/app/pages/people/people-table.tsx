@@ -89,16 +89,18 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
   const onRemoveConfirm = async () => {
     try {
       if (!selectedPeopleData) return
-      const environmentsToRemove = selectedPeopleData.sharedEnviroments.filter(
-        (env) => env.tenantId,
-      )
+      const tenantIds = selectedPeopleData.sharedEnviroments
+        .map((env) => env.tenantId)
+        .filter((id): id is string => !!id)
+      const groupId = useProjectStore.getState().selectedTenantGroup || ""
 
-      for (const env of environmentsToRemove) {
-        await removeAsync({
-          projectKey: env.tenantId,
-          userIds: [selectedPeopleData.peopleDetails.userId],
-        })
-      }
+      if (!groupId || tenantIds.length === 0) return
+
+      await removeAsync({
+        email: selectedPeopleData.peopleDetails.email,
+        tenantIds,
+        groupId,
+      })
 
       showSuccessToast({ description: "Removed access successfully" })
       setIsRemoveAccessDialogOpen(false)

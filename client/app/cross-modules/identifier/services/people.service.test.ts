@@ -128,7 +128,7 @@ describe("PeopleService", () => {
     it("should call correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const payload = { userIds: ["user-1"], projectKey: "proj-key" };
+      const payload = { email: "user@example.com", tenantIds: ["tenant-1"], groupId: "group-1" };
       const result = await service.removeAccess(payload);
 
       expect(http.post).toHaveBeenCalledWith(PEOPLE_ENDPOINTS.REMOVE_ACCESS, payload);
@@ -139,7 +139,7 @@ describe("PeopleService", () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Remove access failed"));
 
       await expect(
-        service.removeAccess({ userIds: ["user-1"], projectKey: "proj-key" }),
+        service.removeAccess({ email: "user@example.com", tenantIds: ["tenant-1"], groupId: "group-1" }),
       ).rejects.toThrow("Remove access failed");
     });
   });
@@ -150,7 +150,7 @@ describe("PeopleService", () => {
     it("should call correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const payload = { email: "user@example.com", projectKeys: ["key-1"], groupId: "group-1" };
+      const payload = { email: "user@example.com", tenantIds: ["key-1"], groupId: "group-1" };
       const result = await service.removeEnvironmentAccess(payload);
 
       expect(http.post).toHaveBeenCalledWith(PEOPLE_ENDPOINTS.REMOVE_ACCESS, payload);
@@ -163,7 +163,7 @@ describe("PeopleService", () => {
       await expect(
         service.removeEnvironmentAccess({
           email: "user@example.com",
-          projectKeys: ["key-1"],
+          tenantIds: ["key-1"],
           groupId: "group-1",
         }),
       ).rejects.toThrow("Remove env access failed");
