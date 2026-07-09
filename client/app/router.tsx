@@ -5,8 +5,8 @@ import {
 } from "@seliseblocks/blocks-kit/guards";
 import {
   ConsoleLayout,
-  DashboardLayout,
-  ProjectOverviewLayout,
+  DashboardRoute,
+  ProjectOverviewRoute,
 } from "@seliseblocks/blocks-kit/layouts";
 import {
   CallbackPage,
@@ -147,13 +147,12 @@ export const router = createBrowserRouter([
 
               // ── Project overview layout ──
               {
-                path: "project-overview",
+                path: "project/:tenantGroupId",
                 element: (
-                  <ProjectOverviewLayout
+                  <ProjectOverviewRoute
                     redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}>
-                    <Outlet />
-                  </ProjectOverviewLayout>
+                    navigationMenus={navigationMenus}
+                  />
                 ),
                 children: [
                   {
@@ -187,17 +186,24 @@ export const router = createBrowserRouter([
                 ],
               },
 
-              // ── Dashboard layout (impersonated routes) ──
+              // ── Dashboard layout (impersonated routes, scoped by :itemId) ──
               {
+                path: ":itemId",
                 element: (
-                  <DashboardLayout
+                  <DashboardRoute
                     redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}>
-                    <Outlet />
-                  </DashboardLayout>
+                    navigationMenus={navigationMenus}
+                  />
                 ),
                 children: [
-                  { path: "dashboard", element: <DashboardOverview /> },
+                  {
+                    index: true,
+                    element: <Navigate to="dashboard" replace />,
+                  },
+                  {
+                    path: "dashboard",
+                    element: <DashboardOverview />,
+                  },
                   {
                     path: "secret-management",
                     element: <SecretManagementLayout />,
