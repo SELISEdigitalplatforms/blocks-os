@@ -1,3 +1,5 @@
+import "@/lib/resolve-env";
+import "@/styles/globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
@@ -6,7 +8,6 @@ import { Toaster } from "./components/ui-kits/toaster/toaster";
 import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
 import QueryProvider from "./providers/query-provider";
 import { router } from "./router";
-import "./styles/globals.css";
 import { BlocksAppLayout } from "@seliseblocks/blocks-kit/providers";
 import { ThemeProvider } from "./hooks/use-theme";
 
