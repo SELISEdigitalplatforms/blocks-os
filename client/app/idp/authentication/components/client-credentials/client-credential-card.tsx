@@ -1,5 +1,10 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import { MaskedText } from "@/components/masked-text";
 import { ReactNode, useState } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
@@ -23,7 +28,9 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
   return (
     <div className="min-w-0">
       <p className="mb-2 text-sm font-medium text-low-emphasis">{label}</p>
-      <div className="break-words text-base font-normal text-high-emphasis">{children}</div>
+      <div className="break-words text-base font-normal text-high-emphasis">
+        {children}
+      </div>
     </div>
   );
 };
@@ -44,6 +51,28 @@ const formatLifetime = (minutes: number) => {
 };
 
 const VISIBLE_BADGE_LIMIT = 5;
+
+const getBackendErrorMap = (response: unknown) => {
+  if (!response || typeof response !== "object") return undefined;
+
+  const typedResponse = response as {
+    errors?: unknown;
+    error?: { errors?: unknown };
+  };
+
+  if (typedResponse.errors && typeof typedResponse.errors === "object") {
+    return typedResponse.errors as Record<string, string | string[]>;
+  }
+
+  if (
+    typedResponse.error?.errors &&
+    typeof typedResponse.error.errors === "object"
+  ) {
+    return typedResponse.error.errors as Record<string, string | string[]>;
+  }
+
+  return undefined;
+};
 
 const PermissionChips = ({ permissions }: { permissions: string[] }) => {
   if (!permissions || permissions.length === 0) {
@@ -85,7 +114,10 @@ type ClientInfoCardProps = {
   onEdit?: (client: IClientCredentialsConfig) => void;
 };
 
-export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCardProps) => {
+export const ClientCredentialsCard = ({
+  clientCredential,
+  onEdit,
+}: ClientInfoCardProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useDeleteAuthClient({
@@ -94,24 +126,35 @@ export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCa
   const handleConfirmDelete = async (id: string) => {
     try {
       const res = await mutateAsync({ itemId: id });
-      if (!res?.isSuccess) return showErrorToast({ errors: res?.error ?? "Delete failed" });
-      showSuccessToast({ description: "Client credential deleted successfully" });
+      if (!res?.isSuccess) {
+        const apiErrors = getBackendErrorMap(res);
+        return showErrorToast({
+          errors: apiErrors ?? "Failed to delete client credential.",
+        });
+      }
+      showSuccessToast({
+        description: "Client credential deleted successfully",
+      });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
     }
   };
   return (
     <div className="grid gap-4">
-      <Card className="rounded-sm border bg-card py-6 shadow-sm" key={clientCredential.itemId}>
+      <Card
+        className="rounded-sm border bg-card py-6 shadow-sm"
+        key={clientCredential.itemId}>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
               <CardTitle className="text-xl font-semibold text-high-emphasis">
                 {clientCredential.name}
               </CardTitle>
-              <Badge variant={clientCredential.isActive ? "success" : "secondary"}>
+              <Badge
+                variant={clientCredential.isActive ? "success" : "secondary"}>
                 {clientCredential.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
@@ -121,8 +164,7 @@ export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCa
                   onClick={() => onEdit(clientCredential)}
                   variant="outline"
                   size="sm"
-                  aria-label="Edit client credential"
-                >
+                  aria-label="Edit client credential">
                   <Pencil className="h-4 w-4" />
                   <span className="ml-2">Edit</span>
                 </Button>
@@ -132,8 +174,7 @@ export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCa
                   setOpen(true);
                 }}
                 variant="outline"
-                className="text-[#D92127]"
-              >
+                className="text-[#D92127]">
                 Delete
               </Button>
             </div>
@@ -153,7 +194,8 @@ export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCa
                 </CopyToClipboardButton>
               </Item>
               <Item label="Client Secret">
-                <CopyToClipboardButton textToCopy={clientCredential.clientSecret}>
+                <CopyToClipboardButton
+                  textToCopy={clientCredential.clientSecret}>
                   <MaskedText
                     text={clientCredential.clientSecret}
                     length={30}
@@ -164,15 +206,21 @@ export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCa
               </Item>
               <Item label="Token lifetime">
                 <span className="whitespace-nowrap">
-                  {formatLifetime(clientCredential.accessTokenValidForNumberMinutes)}
+                  {formatLifetime(
+                    clientCredential.accessTokenValidForNumberMinutes,
+                  )}
                 </span>
               </Item>
               <Item label="Role(s)">
                 <div className="flex items-center gap-2">
-                  {clientCredential.roles && clientCredential.roles.length > 0 ? (
+                  {clientCredential.roles &&
+                  clientCredential.roles.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {clientCredential.roles.map((role: string) => (
-                        <Badge key={role} variant="secondary" className="text-xs">
+                        <Badge
+                          key={role}
+                          variant="secondary"
+                          className="text-xs">
                           {role}
                         </Badge>
                       ))}
@@ -183,7 +231,9 @@ export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCa
                 </div>
               </Item>
               <Item label="Permission(s)">
-                <PermissionChips permissions={clientCredential.permissions ?? []} />
+                <PermissionChips
+                  permissions={clientCredential.permissions ?? []}
+                />
               </Item>
               <Item label="Created on">
                 <span className="whitespace-nowrap">
