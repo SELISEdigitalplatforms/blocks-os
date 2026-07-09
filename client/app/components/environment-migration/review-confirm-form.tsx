@@ -129,7 +129,9 @@ export const ReviewConfirmForm = () => {
       if (response.isSuccess && response.isValid) {
         showSuccessToast({ description: "Migration started successfully!" })
         setIsVerificationModalOpen(false)
-        navigate("/project-overview/environments")
+        navigate(
+          groupId ? `/app/project/${groupId}/environments` : "/app/console",
+        )
         return
       }
       showErrorToast({ errors: { general: "Invalid verification code" } })
