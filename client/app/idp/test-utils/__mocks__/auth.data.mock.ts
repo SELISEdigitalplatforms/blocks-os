@@ -222,5 +222,4 @@ export const mockJwtClaimPayload: JwtClaimPayload = {
   name: "Test User",
   userName: "testuser",
   roles: "admin",
-  projectKey: TEST_PROJECT_KEY,
 };
