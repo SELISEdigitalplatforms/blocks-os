@@ -623,7 +623,7 @@ namespace DomainService.Projects
 
             var tokenParams = new
             {
-                IsConfigured = project?.ThirdPartyJwtTokenParameters is not null,
+                IsConfigured = !(project?.ThirdPartyJwtTokenParameters?.PublicCertificatePath == null && project?.ThirdPartyJwtTokenParameters?.JwksUrl == null),
                 ProviderName = project?.ThirdPartyJwtTokenParameters?.ProviderName,
                 Issuer = project?.ThirdPartyJwtTokenParameters?.Issuer,
                 Audiences = project?.ThirdPartyJwtTokenParameters?.Audiences,
