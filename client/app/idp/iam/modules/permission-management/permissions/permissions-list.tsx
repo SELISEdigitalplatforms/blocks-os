@@ -16,6 +16,7 @@ import { FilterControls } from "@/components/filter-toolbar";
 import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 type PermissionTableProps = {
@@ -41,6 +42,7 @@ export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeve
 export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps) => {
   const { sortQueryParams, setSortQueryParams } = usePermissionsSortQuaryParams();
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const columns = useMemo<ColumnDef<IPermission>[]>(
     () => [
       {
@@ -237,7 +239,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 onClick={() => {
-                  navigate(`/app/idp/permission-detail/${row.original.itemId}`);
+                  navigate(scoped(`idp/permission-detail/${row.original.itemId}`));
                 }}
                 isHoverable
               >
