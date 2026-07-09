@@ -84,7 +84,7 @@ export const PersonDetailPage = () => {
               <BreadcrumbLink asChild>
                 <button
                   type="button"
-                  onClick={() => navigate(`/app/project-overview/${tenantGroupId}/people`)}
+                  onClick={() => navigate(`/app/project/${tenantGroupId}/people`)}
                 >
                   People
                 </button>

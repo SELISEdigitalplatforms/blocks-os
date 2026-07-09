@@ -61,7 +61,7 @@ export const GitCommandSnippet = () => {
               enable git commands.
             </p>
             <Link
-              to={`/app/project-overview/${selectedProject?.tenantGroupId ?? ""}/repositories`}
+              to={`/app/project/${selectedProject?.tenantGroupId ?? ""}/repositories`}
             >
               <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
