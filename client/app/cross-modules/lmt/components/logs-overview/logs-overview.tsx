@@ -5,7 +5,7 @@ import {
   LOG_SERVICE_ICONS,
 } from "@blocks-lmt/constants/logs-dummy.constant"
 import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model"
-import { LMT_BASE_PATH } from "@/constants/lmt-nav"
+import { useLmtBasePath } from "@/hooks/use-scoped-path"
 import { ArrowRight, Shield } from "lucide-react"
 import { type KeyboardEvent } from "react"
 import { useNavigate } from "react-router-dom"
@@ -67,6 +67,7 @@ const LogServiceCard = ({
 
 export const LogsOverview = () => {
   const navigate = useNavigate()
+  const LMT_BASE_PATH = useLmtBasePath()
 
   const handleSelect = (routeSlug: string) => {
     navigate(`${LMT_BASE_PATH}/logs/${routeSlug}`)

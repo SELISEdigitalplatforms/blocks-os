@@ -33,6 +33,7 @@ import {
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 
 function SecretManagementHeaderActions({
   isOidcBranding,
@@ -198,6 +199,7 @@ function SecretManagementHeaderActions({
 export default function SecretManagementLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const currentPath = pathname.split("/").pop() ?? "my-secret";
   const isOidcBranding = /\/oidc\/[^/]+\/branding$/.test(pathname);
 
@@ -304,7 +306,7 @@ export default function SecretManagementLayout() {
                   size="icon"
                   className="mt-0.5 h-8 w-8 shrink-0"
                   aria-label="Back to OIDC"
-                  onClick={() => navigate("/app/secret-management/oidc")}>
+                  onClick={() => navigate(scoped("secret-management/oidc"))}>
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <PageHeader

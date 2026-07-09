@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select"
-import { LMT_NAV_GROUPS, LMT_BASE_PATH } from "@/constants/lmt-nav"
+import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
+import { useLmtBasePath } from "@/hooks/use-scoped-path"
 import { cn } from "@/lib/utils"
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet"
 import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage"
@@ -18,6 +19,7 @@ import { Outlet, useLocation } from "react-router-dom"
 
 export default function LmtLayout() {
   const { pathname } = useLocation()
+  const LMT_BASE_PATH = useLmtBasePath()
   const isLogsDetail = new RegExp(
     `^${LMT_BASE_PATH}/logs/[^/]+(/trace/[^/]+)?$`,
   ).test(pathname)

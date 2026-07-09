@@ -20,7 +20,7 @@ export function ConsoleHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const isConsoleButtonVisible =
-    pathname.startsWith("/project-overview") || pathname.startsWith("/profile");
+    pathname.startsWith("/project") || pathname.startsWith("/profile");
 
   useEffect(() => {
     const handleScroll = () => {
