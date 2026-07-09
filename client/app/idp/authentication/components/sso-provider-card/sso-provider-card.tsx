@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ISsoProviderConfigurationWithMeta } from "@blocks-idp/authentication/models/sso.model";
 import { EllipsisVertical } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { SSoProviderStatusToggle } from "../sso-provider-status-toggle";
 import { useMemo, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
@@ -40,6 +41,7 @@ export const SSOProviderCardSkelton = () => {
   );
 };
 export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
+  const scoped = useScopedPath();
   const [open, setOpen] = useState<boolean>(false);
   const { theme } = useTheme();
   const imageSrc = useMemo(() => {
@@ -88,7 +90,7 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <Link
-                    to={`/app/idp/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`}>
+                    to={scoped(`idp/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`)}>
                     <DropdownMenuItem>Configure</DropdownMenuItem>
                   </Link>
                   {configuration.itemId && (
