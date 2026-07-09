@@ -130,7 +130,7 @@ export const ReviewConfirmForm = () => {
         showSuccessToast({ description: "Migration started successfully!" })
         setIsVerificationModalOpen(false)
         navigate(
-          groupId ? `/app/project-overview/${groupId}/environments` : "/app/console",
+          groupId ? `/app/project/${groupId}/environments` : "/app/console",
         )
         return
       }

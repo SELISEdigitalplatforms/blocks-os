@@ -376,7 +376,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() =>
                   navigate(
-                    `/app/project-overview/${tenantGroupId}/people/${row.original.peopleDetails.userId}`,
+                    `/app/project/${tenantGroupId}/people/${row.original.peopleDetails.userId}`,
                   )
                 }
               >

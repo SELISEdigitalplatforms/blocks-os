@@ -29,7 +29,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
 
   const onConfigureClick = () => {
     setTenantGroup(project.tenantGroupId);
-    navigate(`/app/project-overview/${project.tenantGroupId}/environments`);
+    navigate(`/app/project/${project.tenantGroupId}/environments`);
   };
 
   const onEnvBadgeClick = (e: React.MouseEvent, envProject: IProject) => {

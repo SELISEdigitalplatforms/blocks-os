@@ -25,7 +25,7 @@ const EnvironmentMigrationWizardContent = () => {
   const { currentStep } = useStepper()
   const selectedTenantGroup = useProjectStore((state) => state.selectedTenantGroup)
   const environmentsPath = selectedTenantGroup
-    ? `/app/project-overview/${selectedTenantGroup}/environments`
+    ? `/app/project/${selectedTenantGroup}/environments`
     : "/app/console"
 
   return (
