@@ -1,10 +1,7 @@
-using Blocks.Genesis;
-
 namespace Secrets.DomainService.ResponseModel
 {
-    public class DeleteSecretRequest : IProjectKey
+    public class DeleteSecretRequest
     {
         public string ItemId { get; set; }
-        public string? ProjectKey { get; set; }
     }
 }

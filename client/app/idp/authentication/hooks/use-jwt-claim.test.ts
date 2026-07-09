@@ -35,20 +35,19 @@ describe("use-jwt-claim hooks", () => {
   describe("useGetJwtClaim", () => {
     it("should fetch JWT claim successfully", async () => {
       const mockResponse = { data: { claims: [] } };
-      const payload = { projectKey: TEST_PROJECT_KEY, itemId: "test-item-id" };
       vi.mocked(projectService.getJwtClaim).mockResolvedValue(mockResponse as never);
 
-      const { result } = renderHook(() => useGetJwtClaim(payload), {
+      const { result } = renderHook(() => useGetJwtClaim(TEST_PROJECT_KEY), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockResponse);
-      expect(projectService.getJwtClaim).toHaveBeenCalledWith(payload);
+      expect(projectService.getJwtClaim).toHaveBeenCalledWith();
     });
 
     it("should not fetch when projectKey is empty", () => {
-      const { result } = renderHook(() => useGetJwtClaim({ projectKey: "", itemId: "" }), {
+      const { result } = renderHook(() => useGetJwtClaim(""), {
         wrapper: createWrapper(),
       });
 

@@ -5,8 +5,8 @@ import {
 } from "@seliseblocks/blocks-kit/guards";
 import {
   ConsoleLayout,
-  DashboardLayout,
-  ProjectOverviewLayout,
+  DashboardRoute,
+  ProjectOverviewRoute,
 } from "@seliseblocks/blocks-kit/layouts";
 import {
   CallbackPage,
@@ -58,12 +58,14 @@ import GitHubCallbackPage from "./routes/callback/callback";
 import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ApiSettingsPage from "./routes/dashboard/api-settings";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
-import LmtPage from "./routes/dashboard/lmt";
+import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
+import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
 import OidcBrandingPage from "./routes/dashboard/oidc-branding";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
+import LmtLayout from "@/layouts/lmt/lmt-layout";
 
 const redirectPaths: Record<string, string> = {
   "/app/idp/user-detail/*": "/app/idp",
@@ -114,6 +116,10 @@ export const router = createBrowserRouter([
               </ProtectedGuard>
             ),
             children: [
+              {
+                index: true,
+                element: <Navigate to="console" replace />,
+              },
               // ── Console routes (profile, console, create-project, etc.) ──
               {
                 element: (
@@ -141,13 +147,12 @@ export const router = createBrowserRouter([
 
               // ── Project overview layout ──
               {
-                path: "project-overview",
+                path: "project/:tenantGroupId",
                 element: (
-                  <ProjectOverviewLayout
+                  <ProjectOverviewRoute
                     redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}>
-                    <Outlet />
-                  </ProjectOverviewLayout>
+                    navigationMenus={navigationMenus}
+                  />
                 ),
                 children: [
                   {
@@ -181,17 +186,24 @@ export const router = createBrowserRouter([
                 ],
               },
 
-              // ── Dashboard layout (impersonated routes) ──
+              // ── Dashboard layout (impersonated routes, scoped by :itemId) ──
               {
+                path: ":itemId",
                 element: (
-                  <DashboardLayout
+                  <DashboardRoute
                     redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}>
-                    <Outlet />
-                  </DashboardLayout>
+                    navigationMenus={navigationMenus}
+                  />
                 ),
                 children: [
-                  { path: "dashboard", element: <DashboardOverview /> },
+                  {
+                    index: true,
+                    element: <Navigate to="dashboard" replace />,
+                  },
+                  {
+                    path: "dashboard",
+                    element: <DashboardOverview />,
+                  },
                   {
                     path: "secret-management",
                     element: <SecretManagementLayout />,
@@ -304,12 +316,28 @@ export const router = createBrowserRouter([
                         element: <Roles />,
                       },
                       {
+                        path: "role-detail",
+                        element: <Navigate to="../roles" replace />,
+                      },
+                      {
+                        path: "role-detail/:id",
+                        element: <IamRoleDetailPage />,
+                      },
+                      {
                         path: "permissions",
                         element: <Permissions />,
                       },
                       {
+                        path: "permission-detail",
+                        element: <Navigate to="../permissions" replace />,
+                      },
+                      {
                         path: "permission-detail/new",
                         element: <IamAddPermissionPage />,
+                      },
+                      {
+                        path: "permission-detail/:id",
+                        element: <IamPermissionDetailPage />,
                       },
                     ],
                   },
@@ -319,7 +347,7 @@ export const router = createBrowserRouter([
                   },
                   {
                     path: "lmt",
-                    element: <LmtPage />,
+                    element: <LmtLayout />,
                     children: [
                       {
                         index: true,
@@ -335,14 +363,23 @@ export const router = createBrowserRouter([
                         path: "tracing/timeline/:traceId",
                         element: <LmtTraceDetailsRedirect />,
                       },
-                      { path: "logs", element: <LogsRoute /> },
                       {
-                        path: "logs/:serviceName",
-                        element: <LmtServiceLogsRoute />,
-                      },
-                      {
-                        path: "logs/:serviceName/trace/:traceId",
-                        element: <LmtServiceLogTraceRoute />,
+                        path: "logs",
+                        element: <Outlet />,
+                        children: [
+                          {
+                            index: true,
+                            element: <LogsRoute />,
+                          },
+                          {
+                            path: ":serviceName",
+                            element: <LmtServiceLogsRoute />,
+                          },
+                          {
+                            path: ":serviceName/trace/:traceId",
+                            element: <LmtServiceLogTraceRoute />,
+                          },
+                        ],
                       },
                     ],
                   },

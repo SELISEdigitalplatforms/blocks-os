@@ -31,7 +31,6 @@ export const buildOidcSavePayload = (
       credential.allowedResponseTypes?.length > 0
         ? credential.allowedResponseTypes
         : ["code"],
-    allowedServiceAccessResources: credential.allowedServiceAccessResources ?? [],
     itemId: credential.itemId,
     projectKey,
     clientDisplayName: credential.clientDisplayName,

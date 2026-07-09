@@ -21,7 +21,7 @@ export interface IOidcConfig {
   isActive: boolean;
   requirePkce: boolean;
   allowedResponseTypes: string[];
-  allowedServiceAccessResources: string[];
+  allowedServiceAccessResources?: string[];
   tenantId: string;
   clientLogoUrl?: string;
   clientBrandColor?: string;
@@ -43,7 +43,7 @@ export interface ISaveOidcCredentialPayload {
   scope: string;
   requirePkce: boolean;
   allowedResponseTypes: string[];
-  allowedServiceAccessResources: string[];
+  allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;
   clientBrandColor?: string;
   clientDisplayName: string;
@@ -59,7 +59,7 @@ export interface ISaveOidcCredentialResponse {
   scope: string;
   requirePkce: boolean;
   allowedResponseTypes: string[];
-  allowedServiceAccessResources: string[];
+  allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;
   clientBrandColor?: string;
   clientDisplayName: string;
@@ -70,49 +70,40 @@ export interface IGetClientsPayload {
 }
 
 export interface IClientCredentialsConfig {
-  scope: string;
   itemId: string;
   name: string;
+  clientSecret: string;
+  accessTokenValidForNumberMinutes: number;
+  roles: string[];
+  permissions: string[];
+  isActive: boolean;
   createdDate: string;
   lastUpdatedDate: string;
   createdBy: string;
   language: string;
   lastUpdatedBy: string;
-  organizationIds: string[];
+  organizationId: string;
   tags: string[];
-  clientSecret: string;
-  roles: string[];
-  isActive: boolean;
-  audiences: string[];
-}
-
-export interface IClientConfigResponse {
-  scope: string;
-  itemId: string;
-  name: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  language: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  clientSecret: string;
-  roles: string[];
-  isActive: boolean;
-  audiences: string[];
 }
 
 export interface ISaveClientCredentialPayload {
+  itemId?: string | null;
   name: string;
+  isActive: boolean;
+  accessTokenValidForNumberMinutes: number;
   roles: string[];
+  permissions: string[];
   projectKey: string;
 }
 
 export interface ISaveClientCredentialResponse {
+  itemId: string;
   name: string;
-  roles: [];
-  projectKey: string;
+  isActive: boolean;
+  accessTokenValidForNumberMinutes: number;
+  roles: string[];
+  permissions: string[];
+  isSuccess: boolean;
 }
 
 export interface TabValue {

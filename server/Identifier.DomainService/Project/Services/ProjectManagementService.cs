@@ -215,8 +215,7 @@ namespace DomainService.Projects
                 Name = fileName,
                 Tags = "[\"File\"]",
                 ParentDirectoryId = string.Empty,
-                AccessModifier = "Public",
-                ProjectKey = BlocksContext.GetContext()?.TenantId
+                AccessModifier = "Public"
             };
 
             var presignedUrlResponse = await _storageDriverService.GetPerSignedUrlForUploadAsync(preSignedUriRequest);
@@ -329,8 +328,11 @@ namespace DomainService.Projects
         {
             var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
             var certificateStorageTypeString = configuration.GetValue<string>("CertificateStorageType");
-
-            if (!Enum.TryParse<CertificateStorageType>(certificateStorageTypeString, out var certificateStorageType))
+           if (string.IsNullOrEmpty(certificateStorageTypeString))
+           {
+            certificateStorageTypeString = _configuration["CertificateStorageType"];
+           }
+          if (!Enum.TryParse<CertificateStorageType>(certificateStorageTypeString, out var certificateStorageType))
             {
                 certificateStorageType = CertificateStorageType.Azure;
             }
@@ -383,7 +385,7 @@ namespace DomainService.Projects
             var project = new GetProjectResponseData
             {
                 Name = tenant.Name,
-                ApplicationDomain = tenant.Applications.FirstOrDefault()?.Domain ?? "",
+                Applications = tenant.Applications,
                 ItemId = tenant.ItemId,
                 CreatedDate = tenant.CreatedDate,
                 LastUpdatedDate = tenant.LastUpdatedDate,
@@ -406,42 +408,39 @@ namespace DomainService.Projects
 
         public async Task<BaseResponse> UpdateProjectAsync(UpdateProjectRequest request)
         {
-            var project = await _projectRepository.GetByTenantIdAsync(request.ProjectKey);
+            var blocksContext = BlocksContext.GetContext();
+            var project = await _projectRepository.GetByTenantIdAsync(blocksContext.TenantId);
 
             if (project == null)
             {
-                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {request.ProjectKey}" } } };
+                return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
             }
 
-            var mainDomain = IdentifierHelper.ExtractMainDomain(request.ApplicationDomain);
-
-            //if (!string.Equals(request.ApplicationDomain, project.ApplicationDomain))
-            //{
-            //    project.IsDomainVerified = mainDomain == IdentifierConstants.BlocksDomain;
-            //}
-
-            //if (request.ApplicationDomain.Contains(IdentifierConstants.BlocksDomain, StringComparison.OrdinalIgnoreCase))
-            //{
-            //    project.IsDomainVerified = true;
-            //}
-
             project.LastUpdatedDate = DateTime.UtcNow;
-            // project.ApplicationDomain = request.ApplicationDomain;
-            project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-            //  project.CookieDomain = mainDomain;
-           // project.CustomDomain = !string.IsNullOrWhiteSpace(request.CustomDomain) ? request.CustomDomain : project.CustomDomain;
-            project.JwtTokenParameters.Audiences.Add(request.ApplicationDomain);
-            project.Applications.Add(new Applications { Domain = request.ApplicationDomain, CookieDomain = mainDomain, IsDomainVerified = mainDomain == IdentifierConstants.BlocksDomain });
+            project.LastUpdatedBy = blocksContext.UserId;
 
+            switch (request.Action)
+            {
+                case ApplicationAction.Add:
+                    var addResult = AddApplication(project, request);
+                    if (!addResult.IsSuccess)
+                        return addResult;
+                    break;
 
-            //if (!string.IsNullOrWhiteSpace(request.CustomDomain) && !project.AllowedDomains.Contains(request.ApplicationDomain, StringComparer.OrdinalIgnoreCase))
-            //{
-            //    project.AllowedDomains.Add(request.ApplicationDomain);
-            //}   
+                case ApplicationAction.Edit:
+                    var editResult = EditApplication(project, request);
+                    if (!editResult.IsSuccess)
+                        return editResult;
+                    break;
 
-            await Task.WhenAll(_projectRepository.UpdateProjectAsync(project),
-                                _projectRepository.UpdateIamConfiguration(project));
+                case ApplicationAction.Delete:
+                    var deleteResult = DeleteApplication(project, request);
+                    if (!deleteResult.IsSuccess)
+                        return deleteResult;
+                    break;
+            }
 
+            await _projectRepository.UpdateProjectAsync(project);
             await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
             {
                 Action = "upsert",
@@ -449,33 +448,79 @@ namespace DomainService.Projects
                 Tenant = project
             });
 
-            //var domian = IdentifierConstants.CookieDomainPrefix + project.CookieDomain;
+            return new BaseResponse { IsSuccess = true };
+        }
 
-            //if (project.IsCookieEnable)
-            //{
+        // Domains are stored inconsistently ("https://x", "x", trailing slash,
+        // mixed case) — normalize before comparing so duplicates can't sneak in
+        private static string NormalizeDomain(string domain) =>
+            (domain ?? string.Empty)
+                .Trim()
+                .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace("http://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .TrimEnd('/')
+                .ToLowerInvariant();
 
-            //    if (applicationDomainBeforeUpdate != request.ApplicationDomain)
-            //    {
-            //        await _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest> { ConsumerName = IdentifierConstants.IdentifierName, Payload = new DisableDomainBindingRequest { ProjectId = project.ItemId, Domain = domian } });
-            //    }
+        private BaseResponse AddApplication(Tenant project, UpdateProjectRequest request)
+        {
+            var incomingDomain = NormalizeDomain(request.Application.Domain);
+            if (project.Applications.Any(a => NormalizeDomain(a.Domain) == incomingDomain))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
+            }
 
-            //    await _messageClient.SendToConsumerAsync(new ConsumerMessage<ConfigureDomainRequest> { ConsumerName = IdentifierConstants.IdentifierName, Payload = new ConfigureDomainRequest { CookieDomain = domian, ProjectId = request.ProjectId } });
-            //}
-            //else
-            //{
-            //    await _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest> { ConsumerName = IdentifierConstants.IdentifierName, Payload = new DisableDomainBindingRequest { ProjectId = project.ItemId, Domain = domian } });
-            //}
+            var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
+            var newApp = new Applications
+            {
+                Domain = request.Application.Domain,
+                CookieDomain = request.Application.CookieDomain,
+                IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain
+            };
+            project.Applications.Add(newApp);
+            return new BaseResponse { IsSuccess = true };
+        }
+
+        private BaseResponse EditApplication(Tenant project, UpdateProjectRequest request)
+        {
+            var existingApp = project.Applications.FirstOrDefault(a => a.Domain == request.ApplicationDomain);
+            if (existingApp == null)
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "application_not_found", $"No application found with domain {request.ApplicationDomain}" } } };
+            }
+
+            var incomingDomain = NormalizeDomain(request.Application.Domain);
+            if (project.Applications.Any(a => !ReferenceEquals(a, existingApp) && NormalizeDomain(a.Domain) == incomingDomain))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
+            }
+
+            var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
+            existingApp.Domain = request.Application.Domain;
+            existingApp.CookieDomain = request.Application.CookieDomain;
+            existingApp.IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain;
 
             return new BaseResponse { IsSuccess = true };
         }
 
-        public async Task<BaseResponse> DisableProjectAsync(string projectKey)
+        private BaseResponse DeleteApplication(Tenant project, UpdateProjectRequest request)
         {
-            var project = _tenants.GetTenantByID(projectKey);
+            var existingApp = project.Applications.FirstOrDefault(a => a.Domain == request.ApplicationDomain);
+            if (existingApp == null)
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "application_not_found", $"No application found with domain {request.ApplicationDomain}" } } };
+            }
+
+            project.Applications.Remove(existingApp);
+            return new BaseResponse { IsSuccess = true };
+        }
+
+        public async Task<BaseResponse> DisableProjectAsync(string projectId)
+        {
+            var project = _tenants.GetTenantByID(projectId);
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project exist with {projectKey}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project exist with {projectId}" } } };
             }
 
             project.IsDisabled = true;
@@ -536,11 +581,12 @@ namespace DomainService.Projects
         public async Task<BaseResponse> UpdateTokenValidationParametersAsync(UpdateTokenValidationParametersRequest request)
         {
 
-            var project = await _projectRepository.GetByTenantIdAsync(request.ProjectKey);
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var project = await _projectRepository.GetByTenantIdAsync(tenantId);
 
             if (project == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {request.ProjectKey}" } } };
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } } };
             }
 
             project.ThirdPartyJwtTokenParameters ??= new();
@@ -561,7 +607,7 @@ namespace DomainService.Projects
                 Action = "upsert",
                 TenantId = project.TenantId,
                 Tenant = project
-            }), _cacheClient.RemoveKeyAsync($"{_tenantTokenPublicCertificateCachePrefix}{request.ProjectKey}"));
+            }), _cacheClient.RemoveKeyAsync($"{_tenantTokenPublicCertificateCachePrefix}{tenantId}"));
 
             return new BaseResponse { IsSuccess = true };
         }
@@ -575,15 +621,27 @@ namespace DomainService.Projects
                 return new NotFoundObjectResult(new { error = "Project not found" });
             }
 
+            // Tenant initializes ThirdPartyJwtTokenParameters, so a project that never configured a
+            // provider still deserializes to an empty instance. Only a key source proves configuration.
+            var thirdPartyJwtTokenParameters = project.ThirdPartyJwtTokenParameters;
+            var isConfigured = thirdPartyJwtTokenParameters is not null
+                               && (!string.IsNullOrWhiteSpace(thirdPartyJwtTokenParameters.JwksUrl)
+                                   || !string.IsNullOrWhiteSpace(thirdPartyJwtTokenParameters.PublicCertificatePath));
+
+            if (!isConfigured)
+            {
+                thirdPartyJwtTokenParameters = null;
+            }
+
             var tokenParams = new
             {
-                IsConfigured = project?.ThirdPartyJwtTokenParameters is not null,
-                ProviderName = project?.ThirdPartyJwtTokenParameters?.ProviderName,
-                Issuer = project?.ThirdPartyJwtTokenParameters?.Issuer,
-                Audiences = project?.ThirdPartyJwtTokenParameters?.Audiences,
-                PublicCertificatePath = project?.ThirdPartyJwtTokenParameters?.PublicCertificatePath,
-                JwksUrl = project?.ThirdPartyJwtTokenParameters?.JwksUrl,
-                CookieKey = project?.ThirdPartyJwtTokenParameters?.CookieKey
+                IsConfigured = isConfigured,
+                ProviderName = thirdPartyJwtTokenParameters?.ProviderName,
+                Issuer = thirdPartyJwtTokenParameters?.Issuer,
+                Audiences = thirdPartyJwtTokenParameters?.Audiences,
+                PublicCertificatePath = thirdPartyJwtTokenParameters?.PublicCertificatePath,
+                JwksUrl = thirdPartyJwtTokenParameters?.JwksUrl,
+                CookieKey = thirdPartyJwtTokenParameters?.CookieKey
             };
             return new OkObjectResult(tokenParams);
         }
@@ -595,9 +653,9 @@ namespace DomainService.Projects
             return new SaveThirdPartyJWTClaimsResponse { IsSuccess = true , ItemId = claimsMapper.ItemId};
         }
 
-        public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync(GetThirdPartyJWTClaimsRequest request)
+        public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()
         {
-            return await _projectRepository.GetThirdPartyJWTClaimsAsync(request.ItemId);
+            return await _projectRepository.GetThirdPartyJWTClaimsAsync(string.Empty);
         }
 
         private async Task<ThirdPartyJWTClaims> MapJWTClaims(SaveThirdPartyJWTClaimsRequest request)

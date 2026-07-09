@@ -198,7 +198,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         cell: ({ row }) => (
           <div className="flex">
             {!row.original.isBuiltIn && (
-              <Link to={`/services/iam/permission-detail/${row.original.itemId}`}>
+              <Link to={`/app/idp/permission-detail/${row.original.itemId}`}>
                 <Button size="icon" className="rounded-full" variant="ghost">
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -237,7 +237,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 onClick={() => {
-                  navigate(`/services/iam/permission-detail/${row.original.itemId}`);
+                  navigate(`/app/idp/permission-detail/${row.original.itemId}`);
                 }}
                 isHoverable
               >

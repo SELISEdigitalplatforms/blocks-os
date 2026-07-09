@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace DomainService.Entities
@@ -7,8 +7,7 @@ namespace DomainService.Entities
     public class Project : BaseEntity
     {
         public string Name { get; set; }
-        public string ApplicationDomain { get; set; }
-        public bool IsProduction { get; set; }
+        public List<Applications> Applications { get; set; }
         public string TenantId { get; set; }
         public string TenantGroupId { get; set; }
         public bool IsDomainVerified { get; set; }

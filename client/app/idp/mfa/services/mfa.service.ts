@@ -32,15 +32,21 @@ export class MFAService {
         absoluteUrl: true,
       })
       .then((response) => ({
-        enableMfa: response?.enableMfa ?? false,
+        enabled: response?.enabled ?? false,
+        allowedMethods: Array.isArray(response?.allowedMethods)
+          ? response.allowedMethods.map(Number)
+          : [],
+        requireMfaForAllUsers: response?.requireMfaForAllUsers ?? false,
+        mfaRequiredRoles: response?.mfaRequiredRoles ?? [],
+        mfaExemptRoles: response?.mfaExemptRoles ?? [],
+        allowUserOptOut: response?.allowUserOptOut ?? true,
+        allowBackupCodes: response?.allowBackupCodes ?? true,
+        backupCodesCount: response?.backupCodesCount ?? 10,
         mfaTemplate: {
           templateName: response?.mfaTemplate?.templateName ?? '',
           templateId: response?.mfaTemplate?.templateId ?? '',
         },
         projectKey: null,
-        userMfaType: Array.isArray(response?.userMfaType)
-          ? response.userMfaType.map(Number)
-          : [],
       }))
   }
 
@@ -54,21 +60,28 @@ export class MFAService {
     payload: IMFAConfigurationSavePayload,
   ): Promise<IMFAConfigurationSaveResponse> {
     return http
-      .post<{ isSuccess: boolean; errors: unknown | null }>(
+      .post<unknown>(
         MFA_CONFIG_ENDPOINTS.SAVE,
         {
-          enableMfa: payload.enableMfa,
-          userMfaType: payload.userMfaType,
+          enableMfa: payload.enabled,
+          userMfaType: payload.allowedMethods,
           ...(payload.mfaTemplate ? { mfaTemplate: payload.mfaTemplate } : {}),
-          projectKey: payload.projectKey,
         },
         undefined,
         { absoluteUrl: true },
       )
-      .then((response) => ({
-        isSuccess: response?.isSuccess ?? false,
-        errors: response?.errors ?? null,
-      }))
+      .then((response) => {
+        const body = (response ?? {}) as {
+          isSuccess?: boolean;
+          success?: boolean;
+          errors?: unknown | null;
+        };
+        const isSuccess = body.isSuccess ?? body.success ?? true;
+        return {
+          isSuccess,
+          errors: body.errors ?? null,
+        };
+      })
   }
 
   generateUserMfaOTP(

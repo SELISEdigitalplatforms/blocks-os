@@ -1,14 +1,11 @@
 using Blocks.Genesis;
 using BlocksTemplate.Api;
-using Captcha.DomainService.Configuration;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using CloudConfiguration.DomainService.Shared.Utilities;
 using DomainService.Shared;
-using DomainService.Utilities;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
 using Secrets.DomainService.Services;
 using SeliseBlocks.ConfigurationDriver;
 
@@ -21,7 +18,7 @@ Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString}");
 
-ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
+ApplicationConfigurations.ConfigureServices(builder.Services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Configuration.AddMongoDbConfiguration(options =>
 {
@@ -51,7 +48,6 @@ Directory.CreateDirectory(wwwrootPath);
 
 ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath);
 
-services.RegisterAllServices();
 services.AddApplicationServices();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
@@ -94,6 +90,7 @@ await app.RunAsync();
 //        ? VaultType.OnPrem
 //        : VaultType.Azure;
 //}
+
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)
 {
@@ -145,6 +142,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
         ["__BLOCKS_MONITOR_CLIENT_ID__"] = section["BLOCKS_MONITOR_CLIENT_ID"],
         ["__BLOCKS_RELEASE_CLIENT_ID__"] = section["BLOCKS_RELEASE_CLIENT_ID"],
         ["__BLOCKS_STUDIO_CLIENT_ID__"] = section["BLOCKS_STUDIO_CLIENT_ID"],
+        ["__BLOCKS_CNAME_BASE_URL__"] = section["BLOCKS_CNAME_BASE_URL"],
     };
 
     var files = Directory.EnumerateFiles(webRootPath, "*", SearchOption.AllDirectories)

@@ -25,15 +25,17 @@ describe("AuthClientsService", () => {
     vi.clearAllMocks();
   });
 
-  // ─── getClientCredentials ─────────────────────────────────────────────────
-  describe("getClientCredentials", () => {
-    it("should GET with correct query params", async () => {
+  // ─── list ──────────────────────────────────────────────────────────────────
+  describe("list", () => {
+    it("should GET the new client-credentials endpoint", async () => {
       vi.mocked(http.get).mockResolvedValue(mockClientCredentialsResponse);
 
-      const result = await service.getClientCredentials(mockGetClientsPayload);
+      const result = await service.list(mockGetClientsPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${AUTH_CLIENT_ENDPOINTS.GET_CLIENT_CREDENTIALS}?ProjectKey=${mockGetClientsPayload.projectKey}`,
+        `${AUTH_CLIENT_ENDPOINTS.LIST}?ItemId=&Name=`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockClientCredentialsResponse);
     });
@@ -41,22 +43,22 @@ describe("AuthClientsService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getClientCredentials(mockGetClientsPayload)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(service.list(mockGetClientsPayload)).rejects.toThrow("Network error");
     });
   });
 
-  // ─── saveClientCredential ─────────────────────────────────────────────────
-  describe("saveClientCredential", () => {
-    it("should POST to the correct endpoint with payload", async () => {
+  // ─── save ──────────────────────────────────────────────────────────────────
+  describe("save", () => {
+    it("should POST to the client-credentials endpoint with the new payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const result = await service.saveClientCredential(mockSaveClientPayload);
+      const result = await service.save(mockSaveClientPayload);
 
       expect(http.post).toHaveBeenCalledWith(
-        AUTH_CLIENT_ENDPOINTS.SAVE_CLIENT_CREDENTIAL,
+        AUTH_CLIENT_ENDPOINTS.SAVE,
         mockSaveClientPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -64,32 +66,31 @@ describe("AuthClientsService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.saveClientCredential(mockSaveClientPayload)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(service.save(mockSaveClientPayload)).rejects.toThrow("Network error");
     });
   });
 
-  // ─── deleteClientCredential ───────────────────────────────────────────────
-  describe("deleteClientCredential", () => {
-    it("should POST to the correct endpoint with payload", async () => {
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+  // ─── delete ────────────────────────────────────────────────────────────────
+  describe("delete", () => {
+    it("should DELETE the resource by itemId in the path", async () => {
+      vi.mocked(http.delete).mockResolvedValue(mockSuccessResponse);
 
-      const result = await service.deleteClientCredential(mockDeleteClientPayload);
+      const result = await service.delete({ itemId: mockDeleteClientPayload.itemId });
 
-      expect(http.post).toHaveBeenCalledWith(
-        AUTH_CLIENT_ENDPOINTS.DELETE_CLIENT_CREDENTIAL,
-        mockDeleteClientPayload,
+      expect(http.delete).toHaveBeenCalledWith(
+        `${AUTH_CLIENT_ENDPOINTS.DELETE}/${mockDeleteClientPayload.itemId}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
 
     it("should throw when the API call fails", async () => {
-      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
+      vi.mocked(http.delete).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.deleteClientCredential(mockDeleteClientPayload)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(
+        service.delete({ itemId: mockDeleteClientPayload.itemId }),
+      ).rejects.toThrow("Network error");
     });
   });
 });

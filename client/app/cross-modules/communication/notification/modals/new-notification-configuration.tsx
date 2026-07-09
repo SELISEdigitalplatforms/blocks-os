@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { useSaveNotificationConfig } from "../hooks/use-notification-config";
 import { useForm } from "react-hook-form";
@@ -128,7 +127,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
         enablePersistence: data.enablePersistence,
         notifyMethod: data.notifyMethod,
         projectKey: tenantId,
-        itemId: isEdit && previousData?.itemId ? previousData.itemId : uuidv4(),
+        itemId: isEdit ? previousData?.itemId : undefined,
       });
       if (res?.isSuccess) {
         toast({

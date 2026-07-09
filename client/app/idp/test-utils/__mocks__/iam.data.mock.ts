@@ -245,7 +245,23 @@ export const mockActivationCodeExpirationResponse = {
 
 // ─── Role Mocks ──────────────────────────────────────────────────────────────
 
+const mockRoleBase = {
+  ancestorRoleSlugs: [] as string[],
+  parentRoleSlug: null,
+  canCreateOwn: true,
+  count: 0,
+  createdFromDefault: false,
+  createdDate: "2026-03-23T11:33:27.841Z",
+  lastUpdatedDate: "2026-03-23T11:33:27.841Z",
+  createdBy: "755991d9-6c90-4f12-b710-8cb896075a35",
+  language: null,
+  lastUpdatedBy: "755991d9-6c90-4f12-b710-8cb896075a35",
+  organizationId: "default",
+  tags: [] as string[],
+};
+
 export const mockRole: IRole = {
+  ...mockRoleBase,
   itemId: MOCK_ROLE_ITEM_ID,
   name: "Admin",
   description: "Administrator role",
@@ -254,6 +270,7 @@ export const mockRole: IRole = {
 };
 
 export const mockRole2: IRole = {
+  ...mockRoleBase,
   itemId: "role-e5f6-g7h8-i9j0",
   name: "User",
   description: "Standard user role",
@@ -270,7 +287,6 @@ export const mockRolesResponse = {
 export const mockGetRolesPayload: GetRolesPayload = {
   page: 1,
   pageSize: 20,
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockGetRolePayload: IGetRolePayload = {
@@ -287,7 +303,6 @@ export const mockCreateRolePayload: CreateRolePayload = {
   name: "New Role",
   description: "New role description",
   slug: "new-role",
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockUpdateRolePayload: UpdateRolePayload = {
@@ -346,7 +361,6 @@ export const mockGetPermissionsPayload: IGetPermissionsPayload = {
 
 export const mockGetPermissionByIdPayload: IGetPermissionByIdPayload = {
   id: MOCK_PERMISSION_ITEM_ID,
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockGetPermissionByIdResponse = {
@@ -363,7 +377,6 @@ export const mockCreatePermissionPayload: CreatePermissionPayload = {
   tags: [],
   dependentPermissions: [],
   isBuiltIn: false,
-  projectKey: TEST_PROJECT_KEY,
 };
 
 export const mockUpdatePermissionPayload: UpdatePermissionPayload = {
