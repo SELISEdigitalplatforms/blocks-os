@@ -68,6 +68,7 @@ export const IDENTITY_PROVIDER_ENDPOINTS = {
   CREATE: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
   UPDATE: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
   UPDATE_STATUS: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
+  DELETE: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
 } as const;
 
 export const EXECUTION_CONTEXT_ENDPOINTS = {
