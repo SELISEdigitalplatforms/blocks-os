@@ -1,5 +1,6 @@
 import { http } from "@/lib/http-client";
 import {
+  DeleteIdentityProviderResponse,
   IdentityProvider,
   IdentityProviderResponse,
   IdentityProvidersResponse,
@@ -45,6 +46,12 @@ export class IdentityProviderService {
       undefined,
       { absoluteUrl: true },
     );
+  }
+
+  delete(id: string): Promise<DeleteIdentityProviderResponse> {
+    return http.delete(`${IDENTITY_PROVIDER_ENDPOINTS.DELETE}/${id}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 
