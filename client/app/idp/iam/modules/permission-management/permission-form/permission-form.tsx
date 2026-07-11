@@ -3,9 +3,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
-import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
-import { usePermissionSeverityOptions } from "@blocks-idp/iam/hooks/use-permission";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { PERMISSION_SEVERITY_OPTIONS, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { permissionFormDefaultValue, permissionFormSchema, permissionFormSchemaType } from "./utils";
@@ -20,8 +18,6 @@ type PermissionFormProps = {
   isBuiltIn?: boolean;
 };
 export const PermissionForm = ({ onSave, isPending, values = null, isBuiltIn = false }: PermissionFormProps) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const { severityOptions } = usePermissionSeverityOptions({ projectKey });
   const form = useForm({
     values: values || permissionFormDefaultValue,
     resolver: zodResolver(permissionFormSchema),
@@ -40,7 +36,7 @@ export const PermissionForm = ({ onSave, isPending, values = null, isBuiltIn = f
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="Enter name" disabled={isBuiltIn} />
                   </FormControl>
@@ -53,7 +49,7 @@ export const PermissionForm = ({ onSave, isPending, values = null, isBuiltIn = f
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>Type <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Select
                       value={field.value > 0 ? field.value.toString() : undefined}
@@ -81,7 +77,7 @@ export const PermissionForm = ({ onSave, isPending, values = null, isBuiltIn = f
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Resource</FormLabel>
+                  <FormLabel>Resource <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -98,7 +94,7 @@ export const PermissionForm = ({ onSave, isPending, values = null, isBuiltIn = f
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Group</FormLabel>
+                  <FormLabel>Group <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <PermissionGroupCombobox
                       value={field.value}
@@ -117,17 +113,21 @@ export const PermissionForm = ({ onSave, isPending, values = null, isBuiltIn = f
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Severity</FormLabel>
+                  <FormLabel>Severity <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Select
-                      value={field.value && field.value > 0 ? field.value.toString() : undefined}
+                      value={
+                        field.value !== undefined && field.value !== null
+                          ? field.value.toString()
+                          : undefined
+                      }
                       onValueChange={(val) => field.onChange(Number(val))}
                     >
                       <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                         <SelectValue placeholder="Select Severity" />
                       </SelectTrigger>
                       <SelectContent>
-                        {severityOptions.map((item) => (
+                        {PERMISSION_SEVERITY_OPTIONS.map((item) => (
                           <SelectItem key={item.value} value={item.value.toString()}>
                             {item.label}
                           </SelectItem>

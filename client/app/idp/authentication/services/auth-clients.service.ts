@@ -10,11 +10,7 @@ import { AUTH_CLIENT_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class AuthClientsService {
   list(_payload: IGetClientsPayload): Promise<IClientCredentialsConfig[]> {
-    return http.get(
-      `${AUTH_CLIENT_ENDPOINTS.LIST}?ItemId=&Name=`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(AUTH_CLIENT_ENDPOINTS.LIST, undefined, { absoluteUrl: true });
   }
 
   save(

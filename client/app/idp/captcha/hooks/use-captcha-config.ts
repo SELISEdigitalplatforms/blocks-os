@@ -2,10 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { captchaService } from "../services/captcha.service";
 import { IGetCaptchaConfigsPayload } from "../models/captcha";
 
-export const useGetCaptchaConfigs = (options: IGetCaptchaConfigsPayload) => {
+export const useGetCaptchaConfigs = (
+  options: IGetCaptchaConfigsPayload,
+  enabled: boolean = true,
+) => {
   return useQuery({
     queryKey: ["captcha-configs", options.projectKey],
     queryFn: () => captchaService.getCaptchaConfigs(options),
+    enabled: !!options.projectKey && enabled,
   });
 };
 

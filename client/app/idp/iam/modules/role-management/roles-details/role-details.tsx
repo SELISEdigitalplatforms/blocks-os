@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+// import { useMemo } from "react";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
@@ -6,9 +6,9 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { Button } from "@/components/ui-kits/button/button";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
+// import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
-import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
+// import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
 import { useQueryClient } from "@tanstack/react-query";
 import { PermissionsSelectionPanel } from "./permissions-selection-panel";
 export function RoleDetailsContainer() {
@@ -59,31 +59,32 @@ export function RoleDetailsContainer() {
       }
     }
   };
-  const permissionSeverityData = useMemo(() => {
-    const permissions = Array.from(permissionMap.values());
-    return Object.values(
-      permissions
-        .filter((item) => {
-          if (item.modified && item.changeState === "added") return true;
-          if (item.modified && item.changeState === "removed") return false;
-          return item.isInitiallyAssigned;
-        })
-        .reduce(
-          (acc, item: IPermission) => {
-            const severityKey = item.permissionSeverity;
-            if (!acc[severityKey]) {
-              acc[severityKey] = {
-                severityLevel: PermissionSeverityLevel[severityKey],
-                count: 0,
-              };
-            }
-            acc[severityKey].count += 1;
-            return acc;
-          },
-          {} as Record<string, { severityLevel: string; count: number }>,
-        ),
-    );
-  }, [permissionMap]);
+  // Permission Severity Overview is temporarily disabled.
+  // const permissionSeverityData = useMemo(() => {
+  //   const permissions = Array.from(permissionMap.values());
+  //   return Object.values(
+  //     permissions
+  //       .filter((item) => {
+  //         if (item.modified && item.changeState === "added") return true;
+  //         if (item.modified && item.changeState === "removed") return false;
+  //         return item.isInitiallyAssigned;
+  //       })
+  //       .reduce(
+  //         (acc, item: IPermission) => {
+  //           const severityKey = item.permissionSeverity;
+  //           if (!acc[severityKey]) {
+  //             acc[severityKey] = {
+  //               severityLevel: PermissionSeverityLevel[severityKey],
+  //               count: 0,
+  //             };
+  //           }
+  //           acc[severityKey].count += 1;
+  //           return acc;
+  //         },
+  //         {} as Record<string, { severityLevel: string; count: number }>,
+  //       ),
+  //   );
+  // }, [permissionMap]);
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
@@ -108,7 +109,7 @@ export function RoleDetailsContainer() {
         </div>
       </div>
       <div className="grid gap-4">
-        <PermissionSeverity data={permissionSeverityData} isLoading={!isInitialized} />
+        {/* <PermissionSeverity data={permissionSeverityData} isLoading={!isInitialized} /> */}
         <PermissionsSelectionPanel />
       </div>
     </>
