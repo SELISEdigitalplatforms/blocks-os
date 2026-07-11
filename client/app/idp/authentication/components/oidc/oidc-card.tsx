@@ -70,10 +70,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     key: string;
     value: string;
     copyable?: boolean;
-    secret?: boolean;
+    sensitive?: boolean;
   }[] = [
     { key: "Client Id", value: item.itemId, copyable: true },
-    { key: "Client Secret", value: item.clientSecret, copyable: true, secret: true },
+    { key: "Client Secret", value: item.clientSecret, sensitive: true },
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),
@@ -185,6 +185,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               <TooltipContent>Template</TooltipContent>
             </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
+            <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -206,13 +207,13 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         <TableRow className="border-b-2 border-border hover:bg-transparent">
           <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable, secret }) => (
+              {kvPairs.map(({ key, value, copyable, sensitive }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
                   copyable={copyable}
-                  secret={secret}
+                  sensitive={sensitive}
                 />
               ))}
             </div>
