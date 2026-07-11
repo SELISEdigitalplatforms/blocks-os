@@ -1,4 +1,5 @@
 export enum PermissionSeverityLevel {
+  None = 0,
   Critical = 1,
   High,
   Medium,
@@ -8,7 +9,7 @@ export enum PermissionSeverityLevel {
 type PermissionSeverityOption = {
   label: string;
   value: PermissionSeverityLevel;
-  variant: "error" | "destructive" | "info" | "success";
+  variant: "error" | "destructive" | "info" | "success" | "secondary";
   className?: string;
   barClassName?: string;
   id: string;
@@ -51,6 +52,15 @@ export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
     className: "text-blue-500",
     barClassName: "bg-blue-400",
     bg: "bg-blue-50",
+  },
+  {
+    id: "None",
+    label: "None",
+    value: PermissionSeverityLevel.None,
+    variant: "secondary",
+    className: "text-gray-600",
+    barClassName: "bg-gray-400",
+    bg: "bg-gray-50",
   },
 ];
 
@@ -204,7 +214,7 @@ export interface IGetPermissionsSeverityRequestPayload {
 export const normalizePermissionSeverity = (
   value: PermissionSeverityLevel | string | number | null | undefined,
 ): PermissionSeverityLevel | undefined => {
-  if (value === null || value === undefined || value === "" || value === 0) return undefined;
+  if (value === null || value === undefined || value === "") return undefined;
   if (typeof value === "number" && PermissionSeverityLevel[value] !== undefined) {
     return value as PermissionSeverityLevel;
   }

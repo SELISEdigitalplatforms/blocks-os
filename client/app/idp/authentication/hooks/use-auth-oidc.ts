@@ -49,3 +49,19 @@ export const useDeleteAuthOidc = (options: { projectKey: string }) => {
     },
   });
 };
+
+export const useRotateAuthOidcSecret = (options: { projectKey: string }) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["authentication", "auth-oidc", "rotate-secret"],
+    mutationFn: authOidc.clients.rotateOidcClientSecret,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["authentication", "auth-oidc-list", options],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["authentication", "auth-oidc", options],
+      });
+    },
+  });
+};
