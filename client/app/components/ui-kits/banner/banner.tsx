@@ -51,20 +51,19 @@ export const Banner = ({
     <div
       role="alert"
       className={cn(
-        "mb-4 flex items-center gap-2.5 rounded-md border",
+        "mb-4 flex items-start gap-2.5 rounded-md border text-left",
         compact ? "px-3 py-2" : "px-4 py-3",
         variantStyles[variant],
         className,
       )}
     >
-      <span className={cn("flex-shrink-0", iconColorStyles[variant])}>
+      <span className={cn("mt-0.5 flex-shrink-0", iconColorStyles[variant])}>
         {icon ?? <Icon className="h-4 w-4" />}
       </span>
-      <p className="text-xs leading-relaxed">
-        {title && <span className="font-semibold">{title}</span>}
-        {title && children ? " " : null}
-        {children}
-      </p>
+      <div className="min-w-0 flex-1 text-xs leading-relaxed">
+        {title ? <p className="font-semibold">{title}</p> : null}
+        {children ? <p className={cn(title && "mt-0.5")}>{children}</p> : null}
+      </div>
     </div>
   );
 };
