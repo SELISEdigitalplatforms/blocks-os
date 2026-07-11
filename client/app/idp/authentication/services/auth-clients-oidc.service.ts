@@ -5,6 +5,8 @@ import {
   IDeleteOidcClientResponse,
   IGetOidcPayload,
   IGetOidcCredentialsResponse,
+  IRotateOidcClientSecretPayload,
+  IRotateOidcClientSecretResponse,
   ISaveOidcCredentialPayload,
   ISaveOidcCredentialResponse,
   IOidcConfig,
@@ -43,6 +45,17 @@ export class AuthOidc {
   ): Promise<APIResponse<IDeleteOidcClientResponse>> {
     return http.delete(
       `${AUTH_OIDC_ENDPOINTS.DELETE_OIDC_CLIENT}/${payload.itemId}`,
+      undefined,
+      { absoluteUrl: true },
+    );
+  }
+
+  rotateOidcClientSecret(
+    payload: IRotateOidcClientSecretPayload,
+  ): Promise<IRotateOidcClientSecretResponse> {
+    return http.post(
+      `${AUTH_OIDC_ENDPOINTS.ROTATE_OIDC_CLIENT_SECRET}/${payload.itemId}/rotate-secret`,
+      {},
       undefined,
       { absoluteUrl: true },
     );

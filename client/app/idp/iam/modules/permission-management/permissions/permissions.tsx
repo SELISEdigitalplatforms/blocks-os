@@ -8,7 +8,7 @@ import {
   usePermissionsFilterQuaryParams,
   usePermissionsSortQuaryParams,
 } from "./permissions-filter-toolbar";
-import { PermissionsGroupBySeverity } from "./permissions-group-severity";
+// import { PermissionsGroupBySeverity } from "./permissions-group-severity";
 export function Permissions() {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { queryParams, setQueryParams } = usePermissionsFilterQuaryParams();
@@ -39,7 +39,7 @@ export function Permissions() {
   const totalCount = data?.totalCount || 0;
   return (
     <div className=" grid gap-4">
-      <PermissionsGroupBySeverity />
+      {/* <PermissionsGroupBySeverity /> */}
       <Card className="overflow-hidden">
         <CardHeader>
           <PermissionsFilterToolbar />
