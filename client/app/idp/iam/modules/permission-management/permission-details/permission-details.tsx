@@ -51,12 +51,11 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail"] = "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = permissionData?.data.name || "";
+  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = id;
   return (
     <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={4} />
       </div>
       <div className="mt-4 text-xl font-semibold flex items-center gap-2">
         {permissionData?.data.name || ""}
