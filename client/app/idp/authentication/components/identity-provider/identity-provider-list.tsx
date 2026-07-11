@@ -150,9 +150,9 @@ const IdentityProviderRow = ({
   const providerLabel = item.displayName || item.provider;
   const willEnable = !isActive;
 
-  const kvPairs: { key: string; value: string; copyable?: boolean }[] = [
-    { key: "Client ID", value: item.clientId ?? "", copyable: true },
-    { key: "Client Secret", value: item.clientSecret ?? "", copyable: true },
+  const kvPairs: { key: string; value: string; copyable?: boolean; sensitive?: boolean }[] = [
+    { key: "Client Id", value: item.clientId ?? "", copyable: true },
+    { key: "Client Secret", value: item.clientSecret ?? "", sensitive: true },
     { key: "Issuer URL", value: item.issuer ?? "", copyable: true },
     { key: "Authorization URL", value: item.authorizationUrl ?? "", copyable: true },
     { key: "Token URL", value: item.tokenUrl ?? "", copyable: true },
@@ -306,12 +306,13 @@ const IdentityProviderRow = ({
         <TableRow className="border-b-2 border-border hover:bg-transparent">
           <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable }) => (
+              {kvPairs.map(({ key, value, copyable, sensitive }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
                   copyable={copyable}
+                  sensitive={sensitive}
                 />
               ))}
             </div>

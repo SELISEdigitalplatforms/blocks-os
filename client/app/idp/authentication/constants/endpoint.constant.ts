@@ -27,6 +27,7 @@ export const AUTH_OIDC_ENDPOINTS = {
   GET_OIDC_CLIENT: `${API_BASES.IAM}/oidc-clients`,
   SAVE_OIDC_CLIENT: `${API_BASES.IAM}/oidc-clients`,
   DELETE_OIDC_CLIENT: `${API_BASES.IAM}/oidc-clients`,
+  ROTATE_OIDC_CLIENT_SECRET: `${API_BASES.IAM}/oidc-clients`,
   OIDC_TOKEN: `${API_BASES.IAM}/${AUTH_OIDC_SUBPATH}/token`,
   OIDC_CALL_BACK: `${API_BASES.IAM}/${AUTH_OIDC_SUBPATH}/oidc/callback`,
 } as const;
