@@ -94,7 +94,7 @@ export const OidcList = () => {
               <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
                 Created On
               </TableHead>
-              <TableHead className="w-20" />
+              <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">

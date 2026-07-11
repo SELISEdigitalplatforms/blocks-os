@@ -72,6 +72,20 @@ export const mockDeleteClientPayload: IDeleteOidcClientPayload = {
   projectKey: TEST_PROJECT_KEY,
 };
 
+export const mockRotateOidcSecretPayload = {
+  itemId: MOCK_OIDC_ITEM_ID,
+  projectKey: TEST_PROJECT_KEY,
+};
+
+export const mockRotateOidcSecretResponse = {
+  isSuccess: true,
+  itemId: MOCK_OIDC_ITEM_ID,
+  clientId: MOCK_OIDC_ITEM_ID,
+  clientSecret: "rotated-mock-oidc-secret",
+  rotatedAt: "2026-07-11T18:49:15Z",
+  rotatedBy: "admin",
+};
+
 // ─── OIDC Mocks ──────────────────────────────────────────────────────────────
 
 export const mockGetOidcPayload: IGetOidcPayload = {

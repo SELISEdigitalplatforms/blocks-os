@@ -9,6 +9,8 @@ import {
   mockOidcCredentialResponse,
   mockSaveOidcPayload,
   mockDeleteClientPayload,
+  mockRotateOidcSecretPayload,
+  mockRotateOidcSecretResponse,
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
 
@@ -112,6 +114,30 @@ describe("AuthOidc", () => {
       await expect(service.deleteOidcCredential(mockDeleteClientPayload)).rejects.toThrow(
         "Network error",
       );
+    });
+  });
+
+  describe("rotateOidcClientSecret", () => {
+    it("should POST to the rotate-secret endpoint with empty body", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockRotateOidcSecretResponse);
+
+      const result = await service.rotateOidcClientSecret(mockRotateOidcSecretPayload);
+
+      expect(http.post).toHaveBeenCalledWith(
+        `${AUTH_OIDC_ENDPOINTS.ROTATE_OIDC_CLIENT_SECRET}/${mockRotateOidcSecretPayload.itemId}/rotate-secret`,
+        {},
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(result).toEqual(mockRotateOidcSecretResponse);
+    });
+
+    it("should throw when the API call fails", async () => {
+      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
+
+      await expect(
+        service.rotateOidcClientSecret(mockRotateOidcSecretPayload),
+      ).rejects.toThrow("Network error");
     });
   });
 });
