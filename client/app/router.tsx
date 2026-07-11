@@ -316,6 +316,10 @@ export const router = createBrowserRouter([
                         element: <Roles />,
                       },
                       {
+                        path: "role",
+                        element: <Navigate to="../roles" replace />,
+                      },
+                      {
                         path: "role-detail",
                         element: <Navigate to="../roles" replace />,
                       },
@@ -326,6 +330,10 @@ export const router = createBrowserRouter([
                       {
                         path: "permissions",
                         element: <Permissions />,
+                      },
+                      {
+                        path: "permission",
+                        element: <Navigate to="../permissions" replace />,
                       },
                       {
                         path: "permission-detail",

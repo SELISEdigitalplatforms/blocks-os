@@ -36,12 +36,11 @@ export const AddPermission = () => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail"] = "Permissions";
   BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail/new"] = "New";
   return (
     <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={4} />
       </div>
       <div className="mt-4 text-xl font-semibold">New Permission</div>
       <div className="mt-4">
