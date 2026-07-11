@@ -13,7 +13,8 @@ export const AddPermission = () => {
   const scoped = useScopedPath();
   const { isPending, mutateAsync } = useAddPermission();
   const onSubmit = async (data: permissionFormSchemaType) => {
-    if (!data.permissionSeverity) {
+    // None is a valid severity (0), so only an unset value counts as missing.
+    if (data.permissionSeverity === undefined || data.permissionSeverity === null) {
       showErrorToast({ errors: "Severity is required" });
       return;
     }

@@ -204,11 +204,19 @@ export default function SecretManagementLayout() {
   const isOidcBranding = /\/oidc\/[^/]+\/branding$/.test(pathname);
 
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data: captchaData } = useGetCaptchaConfigs({ projectKey: tenantId });
-  const { data: externalIdpData } = useGetSavedPublicCertificates(tenantId);
-  const { data: clientsData } = useListAuthClientCredentials({
-    projectKey: tenantId,
-  });
+  // Each query drives header actions for its own page only, so gate it on the
+  // active route to avoid fetching every page's data on every page.
+  const { data: captchaData } = useGetCaptchaConfigs(
+    { projectKey: tenantId },
+    currentPath === "captcha",
+  );
+  const { data: externalIdpData } = useGetSavedPublicCertificates(
+    currentPath === "external-idp" ? tenantId : "",
+  );
+  const { data: clientsData } = useListAuthClientCredentials(
+    { projectKey: tenantId },
+    currentPath === "client-credentials",
+  );
 
   // Shared via URL so child routes can read/close the same modal
   const [, setIsAddIdpOpen] = useQueryState(
