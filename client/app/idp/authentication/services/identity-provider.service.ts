@@ -19,15 +19,23 @@ export class IdentityProviderService {
   }
 
   create(provider: IdentityProvider): Promise<IdentityProviderResponse> {
-    return http.post(IDENTITY_PROVIDER_ENDPOINTS.CREATE, provider, undefined, {
-      absoluteUrl: true,
-    });
+    // protocol is a fixed wire-only field with no form representation.
+    return http.post(
+      IDENTITY_PROVIDER_ENDPOINTS.CREATE,
+      { ...provider, protocol: "oidc" },
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   update(id: string, provider: IdentityProvider): Promise<IdentityProviderResponse> {
-    return http.put(`${IDENTITY_PROVIDER_ENDPOINTS.UPDATE}/${id}`, provider, undefined, {
-      absoluteUrl: true,
-    });
+    // protocol is a fixed wire-only field with no form representation.
+    return http.put(
+      `${IDENTITY_PROVIDER_ENDPOINTS.UPDATE}/${id}`,
+      { ...provider, protocol: "oidc" },
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   updateStatus(id: string, request: UpdateStatusRequest): Promise<IdentityProviderResponse> {
