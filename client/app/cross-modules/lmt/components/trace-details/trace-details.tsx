@@ -143,11 +143,11 @@ export const TraceDetails = ({
       }}
     >
       {isPending ? (
-        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-7 w-40" />
       ) : (
         <PageBreadcrumb breadcrumbIndex={breadcrumbIndex} listClassName="text-base sm:text-lg" />
       )}
-      <div className="flex items-center justify-between md:py-6">
+      <div className="flex items-center justify-between">
         {isPending ? (
           <Skeleton className="h-8 w-1/3" />
         ) : (
@@ -186,7 +186,7 @@ export const TraceDetails = ({
       {isEmpty ? (
         <TraceDetailsEmptyState traceId={id} isError={isError} />
       ) : (
-      <div className="mt-6 flex w-full flex-col gap-6 md:flex-row">
+      <div className="flex w-full flex-col gap-6 md:flex-row">
         <div className={`${isPanelOpen ? "w-full md:w-[68%]" : "w-full"}`}>
           <Card className="h-min rounded-sm shadow-none">
             <CardHeader>
