@@ -22,8 +22,7 @@ export function RoleDetailsContainer() {
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles(role?.slug);
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail"] = "Roles";
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role?.itemId] = role?.name || "";
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role?.itemId] = role?.itemId || "";
   const onSaveClick = async () => {
     const changedPermissions = Array.from(permissionMap.values()).reduce(
       (acc, item) => {
@@ -88,7 +87,7 @@ export function RoleDetailsContainer() {
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
-        <PageBreadcrumb breadcrumbIndex={3} className="flex min-w-0 flex-1" />
+        <PageBreadcrumb breadcrumbIndex={4} className="flex min-w-0 flex-1" />
         <div className="flex shrink-0 items-center gap-2">
           {!isInitialized ? (
             <Skeleton className="h-9 w-32 rounded-sm" />
