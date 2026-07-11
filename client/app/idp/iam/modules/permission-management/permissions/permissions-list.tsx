@@ -148,52 +148,52 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
           );
         },
       },
-      {
-        id: "tags",
-        accessorFn: (row) => `${row.description}`.trim(),
-        header: () => {
-          return <div>Tags</div>;
-        },
-        cell: (tags) => (
-          <div className="flex max-w-[150px] flex-wrap gap-1">
-            {tags.row.original.tags.length > 0 && <Badge variant="secondary">{tags.row.original.tags[0]}</Badge>}
-            {tags.row.original.tags.length - 1 > 0 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Badge>{tags.row.original.tags.length - 1}+</Badge>
-                  </TooltipTrigger>
-                  <TooltipContent className="flex max-w-[200px] flex-wrap gap-2 p-1">
-                    {tags.row.original.tags.slice(1).map((item, index) => (
-                      <Badge key={index} variant="secondary">
-                        {item}
-                      </Badge>
-                    ))}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: "description",
-        accessorFn: (row) => `${row.description}`.trim(),
-        header: () => {
-          return (
-            <div className="flex items-center">
-              <span className="font-bold text-medium-emphasis">Description</span>
-            </div>
-          );
-        },
-        cell: (permission) => (
-          <div className="flex w-[200px]">
-            <span className="truncate text-sm lowercase text-medium-emphasis">
-              {permission.row.original.description}
-            </span>
-          </div>
-        ),
-      },
+      // {
+      //   id: "tags",
+      //   accessorFn: (row) => `${row.description}`.trim(),
+      //   header: () => {
+      //     return <div>Tags</div>;
+      //   },
+      //   cell: (tags) => (
+      //     <div className="flex max-w-[150px] flex-wrap gap-1">
+      //       {tags.row.original.tags.length > 0 && <Badge variant="secondary">{tags.row.original.tags[0]}</Badge>}
+      //       {tags.row.original.tags.length - 1 > 0 && (
+      //         <TooltipProvider>
+      //           <Tooltip>
+      //             <TooltipTrigger>
+      //               <Badge>{tags.row.original.tags.length - 1}+</Badge>
+      //             </TooltipTrigger>
+      //             <TooltipContent className="flex max-w-[200px] flex-wrap gap-2 p-1">
+      //               {tags.row.original.tags.slice(1).map((item, index) => (
+      //                 <Badge key={index} variant="secondary">
+      //                   {item}
+      //                 </Badge>
+      //               ))}
+      //             </TooltipContent>
+      //           </Tooltip>
+      //         </TooltipProvider>
+      //       )}
+      //     </div>
+      //   ),
+      // },
+      // {
+      //   id: "description",
+      //   accessorFn: (row) => `${row.description}`.trim(),
+      //   header: () => {
+      //     return (
+      //       <div className="flex items-center">
+      //         <span className="font-bold text-medium-emphasis">Description</span>
+      //       </div>
+      //     );
+      //   },
+      //   cell: (permission) => (
+      //     <div className="flex w-[200px]">
+      //       <span className="truncate text-sm lowercase text-medium-emphasis">
+      //         {permission.row.original.description}
+      //       </span>
+      //     </div>
+      //   ),
+      // },
       {
         id: "actions",
         enableHiding: false,
