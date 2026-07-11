@@ -229,7 +229,10 @@ export const navigationMenus: Menu[] = [
       {
         id: "roles",
         name: "Roles",
-        path: "/app/idp/roles",
+        // Path is intentionally "role" (not "roles"): sidebar expansion uses
+        // pathname.startsWith(menu.path), and detail pages live at
+        // "/idp/role-detail/:id" which does not start with "/idp/roles".
+        path: "/app/idp/role",
         icon: ShieldCheck,
         desc: "Manage roles",
         type: "menu",
@@ -237,7 +240,10 @@ export const navigationMenus: Menu[] = [
       {
         id: "permissions",
         name: "Permissions",
-        path: "/app/idp/permissions",
+        // Path is intentionally "permission" (not "permissions"): sidebar expansion uses
+        // pathname.startsWith(menu.path), and detail pages live at
+        // "/idp/permission-detail/:id" which does not start with "/idp/permissions".
+        path: "/app/idp/permission",
         icon: Lock,
         desc: "Manage permissions",
         type: "menu",

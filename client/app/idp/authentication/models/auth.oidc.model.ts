@@ -121,3 +121,18 @@ export interface IDeleteOidcClientResponse {
   };
   isSuccess: boolean;
 }
+
+export interface IRotateOidcClientSecretPayload {
+  itemId: string;
+  projectKey: string;
+}
+
+export interface IRotateOidcClientSecretResponse {
+  isSuccess: boolean;
+  itemId: string;
+  clientId: string;
+  clientSecret: string;
+  rotatedAt: string;
+  rotatedBy: string;
+  errors?: Record<string, string>;
+}

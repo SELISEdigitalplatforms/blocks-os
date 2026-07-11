@@ -6,7 +6,7 @@ import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { PermissionForm } from "../permission-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { PermissionRolesList } from "./permission-roles-list";
+// import { PermissionRolesList } from "./permission-roles-list";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -36,6 +36,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
     return mapPermissionToFormValues(permissionData.data);
   }, [permissionData]);
   const onSubmit = async (formData: permissionFormSchemaType) => {
+    if (permissionData?.data.isBuiltIn) return;
     try {
       const res = await mutateAsync({
         ...formData,
@@ -51,12 +52,11 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail"] = "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = permissionData?.data.name || "";
+  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = id;
   return (
     <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={4} />
       </div>
       <div className="mt-4 text-xl font-semibold flex items-center gap-2">
         {permissionData?.data.name || ""}
@@ -77,11 +77,11 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
             isPending={isPending}
             values={formValues}
             isBuiltIn={permissionData?.data.isBuiltIn}
+            showTags={false}
           />
         )}
       </div>
-      {/* temporary solutions */}
-      <PermissionRolesList slugs={permissionData?.data.roles || []} />
+      {/* <PermissionRolesList slugs={permissionData?.data.roles || []} /> */}
     </div>
   );
 };
