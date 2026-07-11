@@ -6,6 +6,7 @@ import {
   Power,
   PowerOff,
   Shield,
+  Trash2,
   Users,
   Key,
 } from "lucide-react";
@@ -30,11 +31,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import {
+  useDeleteIdentityProvider,
   useGetIdentityProviders,
   useUpdateIdentityProviderStatus,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
@@ -94,8 +101,11 @@ const IdentityProviderRow = ({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { mutateAsync: updateStatus, isPending: isUpdating } =
     useUpdateIdentityProviderStatus();
+  const { mutateAsync: deleteProvider, isPending: isDeleting } =
+    useDeleteIdentityProvider();
 
   const cfg = PROVIDER_CONFIG[item.providerType] ?? DEFAULT_PROVIDER_CONFIG;
   const Icon = cfg.Icon;
@@ -117,6 +127,20 @@ const IdentityProviderRow = ({
         description: `Identity provider ${item.isActive ? "disabled" : "enabled"} successfully`,
       });
       setShowStatusDialog(false);
+    } catch (err) {
+      if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
+      showErrorToast({ errors: "Something went wrong" });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      const res = await deleteProvider(item.itemId!);
+      if (!res.isSuccess) return showErrorToast({ errors: res.errors });
+      showSuccessToast({
+        description: "Identity provider deleted successfully",
+      });
+      setShowDeleteDialog(false);
     } catch (err) {
       if (isErrorWithErrors(err)) return showErrorToast({ errors: err.errors });
       showErrorToast({ errors: "Something went wrong" });
@@ -220,33 +244,60 @@ const IdentityProviderRow = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={() => setShowEditModal(true)}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-7 w-7 p-0",
-                isActive
-                  ? "text-emerald-600 hover:text-destructive"
-                  : "text-muted-foreground hover:text-emerald-600",
-              )}
-              aria-label={isActive ? "Disable provider" : "Enable provider"}
-              onClick={() => setShowStatusDialog(true)}
-              disabled={isUpdating}
-            >
-              {isActive ? (
-                <Power className="h-3.5 w-3.5" />
-              ) : (
-                <PowerOff className="h-3.5 w-3.5" />
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  aria-label="Edit provider"
+                  onClick={() => setShowEditModal(true)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-7 p-0",
+                    isActive
+                      ? "text-emerald-600 hover:text-destructive"
+                      : "text-muted-foreground hover:text-emerald-600",
+                  )}
+                  aria-label={isActive ? "Disable provider" : "Enable provider"}
+                  onClick={() => setShowStatusDialog(true)}
+                  disabled={isUpdating}
+                >
+                  {isActive ? (
+                    <Power className="h-3.5 w-3.5" />
+                  ) : (
+                    <PowerOff className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isActive ? "Disable" : "Enable"}</TooltipContent>
+            </Tooltip>
+            <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete provider"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
           </div>
         </TableCell>
       </TableRow>
@@ -273,7 +324,7 @@ const IdentityProviderRow = ({
         onOpenChange={(open) => {
           if (!open) setShowEditModal(false);
         }}
-        editItem={item}
+        editId={item.itemId}
       />
 
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
@@ -324,6 +375,46 @@ const IdentityProviderRow = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete identity provider</DialogTitle>
+            <DialogDescription>
+              {isActive ? (
+                <>
+                  Users will no longer be able to sign in with{" "}
+                  <strong>{providerLabel}</strong>. This provider and its
+                  configuration will be permanently removed.
+                </>
+              ) : (
+                <>
+                  <strong>{providerLabel}</strong> and its configuration will be
+                  permanently removed. This cannot be undone.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
@@ -353,6 +444,7 @@ const LoadingSkeleton = () => (
           <Skeleton className="h-5 w-16 rounded-full" />
           <Skeleton className="h-3 w-24" />
           <div className="ml-auto flex gap-1.5">
+            <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
             <Skeleton className="h-7 w-7 rounded" />
           </div>
@@ -395,7 +487,7 @@ export function IdentityProviderList() {
               <TableHead className="hidden w-40 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:table-cell">
                 Created On
               </TableHead>
-              <TableHead className="w-20" />
+              <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">
