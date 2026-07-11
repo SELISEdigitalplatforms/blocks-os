@@ -53,3 +53,14 @@ export const useUpdateIdentityProviderStatus = () => {
     },
   });
 };
+
+export const useDeleteIdentityProvider = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: [...QUERY_KEY, "delete"],
+    mutationFn: (id: string) => identityProviderService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+};

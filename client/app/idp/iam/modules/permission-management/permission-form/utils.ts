@@ -1,6 +1,11 @@
 import { IPermission, PermissionSeverityLevel, normalizePermissionSeverity } from "@blocks-idp/iam/models/permission";
 import { z } from "zod";
 
+export const BUILTIN_PERMISSION_READONLY_MESSAGE =
+  "Built-in permissions are managed by the platform and cannot be modified.";
+
+export const isPermissionFormReadOnly = (isBuiltIn?: boolean): boolean => Boolean(isBuiltIn);
+
 export const permissionFormDefaultValue: permissionFormSchemaType = {
   name: "",
   type: 0,
