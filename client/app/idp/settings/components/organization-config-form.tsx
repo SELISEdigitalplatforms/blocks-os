@@ -109,9 +109,6 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
   const { mutateAsync, isPending } = useSaveSettingsOrganizationConfig()
   const [enableDialogOpen, setEnableDialogOpen] = useState(false)
 
-  const isMultiOrgEnabled = config.isMultiOrgEnabled
-  const fieldsReadOnly = !isMultiOrgEnabled
-
   const formValues = useMemo(() => toOrganizationConfigFormValues(config), [config])
 
   const form = useForm<OrganizationConfigFormValues>({
@@ -120,6 +117,11 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
   })
 
   const { isDirty } = useFormState({ control: form.control })
+
+  // Pending state: the toggle reflects the form, so enabling stays unsaved until
+  // Save. Once persisted, multi-org can never be turned back off.
+  const isMultiOrgEnabled = form.watch("isMultiOrgEnabled")
+  const isMultiOrgLocked = config.isMultiOrgEnabled
 
   const handleReset = useCallback(() => {
     form.reset(toOrganizationConfigFormValues(config))
@@ -141,22 +143,34 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
 
   const handleMultiOrgToggle = useCallback(
     (checked: boolean) => {
-      if (!checked || isMultiOrgEnabled) return
+      if (isMultiOrgLocked) return
+
+      if (!checked) {
+        // Not saved yet, so the user can still take it back.
+        form.setValue("isMultiOrgEnabled", false, { shouldDirty: true })
+        return
+      }
+
       setEnableDialogOpen(true)
     },
-    [isMultiOrgEnabled],
+    [form, isMultiOrgLocked],
   )
+
+  const handleConfirmEnable = useCallback(() => {
+    form.setValue("isMultiOrgEnabled", true, { shouldDirty: true })
+    setEnableDialogOpen(false)
+  }, [form])
 
   const tabActions = useMemo(
     () => (
       <SettingsFormTabButtons
         onReset={handleReset}
         onSave={form.handleSubmit(handleSubmit)}
-        resetDisabled={fieldsReadOnly || !isDirty || isPending}
-        saveDisabled={fieldsReadOnly || !isDirty || isPending}
+        resetDisabled={!isDirty || isPending}
+        saveDisabled={!isDirty || isPending}
       />
     ),
-    [fieldsReadOnly, form, handleReset, handleSubmit, isDirty, isPending],
+    [form, handleReset, handleSubmit, isDirty, isPending],
   )
 
   return (
@@ -169,7 +183,7 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
             description="Manage multiple organizations from one workspace. Keep resources organized with a clear hierarchy."
             checked={isMultiOrgEnabled}
             onCheckedChange={handleMultiOrgToggle}
-            disabled={isMultiOrgEnabled}
+            disabled={isMultiOrgLocked || isPending}
           />
 
           {isMultiOrgEnabled ? (
@@ -206,9 +220,9 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
       </Form>
 
       <EnableMultiOrgDialog
-        config={config}
         open={enableDialogOpen}
         onOpenChange={setEnableDialogOpen}
+        onConfirm={handleConfirmEnable}
       />
     </div>
   )
