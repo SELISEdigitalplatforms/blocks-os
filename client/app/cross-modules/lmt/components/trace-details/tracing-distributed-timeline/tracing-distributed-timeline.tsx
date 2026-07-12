@@ -12,7 +12,7 @@ import { TraceTree } from "@blocks-lmt/models/trace.model";
 const LoadingSkelton = () => {
   return (
     <div>
-      <Skeleton className="min-h-[170px] w-full rounded-none" />
+      <Skeleton className="min-h-[110px] w-full rounded-none" />
     </div>
   );
 };
@@ -77,7 +77,7 @@ const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
           </div>
         ))}
       </div>
-      <div className="min-h-[150px] pt-2">
+      <div className="min-h-[60px] pt-2">
         {timeLines.map((item) => (
           <TooltipProvider key={item.spanId}>
             <Tooltip>

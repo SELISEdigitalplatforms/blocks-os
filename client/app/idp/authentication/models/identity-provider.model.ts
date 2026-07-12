@@ -58,3 +58,8 @@ export interface IdentityProvidersResponse {
   errors: Record<string, string[]> | null;
   data?: IdentityProvider[];
 }
+
+export interface DeleteIdentityProviderResponse {
+  isSuccess: boolean;
+  errors?: Record<string, string[]> | null;
+}
