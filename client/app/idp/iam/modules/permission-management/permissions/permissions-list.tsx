@@ -1,24 +1,37 @@
-import { Pencil } from "lucide-react";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui-kits/table/table";
-import { Button } from "@/components/ui-kits/button/button";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { FilterControls } from "@/components/filter-toolbar";
 import { Badge } from "@/components/ui-kits/badge/badge";
-import { useMemo } from "react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
+import { Button } from "@/components/ui-kits/button/button";
+import {
+  ScrollArea,
+  ScrollBar,
+} from "@/components/ui-kits/scroll-area/scroll-area";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui-kits/table/table";
+import { useScopedPath } from "@/hooks/use-scoped-path";
+import { cn } from "@/lib/utils";
 import {
   IPermission,
   PERMISSION_SEVERITY_OPTIONS,
   PermissionSeverityLevel,
   ResourceType,
 } from "@blocks-idp/iam/models/permission";
-import { FilterControls } from "@/components/filter-toolbar";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Pencil } from "lucide-react";
+import { useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@/hooks/use-scoped-path";
-import { cn } from "@/lib/utils";
-import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 type PermissionTableProps = {
   permissions: IPermission[];
   isLoading: boolean;
@@ -30,8 +43,14 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeverityLevel }) => {
-  const config = PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === severity);
+export const PermissionSeverityBadge = ({
+  severity,
+}: {
+  severity: PermissionSeverityLevel;
+}) => {
+  const config = PERMISSION_SEVERITY_OPTIONS.find(
+    (option) => option.value === severity,
+  );
   if (!config) return null;
   return (
     <Badge variant={config.variant} className={cn(config.className, config.bg)}>
@@ -39,8 +58,12 @@ export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeve
     </Badge>
   );
 };
-export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps) => {
-  const { sortQueryParams, setSortQueryParams } = usePermissionsSortQuaryParams();
+export const PermissionsList = ({
+  permissions,
+  isLoading,
+}: PermissionTableProps) => {
+  const { sortQueryParams, setSortQueryParams } =
+    usePermissionsSortQuaryParams();
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const columns = useMemo<ColumnDef<IPermission>[]>(
@@ -49,10 +72,17 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         id: "name",
         accessorFn: (row) => `${row.name}`.trim(),
         header: () => (
-          <FilterControls.SortHeader label="Name" id="Name" value={sortQueryParams} onChange={setSortQueryParams} />
+          <FilterControls.SortHeader
+            label="Name"
+            id="Name"
+            value={sortQueryParams}
+            onChange={setSortQueryParams}
+          />
         ),
         cell: (permission) => (
-          <div className="flex w-[200px] items-center break-all" title={permission.row.original.name}>
+          <div
+            className="flex w-[200px] items-center break-all"
+            title={permission.row.original.name}>
             <span>{permission.row.original.name}</span>
           </div>
         ),
@@ -88,9 +118,10 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
           <div className="flex w-[180px] items-center break-all">
             <Badge
               className={cn(
-                permission.row.original.isBuiltIn ? "!bg-gray-300 !text-gray-800" : "!bg-purple-100 !text-purple-700"
-              )}
-            >
+                permission.row.original.isBuiltIn
+                  ? "!bg-gray-300 !text-gray-800"
+                  : "!bg-purple-100 !text-purple-700",
+              )}>
               {permission.row.original.isBuiltIn ? "Built In" : "Custom"}
             </Badge>
           </div>
@@ -100,7 +131,12 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         id: "Type",
         accessorFn: (row) => `${row.type}`.trim(),
         header: () => (
-          <FilterControls.SortHeader label="Type" id="Type" value={sortQueryParams} onChange={setSortQueryParams} />
+          <FilterControls.SortHeader
+            label="Type"
+            id="Type"
+            value={sortQueryParams}
+            onChange={setSortQueryParams}
+          />
         ),
         cell: (permission) => {
           const resourceTypeKey = permission.row.original.type as number;
@@ -125,7 +161,9 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         cell: (permission) => {
           return (
             <div className="flex w-[70px] items-center justify-center">
-              <PermissionSeverityBadge severity={permission.row.original.permissionSeverity} />
+              <PermissionSeverityBadge
+                severity={permission.row.original.permissionSeverity}
+              />
             </div>
           );
         },
@@ -136,7 +174,9 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         header: () => {
           return (
             <div className="flex items-center">
-              <span className="font-bold text-medium-emphasis">No of Roles</span>
+              <span className="font-bold text-medium-emphasis">
+                No of Roles
+              </span>
             </div>
           );
         },
@@ -210,7 +250,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         ),
       },
     ],
-    [setSortQueryParams, sortQueryParams]
+    [setSortQueryParams, sortQueryParams],
   );
   const table = useReactTable({
     data: permissions,
@@ -223,10 +263,19 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
       <Table className="text-sm ">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="px-4 py-3 hover:bg-transparent">
+            <TableRow
+              key={headerGroup.id}
+              className="px-4 py-3 hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="font-bold text-medium-emphasis">
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                <TableHead
+                  key={header.id}
+                  className="font-bold text-medium-emphasis">
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                 </TableHead>
               ))}
             </TableRow>
@@ -239,18 +288,23 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 onClick={() => {
-                  navigate(scoped(`idp/permission-detail/${row.original.itemId}`));
+                  navigate(
+                    scoped(`idp/permission-detail/${row.original.itemId}`),
+                  );
                 }}
-                isHoverable
-              >
+                isHoverable>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
                 ))}
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground">
                 No permission found. Please create new permission.
               </TableCell>
             </TableRow>
