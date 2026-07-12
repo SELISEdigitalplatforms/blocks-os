@@ -151,9 +151,9 @@ namespace Api.Controllers
         [HttpGet]
         //[ProtectedEndPoint("blocks-os::get-third-party-jwt-claims")]
         [Authorize]
-        public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaims([FromQuery] GetThirdPartyJWTClaimsRequest request)
+        public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaims()
         {
-            return await _projectManagementService.GetThirdPartyJWTClaimsAsync(request);
+            return await _projectManagementService.GetThirdPartyJWTClaimsAsync();
         }
     }
 }
