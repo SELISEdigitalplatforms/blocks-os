@@ -21,7 +21,7 @@ namespace BlocksTemplate.Api.Controllers
 
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> GetLogs([FromBody] GetLogsRequest request)
         {
             var result = await _logService.GetLogsAsync(request);
@@ -29,7 +29,7 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<GetLogsResponse> GetLogsByDate([FromBody] LogsByDateRequest request)
         {
             return await _logService.GetLogsByDateAsync(request);
@@ -37,7 +37,7 @@ namespace BlocksTemplate.Api.Controllers
 
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> Live([FromQuery] LiveLogRequest request)
         {
             var result = await _logService.GetLiveLogsAsync(request);
