@@ -23,10 +23,10 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import {
   IdentityProvider,
-  IdentityProviderType,
 } from "@blocks-idp/authentication/models/identity-provider.model";
 import {
   useCreateIdentityProvider,
+  useGetIdentityProviderById,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import {
@@ -36,10 +36,11 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
-import { toPermissionStubs, toRoleStubs } from "./identity-provider-form.util";
+import { toPermissionStubs, toRoleStubs, buildIdentityProviderPayload } from "./identity-provider-form.util";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "social", label: "Social" },
@@ -64,7 +65,7 @@ type FormValues = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editItem?: IdentityProvider;
+  editId?: string;
 };
 
 const BLANK_FORM: FormValues = {
@@ -77,9 +78,46 @@ const BLANK_FORM: FormValues = {
   audience: "",
 };
 
-export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Props) {
-  const isEditing = !!editItem?.itemId;
+const parseRedirectUris = (provider: IdentityProvider): string[] => {
+  const uris = Array.isArray(provider.redirectUris)
+    ? provider.redirectUris
+    : provider.redirectUris
+      ? [provider.redirectUris as unknown as string]
+      : Array.isArray(provider.redirectUri)
+        ? provider.redirectUri
+        : provider.redirectUri
+          ? [provider.redirectUri as string]
+          : [""];
+  return uris.length ? uris : [""];
+};
+
+const toFormValues = (provider: IdentityProvider): FormValues => {
+  const matched = PROVIDER_OPTIONS.some((t) => t.value === provider.providerType);
+  return {
+    displayName: provider.displayName,
+    providerType: matched ? provider.providerType : "social",
+    provider: provider.provider,
+    clientId: provider.clientId,
+    clientSecret: "",
+    wellKnownUrl: provider.wellKnownUrl ?? "",
+    audience: provider.audience ?? "",
+  };
+};
+
+export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props) {
+  const isEditing = !!editId;
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+
+  const {
+    data: providerResponse,
+    isLoading: isLoadingProvider,
+    isError: isProviderFetchError,
+    error: providerFetchError,
+  } = useGetIdentityProviderById(editId ?? "", open && isEditing);
+
+  const editedProvider =
+    providerResponse?.isSuccess ? providerResponse.data : undefined;
+  const isFormLoading = isEditing && isLoadingProvider;
 
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
   const [showClientId, setShowClientId] = useState(false);
@@ -113,39 +151,53 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
   }, [providerType, blocksOidcWellKnownUrl, setValue]);
 
   useEffect(() => {
-    if (open && editItem) {
-      const matched = PROVIDER_OPTIONS.some((t) => t.value === editItem.providerType);
-      reset({
-        providerType: matched ? editItem.providerType : "social",
-        provider: editItem.provider,
-        clientId: editItem.clientId,
-        clientSecret: "",
-        wellKnownUrl: editItem.wellKnownUrl ?? "",
-        audience: (editItem as any).audience ?? "",
-      });
-      const uris = Array.isArray(editItem.redirectUris)
-        ? editItem.redirectUris
-        : editItem.redirectUris
-          ? [editItem.redirectUris as unknown as string]
-          : Array.isArray(editItem.redirectUri)
-            ? editItem.redirectUri
-            : editItem.redirectUri
-              ? [editItem.redirectUri as string]
-              : [""];
-      setRedirectUris(uris.length ? uris : [""]);
-      setSelectedRoles(toRoleStubs(editItem.initialRoles ?? []));
-      setSelectedPermissions(toPermissionStubs(editItem.initialPermissions ?? []));
-      setRequirePkce(!!editItem.requirePkce);
-      setRedirectUrisError(null);
-    } else if (open) {
+    if (!open) return;
+
+    if (!isEditing) {
       reset(BLANK_FORM);
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setRequirePkce(false);
       setRedirectUrisError(null);
+      return;
     }
-  }, [open, editItem, reset]);
+
+    if (isLoadingProvider) return;
+
+    if (!providerResponse?.isSuccess || !editedProvider) {
+      showErrorToast({
+        errors: providerResponse?.errors ?? { not_found: "Provider not found." },
+      });
+      onOpenChange(false);
+      return;
+    }
+
+    reset(toFormValues(editedProvider));
+    setRedirectUris(parseRedirectUris(editedProvider));
+    setSelectedRoles(toRoleStubs(editedProvider.initialRoles ?? []));
+    setSelectedPermissions(toPermissionStubs(editedProvider.initialPermissions ?? []));
+    setRequirePkce(!!editedProvider.requirePkce);
+    setRedirectUrisError(null);
+  }, [
+    open,
+    isEditing,
+    isLoadingProvider,
+    providerResponse,
+    editedProvider,
+    reset,
+    onOpenChange,
+  ]);
+
+  useEffect(() => {
+    if (!open || !isEditing || !isProviderFetchError) return;
+    if (isErrorWithErrors(providerFetchError)) {
+      showErrorToast({ errors: providerFetchError.errors });
+    } else {
+      showErrorToast({ errors: { not_found: "Provider not found." } });
+    }
+    onOpenChange(false);
+  }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange]);
 
   const { mutateAsync: create, isPending: isCreating } = useCreateIdentityProvider();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIdentityProvider();
@@ -159,29 +211,20 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
     }
     setRedirectUrisError(null);
     try {
-      const payload: IdentityProvider = {
-        displayName: values.displayName,
-        providerType: values.providerType as IdentityProviderType,
-        provider: values.provider,
-        clientId: values.clientId,
-        clientSecret: values.clientSecret,
-        audience: values.audience,
-        wellKnownUrl:
-          values.providerType === "blocks-oidc"
-            ? blocksOidcWellKnownUrl || values.wellKnownUrl
-            : values.wellKnownUrl,
-        tokenEndpointAuthMethod: "client_secret_basic",
-        scope: "openid",
-        redirectUris: cleanedUris,
-        isActive: editItem?.isActive ?? true,
+      const payload = buildIdentityProviderPayload({
+        values,
+        cleanedUris,
+        selectedRoles,
+        selectedPermissions,
         requirePkce,
-        initialRoles: selectedRoles.map((r) => r.slug),
-        initialPermissions: selectedPermissions.map((p) => p.resource),
-        ...(isEditing ? { itemId: editItem!.itemId } : {}),
-      };
+        blocksOidcWellKnownUrl,
+        editedProvider,
+        editId,
+        isEditing,
+      });
 
       const res = isEditing
-        ? await update({ id: editItem!.itemId!, provider: payload })
+        ? await update({ id: editId!, provider: payload })
         : await create(payload);
 
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
@@ -214,6 +257,16 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </DialogTitle>
           </DialogHeader>
 
+          {isFormLoading ? (
+            <div className="space-y-4" aria-busy="true" aria-label="Loading provider">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
           {/* Select Provider */}
@@ -223,6 +276,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </Label>
             <Select
               value={providerType}
+              disabled={isEditing}
               onValueChange={(v) => setValue("providerType", v, { shouldValidate: true })}
             >
               <SelectTrigger id="providerType">
@@ -272,6 +326,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
               <Input
                 id="provider"
                 placeholder="my-identity-provider"
+                disabled={isEditing}
                 {...register("provider", { required: "Provider name is required" })}
               />
             )}
@@ -471,12 +526,13 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editItem }: Pro
             </Button>
             <Button
               type="submit"
-              disabled={isPending || !isValid}
+              disabled={isPending || !isValid || isFormLoading}
             >
               {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
             </Button>
           </DialogFooter>
           </form>
+          )}
         </div>
       </DialogContent>
     </Dialog>

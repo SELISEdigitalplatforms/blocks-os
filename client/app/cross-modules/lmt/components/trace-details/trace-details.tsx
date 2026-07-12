@@ -2,7 +2,7 @@ import React, { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
-import { LMT_BASE_PATH } from "@/constants/lmt-nav";
+import { useLmtBasePath } from "@/hooks/use-scoped-path";
 import { ArrowLeft, Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -70,13 +70,15 @@ const TraceDetailsEmptyState = ({
 export const TraceDetails = ({
   id,
   breadcrumbIndex = 2,
-  backHref = `${LMT_BASE_PATH}/tracing`,
+  backHref,
 }: {
   id: string
   breadcrumbIndex?: number
   backHref?: string
 }) => {
   const navigate = useNavigate()
+  const lmtBase = useLmtBasePath()
+  const resolvedBackHref = backHref ?? `${lmtBase}/tracing`
   const isMobile = useIsMobile();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [traceHistory, setTraceHistory] = useState<
@@ -119,12 +121,12 @@ export const TraceDetails = ({
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
   };
-  BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/tracing`] = "Tracing"
+  BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing`] = "Tracing"
   if (id) {
-    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/tracing/${id}`] = id
+    BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing/${id}`] = id
   }
   const selectedTraceHistory = traceHistory[traceHistory?.length - 1]
-  const handleBack = () => navigate(backHref)
+  const handleBack = () => navigate(resolvedBackHref)
   const isPending = isLoading || isFetching
   const hasTrace = Boolean(data?.data)
   const isEmpty = !isPending && !hasTrace
@@ -141,11 +143,11 @@ export const TraceDetails = ({
       }}
     >
       {isPending ? (
-        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-7 w-40" />
       ) : (
         <PageBreadcrumb breadcrumbIndex={breadcrumbIndex} listClassName="text-base sm:text-lg" />
       )}
-      <div className="flex items-center justify-between md:py-6">
+      <div className="flex items-center justify-between">
         {isPending ? (
           <Skeleton className="h-8 w-1/3" />
         ) : (
@@ -184,7 +186,7 @@ export const TraceDetails = ({
       {isEmpty ? (
         <TraceDetailsEmptyState traceId={id} isError={isError} />
       ) : (
-      <div className="mt-6 flex w-full flex-col gap-6 md:flex-row">
+      <div className="flex w-full flex-col gap-6 md:flex-row">
         <div className={`${isPanelOpen ? "w-full md:w-[68%]" : "w-full"}`}>
           <Card className="h-min rounded-sm shadow-none">
             <CardHeader>

@@ -1,6 +1,7 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using Cloud.LmtService.Models.Logs;
 using Cloud.LmtService.Services.Logs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,7 +21,7 @@ namespace BlocksTemplate.Api.Controllers
 
 
         [HttpPost]
-     
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> GetLogs([FromBody] GetLogsRequest request)
         {
             var result = await _logService.GetLogsAsync(request);
@@ -28,6 +29,7 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpPost]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<GetLogsResponse> GetLogsByDate([FromBody] LogsByDateRequest request)
         {
             return await _logService.GetLogsByDateAsync(request);
@@ -35,6 +37,7 @@ namespace BlocksTemplate.Api.Controllers
 
 
         [HttpGet]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> Live([FromQuery] LiveLogRequest request)
         {
             var result = await _logService.GetLiveLogsAsync(request);

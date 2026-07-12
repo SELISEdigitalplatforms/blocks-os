@@ -19,13 +19,14 @@ export interface IResendInvitation {
 }
 
 export interface IRemoveAccess {
-  userIds: string[];
-  projectKey: string;
+  email: string;
+  tenantIds: string[];
+  groupId: string;
 }
 
 export interface IRemoveEnvironmentAccess {
   email: string;
-  projectKeys: string[];
+  tenantIds: string[];
   groupId: string;
 }
 

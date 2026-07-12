@@ -6,6 +6,7 @@ import {
   IGetPermissionByIdPayload,
   IGetPermissionByIdResponse,
   IGetPermissionsPayload,
+  IGetPermissionsSeverityRequestPayload,
   IGetPermissionsSeverityResponse,
   IGetResourceGroupPayload,
   IGetResourceGroupResponse,
@@ -22,13 +23,19 @@ export class PermissionService {
     return http.post(PERMISSION_ENDPOINTS.GET_PERMISSIONS, payload, undefined, { absoluteUrl: true });
   }
 
-  getPermissionsSeverity(): Promise<IGetPermissionsSeverityResponse> {
-    return http.get(PERMISSION_ENDPOINTS.GET_PERMISSIONS_GROUP_BY_SEVERITY, undefined, { absoluteUrl: true });
+  getPermissionsSeverity(
+    payload: IGetPermissionsSeverityRequestPayload,
+  ): Promise<IGetPermissionsSeverityResponse> {
+    return http.get(
+      `${PERMISSION_ENDPOINTS.GET_PERMISSIONS_GROUP_BY_SEVERITY}`,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   getPermissionById(payload: IGetPermissionByIdPayload): Promise<IGetPermissionByIdResponse> {
     return http.get(
-      `${PERMISSION_ENDPOINTS.GET_PERMISSION}?Id=${payload.id}&ProjectKey=${payload.projectKey}`,
+      `${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${payload.id}`,
       undefined,
       { absoluteUrl: true },
     );
@@ -41,7 +48,12 @@ export class PermissionService {
   };
 
   updatePermission = (payload: UpdatePermissionPayload): Promise<UpdatePermissionResponse> => {
-    return http.post(PERMISSION_ENDPOINTS.UPDATE_PERMISSION, payload, undefined, { absoluteUrl: true });
+    return http.post(
+      `${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${payload.itemId}`,
+      payload,
+      undefined,
+      { absoluteUrl: true },
+    );
   };
 
   getResourceGroup(payload: IGetResourceGroupPayload): Promise<IGetResourceGroupResponse> {
