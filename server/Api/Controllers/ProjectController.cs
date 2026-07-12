@@ -27,7 +27,7 @@ namespace Api.Controllers
             _updateProjectValidator = updateProjectValidator;
         }
 
-        [Authorize]
+        [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
         public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
         {
@@ -65,7 +65,7 @@ namespace Api.Controllers
         }
 
 
-        [Authorize]
+        [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
         public async Task<BaseResponse> UpdateProject([FromBody] UpdateProjectRequest request)
         {
