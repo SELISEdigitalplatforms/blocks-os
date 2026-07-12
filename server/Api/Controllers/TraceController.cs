@@ -21,28 +21,28 @@ namespace BlocksTemplate.Api.Controllers
 
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::trace::gets")]
         public async Task<object> GetTraces([FromBody] GetTracesRequest request)
         {
             return await _traceService.GetTracesAsync(request);
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::trace::gets")]
         public async Task<object> GetTrace([FromQuery] GetTraceRequest request)
         {
             return await _traceService.GetTraceAsync(request);
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::trace::get-analytics")]
         public async Task<object> GetOperationalAnalytics([FromBody] GetApiAnalyticsRequest request)
         {
             return await _traceService.GetOperationalAnalytics(request);
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::trace::get-analytics")]
         public async Task<object> GetServiceAnalytics([FromBody] GetHttpStatusAnalyticsRequest request)
         {
             return await _traceService.GetServiceAnalytics(request);
