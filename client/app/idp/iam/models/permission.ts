@@ -1,4 +1,5 @@
 export enum PermissionSeverityLevel {
+  None = 0,
   Critical = 1,
   High,
   Medium,
@@ -8,7 +9,7 @@ export enum PermissionSeverityLevel {
 type PermissionSeverityOption = {
   label: string;
   value: PermissionSeverityLevel;
-  variant: "error" | "destructive" | "info" | "success";
+  variant: "error" | "destructive" | "info" | "success" | "secondary";
   className?: string;
   barClassName?: string;
   id: string;
@@ -51,6 +52,15 @@ export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
     className: "text-blue-500",
     barClassName: "bg-blue-400",
     bg: "bg-blue-50",
+  },
+  {
+    id: "None",
+    label: "None",
+    value: PermissionSeverityLevel.None,
+    variant: "secondary",
+    className: "text-gray-600",
+    barClassName: "bg-gray-400",
+    bg: "bg-gray-50",
   },
 ];
 
@@ -113,7 +123,6 @@ export interface IGetPermissionsPayload {
 }
 export interface IGetPermissionByIdPayload {
   id: string;
-  projectKey: string;
 }
 export interface IGetPermissionByIdResponse {
   data: IPermission;
@@ -129,7 +138,7 @@ export interface CreatePermissionPayload {
   tags: string[];
   dependentPermissions: string[];
   isBuiltIn: boolean;
-  projectKey: string;
+  permissionSeverity?: PermissionSeverityLevel;
 }
 export interface CreatePermissionResponse {
   errors: unknown;
@@ -197,3 +206,36 @@ export type IGetPermissionsSeverityResponse = {
   severityLevel: string;
   count: number;
 }[];
+
+export interface IGetPermissionsSeverityRequestPayload {
+  projectKey: string;
+}
+
+export const normalizePermissionSeverity = (
+  value: PermissionSeverityLevel | string | number | null | undefined,
+): PermissionSeverityLevel | undefined => {
+  if (value === null || value === undefined || value === "") return undefined;
+  if (typeof value === "number" && PermissionSeverityLevel[value] !== undefined) {
+    return value as PermissionSeverityLevel;
+  }
+  if (typeof value === "string") {
+    const numericValue = Number(value);
+    if (!Number.isNaN(numericValue) && PermissionSeverityLevel[numericValue] !== undefined) {
+      return numericValue as PermissionSeverityLevel;
+    }
+    const matchedOption = PERMISSION_SEVERITY_OPTIONS.find(
+      (option) => option.id.toLowerCase() === value.toLowerCase() || option.label.toLowerCase() === value.toLowerCase(),
+    );
+    return matchedOption?.value;
+  }
+  return undefined;
+};
+
+export const getSeverityOptionsFromResponse = (
+  data: IGetPermissionsSeverityResponse | undefined,
+) => {
+  if (!data?.length) return PERMISSION_SEVERITY_OPTIONS;
+  return data
+    .map((item) => PERMISSION_SEVERITY_OPTIONS.find((option) => option.id === item.severityLevel))
+    .filter((option): option is (typeof PERMISSION_SEVERITY_OPTIONS)[number] => !!option);
+};

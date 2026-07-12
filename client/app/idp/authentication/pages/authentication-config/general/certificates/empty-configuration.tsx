@@ -1,12 +1,12 @@
-import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { AddEditProviderModal } from "./add-edit-provider-modal";
+import { EmptyState } from "@/components/ui-kits/empty-state";
+import { Globe } from "lucide-react";
+
 export const EmptyConfiguration = () => {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-between gap-3">
-        <p>No provider configured.</p>
-        <AddEditProviderModal />
-      </CardContent>
-    </Card>
+    <EmptyState
+      icon={Globe}
+      title="No external IdP yet"
+      description="Add your first external identity provider to get started."
+    />
   );
 };

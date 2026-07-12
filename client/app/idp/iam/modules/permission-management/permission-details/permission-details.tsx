@@ -1,12 +1,12 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
+import { useMemo } from "react";
+import { mapPermissionToFormValues, permissionFormSchemaType } from "../permission-form/utils";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { PermissionForm } from "../permission-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { permissionFormSchemaType } from "../permission-form/utils";
-import { PermissionRolesList } from "./permission-roles-list";
+// import { PermissionRolesList } from "./permission-roles-list";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -29,17 +29,20 @@ const FormLOadingSkeleton = () => (
   </Card>
 );
 export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
-  const selectedTenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data, isLoading } = useGetPermissionById({ id, projectKey: selectedTenantId });
-  const { isPending, mutateAsync } = useUpdatePermission({ id, projectKey: selectedTenantId });
-  const onSubmit = async (data: permissionFormSchemaType) => {
+  const { data: permissionData, isLoading } = useGetPermissionById({ id });
+  const { isPending, mutateAsync } = useUpdatePermission({ id });
+  const formValues = useMemo(() => {
+    if (!permissionData?.data) return null;
+    return mapPermissionToFormValues(permissionData.data);
+  }, [permissionData]);
+  const onSubmit = async (formData: permissionFormSchemaType) => {
+    if (permissionData?.data.isBuiltIn) return;
     try {
       const res = await mutateAsync({
-        ...data,
-        type: +data.type,
-        projectKey: selectedTenantId,
-        isBuiltIn: false,
-        dependentPermissions: +data.type === 2 ? data.dependentPermissions : [],
+        ...formData,
+        type: +formData.type,
+        isBuiltIn: permissionData?.data.isBuiltIn ?? false,
+        dependentPermissions: +formData.type === 2 ? formData.dependentPermissions : [],
         itemId: id,
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
@@ -49,20 +52,19 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/services/iam/permission-detail"] = "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/services/iam/permission-detail/${id}`] = data?.data.name || "";
+  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = id;
   return (
-    <div className="px-4 pt-4 md:px-6 md:pt-6">
+    <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={4} />
       </div>
       <div className="mt-4 text-xl font-semibold flex items-center gap-2">
-        {data?.data.name || ""}
-        {data?.data && (
+        {permissionData?.data.name || ""}
+        {permissionData?.data && (
           <Badge
-            className={cn(data?.data.isBuiltIn ? "!bg-gray-300 !text-gray-800" : "!bg-purple-100 !text-purple-700")}
+            className={cn(permissionData?.data.isBuiltIn ? "!bg-gray-300 !text-gray-800" : "!bg-purple-100 !text-purple-700")}
           >
-            {data?.data.isBuiltIn ? "Built In" : "Custom"}
+            {permissionData?.data.isBuiltIn ? "Built In" : "Custom"}
           </Badge>
         )}
       </div>
@@ -70,11 +72,16 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
         {isLoading ? (
           <FormLOadingSkeleton />
         ) : (
-          <PermissionForm onSave={onSubmit} isPending={isPending} values={data?.data || null} />
+          <PermissionForm
+            onSave={onSubmit}
+            isPending={isPending}
+            values={formValues}
+            isBuiltIn={permissionData?.data.isBuiltIn}
+            showTags={false}
+          />
         )}
       </div>
-      {/* temporary solutions */}
-      <PermissionRolesList slugs={data?.data.roles || []} />
+      {/* <PermissionRolesList slugs={permissionData?.data.roles || []} /> */}
     </div>
   );
 };

@@ -33,7 +33,7 @@ describe("AuthClientsService", () => {
       const result = await service.list(mockGetClientsPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${AUTH_CLIENT_ENDPOINTS.LIST}?ItemId=&Name=`,
+        AUTH_CLIENT_ENDPOINTS.LIST,
         undefined,
         { absoluteUrl: true },
       );

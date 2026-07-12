@@ -4,13 +4,7 @@ export interface JwtClaimPayload {
   name: string;
   userName: string;
   roles: string;
-  projectKey: string;
   itemId?: string;
-}
-
-export interface GetJwtClaimPayload {
-  projectKey: string;
-  itemId: string;
 }
 
 export interface JwtClaimResponse {
