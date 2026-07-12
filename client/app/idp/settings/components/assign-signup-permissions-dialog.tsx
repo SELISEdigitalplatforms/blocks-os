@@ -105,7 +105,7 @@ export const AssignSignupPermissionsDialog = ({
     setOpen(nextOpen)
   }
 
-  const handleSave = () => {
+  const handleSet = () => {
     onAssign(selectedPermissions)
     resetDialog()
     setOpen(false)
@@ -123,8 +123,8 @@ export const AssignSignupPermissionsDialog = ({
         <DialogHeader>
           <DialogTitle className="text-left">Assign Permissions</DialogTitle>
           <DialogDescription className="text-left">
-            Select up to {MAX_SIGNUP_PERMISSIONS} permissions for new sign-up users. Save here to
-            update the list, then Save on the page to persist.
+            Select up to {MAX_SIGNUP_PERMISSIONS} permissions for new sign-up users. Set adds them to
+            the list, then use Save on the page to persist them.
           </DialogDescription>
         </DialogHeader>
         <FilterControls.SearchInput
@@ -208,8 +208,8 @@ export const AssignSignupPermissionsDialog = ({
               Cancel
             </Button>
           </DialogClose>
-          <Button type="button" size="default" onClick={handleSave}>
-            Save
+          <Button type="button" size="default" onClick={handleSet}>
+            Set
           </Button>
         </DialogFooter>
       </DialogContent>
