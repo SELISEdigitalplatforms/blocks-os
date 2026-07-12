@@ -1,0 +1,121 @@
+import { describe, expect, it, vi } from "vitest"
+
+const IAM_BASE_URL = "https://dev-iam.blocksdevelopers.com"
+
+vi.mock("@/lib/runtime-env", () => ({
+  getRuntimeEnv: (key: string) => (key === "BLOCKS_IAM_BASE_URL" ? IAM_BASE_URL : ""),
+}))
+
+const {
+  applyOidcIamConfigOverrides,
+  buildSavePayload,
+  iamConfigFormSchema,
+  toIamConfigFormValues,
+} = await import("./auth-config-form")
+
+type IamConfigFormValues = ReturnType<typeof toIamConfigFormValues>
+
+const iamConfigFormValues = (
+  overrides: Partial<IamConfigFormValues> = {},
+): IamConfigFormValues => ({
+  accountActivationPath: "activate",
+  accountVerificationPath: "verify",
+  recoverAccountPath: "resetpassword",
+  accountActionBaseUrl: "https://console.enterprise.cloud",
+  useAccountActionBaseUrlAsDefault: true,
+  activationUrlLifetimeInMinutes: 1440,
+  recoverAccountUrlLifetimeInMinutes: 10,
+  logoutOnPasswordChange: true,
+  isOidcEnabled: false,
+  passwordStrengthCheckerRegex: "",
+  ...overrides,
+})
+
+/** Mirrors a project seeded with the `https://example.com` domain at creation. */
+const savedConfig = {
+  itemId: "6a3130b3fefe3615abcc8cf1",
+  refreshTokenValidForNumberMinutes: 30,
+  absoluteRefreshTokenValidForNumberMinutes: 30,
+  accessTokenValidForNumberMinutes: 7,
+  rememberMeRefreshTokenValidForNumberMinutes: 43200,
+  getNumberOfWrongAttemptsToLockTheAccount: 5,
+  accountLockDurationInMinutes: 5,
+  publicCertificatePath: "https://blocksdev.blob.core.windows.net/cert.pfx",
+  accountActivationPath: "activate",
+  accountVerificationPath: "verify",
+  recoverAccountPath: "resetpassword",
+  isOidcEnabled: true,
+  accountActionBaseUrl: "https://example.com",
+  useAccountActionBaseUrlAsDefault: false,
+  activationUrlLifetimeInMinutes: 1440,
+  recoverAccountUrlLifetimeInMinutes: 10,
+  logoutOnPasswordChange: true,
+  passwordStrengthCheckerRegex: "",
+  allowedGrantTypes: ["password"],
+}
+
+describe("toIamConfigFormValues", () => {
+  it("defaults the base URL to the IAM host when OIDC is enabled", () => {
+    expect(toIamConfigFormValues(savedConfig).accountActionBaseUrl).toBe(IAM_BASE_URL)
+  })
+
+  it("keeps the stored base URL when OIDC is disabled", () => {
+    const values = toIamConfigFormValues({ ...savedConfig, isOidcEnabled: false })
+
+    expect(values.accountActionBaseUrl).toBe("https://example.com")
+  })
+})
+
+describe("applyOidcIamConfigOverrides", () => {
+  it("sets the base URL to the IAM host when OIDC is enabled", () => {
+    const result = applyOidcIamConfigOverrides(
+      iamConfigFormValues({ isOidcEnabled: true, accountActionBaseUrl: "" }),
+    )
+
+    expect(result.accountActionBaseUrl).toBe(IAM_BASE_URL)
+    expect(result.useAccountActionBaseUrlAsDefault).toBe(false)
+  })
+
+  it("leaves the base URL alone when OIDC is disabled", () => {
+    const values = iamConfigFormValues({ isOidcEnabled: false })
+
+    expect(applyOidcIamConfigOverrides(values)).toEqual(values)
+  })
+
+  it("sends the IAM host rather than the stale saved base URL", () => {
+    const payload = buildSavePayload(
+      savedConfig,
+      applyOidcIamConfigOverrides(toIamConfigFormValues(savedConfig)),
+    )
+
+    expect(payload.accountActionBaseUrl).toBe(IAM_BASE_URL)
+    expect(payload.useAccountActionBaseUrlAsDefault).toBe(false)
+  })
+})
+
+describe("iamConfigFormSchema", () => {
+  it("requires a base URL when OIDC is disabled", () => {
+    const result = iamConfigFormSchema.safeParse(
+      iamConfigFormValues({ isOidcEnabled: false, accountActionBaseUrl: "" }),
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(["accountActionBaseUrl"])
+  })
+
+  it("rejects a blank base URL when OIDC is disabled", () => {
+    const result = iamConfigFormSchema.safeParse(
+      iamConfigFormValues({ isOidcEnabled: false, accountActionBaseUrl: "   " }),
+    )
+
+    expect(result.success).toBe(false)
+  })
+
+  it("allows an empty base URL when OIDC is enabled", () => {
+    const result = iamConfigFormSchema.safeParse(
+      iamConfigFormValues({ isOidcEnabled: true, accountActionBaseUrl: "" }),
+    )
+
+    expect(result.success).toBe(true)
+  })
+})
