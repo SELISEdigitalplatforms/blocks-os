@@ -123,12 +123,14 @@ export const mockOidcCredentialResponse = {
 };
 
 export const mockSaveOidcPayload: ISaveOidcCredentialPayload = {
-  audience: "blocks-cloud",
   isAutoRedirect: false,
+  isActive: true,
   itemId: MOCK_OIDC_ITEM_ID,
-  projectKey: TEST_PROJECT_KEY,
-  redirectUri: "https://app.blocks.com/callback",
+  redirectUris: ["https://app.blocks.com/callback"],
   scope: "openid profile email",
+  requirePkce: true,
+  registerAsIdentityProvider: false,
+  allowedResponseTypes: ["code"],
   clientDisplayName: "Test OIDC App",
 };
 
