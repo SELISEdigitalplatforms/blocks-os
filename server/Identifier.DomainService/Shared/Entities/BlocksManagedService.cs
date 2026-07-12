@@ -15,10 +15,18 @@ namespace DomainService.Shared.Entities
         public string ServiceType { get; set; }
     }
 
+    /// <summary>
+    /// Runtime topology of a managed service registered with the platform.
+    /// </summary>
     public enum BlocksManagedServiceType
     {
+        /// <summary>Unspecified or legacy value.</summary>
         None = 0,
+
+        /// <summary>HTTP API service that handles request/response traffic.</summary>
         Api = 1,
+
+        /// <summary>Background worker that consumes queued jobs.</summary>
         Worker = 2,
     }
 }
