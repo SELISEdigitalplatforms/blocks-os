@@ -18,7 +18,7 @@ namespace Api.Controllers
 
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::people::invite")]
         public async Task<IActionResult> Invite([FromBody] InviteRequest requests)
         {
             if (requests.Invitations.Count == 0) return BadRequest(new InviteResponse());
@@ -29,7 +29,7 @@ namespace Api.Controllers
 
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::people::remove-access")]
         public async Task<IActionResult> RemoveAccess([FromBody] RemoveAccessRequest command)
         {
             var result = await _peopleService.RemoveAccessFromProjectAsync(command);
@@ -38,14 +38,14 @@ namespace Api.Controllers
 
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::people::gets")]
         public async Task<GetPeoplesResponse> Gets([FromBody] GetPeoplesRequest command)
         {
             return await _peopleService.GetPeoplesAsync(command);
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::people::resend")]
         public async Task<IActionResult> ResendInvitation([FromBody] ResendInvitationRequest command)
         {
             var result = await _peopleService.ResendInvitationAsync(command);
@@ -60,7 +60,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::people::transfer-owner")]
         public async Task<IActionResult> TransferOwnerShip([FromBody] TransferOwnershipRequest request)
         {
             var result = await _peopleService.TransferOwnershipAsync(request);
