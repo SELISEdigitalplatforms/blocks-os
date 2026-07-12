@@ -1,4 +1,3 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { CreatePermissionPayload } from "@blocks-idp/iam/models/permission";
 import { useAddPermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
@@ -8,35 +7,40 @@ import { permissionFormSchemaType } from "../permission-form/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 export const AddPermission = () => {
   const navigate = useNavigate();
-  const selectedTenantId = useProjectStore().selectedProject?.tenantId || "";
+  const scoped = useScopedPath();
   const { isPending, mutateAsync } = useAddPermission();
   const onSubmit = async (data: permissionFormSchemaType) => {
+    // None is a valid severity (0), so only an unset value counts as missing.
+    if (data.permissionSeverity === undefined || data.permissionSeverity === null) {
+      showErrorToast({ errors: "Severity is required" });
+      return;
+    }
     try {
       const newPermission: CreatePermissionPayload = {
         ...data,
         type: +data.type,
-        projectKey: selectedTenantId,
         isBuiltIn: false,
+        permissionSeverity: data.permissionSeverity,
         dependentPermissions: +data.type === 2 ? data.dependentPermissions : [],
       };
       const res = await mutateAsync(newPermission);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Permission created successfully" });
-      navigate(`/app/idp/permissions`);
+      navigate(scoped(`idp/permissions`));
     } catch (error) {
       if (isErrorWithErrors(error))
         return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail"] = "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permissions/new`] = "New";
+  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail/new"] = "New";
   return (
-    <div className="px-4 pt-4 md:px-6 md:pt-6">
+    <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={4} />
       </div>
       <div className="mt-4 text-xl font-semibold">New Permission</div>
       <div className="mt-4">

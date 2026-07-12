@@ -1,10 +1,14 @@
 import { authClientService } from "@blocks-idp/authentication/services/auth-clients.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export const useListAuthClientCredentials = (options: { projectKey: string }) => {
+export const useListAuthClientCredentials = (
+  options: { projectKey: string },
+  enabled: boolean = true,
+) => {
   return useQuery({
     queryKey: ["authentication", "auth-clients", options],
     queryFn: () => authClientService.clients.list(options),
+    enabled: !!options.projectKey && enabled,
   });
 };
 

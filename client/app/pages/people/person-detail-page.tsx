@@ -28,17 +28,21 @@ import { Button } from "@/components/ui-kits/button/button"
 import { ArrowLeft } from "lucide-react"
 import { useGetPeople } from "@/hooks/use-people"
 import { useGetProjects } from "@/hooks/use-project"
-import { UserDevices } from "@blocks-idp/iam/modules/user-management/user-devices"
-import { getRuntimeEnv } from "@/lib/runtime-env"
+// Devices tab temporarily disabled.
+// import { UserDevices } from "@blocks-idp/iam/modules/user-management/user-devices"
+// import { getRuntimeEnv } from "@/lib/runtime-env"
 
 const tabs = [
   { value: "details", label: "Details" },
   { value: "environments", label: "Environments" },
-  { value: "devices", label: "Devices" },
+  // { value: "devices", label: "Devices" },
 ]
 
 export const PersonDetailPage = () => {
-  const { id = "" } = useParams<{ id: string }>()
+  const { id = "", tenantGroupId = "" } = useParams<{
+    id: string
+    tenantGroupId: string
+  }>()
   const navigate = useNavigate()
   const [currentTab, setCurrentTab] = useQueryState("tab", { defaultValue: "details" })
   const { selectedTenantGroup } = useProjectStore()
@@ -66,7 +70,8 @@ export const PersonDetailPage = () => {
     !sharedEnvironments.some((env) => env.isCreator)
 
   const isLoading = isUserLoading || (user && (isPeopleLoading || isProjectLoading))
-  const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || ""
+  // Devices tab temporarily disabled.
+  // const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || ""
 
   const handleTabChange = (value: string) => {
     void setCurrentTab(value)
@@ -79,7 +84,10 @@ export const PersonDetailPage = () => {
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <button type="button" onClick={() => navigate("/project-overview/people")}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/app/project/${tenantGroupId}/people`)}
+                >
                   People
                 </button>
               </BreadcrumbLink>
@@ -165,9 +173,11 @@ export const PersonDetailPage = () => {
             isViewerOwner={peopleData?.isOwner ?? false}
           />
         </TabsContent>
+        {/* Devices tab temporarily disabled.
         <TabsContent value="devices">
           <UserDevices id={id} projectKey={projectKey} />
         </TabsContent>
+        */}
       </Tabs>
     </div>
   )

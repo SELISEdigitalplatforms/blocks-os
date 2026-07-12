@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
@@ -22,6 +23,7 @@ const LoadingSkeleton = () => (
 export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),
     pageSize: parseAsInteger.withDefault(10),
@@ -79,7 +81,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {
-    navigate(`/app/idp/role-detail/${itemId}`);
+    navigate(scoped(`idp/role-detail/${itemId}`));
   };
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));

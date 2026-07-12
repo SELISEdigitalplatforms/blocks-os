@@ -49,8 +49,34 @@ import { isErrorWithErrors } from "@/lib/error";
 const MAX_PERMISSIONS = 10;
 const PERMISSION_PAGE_SIZE = 20;
 
-const formatPermissionSeverity = (severity: PermissionSeverityLevel | undefined) => {
-  return PERMISSION_SEVERITY_OPTIONS.find((opt) => opt.value === severity) ?? null;
+const formatPermissionSeverity = (
+  severity: PermissionSeverityLevel | undefined,
+) => {
+  return (
+    PERMISSION_SEVERITY_OPTIONS.find((opt) => opt.value === severity) ?? null
+  );
+};
+
+const getBackendErrorMap = (response: unknown) => {
+  if (!response || typeof response !== "object") return undefined;
+
+  const typedResponse = response as {
+    errors?: unknown;
+    error?: { errors?: unknown };
+  };
+
+  if (typedResponse.errors && typeof typedResponse.errors === "object") {
+    return typedResponse.errors as Record<string, string | string[]>;
+  }
+
+  if (
+    typedResponse.error?.errors &&
+    typeof typedResponse.error.errors === "object"
+  ) {
+    return typedResponse.error.errors as Record<string, string | string[]>;
+  }
+
+  return undefined;
 };
 
 type CreateClientCredentialProps = {
@@ -93,21 +119,26 @@ export const CreateClientCredential = ({
     filter: { search: roleFilter },
   });
 
-  const { data: permsData, isLoading: permsLoading, isFetching: permsFetching } =
-    useGetPermissions({
-      projectKey: tenantId,
-      page: permPage,
-      pageSize: PERMISSION_PAGE_SIZE,
-      isBuiltIn: "",
-      roles: [],
-      search: permFilter,
-    });
+  const {
+    data: permsData,
+    isLoading: permsLoading,
+    isFetching: permsFetching,
+  } = useGetPermissions({
+    projectKey: tenantId,
+    page: permPage,
+    pageSize: PERMISSION_PAGE_SIZE,
+    isBuiltIn: "",
+    roles: [],
+    search: permFilter,
+  });
 
   const filteredRoles = useMemo(() => {
     if (!rolesData?.data) return [];
     const lowered = roleFilter.toLowerCase();
     if (!lowered) return rolesData.data;
-    return rolesData.data.filter((role) => role.slug.toLowerCase().includes(lowered));
+    return rolesData.data.filter((role) =>
+      role.slug.toLowerCase().includes(lowered),
+    );
   }, [rolesData, roleFilter]);
 
   const permissions = permItems;
@@ -181,7 +212,8 @@ export const CreateClientCredential = ({
       reset({
         itemId: editClient.itemId,
         clientNameService: editClient.name,
-        accessTokenValidForNumberMinutes: editClient.accessTokenValidForNumberMinutes,
+        accessTokenValidForNumberMinutes:
+          editClient.accessTokenValidForNumberMinutes,
         isActive: editClient.isActive,
         roles: editClient.roles ?? [],
         permissions: editClient.permissions ?? [],
@@ -193,6 +225,7 @@ export const CreateClientCredential = ({
     setPermFilter("");
   }, [editClient, open, reset]);
 
+  const selectedRoles = watch("roles") ?? [];
   const selectedPermissions = watch("permissions") ?? [];
   const isPermCapReached = selectedPermissions.length >= MAX_PERMISSIONS;
 
@@ -218,8 +251,10 @@ export const CreateClientCredential = ({
       };
       const res = await saveServiceClient(payload);
       if (!res?.isSuccess) {
-        const apiError = res?.error as { errors?: string[] } | undefined;
-        return showErrorToast({ errors: apiError?.errors ?? "Save failed" });
+        const apiErrors = getBackendErrorMap(res);
+        return showErrorToast({
+          errors: apiErrors ?? "Failed to save client credential.",
+        });
       }
       showSuccessToast({
         description: isEdit
@@ -228,7 +263,8 @@ export const CreateClientCredential = ({
       });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
     } finally {
       reset();
@@ -242,25 +278,26 @@ export const CreateClientCredential = ({
           <Button size="sm">
             <Plus className="h-5 w-5" />
             <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-              {isEdit ? "Edit Client Credential" : "Add Client Credential"}
+              {isEdit ? "Edit Client Credential" : "Add"}
             </span>
           </Button>
         </DialogTrigger>
       )}
       <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6 pr-12">
-          <DialogTitle>{isEdit ? "Edit Access Token" : "New Access Token"}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? "Edit Client Credential" : "Add Client Credential"}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update details for this access token."
-              : "Enter details to create a new key."}
+              ? "Update the credential name, lifetime, roles, and permissions."
+              : "Create a credential and choose the roles and permissions it should grant."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
-          >
+            className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
@@ -290,11 +327,17 @@ export const CreateClientCredential = ({
                         <Input
                           type="number"
                           min={1}
-                          max={43_200}
-                          placeholder="60"
-                          value={Number.isFinite(field.value) ? field.value : ""}
+                          max={5}
+                          placeholder="5"
+                          value={
+                            Number.isFinite(field.value) ? field.value : ""
+                          }
                           onChange={(e) =>
-                            field.onChange(e.target.value === "" ? 0 : Number(e.target.value))
+                            field.onChange(
+                              e.target.value === ""
+                                ? 0
+                                : Number(e.target.value),
+                            )
                           }
                           onBlur={field.onBlur}
                           name={field.name}
@@ -313,7 +356,8 @@ export const CreateClientCredential = ({
                         <div className="space-y-0.5">
                           <FormLabel className="text-sm">Status</FormLabel>
                           <p className="text-xs text-muted-foreground">
-                            Inactive credentials cannot be used to obtain new tokens.
+                            Inactive credentials cannot be used to obtain new
+                            tokens.
                           </p>
                         </div>
                         <FormControl>
@@ -330,15 +374,36 @@ export const CreateClientCredential = ({
               </section>
 
               <section className="space-y-4">
-                <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
-                  <UserCog className="h-4 w-4" />
-                  Roles
+                <div className="flex items-center justify-between gap-3 border-b pb-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
+                    <UserCog className="h-4 w-4" />
+                    Roles
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {selectedRoles.length > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          form.setValue("roles", [], {
+                            shouldDirty: true,
+                          })
+                        }>
+                        Clear
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <FormField
                   control={form.control}
                   name="roles"
                   render={({ field }) => (
                     <FormItem>
+                      <p className="text-sm text-muted-foreground">
+                        Select the default roles granted when this client
+                        credential is used.
+                      </p>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -353,8 +418,11 @@ export const CreateClientCredential = ({
                           {filteredRoles?.map((type) => {
                             const isChecked = field.value?.includes(type.slug);
                             return (
-                              <div key={type.slug} className="flex min-w-0 items-center gap-2">
+                              <div
+                                key={type.slug}
+                                className="flex min-w-0 items-center gap-2">
                                 <Checkbox
+                                  id={type.slug}
                                   checked={isChecked}
                                   onCheckedChange={(checked) => {
                                     const updated = checked
@@ -368,8 +436,7 @@ export const CreateClientCredential = ({
                                 <label
                                   htmlFor={type.slug}
                                   className="min-w-0 flex-1 cursor-pointer truncate"
-                                  title={type.slug}
-                                >
+                                  title={type.slug}>
                                   {type.slug}
                                 </label>
                               </div>
@@ -407,8 +474,11 @@ export const CreateClientCredential = ({
                         type="button"
                         size="sm"
                         variant="ghost"
-                        onClick={() => form.setValue("permissions", [], { shouldDirty: true })}
-                      >
+                        onClick={() =>
+                          form.setValue("permissions", [], {
+                            shouldDirty: true,
+                          })
+                        }>
                         Clear
                       </Button>
                     )}
@@ -419,6 +489,10 @@ export const CreateClientCredential = ({
                   name="permissions"
                   render={({ field }) => (
                     <FormItem>
+                      <p className="text-sm text-muted-foreground">
+                        Select permissions to include in the access token
+                        granted by this client.
+                      </p>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -442,25 +516,35 @@ export const CreateClientCredential = ({
                           ) : (
                             <ul className="max-h-72 divide-y overflow-y-auto">
                               {permissions.map((perm) => {
-                                const isChecked = field.value?.includes(perm.resource);
+                                const isChecked = field.value?.includes(
+                                  perm.resource,
+                                );
                                 const severity = formatPermissionSeverity(
                                   perm.permissionSeverity,
                                 );
                                 return (
                                   <li
                                     key={perm.itemId}
-                                    className="flex items-center gap-3 px-3 py-2"
-                                  >
+                                    className="flex items-center gap-3 px-3 py-2">
                                     <Checkbox
+                                      id={perm.itemId}
                                       checked={isChecked}
                                       disabled={!isChecked && isPermCapReached}
                                       onCheckedChange={(checked) => {
-                                        if (checked && (field.value ?? []).length >= MAX_PERMISSIONS)
+                                        if (
+                                          checked &&
+                                          (field.value ?? []).length >=
+                                            MAX_PERMISSIONS
+                                        )
                                           return;
                                         const updated = checked
-                                          ? [...(field.value ?? []), perm.resource]
+                                          ? [
+                                              ...(field.value ?? []),
+                                              perm.resource,
+                                            ]
                                           : (field.value ?? []).filter(
-                                              (p: string) => p !== perm.resource,
+                                              (p: string) =>
+                                                p !== perm.resource,
                                             );
                                         field.onChange(updated);
                                       }}
@@ -472,7 +556,9 @@ export const CreateClientCredential = ({
                                           aria-hidden
                                         />
                                       )}
-                                      <span className="truncate text-sm">{perm.name}</span>
+                                      <span className="truncate text-sm">
+                                        {perm.name}
+                                      </span>
                                       <span className="truncate text-xs text-muted-foreground">
                                         {perm.resource}
                                       </span>
@@ -483,21 +569,21 @@ export const CreateClientCredential = ({
                               {permHasMore && (
                                 <li
                                   ref={permSentinelRef}
-                                  className="flex items-center justify-center gap-2 px-3 py-3 text-xs text-muted-foreground"
-                                >
+                                  className="flex items-center justify-center gap-2 px-3 py-3 text-xs text-muted-foreground">
                                   {permsFetching ? (
                                     <>
                                       <span className="size-2 animate-pulse rounded-full bg-muted-foreground" />
                                       <span className="size-2 animate-pulse rounded-full bg-muted-foreground [animation-delay:120ms]" />
                                       <span className="size-2 animate-pulse rounded-full bg-muted-foreground [animation-delay:240ms]" />
-                                      <span className="ml-1">Loading more permissions…</span>
+                                      <span className="ml-1">
+                                        Loading more permissions…
+                                      </span>
                                     </>
                                   ) : (
                                     <button
                                       type="button"
                                       className="text-primary hover:underline"
-                                      onClick={() => loadMorePerms()}
-                                    >
+                                      onClick={() => loadMorePerms()}>
                                       Load more
                                     </button>
                                   )}
@@ -514,8 +600,8 @@ export const CreateClientCredential = ({
                       </FormControl>
                       {isPermCapReached && (
                         <p className="text-xs text-muted-foreground">
-                          Maximum of {MAX_PERMISSIONS} permissions reached. Unselect one to add
-                          another.
+                          Maximum of {MAX_PERMISSIONS} permissions reached.
+                          Unselect one to add another.
                         </p>
                       )}
                       <FormMessage />

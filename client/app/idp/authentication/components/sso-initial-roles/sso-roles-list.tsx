@@ -9,6 +9,7 @@ import {
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteSSORole } from "./delete-sso-role";
@@ -18,6 +19,7 @@ type SSORolesListProps = {
 };
 export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const columns = useMemo<ColumnDef<IRole>[]>(
     () => [
       {
@@ -67,7 +69,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {
-    navigate(`/app/idp/role-detail/${itemId}`);
+    navigate(scoped(`idp/role-detail/${itemId}`));
   };
   return (
     <>
