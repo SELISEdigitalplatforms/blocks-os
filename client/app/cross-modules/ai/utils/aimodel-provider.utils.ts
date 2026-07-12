@@ -1,8 +1,15 @@
 import { IProvider } from "@blocks-ai/types/aimodel.service.type";
 
+/**
+ * The kind of platform that hosts an AI model integration. Drives how
+ * credentials and request URLs are configured in the AI settings UI.
+ */
 export enum ServicePlatform {
+  /** A first-party, officially hosted API such as OpenAI or Anthropic. */
   OFFICIAL_API = "official_api",
+  /** A self-hostable open-weights deployment such as Azure AI or OpenRouter. */
   OPEN_DEPLOYMENT = "open_deployment",
+  /** A user-defined custom deployment pointing at an arbitrary HTTP endpoint. */
   CUSTOM_DEPLOYMENT = "custom_deployment",
 }
 
@@ -15,9 +22,15 @@ export const createCustomProvider = (): IProvider => ({
   Order: 999999,
 });
 
+/**
+ * Coarse-grained grouping of an AI provider used in UI filters.
+ */
 export enum ProviderType {
+  /** A first-party, officially hosted provider (OpenAI, Anthropic, ...). */
   OFFICIAL = "official",
+  /** An open-weights provider (Azure, OpenRouter, ...). */
   OPEN = "open",
+  /** A user-defined custom provider. */
   CUSTOM = "custom",
 }
 
