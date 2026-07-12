@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest"
 import {
-  buildEnableMultiOrgPayload,
   buildOrganizationConfigSavePayload,
   toOrganizationConfigFormValues,
 } from "./organization-config-form"
@@ -20,34 +19,6 @@ const baseConfig: ISettingsOrganizationConfig = {
   keepOrgPermissionsSameAsDefaultPermissions: false,
 }
 
-describe("buildEnableMultiOrgPayload", () => {
-  it("enables multi-org, bumps consent when false, keeps creation fields", () => {
-    const payload = buildEnableMultiOrgPayload(baseConfig)
-
-    expect(payload).toEqual({
-      allowOrgCreationFromCloud: true,
-      allowOrgCreationFromConstruct: false,
-      allowOrgCreationFromSignup: false,
-      allowOrgCreationFromPortal: true,
-      isMultiOrgEnabled: true,
-      consentForMultiOrgEnable: true,
-      defaultRolesOnOrgCreation: ["member"],
-      defaultPermissionsOnOrgCreation: ["blocks-idp::read-users"],
-      keepOrgRolesSameAsDefaultRoles: true,
-      keepOrgPermissionsSameAsDefaultPermissions: false,
-    })
-  })
-
-  it("keeps consent true when already true", () => {
-    const payload = buildEnableMultiOrgPayload({
-      ...baseConfig,
-      consentForMultiOrgEnable: true,
-    })
-
-    expect(payload.consentForMultiOrgEnable).toBe(true)
-  })
-})
-
 describe("organization-config-form", () => {
   it("maps settings config into form values", () => {
     expect(toOrganizationConfigFormValues(baseConfig)).toEqual({
@@ -55,6 +26,7 @@ describe("organization-config-form", () => {
       allowOrgCreationFromConstruct: false,
       allowOrgCreationFromSignup: false,
       allowOrgCreationFromPortal: true,
+      isMultiOrgEnabled: false,
     })
   })
 
@@ -76,5 +48,41 @@ describe("organization-config-form", () => {
       keepOrgRolesSameAsDefaultRoles: true,
       keepOrgPermissionsSameAsDefaultPermissions: false,
     })
+  })
+
+  it("enables multi-org and grants consent from the pending form value", () => {
+    const values = {
+      ...toOrganizationConfigFormValues(baseConfig),
+      isMultiOrgEnabled: true,
+    }
+
+    const payload = buildOrganizationConfigSavePayload(baseConfig, values)
+
+    expect(payload.isMultiOrgEnabled).toBe(true)
+    expect(payload.consentForMultiOrgEnable).toBe(true)
+  })
+
+  it("sends creation workflow edits made in the same unsaved batch as the enable", () => {
+    const values = {
+      ...toOrganizationConfigFormValues(baseConfig),
+      isMultiOrgEnabled: true,
+      allowOrgCreationFromSignup: true,
+      allowOrgCreationFromCloud: false,
+    }
+
+    const payload = buildOrganizationConfigSavePayload(baseConfig, values)
+
+    expect(payload.allowOrgCreationFromSignup).toBe(true)
+    expect(payload.allowOrgCreationFromCloud).toBe(false)
+    expect(payload.isMultiOrgEnabled).toBe(true)
+  })
+
+  it("does not enable multi-org while the toggle is left off", () => {
+    const values = toOrganizationConfigFormValues(baseConfig)
+
+    const payload = buildOrganizationConfigSavePayload(baseConfig, values)
+
+    expect(payload.isMultiOrgEnabled).toBe(false)
+    expect(payload.consentForMultiOrgEnable).toBe(false)
   })
 })
