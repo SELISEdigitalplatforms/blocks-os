@@ -1,9 +1,15 @@
 ﻿
 namespace CloudConfiguration.DomainService.Shared.Enums
 {
+    /// <summary>
+    /// Outbound mail provider a tenant is configured to use.
+    /// </summary>
     public enum MailServiceProvider
     {
-        AmazonSes,
-        Zoho
+        /// <summary>Amazon Simple Email Service.</summary>
+        AmazonSes = 0,
+
+        /// <summary>Zoho Mail transactional API.</summary>
+        Zoho = 1,
     }
 }

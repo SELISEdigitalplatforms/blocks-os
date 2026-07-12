@@ -57,53 +57,119 @@ namespace DomainService.People
         public UserVerifiedType VerifiedType { get; set; } = UserVerifiedType.None;
     }
 
+    /// <summary>
+    /// Channels on which a user has successfully verified their identity.
+    /// </summary>
     public enum UserVerifiedType
     {
-        None,
-        Email,
-        Sms, 
-        WhatsApp
+        /// <summary>No verification has been completed yet.</summary>
+        None = 0,
+
+        /// <summary>User verified ownership of their email address via a verification link or code.</summary>
+        Email = 1,
+
+        /// <summary>User verified ownership of their phone number via an SMS code.</summary>
+        Sms = 2,
+
+        /// <summary>User verified ownership of their phone number via a WhatsApp message.</summary>
+        WhatsApp = 3,
     }
 
+    /// <summary>
+    /// Misspelled legacy duplicate of <see cref="UserVerifiedType"/>. Kept for
+    /// backwards compatibility with persisted Mongo documents; new code should
+    /// use <see cref="UserVerifiedType"/>.
+    /// </summary>
     public enum UserVarifiedType
     {
-        None,
-        Email,
-        Sms,
-        WhatsApp
+        /// <summary>No verification has been completed yet.</summary>
+        None = 0,
+
+        /// <summary>User verified ownership of their email address.</summary>
+        Email = 1,
+
+        /// <summary>User verified ownership of their phone number via SMS.</summary>
+        Sms = 2,
+
+        /// <summary>User verified ownership of their phone number via WhatsApp.</summary>
+        WhatsApp = 3,
     }
 
+    /// <summary>
+    /// The channel or process that created the user account.
+    /// </summary>
     public enum UserCreationType
     {
-        None,
-        Portal,
-        Api,
-        Service,
-        Social,
-        ThirdParty,
+        /// <summary>Creation source is unspecified or unknown.</summary>
+        None = 0,
+
+        /// <summary>User signed up through the management portal UI.</summary>
+        Portal = 1,
+
+        /// <summary>User was created through a programmatic API call.</summary>
+        Api = 2,
+
+        /// <summary>User was created by a trusted background service or worker.</summary>
+        Service = 3,
+
+        /// <summary>User signed up via a social identity provider (Google, Microsoft, ...).</summary>
+        Social = 4,
+
+        /// <summary>User was provisioned by a third-party integration or sync job.</summary>
+        ThirdParty = 5,
     }
 
+    /// <summary>
+    /// Type of long-lived credential the user authenticates with.
+    /// </summary>
     public enum UserPassType
     {
-        None,
-        Password,
-        Pin
+        /// <summary>No credential set; the user cannot sign in with a password or PIN.</summary>
+        None = 0,
+
+        /// <summary>User authenticates with a password.</summary>
+        Password = 1,
+
+        /// <summary>User authenticates with a short numeric PIN.</summary>
+        Pin = 2,
     }
 
+    /// <summary>
+    /// The multi-factor authentication method enabled for the user.
+    /// </summary>
     public enum UserMfaType
     {
-        None,
-        TOTP,
-        Email,
-        Sms,
-        WhatsApp,
+        /// <summary>No MFA method is configured.</summary>
+        None = 0,
+
+        /// <summary>Time-based one-time password (RFC 6238) from an authenticator app.</summary>
+        TOTP = 1,
+
+        /// <summary>One-time code delivered by email.</summary>
+        Email = 2,
+
+        /// <summary>One-time code delivered by SMS.</summary>
+        Sms = 3,
+
+        /// <summary>One-time code delivered by WhatsApp.</summary>
+        WhatsApp = 4,
     }
 
+    /// <summary>
+    /// Authentication mechanisms that a user is allowed to use when signing in.
+    /// </summary>
     public enum UserLogInType
     {
-        None,
-        Password,
-        SSO,
-        AuthrizationCode
+        /// <summary>No sign-in methods are allowed (account effectively disabled).</summary>
+        None = 0,
+
+        /// <summary>User signs in with a username/email and password.</summary>
+        Password = 1,
+
+        /// <summary>User signs in via a configured single sign-on provider.</summary>
+        SSO = 2,
+
+        /// <summary>User signs in with an OAuth 2.0 authorization code flow (OIDC).</summary>
+        AuthrizationCode = 3,
     }
 }
