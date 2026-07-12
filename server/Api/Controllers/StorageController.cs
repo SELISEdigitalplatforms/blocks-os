@@ -21,32 +21,28 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpPost]
-        //[ProtectedEndPoint("blocks-os::storage::save")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::storage::mutate")]
         public async Task<BaseMutationResponse> Save([FromBody] SaveStorageConfigurationRequest request)
         {
             return await _configurationService.SaveStorageConfigurationAsync(request);
         }
 
         [HttpGet]
-        //[ProtectedEndPoint("blocks-os::storage::gets")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::storage::gets")]
         public async Task<List<StorageConfiguration>> Gets([FromQuery] GetStorageConfigurationsRequest request)
         {
             return await _configurationService.GetStorageConfigurationsAsync();
         }
 
         [HttpGet]
-        //[ProtectedEndPoint("blocks-os::storage::get")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::storage::gets")]
         public async Task<StorageConfiguration> Get([FromQuery] GetStorageConfigurationRequest request)
         {
             return await _configurationService.GetStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);
         }
 
         [HttpPost]
-        //[ProtectedEndPoint("blocks-os::storage::delete")]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::storage::mutate")]
         public async Task<BaseResponse> Delete([FromQuery] DeleteStorageConfigurationRequest request)
         {
             return await _configurationService.DeleteStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);
