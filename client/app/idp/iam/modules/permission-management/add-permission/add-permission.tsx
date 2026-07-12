@@ -13,7 +13,8 @@ export const AddPermission = () => {
   const scoped = useScopedPath();
   const { isPending, mutateAsync } = useAddPermission();
   const onSubmit = async (data: permissionFormSchemaType) => {
-    if (!data.permissionSeverity) {
+    // None is a valid severity (0), so only an unset value counts as missing.
+    if (data.permissionSeverity === undefined || data.permissionSeverity === null) {
       showErrorToast({ errors: "Severity is required" });
       return;
     }
@@ -35,12 +36,11 @@ export const AddPermission = () => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail"] = "Permissions";
   BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail/new"] = "New";
   return (
     <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={4} />
       </div>
       <div className="mt-4 text-xl font-semibold">New Permission</div>
       <div className="mt-4">

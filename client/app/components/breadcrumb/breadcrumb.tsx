@@ -12,11 +12,29 @@ import useRoutePathSegments from "@/hooks/use-path-segments";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { cn } from "@/lib/utils";
 
+const normalizeBreadcrumbHref = (href: string): string =>
+  href.replace(/^\/app\/[^/]+(?=\/)/, "/app")
+
 const getBreadcrumbTitle = (href: string, defaultLabel: string): string | null => {
+  const normalizedHref = normalizeBreadcrumbHref(href)
+  if (Object.prototype.hasOwnProperty.call(BREADCRUMB_CUSTOM_TITLES, normalizedHref)) {
+    return BREADCRUMB_CUSTOM_TITLES[normalizedHref]
+  }
   if (Object.prototype.hasOwnProperty.call(BREADCRUMB_CUSTOM_TITLES, href)) {
     return BREADCRUMB_CUSTOM_TITLES[href]
   }
   return defaultLabel
+}
+
+const getBreadcrumbLinkHref = (href: string): string => {
+  const normalizedHref = normalizeBreadcrumbHref(href)
+  if (normalizedHref === "/app/idp/role-detail") {
+    return href.replace("/idp/role-detail", "/idp/roles")
+  }
+  if (normalizedHref === "/app/idp/permission-detail") {
+    return href.replace("/idp/permission-detail", "/idp/permissions")
+  }
+  return href
 }
 
 const PageBreadcrumb: React.FC<{
@@ -39,6 +57,7 @@ const PageBreadcrumb: React.FC<{
       <BreadcrumbList className={listClassName}>
         {breadcrumbs.map((breadcrumb, index) => {
           const title = getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) ?? breadcrumb.label
+          const linkHref = getBreadcrumbLinkHref(breadcrumb.href)
 
           return (
           <React.Fragment key={breadcrumb.href}>
@@ -49,7 +68,7 @@ const PageBreadcrumb: React.FC<{
                 </BreadcrumbPage>
               ) : (
                 <BreadcrumbLink asChild>
-                  <Link to={breadcrumb.href} className="text-foreground hover:text-foreground">
+                  <Link to={linkHref} className="text-foreground hover:text-foreground">
                     {title}
                   </Link>
                 </BreadcrumbLink>

@@ -7,6 +7,7 @@ import {
   mockOidcCredentialResponse,
   mockSaveOidcPayload,
   mockDeleteClientPayload,
+  mockRotateOidcSecretPayload,
   MOCK_OIDC_ITEM_ID,
 } from "../../test-utils/__mocks__";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__";
@@ -16,6 +17,7 @@ import {
   useGetAuthOidcCredential,
   useSaveAuthOidc,
   useDeleteAuthOidc,
+  useRotateAuthOidcSecret,
 } from "./use-auth-oidc";
 
 vi.mock("@blocks-idp/authentication/services/auth-clients-oidc.service", () =>
@@ -84,6 +86,24 @@ describe("use-auth-oidc hooks", () => {
       result.current.mutate(mockDeleteClientPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(authOidc.clients.deleteOidcCredential).toHaveBeenCalledWith(mockDeleteClientPayload, expect.anything());
+    });
+  });
+
+  describe("useRotateAuthOidcSecret", () => {
+    it("should rotate OIDC client secret successfully", async () => {
+      vi.mocked(authOidc.clients.rotateOidcClientSecret).mockResolvedValue(undefined as never);
+
+      const { result } = renderHook(
+        () => useRotateAuthOidcSecret({ projectKey: TEST_PROJECT_KEY }),
+        { wrapper: createWrapper() },
+      );
+
+      result.current.mutate(mockRotateOidcSecretPayload);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(authOidc.clients.rotateOidcClientSecret).toHaveBeenCalledWith(
+        mockRotateOidcSecretPayload,
+        expect.anything(),
+      );
     });
   });
 });
