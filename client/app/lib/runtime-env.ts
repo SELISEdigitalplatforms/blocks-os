@@ -2,6 +2,7 @@
 const PLACEHOLDER_PREFIX = "__BLOCKS_";
 
 export type RuntimeKey =
+  | "BLOCKS_BASE_DOMAIN"
   | "BLOCKS_X_BLOCKS_KEY"
   | "BLOCKS_GOOGLE_SITE_KEY"
   | "BLOCKS_CONSTRUCT_URL"
