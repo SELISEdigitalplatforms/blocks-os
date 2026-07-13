@@ -310,7 +310,6 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "IdentityConfigurations", project.TenantId),
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project.TenantId),
