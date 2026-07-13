@@ -9,26 +9,10 @@ export const organizationConfigFormSchema = z.object({
   allowOrgCreationFromConstruct: z.boolean(),
   allowOrgCreationFromSignup: z.boolean(),
   allowOrgCreationFromPortal: z.boolean(),
+  isMultiOrgEnabled: z.boolean(),
 })
 
 export type OrganizationConfigFormValues = z.infer<typeof organizationConfigFormSchema>
-
-export const buildEnableMultiOrgPayload = (
-  config: ISettingsOrganizationConfig,
-): ISettingsSaveOrganizationConfigPayload => ({
-  allowOrgCreationFromCloud: config.allowCreationFromCloud,
-  allowOrgCreationFromConstruct: config.allowCreationFromConstruct,
-  allowOrgCreationFromSignup: config.allowOrgCreationFromSignup,
-  allowOrgCreationFromPortal: config.allowOrgCreationFromPortal,
-  isMultiOrgEnabled: true,
-  consentForMultiOrgEnable: config.consentForMultiOrgEnable
-    ? config.consentForMultiOrgEnable
-    : true,
-  defaultRolesOnOrgCreation: config.defaultRolesOnOrgCreation,
-  defaultPermissionsOnOrgCreation: config.defaultPermissionsOnOrgCreation,
-  keepOrgRolesSameAsDefaultRoles: config.keepOrgRolesSameAsDefaultRoles,
-  keepOrgPermissionsSameAsDefaultPermissions: config.keepOrgPermissionsSameAsDefaultPermissions,
-})
 
 export const toOrganizationConfigFormValues = (
   config: ISettingsOrganizationConfig,
@@ -37,6 +21,7 @@ export const toOrganizationConfigFormValues = (
   allowOrgCreationFromConstruct: config.allowCreationFromConstruct,
   allowOrgCreationFromSignup: config.allowOrgCreationFromSignup,
   allowOrgCreationFromPortal: config.allowOrgCreationFromPortal,
+  isMultiOrgEnabled: config.isMultiOrgEnabled,
 })
 
 export const buildOrganizationConfigSavePayload = (
@@ -47,8 +32,9 @@ export const buildOrganizationConfigSavePayload = (
   allowOrgCreationFromConstruct: values.allowOrgCreationFromConstruct,
   allowOrgCreationFromSignup: values.allowOrgCreationFromSignup,
   allowOrgCreationFromPortal: values.allowOrgCreationFromPortal,
-  isMultiOrgEnabled: config.isMultiOrgEnabled,
-  consentForMultiOrgEnable: config.consentForMultiOrgEnable,
+  isMultiOrgEnabled: values.isMultiOrgEnabled,
+  // Turning multi-org on is what grants consent; it is never revoked once given.
+  consentForMultiOrgEnable: values.isMultiOrgEnabled || config.consentForMultiOrgEnable,
   defaultRolesOnOrgCreation: config.defaultRolesOnOrgCreation,
   defaultPermissionsOnOrgCreation: config.defaultPermissionsOnOrgCreation,
   keepOrgRolesSameAsDefaultRoles: config.keepOrgRolesSameAsDefaultRoles,

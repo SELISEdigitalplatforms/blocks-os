@@ -17,7 +17,7 @@ namespace Api.Controllers
             _serviceManagement = serviceManagement;
         }
 
-        [Authorize]
+        [HttpPost]
         [ProtectedEndPoint("blocks-os::service::register")]
         public async Task<IActionResult> Register([FromBody] RegisterServiceRequest request)
         {
@@ -30,7 +30,7 @@ namespace Api.Controllers
             return BadRequest(response);
         }
 
-        [Authorize]
+        [HttpPost]
         [ProtectedEndPoint("blocks-os::service::gets")]
         public async Task<GetAllServiceResponse> GetAll([FromBody] GetAllServiceRequest request)
         {
