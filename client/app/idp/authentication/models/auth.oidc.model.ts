@@ -20,6 +20,7 @@ export interface IOidcConfig {
   isAutoRedirect: boolean;
   isActive: boolean;
   requirePkce: boolean;
+  registerAsIdentityProvider?: boolean;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   tenantId: string;
@@ -34,14 +35,13 @@ export interface IGetOidcCredentialsResponse {
 }
 
 export interface ISaveOidcCredentialPayload {
-  audience: string;
   isAutoRedirect: boolean;
   isActive: boolean;
   itemId: string;
-  projectKey: string;
   redirectUris: string[];
   scope: string;
   requirePkce: boolean;
+  registerAsIdentityProvider: boolean;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;

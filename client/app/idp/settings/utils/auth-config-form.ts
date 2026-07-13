@@ -32,18 +32,28 @@ export type GrantTypesFormValues = z.infer<typeof grantTypesFormSchema>
 
 export type AuthSettingsFormValues = z.infer<typeof authSettingsFormSchema>
 
-export const iamConfigFormSchema = z.object({
-  accountActivationPath: z.string(),
-  accountVerificationPath: z.string(),
-  recoverAccountPath: z.string(),
-  accountActionBaseUrl: z.string(),
-  useAccountActionBaseUrlAsDefault: z.boolean(),
-  activationUrlLifetimeInMinutes: positiveInt,
-  recoverAccountUrlLifetimeInMinutes: positiveInt,
-  logoutOnPasswordChange: z.boolean(),
-  isOidcEnabled: z.boolean(),
-  passwordStrengthCheckerRegex: z.string(),
-})
+export const iamConfigFormSchema = z
+  .object({
+    accountActivationPath: z.string(),
+    accountVerificationPath: z.string(),
+    recoverAccountPath: z.string(),
+    accountActionBaseUrl: z.string(),
+    useAccountActionBaseUrlAsDefault: z.boolean(),
+    activationUrlLifetimeInMinutes: positiveInt,
+    recoverAccountUrlLifetimeInMinutes: positiveInt,
+    logoutOnPasswordChange: z.boolean(),
+    isOidcEnabled: z.boolean(),
+    passwordStrengthCheckerRegex: z.string(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.isOidcEnabled || values.accountActionBaseUrl.trim()) return
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["accountActionBaseUrl"],
+      message: "Account action base URL is required.",
+    })
+  })
 
 export type IamConfigFormValues = z.infer<typeof iamConfigFormSchema>
 
@@ -88,7 +98,9 @@ export const toIamConfigFormValues = (
   accountActivationPath: config.accountActivationPath,
   accountVerificationPath: config.accountVerificationPath,
   recoverAccountPath: config.recoverAccountPath,
-  accountActionBaseUrl: config.accountActionBaseUrl,
+  accountActionBaseUrl: config.isOidcEnabled
+    ? getBlocksIamBaseUrl()
+    : config.accountActionBaseUrl,
   useAccountActionBaseUrlAsDefault: config.isOidcEnabled
     ? true
     : config.useAccountActionBaseUrlAsDefault,
@@ -99,12 +111,15 @@ export const toIamConfigFormValues = (
   passwordStrengthCheckerRegex: config.passwordStrengthCheckerRegex,
 })
 
+/** Under OIDC the server builds action links from its own host, so the stored base URL is the
+ * IAM host rather than whatever an app domain seeded at project creation. */
 export const applyOidcIamConfigOverrides = (
   values: IamConfigFormValues,
 ): IamConfigFormValues =>
   values.isOidcEnabled
     ? {
         ...values,
+        accountActionBaseUrl: getBlocksIamBaseUrl(),
         useAccountActionBaseUrlAsDefault: false,
       }
     : values
