@@ -1,8 +1,17 @@
+/**
+ * Severity classification for a permission entry. Higher severity grants
+ * access to more sensitive operations and warrants stricter review.
+ */
 export enum PermissionSeverityLevel {
+  /** No severity assigned; default for newly created permissions. */
   None = 0,
+  /** Critical permissions can affect security, billing, or data deletion. */
   Critical = 1,
+  /** High-severity permissions touch sensitive PII or privileged actions. */
   High,
+  /** Medium-severity permissions affect normal application data. */
   Medium,
+  /** Low-severity permissions cover read-only or non-sensitive operations. */
   Low,
 }
 
@@ -172,9 +181,16 @@ export interface GetPermission {
   resourceGroup: string;
 }
 
+/**
+ * The kind of resource a permission guards. Used by the permission
+ * management UI to group, filter, and present permissions consistently.
+ */
 export enum ResourceType {
+  /** Permission guards a server-side API endpoint. */
   "Endpoint" = 1,
+  /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
+  /** Permission guards access to a specific data record or data class. */
   "Data protection" = 3,
 }
 
