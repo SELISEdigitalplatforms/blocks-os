@@ -1,8 +1,8 @@
-import { FilterControls } from "@/components/filter-toolbar";
-import { Badge } from "@/components/ui-kits/badge/badge";
-import { Button } from "@/components/ui-kits/button/button";
-import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { FilterControls } from "@/components/filter-toolbar"
+import { Badge } from "@/components/ui-kits/badge/badge"
+import { Button } from "@/components/ui-kits/button/button"
+import { Card, CardContent } from "@/components/ui-kits/card/card"
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox"
 import {
   Dialog,
   DialogClose,
@@ -12,9 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui-kits/dialog/dialog";
-import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+} from "@/components/ui-kits/dialog/dialog"
+import { Pagination } from "@/components/ui-kits/pagination/pagination"
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
 import {
   Table,
   TableBody,
@@ -22,52 +22,72 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui-kits/table/table";
-import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
-import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
-import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
-type AddSSOPermissionProps = {
-  permissions: IPermission[];
-  onAdd: (data: IPermission[]) => void;
-};
-export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) => {
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const [open, setOpen] = useState<boolean>(false);
-  const [selectedPermission, setSelectedPermissions] = useState<IPermission[]>([]);
+} from "@/components/ui-kits/table/table"
+import { cn } from "@/lib/utils"
+import { useProjectStore } from "@seliseblocks/blocks-kit"
+import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission"
+import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission"
+import { Plus } from "lucide-react"
+import { useMemo, useState } from "react"
+
+type AddClientCredentialPermissionProps = {
+  selectedResources: string[]
+  onAdd: (resources: string[]) => void
+  maxPermissions: number
+}
+
+export const AddClientCredentialPermission = ({
+  onAdd,
+  selectedResources,
+  maxPermissions,
+}: AddClientCredentialPermissionProps) => {
+  const tenantId = useProjectStore().selectedProject?.tenantId || ""
+  const [open, setOpen] = useState<boolean>(false)
+  const [pendingPermissions, setPendingPermissions] = useState<IPermission[]>([])
   const [filter, setFilter] = useState({
     page: 0,
     pageSize: 5,
     isBuiltIn: "",
-    roles: [],
+    roles: [] as string[],
     search: "",
-  });
+  })
+
   const { data, isLoading } = useGetPermissions(
     {
       ...filter,
       projectKey: tenantId,
     },
     { enabled: open && Boolean(tenantId) },
-  );
-  const onClickHandler = async () => {
-    onAdd(selectedPermission);
-    resetFilter();
-    setOpen(false);
-  };
-  const onCheckedChangeHandler = (checked: boolean, permission: IPermission) => {
+  )
+
+  const pendingResources = useMemo(
+    () => pendingPermissions.map((permission) => permission.resource),
+    [pendingPermissions],
+  )
+
+  const handleCheckedChange = (checked: boolean, permission: IPermission) => {
     if (checked) {
-      return setSelectedPermissions((prev) => [...prev, permission]);
+      setPendingPermissions((prev) => [...prev, permission])
+      return
     }
-    setSelectedPermissions((prev) => prev.filter((item) => item.resource !== permission.resource));
-  };
-  const handlePermissionCheckboxChange = (checked: boolean, permission: IPermission) => {
-    if (checked && permissionsResource.length + selectedPermission.length >= 5) {
-      return;
+    setPendingPermissions((prev) =>
+      prev.filter((item) => item.resource !== permission.resource),
+    )
+  }
+
+  const handlePermissionCheckboxChange = (
+    checked: boolean,
+    permission: IPermission,
+  ) => {
+    if (
+      checked &&
+      selectedResources.length + pendingPermissions.length >= maxPermissions
+    ) {
+      return
     }
-    onCheckedChangeHandler(checked, permission);
-  };
+    handleCheckedChange(checked, permission)
+  }
+
   const resetFilter = () => {
     setFilter({
       page: 0,
@@ -75,33 +95,27 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
       isBuiltIn: "",
       roles: [],
       search: "",
-    });
-    setSelectedPermissions([]);
-  };
-  const permissionsResource = useMemo(() => {
-    return permissions.map((item) => item.resource) || [];
-  }, [permissions]);
-  const selectedPermissionsResource = useMemo(() => {
-    return selectedPermission.map((item) => item.resource) || [];
-  }, [selectedPermission]);
+    })
+    setPendingPermissions([])
+  }
+
   return (
     <Dialog
       open={open}
-      onOpenChange={(v) => {
-        if (!v) resetFilter();
-        setOpen(v);
-      }}
-    >
+      onOpenChange={(value) => {
+        if (!value) resetFilter()
+        setOpen(value)
+      }}>
       <DialogTrigger asChild>
         <Button
           size="sm"
           variant="default"
-          className="h-7 bg-primary text-xs px-2.5"
+          className="h-7 bg-primary px-2.5 text-xs"
+          type="button"
           onClick={(e) => {
-            e.stopPropagation();
+            e.stopPropagation()
           }}
-          disabled={permissions.length >= 5}
-        >
+          disabled={selectedResources.length >= maxPermissions}>
           <Plus className="h-3.5 w-3.5 md:mr-1.5" />
           <span className="sr-only sm:not-sr-only">Assign Permissions</span>
         </Button>
@@ -109,27 +123,32 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
       <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
           <DialogTitle className="text-left">Assign Permissions</DialogTitle>
-          <DialogDescription></DialogDescription>
+          <DialogDescription />
         </DialogHeader>
         <div>
           <FilterControls.SearchInput
             placeholder="Search by permission name"
-            onChange={(search) => setFilter((prev) => ({ ...prev, search, page: 0 }))}
+            onChange={(search) =>
+              setFilter((prev) => ({ ...prev, search, page: 0 }))
+            }
             value={filter.search}
             className="h-fit w-full py-3"
           />
         </div>
         <h1
-          className={cn("text-sm font-semibold", selectedPermission.length === 5 && "text-error")}
-        >
-          *You can select up to 5 permissions. <span>{`(${selectedPermission.length}/5)`}</span>
+          className={cn(
+            "text-sm font-semibold",
+            pendingPermissions.length === maxPermissions && "text-error",
+          )}>
+          *You can select up to {maxPermissions} permissions.{" "}
+          <span>{`(${pendingPermissions.length}/${maxPermissions})`}</span>
         </h1>
         <Card className="min-h-0 flex-1 overflow-hidden">
           <CardContent className="max-h-[min(50vh,360px)] overflow-x-auto overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead></TableHead>
+                  <TableHead />
                   <TableHead>Name</TableHead>
                   <TableHead>Resource</TableHead>
                   <TableHead>Type</TableHead>
@@ -154,17 +173,20 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                     </TableRow>
                   ))
                 ) : data?.data?.length ? (
-                  (data.data as IPermission[]).map((item) => (
+                  data.data.map((item) => (
                     <TableRow key={item.itemId}>
                       <TableCell>
                         <Checkbox
                           checked={
-                            permissionsResource.includes(item.resource) ||
-                            selectedPermissionsResource.includes(item.resource)
+                            selectedResources.includes(item.resource) ||
+                            pendingResources.includes(item.resource)
                           }
-                          disabled={permissionsResource.includes(item.resource)}
+                          disabled={selectedResources.includes(item.resource)}
                           onCheckedChange={(checked) => {
-                            handlePermissionCheckboxChange(checked as boolean, item);
+                            handlePermissionCheckboxChange(
+                              checked as boolean,
+                              item,
+                            )
                           }}
                         />
                       </TableCell>
@@ -176,15 +198,16 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                       <TableCell>
                         <span
                           className="block min-w-0 max-w-[220px] truncate text-sm text-muted-foreground"
-                          title={item.resource}
-                        >
+                          title={item.resource}>
                           {item.resource}
                         </span>
                       </TableCell>
                       <TableCell>
                         {
-                          RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
-                            ?.label
+                          RESOURCE_TYPE.find(
+                            (resource) =>
+                              resource.value === item.type.toString(),
+                          )?.label
                         }
                       </TableCell>
                     </TableRow>
@@ -193,8 +216,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                   <TableRow>
                     <TableCell
                       colSpan={4}
-                      className="h-24 text-center text-muted-foreground"
-                    >
+                      className="h-24 text-center text-muted-foreground">
                       No permissions found
                     </TableCell>
                   </TableRow>
@@ -220,14 +242,18 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
             </Button>
           </DialogClose>
           <Button
+            type="button"
             size="default"
-            onClick={onClickHandler}
-            disabled={selectedPermission.length === 0}
-          >
+            disabled={pendingPermissions.length === 0}
+            onClick={() => {
+              onAdd(pendingResources)
+              resetFilter()
+              setOpen(false)
+            }}>
             Add
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-};
+  )
+}

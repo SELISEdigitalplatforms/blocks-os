@@ -1,8 +1,7 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useGetProjects, useGetMigrationStatus } from "@/hooks/use-project";
-import { useGetPeople } from "@/hooks/use-people";
 import { AddEnvironmentModal } from "@/components/environment-card/add-environment-modal";
-import { Plus, ArrowRightLeft, CircleHelp } from "lucide-react";
+import { EnvironmentCard } from "@/components/environment-card/environment-card";
+import { EnvironmentMigrationWizard } from "@/components/environment-migration/environment-migration-wizard";
+import { ProjectCardLoading } from "@/components/project-card/loading";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -11,20 +10,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import { useState, useCallback } from "react";
-import { EnvironmentMigrationWizard } from "@/components/environment-migration/environment-migration-wizard";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { ProjectCardLoading } from "@/components/project-card/loading";
-import { useNavigate } from "react-router-dom";
-import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger,
   TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
+import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
+import { useGetPeople } from "@/hooks/use-people";
+import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
-import { EnvironmentCard } from "@/components/environment-card/environment-card";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { CircleHelp, Plus } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const isRecentMigrationForTarget = (
   data: IMigrationStatusResponse[number],
@@ -106,14 +106,14 @@ export const EnvironmentsPage = () => {
         <div className="mb-6 flex flex-row justify-between">
           <h4 className="text-lg font-semibold md:text-xl">Environments</h4>
           <div className="flex gap-2 sm:gap-4">
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/data-migration")}
               className="h-10 whitespace-nowrap text-sm">
               <ArrowRightLeft className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Start Migration</span>
-            </Button>
+            </Button> */}
             {canAddEnvironment && (
               <Button
                 variant="default"
