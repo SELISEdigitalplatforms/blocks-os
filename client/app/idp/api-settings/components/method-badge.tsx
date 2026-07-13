@@ -12,6 +12,8 @@ type MethodBadgeProps = {
 };
 export const MethodBadge = ({ method }: MethodBadgeProps) => {
   const upper = (method ?? "").toUpperCase();
+  // Endpoints seeded without an HTTP method would otherwise render an empty pill.
+  if (!upper) return null;
   return (
     <span
       className={cn(
