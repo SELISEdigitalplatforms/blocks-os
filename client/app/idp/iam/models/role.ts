@@ -91,9 +91,20 @@ export interface GroupsData {
   projectKey: string;
 }
 
+/**
+ * The kind of resource a permission guards.
+ *
+ * NOTE: This is a legacy duplicate of the `ResourceType` enum exported from
+ * `@/idp/iam/models/permission`. All new code should import from
+ * `permission.ts`; this declaration is kept only so existing role-management
+ * modules continue to compile.
+ */
 export enum ResourceType {
+  /** Permission guards a server-side API endpoint. */
   "Endpoint" = 1,
+  /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
+  /** Permission guards access to a specific data record or data class. */
   "Data protection" = 3,
 }
 

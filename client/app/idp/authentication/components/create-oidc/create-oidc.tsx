@@ -19,7 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useFieldArray, useForm } from "react-hook-form";
-import { Plus, Pencil, X } from "lucide-react";
+import { Info, Plus, Pencil, X } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { ISaveOidcCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
@@ -101,6 +101,7 @@ export const CreateOIDC = ({
         isAutoRedirect: credential.isAutoRedirect ?? false,
         isActive: credential.isActive ?? true,
         requirePkce: credential.requirePkce ?? true,
+        registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
         allowedResponseTypes:
           credential.allowedResponseTypes &&
           credential.allowedResponseTypes.length
@@ -130,7 +131,6 @@ export const CreateOIDC = ({
     }
     try {
       const payload: ISaveOidcCredentialPayload = {
-        audience: "",
         redirectUris: data.redirectUris
           .map((entry) => entry.value.trim())
           .filter(Boolean),
@@ -138,9 +138,9 @@ export const CreateOIDC = ({
         isAutoRedirect: data.isAutoRedirect,
         isActive: data.isActive,
         requirePkce: data.requirePkce,
+        registerAsIdentityProvider: data.registerAsIdentityProvider,
         allowedResponseTypes: data.allowedResponseTypes,
         itemId: isEditMode ? itemId : "",
-        projectKey: tenantId,
         clientLogoUrl: clientLogoUrl || undefined,
         clientBrandColor: data.clientBrandColor || undefined,
         clientDisplayName: data.clientDisplayName,
@@ -349,6 +349,53 @@ export const CreateOIDC = ({
                         className="cursor-pointer text-sm text-high-emphasis">
                         Redirect automatically after authentication
                       </label>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Register as Identity Provider — on by default; the full
+                  explanation lives in the tooltip to keep the row compact */}
+              <FormField
+                control={form.control}
+                name="registerAsIdentityProvider"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Identity Provider</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="registerAsIdentityProvider"
+                        className="shrink-0"
+                        checked={!!field.value}
+                        onCheckedChange={(v) => field.onChange(!!v)}
+                      />
+                      <label
+                        htmlFor="registerAsIdentityProvider"
+                        className="cursor-pointer text-sm text-high-emphasis">
+                        Register as a Blocks OIDC identity provider
+                      </label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label="More about Blocks OIDC identity providers"
+                            className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p className="text-xs leading-relaxed">
+                            Adds a matching{" "}
+                            <span className="font-medium">Blocks OIDC</span>{" "}
+                            entry under Identity Provider, so other Blocks
+                            projects can offer this project as a sign-in option
+                            and federate their users to it. Uncheck if this
+                            client is only used by your own app to sign users in
+                            — you can always add the provider later.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                     <FormMessage />
                   </FormItem>

@@ -215,8 +215,13 @@ export interface IGetDmsFileAndFolderPayload {
   take: number;
 }
 
+/**
+ * The kind of node represented by a document-management entry.
+ */
 export enum DmsItemType {
+  /** A leaf node holding uploaded file content. */
   File = 1,
+  /** A directory node that may contain other files or folders. */
   Folder = 2,
 }
 

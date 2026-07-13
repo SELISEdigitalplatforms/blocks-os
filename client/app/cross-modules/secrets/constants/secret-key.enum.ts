@@ -1,8 +1,18 @@
+/**
+ * Categories of secret that can be stored in the secret vault. The string
+ * value is persisted as `secretKey` and used to discriminate the matching
+ * payload shape from `SecretValueMap`.
+ */
 export enum SecretType {
+  /** OpenID Connect client credentials and branding settings. */
   OIDC = "OIDC",
+  /** CAPTCHA provider credentials (site key, secret key, generator type). */
   Captcha = "Captcha",
+  /** Generic third-party SSO provider credentials (client id, secret, audience, ...). */
   SSO = "SSO",
+  /** "Bring your own SSO" - self-hosted/custom OIDC provider configuration. */
   OwnSSO = "OwnSSO",
+  /** External identity provider signing material (JWKS URL, certificate, issuer, ...). */
   ExternalIdP = "ExternalIdP",
 }
 
