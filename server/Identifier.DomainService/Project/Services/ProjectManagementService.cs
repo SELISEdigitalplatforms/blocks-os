@@ -306,7 +306,7 @@ namespace DomainService.Projects
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = IdentifierConstants.ConstructCookieDomain == IdentifierConstants.BlocksDomain }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
+                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = true }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -474,7 +474,7 @@ namespace DomainService.Projects
             {
                 Domain = request.Application.Domain,
                 CookieDomain = request.Application.CookieDomain,
-                IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain
+                IsDomainVerified = (mainDomain == IdentifierConstants.ConstructCookieDomain) || (mainDomain == IdentifierConstants.BlocksDomain)
             };
             project.Applications.Add(newApp);
             return new BaseResponse { IsSuccess = true };

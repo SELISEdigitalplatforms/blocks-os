@@ -25,8 +25,8 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
   {
     label: "Access Control",
     items: [
-      { id: "roles", label: "Roles", value: "roles", icon: ShieldCheck, desc: "Manage roles" },
-      { id: "permissions", label: "Permissions", value: "permissions", icon: Lock, desc: "Manage permissions" },
+      { id: "roles", label: "Roles", value: "roles", icon: ShieldCheck, desc: "Create and manage roles that group permissions for users" },
+      { id: "permissions", label: "Permissions", value: "permissions", icon: Lock, desc: "Define and manage granular permissions for access control" },
     ],
   },
 ];
