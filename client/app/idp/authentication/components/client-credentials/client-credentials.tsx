@@ -47,7 +47,7 @@ export const ClientCredentials = () => {
   // const showSummary = !isLoading && !isFetching && total > 0;
 
   return (
-    <div>
+    <div className="min-w-0">
       {/* {showSummary && (
         <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <SummaryTile label="Total credentials" value={total} />
