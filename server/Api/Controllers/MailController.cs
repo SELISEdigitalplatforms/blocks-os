@@ -2,8 +2,6 @@
 using CloudConfiguration.DomainService.Mail.Entities;
 using CloudConfiguration.DomainService.Mail.RequestModel;
 using CloudConfiguration.DomainService.Shared.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlocksTemplate.Api.Controllers
@@ -20,8 +18,7 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpPost]
-        //[ProtectedEndPoint]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::save")]
         public async Task<IActionResult> Save([FromBody] MailConfiguration request)
         {
 
@@ -35,8 +32,7 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpGet]
-        //[ProtectedEndPoint]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<MailConfiguration> Get([FromQuery] GetMailConfigurationRequest request)
         {
             var result = await _configurationService.GetMailConfigurationAsync(request);
@@ -59,8 +55,7 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpGet]
-        // [ProtectedEndPoint]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<List<MailServerConfiguration>> Gets([FromQuery] GetAllMailConfigurationsRequest request)
         {
             var result = await _configurationService.GetAllMailConfigurationsAsync();
@@ -83,8 +78,7 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpDelete]
-        //[ProtectedEndPoint]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::delete")]
         public async Task<IActionResult> Delete([FromQuery] DeleteMailConfigurationRequest request)
         {
 
@@ -105,8 +99,7 @@ namespace BlocksTemplate.Api.Controllers
         }
 
         [HttpPost]
-        //[ProtectedEndPoint]
-        [Authorize]
+        [ProtectedEndPoint("blocks-os::mail::save")]
         public async Task<IActionResult> Duplicate([FromBody] DuplicateMailConfigurationRequest request)
         {
 

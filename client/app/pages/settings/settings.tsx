@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Pencil, Loader } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,34 +29,43 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
+import { useGetPeople } from "@/hooks/use-people";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { formatDate } from "@/lib/utils";
+import { EnvironmentsCard, getEnvironmentOrder } from "./environments-card";
 const SettingsLoading = () => (
-  <main className="">
-    <Skeleton className="h-8 w-24" />
-    <Card className="mt-4">
+  <main className="flex flex-col gap-6 p-6">
+    <Skeleton className="h-8 w-40" />
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-10 w-20" />
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-5 w-32" />
-          </div>
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-5 w-28" />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <Skeleton className="h-4 w-10" />
-          <Skeleton className="h-5 w-16" />
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="space-y-1">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
+    <EnvironmentsCard environments={[]} isLoading />
   </main>
+);
+const InfoField = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) => (
+  <div className="space-y-1">
+    <p className="text-sm text-muted-foreground">{label}</p>
+    <div className="font-medium">{children}</div>
+  </div>
 );
 const projectNameSchema = z.object({
   name: z
@@ -73,6 +82,19 @@ export const SettingsPage = () => {
   const { data: projectsData, isLoading } = useGetProjects(
     selectedTenantGroup || "",
   );
+  const { data: peopleData } = useGetPeople({
+    page: 0,
+    pageSize: 1,
+    filter: "",
+  });
+  const isViewerOwner = peopleData?.isOwner ?? false;
+  // Ordered like the "Select environments" step: dev → test → stg → … → prod
+  const environments = (projectsData?.[0]?.projects ?? [])
+    .filter((environment) => !environment.isDisabled)
+    .sort(
+      (a, b) =>
+        getEnvironmentOrder(a.environment) - getEnvironmentOrder(b.environment),
+    );
   const project = projectsData?.[0]?.projects?.[0];
   const { mutateAsync: updateTenantGroup, isPending: isUpdating } =
     useUpdateTenantGroup({
@@ -130,9 +152,9 @@ export const SettingsPage = () => {
   };
   const formattedDate = formatDate(new Date(project?.createdDate || ""));
   return (
-    <main className="p-6">
-      <h4 className="h-8 text-lg font-semibold md:text-xl">Project Settings</h4>
-      <Card className="mt-4">
+    <main className="flex flex-col gap-6 p-6">
+      <h4 className="text-lg font-semibold md:text-xl">Project Settings</h4>
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>General Information</CardTitle>
           <Button
@@ -145,23 +167,22 @@ export const SettingsPage = () => {
             <span>Edit</span>
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Name</p>
-              <div className="font-medium">{project?.name || "-"}</div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Created On</p>
-              <div className="font-medium">{formattedDate}</div>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Plan</p>
-            <div className="font-medium">Free</div>
+            <InfoField label="Name">{project?.name || "-"}</InfoField>
+            <InfoField label="Created On">{formattedDate}</InfoField>
+            <InfoField label="Environments">
+              {environments.length || "-"}
+            </InfoField>
+            <InfoField label="Plan">Free</InfoField>
           </div>
         </CardContent>
       </Card>
+
+      <EnvironmentsCard
+        environments={environments}
+        canDelete={isViewerOwner}
+      />
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
