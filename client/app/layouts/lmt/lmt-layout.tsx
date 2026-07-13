@@ -10,7 +10,6 @@ import {
 import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
 import { useLmtBasePath } from "@/hooks/use-scoped-path"
 import { cn } from "@/lib/utils"
-import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet"
 import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage"
 import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { RefreshCcw } from "lucide-react"
@@ -70,21 +69,12 @@ export default function LmtLayout() {
           <span className="sr-only sm:not-sr-only sm:ml-2">Refresh</span>
         </Button>
       </div>
-    ) : currentSegment === "tracing" ? (
-      <LMTQueryAgentSheet
-        description="Hello! I can help you search and analyze your logs, metrics, and tracing data."
-        questions={[
-          "Show me traces for the last 1 hour",
-          "Which services are generating the most traces",
-          "Which traces had high latency today",
-        ]}
-      />
     ) : undefined
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
-        {currentItem && !isLmtDetail && (
+        {currentItem && !isLmtDetail && currentSegment !== "tracing" && (
           <PageHeader
             title={currentItem.label}
             description={currentItem.desc}
