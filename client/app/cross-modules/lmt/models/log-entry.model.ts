@@ -6,6 +6,7 @@ export type LogServiceIconKey =
   | "monitor"
   | "localization"
   | "data"
+  | "logic"
   | "release"
   | "utilities"
   | "studio"
