@@ -12,7 +12,6 @@ const string _serviceName = "blocks-os-worker";
 
 var vaultType = ApplicationConfigurations.ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, vaultType);
-
 await CreateHostBuilder(args).Build().RunAsync();
 
 IHostBuilder CreateHostBuilder(string[] args) =>
@@ -43,7 +42,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<RestoreProjectRequest>, RestoreProjectConsumer>();
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
-
+            services.AddHostedService<LmtWorker>();
             ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
             #endregion
         });
