@@ -3,6 +3,7 @@ using DomainService.Certificate;
 using DomainService.ManagedService;
 using DomainService.ManagedService.Services;
 using DomainService.ManagedService.Validator;
+using DomainService.People;
 using DomainService.Projects;
 using DomainService.Shared.Services;
 using DomainService.Shared.Utilities;
@@ -38,6 +39,10 @@ namespace DomainService.Shared
             services.AddSingleton<IServiceManagementRepository, ServiceManagementRepository>();
             services.AddSingleton<ISubscriptionRepository, SubscriptionRepository>();
             services.AddSingleton<ISubscriptionService, SubscriptionService>();
+
+            // People
+            services.AddSingleton<IPeopleService, PeopleService>();
+            services.AddSingleton<IPeopleRepository, PeopleRepository>();
 
             // Drivers
             services.AddSingleton<DmsArtifactBuilderFactory>();

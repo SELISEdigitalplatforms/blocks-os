@@ -15,7 +15,7 @@ import {
   mockDisableMfaPayload,
   MOCK_MFA_USER_ID,
 } from "../../test-utils/__mocks__";
-import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__";
+import { TEST_PROJECT_KEY, mockProjectStoreFactory } from "@/test-utils/__mocks__";
 import { mfaService } from "../services/mfa.service";
 import {
   useGetMFAConfig,
@@ -29,6 +29,7 @@ import {
 } from "./use-mfa-config";
 
 vi.mock("@blocks-idp/mfa/services/mfa.service", () => mockMfaServiceFactory());
+vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("use-mfa-config hooks", () => {
   beforeEach(() => {

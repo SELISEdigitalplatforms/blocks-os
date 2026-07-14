@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { format } from "date-fns";
 import {
   ChevronRight,
   LayoutTemplate,
+  RotateCw,
   Shield,
   Trash2,
 } from "lucide-react";
@@ -26,7 +28,10 @@ import {
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
-import { useDeleteAuthOidc } from "@blocks-idp/authentication/hooks/use-auth-oidc";
+import {
+  useDeleteAuthOidc,
+  useRotateAuthOidcSecret,
+} from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import {
   IDeleteOidcClientPayload,
   IOidcConfig,
@@ -34,6 +39,7 @@ import {
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 
 interface OIDCRowProps {
   item: IOidcConfig;
@@ -43,11 +49,20 @@ interface OIDCRowProps {
 const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRotateDialog, setShowRotateDialog] = useState(false);
+  const [showRotatedSecretDialog, setShowRotatedSecretDialog] = useState(false);
+  const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
   });
+  const { mutateAsync: rotateSecret, isPending: isRotating } = useRotateAuthOidcSecret({
+    projectKey: tenantId,
+  });
+
+  const clientSecret = rotatedSecret ?? item.clientSecret;
 
   const createdAt = item.createdDate
     ? format(new Date(item.createdDate), "dd MMM yyyy")
@@ -68,9 +83,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     key: string;
     value: string;
     copyable?: boolean;
+    sensitive?: boolean;
   }[] = [
     { key: "Client Id", value: item.itemId, copyable: true },
-    { key: "Client Secret", value: item.clientSecret, copyable: true },
+    { key: "Client Secret", value: clientSecret, sensitive: true },
     {
       key: "Redirect URI(s)",
       value: redirectUris.join(", "),
@@ -98,6 +114,11 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     },
   ].filter((pair) => pair.value);
 
+  const clientLabel = useMemo(
+    () => item.clientDisplayName || item.itemId,
+    [item.clientDisplayName, item.itemId],
+  );
+
   const handleConfirmDelete = async () => {
     try {
       const payload: IDeleteOidcClientPayload = {
@@ -111,6 +132,28 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
     } catch (error) {
       if (isErrorWithErrors(error))
         return showErrorToast({ errors: error.errors });
+      showErrorToast({ errors: "Something went wrong" });
+    }
+  };
+
+  const handleConfirmRotate = async () => {
+    try {
+      const res = await rotateSecret({
+        itemId: item.itemId,
+        projectKey: tenantId,
+      });
+      if (!res.isSuccess) {
+        return showErrorToast({ errors: res.errors ?? "Failed to rotate secret" });
+      }
+      setRotatedSecret(res.clientSecret);
+      setShowRotateDialog(false);
+      setShowRotatedSecretDialog(true);
+      setExpanded(true);
+      showSuccessToast({ description: "Client secret rotated successfully" });
+    } catch (error) {
+      if (isErrorWithErrors(error)) {
+        return showErrorToast({ errors: error.errors });
+      }
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -173,7 +216,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
                   aria-label="Template"
                   onClick={() =>
-                    navigate(`/app/secret-management/oidc/${item.itemId}/branding`)
+                    navigate(scoped(`secret-management/oidc/${item.itemId}/branding`))
                   }
                 >
                   <LayoutTemplate className="h-3.5 w-3.5" />
@@ -182,6 +225,24 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               <TooltipContent>Template</TooltipContent>
             </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                  aria-label="Rotate client secret"
+                  onClick={() => setShowRotateDialog(true)}
+                  disabled={isRotating}
+                >
+                  <RotateCw
+                    className={cn("h-3.5 w-3.5", isRotating && "animate-spin")}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Rotate Secret</TooltipContent>
+            </Tooltip>
+            <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -203,12 +264,13 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         <TableRow className="border-b-2 border-border hover:bg-transparent">
           <TableCell colSpan={5} className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-              {kvPairs.map(({ key, value, copyable }) => (
+              {kvPairs.map(({ key, value, copyable, sensitive }) => (
                 <KVDetailItem
                   key={key}
                   label={key}
                   value={value}
                   copyable={copyable}
+                  sensitive={sensitive}
                 />
               ))}
             </div>
@@ -216,13 +278,74 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         </TableRow>
       )}
 
+      <Dialog open={showRotateDialog} onOpenChange={setShowRotateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rotate client secret</DialogTitle>
+            <DialogDescription>
+              Do you want to rotate the client secret for <strong>{clientLabel}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRotateDialog(false)}
+              disabled={isRotating}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmRotate}
+              disabled={isRotating}
+            >
+              {isRotating ? "Rotating…" : "Rotate Secret"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showRotatedSecretDialog}
+        onOpenChange={setShowRotatedSecretDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New client secret</DialogTitle>
+            <DialogDescription>
+              Copy the new secret for <strong>{clientLabel}</strong> now. The
+              previous secret no longer works.
+            </DialogDescription>
+          </DialogHeader>
+          {rotatedSecret ? (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+              <code className="min-w-0 flex-1 break-all text-sm">
+                {rotatedSecret}
+              </code>
+              <CopyToClipboardButton textToCopy={rotatedSecret}>
+                <span />
+              </CopyToClipboardButton>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              size="sm"
+              onClick={() => setShowRotatedSecretDialog(false)}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete OIDC Client</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{" "}
-              <strong>{item.clientDisplayName || item.itemId}</strong>? This
+              <strong>{clientLabel}</strong>? This
               action cannot be undone.
             </DialogDescription>
           </DialogHeader>

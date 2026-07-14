@@ -1,8 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
   IGetPermissionByIdPayload,
+  IGetPermissionsSeverityRequestPayload,
   IGetResourceGroupPayload,
   IPermissionFilter,
+  getSeverityOptionsFromResponse,
 } from "@blocks-idp/iam/models/permission";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 
@@ -74,9 +77,16 @@ export const useGetResourceGroup = (options: IGetResourceGroupPayload) => {
   });
 };
 
-export const useGetPermissionsGroupBySeverity = () => {
+export const useGetPermissionsGroupBySeverity = (options: IGetPermissionsSeverityRequestPayload) => {
   return useQuery({
-    queryKey: ["permissions-group-by-severity"],
-    queryFn: () => iamService.permission.getPermissionsSeverity(),
+    queryKey: ["permissions-group-by-severity", options],
+    queryFn: () => iamService.permission.getPermissionsSeverity(options),
+    enabled: !!options.projectKey,
   });
+};
+
+export const usePermissionSeverityOptions = (options: IGetPermissionsSeverityRequestPayload) => {
+  const { data, isLoading } = useGetPermissionsGroupBySeverity(options);
+  const severityOptions = useMemo(() => getSeverityOptionsFromResponse(data), [data]);
+  return { severityOptions, isLoading };
 };

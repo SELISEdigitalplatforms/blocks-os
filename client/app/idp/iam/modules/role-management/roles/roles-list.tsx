@@ -14,6 +14,7 @@ import { Pencil } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { UpdateRole } from "../update-role/update-role";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { FilterControls, SortValue } from "@/components/filter-toolbar";
 import { useRolesSortQueryParams } from "./roles-filter-toolbar";
@@ -32,6 +33,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
   const { sortQueryParams, setSortQueryParams } = useRolesSortQueryParams();
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const sortHandler = useCallback(
     (value: SortValue) => {
       setSortQueryParams(value);
@@ -108,7 +110,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
               variant="ghost"
               onClick={(event) => {
                 event.stopPropagation();
-                setSelectedRole(() => row.original);
+                setSelectedRole(row.original);
               }}
             >
               <Pencil className="h-4 w-4" />
@@ -125,7 +127,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {
-    navigate(`/services/iam/role-detail/${itemId}`);
+    navigate(scoped(`idp/role-detail/${itemId}`));
   };
   if (isLoading) return <LoadingSkelton />;
   return (

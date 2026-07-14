@@ -28,9 +28,9 @@ export const mockAuthServiceFactory = () => ({
 export const mockAuthClientsServiceFactory = () => ({
   authClientService: {
     clients: {
-      getClientCredentials: vi.fn(),
-      saveClientCredential: vi.fn(),
-      deleteClientCredential: vi.fn(),
+      list: vi.fn(),
+      save: vi.fn(),
+      delete: vi.fn(),
     },
   },
 });
@@ -42,6 +42,7 @@ export const mockAuthOidcServiceFactory = () => ({
       getOidcCredential: vi.fn(),
       saveOidcCredential: vi.fn(),
       deleteOidcCredential: vi.fn(),
+      rotateOidcClientSecret: vi.fn(),
     },
   },
 });

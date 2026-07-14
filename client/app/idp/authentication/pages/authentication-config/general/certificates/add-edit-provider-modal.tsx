@@ -33,6 +33,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 interface AddEditProviderModalProps {
   existingData?: IGetPublicCertificateResponse | null;
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 const formSchema = z.object({
   url: z.string().trim().optional().or(z.literal("")),
@@ -41,9 +44,21 @@ const formSchema = z.object({
   audience: z.string().trim().optional().or(z.literal("")),
 });
 type FormData = z.infer<typeof formSchema>;
-export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps) => {
+export const AddEditProviderModal = ({
+  existingData,
+  children,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: AddEditProviderModalProps) => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (!isControlled) setInternalOpen(value);
+    onOpenChangeProp?.(value);
+  };
+  const isExternallyControlled = isControlled && !children;
   const [selectedProvider, setSelectedProvider] = useState("Keycloak");
   const [certificateMethod, setCertificateMethod] = useState("public-url");
   const [showPassword, setShowPassword] = useState(false);
@@ -241,19 +256,23 @@ export const AddEditProviderModal = ({ existingData }: AddEditProviderModalProps
   };
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="mb-4">
-          {existingData ? (
-            <>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </>
-          ) : (
-            <>
-              <Plus className="mr-2 h-4 w-4" /> Add
-            </>
+      {!isExternallyControlled && (
+        <DialogTrigger asChild>
+          {children ?? (
+            <Button variant="outline" size="sm" className="mb-4">
+              {existingData ? (
+                <>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" /> Add
+                </>
+              )}
+            </Button>
           )}
-        </Button>
-      </DialogTrigger>
+        </DialogTrigger>
+      )}
       <DialogContent className="flex max-h-[80vh] w-[95vw] max-w-md flex-col sm:w-full">
         <DialogHeader>
           <DialogTitle>{existingData ? "Edit provider" : "Add provider"}</DialogTitle>

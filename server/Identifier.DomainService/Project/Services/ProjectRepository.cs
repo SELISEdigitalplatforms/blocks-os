@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Shared;
@@ -41,6 +41,22 @@ namespace DomainService.Projects
             }
 
             return _dbContextProvider.GetDatabase(blocksContext.TenantId);
+        }
+
+        // Genesis resolves this collection from the caller's tenant database when it maps an
+        // external token's claims, so it must never be served from the impersonated root db.
+        private IMongoCollection<ThirdPartyJWTClaims> ResolveThirdPartyJWTClaimsCollection()
+        {
+            var tenantId = BlocksContext.GetContext()?.TenantId;
+
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                throw new InvalidOperationException("Tenant ID is missing in the current context.");
+            }
+
+            return _dbContextProvider
+                .GetDatabase(tenantId)
+                .GetCollection<ThirdPartyJWTClaims>(IdentifierConstants.ThirdPartyJWTClaimsCollectionName);
         }
 
         public async Task<Tenant> GetByIdAsync(string itemId)
@@ -287,7 +303,6 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "StorageConfigurations", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "AuthenticationConfigurations", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "UilmFiles", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageModules", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageKeys", project.TenantId),
@@ -501,7 +516,7 @@ namespace DomainService.Projects
 
         public async Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper)
         {
-            var collection = _clientDb.GetCollection<ThirdPartyJWTClaims>("ThirdPartyJWTClaims");
+            var collection = ResolveThirdPartyJWTClaimsCollection();
             var filter = Builders<ThirdPartyJWTClaims>.Filter.Eq(m => m.ItemId, mapper.ItemId);
             await collection.ReplaceOneAsync(filter, mapper, new ReplaceOptions { IsUpsert = true });
 
@@ -510,7 +525,7 @@ namespace DomainService.Projects
 
         public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId)
         {
-            var collection = _clientDb.GetCollection<ThirdPartyJWTClaims>("ThirdPartyJWTClaims");
+            var collection = ResolveThirdPartyJWTClaimsCollection();
 
             var filter = !string.IsNullOrWhiteSpace(itemId) ?
                          Builders<ThirdPartyJWTClaims>.Filter.Eq(mc => mc.ItemId, itemId) :

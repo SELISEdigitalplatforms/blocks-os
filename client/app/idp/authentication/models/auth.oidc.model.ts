@@ -20,6 +20,7 @@ export interface IOidcConfig {
   isAutoRedirect: boolean;
   isActive: boolean;
   requirePkce: boolean;
+  registerAsIdentityProvider?: boolean;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   tenantId: string;
@@ -34,14 +35,13 @@ export interface IGetOidcCredentialsResponse {
 }
 
 export interface ISaveOidcCredentialPayload {
-  audience: string;
   isAutoRedirect: boolean;
   isActive: boolean;
   itemId: string;
-  projectKey: string;
   redirectUris: string[];
   scope: string;
   requirePkce: boolean;
+  registerAsIdentityProvider: boolean;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;
@@ -70,49 +70,40 @@ export interface IGetClientsPayload {
 }
 
 export interface IClientCredentialsConfig {
-  scope: string;
   itemId: string;
   name: string;
+  clientSecret: string;
+  accessTokenValidForNumberMinutes: number;
+  roles: string[];
+  permissions: string[];
+  isActive: boolean;
   createdDate: string;
   lastUpdatedDate: string;
   createdBy: string;
   language: string;
   lastUpdatedBy: string;
-  organizationIds: string[];
+  organizationId: string;
   tags: string[];
-  clientSecret: string;
-  roles: string[];
-  isActive: boolean;
-  audiences: string[];
-}
-
-export interface IClientConfigResponse {
-  scope: string;
-  itemId: string;
-  name: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  language: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  clientSecret: string;
-  roles: string[];
-  isActive: boolean;
-  audiences: string[];
 }
 
 export interface ISaveClientCredentialPayload {
+  itemId?: string | null;
   name: string;
+  isActive: boolean;
+  accessTokenValidForNumberMinutes: number;
   roles: string[];
+  permissions: string[];
   projectKey: string;
 }
 
 export interface ISaveClientCredentialResponse {
+  itemId: string;
   name: string;
-  roles: [];
-  projectKey: string;
+  isActive: boolean;
+  accessTokenValidForNumberMinutes: number;
+  roles: string[];
+  permissions: string[];
+  isSuccess: boolean;
 }
 
 export interface TabValue {
@@ -129,4 +120,19 @@ export interface IDeleteOidcClientResponse {
     additionalProp3: string;
   };
   isSuccess: boolean;
+}
+
+export interface IRotateOidcClientSecretPayload {
+  itemId: string;
+  projectKey: string;
+}
+
+export interface IRotateOidcClientSecretResponse {
+  isSuccess: boolean;
+  itemId: string;
+  clientId: string;
+  clientSecret: string;
+  rotatedAt: string;
+  rotatedBy: string;
+  errors?: Record<string, string>;
 }
