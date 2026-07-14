@@ -1,9 +1,5 @@
-import { useState } from "react";
-import { ExternalLink, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
-import { Button } from "@/components/ui-kits/button/button";
 import {
   Card,
   CardContent,
@@ -11,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui-kits/card/card";
-import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import {
   Table,
   TableBody,
@@ -21,12 +16,9 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { MaskedText } from "@/components/masked-text";
 import { environmentOptions } from "@/constants/environment-options";
-import { useDisableProject } from "@/hooks/use-project";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { IProject } from "@/models/project.model";
 
@@ -78,11 +70,13 @@ const EnvironmentDomain = ({ project }: { project: IProject }) => {
   );
 };
 
-const EnvironmentsTableLoading = ({ columnCount }: { columnCount: number }) => (
+const COLUMN_COUNT = 4;
+
+const EnvironmentsTableLoading = () => (
   <>
     {Array.from({ length: 3 }).map((_, rowIndex) => (
       <TableRow key={rowIndex}>
-        {Array.from({ length: columnCount }).map((__, cellIndex) => (
+        {Array.from({ length: COLUMN_COUNT }).map((__, cellIndex) => (
           <TableCell key={cellIndex}>
             <Skeleton className="h-6 w-full rounded-sm" />
           </TableCell>
@@ -95,57 +89,12 @@ const EnvironmentsTableLoading = ({ columnCount }: { columnCount: number }) => (
 type EnvironmentsCardProps = {
   environments: IProject[];
   isLoading?: boolean;
-  canDelete?: boolean;
 };
 
 export const EnvironmentsCard = ({
   environments,
   isLoading = false,
-  canDelete = false,
 }: EnvironmentsCardProps) => {
-  const navigate = useNavigate();
-  const { selectedProject, setSelectedProject, resetSelectedProject } =
-    useProjectStore();
-  const [deleteTarget, setDeleteTarget] = useState<IProject | null>(null);
-  const { mutateAsync: disableProject, isPending } = useDisableProject({
-    projectKey: deleteTarget?.tenantId || "",
-  });
-
-  const columnCount = canDelete ? 5 : 4;
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    try {
-      const res = await disableProject({ projectKey: deleteTarget.tenantId });
-      if (!res.isSuccess) {
-        showErrorToast({ errors: res.errors });
-        return;
-      }
-      showSuccessToast({
-        title: "Environment deleted",
-        description: `${getEnvironmentLabel(deleteTarget.environment)} has been deleted.`,
-      });
-      const remaining = environments.filter(
-        (environment) => environment.itemId !== deleteTarget.itemId,
-      );
-      // The deleted environment may be the one the rest of the app is scoped to —
-      // re-point the store at a surviving environment so no dangling selection is
-      // left behind, and fall back to the console once nothing remains.
-      if (remaining.length === 0) {
-        resetSelectedProject();
-        setDeleteTarget(null);
-        navigate("/app/console");
-        return;
-      }
-      if (selectedProject?.itemId === deleteTarget.itemId) {
-        setSelectedProject(remaining[0]);
-      }
-      setDeleteTarget(null);
-    } catch (error) {
-      showErrorToast({ errors: error });
-    }
-  };
-
   return (
     <Card>
       <CardHeader className="mb-4 flex flex-col gap-1">
@@ -162,20 +111,15 @@ export const EnvironmentsCard = ({
               <TableHead className="text-xs md:text-sm">X-Blocks-Key</TableHead>
               <TableHead className="text-xs md:text-sm">Domain</TableHead>
               <TableHead className="text-xs md:text-sm">Created On</TableHead>
-              {canDelete && (
-                <TableHead className="w-20 text-xs md:text-sm">
-                  Actions
-                </TableHead>
-              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <EnvironmentsTableLoading columnCount={columnCount} />
+              <EnvironmentsTableLoading />
             ) : environments.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={columnCount}
+                  colSpan={COLUMN_COUNT}
                   className="h-24 text-center text-sm text-muted-foreground">
                   No environments found for this project.
                 </TableCell>
@@ -206,57 +150,12 @@ export const EnvironmentsCard = ({
                       ? formatDate(new Date(environment.createdDate))
                       : "-"}
                   </TableCell>
-                  {canDelete && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Delete environment"
-                        aria-label={`Delete ${getEnvironmentLabel(environment.environment)} environment`}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setDeleteTarget(environment)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  )}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </CardContent>
-
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        {deleteTarget && (
-          <ConfirmationModal
-            onCancel={() => setDeleteTarget(null)}
-            onConfirm={handleDeleteConfirm}
-            data={{
-              dialogTitle: "Delete this environment?",
-              dialogSubtitle: (
-                <>
-                  <p>
-                    Are you sure you want to delete the{" "}
-                    <span className="font-semibold">
-                      {getEnvironmentLabel(deleteTarget.environment)}
-                    </span>{" "}
-                    environment?
-                  </p>
-                  <p className="mt-2">
-                    This will permanently delete the environment and you&apos;ll
-                    need to contact support to recover it.
-                  </p>
-                </>
-              ),
-              confirmButton: "Delete",
-              cancelButton: "Cancel",
-            }}
-            buttonState={{ confirm: { disable: isPending } }}
-          />
-        )}
-      </Dialog>
     </Card>
   );
 };
