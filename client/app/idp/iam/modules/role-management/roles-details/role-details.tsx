@@ -9,7 +9,6 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 // import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
 // import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
-import { useQueryClient } from "@tanstack/react-query";
 import { PermissionsSelectionPanel } from "./permissions-selection-panel";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 
@@ -31,7 +30,6 @@ const RoleDetailsPageSkeleton = () => (
 
 export function RoleDetailsContainer() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const queryClient = useQueryClient();
   const role = useRoleDetailsStore((state) => state.role);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
   const discardChanges = useRoleDetailsStore((state) => state.discardChanges);
@@ -41,8 +39,8 @@ export function RoleDetailsContainer() {
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles(role?.slug);
 
-  if (role?.itemId && role?.slug) {
-    BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role.itemId] = role.slug;
+  if (role?.itemId && role?.name) {
+    BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role.itemId] = role.name;
   }
 
   const onSaveClick = async () => {
@@ -71,7 +69,6 @@ export function RoleDetailsContainer() {
         slug: role.slug,
       });
       commitChanges();
-      await queryClient.refetchQueries({ queryKey: ["permissions"] });
       showSuccessToast({ description: "Role permissions updated successfully" });
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
