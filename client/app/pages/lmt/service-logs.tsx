@@ -31,7 +31,7 @@ export function LmtServiceLogsRoute() {
     return (
       <div className="flex flex-col gap-5 sm:gap-4">
         <PageBreadcrumb
-          breadcrumbIndex={3}
+          breadcrumbIndex={4}
           listClassName="text-base sm:text-lg"
         />
         <Card>
@@ -65,7 +65,7 @@ export function LmtServiceLogsRoute() {
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
       <PageBreadcrumb
-        breadcrumbIndex={3}
+        breadcrumbIndex={4}
         listClassName="text-base sm:text-lg"
       />
       <LogsViewer
