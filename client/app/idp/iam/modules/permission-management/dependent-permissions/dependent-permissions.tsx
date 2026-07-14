@@ -5,10 +5,12 @@ import { X } from "lucide-react";
 type SSOInitialPermissionsProps = {
   permissionsResource: string[];
   onChange: (data: string[]) => void;
+  disabled?: boolean;
 };
 export function DependentPermissions({
   permissionsResource,
   onChange,
+  disabled = false,
 }: SSOInitialPermissionsProps) {
   const onAddHandler = (newPermissions: IPermission[]) => {
     const resources = newPermissions.map((item) => item.resource);
@@ -24,15 +26,19 @@ export function DependentPermissions({
           {permissionsResource.map((item) => (
             <Badge variant="outline" className="w-fit" key={item}>
               {item}
-              <X
-                className="ml-2 aspect-square w-3 cursor-pointer"
-                onClick={() => onRemoveHandler(item)}
-              ></X>
+              {!disabled ? (
+                <X
+                  className="ml-2 aspect-square w-3 cursor-pointer"
+                  onClick={() => onRemoveHandler(item)}
+                />
+              ) : null}
             </Badge>
           ))}
         </div>
       )}
-      <AddDependentPermission onAdd={onAddHandler} permissionsResource={permissionsResource} />
+      {!disabled ? (
+        <AddDependentPermission onAdd={onAddHandler} permissionsResource={permissionsResource} />
+      ) : null}
     </div>
   );
 }

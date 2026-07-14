@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/page-header/page-header"
+import { Badge } from "@/components/ui-kits/badge/badge"
 import { Button } from "@/components/ui-kits/button/button"
 import {
   Select,
@@ -7,9 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select"
-import { LMT_NAV_GROUPS, LMT_BASE_PATH } from "@/constants/lmt-nav"
+import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
+import { useLmtBasePath } from "@/hooks/use-scoped-path"
 import { cn } from "@/lib/utils"
-import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet"
 import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage"
 import { useProjectStore } from "@seliseblocks/blocks-kit"
 import { RefreshCcw } from "lucide-react"
@@ -18,6 +19,7 @@ import { Outlet, useLocation } from "react-router-dom"
 
 export default function LmtLayout() {
   const { pathname } = useLocation()
+  const LMT_BASE_PATH = useLmtBasePath()
   const isLogsDetail = new RegExp(
     `^${LMT_BASE_PATH}/logs/[^/]+(/trace/[^/]+)?$`,
   ).test(pathname)
@@ -68,25 +70,23 @@ export default function LmtLayout() {
           <span className="sr-only sm:not-sr-only sm:ml-2">Refresh</span>
         </Button>
       </div>
-    ) : currentSegment === "tracing" ? (
-      <LMTQueryAgentSheet
-        description="Hello! I can help you search and analyze your logs, metrics, and tracing data."
-        questions={[
-          "Show me traces for the last 1 hour",
-          "Which services are generating the most traces",
-          "Which traces had high latency today",
-        ]}
-      />
     ) : undefined
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
-        {currentItem && !isLmtDetail && (
+        {currentItem && !isLmtDetail && currentSegment !== "tracing" && (
           <PageHeader
             title={currentItem.label}
             description={currentItem.desc}
             actions={headerActions}
+            titleSuffix={
+              currentSegment === "usage" ? (
+                <Badge variant="default" className="h-fit text-xs">
+                  Coming soon
+                </Badge>
+              ) : undefined
+            }
           />
         )}
         <Outlet />

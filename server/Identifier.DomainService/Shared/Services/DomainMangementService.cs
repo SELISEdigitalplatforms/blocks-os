@@ -1,12 +1,11 @@
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Blocks.Genesis;
 using DnsClient;
 using DomainService.Projects;
-using DomainService.Shared.Dtos;
 using DomainService.Shared.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -23,6 +22,14 @@ namespace DomainService.Shared
         private readonly ITenants _tenants;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
+
+        // Domain names are interpolated into sudo shell commands on the reverse
+        // proxy, so anything outside a strict hostname grammar is rejected before
+        // it can reach one.
+        private static readonly Regex HostnameRegex = new(
+            @"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$",
+            RegexOptions.Compiled);
+
         public DomainManagementService(ILogger<DomainManagementService> logger,
                                        IBlocksSecret blocksSecret,
                                        IProjectRepository projectRepository,
@@ -42,9 +49,34 @@ namespace DomainService.Shared
         {
             var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
             _logger.LogInformation("Processing request {RequestId} for domain {Domain}", tenantId, request.CookieDomain);
-            var cookieDomain = request.CookieDomain.Replace("https://", "");
+            var cookieDomain = NormalizeDomain(request.CookieDomain);
+
+            if (!IsValidHostname(cookieDomain))
+            {
+                _logger.LogWarning("Rejected invalid domain {Domain}", request.CookieDomain);
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_domain", $"{request.CookieDomain} is not a valid domain name." } } };
+            }
 
             var (domain, blocksApiDomain) = ExtractDomainParts(cookieDomain);
+
+            // Derived from config (CnameRecordDomain), so a missing or malformed
+            // setting must not produce a hostname either
+            if (!IsValidHostname(blocksApiDomain))
+            {
+                _logger.LogError("Derived blocksapi domain {BlocksApiDomain} is not a valid hostname; check the CnameRecordDomain setting", blocksApiDomain);
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_domain", $"Could not derive a valid API domain from {domain}." } } };
+            }
+
+            // Already-verified domains have their nginx config and certificate in
+            // place — skip the DNS/SSH/certbot pipeline instead of re-running it
+            var existingApplication = _tenants.GetTenantByID(tenantId)?.Applications?
+                .FirstOrDefault(a => NormalizeDomain(a.Domain) == NormalizeDomain(domain));
+
+            if (existingApplication?.IsDomainVerified == true)
+            {
+                _logger.LogInformation("Domain {Domain} is already verified; skipping configuration", domain);
+                return new BaseResponse { IsSuccess = true };
+            }
 
             var (verifySuccess, verifyMessage) = await VerifyDomainAsync(domain);
 
@@ -71,19 +103,43 @@ namespace DomainService.Shared
             }
 
             _logger.LogInformation("Successfully configured domain {Domain}", request.CookieDomain);
-            await UpdateDomainValidationStatusAsync(tenantId, true);
+            await UpdateDomainValidationStatusAsync(tenantId, domain, true);
 
             return new BaseResponse { IsSuccess = true };
         }
 
-        private async Task UpdateDomainValidationStatusAsync(string tenantId, bool status)
+        // Domains are stored inconsistently ("https://x", "x", trailing slash,
+        // mixed case) — normalize before comparing
+        private static string NormalizeDomain(string domain) =>
+            (domain ?? string.Empty)
+                .Trim()
+                .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace("http://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .TrimEnd('/')
+                .ToLowerInvariant();
+
+        private static bool IsValidHostname(string domain) =>
+            !string.IsNullOrWhiteSpace(domain)
+            && domain.Length <= 253
+            && HostnameRegex.IsMatch(domain);
+
+        private async Task UpdateDomainValidationStatusAsync(string tenantId, string domain, bool status)
         {
             var project = _tenants.GetTenantByID(tenantId);
 
             if (project is not null)
             {
-                //TODO: need to dicide later
-                // project.IsDomainVerified = status;
+                var normalizedDomain = NormalizeDomain(domain);
+                var application = project.Applications?
+                    .FirstOrDefault(a => NormalizeDomain(a.Domain) == normalizedDomain);
+
+                if (application is null)
+                {
+                    _logger.LogWarning("No application found with domain {Domain} for tenant {TenantId}; verification status not updated", domain, tenantId);
+                    return;
+                }
+
+                application.IsDomainVerified = status;
                 await _projectRepository.UpdateProjectAsync(project);
                 await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
                 {
@@ -123,7 +179,7 @@ namespace DomainService.Shared
 
         private async Task<(bool Success, string Message)> CheckPingBlocksApi(string domain)
         {
-            var url = $"https://{domain}/identifier/v1/ping";
+            var url = $"https://{domain}/release/v4/auth/testping";
             _logger.LogInformation("Checking blocksapi ping: {Url}", url);
 
             try
@@ -166,10 +222,10 @@ namespace DomainService.Shared
             var username = _blocksSecret.SshUsername;
             var password = _blocksSecret.SshPassword;
 
-            List<string> commands = new List<string>();
-            List<string> allowedDomains = new List<string>();
-            bool result;
-            string response;
+            // Only hosts created by *this* run may be rolled back. The blocksapi host
+            // is shared by every app under the same root domain, so if it was already
+            // on the box it belongs to other apps: rolling it back would take them down.
+            var createdDomains = new List<string>();
 
             _logger.LogInformation("Connecting to SSH server {Host}...", host);
 
@@ -186,76 +242,84 @@ namespace DomainService.Shared
 
                 _logger.LogInformation("SSH connected to {Host}", host);
 
+                // Diagnostic only. A 502/503 here means the API host is unhealthy, which
+                // is an ops problem — it must never be read as "not configured yet", or a
+                // transient blip would send us into the first-time-setup path and clobber
+                // a live vhost.
+                var (pingSuccess, pingMessage) = await CheckPingBlocksApi(blocksApiDomain);
+                _logger.LogInformation("Blocksapi health for {Domain}: {Healthy} ({Message})", blocksApiDomain, pingSuccess, pingMessage);
 
-
-                //var domainHttpsChecker = await GetHttpsCertificateInfoAsync(domain);
-                //if (domainHttpsChecker is not null && !domainHttpsChecker.HasValidCertificate)
-                //{
-                    
-                //}
-
-                //var blocksApiDomainHttpsChecker = await GetHttpsCertificateInfoAsync(blocksApiDomain);
-                //if (blocksApiDomainHttpsChecker is not null && !blocksApiDomainHttpsChecker.HasValidCertificate && !checkPingSuccess)
-                //{
-
-                //}
-
-                var (checkPingSuccess, checkPingMessage) = await CheckPingBlocksApi(blocksApiDomain);
-                commands = UpdateNginxConfigCommands(domain, IdentifierConstants.RemoteFeTemplate, "fe-domain");
-
-                (result, response) = await ExecuteRemoteCommands(sshClient, commands);
-                allowedDomains.Add(domain);
-                if (!result)
+                var targets = new[]
                 {
-                    _logger.LogError($"Failed to update nginx config for domain {domain}.");
-                    await ExecuteRemoteCommands(sshClient, CleanupNginxConfigCommands(allowedDomains));
-                    return (false, $"Failed to update nginx config for domain {domain}.");
-                }
+                    (Domain: blocksApiDomain, Template: IdentifierConstants.RemoteBlocksapiTemplate, Placeholder: "blocksapi-domain"),
+                    (Domain: domain, Template: IdentifierConstants.RemoteFeTemplate, Placeholder: "fe-domain"),
+                };
 
-                if (!checkPingSuccess)
+                foreach (var target in targets)
                 {
-                    commands = UpdateNginxConfigCommands(blocksApiDomain, IdentifierConstants.RemoteBlocksapiTemplate, "blocksapi-domain");
-                    (result, response) = await ExecuteRemoteCommands(sshClient, commands);
-                    allowedDomains.Add(blocksApiDomain);
-                    if (!result)
+                    if (await IsTlsConfiguredAsync(sshClient, target.Domain))
                     {
-                        _logger.LogError($"Failed to update nginx config for domain {blocksApiDomain}.");
-                        await ExecuteRemoteCommands(sshClient, CleanupNginxConfigCommands(allowedDomains));
-                        return (false, $"Failed to update nginx config for domain {domain}.");
+                        _logger.LogInformation("{Domain} already has a TLS-enabled nginx vhost; leaving it untouched", target.Domain);
+                        continue;
                     }
-                    _logger.LogInformation($"Updated nginx config successfully for domain {blocksApiDomain}.");
-                }
 
-                commands = ReloadNginxConfigCommands();
-                (result, response) = await ExecuteRemoteCommands(sshClient, commands);
-                if (!result)
-                {
-                    _logger.LogError($"Failed to reload nginx.");
-                    await ExecuteRemoteCommands(sshClient, CleanupNginxConfigCommands(allowedDomains));
-                    return (false, $"Failed to reload nginx.");
-                }
-                _logger.LogInformation($"Updated nginx config successfully for domains {string.Join(",", allowedDomains)}.");
+                    var (writeOk, _) = await ExecuteRemoteCommands(sshClient, UpdateNginxConfigCommands(target.Domain, target.Template, target.Placeholder));
+                    createdDomains.Add(target.Domain);
 
-                foreach (var item in allowedDomains)
-                {
-                    commands = SSLCertificateInstallCommands(item);
-                    (result, response) = await ExecuteRemoteCommands(sshClient, commands);
-                    if (!result)
+                    if (!writeOk)
                     {
-                        _logger.LogError($"Failed install SSL certification for domain {item}.");
-                        await ExecuteRemoteCommands(sshClient, CleanupNginxConfigCommands(new List<string> {item}));
-                        return (false, $"Failed install SSL certification for domain {item}");
+                        // The failing command and its stderr are already logged by
+                        // ExecuteRemoteCommands; callers get a short message they can show.
+                        _logger.LogError("Failed to update nginx config for domain {Domain}", target.Domain);
+                        await RollbackAsync(sshClient, createdDomains);
+                        return (false, $"Failed to update nginx config for domain {target.Domain}.");
                     }
-                    _logger.LogInformation($"SSL Crtification installed successfully for domain {item}.");
+
+                    _logger.LogInformation("Wrote nginx config for domain {Domain}", target.Domain);
                 }
 
+                if (createdDomains.Count == 0)
+                {
+                    _logger.LogInformation("Both {Domain} and {BlocksApiDomain} are already configured; nothing to do", domain, blocksApiDomain);
+                    return (true, "Domains already configured.");
+                }
+
+                var (reloadOk, _) = await ExecuteRemoteCommands(sshClient, ReloadNginxConfigCommands());
+                if (!reloadOk)
+                {
+                    _logger.LogError("Failed to reload nginx");
+                    await RollbackAsync(sshClient, createdDomains);
+                    return (false, "Failed to reload nginx configuration.");
+                }
+
+                _logger.LogInformation("Updated nginx config successfully for domains {Domains}", string.Join(",", createdDomains));
+
+                foreach (var item in createdDomains)
+                {
+                    var (certOk, _) = await ExecuteRemoteCommands(sshClient, SSLCertificateInstallCommands(item));
+                    if (!certOk)
+                    {
+                        // Certbot's full output is in the ExecuteRemoteCommands log line and in
+                        // /var/log/letsencrypt on the proxy — it is far too long to hand back.
+                        _logger.LogError("Failed to install SSL certificate for domain {Domain}", item);
+                        await RollbackAsync(sshClient, createdDomains);
+                        return (false, $"Failed to install SSL certificate for domain {item}.");
+                    }
+                    _logger.LogInformation("SSL certificate installed successfully for domain {Domain}", item);
+                }
 
                 return (true, "All commands executed successfully.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "SSH execution error");
-                return (false, $"SSH error: {ex.Message}");
+
+                if (sshClient.IsConnected)
+                {
+                    await RollbackAsync(sshClient, createdDomains);
+                }
+
+                return (false, "Failed to reach the domain configuration server.");
             }
             finally
             {
@@ -264,6 +328,49 @@ namespace DomainService.Shared
                     sshClient.Disconnect();
                     _logger.LogInformation("Disconnected from SSH server {Host}", host);
                 }
+            }
+        }
+
+        // Certbot rewrites the vhost in place to add the 443 server block, so a vhost
+        // carrying an ssl_certificate directive is already serving HTTPS. Re-copying the
+        // plain-HTTP template over it would strip TLS from a live host. This checks the
+        // one path this code owns and writes deterministically — unlike
+        // /etc/letsencrypt/live/<domain>, whose lineage directory picks up a -0001 suffix
+        // when a lineage of that name already exists.
+        private async Task<bool> IsTlsConfiguredAsync(SshClient sshClient, string domain)
+        {
+            var vhost = $"/etc/nginx/sites-available/{domain}";
+
+            // Anchored so a commented-out ssl_certificate line in the source template
+            // cannot be mistaken for a certbot-installed one
+            return await RemoteCheckAsync(
+                sshClient,
+                $"sudo test -f '{vhost}' && sudo grep -qE '^[[:space:]]*ssl_certificate[[:space:]]' '{vhost}'");
+        }
+
+        // A non-zero exit is an answer here, not a failure, so this stays out of
+        // ExecuteRemoteCommands (which treats non-zero as fatal).
+        private async Task<bool> RemoteCheckAsync(SshClient sshClient, string command)
+        {
+            _logger.LogInformation("Checking: {Command}", command);
+            using var cmd = sshClient.CreateCommand(command);
+            await cmd.ExecuteAsync();
+            return cmd.ExitStatus == 0;
+        }
+
+        private async Task RollbackAsync(SshClient sshClient, List<string> createdDomains)
+        {
+            if (createdDomains.Count == 0)
+            {
+                return;
+            }
+
+            _logger.LogWarning("Rolling back nginx config for domains created by this run: {Domains}", string.Join(",", createdDomains));
+
+            var (ok, message) = await ExecuteRemoteCommands(sshClient, CleanupNginxConfigCommands(createdDomains));
+            if (!ok)
+            {
+                _logger.LogError("Rollback failed: {Message}", message);
             }
         }
 
@@ -361,13 +468,13 @@ namespace DomainService.Shared
 
         private List<string> UpdateNginxConfigCommands(string domain, string path, string placeholder)
         {
-            return new List<string>  { 
-                $"sudo cp {path} /etc/nginx/sites-available/{domain}",
-                $"sudo sed -i 's/{{{placeholder}}}/{domain}/g' /etc/nginx/sites-available/{domain}",
-                $"sudo ln -sf /etc/nginx/sites-available/{domain} /etc/nginx/sites-enabled/",
+            return new List<string>  {
+                $"sudo cp '{path}' '/etc/nginx/sites-available/{domain}'",
+                $"sudo sed -i 's/{{{placeholder}}}/{domain}/g' '/etc/nginx/sites-available/{domain}'",
+                $"sudo ln -sf '/etc/nginx/sites-available/{domain}' /etc/nginx/sites-enabled/",
             };
         }
-        
+
         private List<string> ReloadNginxConfigCommands()
         {
             return new List<string>  {
@@ -375,14 +482,21 @@ namespace DomainService.Shared
                 $"sudo systemctl reload nginx",
             };
         }
-        
+
         private List<string> SSLCertificateInstallCommands(string domain)
         {
             return new List<string>  {
-                   $"sudo certbot --webroot -w {IdentifierConstants.CertbotWebrootPath} --installer nginx -d {domain} --email {IdentifierConstants.CertbotEmail} --agree-tos --redirect --non-interactive -v",
+                   // --cert-name pins the lineage to the domain, so a re-run updates
+                   // /etc/letsencrypt/live/<domain> instead of spawning a <domain>-0001
+                   // copy. --keep-until-expiring makes a non-interactive re-run reinstall
+                   // an existing, unexpired cert rather than erroring on the
+                   // reinstall/renew prompt it cannot answer.
+                   $"sudo certbot --webroot -w {IdentifierConstants.CertbotWebrootPath} --installer nginx -d '{domain}' --cert-name '{domain}' --email {IdentifierConstants.CertbotEmail} --agree-tos --keep-until-expiring --redirect --non-interactive -v",
             };
         }
 
+        // Removes nginx config only. Certificates are left in /etc/letsencrypt so a retry
+        // reuses the existing lineage instead of burning Let's Encrypt duplicate-cert quota.
         private List<string> CleanupNginxConfigCommands(List<string> domains)
         {
             var commands = new List<string>();
@@ -391,8 +505,8 @@ namespace DomainService.Shared
             {
                 commands.AddRange(new[]
                 {
-                    $"sudo rm -f /etc/nginx/sites-enabled/{domain}",
-                    $"sudo rm -f /etc/nginx/sites-available/{domain}",
+                    $"sudo rm -f '/etc/nginx/sites-enabled/{domain}'",
+                    $"sudo rm -f '/etc/nginx/sites-available/{domain}'",
                 });
             }
             commands.AddRange(ReloadNginxConfigCommands());
@@ -402,72 +516,36 @@ namespace DomainService.Shared
 
         public async Task<(bool, string)> DisableDomainBindingAsync(DisableDomainBindingRequest request)
         {
-            var domain = request.Domain.Replace("https://", "");
+            var domain = NormalizeDomain(request.Domain);
 
+            if (!IsValidHostname(domain))
+            {
+                _logger.LogWarning("Rejected invalid domain {Domain} for disable-domain-binding", request.Domain);
+                return (false, $"{request.Domain} is not a valid domain name.");
+            }
+
+            // Only this app's own vhost and certificate lineage are removed. The blocksapi
+            // host derived from the same root domain is shared with every other app under
+            // it and must survive — which is why this targets exact paths rather than
+            // globbing the filesystem for anything whose name contains the domain.
             var commands = new[]
             {
-                $"sudo find / -type f -name \"*{domain}*\" -exec rm -f {{}} \\; 2>/dev/null",
-                $"sudo rm -rf /etc/letsencrypt/archive/{domain}-*",
-                $"sudo find /etc/nginx/sites-enabled/ -xtype l -delete",
+                $"sudo rm -f '/etc/nginx/sites-enabled/{domain}'",
+                $"sudo rm -f '/etc/nginx/sites-available/{domain}'",
+                // Exits non-zero when no such lineage exists, which is not a failure here.
+                $"sudo certbot delete --cert-name '{domain}' --non-interactive || true",
                 $"sudo nginx -t",
                 $"sudo systemctl reload nginx"
             };
 
-            var executionResult = await ExecuteRemoteCommandsAsync(commands);
-            await UpdateDomainValidationStatusAsync(request.ProjectId, false);
-            return executionResult;
+            var (success, _) = await ExecuteRemoteCommandsAsync(commands);
+            await UpdateDomainValidationStatusAsync(request.ProjectId, domain, false);
+
+            return success
+                ? (true, $"Domain binding disabled for {domain}.")
+                : (false, $"Failed to disable domain binding for {domain}.");
         }
 
-
-        private async Task<HttpsCertificateInfo> GetHttpsCertificateInfoAsync(string domain)
-        {
-            var result = new HttpsCertificateInfo();
-
-            try
-            {
-                using (var tcpClient = new TcpClient())
-                {
-                    await tcpClient.ConnectAsync(domain, 443);
-
-                    SslPolicyErrors policyErrors = SslPolicyErrors.None;
-
-                    using (var sslStream = new SslStream(tcpClient.GetStream(), false,
-                        (sender, cert, chain, errors) =>
-                        {
-                            policyErrors = errors;
-                            return errors == SslPolicyErrors.None;
-                        }))
-                    {
-                        await sslStream.AuthenticateAsClientAsync(domain);
-
-                        result.SslPolicyErrors = policyErrors.ToString();
-
-                        if (sslStream.RemoteCertificate is X509Certificate2 cert)
-                        {
-                            result.Subject = cert.Subject;
-                            result.Issuer = cert.Issuer;
-                            result.ValidFrom = cert.NotBefore;
-                            result.ValidUntil = cert.NotAfter;
-                            result.IsExpired = DateTime.UtcNow > cert.NotAfter;
-                            result.HasValidCertificate = policyErrors == SslPolicyErrors.None && !result.IsExpired;
-                        }
-                        else
-                        {
-                            result.HasValidCertificate = false;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                result.HasValidCertificate = false;
-                result.SslPolicyErrors = ex.Message;
-            }
-
-            _logger.LogInformation($"Certificate installation status for {domain}: {JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })}");
-            result.HasValidCertificate = false;
-            return result;
-        }
 
     }
 }

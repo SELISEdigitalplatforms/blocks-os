@@ -10,6 +10,7 @@ import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { createContext, useContext, useState } from "react";
 import { Link } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { UserMFAConfirmationDisable } from "./user-mfa-confirmation/user-mfa-confirmation-disable";
 import { UserMFADetails } from "./user-mfa-detail";
 type UserMFAProps = {
@@ -43,13 +44,14 @@ export const UserConfigMFA = () => {
   );
 };
 export const ProjectMFA = () => {
+  const scoped = useScopedPath();
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Multi-factor Authentication</CardTitle>
           <Button asChild variant="outline" size="sm">
-            <Link to="/app/secret-management/mfa">Go to MFA Settings</Link>
+            <Link to={scoped("secret-management/mfa")}>Go to MFA Settings</Link>
           </Button>
         </div>
       </CardHeader>
@@ -105,7 +107,7 @@ export const UserMFA = (props: UserMFAProps) => {
   const [mfaMethodType, setMfaMethodType] = useState<number>(0);
   const { isLoading, data } = useGetMFAConfig();
   if (isLoading) return <LoadingSkelton />;
-  if (!data?.enableMfa) return <ProjectMFA />;
+  if (!data?.enabled) return <ProjectMFA />;
   const showTotpModal = (type: number) => {
     setMfaMethodType(type);
     setIsTotpModalOpen(true);

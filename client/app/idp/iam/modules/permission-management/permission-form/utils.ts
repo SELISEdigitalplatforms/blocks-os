@@ -1,5 +1,10 @@
-import { PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
+import { IPermission, PermissionSeverityLevel, normalizePermissionSeverity } from "@blocks-idp/iam/models/permission";
 import { z } from "zod";
+
+export const BUILTIN_PERMISSION_READONLY_MESSAGE =
+  "Built-in permissions are managed by the platform and cannot be modified.";
+
+export const isPermissionFormReadOnly = (isBuiltIn?: boolean): boolean => Boolean(isBuiltIn);
 
 export const permissionFormDefaultValue: permissionFormSchemaType = {
   name: "",
@@ -9,17 +14,37 @@ export const permissionFormDefaultValue: permissionFormSchemaType = {
   resourceGroup: "",
   description: "",
   dependentPermissions: [],
-  permissionSeverity: "" as unknown as PermissionSeverityLevel,
+  permissionSeverity: undefined,
+};
+
+const normalizeResourceType = (value: unknown): number => {
+  const numericValue = Number(value);
+  if ([1, 2, 3].includes(numericValue)) return numericValue;
+  return 0;
+};
+
+export const mapPermissionToFormValues = (permission: IPermission): permissionFormSchemaType => {
+  const normalizedSeverity = normalizePermissionSeverity(permission.permissionSeverity);
+  return {
+    name: permission.name ?? "",
+    type: normalizeResourceType(permission.type),
+    resource: permission.resource ?? "",
+    resourceGroup: permission.resourceGroup ?? "",
+    tags: permission.tags ?? [],
+    description: permission.description ?? "",
+    dependentPermissions: permission.dependentPermissions ?? [],
+    permissionSeverity: normalizedSeverity,
+  };
 };
 
 export const permissionFormSchema = z
   .object({
-    name: z.string().min(1, "Name is required").max(50, "Name must be at most 50 characters").trim(),
+    name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters").trim(),
     type: z.coerce.number().min(1, "Type is required"),
     resource: z
       .string()
       .min(1, "Resource is required")
-      .max(50, "Resource must be at most 50 characters")
+      .max(100, "Resource must be at most 100 characters")
       .trim()
       .refine((s) => !s.includes(" "), "Resource can't contain spaces"),
     resourceGroup: z.string().nonempty("Group is required").trim(),
@@ -28,7 +53,7 @@ export const permissionFormSchema = z
     dependentPermissions: z.array(z.string()),
     permissionSeverity: z.nativeEnum(PermissionSeverityLevel, {
       message: "Severity is required",
-    }),
+    }).optional(),
   })
   .refine(
     (arg) => {
