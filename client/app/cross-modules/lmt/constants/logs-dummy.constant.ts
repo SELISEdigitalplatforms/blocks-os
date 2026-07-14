@@ -10,6 +10,7 @@ import {
   Rocket,
   Shield,
   Wrench,
+  Workflow,
 } from "lucide-react"
 
 export const LOG_SERVICE_ICONS = {
@@ -18,11 +19,93 @@ export const LOG_SERVICE_ICONS = {
   monitor: LineChart,
   localization: Languages,
   data: Database,
+  logic: Workflow,
   release: Rocket,
   utilities: Wrench,
   studio: Palette,
   agent: Bot,
 } satisfies Record<LogServiceRow["icon"], LucideIcon>
+
+export type BlocksLogService = {
+  id: string
+  label: string
+  routeSlug: string
+  icon: LogServiceRow["icon"]
+  serviceNames: string[]
+}
+
+export const BLOCKS_LOG_SERVICES: BlocksLogService[] = [
+  {
+    id: "iam",
+    label: "IAM",
+    routeSlug: "iam",
+    icon: "iam",
+    serviceNames: ["blocks-iam", "blocks-iam-worker"],
+  },
+  {
+    id: "os",
+    label: "OS",
+    routeSlug: "os",
+    icon: "os",
+    serviceNames: ["blocks-os", "blocks-os-api", "blocks-os-worker"],
+  },
+  {
+    id: "data",
+    label: "Data",
+    routeSlug: "data",
+    icon: "data",
+    serviceNames: ["blocks-data", "blocks-data-worker"],
+  },
+  {
+    id: "monitor",
+    label: "Monitor",
+    routeSlug: "monitor",
+    icon: "monitor",
+    serviceNames: ["blocks-monitor-api", "blocks-monitor-worker"],
+  },
+  {
+    id: "localization",
+    label: "Localization",
+    routeSlug: "localization",
+    icon: "localization",
+    serviceNames: ["blocks-localization", "blocks-localization-worker"],
+  },
+  {
+    id: "logic",
+    label: "Logic",
+    routeSlug: "logic",
+    icon: "logic",
+    serviceNames: ["blocks-logic", "blocks-logic-worker"],
+  },
+  {
+    id: "release",
+    label: "Release",
+    routeSlug: "release",
+    icon: "release",
+    serviceNames: ["blocks-release-api", "blocks-release-worker"],
+  },
+  {
+    id: "utilities",
+    label: "Utilities",
+    routeSlug: "utilities",
+    icon: "utilities",
+    serviceNames: ["blocks-utilities", "blocks-utilities-worker"],
+  },
+  {
+    id: "studio",
+    label: "Studio",
+    routeSlug: "studio",
+    icon: "studio",
+    serviceNames: ["blocks-studio", "blocks-studio-worker"],
+  },
+  {
+    id: "agent",
+    label: "Agent",
+    routeSlug: "agent",
+    icon: "agent",
+    serviceNames: ["blocks-ai-api", "blocks-api-worker"],
+  },
+]
 
 export const DUMMY_LOG_SERVICES: LogServiceRow[] = [
   {

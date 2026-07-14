@@ -34,13 +34,14 @@ export const LogsList = () => {
     endDate: "",
     search: "",
   };
-  const { serviceName } = selectedService || { serviceName: "" };
+  const { serviceName, serviceNames } = selectedService || { serviceName: "", serviceNames: [] };
   const initialTimeStamp = useMemo(
     () => (endDate ? endDate : new Date().toISOString()),
     [endDate, serviceName],
   );
   const { initialLogs, isLoading, hasTopMore, fetchOldLogs, fetchNewLogs } = useLogs({
     serviceName,
+    serviceNames,
     search: search,
     level,
     startDate,

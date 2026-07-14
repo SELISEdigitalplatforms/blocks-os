@@ -7,16 +7,20 @@ import { LogsViewerContext } from "../logs-viewer/logs-viewer"
 import { ILog } from "../../models/log.model"
 
 export const LogItem = ({ log }: { log: ILog }) => {
-  const { logsRouteServiceName, selectedService } = useContext(LogsViewerContext)
+  const { logsRouteServiceName, selectedService, useGenericTraceLinks } =
+    useContext(LogsViewerContext)
   const [searchParams] = useSearchParams()
   const activeTab = searchParams.get("tab") ?? selectedService?.serviceName
   const LMT_BASE_PATH = useLmtBasePath()
-  const traceHref =
-    log.traceId && logsRouteServiceName
-      ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${
-          activeTab ? `?tab=${encodeURIComponent(activeTab)}` : ""
-        }`
-      : undefined
+  const traceHref = log.traceId
+    ? useGenericTraceLinks
+      ? `${LMT_BASE_PATH}/tracing/${log.traceId}`
+      : logsRouteServiceName
+        ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${
+            activeTab ? `?tab=${encodeURIComponent(activeTab)}` : ""
+          }`
+        : undefined
+    : undefined
 
   return (
     <div className="flex flex-col">
