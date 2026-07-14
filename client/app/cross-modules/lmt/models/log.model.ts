@@ -38,11 +38,13 @@ export interface IGetLogsPayload {
   };
   search?: string;
   serviceName: string;
+  serviceNames?: string[];
   projectKey: string;
 }
 
 export interface IGetLiveLogsPayload {
   serviceName: string;
+  serviceNames?: string[];
   lastDate: string;
   projectKey: string;
 }
@@ -63,4 +65,5 @@ export interface IGetLogsByDatePayload {
   };
   search?: string;
   serviceName: string;
+  serviceNames?: string[];
 }

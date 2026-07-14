@@ -1,5 +1,6 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs"
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet"
+import { LOG_SERVICE_ICONS } from "@blocks-lmt/constants/logs-dummy.constant"
 import { useQueryState } from "nuqs"
 import { useContext, useEffect } from "react"
 import { LogsViewerContext } from "../logs-viewer/logs-viewer"
@@ -33,6 +34,12 @@ export const LogsListHeader = () => {
             <TabsList className="h-[42px] bg-blocks-primary-shades-300">
               {services.map((item) => (
                 <TabsTrigger key={item.id} value={item.serviceName} className="h-8 w-fit">
+                  {item.icon ? (
+                    (() => {
+                      const Icon = LOG_SERVICE_ICONS[item.icon]
+                      return <Icon className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                    })()
+                  ) : null}
                   {item.label}
                 </TabsTrigger>
               ))}
