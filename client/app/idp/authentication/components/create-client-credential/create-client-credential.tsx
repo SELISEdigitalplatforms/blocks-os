@@ -18,44 +18,28 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Switch } from "@/components/ui-kits/switch/switch";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { Search, Plus, KeyRound, UserCog, ShieldCheck } from "lucide-react";
+import { Plus, KeyRound } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useForm } from "react-hook-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
-import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import {
   IClientCredentialsConfig,
   ISaveClientCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import {
-  IPermission,
-  PERMISSION_SEVERITY_OPTIONS,
-  PermissionSeverityLevel,
-} from "@blocks-idp/iam/models/permission";
 import {
   CreateClientModalFormDefaultValues,
   CreateClientModalFormValues,
   createClientSchema,
 } from "./utils";
 import { isErrorWithErrors } from "@/lib/error";
+import { ClientCredentialRolesSection } from "./client-credential-roles-section";
+import { ClientCredentialPermissionsSection } from "./client-credential-permissions-section";
 
 const MAX_PERMISSIONS = 10;
-const PERMISSION_PAGE_SIZE = 20;
-
-const formatPermissionSeverity = (
-  severity: PermissionSeverityLevel | undefined,
-) => {
-  return (
-    PERMISSION_SEVERITY_OPTIONS.find((opt) => opt.value === severity) ?? null
-  );
-};
 
 const getBackendErrorMap = (response: unknown) => {
   if (!response || typeof response !== "object") return undefined;
@@ -100,101 +84,12 @@ export const CreateClientCredential = ({
     controlledOnOpenChange?.(v);
   };
 
-  const [roleFilter, setRoleFilter] = useState<string>("");
-  const [permFilter, setPermFilter] = useState<string>("");
-  const [permPage, setPermPage] = useState(0);
-  const [permItems, setPermItems] = useState<IPermission[]>([]);
-  const [permTotalCount, setPermTotalCount] = useState(0);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const isEdit = Boolean(editClient);
 
   const { mutateAsync: saveServiceClient, isPending } = useSaveAuthClient({
     projectKey: tenantId,
   });
-
-  const { data: rolesData, isLoading: rolesLoading } = useGetRoles({
-    page: 0,
-    pageSize: 0,
-    sort: { property: "Name", isDescending: false },
-    filter: { search: roleFilter },
-  });
-
-  const {
-    data: permsData,
-    isLoading: permsLoading,
-    isFetching: permsFetching,
-  } = useGetPermissions({
-    projectKey: tenantId,
-    page: permPage,
-    pageSize: PERMISSION_PAGE_SIZE,
-    isBuiltIn: "",
-    roles: [],
-    search: permFilter,
-  });
-
-  const filteredRoles = useMemo(() => {
-    if (!rolesData?.data) return [];
-    const lowered = roleFilter.toLowerCase();
-    if (!lowered) return rolesData.data;
-    return rolesData.data.filter((role) =>
-      role.slug.toLowerCase().includes(lowered),
-    );
-  }, [rolesData, roleFilter]);
-
-  const permissions = permItems;
-  const permTotal = permTotalCount;
-  const permHasMore = permItems.length < permTotal;
-  const permFirstLoad = permsLoading && permItems.length === 0;
-  const inFlightPageRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setPermPage(0);
-    setPermItems([]);
-    setPermTotalCount(0);
-    inFlightPageRef.current = null;
-  }, [permFilter, open]);
-
-  useEffect(() => {
-    if (!permsData) return;
-    const pageItems: IPermission[] = (permsData.data ?? []) as IPermission[];
-    const total = (permsData.totalCount ?? pageItems.length) as number;
-    setPermTotalCount(total);
-    setPermItems((prev) => {
-      if (permPage === 0) return pageItems;
-      // Dedupe by itemId so the same row from a cached/stale page isn't appended twice,
-      // but trust the API to return disjoint pages otherwise.
-      const seen = new Set(prev.map((p) => p.itemId));
-      const additions = pageItems.filter((p) => !seen.has(p.itemId));
-      return [...prev, ...additions];
-    });
-    inFlightPageRef.current = null;
-    // intentional: also depend on permFilter/open so cached permsData
-    // re-applies when the user resets pagination via filter change or modal reopen
-  }, [permsData, permPage, permFilter, open]);
-
-  const permSentinelRef = useRef<HTMLLIElement | null>(null);
-  const loadMorePerms = useCallback(() => {
-    if (permsFetching) return;
-    if (!permHasMore) return;
-    if (inFlightPageRef.current !== null) return;
-    inFlightPageRef.current = permPage;
-    setPermPage((prev) => prev + 1);
-  }, [permsFetching, permHasMore, permPage]);
-
-  useEffect(() => {
-    const target = permSentinelRef.current;
-    if (!target) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          loadMorePerms();
-        }
-      },
-      { rootMargin: "120px" },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [loadMorePerms]);
 
   const form = useForm<CreateClientModalFormValues>({
     resolver: zodResolver(createClientSchema),
@@ -203,7 +98,6 @@ export const CreateClientCredential = ({
   const {
     formState: { isDirty },
     reset,
-    watch,
   } = form;
 
   useEffect(() => {
@@ -221,19 +115,11 @@ export const CreateClientCredential = ({
     } else {
       reset(CreateClientModalFormDefaultValues);
     }
-    setRoleFilter("");
-    setPermFilter("");
   }, [editClient, open, reset]);
-
-  const selectedRoles = watch("roles") ?? [];
-  const selectedPermissions = watch("permissions") ?? [];
-  const isPermCapReached = selectedPermissions.length >= MAX_PERMISSIONS;
 
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       reset();
-      setRoleFilter("");
-      setPermFilter("");
     }
     setOpen(isOpen);
   };
@@ -373,242 +259,38 @@ export const CreateClientCredential = ({
                 />
               </section>
 
-              <section className="space-y-4">
-                <div className="flex items-center justify-between gap-3 border-b pb-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
-                    <UserCog className="h-4 w-4" />
-                    Roles
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {selectedRoles.length > 0 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          form.setValue("roles", [], {
-                            shouldDirty: true,
-                          })
-                        }>
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <FormField
-                  control={form.control}
-                  name="roles"
-                  render={({ field }) => (
-                    <FormItem>
-                      <p className="text-sm text-muted-foreground">
-                        Select the default roles granted when this client
-                        credential is used.
-                      </p>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search by role name"
-                          className="pl-9"
-                          value={roleFilter}
-                          onChange={(e) => setRoleFilter(e.target.value)}
-                        />
-                      </div>
-                      <FormControl>
-                        <div className="grid grid-cols-1 gap-3 rounded border p-3 sm:grid-cols-2 sm:gap-4">
-                          {filteredRoles?.map((type) => {
-                            const isChecked = field.value?.includes(type.slug);
-                            return (
-                              <div
-                                key={type.slug}
-                                className="flex min-w-0 items-center gap-2">
-                                <Checkbox
-                                  id={type.slug}
-                                  checked={isChecked}
-                                  onCheckedChange={(checked) => {
-                                    const updated = checked
-                                      ? [...(field.value ?? []), type.slug]
-                                      : (field.value ?? []).filter(
-                                          (role: string) => role !== type.slug,
-                                        );
-                                    field.onChange(updated);
-                                  }}
-                                />
-                                <label
-                                  htmlFor={type.slug}
-                                  className="min-w-0 flex-1 cursor-pointer truncate"
-                                  title={type.slug}>
-                                  {type.slug}
-                                </label>
-                              </div>
-                            );
-                          })}
-                          {rolesLoading && (
-                            <div className="col-span-2 grid gap-2">
-                              <Skeleton className="h-12 w-full rounded" />
-                            </div>
-                          )}
-                          {!rolesLoading && filteredRoles?.length === 0 && (
-                            <p className="col-span-2 py-2 text-center text-sm text-muted-foreground">
-                              No roles found
-                            </p>
-                          )}
-                        </div>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </section>
+              <FormField
+                control={form.control}
+                name="roles"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ClientCredentialRolesSection
+                        selectedSlugs={field.value ?? []}
+                        onChange={(slugs) => field.onChange(slugs)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <section className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
-                    <ShieldCheck className="h-4 w-4" />
-                    Permissions
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
-                      {selectedPermissions.length}/{MAX_PERMISSIONS} selected
-                    </span>
-                    {selectedPermissions.length > 0 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          form.setValue("permissions", [], {
-                            shouldDirty: true,
-                          })
-                        }>
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <FormField
-                  control={form.control}
-                  name="permissions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <p className="text-sm text-muted-foreground">
-                        Select permissions to include in the access token
-                        granted by this client.
-                      </p>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search by permission name"
-                          className="pl-9"
-                          value={permFilter}
-                          onChange={(e) => setPermFilter(e.target.value)}
-                        />
-                      </div>
-                      <FormControl>
-                        <div className="rounded border">
-                          {permFirstLoad ? (
-                            <div className="grid gap-2 p-3">
-                              <Skeleton className="h-10 w-full rounded" />
-                              <Skeleton className="h-10 w-full rounded" />
-                            </div>
-                          ) : permissions.length === 0 ? (
-                            <p className="py-4 text-center text-sm text-muted-foreground">
-                              No permissions found
-                            </p>
-                          ) : (
-                            <ul className="max-h-72 divide-y overflow-y-auto">
-                              {permissions.map((perm) => {
-                                const isChecked = field.value?.includes(
-                                  perm.resource,
-                                );
-                                const severity = formatPermissionSeverity(
-                                  perm.permissionSeverity,
-                                );
-                                return (
-                                  <li
-                                    key={perm.itemId}
-                                    className="flex items-center gap-3 px-3 py-2">
-                                    <Checkbox
-                                      id={perm.itemId}
-                                      checked={isChecked}
-                                      disabled={!isChecked && isPermCapReached}
-                                      onCheckedChange={(checked) => {
-                                        if (
-                                          checked &&
-                                          (field.value ?? []).length >=
-                                            MAX_PERMISSIONS
-                                        )
-                                          return;
-                                        const updated = checked
-                                          ? [
-                                              ...(field.value ?? []),
-                                              perm.resource,
-                                            ]
-                                          : (field.value ?? []).filter(
-                                              (p: string) =>
-                                                p !== perm.resource,
-                                            );
-                                        field.onChange(updated);
-                                      }}
-                                    />
-                                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                                      {severity && (
-                                        <span
-                                          className={`size-2 shrink-0 rounded-full ${severity.barClassName}`}
-                                          aria-hidden
-                                        />
-                                      )}
-                                      <span className="truncate text-sm">
-                                        {perm.name}
-                                      </span>
-                                      <span className="truncate text-xs text-muted-foreground">
-                                        {perm.resource}
-                                      </span>
-                                    </div>
-                                  </li>
-                                );
-                              })}
-                              {permHasMore && (
-                                <li
-                                  ref={permSentinelRef}
-                                  className="flex items-center justify-center gap-2 px-3 py-3 text-xs text-muted-foreground">
-                                  {permsFetching ? (
-                                    <>
-                                      <span className="size-2 animate-pulse rounded-full bg-muted-foreground" />
-                                      <span className="size-2 animate-pulse rounded-full bg-muted-foreground [animation-delay:120ms]" />
-                                      <span className="size-2 animate-pulse rounded-full bg-muted-foreground [animation-delay:240ms]" />
-                                      <span className="ml-1">
-                                        Loading more permissions…
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      className="text-primary hover:underline"
-                                      onClick={() => loadMorePerms()}>
-                                      Load more
-                                    </button>
-                                  )}
-                                </li>
-                              )}
-                              {!permHasMore && permissions.length > 0 && (
-                                <li className="px-3 py-2 text-center text-xs text-muted-foreground">
-                                  End of list ({permissions.length}/{permTotal})
-                                </li>
-                              )}
-                            </ul>
-                          )}
-                        </div>
-                      </FormControl>
-                      {isPermCapReached && (
-                        <p className="text-xs text-muted-foreground">
-                          Maximum of {MAX_PERMISSIONS} permissions reached.
-                          Unselect one to add another.
-                        </p>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </section>
+              <FormField
+                control={form.control}
+                name="permissions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ClientCredentialPermissionsSection
+                        selectedResources={field.value ?? []}
+                        onChange={(resources) => field.onChange(resources)}
+                        maxPermissions={MAX_PERMISSIONS}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4 pr-12">
               <DialogClose asChild>

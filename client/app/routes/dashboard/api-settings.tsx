@@ -12,6 +12,7 @@ import {
   useBulkUpdateApiEndpoints,
 } from "@blocks-idp/api-settings/hooks/use-api-settings";
 import { IApiEndpoint } from "@blocks-idp/api-settings/models/api-endpoint.model";
+import { getServiceSwaggerUrl } from "@blocks-idp/api-settings/utils/service-swagger";
 /** ─── Loading skeleton ──────────────────────────────────────────────────────── */
 const ServiceGroupSkeleton = () => (
   <div className="rounded-lg border border-border bg-card p-4">
@@ -65,14 +66,9 @@ export default function ApiSettingsPage() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([svc, controllers]) => {
         const firstEp = Object.values(controllers)[0]?.[0];
-        const baseUrl = (firstEp?.baseUrl || "").replace(/\/+$/, "");
-        const version = firstEp?.version || "v1";
         return {
           service: svc,
-          baseUrl,
-          version,
-          swaggerJsonUrl: `${baseUrl}/${svc}/${version}/swagger/${version}/swagger.json`,
-          swaggerUiUrl: `${baseUrl}/${svc}/${version}/swagger/index.html`,
+          swaggerUrl: getServiceSwaggerUrl(svc, firstEp?.baseUrl),
           controllers: Object.entries(controllers)
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([ctrl, eps]) => [
@@ -308,28 +304,37 @@ export default function ApiSettingsPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-8">
-          {serviceGroups.map(({ service, swaggerJsonUrl, controllers }) => (
+          {serviceGroups.map(({ service, swaggerUrl, controllers }) => (
             <div key={service} className="flex flex-col gap-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
-                  <span
-                    className="hidden items-center gap-1 text-[11px] text-muted-foreground sm:inline-flex cursor-default select-none"
-                    title={swaggerJsonUrl}
-                  >
-                    <span className="truncate">{swaggerJsonUrl}</span>
-                    <ExternalLink className="h-3 w-3 shrink-0 opacity-40" />
-                  </span>
+                  {swaggerUrl && (
+                    <a
+                      href={swaggerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hidden items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-primary hover:underline sm:inline-flex"
+                      title={swaggerUrl}
+                    >
+                      <span className="truncate">{swaggerUrl}</span>
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  )}
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="w-fit shrink-0 gap-1.5 cursor-not-allowed opacity-50"
-                >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span>API Docs</span>
-                </Button>
+                {swaggerUrl && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    className="w-fit shrink-0 gap-1.5"
+                  >
+                    <a href={swaggerUrl} target="_blank" rel="noreferrer">
+                      <BookOpen className="h-3.5 w-3.5" />
+                      <span>API Docs</span>
+                    </a>
+                  </Button>
+                )}
               </div>
               <div className="flex flex-col gap-3">
                 {controllers.map(([controller, eps]) => (

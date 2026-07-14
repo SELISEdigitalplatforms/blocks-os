@@ -49,6 +49,7 @@ export const createOidcSchema = z.object({
   isAutoRedirect: z.boolean(),
   isActive: z.boolean(),
   requirePkce: z.boolean(),
+  registerAsIdentityProvider: z.boolean(),
   allowedResponseTypes: z.array(z.string()).min(1, "At least one response type is required"),
 });
 
@@ -62,5 +63,6 @@ export const createOIDCFormDefaultValue: CreateOIDCFormValues = {
   isAutoRedirect: false,
   isActive: true,
   requirePkce: true,
+  registerAsIdentityProvider: true,
   allowedResponseTypes: ["code"],
 };
