@@ -29,7 +29,6 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
-import { useGetPeople } from "@/hooks/use-people";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { formatDate } from "@/lib/utils";
 import { EnvironmentsCard, getEnvironmentOrder } from "./environments-card";
@@ -82,12 +81,6 @@ export const SettingsPage = () => {
   const { data: projectsData, isLoading } = useGetProjects(
     selectedTenantGroup || "",
   );
-  const { data: peopleData } = useGetPeople({
-    page: 0,
-    pageSize: 1,
-    filter: "",
-  });
-  const isViewerOwner = peopleData?.isOwner ?? false;
   // Ordered like the "Select environments" step: dev → test → stg → … → prod
   const environments = (projectsData?.[0]?.projects ?? [])
     .filter((environment) => !environment.isDisabled)
@@ -179,10 +172,7 @@ export const SettingsPage = () => {
         </CardContent>
       </Card>
 
-      <EnvironmentsCard
-        environments={environments}
-        canDelete={isViewerOwner}
-      />
+      <EnvironmentsCard environments={environments} />
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
