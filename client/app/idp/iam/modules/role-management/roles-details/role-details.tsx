@@ -11,6 +11,24 @@ import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
 // import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
 import { useQueryClient } from "@tanstack/react-query";
 import { PermissionsSelectionPanel } from "./permissions-selection-panel";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
+
+const RoleDetailsPageSkeleton = () => (
+  <>
+    <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
+      <Skeleton className="h-7 w-56 sm:h-8 sm:w-72" />
+      <Skeleton className="h-9 w-32 rounded-sm" />
+    </div>
+    <Card>
+      <CardContent className="space-y-3 py-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Skeleton key={index} className="h-12 w-full rounded-sm" />
+        ))}
+      </CardContent>
+    </Card>
+  </>
+)
+
 export function RoleDetailsContainer() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const queryClient = useQueryClient();
@@ -22,7 +40,11 @@ export function RoleDetailsContainer() {
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles(role?.slug);
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role?.itemId] = role?.itemId || "";
+
+  if (role?.itemId && role?.slug) {
+    BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role.itemId] = role.slug;
+  }
+
   const onSaveClick = async () => {
     const changedPermissions = Array.from(permissionMap.values()).reduce(
       (acc, item) => {
@@ -58,40 +80,21 @@ export function RoleDetailsContainer() {
       }
     }
   };
-  // Permission Severity Overview is temporarily disabled.
-  // const permissionSeverityData = useMemo(() => {
-  //   const permissions = Array.from(permissionMap.values());
-  //   return Object.values(
-  //     permissions
-  //       .filter((item) => {
-  //         if (item.modified && item.changeState === "added") return true;
-  //         if (item.modified && item.changeState === "removed") return false;
-  //         return item.isInitiallyAssigned;
-  //       })
-  //       .reduce(
-  //         (acc, item: IPermission) => {
-  //           const severityKey = item.permissionSeverity;
-  //           if (!acc[severityKey]) {
-  //             acc[severityKey] = {
-  //               severityLevel: PermissionSeverityLevel[severityKey],
-  //               count: 0,
-  //             };
-  //           }
-  //           acc[severityKey].count += 1;
-  //           return acc;
-  //         },
-  //         {} as Record<string, { severityLevel: string; count: number }>,
-  //       ),
-  //   );
-  // }, [permissionMap]);
+
+  if (!isInitialized || !role?.slug) {
+    return <RoleDetailsPageSkeleton />
+  }
+
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
-        <PageBreadcrumb breadcrumbIndex={4} className="flex min-w-0 flex-1" />
+        <PageBreadcrumb
+          breadcrumbIndex={4}
+          className="flex min-w-0 flex-1"
+          listClassName="text-base sm:text-lg"
+        />
         <div className="flex shrink-0 items-center gap-2">
-          {!isInitialized ? (
-            <Skeleton className="h-9 w-32 rounded-sm" />
-          ) : !isEditMode ? (
+          {!isEditMode ? (
             <Button variant="outline" onClick={() => changeEditMode(true)}>
               <span>Edit Permissions</span>
             </Button>
@@ -100,7 +103,7 @@ export function RoleDetailsContainer() {
               <Button variant="outline" disabled={isPending} onClick={() => discardChanges()}>
                 <span>Discard</span>
               </Button>
-              <Button disabled={isPending || !isInitialized} onClick={onSaveClick}>
+              <Button disabled={isPending} onClick={onSaveClick}>
                 <span>Save Changes</span>
               </Button>
             </>
@@ -108,7 +111,6 @@ export function RoleDetailsContainer() {
         </div>
       </div>
       <div className="grid gap-4">
-        {/* <PermissionSeverity data={permissionSeverityData} isLoading={!isInitialized} /> */}
         <PermissionsSelectionPanel />
       </div>
     </>
