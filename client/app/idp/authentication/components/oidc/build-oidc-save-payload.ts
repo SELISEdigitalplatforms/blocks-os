@@ -10,7 +10,6 @@ type BrandingOverrides = {
 
 export const buildOidcSavePayload = (
   credential: IOidcConfig,
-  projectKey: string,
   overrides: BrandingOverrides,
 ): ISaveOidcCredentialPayload => {
   const redirectUris =
@@ -21,18 +20,18 @@ export const buildOidcSavePayload = (
         : [];
 
   return {
-    audience: credential.audience ?? "",
     redirectUris,
     scope: credential.scope,
     isAutoRedirect: credential.isAutoRedirect,
     isActive: credential.isActive,
     requirePkce: credential.requirePkce,
+    // A branding-only save must not silently unregister the identity provider.
+    registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
     allowedResponseTypes:
       credential.allowedResponseTypes?.length > 0
         ? credential.allowedResponseTypes
         : ["code"],
     itemId: credential.itemId,
-    projectKey,
     clientDisplayName: credential.clientDisplayName,
     clientLogoUrl: overrides.clientLogoUrl,
     clientBrandColor: overrides.clientBrandColor,

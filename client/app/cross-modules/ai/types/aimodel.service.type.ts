@@ -47,8 +47,13 @@ export interface IModelListPayload {
   page_size: number;
 }
 
+/**
+ * Result of validating an AI model configuration against its provider.
+ */
 export enum ModelStatus {
+  /** Provider accepted the credentials and responded successfully. */
   VALID = "valid",
+  /** Provider rejected the credentials or the request failed. */
   INVALID = "invalid",
 }
 

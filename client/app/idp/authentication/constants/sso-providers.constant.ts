@@ -14,14 +14,27 @@ import {
   ISsoProviderFrontendMeta,
 } from "@blocks-idp/authentication/models/sso.model";
 
+/**
+ * Identifiers for the single sign-on providers supported by the platform.
+ * The string values are persisted in configuration documents and exchanged
+ * with backend services as the canonical provider key.
+ */
 export enum SSO_PROVIDERS {
+  /** Google (OAuth 2.0 / OpenID Connect). */
   google = "google",
+  /** Microsoft Entra ID / Azure AD (OAuth 2.0 / OpenID Connect). */
   microsoft = "microsoft",
+  /** GitHub OAuth Apps. */
   github = "github",
+  /** LinkedIn Sign In (OAuth 2.0). */
   linkedin = "linkedin",
+  /** X (formerly Twitter) OAuth 2.0 with PKCE. */
   x = "x",
+  /** Sign in with Apple. */
   apple = "apple",
+  /** Facebook Login (OAuth 2.0). */
   facebook = "facebook",
+  /** "Bring your own SSO" generic OIDC provider slot. */
   ownsso = "ownsso",
 }
 

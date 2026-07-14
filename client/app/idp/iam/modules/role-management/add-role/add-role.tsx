@@ -23,14 +23,15 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { z } from "zod";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useAddRole } from "@blocks-idp/iam/hooks/use-roles";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
+import { toSnakeCase } from "@/lib/utils";
 export const AddRole = () => {
   const [isAddRoleOpenModal, setIsAddRoleOpenModal] = useState(false);
+  // Slug auto-syncs from the name until the user edits it manually.
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const { mutateAsync, isPending } = useAddRole();
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const form = useForm({
     defaultValues: addRoleFormDefaultValue,
     resolver: zodResolver(addRoleFormSchema),
@@ -43,7 +44,6 @@ export const AddRole = () => {
       name: data.name,
       description: data.description || "",
       slug: data.slug,
-      projectKey: tenantId,
     };
     try {
       await mutateAsync(newRole);
@@ -71,6 +71,7 @@ export const AddRole = () => {
       open={isAddRoleOpenModal}
       onOpenChange={(value) => {
         form.reset(addRoleFormDefaultValue);
+        setIsSlugManuallyEdited(false);
         setIsAddRoleOpenModal(value);
       }}
     >
@@ -91,7 +92,19 @@ export const AddRole = () => {
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter name" />
+                    <Input
+                      {...field}
+                      placeholder="Enter name"
+                      onChange={(e) => {
+                        field.onChange(e);
+                        if (!isSlugManuallyEdited) {
+                          form.setValue("slug", toSnakeCase(e.target.value), {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          });
+                        }
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,7 +117,14 @@ export const AddRole = () => {
                 <FormItem>
                   <FormLabel>Slug</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter slug" />
+                    <Input
+                      {...field}
+                      placeholder="Enter slug"
+                      onChange={(e) => {
+                        setIsSlugManuallyEdited(true);
+                        field.onChange(e);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

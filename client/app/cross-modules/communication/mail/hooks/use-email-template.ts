@@ -61,7 +61,6 @@ export const useGetEmailTemplates = (
       emailService.fetchEmailTemplates(
         pageNumber,
         pageSize,
-        tenantId,
         searchKey,
         sortProperty,
         isDescending,
@@ -76,12 +75,11 @@ export const useGetEmailTemplate = (itemId: string) => {
   return useQuery({
     queryKey: ["email-template", tenantId, itemId],
     staleTime: 0,
-    queryFn: () => emailService.fetchEmailTemplate(tenantId, itemId),
+    queryFn: () => emailService.fetchEmailTemplate(itemId),
   });
 };
 
 export const useSaveEmailTemplate = () => {
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const [isPending, setIsPending] = useState<boolean>(false);
 
   const saveEmailTemplate = async (data: IEmailTemplate) => {
@@ -90,7 +88,6 @@ export const useSaveEmailTemplate = () => {
       const payload = {
         ...data,
         itemId: data.itemId ? data.itemId : "",
-        projectKey: tenantId,
       };
       const response = await emailService.saveMailTemplate(payload);
       setIsPending(false);

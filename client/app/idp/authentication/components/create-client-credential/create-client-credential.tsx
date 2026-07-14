@@ -18,188 +18,288 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { Search } from "lucide-react";
+import { Switch } from "@/components/ui-kits/switch/switch";
+import { Plus, KeyRound } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useForm } from "react-hook-form";
-import { Plus } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
-import { ISaveClientCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { IRole } from "@blocks-idp/iam/models/role";
+import {
+  IClientCredentialsConfig,
+  ISaveClientCredentialPayload,
+} from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
   CreateClientModalFormDefaultValues,
   CreateClientModalFormValues,
   createClientSchema,
 } from "./utils";
 import { isErrorWithErrors } from "@/lib/error";
-export const CreateClientCredential = () => {
-  const [open, setOpen] = useState<boolean>(false);
-  const [filter, setFilter] = useState<string>("");
-  const [filteredRoles, setFilteredRoles] = useState<IRole[]>([]);
+import { ClientCredentialRolesSection } from "./client-credential-roles-section";
+import { ClientCredentialPermissionsSection } from "./client-credential-permissions-section";
+
+const MAX_PERMISSIONS = 10;
+
+const getBackendErrorMap = (response: unknown) => {
+  if (!response || typeof response !== "object") return undefined;
+
+  const typedResponse = response as {
+    errors?: unknown;
+    error?: { errors?: unknown };
+  };
+
+  if (typedResponse.errors && typeof typedResponse.errors === "object") {
+    return typedResponse.errors as Record<string, string | string[]>;
+  }
+
+  if (
+    typedResponse.error?.errors &&
+    typeof typedResponse.error.errors === "object"
+  ) {
+    return typedResponse.error.errors as Record<string, string | string[]>;
+  }
+
+  return undefined;
+};
+
+type CreateClientCredentialProps = {
+  editClient?: IClientCredentialsConfig | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+};
+
+export const CreateClientCredential = ({
+  editClient,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  hideTrigger = false,
+}: CreateClientCredentialProps) => {
+  const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v);
+    controlledOnOpenChange?.(v);
+  };
+
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const isEdit = Boolean(editClient);
+
   const { mutateAsync: saveServiceClient, isPending } = useSaveAuthClient({
     projectKey: tenantId,
   });
-  const { data, isLoading } = useGetRoles({
-    page: 0,
-    pageSize: 0,
-    projectKey: tenantId,
-    sort: { property: "Name", isDescending: false },
-    filter: {
-      search: filter,
-    },
-  });
-  useEffect(() => {
-    if (data?.data) {
-      setFilteredRoles(
-        data.data.filter((role) => role.slug.toLowerCase().includes(filter.toLowerCase())),
-      );
-    } else {
-      setFilteredRoles([]);
-    }
-  }, [filter, data]);
-  const form = useForm({
+
+  const form = useForm<CreateClientModalFormValues>({
     resolver: zodResolver(createClientSchema),
     defaultValues: CreateClientModalFormDefaultValues,
   });
   const {
     formState: { isDirty },
+    reset,
   } = form;
+
+  useEffect(() => {
+    if (!open) return;
+    if (editClient) {
+      reset({
+        itemId: editClient.itemId,
+        clientNameService: editClient.name,
+        accessTokenValidForNumberMinutes:
+          editClient.accessTokenValidForNumberMinutes,
+        isActive: editClient.isActive,
+        roles: editClient.roles ?? [],
+        permissions: editClient.permissions ?? [],
+      });
+    } else {
+      reset(CreateClientModalFormDefaultValues);
+    }
+  }, [editClient, open, reset]);
+
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      form.reset();
-      setFilter("");
+      reset();
     }
     setOpen(isOpen);
   };
+
   const onSubmit = async (data: CreateClientModalFormValues) => {
     try {
       const payload: ISaveClientCredentialPayload = {
+        itemId: data.itemId ?? null,
         name: data.clientNameService,
+        isActive: data.isActive,
+        accessTokenValidForNumberMinutes: data.accessTokenValidForNumberMinutes,
         roles: data.roles,
+        permissions: data.permissions,
         projectKey: tenantId,
       };
       const res = await saveServiceClient(payload);
-      if (!res.isSuccess) return showErrorToast({ errors: res.error });
-      showSuccessToast({ description: "Service Created successfully" });
+      if (!res?.isSuccess) {
+        const apiErrors = getBackendErrorMap(res);
+        return showErrorToast({
+          errors: apiErrors ?? "Failed to save client credential.",
+        });
+      }
+      showSuccessToast({
+        description: isEdit
+          ? "Client credential updated successfully"
+          : "Client credential created successfully",
+      });
       setOpen(false);
-      return;
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error))
+        return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
     } finally {
-      form.reset();
+      reset();
     }
   };
+
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-5 w-5" />
-          <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-            Add Client Credential
-          </span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh]">
-        <DialogHeader className="pl-1">
-          <DialogTitle>New Access Token</DialogTitle>
-          <DialogDescription>Enter details to create a new key.</DialogDescription>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <Plus className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
+              {isEdit ? "Edit Client Credential" : "Add"}
+            </span>
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6 pr-12">
+          <DialogTitle>
+            {isEdit ? "Edit Client Credential" : "Add Client Credential"}
+          </DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? "Update the credential name, lifetime, roles, and permissions."
+              : "Create a credential and choose the roles and permissions it should grant."}
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-            <div className="max-h-[60vh] space-y-6 overflow-y-auto pl-1 pr-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+            <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
+                  <KeyRound className="h-4 w-4" />
+                  General
+                </div>
+                <FormField
+                  control={form.control}
+                  name="clientNameService"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter client name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="accessTokenValidForNumberMinutes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Access Token Lifetime (minutes)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={5}
+                          placeholder="5"
+                          value={
+                            Number.isFinite(field.value) ? field.value : ""
+                          }
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? 0
+                                : Number(e.target.value),
+                            )
+                          }
+                          onBlur={field.onBlur}
+                          name={field.name}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between rounded-sm border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-sm">Status</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Inactive credentials cannot be used to obtain new
+                            tokens.
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            size="md"
+                            checked={Boolean(field.value)}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </section>
+
               <FormField
                 control={form.control}
-                name="clientNameService"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Client Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter client name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="audienceUrlService"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Audience</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter audience URL" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="roles"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign Role(s)</FormLabel>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by role name"
-                      className="pl-9"
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                    />
-                  </div>
-                  <FormControl>
-                    <div className="grid grid-cols-2 gap-4 rounded border p-3">
-                      {filteredRoles?.map((type) => {
-                        const isChecked = field.value?.includes(type.slug);
-                        return (
-                          <div key={type.slug} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={isChecked}
-                              onCheckedChange={(checked) => {
-                                const updated = checked
-                                  ? [...field.value, type.slug]
-                                  : field.value.filter((role: string) => role !== type.slug);
-                                field.onChange(updated);
-                              }}
-                            />
-                            <label htmlFor={type.slug} className="cursor-pointer">
-                              {type.slug}
-                            </label>
-                          </div>
-                        );
-                      })}
-                      {isLoading && (
-                        <div className="col-span-2 grid gap-2">
-                          <Skeleton className="h-12 w-full rounded" />
-                        </div>
-                      )}
-                      {!isLoading && filteredRoles?.length === 0 && (
-                        <p className="col-span-2 py-2 text-center text-sm text-muted-foreground">
-                          No roles found
-                        </p>
-                      )}
-                    </div>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+                name="roles"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ClientCredentialRolesSection
+                        selectedSlugs={field.value ?? []}
+                        onChange={(slugs) => field.onChange(slugs)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="permissions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ClientCredentialPermissionsSection
+                        selectedResources={field.value ?? []}
+                        onChange={(resources) => field.onChange(resources)}
+                        maxPermissions={MAX_PERMISSIONS}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-            <DialogFooter>
-              <DialogClose>
-                <Button onClick={() => setOpen(false)} type="button" variant="outline">
+            <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4 pr-12">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
                   Cancel
                 </Button>
               </DialogClose>
               <Button disabled={isPending || !isDirty} type="submit">
-                Add
+                {isPending ? "Saving..." : isEdit ? "Save Changes" : "Add"}
               </Button>
             </DialogFooter>
           </form>

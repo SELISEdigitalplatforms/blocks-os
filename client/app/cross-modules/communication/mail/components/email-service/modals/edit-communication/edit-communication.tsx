@@ -25,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { showErrorToast, toast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
@@ -57,7 +56,6 @@ const EditCommunication = (props: EditCommunicationProps) => {
       .min(1, { message: "Subject is required" })
       .max(150, { message: "Subject must be less than 150 characters" }),
   });
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const form = useForm<IEmailTemplate>({
     values: props.templateData
       ? {
@@ -76,7 +74,6 @@ const EditCommunication = (props: EditCommunicationProps) => {
       const payload = {
         ...data,
         itemId: props.templateData.itemId,
-        projectKey: tenantId,
       };
       const res = await saveTemplate(payload);
       props.onClose();

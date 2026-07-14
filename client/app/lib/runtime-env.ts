@@ -1,15 +1,16 @@
 /// <reference types="vite/client" />
 const PLACEHOLDER_PREFIX = "__BLOCKS_";
 
-type RuntimeKey =
+export type RuntimeKey =
+  | "BLOCKS_BASE_DOMAIN"
   | "BLOCKS_X_BLOCKS_KEY"
   | "BLOCKS_GOOGLE_SITE_KEY"
   | "BLOCKS_CONSTRUCT_URL"
   | "BLOCKS_GITHUB_SSO_CLIENT_ID"
   | "BLOCKS_OIDC_CLIENT_ID"
   | "BLOCKS_BASE_DOMAIN"
+  | "BLOCKS_DEV_HOST"
   | "BLOCKS_IAM_BASE_URL"
-  | "BLOCKS_IAM_CLIENT_ID"
   | "BLOCKS_IAM_CALLBACK_URL"
   | "BLOCKS_LOCALIZATION_BASE_URL"
   | "BLOCKS_LOCALIZATION_CALLBACK_URL"
@@ -28,7 +29,17 @@ type RuntimeKey =
   | "BLOCKS_RELEASE_BASE_URL"
   | "BLOCKS_RELEASE_CALLBACK_URL"
   | "BLOCKS_STUDIO_BASE_URL"
-  | "BLOCKS_STUDIO_CALLBACK_URL";
+  | "BLOCKS_STUDIO_CALLBACK_URL"
+  | "BLOCKS_DATA_CLIENT_ID"
+  | "BLOCKS_IAM_CLIENT_ID"
+  | "BLOCKS_LOCALIZATION_CLIENT_ID"
+  | "BLOCKS_AGENTS_CLIENT_ID"
+  | "BLOCKS_OS_CLIENT_ID"
+  | "BLOCKS_UTILITIES_CLIENT_ID"
+  | "BLOCKS_LOGIC_CLIENT_ID"
+  | "BLOCKS_MONITOR_CLIENT_ID"
+  | "BLOCKS_RELEASE_CLIENT_ID"
+  | "BLOCKS_STUDIO_CLIENT_ID";
 
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");
@@ -50,7 +61,11 @@ export const getRuntimeEnv = (
 
   const windowValue =
     typeof window !== "undefined"
-      ? (window as Window & { __BLOCKS_ENV__?: Partial<Record<RuntimeKey, string>> }).__BLOCKS_ENV__?.[key]
+      ? (
+          window as Window & {
+            __BLOCKS_ENV__?: Partial<Record<RuntimeKey, string>>;
+          }
+        ).__BLOCKS_ENV__?.[key]
       : undefined;
   if (windowValue && !isPlaceholder(windowValue)) {
     return windowValue;

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import {
   Card,
   CardContent,
@@ -35,9 +36,10 @@ const ProviderIconFallback = ({ provider }: { provider: string }) => {
 };
 export const ProviderCard = (provider: IProvider) => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const pngUrl = getProviderPng(provider.Provider.toLowerCase());
   const handleClick = () => {
-    navigate(`/app/secret-management/ai-models/${provider.Provider}`);
+    navigate(scoped(`secret-management/ai-models/${provider.Provider}`));
   };
   return (
     <Card

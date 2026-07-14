@@ -18,6 +18,7 @@ import { useSaveSettingsSignUpSetting } from "@blocks-idp/settings/hooks/use-set
 import { useSettingsTenantId } from "@blocks-idp/settings/hooks/use-settings-tenant-id"
 import type { ISettingsSignupConfig } from "@blocks-idp/settings/models/settings.model"
 import {
+  applySignupDisabledOverrides,
   buildSignupSettingsSavePayload,
   resolveSignupPermissions,
   resolveSignupRoles,
@@ -33,6 +34,13 @@ type SignupSettingsFormProps = {
   config: ISettingsSignupConfig
 }
 
+/**
+ * react-hook-form merges useForm's `resetOptions` into every explicit `reset()` call, so the
+ * `keepDirtyValues` we need for background refetches would otherwise make `reset()` retain the
+ * edits it is meant to discard. Every deliberate reset has to opt out of it.
+ */
+const DISCARD_DIRTY_VALUES = { keepDirtyValues: false } as const
+
 export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
   const tenantId = useSettingsTenantId()
   const { mutateAsync, isPending } = useSaveSettingsSignUpSetting()
@@ -41,6 +49,9 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
 
   const form = useForm<SignupSettingsFormValues>({
     values: formValues,
+    // Without this, a background refetch (window focus, cache invalidation) re-runs the
+    // `values` sync, discarding unsaved edits and clearing isDirty — which disables Save.
+    resetOptions: { keepDirtyValues: true },
     resolver: zodResolver(signupSettingsFormSchema),
   })
 
@@ -50,7 +61,6 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
 
   const { data: rolesData } = useGetRoles(
     {
-      projectKey: tenantId,
       page: 0,
       pageSize: 1000,
       sort: { property: "Name", isDescending: false },
@@ -88,8 +98,34 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
     [defaultPermissionsForNewUser, permissionsData?.data],
   )
 
+  const removedRoles = useMemo(
+    () =>
+      resolveSignupRoles(
+        config.defaultRolesForNewUser.filter(
+          (slug) => !defaultRolesForNewUser.includes(slug),
+        ),
+        rolesData?.data ?? [],
+      ),
+    [config.defaultRolesForNewUser, defaultRolesForNewUser, rolesData?.data],
+  )
+
+  const removedPermissions = useMemo(
+    () =>
+      resolveSignupPermissions(
+        config.defaultPermissionsForNewUser.filter(
+          (name) => !defaultPermissionsForNewUser.includes(name),
+        ),
+        permissionsData?.data ?? [],
+      ),
+    [
+      config.defaultPermissionsForNewUser,
+      defaultPermissionsForNewUser,
+      permissionsData?.data,
+    ],
+  )
+
   const handleReset = useCallback(() => {
-    form.reset(toSignupSettingsFormValues(config))
+    form.reset(toSignupSettingsFormValues(config), DISCARD_DIRTY_VALUES)
   }, [config, form])
 
   const handleSignupEnabledChange = useCallback(
@@ -116,13 +152,14 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
       try {
         const res = await mutateAsync(buildSignupSettingsSavePayload(values, config))
         if (!res.isSuccess) return showErrorToast({ errors: res.errors })
+        form.reset(applySignupDisabledOverrides(values, config), DISCARD_DIRTY_VALUES)
         showSuccessToast({ description: "Signup settings updated successfully" })
       } catch (error) {
         if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors })
         showErrorToast({ errors: "Something went wrong" })
       }
     },
-    [config, mutateAsync],
+    [config, form, mutateAsync],
   )
 
   const tabActions = useMemo(
@@ -165,6 +202,8 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
                 render={({ field }) => (
                   <SignupRolesSection
                     roles={displayRoles}
+                    removedRoles={removedRoles}
+                    savedSlugs={config.defaultRolesForNewUser}
                     onChange={(roles) => field.onChange(roles.map((role) => role.slug))}
                   />
                 )}
@@ -175,6 +214,8 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
                 render={({ field }) => (
                   <SignupPermissionsSection
                     permissions={displayPermissions}
+                    removedPermissions={removedPermissions}
+                    savedNames={config.defaultPermissionsForNewUser}
                     onChange={(permissions) =>
                       field.onChange(permissions.map((permission) => permission.name))
                     }

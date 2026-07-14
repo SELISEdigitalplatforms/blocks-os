@@ -1,45 +1,59 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
+import { useMemo } from "react";
+import { mapPermissionToFormValues, permissionFormSchemaType } from "../permission-form/utils";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { PermissionForm } from "../permission-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { permissionFormSchemaType } from "../permission-form/utils";
-import { PermissionRolesList } from "./permission-roles-list";
+// import { PermissionRolesList } from "./permission-roles-list";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
+
 type PermissionDetailsProps = {
   id: string;
 };
-const FormLOadingSkeleton = () => (
-  <Card>
-    <CardContent>
-      <div className="grid w-full grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index}>
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-8 w-full mt-2" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
+
+const PermissionDetailsPageSkeleton = () => (
+  <div>
+    <div className="mb-4 flex min-w-0 items-center gap-2 sm:mb-6">
+      <Skeleton className="h-7 w-56 sm:h-8 sm:w-72" />
+      <Skeleton className="h-6 w-16 shrink-0 rounded-sm" />
+    </div>
+    <Card>
+      <CardContent>
+        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index}>
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="mt-2 h-8 w-full" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 );
+
 export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
-  const selectedTenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data, isLoading } = useGetPermissionById({ id, projectKey: selectedTenantId });
-  const { isPending, mutateAsync } = useUpdatePermission({ id, projectKey: selectedTenantId });
-  const onSubmit = async (data: permissionFormSchemaType) => {
+  const { data: permissionData, isLoading } = useGetPermissionById({ id });
+  const { isPending, mutateAsync } = useUpdatePermission({ id });
+  const permission = permissionData?.data;
+  const formValues = useMemo(() => {
+    if (!permission) return null;
+    return mapPermissionToFormValues(permission);
+  }, [permission]);
+
+  const onSubmit = async (formData: permissionFormSchemaType) => {
+    if (permission?.isBuiltIn) return;
     try {
       const res = await mutateAsync({
-        ...data,
-        type: +data.type,
-        projectKey: selectedTenantId,
-        isBuiltIn: false,
-        dependentPermissions: +data.type === 2 ? data.dependentPermissions : [],
+        ...formData,
+        type: +formData.type,
+        isBuiltIn: permission?.isBuiltIn ?? false,
+        dependentPermissions: +formData.type === 2 ? formData.dependentPermissions : [],
         itemId: id,
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
@@ -49,32 +63,40 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/services/iam/permission-detail"] = "Permissions";
-  BREADCRUMB_CUSTOM_TITLES[`/services/iam/permission-detail/${id}`] = data?.data.name || "";
+
+  if (isLoading || !permission?.name) {
+    return <PermissionDetailsPageSkeleton />;
+  }
+
+  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = permission.name;
+
   return (
-    <div className="px-4 pt-4 md:px-6 md:pt-6">
-      <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+    <div>
+      <div className="mb-4 flex min-w-0 items-center gap-2 sm:mb-6">
+        <PageBreadcrumb
+          breadcrumbIndex={4}
+          className="flex min-w-0"
+          listClassName="text-base sm:text-lg"
+        />
+        <Badge
+          className={cn(
+            "shrink-0",
+            permission.isBuiltIn
+              ? "!bg-gray-300 !text-gray-800"
+              : "!bg-purple-100 !text-purple-700",
+          )}
+        >
+          {permission.isBuiltIn ? "Built In" : "Custom"}
+        </Badge>
       </div>
-      <div className="mt-4 text-xl font-semibold flex items-center gap-2">
-        {data?.data.name || ""}
-        {data?.data && (
-          <Badge
-            className={cn(data?.data.isBuiltIn ? "!bg-gray-300 !text-gray-800" : "!bg-purple-100 !text-purple-700")}
-          >
-            {data?.data.isBuiltIn ? "Built In" : "Custom"}
-          </Badge>
-        )}
-      </div>
-      <div className="mt-4">
-        {isLoading ? (
-          <FormLOadingSkeleton />
-        ) : (
-          <PermissionForm onSave={onSubmit} isPending={isPending} values={data?.data || null} />
-        )}
-      </div>
-      {/* temporary solutions */}
-      <PermissionRolesList slugs={data?.data.roles || []} />
+      <PermissionForm
+        onSave={onSubmit}
+        isPending={isPending}
+        values={formValues}
+        isBuiltIn={permission.isBuiltIn}
+        showTags={false}
+      />
+      {/* <PermissionRolesList slugs={permission.roles || []} /> */}
     </div>
   );
 };

@@ -112,6 +112,18 @@ export const clearQueryString = (options?: { except?: string[] }) => {
   window.history.replaceState(null, "", url.toString());
 };
 
+/**
+ * Converts an arbitrary string to snake_case: lowercased, with every run of
+ * non-alphanumeric characters (spaces, punctuation, etc.) collapsed to a single
+ * underscore and leading/trailing underscores trimmed. e.g. "Test Role" -> "test_role".
+ */
+export const toSnakeCase = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
 export const getUniqueID = (): string => {
   const timestamp = Date.now();
   const randomLetters = Array.from({ length: 6 }, () =>

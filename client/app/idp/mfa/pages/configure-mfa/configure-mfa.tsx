@@ -20,12 +20,10 @@ import {
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { useGetMFAConfig, useSaveMFAConfig } from "../../hooks/use-mfa-config";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { MFA_Provider_Data } from "../../utils/mfa-config";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
-import { Link } from "react-router-dom";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 type MethodInfo = {
   enable: boolean;
@@ -42,7 +40,6 @@ const LoadingSkelton = () => {
   );
 };
 export const ConfigureMFA = () => {
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { isLoading, isFetching, data } = useGetMFAConfig();
   const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
@@ -67,8 +64,8 @@ export const ConfigureMFA = () => {
         header: "Status",
         cell: ({ row }) => (
           <div className="flex max-w-[200px]">
-            <Badge variant={data?.userMfaType.includes(row.original.type) ? "success" : "error"}>
-              {data?.userMfaType.includes(row.original.type) ? "Enabled" : "Disabled"}
+            <Badge variant={data?.allowedMethods.includes(row.original.type) ? "success" : "error"}>
+              {data?.allowedMethods.includes(row.original.type) ? "Enabled" : "Disabled"}
             </Badge>
           </div>
         ),
@@ -84,27 +81,18 @@ export const ConfigureMFA = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* {row.original.type === 2 && data?.userMfaType.includes(row.original.type) && (
-                  <DropdownMenuItem>
-                    <Link
-                      to={`/utilities/email/communications/${data.mfaTemplate.templateId}/edit`}
-                    >
-                      Update Template
-                    </Link>
-                  </DropdownMenuItem>
-                )} */}
                 <DropdownMenuItem
                   onClick={async (e) => {
                     e.stopPropagation();
                     setOpenEnableDisableModal(true);
                     setMethodInfo(() => ({
-                      enable: !data?.userMfaType.includes(row.original.type),
+                      enable: !data?.allowedMethods.includes(row.original.type),
                       name: row.original.label,
                       type: row.original.type,
                     }));
                   }}
                 >
-                  {data?.userMfaType.includes(row.original.type) ? "Disable" : "Enable"}
+                  {data?.allowedMethods.includes(row.original.type) ? "Disable" : "Enable"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -112,11 +100,11 @@ export const ConfigureMFA = () => {
         ),
       },
     ],
-    [data?.mfaTemplate.templateId, data?.userMfaType],
+    [data?.mfaTemplate?.templateId, data?.allowedMethods],
   );
   const { isPending, mutateAsync } = useSaveMFAConfig();
   const onSaveHandler = async (methodInfo: MethodInfo) => {
-    const userMfaTypes = new Set(data?.userMfaType || []);
+    const userMfaTypes = new Set(data?.allowedMethods || []);
     const { type, enable } = methodInfo;
     if (!type) return;
     if (!enable) {
@@ -127,10 +115,8 @@ export const ConfigureMFA = () => {
       userMfaTypes.add(type);
     }
     const payload = {
-      projectKey: tenantId,
-      enableMfa: !!userMfaTypes.size,
-      userMfaType: Array.from(userMfaTypes),
-      ...(data?.itemId ? { itemId: data.itemId } : {}),
+      enabled: !!userMfaTypes.size,
+      allowedMethods: Array.from(userMfaTypes),
     };
     const res = await mutateAsync(payload);
     if (!res.isSuccess) return showErrorToast({ errors: res.errors });
@@ -152,45 +138,45 @@ export const ConfigureMFA = () => {
   return (
     <>
       <div>
+        {loading ? (
+          <LoadingSkelton />
+        ) : mfaConfigData.length === 0 ? (
+          <EmptyState
+            icon={ShieldCheck}
+            title="No configurations found"
+            description="MFA is not yet configured for this project."
+          />
+        ) : (
           <Card className="border-none shadow-none">
             <CardContent>
-              {loading ? (
-                <LoadingSkelton />
-              ) : mfaConfigData.length === 0 ? (
-                <EmptyState
-                  icon={ShieldCheck}
-                  title="No configurations found"
-                  description="MFA is not yet configured for this project."
-                />
-              ) : (
-                <Table className="text-sm md:table-fixed">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id}>
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+              <Table className="text-sm md:table-fixed">
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        </div>
+        )}
+      </div>
       <Dialog open={openEnableDisableModal} onOpenChange={setOpenEnableDisableModal}>
         <ConfirmationModal
           onCancel={() => {}}

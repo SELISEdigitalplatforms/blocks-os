@@ -306,7 +306,7 @@ namespace DomainService.Projects
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = IdentifierConstants.ConstructCookieDomain == IdentifierConstants.BlocksDomain }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
+                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = true }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -422,7 +422,9 @@ namespace DomainService.Projects
             switch (request.Action)
             {
                 case ApplicationAction.Add:
-                    AddApplication(project, request);
+                    var addResult = AddApplication(project, request);
+                    if (!addResult.IsSuccess)
+                        return addResult;
                     break;
 
                 case ApplicationAction.Edit:
@@ -449,16 +451,33 @@ namespace DomainService.Projects
             return new BaseResponse { IsSuccess = true };
         }
 
-        private void AddApplication(Tenant project, UpdateProjectRequest request)
+        // Domains are stored inconsistently ("https://x", "x", trailing slash,
+        // mixed case) — normalize before comparing so duplicates can't sneak in
+        private static string NormalizeDomain(string domain) =>
+            (domain ?? string.Empty)
+                .Trim()
+                .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace("http://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .TrimEnd('/')
+                .ToLowerInvariant();
+
+        private BaseResponse AddApplication(Tenant project, UpdateProjectRequest request)
         {
+            var incomingDomain = NormalizeDomain(request.Application.Domain);
+            if (project.Applications.Any(a => NormalizeDomain(a.Domain) == incomingDomain))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
+            }
+
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
             var newApp = new Applications
             {
                 Domain = request.Application.Domain,
                 CookieDomain = request.Application.CookieDomain,
-                IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain
+                IsDomainVerified = (mainDomain == IdentifierConstants.ConstructCookieDomain) || (mainDomain == IdentifierConstants.BlocksDomain)
             };
             project.Applications.Add(newApp);
+            return new BaseResponse { IsSuccess = true };
         }
 
         private BaseResponse EditApplication(Tenant project, UpdateProjectRequest request)
@@ -467,6 +486,12 @@ namespace DomainService.Projects
             if (existingApp == null)
             {
                 return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "application_not_found", $"No application found with domain {request.ApplicationDomain}" } } };
+            }
+
+            var incomingDomain = NormalizeDomain(request.Application.Domain);
+            if (project.Applications.Any(a => !ReferenceEquals(a, existingApp) && NormalizeDomain(a.Domain) == incomingDomain))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
             }
 
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
@@ -596,15 +621,27 @@ namespace DomainService.Projects
                 return new NotFoundObjectResult(new { error = "Project not found" });
             }
 
+            // Tenant initializes ThirdPartyJwtTokenParameters, so a project that never configured a
+            // provider still deserializes to an empty instance. Only a key source proves configuration.
+            var thirdPartyJwtTokenParameters = project.ThirdPartyJwtTokenParameters;
+            var isConfigured = thirdPartyJwtTokenParameters is not null
+                               && (!string.IsNullOrWhiteSpace(thirdPartyJwtTokenParameters.JwksUrl)
+                                   || !string.IsNullOrWhiteSpace(thirdPartyJwtTokenParameters.PublicCertificatePath));
+
+            if (!isConfigured)
+            {
+                thirdPartyJwtTokenParameters = null;
+            }
+
             var tokenParams = new
             {
-                IsConfigured = project?.ThirdPartyJwtTokenParameters is not null,
-                ProviderName = project?.ThirdPartyJwtTokenParameters?.ProviderName,
-                Issuer = project?.ThirdPartyJwtTokenParameters?.Issuer,
-                Audiences = project?.ThirdPartyJwtTokenParameters?.Audiences,
-                PublicCertificatePath = project?.ThirdPartyJwtTokenParameters?.PublicCertificatePath,
-                JwksUrl = project?.ThirdPartyJwtTokenParameters?.JwksUrl,
-                CookieKey = project?.ThirdPartyJwtTokenParameters?.CookieKey
+                IsConfigured = isConfigured,
+                ProviderName = thirdPartyJwtTokenParameters?.ProviderName,
+                Issuer = thirdPartyJwtTokenParameters?.Issuer,
+                Audiences = thirdPartyJwtTokenParameters?.Audiences,
+                PublicCertificatePath = thirdPartyJwtTokenParameters?.PublicCertificatePath,
+                JwksUrl = thirdPartyJwtTokenParameters?.JwksUrl,
+                CookieKey = thirdPartyJwtTokenParameters?.CookieKey
             };
             return new OkObjectResult(tokenParams);
         }
@@ -616,9 +653,9 @@ namespace DomainService.Projects
             return new SaveThirdPartyJWTClaimsResponse { IsSuccess = true , ItemId = claimsMapper.ItemId};
         }
 
-        public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync(GetThirdPartyJWTClaimsRequest request)
+        public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync()
         {
-            return await _projectRepository.GetThirdPartyJWTClaimsAsync(request.ItemId);
+            return await _projectRepository.GetThirdPartyJWTClaimsAsync(string.Empty);
         }
 
         private async Task<ThirdPartyJWTClaims> MapJWTClaims(SaveThirdPartyJWTClaimsRequest request)
