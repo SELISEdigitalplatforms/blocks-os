@@ -1,9 +1,8 @@
 import React, { createContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { useLmtBasePath } from "@/hooks/use-scoped-path";
-import { ArrowLeft, Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import useIsMobile from "@/hooks/use-is-mobile";
@@ -48,7 +47,7 @@ const TraceDetailsEmptyState = ({
   traceId: string
   isError: boolean
 }) => (
-  <Card className="mt-6 rounded-sm shadow-none">
+  <Card className="rounded-sm shadow-none">
     <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
         <GitBranch className="h-6 w-6 text-muted-foreground" aria-hidden />
@@ -67,18 +66,30 @@ const TraceDetailsEmptyState = ({
     </CardContent>
   </Card>
 )
+
+const getTraceBreadcrumbLabel = (
+  id: string,
+  hasTrace: boolean,
+  entryPoint?: { method?: string; actionName?: string },
+  includeMethod = false,
+) => {
+  if (!hasTrace) return id
+  const actionName = entryPoint?.actionName
+  if (!actionName) return id
+  if (!includeMethod || !entryPoint?.method) return actionName
+  return `${actionName} (${entryPoint.method})`
+}
+
 export const TraceDetails = ({
   id,
   breadcrumbIndex = 2,
-  backHref,
+  logsTraceBreadcrumbHref,
 }: {
   id: string
   breadcrumbIndex?: number
-  backHref?: string
+  logsTraceBreadcrumbHref?: string
 }) => {
-  const navigate = useNavigate()
   const lmtBase = useLmtBasePath()
-  const resolvedBackHref = backHref ?? `${lmtBase}/tracing`
   const isMobile = useIsMobile();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [traceHistory, setTraceHistory] = useState<
@@ -121,16 +132,29 @@ export const TraceDetails = ({
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
   };
-  BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing`] = "Tracing"
-  if (id) {
-    BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing/${id}`] = id
-  }
-  const selectedTraceHistory = traceHistory[traceHistory?.length - 1]
-  const handleBack = () => navigate(resolvedBackHref)
   const isPending = isLoading || isFetching
   const hasTrace = Boolean(data?.data)
   const isEmpty = !isPending && !hasTrace
   const showTimelineLoading = isPending || (hasTrace && traceHistory.length === 0)
+  const entryPoint = data?.data?.entryPoint
+  BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing`] = "Tracing"
+  if (id) {
+    BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing/${id}`] = getTraceBreadcrumbLabel(
+      id,
+      hasTrace,
+      entryPoint,
+      true,
+    )
+  }
+  if (logsTraceBreadcrumbHref) {
+    BREADCRUMB_CUSTOM_TITLES[logsTraceBreadcrumbHref] = getTraceBreadcrumbLabel(
+      id,
+      hasTrace,
+      entryPoint,
+      true,
+    )
+  }
+  const selectedTraceHistory = traceHistory[traceHistory?.length - 1]
   return (
     <timelineContext.Provider
       value={{
@@ -142,46 +166,28 @@ export const TraceDetails = ({
         isLoading: showTimelineLoading,
       }}
     >
-      {isPending ? (
-        <Skeleton className="h-7 w-40" />
-      ) : (
-        <PageBreadcrumb breadcrumbIndex={breadcrumbIndex} listClassName="text-base sm:text-lg" />
-      )}
-      <div className="flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
         {isPending ? (
-          <Skeleton className="h-8 w-1/3" />
+          <>
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-8 w-40" />
+          </>
         ) : (
-          <div className="flex items-center">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleBack}>
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-            <h1 className="ml-2 break-all text-lg font-semibold md:ml-4 md:text-2xl">
-              {hasTrace ? (
-                <>
-                  {data?.data?.entryPoint?.method}{" "}
-                  <span className="text-low-emphasis">{data?.data?.entryPoint?.actionName}</span>
-                </>
-              ) : (
-                <span className="text-low-emphasis">{id}</span>
-              )}
-            </h1>
-          </div>
+          <>
+            <PageBreadcrumb breadcrumbIndex={breadcrumbIndex} listClassName="text-base sm:text-lg" />
+            {hasTrace ? (
+              <Button
+                size="default"
+                variant="outline"
+                className="shrink-0 shadow-none"
+                onClick={downloadJSONFile}
+              >
+                <Download className="h-4 w-4 lg:mr-2" />
+                <span className="sr-only lg:not-sr-only">Download JSON</span>
+              </Button>
+            ) : null}
+          </>
         )}
-        {isPending ? (
-          <Skeleton className="h-8 w-40" />
-        ) : hasTrace ? (
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              size="default"
-              variant="outline"
-              className="shadow-none"
-              onClick={downloadJSONFile}
-            >
-              <Download className="h-4 w-4 lg:mr-2" />
-              <span className="sr-only lg:not-sr-only">Download JSON</span>
-            </Button>
-          </div>
-        ) : null}
       </div>
       {isEmpty ? (
         <TraceDetailsEmptyState traceId={id} isError={isError} />
