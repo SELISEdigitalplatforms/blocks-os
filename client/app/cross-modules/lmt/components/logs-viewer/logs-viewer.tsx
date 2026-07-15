@@ -1,8 +1,15 @@
-import { createContext, useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { LogsListHeader } from "../logs-header/logs-header";
 import { cn } from "@/lib/utils";
 import { LogsList } from "../logs-list";
 import type { LogServiceIconKey } from "../../models/log-entry.model";
+import { useQueryState } from "nuqs";
 export interface Service {
   id: string;
   label: string;
@@ -15,6 +22,7 @@ export interface LogFilter {
   startDate: string;
   endDate: string;
   level: string;
+  service: string;
 }
 interface LogsViewerContextType {
   services: Service[];
@@ -46,7 +54,8 @@ const initialContextValue: LogsViewerContextType = {
   useGenericTraceLinks: false,
 };
 // Create context with the initial value
-export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
+export const LogsViewerContext =
+  createContext<LogsViewerContextType>(initialContextValue);
 interface LogsViewerProps {
   services: Service[];
   startDate?: string;
@@ -69,21 +78,35 @@ export const LogsViewer = ({
   logsRouteServiceName,
   useGenericTraceLinks = false,
 }: LogsViewerProps) => {
-  const [selectedService, setSelectedService] = useState<Service | null>(
-    services.length > 0 ? services[0] : null,
-  );
+  const defaultServiceId = services.length > 0 ? services[0].id : "";
+  const [serviceId, setServiceId] = useQueryState("service", {
+    defaultValue: defaultServiceId,
+  });
+
+  const selectedService = useMemo(() => {
+    return (
+      services.find((s) => s.id === serviceId) ||
+      (services.length > 0 ? services[0] : null)
+    );
+  }, [services, serviceId]);
+
   const [filter, setFilter] = useState<Partial<LogFilter> | null>(null);
 
+  // Update serviceId when services change
   useEffect(() => {
-    setSelectedService((current) => {
-      if (current && services.some((service) => service.id === current.id)) return current;
-      return services.length > 0 ? services[0] : null;
-    });
-  }, [services]);
+    const newDefaultServiceId = services.length > 0 ? services[0].id : "";
+    if (newDefaultServiceId && !services.find((s) => s.id === serviceId)) {
+      setServiceId(newDefaultServiceId);
+    }
+  }, [services, serviceId, setServiceId]);
 
-  const changeService = useCallback((service: Service) => {
-    setSelectedService((current) => (current?.id === service.id ? current : service));
-  }, []);
+  const changeService = useCallback(
+    (service: Service) => {
+      setServiceId(service.id);
+    },
+    [setServiceId],
+  );
+
   const resetFilter = () => {
     setFilter(null);
   };
@@ -102,8 +125,7 @@ export const LogsViewer = ({
         askAiDescription,
         logsRouteServiceName,
         useGenericTraceLinks,
-      }}
-    >
+      }}>
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
         <LogsList

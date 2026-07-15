@@ -1,5 +1,5 @@
-import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model"
-import type { LucideIcon } from "lucide-react"
+import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model";
+import type { LucideIcon } from "lucide-react";
 import {
   Bot,
   Database,
@@ -11,7 +11,7 @@ import {
   Shield,
   Wrench,
   Workflow,
-} from "lucide-react"
+} from "lucide-react";
 
 export const LOG_SERVICE_ICONS = {
   iam: Shield,
@@ -24,15 +24,38 @@ export const LOG_SERVICE_ICONS = {
   utilities: Wrench,
   studio: Palette,
   agent: Bot,
-} satisfies Record<LogServiceRow["icon"], LucideIcon>
+} satisfies Record<LogServiceRow["icon"], LucideIcon>;
+
+type BlocksLogServiceNames =
+  | "blocks-iam"
+  | "blocks-iam-worker"
+  | "blocks-os"
+  | "blocks-os-api"
+  | "blocks-os-worker"
+  | "blocks-data"
+  | "blocks-data-worker"
+  | "blocks-monitor-api"
+  | "blocks-monitor-worker"
+  | "blocks-localization"
+  | "blocks-localization-worker"
+  | "blocks-logic"
+  | "blocks-logic-worker"
+  | "blocks-release-api"
+  | "blocks-release-worker"
+  | "blocks-utilities"
+  | "blocks-utilities-worker"
+  | "blocks-studio"
+  | "blocks-studio-worker"
+  | "blocks-ai-api"
+  | "blocks-ai-worker";
 
 export type BlocksLogService = {
-  id: string
-  label: string
-  routeSlug: string
-  icon: LogServiceRow["icon"]
-  serviceNames: string[]
-}
+  id: string;
+  label: string;
+  routeSlug: string;
+  icon: LogServiceRow["icon"];
+  serviceNames: BlocksLogServiceNames[];
+};
 
 export const BLOCKS_LOG_SERVICES: BlocksLogService[] = [
   {
@@ -103,11 +126,11 @@ export const BLOCKS_LOG_SERVICES: BlocksLogService[] = [
     label: "Agent",
     routeSlug: "agent",
     icon: "agent",
-    serviceNames: ["blocks-ai-api", "blocks-api-worker"],
+    serviceNames: ["blocks-ai-api", "blocks-ai-worker"],
   },
-]
+];
 
-export const DUMMY_LOG_SERVICES: LogServiceRow[] = [
+export const LOG_SERVICES: LogServiceRow[] = [
   {
     id: "blocks-iam",
     name: "Blocks IAM",
@@ -189,4 +212,4 @@ export const DUMMY_LOG_SERVICES: LogServiceRow[] = [
       "AI agent orchestration and tool-call logs. Trace prompt flows, model invocations, and agent-side failures.",
     status: "running",
   },
-]
+];
