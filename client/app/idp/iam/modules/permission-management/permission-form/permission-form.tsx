@@ -1,6 +1,6 @@
 import { ChipsInput, ChipsInputField, ChipsInputList } from "@/components/chip-input/chips-input";
 import { Button } from "@/components/ui-kits/button/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
 import { PERMISSION_SEVERITY_OPTIONS, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
@@ -199,6 +199,9 @@ export const PermissionForm = ({
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
                     <FormLabel>Dependent permissions (Max 5)</FormLabel>
+                      <FormDescription className="text-xs text-muted-foreground">
+                        When this FE action is granted to a role, these permissions are included automatically.
+                      </FormDescription>
                     <FormControl>
                       <DependentPermissions
                         permissionsResource={field.value}
