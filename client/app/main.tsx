@@ -1,4 +1,4 @@
-import "@/lib/resolve-env";
+import "@seliseblocks/blocks-kit/lib";
 import "@/styles/globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
