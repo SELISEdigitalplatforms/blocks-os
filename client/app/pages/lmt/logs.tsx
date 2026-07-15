@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { BLOCKS_LOG_SERVICES } from "@/cross-modules/lmt/constants/logs.constant";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
 import { LogsViewer, type Service } from "@blocks-lmt/components";
@@ -37,7 +36,7 @@ export const parseAsLogSource = createParser({
   },
 });
 export function LogsRoute() {
-  const [source, setSource] = useQueryState<LogSource>(
+  const [source] = useQueryState<LogSource>(
     "source",
     parseAsLogSource.withDefault("blocks"),
   );
@@ -53,6 +52,8 @@ export function LogsRoute() {
         label: service.name,
         serviceName: service.serviceId,
         serviceNames: [service.serviceId],
+        // Store the RegisteredService data so we can use it later for name mapping
+        _raw: service,
       })) ?? [],
     [data?.data],
   );
@@ -64,21 +65,6 @@ export function LogsRoute() {
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
-      <Tabs
-        value={source}
-        onValueChange={(value) => setSource(value as LogSource)}>
-        <TabsList className="h-[42px] bg-blocks-primary-shades-300">
-          {SOURCE_OPTIONS.map((option) => (
-            <TabsTrigger
-              key={option.value}
-              value={option.value}
-              className="h-8 w-fit">
-              {option.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
       {isManagedLoading ? (
         <Card>
           <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
@@ -99,6 +85,7 @@ export function LogsRoute() {
           askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
           agentName="Ask AI"
           useGenericTraceLinks
+          isSourceBlocks={source === "blocks"}
         />
       )}
     </div>
