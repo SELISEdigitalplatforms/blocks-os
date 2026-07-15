@@ -40,9 +40,7 @@ describe("use-auth-oidc hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockOidcCredentialsResponse);
-      expect(authOidc.clients.getOidcCredentials).toHaveBeenCalledWith({
-        projectKey: TEST_PROJECT_KEY,
-      });
+      expect(authOidc.clients.getOidcCredentials).toHaveBeenCalledWith();
     });
   });
 

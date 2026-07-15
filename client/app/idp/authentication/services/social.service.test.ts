@@ -144,7 +144,12 @@ describe("SSOService", () => {
 
       const result = await service.saveBlocksSsoCredential(payload);
 
-      expect(http.post).toHaveBeenCalledWith(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload);
+      expect(http.post).toHaveBeenCalledWith(
+        AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT,
+        payload,
+        undefined,
+        { absoluteUrl: true },
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -164,7 +169,9 @@ describe("SSOService", () => {
       const result = await service.getBlocksSsoCredential(projectKey);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}?ProjectKey=${projectKey}`,
+        AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
