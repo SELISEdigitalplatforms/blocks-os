@@ -20,6 +20,7 @@ export interface ILog {
   level: string;
   message: string;
   traceId: string;
+  serviceName?: string;
 }
 
 export interface IGetLogsPayload {
