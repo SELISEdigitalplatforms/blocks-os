@@ -39,6 +39,8 @@ describe("PermissionService", () => {
       expect(http.post).toHaveBeenCalledWith(
         PERMISSION_ENDPOINTS.GET_PERMISSIONS,
         mockGetPermissionsPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockPermissionsResponse);
     });
@@ -86,6 +88,8 @@ describe("PermissionService", () => {
       expect(http.post).toHaveBeenCalledWith(
         PERMISSION_ENDPOINTS.CREATE_PERMISSION,
         mockCreatePermissionPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -133,6 +137,8 @@ describe("PermissionService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${PERMISSION_ENDPOINTS.GET_RESOURCE_GROUPS}?ProjectKey=${mockResourceGroupPayload.projectKey}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockResourceGroupResponse);
     });
