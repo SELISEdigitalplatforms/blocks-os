@@ -54,7 +54,7 @@ const PageBreadcrumb: React.FC<{
 
   return (
     <Breadcrumb className={cn("hidden md:flex", className)}>
-      <BreadcrumbList className={listClassName}>
+      <BreadcrumbList className={cn("flex text-base sm:text-lg", listClassName)}>
         {breadcrumbs.map((breadcrumb, index) => {
           const title = getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) ?? breadcrumb.label
           const linkHref = getBreadcrumbLinkHref(breadcrumb.href)

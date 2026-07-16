@@ -11,37 +11,48 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
+
 type PermissionDetailsProps = {
   id: string;
 };
-const FormLOadingSkeleton = () => (
-  <Card>
-    <CardContent>
-      <div className="grid w-full grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index}>
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-8 w-full mt-2" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
+
+const PermissionDetailsPageSkeleton = () => (
+  <div>
+    <div className="mb-4 flex min-w-0 items-center gap-2 sm:mb-6">
+      <Skeleton className="h-7 w-56 sm:h-8 sm:w-72" />
+      <Skeleton className="h-6 w-16 shrink-0 rounded-sm" />
+    </div>
+    <Card>
+      <CardContent>
+        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index}>
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="mt-2 h-8 w-full" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 );
+
 export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
   const { data: permissionData, isLoading } = useGetPermissionById({ id });
   const { isPending, mutateAsync } = useUpdatePermission({ id });
+  const permission = permissionData?.data;
   const formValues = useMemo(() => {
-    if (!permissionData?.data) return null;
-    return mapPermissionToFormValues(permissionData.data);
-  }, [permissionData]);
+    if (!permission) return null;
+    return mapPermissionToFormValues(permission);
+  }, [permission]);
+
   const onSubmit = async (formData: permissionFormSchemaType) => {
-    if (permissionData?.data.isBuiltIn) return;
+    if (permission?.isBuiltIn) return;
     try {
       const res = await mutateAsync({
         ...formData,
         type: +formData.type,
-        isBuiltIn: permissionData?.data.isBuiltIn ?? false,
+        isBuiltIn: permission?.isBuiltIn ?? false,
         dependentPermissions: +formData.type === 2 ? formData.dependentPermissions : [],
         itemId: id,
       });
@@ -52,36 +63,40 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = id;
+
+  if (isLoading || !permission?.name) {
+    return <PermissionDetailsPageSkeleton />;
+  }
+
+  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = permission.name;
+
   return (
     <div>
-      <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={4} />
+      <div className="mb-4 flex min-w-0 items-center gap-2 sm:mb-6">
+        <PageBreadcrumb
+          breadcrumbIndex={4}
+          className="flex min-w-0"
+          listClassName="text-base sm:text-lg"
+        />
+        <Badge
+          className={cn(
+            "shrink-0",
+            permission.isBuiltIn
+              ? "!bg-gray-300 !text-gray-800"
+              : "!bg-purple-100 !text-purple-700",
+          )}
+        >
+          {permission.isBuiltIn ? "Built In" : "Custom"}
+        </Badge>
       </div>
-      <div className="mt-4 text-xl font-semibold flex items-center gap-2">
-        {permissionData?.data.name || ""}
-        {permissionData?.data && (
-          <Badge
-            className={cn(permissionData?.data.isBuiltIn ? "!bg-gray-300 !text-gray-800" : "!bg-purple-100 !text-purple-700")}
-          >
-            {permissionData?.data.isBuiltIn ? "Built In" : "Custom"}
-          </Badge>
-        )}
-      </div>
-      <div className="mt-4">
-        {isLoading ? (
-          <FormLOadingSkeleton />
-        ) : (
-          <PermissionForm
-            onSave={onSubmit}
-            isPending={isPending}
-            values={formValues}
-            isBuiltIn={permissionData?.data.isBuiltIn}
-            showTags={false}
-          />
-        )}
-      </div>
-      {/* <PermissionRolesList slugs={permissionData?.data.roles || []} /> */}
+      <PermissionForm
+        onSave={onSubmit}
+        isPending={isPending}
+        values={formValues}
+        isBuiltIn={permission.isBuiltIn}
+        showTags={false}
+      />
+      {/* <PermissionRolesList slugs={permission.roles || []} /> */}
     </div>
   );
 };
