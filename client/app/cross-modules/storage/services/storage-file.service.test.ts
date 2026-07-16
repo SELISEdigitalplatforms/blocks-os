@@ -40,6 +40,8 @@ describe("StorageFile", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${STORAGE_FILE_ENDPOINTS.GET_FILE}?FileId=${mockGetFilePayload.itemId}&ProjectKey=${mockGetFilePayload.projectKey}&ConfigurationName=${mockGetFilePayload.configurationName}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetFileByIdResponse);
     });
@@ -51,6 +53,8 @@ describe("StorageFile", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${STORAGE_FILE_ENDPOINTS.GET_FILE}?FileId=file-1&ProjectKey=${TEST_PROJECT_KEY}&ConfigurationName=`,
+        undefined,
+        { absoluteUrl: true },
       );
     });
 
@@ -72,6 +76,8 @@ describe("StorageFile", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.DELETE_FILE,
         mockDeleteFilePayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockDeleteSuccessResponse);
     });
@@ -96,6 +102,8 @@ describe("StorageFile", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.GET_PRESIGNED_URL,
         mockPreSignedUrlPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockPreSignedUrlResponse);
     });
@@ -129,6 +137,8 @@ describe("StorageFile", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.GET_FILES_INFO,
         mockGetFilesInfoPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetFilesInfoResponse);
     });
@@ -158,6 +168,8 @@ describe("StorageFile", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.UPDATE_FILE_ADDITIONAL_INFO,
         payload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -186,6 +198,8 @@ describe("StorageFile", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${STORAGE_FILE_ENDPOINTS.GET_FILE}?FileId=${meta.fileId}&ProjectKey=${meta.projectKey}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetFileByIdResponse);
     });
