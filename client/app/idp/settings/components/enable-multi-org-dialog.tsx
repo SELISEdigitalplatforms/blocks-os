@@ -1,11 +1,11 @@
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal"
-import { Dialog } from "@/components/ui-kits/dialog/dialog"
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { Dialog } from "@/components/ui-kits/dialog/dialog";
 
 type EnableMultiOrgDialogProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onConfirm: () => void
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+};
 
 export const EnableMultiOrgDialog = ({
   open,
@@ -24,4 +24,4 @@ export const EnableMultiOrgDialog = ({
       onCancel={() => onOpenChange(false)}
     />
   </Dialog>
-)
+);
