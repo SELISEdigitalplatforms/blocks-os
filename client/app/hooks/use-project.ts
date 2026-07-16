@@ -9,6 +9,10 @@ import {
   shortGuidGenerator,
 } from "@/components/create-project/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import {
+  IUpdateProjectPayload,
+  IValidateCnameProjectPayload,
+} from "@/models/project.model";
 
 export const useGetProjects = (tenantGroupId = "") => {
   const { setProjects } = useProjectStore();
@@ -38,7 +42,6 @@ export const useGetProject = (options?: { projectId: string }) => {
     enabled: Boolean(projectId),
   });
 };
-
 
 export const useGetAssets = (
   tenantGroupId: string,
@@ -83,12 +86,12 @@ export const useUpdateRepositories = () => {
   });
 };
 
-export const useUpdateProject = (_: { projectKey: string }) => {
+export const useUpdateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["identifier", "project-update"],
-    mutationFn: (payload: { name: string; tenantGroupId: string }) =>
-      crossProjectService.updateTenantGroup(payload),
+    mutationFn: (payload: IUpdateProjectPayload) =>
+      crossProjectService.updateProject(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
@@ -111,14 +114,16 @@ export const useUpdateTenantGroup = (_: { tenantGroupId: string }) => {
   });
 };
 
-export const useValidateCNameProject = (options: { projectKey: string }) => {
+export const useValidateCNameProject = (
+  options: IValidateCnameProjectPayload,
+) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["identifier", "projects", "validate cname"],
-    mutationFn: crossProjectService.validateCNameProject,
+    mutationKey: ["identifier", "projects", options],
+    mutationFn: () => crossProjectService.validateCNameProject(options),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["identifier", "project", options],
+        queryKey: ["identifier", "project"],
       });
     },
   });
@@ -128,7 +133,7 @@ export const useDisableProject = (options: { projectKey: string }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["identifier", "projects", "disable"],
-    mutationFn: crossProjectService.disableProject,
+    mutationFn: () => crossProjectService.disableProject(options),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["identifier", "project", options],
@@ -164,7 +169,9 @@ export const useInitiateMigration = () => {
     mutationKey: ["identifier", "migration", "initiate"],
     mutationFn: crossProjectService.initiateMigration,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["identifier", "migration-status"] });
+      queryClient.invalidateQueries({
+        queryKey: ["identifier", "migration-status"],
+      });
     },
   });
 };
@@ -175,7 +182,9 @@ export const useVerifyMigration = () => {
     mutationKey: ["identifier", "migration", "verify"],
     mutationFn: crossProjectService.verifyMigration,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["identifier", "migration-status"] });
+      queryClient.invalidateQueries({
+        queryKey: ["identifier", "migration-status"],
+      });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
     },
   });
@@ -239,9 +248,7 @@ export const useProjectForm = () => {
           showErrorToast({ errors: response.errors });
         }
 
-        navigate(
-          `/app/project/${response.tenantGroupId}/environments`,
-        );
+        navigate(`/app/project/${response.tenantGroupId}/environments`);
         resetFormData();
       } else {
         showErrorToast({ errors: response.errors });
