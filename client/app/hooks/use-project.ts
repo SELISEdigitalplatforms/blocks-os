@@ -99,7 +99,7 @@ export const useUpdateProject = () => {
   });
 };
 
-export const useUpdateTenantGroup = (_: { tenantGroupId: string }) => {
+export const useUpdateTenantGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["identifier", "project-update-tenant-group"],
