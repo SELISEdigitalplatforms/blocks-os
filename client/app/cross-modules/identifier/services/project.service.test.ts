@@ -114,23 +114,21 @@ describe("ProjectService", () => {
   // ─── getEnvRepositories ─────────────────────────────────────────────────────
 
   describe("getEnvRepositories", () => {
-    it("should call correct endpoint with projectkey", async () => {
+    it("should call correct endpoint as an absolute url", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetEnvRepositoriesResponse);
 
-      const result = await service.getEnvRepositories("proj-key-1");
+      const result = await service.getEnvRepositories();
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?projectkey=proj-key-1`,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPOS_LIST, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockGetEnvRepositoriesResponse);
     });
 
     it("should handle API errors", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Failed to fetch repos"));
 
-      await expect(service.getEnvRepositories("proj-key")).rejects.toThrow("Failed to fetch repos");
+      await expect(service.getEnvRepositories()).rejects.toThrow("Failed to fetch repos");
     });
   });
 
@@ -256,7 +254,7 @@ describe("ProjectService", () => {
       };
       const result = await service.updateProject(payload);
 
-      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.UPDATE, payload);
+      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.UPDATE_PROJECT, payload);
       expect(result).toEqual(mockUpdateProjectResponse);
     });
 
