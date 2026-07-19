@@ -10,7 +10,6 @@ import {
 import {
   CallbackPage,
   ConsolePage,
-  DashboardOverview,
   LoginPage,
   ProfilePage,
 } from "@seliseblocks/blocks-kit/pages";
@@ -71,6 +70,7 @@ import OidcBrandingPage from "./routes/dashboard/oidc-branding";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
 import LmtLayout from "@/layouts/lmt/lmt-layout";
 import { ProjectOverviewRoute } from "@/layouts/project-overview-route";
+import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
 
 const redirectPaths: Record<string, string> = {
   "/app/idp/user-detail/*": "/app/idp",

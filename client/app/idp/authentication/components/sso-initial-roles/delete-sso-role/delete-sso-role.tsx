@@ -1,4 +1,4 @@
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { X } from "lucide-react";

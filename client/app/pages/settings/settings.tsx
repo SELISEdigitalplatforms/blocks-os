@@ -90,9 +90,7 @@ export const SettingsPage = () => {
     );
   const project = projectsData?.[0]?.projects?.[0];
   const { mutateAsync: updateTenantGroup, isPending: isUpdating } =
-    useUpdateTenantGroup({
-      tenantGroupId: selectedTenantGroup || "",
-    });
+    useUpdateTenantGroup();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const form = useForm<ProjectNameForm>({
     resolver: zodResolver(projectNameSchema),

@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui-kits/card/card";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
 import { ArrowLeft, CircleSlash, MoreVertical } from "lucide-react";
