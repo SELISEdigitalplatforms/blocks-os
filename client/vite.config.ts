@@ -72,7 +72,25 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       globals: true,
-      setupFiles: [],
+      setupFiles: ['./app/test-utils/vitest.setup.ts'],
+      coverage: {
+        all: true,
+        provider: 'v8',
+        include: ['app/**/*.{ts,tsx}'],
+        exclude: [
+          'app/**/*.test.*',
+          'app/**/*.spec.*',
+          'app/**/*.d.ts',
+          'app/**/main.tsx',
+          'app/**/vite-env.d.ts',
+          '**/components/ui/**',
+          'app/**/*.stories.*',
+          '**/__generated__/**',
+          '**/*.gen.*',
+          'app/**/test-utils/**',
+          'app/**/__mocks__/**',
+        ],
+      },
       alias: {
         '@': path.resolve(__dirname, './app'),
         '@blocks-idp': path.resolve(__dirname, './app/idp'),

@@ -42,6 +42,7 @@ export interface ISaveOidcCredentialPayload {
   scope: string;
   requirePkce: boolean;
   registerAsIdentityProvider: boolean;
+  externalDiscoveryEndpoint?: string;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;
