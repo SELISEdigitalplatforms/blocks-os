@@ -39,7 +39,8 @@ export type RuntimeKey =
   | "BLOCKS_LOGIC_CLIENT_ID"
   | "BLOCKS_MONITOR_CLIENT_ID"
   | "BLOCKS_RELEASE_CLIENT_ID"
-  | "BLOCKS_STUDIO_CLIENT_ID";
+  | "BLOCKS_STUDIO_CLIENT_ID"
+  | "BLOCKS_CNAME_BASE_URL";
 
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");
