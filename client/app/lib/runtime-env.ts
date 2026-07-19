@@ -2,6 +2,7 @@
 const PLACEHOLDER_PREFIX = "__BLOCKS_";
 
 export type RuntimeKey =
+  | "BLOCKS_BASE_DOMAIN"
   | "BLOCKS_X_BLOCKS_KEY"
   | "BLOCKS_GOOGLE_SITE_KEY"
   | "BLOCKS_CONSTRUCT_URL"
@@ -38,7 +39,8 @@ export type RuntimeKey =
   | "BLOCKS_LOGIC_CLIENT_ID"
   | "BLOCKS_MONITOR_CLIENT_ID"
   | "BLOCKS_RELEASE_CLIENT_ID"
-  | "BLOCKS_STUDIO_CLIENT_ID";
+  | "BLOCKS_STUDIO_CLIENT_ID"
+  | "BLOCKS_CNAME_BASE_URL";
 
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");

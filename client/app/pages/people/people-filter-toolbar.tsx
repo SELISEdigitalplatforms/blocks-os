@@ -6,7 +6,7 @@ import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "n
 export const usePeopleFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),
-    pageSize: parseAsInteger.withDefault(100),
+    pageSize: parseAsInteger.withDefault(10),
     search: parseAsString.withDefault(""),
     environments: parseAsArrayOf(parseAsString).withDefault([]),
     status: parseAsArrayOf(parseAsString).withDefault([]),

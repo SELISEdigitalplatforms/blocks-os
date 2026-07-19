@@ -21,7 +21,7 @@ export interface IModelResponse {
   is_success: false;
   item_id: string;
   detail: string;
-  error: {};
+  error: object;
 }
 
 export interface IValid {
@@ -47,8 +47,13 @@ export interface IModelListPayload {
   page_size: number;
 }
 
+/**
+ * Result of validating an AI model configuration against its provider.
+ */
 export enum ModelStatus {
+  /** Provider accepted the credentials and responded successfully. */
   VALID = "valid",
+  /** Provider rejected the credentials or the request failed. */
   INVALID = "invalid",
 }
 
@@ -115,6 +120,7 @@ export interface IUpdateModelPayload {
   custom_headers?: Record<string, unknown> | null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ISeedProvidersPayload {}
 
 export interface IProvider {

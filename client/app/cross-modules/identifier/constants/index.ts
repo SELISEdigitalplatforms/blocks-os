@@ -1,6 +1,13 @@
+/**
+ * Runtime topology of a service registered with the platform's identifier
+ * (service registry). Mirrors the backend `BlocksManagedServiceType` enum.
+ */
 export enum REGISTER_SERVICE_TYPE {
+  /** Service has no type assigned. */
   None = 0,
+  /** HTTP API service. */
   Api = 1,
+  /** Background worker that consumes queued jobs. */
   Worker = 2,
 }
 

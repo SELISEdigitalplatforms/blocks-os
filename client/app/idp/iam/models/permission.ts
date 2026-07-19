@@ -1,14 +1,24 @@
+/**
+ * Severity classification for a permission entry. Higher severity grants
+ * access to more sensitive operations and warrants stricter review.
+ */
 export enum PermissionSeverityLevel {
+  /** No severity assigned; default for newly created permissions. */
+  None = 0,
+  /** Critical permissions can affect security, billing, or data deletion. */
   Critical = 1,
+  /** High-severity permissions touch sensitive PII or privileged actions. */
   High,
+  /** Medium-severity permissions affect normal application data. */
   Medium,
+  /** Low-severity permissions cover read-only or non-sensitive operations. */
   Low,
 }
 
 type PermissionSeverityOption = {
   label: string;
   value: PermissionSeverityLevel;
-  variant: "error" | "destructive" | "info" | "success";
+  variant: "error" | "destructive" | "info" | "success" | "secondary";
   className?: string;
   barClassName?: string;
   id: string;
@@ -51,6 +61,15 @@ export const PERMISSION_SEVERITY_OPTIONS: PermissionSeverityOption[] = [
     className: "text-blue-500",
     barClassName: "bg-blue-400",
     bg: "bg-blue-50",
+  },
+  {
+    id: "None",
+    label: "None",
+    value: PermissionSeverityLevel.None,
+    variant: "secondary",
+    className: "text-gray-600",
+    barClassName: "bg-gray-400",
+    bg: "bg-gray-50",
   },
 ];
 
@@ -162,9 +181,16 @@ export interface GetPermission {
   resourceGroup: string;
 }
 
+/**
+ * The kind of resource a permission guards. Used by the permission
+ * management UI to group, filter, and present permissions consistently.
+ */
 export enum ResourceType {
+  /** Permission guards a server-side API endpoint. */
   "Endpoint" = 1,
+  /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
+  /** Permission guards access to a specific data record or data class. */
   "Data protection" = 3,
 }
 
@@ -204,7 +230,7 @@ export interface IGetPermissionsSeverityRequestPayload {
 export const normalizePermissionSeverity = (
   value: PermissionSeverityLevel | string | number | null | undefined,
 ): PermissionSeverityLevel | undefined => {
-  if (value === null || value === undefined || value === "" || value === 0) return undefined;
+  if (value === null || value === undefined || value === "") return undefined;
   if (typeof value === "number" && PermissionSeverityLevel[value] !== undefined) {
     return value as PermissionSeverityLevel;
   }

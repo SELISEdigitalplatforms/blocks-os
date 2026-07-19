@@ -3,7 +3,7 @@ import {
   BarChart3,
   Bell,
   BookMinus,
-  BrainCircuit,
+  // BrainCircuit, // Temporarily hidden (AI Models)
   Building2,
   CreditCard,
   Database,
@@ -12,9 +12,9 @@ import {
   Globe,
   Home,
   Key,
-  KeyRound,
+  // KeyRound, // Temporarily hidden (My Secret)
   Layers,
-  Link2,
+  // Link2, // Temporarily hidden (Magic URL)
   Lock,
   Mail,
   Package,
@@ -87,14 +87,15 @@ export const navigationMenus: Menu[] = [
     icon: Lock,
     desc: "Manage secrets, configs, and credentials",
     children: [
-      {
-        id: "my-secret",
-        type: "menu",
-        name: "My Secret",
-        path: "/app/secret-management/my-secret",
-        icon: KeyRound,
-        desc: "Personal secrets and credentials",
-      },
+      // Temporarily hidden
+      // {
+      //   id: "my-secret",
+      //   type: "menu",
+      //   name: "My Secret",
+      //   path: "/app/secret-management/my-secret",
+      //   icon: KeyRound,
+      //   desc: "Personal secrets and credentials",
+      // },
       {
         id: "managed-services",
         type: "menu",
@@ -152,14 +153,15 @@ export const navigationMenus: Menu[] = [
         desc: "Multi-factor authentication settings",
         type: "menu",
       },
-      {
-        id: "magic-url",
-        name: "Magic URL",
-        path: "/app/secret-management/magic-url",
-        icon: Link2,
-        desc: "Password less magic link settings",
-        type: "menu",
-      },
+      // Temporarily hidden
+      // {
+      //   id: "magic-url",
+      //   name: "Magic URL",
+      //   path: "/app/secret-management/magic-url",
+      //   icon: Link2,
+      //   desc: "Password less magic link settings",
+      //   type: "menu",
+      // },
       {
         id: "email",
         name: "Email",
@@ -184,14 +186,15 @@ export const navigationMenus: Menu[] = [
         desc: "File and object storage",
         type: "menu",
       },
-      {
-        id: "ai-models",
-        name: "AI Models",
-        path: "/app/secret-management/ai-models",
-        icon: BrainCircuit,
-        desc: "AI model integrations",
-        type: "menu",
-      },
+      // Temporarily hidden
+      // {
+      //   id: "ai-models",
+      //   name: "AI Models",
+      //   path: "/app/secret-management/ai-models",
+      //   icon: BrainCircuit,
+      //   desc: "AI model integrations",
+      //   type: "menu",
+      // },
     ],
   },
   {
@@ -228,7 +231,10 @@ export const navigationMenus: Menu[] = [
       {
         id: "roles",
         name: "Roles",
-        path: "/app/idp/roles",
+        // Path is intentionally "role" (not "roles"): sidebar expansion uses
+        // pathname.startsWith(menu.path), and detail pages live at
+        // "/idp/role-detail/:id" which does not start with "/idp/roles".
+        path: "/app/idp/role",
         icon: ShieldCheck,
         desc: "Manage roles",
         type: "menu",
@@ -236,7 +242,10 @@ export const navigationMenus: Menu[] = [
       {
         id: "permissions",
         name: "Permissions",
-        path: "/app/idp/permissions",
+        // Path is intentionally "permission" (not "permissions"): sidebar expansion uses
+        // pathname.startsWith(menu.path), and detail pages live at
+        // "/idp/permission-detail/:id" which does not start with "/idp/permissions".
+        path: "/app/idp/permission",
         icon: Lock,
         desc: "Manage permissions",
         type: "menu",

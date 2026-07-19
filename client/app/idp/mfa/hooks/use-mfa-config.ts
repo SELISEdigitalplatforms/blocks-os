@@ -1,11 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { mfaService } from "../services/mfa.service";
 import { IGetUserByIdPayload } from "@blocks-idp/iam/models/user";
 
+// The project MFA config endpoint resolves the tenant from the request token, so the
+// active tenant must be part of the query key to avoid serving another project's cache.
 export const useGetMFAConfig = () => {
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
-    queryKey: ["mfa-config", "get"],
+    queryKey: ["mfa-config", "get", tenantId],
     queryFn: () => mfaService.getConfigurations(),
+    enabled: !!tenantId,
   });
 };
 
@@ -18,11 +23,12 @@ export const useGetProfileMFAConfig = () => {
 
 export const useSaveMFAConfig = () => {
   const queryClient = useQueryClient();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useMutation({
     mutationKey: ["mfa-config", "save"],
     mutationFn: mfaService.saveMFAConfiguration,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mfa-config", "get"] });
+      queryClient.invalidateQueries({ queryKey: ["mfa-config", "get", tenantId] });
     },
   });
 };

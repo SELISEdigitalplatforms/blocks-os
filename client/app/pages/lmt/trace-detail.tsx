@@ -5,8 +5,8 @@ export function LmtTraceDetailRoute() {
   const { traceId } = useParams<{ traceId: string }>()
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-4">
-      <TraceDetails id={traceId ?? ""} breadcrumbIndex={3} />
+    <div className="flex flex-col">
+      <TraceDetails id={traceId ?? ""} breadcrumbIndex={4} />
     </div>
   )
 }

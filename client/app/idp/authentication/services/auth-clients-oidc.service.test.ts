@@ -9,6 +9,8 @@ import {
   mockOidcCredentialResponse,
   mockSaveOidcPayload,
   mockDeleteClientPayload,
+  mockRotateOidcSecretPayload,
+  mockRotateOidcSecretResponse,
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
 
@@ -34,7 +36,9 @@ describe("AuthOidc", () => {
       const result = await service.getOidcCredentials(mockGetOidcPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS}?ProjectKey=${mockGetOidcPayload.projectKey}`,
+        AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockOidcCredentialsResponse);
     });
@@ -55,7 +59,9 @@ describe("AuthOidc", () => {
       const result = await service.getOidcCredential(payload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}?ProjectKey=${payload.projectKey}&ClientId=${payload.clientId}`,
+        `${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}/${payload.clientId}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockOidcCredentialResponse);
     });
@@ -79,6 +85,8 @@ describe("AuthOidc", () => {
       expect(http.post).toHaveBeenCalledWith(
         AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT,
         mockSaveOidcPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -94,24 +102,49 @@ describe("AuthOidc", () => {
 
   // ─── deleteOidcCredential ─────────────────────────────────────────────────
   describe("deleteOidcCredential", () => {
-    it("should POST to the correct endpoint with payload", async () => {
-      vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
+    it("should DELETE the correct endpoint with itemId in the URL", async () => {
+      vi.mocked(http.delete).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.deleteOidcCredential(mockDeleteClientPayload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        AUTH_OIDC_ENDPOINTS.DELETE_OIDC_CLIENT,
-        mockDeleteClientPayload,
+      expect(http.delete).toHaveBeenCalledWith(
+        `${AUTH_OIDC_ENDPOINTS.DELETE_OIDC_CLIENT}/${mockDeleteClientPayload.itemId}`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
 
     it("should throw when the API call fails", async () => {
-      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
+      vi.mocked(http.delete).mockRejectedValue(new Error("Network error"));
 
       await expect(service.deleteOidcCredential(mockDeleteClientPayload)).rejects.toThrow(
         "Network error",
       );
+    });
+  });
+
+  describe("rotateOidcClientSecret", () => {
+    it("should POST to the rotate-secret endpoint with empty body", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockRotateOidcSecretResponse);
+
+      const result = await service.rotateOidcClientSecret(mockRotateOidcSecretPayload);
+
+      expect(http.post).toHaveBeenCalledWith(
+        `${AUTH_OIDC_ENDPOINTS.ROTATE_OIDC_CLIENT_SECRET}/${mockRotateOidcSecretPayload.itemId}/rotate-secret`,
+        {},
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(result).toEqual(mockRotateOidcSecretResponse);
+    });
+
+    it("should throw when the API call fails", async () => {
+      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
+
+      await expect(
+        service.rotateOidcClientSecret(mockRotateOidcSecretPayload),
+      ).rejects.toThrow("Network error");
     });
   });
 });

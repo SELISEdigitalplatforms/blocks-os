@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Pencil, Send } from "lucide-react";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import {
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
@@ -19,7 +23,13 @@ import {
   useSendTestMail,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { EmailTemplateDetailsSkeleton } from "./email-template-details-skeleton";
-export function EmailCommunicationDetails({ params, onBack }: { params: { id: string }; onBack?: () => void }) {
+export function EmailCommunicationDetails({
+  params,
+  onBack,
+}: {
+  params: { id: string };
+  onBack?: () => void;
+}) {
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
   const { data: loggedInUser } = useGetUser();
@@ -32,7 +42,8 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
   const { isPending, mutateAsync } = useSendTestMail();
   const navigate = useNavigate();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isSendTestEmailModalOpen, setIsSendTestEmailModalOpen] = useState(false);
+  const [isSendTestEmailModalOpen, setIsSendTestEmailModalOpen] =
+    useState(false);
   const sendTestEmailModalOpen = () => {
     setIsSendTestEmailModalOpen(true);
   };
@@ -42,12 +53,20 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
       setEmailDetails(email || null);
     }
   }, [id, data]);
-  if (!emailDetails || isLoading || isFetching || isConfigsLoading || isConfigsFetching) {
+  if (
+    !emailDetails ||
+    isLoading ||
+    isFetching ||
+    isConfigsLoading ||
+    isConfigsFetching
+  ) {
     return <EmailTemplateDetailsSkeleton />;
   }
-  BREADCRUMB_CUSTOM_TITLES["/utilities/email/communications"] = "Email Templates";
-  BREADCRUMB_CUSTOM_TITLES["/utilities/email/communications/" + emailDetails?.itemId] =
-    emailDetails?.name ? emailDetails.name : "";
+  BREADCRUMB_CUSTOM_TITLES["/utilities/email/communications"] =
+    "Email Templates";
+  BREADCRUMB_CUSTOM_TITLES[
+    "/utilities/email/communications/" + emailDetails?.itemId
+  ] = emailDetails?.name ? emailDetails.name : "";
   const confirmationModalData = {
     dialogTitle: "Send test email",
     dialogSubtitle: "Are you sure you want to send a test email?",
@@ -75,7 +94,6 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
   const editData = emailDetails ? emailDetails : dat;
   const sendTestEmail = async () => {
     try {
-      console.log(emailDetails);
       const payload = {
         to: loggedInUser?.data?.email || "",
         purpose: emailDetails.name || "",
@@ -113,10 +131,16 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
       </div>
       <div className="mt-5 flex items-center justify-between">
         <div className="item-center flex gap-2">
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onBack ? onBack() : navigate(-1)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => (onBack ? onBack() : navigate(-1))}>
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg font-semibold md:text-2xl">{emailDetails.name}</h1>
+          <h1 className="text-lg font-semibold md:text-2xl">
+            {emailDetails.name}
+          </h1>
         </div>
         <div className="flex gap-4">
           <div>
@@ -125,12 +149,15 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
               variant="outline"
               className="gap-2 shadow-none hover:bg-white"
               disabled={isPending}
-              onClick={sendTestEmailModalOpen}
-            >
+              onClick={sendTestEmailModalOpen}>
               <Send className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Send test Email</span>
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Send test Email
+              </span>
             </Button>
-            <Dialog open={isSendTestEmailModalOpen} onOpenChange={setIsSendTestEmailModalOpen}>
+            <Dialog
+              open={isSendTestEmailModalOpen}
+              onOpenChange={setIsSendTestEmailModalOpen}>
               <ConfirmationModal
                 onCancel={() => {
                   setIsSendTestEmailModalOpen(false);
@@ -153,11 +180,14 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
                 variant="outline"
                 className="gap-2 shadow-none hover:bg-white"
                 onClick={() =>
-                  navigate(`/utilities/email/communications/${emailDetails.itemId}/edit`)
-                }
-              >
+                  navigate(
+                    `/utilities/email/communications/${emailDetails.itemId}/edit`,
+                  )
+                }>
                 <Pencil className="h-5 w-5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Edit
+                </span>
               </Button>
             </div>
           </CardHeader>
@@ -174,16 +204,19 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
           <CardHeader>
             <div className="flex w-full items-center justify-between px-4 pt-4">
               <CardTitle className="text-xl">Details</CardTitle>
-              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <Dialog
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
                     size="default"
                     variant="outline"
                     className="gap-2 shadow-none hover:bg-white"
-                    onClick={() => setIsEditDialogOpen(true)}
-                  >
+                    onClick={() => setIsEditDialogOpen(true)}>
                     <Pencil className="h-5 w-5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                      Edit
+                    </span>
                   </Button>
                 </DialogTrigger>
                 <EditCommunication
@@ -199,7 +232,9 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
           <CardContent>
             <div className="border-t px-4 pt-4">
               <div className="mb-10">
-                <h3 className="text-sm font-medium text-low-emphasis">Subject</h3>
+                <h3 className="text-sm font-medium text-low-emphasis">
+                  Subject
+                </h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {emailDetails.templateSubject}
                 </p>
@@ -208,47 +243,61 @@ export function EmailCommunicationDetails({ params, onBack }: { params: { id: st
             <div className="grid grid-cols-2 gap-4 px-4">
               <div className="grid gap-10">
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">Language</h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">
+                    Language
+                  </h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {
                       langConfigureData.find(
                         (lang) =>
-                          lang.itemId.split("-")[0] === (emailDetails.language ?? "").split("-")[0],
+                          lang.itemId.split("-")[0] ===
+                          (emailDetails.language ?? "").split("-")[0],
                       )?.languageName
                     }
                   </p>
                 </div>
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">Created on</h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">
+                    Created on
+                  </h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {!emailDetails ||
-                      !emailDetails.createdDate ||
-                      !checkValidDate(emailDetails.createdDate)
+                    !emailDetails.createdDate ||
+                    !checkValidDate(emailDetails.createdDate)
                       ? "-"
-                      : formatFullDate(parseDateString(emailDetails.createdDate))}
+                      : formatFullDate(
+                          parseDateString(emailDetails.createdDate),
+                        )}
                   </p>
                 </div>
               </div>
               <div>
                 <div className="grid gap-10">
                   <div className="grid gap-1">
-                    <h3 className="text-sm font-medium text-low-emphasis">Configuration</h3>
+                    <h3 className="text-sm font-medium text-low-emphasis">
+                      Configuration
+                    </h3>
                     <p className="text-base font-normal text-high-emphasis">
                       {
                         emailConfigsData?.find(
-                          (config) => config.itemId === emailDetails.mailConfigurationId,
+                          (config) =>
+                            config.itemId === emailDetails.mailConfigurationId,
                         )?.name
                       }
                     </p>
                   </div>
                   <div className="grid gap-1">
-                    <h3 className="text-sm font-medium text-low-emphasis">Last modified</h3>
+                    <h3 className="text-sm font-medium text-low-emphasis">
+                      Last modified
+                    </h3>
                     <p className="text-base font-normal text-high-emphasis">
                       {!emailDetails ||
-                        !emailDetails.lastUpdatedDate ||
-                        !checkValidDate(emailDetails.lastUpdatedDate)
+                      !emailDetails.lastUpdatedDate ||
+                      !checkValidDate(emailDetails.lastUpdatedDate)
                         ? "-"
-                        : formatFullDate(parseDateString(emailDetails.lastUpdatedDate))}
+                        : formatFullDate(
+                            parseDateString(emailDetails.lastUpdatedDate),
+                          )}
                     </p>
                   </div>
                 </div>

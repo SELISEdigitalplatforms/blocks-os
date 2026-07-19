@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
   TableBody,
@@ -105,7 +106,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
           <span className="sr-only sm:not-sr-only">Assign Permissions</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-2xl flex-col overflow-hidden sm:w-full">
+      <DialogContent className="flex max-h-[min(92vh,720px)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col overflow-hidden sm:w-full">
         <DialogHeader>
           <DialogTitle className="text-left">Assign Permissions</DialogTitle>
           <DialogDescription></DialogDescription>
@@ -130,37 +131,74 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                 <TableRow>
                   <TableHead></TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Resource</TableHead>
                   <TableHead>Type</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.data.map((item) => (
-                  <TableRow key={item.itemId}>
-                    <TableCell>
-                      <Checkbox
-                        checked={
-                          permissionsResource.includes(item.resource) ||
-                          selectedPermissionsResource.includes(item.resource)
+                {isLoading ? (
+                  Array.from({ length: filter.pageSize }).map((_, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>
+                        <Skeleton className="h-4 w-4 rounded" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-40 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-full max-w-[220px] rounded" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-16 rounded" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : data?.data?.length ? (
+                  (data.data as IPermission[]).map((item) => (
+                    <TableRow key={item.itemId}>
+                      <TableCell>
+                        <Checkbox
+                          checked={
+                            permissionsResource.includes(item.resource) ||
+                            selectedPermissionsResource.includes(item.resource)
+                          }
+                          disabled={permissionsResource.includes(item.resource)}
+                          onCheckedChange={(checked) => {
+                            handlePermissionCheckboxChange(checked as boolean, item);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="w-fit">
+                          {item.name}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className="block min-w-0 max-w-[220px] truncate text-sm text-muted-foreground"
+                          title={item.resource}
+                        >
+                          {item.resource}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {
+                          RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
+                            ?.label
                         }
-                        disabled={permissionsResource.includes(item.resource)}
-                        onCheckedChange={(checked) => {
-                          handlePermissionCheckboxChange(checked as boolean, item);
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="w-fit">
-                        {item.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {
-                        RESOURCE_TYPE.find((resource) => resource.value === item.type.toString())
-                          ?.label
-                      }
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No permissions found
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>

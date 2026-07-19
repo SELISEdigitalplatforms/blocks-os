@@ -1,4 +1,4 @@
-﻿using Amazon.S3.Model;
+using Amazon.S3.Model;
 using Blocks.Genesis;
 using DomainService.Shared;
 using DomainService.Shared.Entities;
@@ -8,16 +8,30 @@ namespace DomainService.ManagedService.Services
 {
     public class ServiceManagementRepository : IServiceManagementRepository
     {
-        private readonly IDbContextProvider _dbContextProvider;
+       private readonly IDbContextProvider _dbContextProvider;
+       private IMongoDatabase _clientDb;
+       private readonly IBlocksSecret _blocksSecret;
 
-        public ServiceManagementRepository(IDbContextProvider dbContextProvider)
+
+        public ServiceManagementRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret)
         {
-            _dbContextProvider = dbContextProvider;
+         _dbContextProvider = dbContextProvider;
+         _blocksSecret = blocksSecret;
+         _clientDb = ResolvedClientDb();
         }
-
-        public async Task<(IQueryable<BlocksManagedService>, long)> GetAllServicesAsync(GetAllServiceRequest request)
+       private IMongoDatabase ResolvedClientDb()
+       {
+        var blocksContext = BlocksContext.GetContext();
+        if (blocksContext.Impersonated)
         {
-            var collection = _dbContextProvider.GetCollection<BlocksManagedService>("BlocksManagedServices");
+         return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
+        }
+        return _dbContextProvider.GetDatabase(blocksContext.TenantId);
+       }
+
+  public async Task<(IQueryable<BlocksManagedService>, long)> GetAllServicesAsync(GetAllServiceRequest request)
+        {
+            var collection = _clientDb.GetCollection<BlocksManagedService>("BlocksManagedServices");
             var filter = Builders<BlocksManagedService>.Filter.Eq(s => s.TenantId, BlocksContext.GetContext()?.TenantId ?? string.Empty);
 
             if (!string.IsNullOrWhiteSpace(request?.Filter?.ServiceName))
@@ -42,7 +56,7 @@ namespace DomainService.ManagedService.Services
 
         public async Task SaveAsync(BlocksManagedService service)
         {
-            var collection = _dbContextProvider.GetCollection<BlocksManagedService>("BlocksManagedServices");
+            var collection = _clientDb.GetCollection<BlocksManagedService>("BlocksManagedServices");
             await collection.InsertOneAsync(service);
         }
     }
