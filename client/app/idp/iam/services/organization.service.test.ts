@@ -131,6 +131,7 @@ describe("OrganizationService", () => {
         allowCreationFromCloud: true,
         allowCreationFromConstruct: false,
         isMultiOrgEnabled: false,
+        consentForMultiOrgEnable: false,
         allowOrgCreationFromSignup: false,
         allowOrgCreationFromPortal: false,
         defaultRoleOnOrgCreation: [],

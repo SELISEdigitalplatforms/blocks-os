@@ -41,20 +41,20 @@ describe("Storage Configuration Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toEqual(mockStorageConfigList);
-      expect(storageService.configuration.gets).toHaveBeenCalledWith(TEST_TENANT_ID);
+      expect(storageService.configuration.gets).toHaveBeenCalledWith();
     });
 
-    it("should pass tenantId from project store as projectKey", async () => {
+    it("should query the configurations without arguments", async () => {
       vi.mocked(storageService.configuration.gets).mockResolvedValue(mockStorageConfigList);
 
       renderHook(() => useGetStorageConfigurations(), { wrapper: createWrapper() });
 
       await waitFor(() =>
-        expect(storageService.configuration.gets).toHaveBeenCalledWith(TEST_TENANT_ID),
+        expect(storageService.configuration.gets).toHaveBeenCalledWith(),
       );
     });
 
-    it("should use empty string when tenantId is not available", async () => {
+    it("should still query configurations when no project is selected", async () => {
       const { useProjectStore } = await import("@seliseblocks/blocks-kit");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: undefined,
@@ -68,7 +68,7 @@ describe("Storage Configuration Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(storageService.configuration.gets).toHaveBeenCalledWith("");
+      expect(storageService.configuration.gets).toHaveBeenCalledWith();
     });
 
     it("should return empty array when no configs exist", async () => {
