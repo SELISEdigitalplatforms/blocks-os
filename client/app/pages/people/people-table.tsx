@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui-kits/button/button"
+import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
   DialogContent,
@@ -6,14 +6,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui-kits/dialog/dialog"
+} from "@/components/ui-kits/dialog/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui-kits/dropdown-menu/dropdown-menu"
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
+} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
   TableBody,
@@ -21,135 +21,151 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui-kits/table/table"
+} from "@/components/ui-kits/table/table";
 import {
   CellContext,
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { EllipsisVertical, ArrowRightLeft, Mail, RefreshCw, User } from "lucide-react"
-import { useMemo, useState } from "react"
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal"
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
+} from "@tanstack/react-table";
+import {
+  EllipsisVertical,
+  ArrowRightLeft,
+  Mail,
+  RefreshCw,
+  User,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import {
   useRemoveAccess,
   useResendInvitation,
   useTransferOwnership,
-} from "@/hooks/use-people"
-import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account"
-import { useNavigate, useParams } from "react-router-dom"
-import { PeopleGroupedByEnvironments } from "@/models/people"
-import { useProjectStore } from "@seliseblocks/blocks-kit"
-import { environmentOptions } from "@/constants/environment-options"
-import { Badge } from "@/components/ui-kits/badge/badge"
-import { PeopleStatusBadge } from "@/components/people/status-badge"
-import { getRuntimeEnv } from "@/lib/runtime-env"
+} from "@/hooks/use-people";
+import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account";
+import { useNavigate, useParams } from "react-router-dom";
+import { PeopleGroupedByEnvironments } from "@/models/people";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { environmentOptions } from "@/constants/environment-options";
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { PeopleStatusBadge } from "@/components/people/status-badge";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 type PeopleTableProps = {
-  people: PeopleGroupedByEnvironments[]
-  isLoading: boolean
-  isViewerOwner?: boolean
-}
+  people: PeopleGroupedByEnvironments[];
+  isLoading: boolean;
+  isViewerOwner?: boolean;
+};
 
-export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: PeopleTableProps) => {
-  const navigate = useNavigate()
-  const { tenantGroupId = "" } = useParams<{ tenantGroupId: string }>()
-  const [isResendInvitationDialogOpen, setIsResendInvitationDialogOpen] = useState(false)
-  const [isResendActivationDialogOpen, setIsResendActivationDialogOpen] = useState(false)
-  const [isRemoveAccessDialogOpen, setIsRemoveAccessDialogOpen] = useState(false)
-  const [isTransferOwnershipDialogOpen, setIsTransferOwnershipDialogOpen] = useState(false)
-  const [selectedPeopleData, setSelectedPeopleData] = useState<PeopleGroupedByEnvironments | null>(
-    null,
-  )
+export const PeopleTable = ({
+  people,
+  isLoading,
+  isViewerOwner = false,
+}: PeopleTableProps) => {
+  const navigate = useNavigate();
+  const { tenantGroupId = "" } = useParams<{ tenantGroupId: string }>();
+  const [isResendInvitationDialogOpen, setIsResendInvitationDialogOpen] =
+    useState(false);
+  const [isResendActivationDialogOpen, setIsResendActivationDialogOpen] =
+    useState(false);
+  const [isRemoveAccessDialogOpen, setIsRemoveAccessDialogOpen] =
+    useState(false);
+  const [isTransferOwnershipDialogOpen, setIsTransferOwnershipDialogOpen] =
+    useState(false);
+  const [selectedPeopleData, setSelectedPeopleData] =
+    useState<PeopleGroupedByEnvironments | null>(null);
 
-  const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY")
-  const { mutateAsync: removeAsync } = useRemoveAccess()
-  const { mutateAsync: resendInvitation } = useResendInvitation()
-  const { mutateAsync: resendActivation } = useAccountResendActivation()
-  const { mutateAsync: transferOwnership, isPending: isTransferring } = useTransferOwnership()
-  const groupId = useProjectStore().selectedTenantGroup || ""
+  const xBlocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+  const { mutateAsync: removeAsync } = useRemoveAccess();
+  const { mutateAsync: resendInvitation } = useResendInvitation();
+  const { mutateAsync: resendActivation } = useAccountResendActivation();
+  const { mutateAsync: transferOwnership, isPending: isTransferring } =
+    useTransferOwnership();
+  const groupId = useProjectStore().selectedTenantGroup || "";
 
   const openResendDialog = (rowData: PeopleGroupedByEnvironments) => {
-    setIsResendInvitationDialogOpen(true)
-    setSelectedPeopleData(rowData)
-  }
+    setIsResendInvitationDialogOpen(true);
+    setSelectedPeopleData(rowData);
+  };
 
   const openResendActivationDialog = (rowData: PeopleGroupedByEnvironments) => {
-    setIsResendActivationDialogOpen(true)
-    setSelectedPeopleData(rowData)
-  }
+    setIsResendActivationDialogOpen(true);
+    setSelectedPeopleData(rowData);
+  };
 
-  const openTransferOwnershipDialog = (rowData: PeopleGroupedByEnvironments) => {
-    setIsTransferOwnershipDialogOpen(true)
-    setSelectedPeopleData(rowData)
-  }
+  const openTransferOwnershipDialog = (
+    rowData: PeopleGroupedByEnvironments,
+  ) => {
+    setIsTransferOwnershipDialogOpen(true);
+    setSelectedPeopleData(rowData);
+  };
 
   const onRemoveConfirm = async () => {
     try {
-      if (!selectedPeopleData) return
+      if (!selectedPeopleData) return;
       const tenantIds = selectedPeopleData.sharedEnviroments
         .map((env) => env.tenantId)
-        .filter((id): id is string => !!id)
-      const groupId = useProjectStore.getState().selectedTenantGroup || ""
+        .filter((id): id is string => !!id);
+      const groupId = useProjectStore.getState().selectedTenantGroup || "";
 
-      if (!groupId || tenantIds.length === 0) return
+      if (!groupId || tenantIds.length === 0) return;
 
       await removeAsync({
         email: selectedPeopleData.peopleDetails.email,
         tenantIds,
         groupId,
-      })
+      });
 
-      showSuccessToast({ description: "Removed access successfully" })
-      setIsRemoveAccessDialogOpen(false)
+      showSuccessToast({ description: "Removed access successfully" });
+      setIsRemoveAccessDialogOpen(false);
     } catch (error) {
-      showErrorToast({ errors: error })
+      showErrorToast({ errors: error });
     }
-  }
+  };
 
   const onConfirmResendInvitation = async () => {
-    if (!selectedPeopleData) return
+    if (!selectedPeopleData) return;
     try {
       await resendInvitation({
         email: selectedPeopleData.peopleDetails.email,
         groupId,
-      })
-      showSuccessToast({ description: "Resend invitation mail successfully" })
-      setIsResendInvitationDialogOpen(false)
+      });
+      showSuccessToast({ description: "Resend invitation mail successfully" });
+      setIsResendInvitationDialogOpen(false);
     } catch (error) {
-      showErrorToast({ errors: error })
+      showErrorToast({ errors: error });
     }
-  }
+  };
 
   const onConfirmResendActivation = async () => {
-    if (!selectedPeopleData) return
+    if (!selectedPeopleData) return;
     try {
       await resendActivation({
         userId: selectedPeopleData.peopleDetails.userId,
         projectKey: xBlocksKey,
-      })
-      showSuccessToast({ description: "Resend activation mail successfully" })
-      setIsResendActivationDialogOpen(false)
+      });
+      showSuccessToast({ description: "Resend activation mail successfully" });
+      setIsResendActivationDialogOpen(false);
     } catch (error) {
-      showErrorToast({ errors: error })
+      showErrorToast({ errors: error });
     }
-  }
+  };
 
   const onConfirmTransferOwnership = async () => {
-    if (!selectedPeopleData) return
+    if (!selectedPeopleData) return;
     try {
       await transferOwnership({
         tenantGroupId: groupId,
         transferToUserEmail: selectedPeopleData.peopleDetails.email,
-      })
-      showSuccessToast({ description: "Ownership transferred successfully" })
-      setIsTransferOwnershipDialogOpen(false)
+      });
+      showSuccessToast({ description: "Ownership transferred successfully" });
+      setIsTransferOwnershipDialogOpen(false);
     } catch (error) {
-      showErrorToast({ errors: error })
+      showErrorToast({ errors: error });
     }
-  }
+  };
 
   const columns = useMemo<ColumnDef<PeopleGroupedByEnvironments>[]>(
     () => [
@@ -164,9 +180,11 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
         ),
         cell: (info) => {
           const fullName =
-            `${info.row.original.peopleDetails.firstName} ${info.row.original.peopleDetails.lastName || ""}`.trim()
+            `${info.row.original.peopleDetails.firstName} ${info.row.original.peopleDetails.lastName || ""}`.trim();
           const displayName =
-            fullName || info.row.original.peopleDetails.email?.split("@")[0] || "---"
+            fullName ||
+            info.row.original.peopleDetails.email?.split("@")[0] ||
+            "---";
 
           return (
             <div className="ml-2 flex items-center gap-3 sm:ml-0">
@@ -182,29 +200,39 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 )}
               </div>
               <span className="truncate">{displayName}</span>
-              {info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
+              {info.row.original.sharedEnviroments.some(
+                (env) => env.isCreator,
+              ) && (
                 <PeopleStatusBadge
                   status="Owner"
                   className="w-fit bg-primary/10 px-2 py-0.5 text-[10px] text-xs font-normal text-primary"
                 />
               )}
+              {/* Pending Invite: they were sent an invitation but have not accepted it yet. */}
               {info.row.original.sharedEnviroments.some(
                 (env) => env.isInvitationSent && !env.isInvitationConfirmed,
               ) &&
-                !info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
-                  <>
-                    <PeopleStatusBadge
-                      status="Pending Invite"
-                      className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
-                    />
-                    <PeopleStatusBadge
-                      status="Inactive"
-                      className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
-                    />
-                  </>
+                !info.row.original.sharedEnviroments.some(
+                  (env) => env.isCreator,
+                ) && (
+                  <PeopleStatusBadge
+                    status="Pending Invite"
+                    className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
+                  />
+                )}
+              {/* Inactive: the account itself is not activated yet (no password / unverified).
+                  Independent of invite acceptance — accepting an invite does not activate the account. */}
+              {info.row.original.peopleDetails.allowResendActivation &&
+                !info.row.original.sharedEnviroments.some(
+                  (env) => env.isCreator,
+                ) && (
+                  <PeopleStatusBadge
+                    status="Inactive"
+                    className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
+                  />
                 )}
             </div>
-          )
+          );
         },
       },
       {
@@ -229,11 +257,12 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
           </div>
         ),
         cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
-          const { sharedEnviroments } = row.original
-          const totalEnvs = sharedEnviroments.length
-          const displayedEnvs = totalEnvs > 3 ? sharedEnviroments.slice(0, 2) : sharedEnviroments
-          const hasMore = totalEnvs > 3
-          const moreCount = totalEnvs - 2
+          const { sharedEnviroments } = row.original;
+          const totalEnvs = sharedEnviroments.length;
+          const displayedEnvs =
+            totalEnvs > 3 ? sharedEnviroments.slice(0, 2) : sharedEnviroments;
+          const hasMore = totalEnvs > 3;
+          const moreCount = totalEnvs - 2;
 
           return (
             <div className="ml-2 flex w-[180px] flex-wrap gap-1 sm:ml-0 md:w-[240px]">
@@ -241,13 +270,17 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 <>
                   {displayedEnvs.map((env) => {
                     const envLabel =
-                      environmentOptions.find((opt) => opt.value === env.enviroment)?.label ||
-                      env.enviroment
+                      environmentOptions.find(
+                        (opt) => opt.value === env.enviroment,
+                      )?.label || env.enviroment;
                     return (
-                      <Badge key={env.itemId} variant="secondary" className="text-xs">
+                      <Badge
+                        key={env.itemId}
+                        variant="secondary"
+                        className="text-xs">
                         {envLabel}
                       </Badge>
-                    )
+                    );
                   })}
                   {hasMore && (
                     <Badge variant="secondary" className="text-xs">
@@ -259,25 +292,33 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 <span>-</span>
               )}
             </div>
-          )
+          );
         },
       },
       ...(isViewerOwner
         ? [
             {
               id: "actions",
-              cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
-                const isRowUserOwner = row.original.sharedEnviroments.some((env) => env.isCreator)
-                if (isRowUserOwner) return null
+              cell: ({
+                row,
+              }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
+                const isRowUserOwner = row.original.sharedEnviroments.some(
+                  (env) => env.isCreator,
+                );
+                if (isRowUserOwner) return null;
 
                 const hasPending = row.original.sharedEnviroments.some(
                   (env) => !env.isInvitationConfirmed,
-                )
-                const isOwner = row.original.sharedEnviroments.some((env) => env.isCreator)
-                const showResendInvite = hasPending && !isOwner
+                );
+                const isOwner = row.original.sharedEnviroments.some(
+                  (env) => env.isCreator,
+                );
+                const showResendInvite = hasPending && !isOwner;
                 const showResendActivation =
                   row.original.peopleDetails.allowResendActivation &&
-                  row.original.sharedEnviroments.some((env) => env.isInvitationConfirmed)
+                  row.original.sharedEnviroments.some(
+                    (env) => env.isInvitationConfirmed,
+                  );
 
                 return (
                   <DropdownMenu>
@@ -291,10 +332,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                       {showResendInvite && (
                         <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation()
-                            openResendDialog(row.original)
-                          }}
-                        >
+                            e.stopPropagation();
+                            openResendDialog(row.original);
+                          }}>
                           <Mail className="mr-2 h-4 w-4" />
                           <span>Resend Invitation</span>
                         </DropdownMenuItem>
@@ -302,10 +342,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                       {showResendActivation && (
                         <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation()
-                            openResendActivationDialog(row.original)
-                          }}
-                        >
+                            e.stopPropagation();
+                            openResendActivationDialog(row.original);
+                          }}>
                           <RefreshCw className="mr-2 h-4 w-4" />
                           <span>Resend Activation</span>
                         </DropdownMenuItem>
@@ -313,30 +352,29 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                       {!showResendInvite && (
                         <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation()
-                            openTransferOwnershipDialog(row.original)
-                          }}
-                        >
+                            e.stopPropagation();
+                            openTransferOwnershipDialog(row.original);
+                          }}>
                           <ArrowRightLeft className="mr-2 h-4 w-4" />
                           <span>Transfer Ownership</span>
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                )
+                );
               },
             },
           ]
         : []),
     ],
     [isViewerOwner],
-  )
+  );
 
   const table = useReactTable({
     data: people,
     columns,
     getCoreRowModel: getCoreRowModel(),
-  })
+  });
 
   return (
     <>
@@ -348,7 +386,10 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 <TableHead key={header.id}>
                   {header.isPlaceholder
                     ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                 </TableHead>
               ))}
             </TableRow>
@@ -367,7 +408,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
             ))
           ) : !people.length ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground">
                 No results found.
               </TableCell>
             </TableRow>
@@ -380,8 +423,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                   navigate(
                     `/app/project/${tenantGroupId}/people/${row.original.peopleDetails.userId}`,
                   )
-                }
-              >
+                }>
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -393,7 +435,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
         </TableBody>
       </Table>
 
-      <Dialog open={isRemoveAccessDialogOpen} onOpenChange={setIsRemoveAccessDialogOpen}>
+      <Dialog
+        open={isRemoveAccessDialogOpen}
+        onOpenChange={setIsRemoveAccessDialogOpen}>
         {isRemoveAccessDialogOpen && selectedPeopleData && (
           <ConfirmationModal
             onCancel={() => setIsRemoveAccessDialogOpen(false)}
@@ -408,7 +452,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
         )}
       </Dialog>
 
-      <Dialog open={isResendInvitationDialogOpen} onOpenChange={setIsResendInvitationDialogOpen}>
+      <Dialog
+        open={isResendInvitationDialogOpen}
+        onOpenChange={setIsResendInvitationDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Resend Invitation</DialogTitle>
@@ -418,7 +464,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResendInvitationDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsResendInvitationDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={onConfirmResendInvitation}>Resend</Button>
@@ -426,7 +474,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isResendActivationDialogOpen} onOpenChange={setIsResendActivationDialogOpen}>
+      <Dialog
+        open={isResendActivationDialogOpen}
+        onOpenChange={setIsResendActivationDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Resend Activation</DialogTitle>
@@ -436,7 +486,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResendActivationDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsResendActivationDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={onConfirmResendActivation}>Resend</Button>
@@ -444,7 +496,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isTransferOwnershipDialogOpen} onOpenChange={setIsTransferOwnershipDialogOpen}>
+      <Dialog
+        open={isTransferOwnershipDialogOpen}
+        onOpenChange={setIsTransferOwnershipDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Transfer Ownership</DialogTitle>
@@ -457,16 +511,17 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
             <Button
               variant="outline"
               onClick={() => setIsTransferOwnershipDialogOpen(false)}
-              disabled={isTransferring}
-            >
+              disabled={isTransferring}>
               Cancel
             </Button>
-            <Button onClick={onConfirmTransferOwnership} disabled={isTransferring}>
+            <Button
+              onClick={onConfirmTransferOwnership}
+              disabled={isTransferring}>
               {isTransferring ? "Transferring..." : "Transfer"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
-}
+  );
+};
