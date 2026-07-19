@@ -22,7 +22,7 @@ import {
 } from "../constants/notification.constant";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,12 +53,7 @@ interface NotificationConfigurationListProps {
 
 const NotificationConfigurationList: React.FC<
   NotificationConfigurationListProps
-> = ({
-  addConfigOpen,
-  onAddConfigOpenChange,
-  isLoading: isLoadingProp,
-  configurationsLength: configurationsLengthProp,
-}) => {
+> = ({ addConfigOpen, onAddConfigOpenChange, isLoading: isLoadingProp }) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const { queryParams, setQueryParams } =
     useNotificationConfigsFilterQueryParams();
@@ -69,8 +64,6 @@ const NotificationConfigurationList: React.FC<
     searchText: queryParams.notificationSearch || undefined,
   });
   const loading = isLoadingProp ?? (isLoading || isFetching);
-  const configurationsLength =
-    configurationsLengthProp ?? data?.configurations?.length ?? 0;
 
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

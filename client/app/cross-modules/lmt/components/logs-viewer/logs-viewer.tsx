@@ -1,17 +1,32 @@
-import { createContext, useCallback, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { LogsListHeader } from "../logs-header/logs-header";
 import { cn } from "@/lib/utils";
 import { LogsList } from "../logs-list";
+import type { LogServiceIconKey } from "../../models/log-entry.model";
+import { useQueryState } from "nuqs";
+import type { RegisteredService } from "@/cross-modules/identifier/models/service.model";
+
 export interface Service {
   id: string;
   label: string;
   serviceName: string;
+  serviceNames?: string[];
+  icon?: LogServiceIconKey;
+  _raw?: RegisteredService;
 }
 export interface LogFilter {
   search: string;
   startDate: string;
   endDate: string;
   level: string;
+  service: string;
+  subService: string;
 }
 interface LogsViewerContextType {
   services: Service[];
@@ -26,6 +41,10 @@ interface LogsViewerContextType {
   agentName?: string;
   askAiDescription?: string;
   logsRouteServiceName?: string;
+  useGenericTraceLinks?: boolean;
+  isSourceBlocks: boolean;
+  subService: string;
+  setSubService: (value: string) => void;
 }
 const initialContextValue: LogsViewerContextType = {
   services: [],
@@ -39,9 +58,14 @@ const initialContextValue: LogsViewerContextType = {
   agentName: "Ask AI",
   askAiDescription: "",
   logsRouteServiceName: undefined,
+  useGenericTraceLinks: false,
+  isSourceBlocks: true,
+  subService: "all",
+  setSubService: () => {},
 };
 // Create context with the initial value
-export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
+export const LogsViewerContext =
+  createContext<LogsViewerContextType>(initialContextValue);
 interface LogsViewerProps {
   services: Service[];
   startDate?: string;
@@ -52,6 +76,8 @@ interface LogsViewerProps {
   agentName?: string;
   askAiDescription?: string;
   logsRouteServiceName?: string;
+  useGenericTraceLinks?: boolean;
+  isSourceBlocks?: boolean;
 }
 export const LogsViewer = ({
   pageSize = 20,
@@ -61,14 +87,71 @@ export const LogsViewer = ({
   agentName = "Ask AI",
   askAiDescription,
   logsRouteServiceName,
+  useGenericTraceLinks = false,
+  isSourceBlocks = true,
 }: LogsViewerProps) => {
-  const [selectedService, setSelectedService] = useState<Service | null>(
-    services.length > 0 ? services[0] : null,
-  );
+  const defaultServiceId = services.length > 0 ? services[0].id : "";
+  const [serviceId, setServiceId] = useQueryState("service", {
+    defaultValue: defaultServiceId,
+  });
+  const [subService, setSubService] = useQueryState("subService", {
+    defaultValue: "all",
+  });
+
+  const selectedService = useMemo(() => {
+    return (
+      services.find((s) => s.id === serviceId) ||
+      (services.length > 0 ? services[0] : null)
+    );
+  }, [services, serviceId]);
+
+  // Compute the effective selected service with serviceNames based on subService
+  const effectiveSelectedService = useMemo(() => {
+    if (!selectedService) return null;
+    if (!isSourceBlocks) return selectedService;
+
+    // For blocks services, filter serviceNames based on subService
+    const allServiceNames = selectedService.serviceNames || [
+      selectedService.serviceName,
+    ];
+    let filteredServiceNames: string[];
+    if (subService === "all") {
+      filteredServiceNames = allServiceNames;
+    } else if (subService === "api") {
+      filteredServiceNames = allServiceNames.filter(
+        (name) => !name.includes("worker"),
+      );
+    } else if (subService === "worker") {
+      filteredServiceNames = allServiceNames.filter((name) =>
+        name.includes("worker"),
+      );
+    } else {
+      filteredServiceNames = allServiceNames;
+    }
+
+    return {
+      ...selectedService,
+      serviceNames: filteredServiceNames,
+    };
+  }, [selectedService, isSourceBlocks, subService]);
+
   const [filter, setFilter] = useState<Partial<LogFilter> | null>(null);
-  const changeService = useCallback((service: Service) => {
-    setSelectedService((current) => (current?.id === service.id ? current : service));
-  }, []);
+
+  // Update serviceId when services change
+  useEffect(() => {
+    const newDefaultServiceId = services.length > 0 ? services[0].id : "";
+    if (newDefaultServiceId && !services.find((s) => s.id === serviceId)) {
+      setServiceId(newDefaultServiceId);
+    }
+  }, [services, serviceId, setServiceId]);
+
+  const changeService = useCallback(
+    (service: Service) => {
+      setServiceId(service.id);
+    },
+    [setServiceId],
+  );
+
   const resetFilter = () => {
     setFilter(null);
   };
@@ -77,7 +160,7 @@ export const LogsViewer = ({
       value={{
         pageSize,
         services,
-        selectedService,
+        selectedService: effectiveSelectedService,
         changeService,
         filter,
         setFilter,
@@ -86,12 +169,15 @@ export const LogsViewer = ({
         agentName,
         askAiDescription,
         logsRouteServiceName,
-      }}
-    >
+        useGenericTraceLinks,
+        isSourceBlocks,
+        subService,
+        setSubService,
+      }}>
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
         <LogsList
-          key={`${selectedService?.id ?? "none"}-${JSON.stringify(filter ?? null)}`}
+          key={`${effectiveSelectedService?.id ?? "none"}-${JSON.stringify(filter ?? null)}`}
         />
       </div>
     </LogsViewerContext.Provider>

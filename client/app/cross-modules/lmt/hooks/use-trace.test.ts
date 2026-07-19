@@ -9,10 +9,10 @@ import {
 } from "../test-utils/__mocks__";
 import type { IAPIResponse } from "@/models/api-response";
 import type { TraceTree } from "../models/trace.model";
-import { lmtService } from "../lmt.service";
+import { lmtService } from "../services/lmt.service";
 import { useGetTraces, useGetTraceById } from "./use-trace";
 
-vi.mock("@blocks-lmt/lmt.service", () => mockLmtServiceFactory());
+vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("use-trace hooks", () => {
