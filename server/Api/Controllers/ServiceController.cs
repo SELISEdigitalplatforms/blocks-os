@@ -17,9 +17,8 @@ namespace Api.Controllers
             _serviceManagement = serviceManagement;
         }
 
-        // [ProtectedEndPoint("blocks-os::service::register")  ]
-        [Authorize]
         [HttpPost]
+        [ProtectedEndPoint("blocks-os::service::register")]
         public async Task<IActionResult> Register([FromBody] RegisterServiceRequest request)
         {
             var response = await _serviceManagement.RegisterServiceAsync(request);
@@ -31,9 +30,8 @@ namespace Api.Controllers
             return BadRequest(response);
         }
 
-        // [ProtectedEndPoint("blocks-os::service::get-all")]
-        [Authorize]
         [HttpPost]
+        [ProtectedEndPoint("blocks-os::service::gets")]
         public async Task<GetAllServiceResponse> GetAll([FromBody] GetAllServiceRequest request)
         {
             return await _serviceManagement.GetAllServicesAsync(request);

@@ -7,10 +7,10 @@ import {
   mockLogsResponse,
   mockGetLogsPayload,
 } from "../test-utils/__mocks__";
-import { lmtService } from "../lmt.service";
+import { lmtService } from "../services/lmt.service";
 import { useGetLogs, useGetLiveLogs } from "./use-log";
 
-vi.mock("@blocks-lmt/lmt.service", () => mockLmtServiceFactory());
+vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("use-log hooks", () => {

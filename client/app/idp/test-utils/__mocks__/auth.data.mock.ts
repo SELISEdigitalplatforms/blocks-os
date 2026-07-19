@@ -72,6 +72,20 @@ export const mockDeleteClientPayload: IDeleteOidcClientPayload = {
   projectKey: TEST_PROJECT_KEY,
 };
 
+export const mockRotateOidcSecretPayload = {
+  itemId: MOCK_OIDC_ITEM_ID,
+  projectKey: TEST_PROJECT_KEY,
+};
+
+export const mockRotateOidcSecretResponse = {
+  isSuccess: true,
+  itemId: MOCK_OIDC_ITEM_ID,
+  clientId: MOCK_OIDC_ITEM_ID,
+  clientSecret: "rotated-mock-oidc-secret",
+  rotatedAt: "2026-07-11T18:49:15Z",
+  rotatedBy: "admin",
+};
+
 // ─── OIDC Mocks ──────────────────────────────────────────────────────────────
 
 export const mockGetOidcPayload: IGetOidcPayload = {
@@ -109,12 +123,14 @@ export const mockOidcCredentialResponse = {
 };
 
 export const mockSaveOidcPayload: ISaveOidcCredentialPayload = {
-  audience: "blocks-cloud",
   isAutoRedirect: false,
+  isActive: true,
   itemId: MOCK_OIDC_ITEM_ID,
-  projectKey: TEST_PROJECT_KEY,
-  redirectUri: "https://app.blocks.com/callback",
+  redirectUris: ["https://app.blocks.com/callback"],
   scope: "openid profile email",
+  requirePkce: true,
+  registerAsIdentityProvider: false,
+  allowedResponseTypes: ["code"],
   clientDisplayName: "Test OIDC App",
 };
 
@@ -222,5 +238,4 @@ export const mockJwtClaimPayload: JwtClaimPayload = {
   name: "Test User",
   userName: "testuser",
   roles: "admin",
-  projectKey: TEST_PROJECT_KEY,
 };

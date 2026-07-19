@@ -8,9 +8,21 @@ export interface IInvitePeoplePayload {
   groupId: string
 }
 
+/** What the server actually did with each address, keyed by the normalized (lowercased) email. */
+export type InvitationOutcome =
+  | "invited"
+  | "user_creation_requested"
+  | "invitation_requested"
+  | "access_granted"
+  | "already_has_access"
+  | "invitation_not_sent"
+  | "skipped_self"
+  | "skipped_no_environments";
+
 export interface IInvitePeopleResponse {
   isSuccess: boolean;
   errors: null | { exceed_limit: string };
+  results?: Record<string, InvitationOutcome>;
 }
 
 export interface IResendInvitation {
@@ -19,13 +31,14 @@ export interface IResendInvitation {
 }
 
 export interface IRemoveAccess {
-  userIds: string[];
-  projectKey: string;
+  email: string;
+  tenantIds: string[];
+  groupId: string;
 }
 
 export interface IRemoveEnvironmentAccess {
   email: string;
-  projectKeys: string[];
+  tenantIds: string[];
   groupId: string;
 }
 

@@ -156,7 +156,7 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
         resolvedLogoUrl = await uploadLogoToStorage(pendingLogoFile);
       }
 
-      const payload = buildOidcSavePayload(credential, tenantId, {
+      const payload = buildOidcSavePayload(credential, {
         clientLogoUrl: resolvedLogoUrl,
         clientBrandColor: brandColor,
       });
@@ -188,7 +188,6 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
     pendingLogoFile,
     previewLogoUrl,
     saveOidc,
-    tenantId,
     uploadLogoToStorage,
   ]);
 

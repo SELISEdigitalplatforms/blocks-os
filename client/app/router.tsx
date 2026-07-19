@@ -6,23 +6,24 @@ import {
 import {
   ConsoleLayout,
   DashboardRoute,
-  ProjectOverviewRoute,
 } from "@seliseblocks/blocks-kit/layouts";
 import {
   CallbackPage,
   ConsolePage,
-  DashboardOverview,
   LoginPage,
   ProfilePage,
 } from "@seliseblocks/blocks-kit/pages";
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { navigationMenus } from "./constants/navigation-menus";
-import { AIModels } from "./cross-modules/ai/pages/ai-models";
+// Temporarily disabled
+// import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage } from "./cross-modules/communication/mail";
 import { NotificationConfigurationListPage } from "./cross-modules/communication/notification/components/notification-configuration-list";
-import { SecretsList } from "./cross-modules/secrets/components/secrets-list/secrets-list";
+// Temporarily disabled
+// import { SecretsList } from "./cross-modules/secrets/components/secrets-list/secrets-list";
 import { StorageContents } from "./cross-modules/storage/pages/storage/storage-contents";
-import { MagicUrls } from "./cross-modules/utilities/pages/magic-urls/magic-urls";
+// Temporarily disabled
+// import { MagicUrls } from "./cross-modules/utilities/pages/magic-urls/magic-urls";
 import { ClientCredentials } from "./idp/authentication/components/client-credentials";
 import { IdentityProviderPage } from "./idp/authentication/components/identity-provider/identity-provider";
 import { OIDC } from "./idp/authentication/components/oidc";
@@ -55,17 +56,21 @@ import { SettingsPage } from "./pages/settings/settings";
 import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-usage-page";
 import ActivatePage from "./routes/auth/activate-page";
 import GitHubCallbackPage from "./routes/callback/callback";
-import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
+// Temporarily disabled
+// import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ApiSettingsPage from "./routes/dashboard/api-settings";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
 import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
 import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
-import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
+// Temporarily disabled
+// import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
 import OidcBrandingPage from "./routes/dashboard/oidc-branding";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
 import LmtLayout from "@/layouts/lmt/lmt-layout";
+import { ProjectOverviewRoute } from "@/layouts/project-overview-route";
+import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
 
 const redirectPaths: Record<string, string> = {
   "/app/idp/user-detail/*": "/app/idp",
@@ -210,12 +215,13 @@ export const router = createBrowserRouter([
                     children: [
                       {
                         index: true,
-                        element: <Navigate to="my-secret" replace />,
+                        element: <Navigate to="managed-services" replace />,
                       },
-                      {
-                        path: "my-secret",
-                        element: <SecretsList />,
-                      },
+                      // Temporarily disabled
+                      // {
+                      //   path: "my-secret",
+                      //   element: <SecretsList />,
+                      // },
                       {
                         path: "managed-services",
                         element: <ManagedServicesPage />,
@@ -257,16 +263,17 @@ export const router = createBrowserRouter([
                         path: "mfa",
                         element: <ConfigureMFA />,
                       },
-                      {
-                        path: "magic-url",
-                        element: <MagicUrls />,
-                        children: [
-                          {
-                            path: ":id",
-                            element: <MagicUrlDetailsPage />,
-                          },
-                        ],
-                      },
+                      // Temporarily disabled
+                      // {
+                      //   path: "magic-url",
+                      //   element: <MagicUrls />,
+                      //   children: [
+                      //     {
+                      //       path: ":id",
+                      //       element: <MagicUrlDetailsPage />,
+                      //     },
+                      //   ],
+                      // },
                       {
                         path: "storage",
                         element: <StorageContents />,
@@ -283,16 +290,17 @@ export const router = createBrowserRouter([
                         path: "external-idp",
                         element: <Certificates />,
                       },
-                      {
-                        path: "ai-models",
-                        element: <AIModels />,
-                        children: [
-                          {
-                            path: ":provider",
-                            element: <AiModelSelectedRoute />,
-                          },
-                        ],
-                      },
+                      // Temporarily disabled
+                      // {
+                      //   path: "ai-models",
+                      //   element: <AIModels />,
+                      //   children: [
+                      //     {
+                      //       path: ":provider",
+                      //       element: <AiModelSelectedRoute />,
+                      //     },
+                      //   ],
+                      // },
                     ],
                   },
                   {
@@ -316,6 +324,10 @@ export const router = createBrowserRouter([
                         element: <Roles />,
                       },
                       {
+                        path: "role",
+                        element: <Navigate to="../roles" replace />,
+                      },
+                      {
                         path: "role-detail",
                         element: <Navigate to="../roles" replace />,
                       },
@@ -326,6 +338,10 @@ export const router = createBrowserRouter([
                       {
                         path: "permissions",
                         element: <Permissions />,
+                      },
+                      {
+                        path: "permission",
+                        element: <Navigate to="../permissions" replace />,
                       },
                       {
                         path: "permission-detail",

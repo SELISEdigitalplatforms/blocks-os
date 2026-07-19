@@ -6,10 +6,18 @@ export const UserCreationType: Record<number, string> = {
   4: "Social",
 };
 
+/**
+ * OAuth 2.0 grant types supported by the platform. The string values match
+ * the values sent on the wire and stored in project configuration.
+ */
 export enum GRANT_TYPES {
+  /** Resource Owner Password Credentials grant (username + password). */
   password = "password",
+  /** Social / federated login (single sign-on via an external IdP). */
   social = "social",
+  /** Client Credentials grant (machine-to-machine, no end user). */
   clientCredential = "client_credentials",
+  /** Authorization Code grant with PKCE (standard OIDC web/mobile flow). */
   authorizationCode = "authorization_code",
 }
 

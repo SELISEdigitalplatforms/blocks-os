@@ -36,7 +36,7 @@ describe("RoleService", () => {
 
       const result = await service.getRoles(mockGetRolesPayload);
 
-      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.GET_ROLES, mockGetRolesPayload);
+      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.GET_ROLES, mockGetRolesPayload, undefined, { absoluteUrl: true });
       expect(result).toEqual(mockRolesResponse);
     });
 
@@ -55,7 +55,7 @@ describe("RoleService", () => {
       const result = await service.getRoleById(mockGetRolePayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${ROLE_ENDPOINTS.GET_ROLE}/${mockGetRolePayload.id}`,
+        `${ROLE_ENDPOINTS.GET_ROLES}/${mockGetRolePayload.id}`,
         undefined,
         { absoluteUrl: true },
       );
@@ -76,7 +76,7 @@ describe("RoleService", () => {
 
       const result = await service.addRole(mockCreateRolePayload);
 
-      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.CREATE_ROLE, mockCreateRolePayload);
+      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.CREATE_ROLE, mockCreateRolePayload, undefined, { absoluteUrl: true });
       expect(result).toEqual(mockRole);
     });
 
@@ -94,7 +94,7 @@ describe("RoleService", () => {
 
       const result = await service.updateRole(mockUpdateRolePayload);
 
-      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.UPDATE_ROLE, mockUpdateRolePayload);
+      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.UPDATE_ROLE, mockUpdateRolePayload, undefined, { absoluteUrl: true });
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -112,7 +112,7 @@ describe("RoleService", () => {
 
       const result = await service.setRoles(mockSetRolesPayload);
 
-      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.SET_ROLES, { ...mockSetRolesPayload });
+      expect(http.post).toHaveBeenCalledWith(ROLE_ENDPOINTS.SET_ROLES, { ...mockSetRolesPayload }, undefined, { absoluteUrl: true });
       expect(result).toEqual(mockSetRolesPayload);
     });
 

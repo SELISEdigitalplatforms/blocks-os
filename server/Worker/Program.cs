@@ -1,4 +1,5 @@
 using Blocks.Genesis;
+using DomainService.Dtos;
 using DomainService.Projects;
 using DomainService.Shared;
 using DomainService.Shared.Dtos;
@@ -43,6 +44,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<RestoreProjectRequest>, RestoreProjectConsumer>();
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
+            services.AddSingleton<IConsumer<CreateUserByEmailPostEvent>, CreateUserByEmailPostConsumer>();
 
             ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
             #endregion

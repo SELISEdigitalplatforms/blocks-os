@@ -3,6 +3,7 @@ import {
   FilterToolbar,
   useSortQueryParams,
 } from "@/components/filter-toolbar";
+import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
@@ -27,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { Tabs, TabsContent } from "@/components/ui-kits/tabs/tabs";
+import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { useLmtBasePath } from "@/hooks/use-scoped-path";
 import { formatDate, parseDateString } from "@/lib/utils";
@@ -325,24 +327,30 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
         onValueChange={(value: string) =>
           tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)
         }>
-        <div className="mb-5 flex flex-col gap-4 rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 dark:from-slate-900 dark:to-slate-800/50">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-high-emphasis">
-                Trace storage modes
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Choose the trace tier you want to inspect.
-              </p>
-            </div>
-            <Button
-              onClick={() => setOpen((current) => !current)}
-              variant="outline"
-              size="sm">
-              <BookOpenText className="aspect-square w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-2">Guide</span>
-            </Button>
-          </div>
+        <PageHeader
+          title="Tracing"
+          description="Trace requests across services"
+          actions={
+            <>
+              <Button
+                onClick={() => setOpen((current) => !current)}
+                variant="outline"
+                size="sm">
+                <BookOpenText className="aspect-square w-4" />
+                <span className="sr-only sm:not-sr-only sm:ml-2">Guide</span>
+              </Button>
+              <LMTQueryAgentSheet
+                description="Hello! I can help you search and analyze your logs, metrics, and tracing data."
+                questions={[
+                  "Show me traces for the last 1 hour",
+                  "Which services are generating the most traces",
+                  "Which traces had high latency today",
+                ]}
+              />
+            </>
+          }
+        />
+        <div className="mb-4 sm:mb-5">
           {isMobile ? (
             <Select
               value={tabId}
