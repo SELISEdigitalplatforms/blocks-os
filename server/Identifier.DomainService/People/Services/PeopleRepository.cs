@@ -5,6 +5,7 @@ using DomainService.Projects;
 using DomainService.Shared;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Text.RegularExpressions;
 
 namespace DomainService.People
 {
@@ -16,6 +17,9 @@ namespace DomainService.People
 
         private const string _userCollectionName = "Users";
         private const string _peopleCollectionName = "ProjectPeoples";
+
+        // Shortest search term that will actually query; below this the filter is ignored (all people returned).
+        private const int MinSearchTermLength = 3;
 
         // One document per person: _id is the UserId, Email is carried along to give the page a stable order.
         private static readonly BsonDocument GroupByPersonStage = new("$group", new BsonDocument
@@ -56,16 +60,44 @@ namespace DomainService.People
                 projectPeopleFilter &= Builders<ProjectPeople>.Filter.Eq(x => x.IsInvitationConfirmed, request.IsInvitationConfirmed.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(request?.Filter))
+            var searchTerm = request?.Filter?.Trim() ?? string.Empty;
+
+            // Require a minimum length so short, over-broad terms don't scan the whole collection. Enforced
+            // here too (not just the client) since the request can be crafted directly.
+            if (searchTerm.Length >= MinSearchTermLength)
             {
-                var regex = new BsonRegularExpression(request.Filter.ToString(), "i");
-                var userFilter = Builders<User>.Filter.Or(
-                    Builders<User>.Filter.Regex(x => x.Email, regex),
-                    Builders<User>.Filter.Regex(x => x.FirstName, regex),
-                    Builders<User>.Filter.Regex(x => x.LastName, regex)
-                );
-                var matchingUserIds = await userCollection.Find(userFilter).Project(x => x.ItemId).ToListAsync();
-                projectPeopleFilter &= Builders<ProjectPeople>.Filter.In(x => x.UserId, matchingUserIds);
+                // Escape the user input so it is matched as a literal substring, not a regex. Passing raw input
+                // to BsonRegularExpression allowed regex injection and catastrophic-backtracking (ReDoS).
+                var regex = new BsonRegularExpression(Regex.Escape(searchTerm), "i");
+                var field = request.SearchField?.Trim().ToLowerInvariant();
+
+                if (field == PeopleSearchFields.Email)
+                {
+                    // Email is denormalized onto ProjectPeople, so match it on the already project-scoped rows.
+                    // No scan of the (tenant-wide) Users collection at all.
+                    projectPeopleFilter &= Builders<ProjectPeople>.Filter.Regex(x => x.Email, regex);
+                }
+                else
+                {
+                    // Name (and the all-fields fallback) needs the Users collection. A case-insensitive regex
+                    // cannot use an index, so first narrow to this project's members and run the regex only over
+                    // them, instead of scanning every user in the tenant.
+                    var memberUserIds = await peopleCollection.Distinct(x => x.UserId, projectPeopleFilter).ToListAsync();
+
+                    var scopedToMembers = Builders<User>.Filter.In(x => x.ItemId, memberUserIds);
+                    var textMatch = field == PeopleSearchFields.Name
+                        ? Builders<User>.Filter.Or(
+                            Builders<User>.Filter.Regex(x => x.FirstName, regex),
+                            Builders<User>.Filter.Regex(x => x.LastName, regex))
+                        : Builders<User>.Filter.Or(
+                            Builders<User>.Filter.Regex(x => x.Email, regex),
+                            Builders<User>.Filter.Regex(x => x.FirstName, regex),
+                            Builders<User>.Filter.Regex(x => x.LastName, regex));
+
+                    var matchingUserIds = await userCollection.Find(scopedToMembers & textMatch)
+                        .Project(x => x.ItemId).ToListAsync();
+                    projectPeopleFilter &= Builders<ProjectPeople>.Filter.In(x => x.UserId, matchingUserIds);
+                }
             }
 
             var isOwner = await IsOwner(BlocksContext.GetContext().UserId ?? "", projectIds);
