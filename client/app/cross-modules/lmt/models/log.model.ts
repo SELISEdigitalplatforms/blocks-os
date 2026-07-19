@@ -20,6 +20,7 @@ export interface ILog {
   level: string;
   message: string;
   traceId: string;
+  serviceName?: string;
 }
 
 export interface IGetLogsPayload {
@@ -38,11 +39,13 @@ export interface IGetLogsPayload {
   };
   search?: string;
   serviceName: string;
+  serviceNames?: string[];
   projectKey: string;
 }
 
 export interface IGetLiveLogsPayload {
   serviceName: string;
+  serviceNames?: string[];
   lastDate: string;
   projectKey: string;
 }
@@ -63,4 +66,5 @@ export interface IGetLogsByDatePayload {
   };
   search?: string;
   serviceName: string;
+  serviceNames?: string[];
 }
