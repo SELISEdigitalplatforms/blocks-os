@@ -13,7 +13,7 @@ export const useGetPeople = (option: { page: number; pageSize: number; filter: s
       }),
     select: (response) => ({
       peoples: response.peoples,
-      totalCount: response.totalCount,
+      totalCount: response.peoplesTotalCount,
       isOwner: response.isOwner,
     }),
     enabled: !!projectGroupId,
