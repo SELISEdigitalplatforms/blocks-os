@@ -32,14 +32,12 @@ describe("StorageConfiguration", () => {
   // ─── gets ──────────────────────────────────────────────────────────────────
 
   describe("gets", () => {
-    it("should call correct endpoint with projectKey", async () => {
+    it("should call the configs endpoint", async () => {
       vi.mocked(http.get).mockResolvedValue(mockStorageConfigList);
 
-      const result = await service.gets(TEST_PROJECT_KEY);
+      const result = await service.gets();
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS}?ProjectKey=${TEST_PROJECT_KEY}`,
-      );
+      expect(http.get).toHaveBeenCalledWith(STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS);
       expect(result).toEqual(mockStorageConfigList);
     });
 

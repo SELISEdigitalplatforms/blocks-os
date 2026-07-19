@@ -6,7 +6,8 @@ namespace Cloud.LmtService.Models.Logs
 {
     public class LiveLogRequest
     {
-        public required string Name { get; set; }
+        public string? Name { get; set; }
+        public List<string> ServiceNames { get; set; } = [];
         public DateTime LastDate { get; set; }
     }
 }

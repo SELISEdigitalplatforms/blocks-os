@@ -29,8 +29,8 @@ export const Certificates = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const { isLoading, data: existingCertificate } = useGetSavedPublicCertificates(projectKey);
   const { data: jwtClaimData, isLoading: isJwtClaimLoading } = useGetJwtClaim(
-    { projectKey, itemId: "" },
-    !!projectKey && !!existingCertificate?.isConfigured,
+    projectKey,
+    !!existingCertificate?.isConfigured,
   );
   const [isJwtClaimModalOpen, setIsJwtClaimModalOpen] = useQueryState(
     "jwtClaim",
@@ -46,7 +46,15 @@ export const Certificates = () => {
     return <LoadingSkelton />;
   }
   if (!existingCertificate?.isConfigured) {
-    return <EmptyConfiguration />;
+    return (
+      <>
+        <EmptyConfiguration />
+        <AddEditProviderModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => void setIsEditModalOpen(open)}
+        />
+      </>
+    );
   }
   return (
     <>

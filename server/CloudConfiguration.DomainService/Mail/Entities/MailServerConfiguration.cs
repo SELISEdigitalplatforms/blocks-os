@@ -22,10 +22,18 @@ namespace CloudConfiguration.DomainService.Mail.Entities
         public MailServiceProvider Provider { get; set; }
     }
 
+    /// <summary>
+    /// The SMTP/mail transport implementation used to deliver outgoing mail.
+    /// </summary>
     public enum SmtpClient
     {
+        /// <summary>Use the platform default SMTP transport.</summary>
         Default = 0,
-        MsGraph,
-        MsMailKit
+
+        /// <summary>Use Microsoft Graph as the mail transport (recommended for Microsoft 365 tenants).</summary>
+        MsGraph = 1,
+
+        /// <summary>Use the MailKit SMTP client (recommended for non-Microsoft providers).</summary>
+        MsMailKit = 2,
     }
 }

@@ -179,14 +179,15 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
   const blocksIamBaseUrl = useMemo(() => getBlocksIamBaseUrl(), [])
 
   useEffect(() => {
-    if (!isOidcEnabled) return
+    const nextBaseUrl = isOidcEnabled ? blocksIamBaseUrl : config.accountActionBaseUrl
 
-    const currentUseDefault = form.getValues("useAccountActionBaseUrlAsDefault")
+    if (form.getValues("accountActionBaseUrl") === nextBaseUrl) return
 
-    if (!currentUseDefault) {
-      form.setValue("useAccountActionBaseUrlAsDefault", true, { shouldDirty: true })
-    }
-  }, [form, isOidcEnabled])
+    form.setValue("accountActionBaseUrl", nextBaseUrl, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }, [blocksIamBaseUrl, config.accountActionBaseUrl, form, isOidcEnabled])
 
   const handleReset = useCallback(() => {
     form.reset(toIamConfigFormValues(config))
@@ -345,11 +346,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                       <FormControl>
                         <AccountActionBaseUrlInput
                           name={field.name}
-                          value={
-                            isOidcEnabled
-                              ? blocksIamBaseUrl
-                              : field.value || blocksIamBaseUrl
-                          }
+                          value={field.value}
                           onBlur={field.onBlur}
                           onChange={field.onChange}
                           readOnly={isOidcEnabled}

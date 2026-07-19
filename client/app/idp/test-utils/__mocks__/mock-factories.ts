@@ -42,6 +42,7 @@ export const mockAuthOidcServiceFactory = () => ({
       getOidcCredential: vi.fn(),
       saveOidcCredential: vi.fn(),
       deleteOidcCredential: vi.fn(),
+      rotateOidcClientSecret: vi.fn(),
     },
   },
 });
