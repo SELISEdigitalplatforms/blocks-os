@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -17,16 +16,21 @@ import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui-kits/table/table";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
-import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
-import { useMemo, useState } from "react";
+import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
+import { useRef, useState } from "react";
+
+const MAX_DEPENDENT_PERMISSIONS = 5;
+
 type AddDependentPermissionProps = {
   permissionsResource: string[];
-  onAdd: (data: IPermission[]) => void;
+  onChange: (data: string[]) => void;
 };
-export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDependentPermissionProps) => {
+
+export const AddDependentPermission = ({ onChange, permissionsResource }: AddDependentPermissionProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const [open, setOpen] = useState<boolean>(false);
-  const [selectedPermisson, setSelectedPermissions] = useState<IPermission[]>([]);
+  const [open, setOpen] = useState(false);
+  const [workingSet, setWorkingSet] = useState<string[]>([]);
+  const snapshotRef = useRef<string[]>([]);
   const [filter, setFilter] = useState({
     page: 0,
     pageSize: 5,
@@ -35,21 +39,12 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
     type: 1,
     search: "",
   });
+
   const { data, isLoading } = useGetPermissions({
     ...filter,
     projectKey: tenantId,
   });
-  const onClickHandler = async () => {
-    onAdd(selectedPermisson);
-    resetFilter();
-    setOpen(false);
-  };
-  const onCheckedChangeHandler = (checked: boolean, permission: IPermission) => {
-    if (checked) {
-      return setSelectedPermissions((prev) => [...prev, permission]);
-    }
-    setSelectedPermissions((prev) => prev.filter((item) => item.resource !== permission.resource));
-  };
+
   const resetFilter = () => {
     setFilter({
       type: 1,
@@ -59,19 +54,51 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
       roles: [],
       search: "",
     });
-    setSelectedPermissions([]);
   };
-  const selectedPermissionsResource = useMemo(() => {
-    return selectedPermisson.map((item) => item.resource) || [];
-  }, [selectedPermisson]);
+
+  const closeModal = () => {
+    resetFilter();
+    setWorkingSet([]);
+    setOpen(false);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      const initial = [...permissionsResource];
+      snapshotRef.current = initial;
+      setWorkingSet(initial);
+      setOpen(true);
+      return;
+    }
+    // X / Escape / overlay: keep live selections (already applied via onChange)
+    closeModal();
+  };
+
+  const handleCancel = () => {
+    onChange([...snapshotRef.current]);
+    closeModal();
+  };
+
+  const handleAdd = () => {
+    // Keep live selections; close without reverting
+    closeModal();
+  };
+
+  const handleCheckedChange = (checked: boolean, resource: string) => {
+    if (checked) {
+      if (workingSet.length >= MAX_DEPENDENT_PERMISSIONS) return;
+      const next = [...workingSet, resource];
+      setWorkingSet(next);
+      onChange(next);
+      return;
+    }
+    const next = workingSet.filter((item) => item !== resource);
+    setWorkingSet(next);
+    onChange(next);
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) resetFilter();
-        setOpen(v);
-      }}
-    >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button
           size="sm"
@@ -86,7 +113,12 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-left">Assign Permissions</DialogTitle>
+          <div className="flex items-center justify-between gap-2 pr-6">
+            <DialogTitle className="text-left">Assign Permissions</DialogTitle>
+            <Badge variant="secondary" aria-label={`${workingSet.length} of ${MAX_DEPENDENT_PERMISSIONS} permissions selected`}>
+              {workingSet.length}/{MAX_DEPENDENT_PERMISSIONS} selected
+            </Badge>
+          </div>
           <DialogDescription></DialogDescription>
         </DialogHeader>
         <div>
@@ -112,15 +144,11 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
                   <TableRow key={item.itemId}>
                     <TableCell>
                       <Checkbox
-                        checked={
-                          permissionsResource.includes(item.resource) ||
-                          selectedPermissionsResource.includes(item.resource)
-                        }
-                        disabled={permissionsResource.includes(item.resource)}
+                        checked={workingSet.includes(item.resource)}
                         onCheckedChange={(checked) => {
-                          if (permissionsResource.length + selectedPermisson.length < 5)
-                            onCheckedChangeHandler(checked as boolean, item);
+                          handleCheckedChange(checked as boolean, item.resource);
                         }}
+                        aria-label={`Select ${item.name}`}
                       />
                     </TableCell>
                     <TableCell className="w-full">
@@ -148,12 +176,10 @@ export const AddDependentPermission = ({ onAdd, permissionsResource }: AddDepend
           )}
         </div>
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" size="default">
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button size="default" onClick={onClickHandler}>
+          <Button variant="outline" size="default" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button size="default" onClick={handleAdd}>
             Add
           </Button>
         </DialogFooter>
