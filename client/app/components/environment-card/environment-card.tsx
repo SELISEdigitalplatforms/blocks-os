@@ -3,7 +3,7 @@ import { ChevronRight, Hourglass } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IProject } from "@/models/project.model";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useStartImpersonation } from "@seliseblocks/blocks-kit/hooks";

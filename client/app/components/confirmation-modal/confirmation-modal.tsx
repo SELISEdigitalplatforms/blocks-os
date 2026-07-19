@@ -21,7 +21,11 @@ interface ConfirmationModalProps {
     confirm: { disable: boolean };
   };
 }
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ data, onConfirm, buttonState }) => (
+export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  data,
+  onConfirm,
+  buttonState,
+}) => (
   <DialogContent className="mr-4 w-full max-w-[425px] rounded-md">
     <DialogHeader>
       <DialogTitle className="text-left text-lg font-semibold leading-7">
@@ -37,10 +41,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ data, onConfirm, 
           {data.cancelButton || "Cancel"}
         </Button>
       </DialogTrigger>
-      <Button size="sm" onClick={onConfirm} disabled={buttonState?.confirm.disable}>
+      <Button
+        size="sm"
+        onClick={onConfirm}
+        disabled={buttonState?.confirm.disable}>
         {data.confirmButton || "Yes"}
       </Button>
     </DialogFooter>
   </DialogContent>
 );
-export default ConfirmationModal;
