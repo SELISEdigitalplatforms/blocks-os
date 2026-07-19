@@ -14,13 +14,15 @@ namespace DomainService.People
     {
         private static class CacheConstants
         {
-            public const int InvitationCacheExpirationSeconds = 3600;
+            /// <summary>Used when People:InvitationLifetimeInMinutes is unset. Matches IAM's own default activation lifetime.</summary>
+            public const int DefaultInvitationLifetimeInMinutes = 60 * 24;
         }
 
         private static class ErrorCodes
         {
             public const string EmptyGroupId = "empty_group_id";
             public const string InvalidGroupId = "invalid_group_id";
+            public const string InvalidEnvironment = "invalid_environment";
             public const string UserNotFound = "user_not_found";
             public const string CodeExpired = "code_expire";
             public const string AlreadySignedUp = "already_signup";
@@ -171,26 +173,61 @@ namespace DomainService.People
                     };
                 }
 
+                // IAM stores every email lowercased, so an address typed with different casing would otherwise
+                // miss the lookup below and have a duplicate account created for it.
+                request.Invitations = NormalizeInvitations(request.Invitations);
+
+                // Ownership was checked against the group, so access may only be granted within the group.
+                var foreignTenantIds = request.Invitations.Values
+                    .Where(envDetails => envDetails != null)
+                    .SelectMany(envDetails => envDetails)
+                    .Select(env => env.TenantId)
+                    .Where(tenantId => !tenants.Contains(tenantId))
+                    .Distinct()
+                    .ToList();
+
+                if (foreignTenantIds.Count > 0)
+                {
+                    _logger.LogWarning(
+                        "InvitePeoplesAsync rejected: environments {TenantIds} do not belong to GroupId: {GroupId}",
+                        string.Join(", ", foreignTenantIds), request.GroupId);
+
+                    return new InviteResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string>
+                        {
+                            { ErrorCodes.InvalidEnvironment, "One or more environments do not belong to the given groupId" }
+                        }
+                    };
+                }
+
+                var callerEmail = NormalizeEmail(BlocksContext.GetContext()?.UserName);
+                var results = new Dictionary<string, string>();
+
                 foreach (var (email, envDetails) in request.Invitations)
                 {
-                    if (string.IsNullOrWhiteSpace(email) || email == BlocksContext.GetContext()?.UserName)
+                    if (email == callerEmail)
                     {
-                        _logger.LogWarning("Skipping invitation with empty email");
+                        _logger.LogWarning("Skipping self invitation for email: {Email}", email);
+                        results[email] = InvitationOutcomes.SkippedSelf;
                         continue;
                     }
 
                     if (envDetails == null || envDetails.Count == 0)
                     {
                         _logger.LogWarning("No valid project keys found for email: {Email}", email);
+                        results[email] = InvitationOutcomes.SkippedNoEnvironments;
                         continue;
                     }
 
-                    await ProcessInvitationForEmail(email, envDetails, tenants);
+                    results[email] = await ProcessInvitationForEmail(email, envDetails, tenants);
                 }
 
-                _logger.LogInformation("InvitePeoplesAsync completed successfully for GroupId: {GroupId}", request.GroupId);
+                _logger.LogInformation("InvitePeoplesAsync completed for GroupId: {GroupId}. Outcomes: {Outcomes}",
+                    request.GroupId, string.Join(", ", results.Select(r => $"{r.Key}={r.Value}")));
 
-                return new InviteResponse { IsSuccess = true };
+                return new InviteResponse { IsSuccess = true, Results = results };
             }
             catch (Exception ex)
             {
@@ -199,29 +236,55 @@ namespace DomainService.People
             }
         }
 
-        private async Task ProcessInvitationForEmail(string email, List<EnviromentDetails> enviromentDetails, List<string> tenants)
+        private static string NormalizeEmail(string? email) => email?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        /// <summary>
+        /// Lowercases the addresses and merges any that differed only by casing, so a person cannot be
+        /// invited twice in one request under two spellings of the same address.
+        /// </summary>
+        private static Dictionary<string, List<EnviromentDetails>> NormalizeInvitations(Dictionary<string, List<EnviromentDetails>> invitations)
+        {
+            var normalized = new Dictionary<string, List<EnviromentDetails>>();
+
+            foreach (var (email, envDetails) in invitations)
+            {
+                var normalizedEmail = NormalizeEmail(email);
+
+                if (string.IsNullOrWhiteSpace(normalizedEmail)) continue;
+
+                if (!normalized.TryGetValue(normalizedEmail, out var merged))
+                {
+                    normalized[normalizedEmail] = envDetails ?? [];
+                    continue;
+                }
+
+                foreach (var env in envDetails ?? [])
+                {
+                    if (!merged.Any(e => e.TenantId == env.TenantId)) merged.Add(env);
+                }
+            }
+
+            return normalized;
+        }
+
+        /// <summary>
+        /// An account that cannot sign in yet needs an activation key in its invitation mail, and only IAM can
+        /// mint one. True for someone with no account at all, and for one that was never activated.
+        /// </summary>
+        private static bool NeedsActivationKey(User? user) => user == null || !user.Active || !user.IsVerified;
+
+        private async Task<string> ProcessInvitationForEmail(string email, List<EnviromentDetails> enviromentDetails, List<string> tenants)
         {
             var existingUsers = await _peopleRepository.GetUsersByEmailAsync(new List<string> { email });
-            var user = existingUsers?.FirstOrDefault(u => u.Email == email);
+            var user = existingUsers?.FirstOrDefault(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
 
+            // No account yet: IAM has to create it before any project people row may reference it.
             if (user == null)
             {
                 _logger.LogInformation("User not found for email: {Email}. Creating new user.", email);
-                await ProcessUserCreateAndInvitation(email, string.Join(";", enviromentDetails.Select(e => e.TenantId)));
-                return;
+                await RequestInvitationFromIam(email, enviromentDetails.Select(e => e.TenantId), forceInvitation: false);
+                return InvitationOutcomes.UserCreationRequested;
             }
-
-            var projectPeoples = await ProcessInviteRequests(tenants, enviromentDetails, user);
-            if (projectPeoples.Count > 0)
-            {
-                await _peopleRepository.InsertPeoplesAsync(projectPeoples);
-                _logger.LogInformation("Inserted {Count} project people records for email: {Email}", projectPeoples.Count, email);
-            }
-        }
-
-        private async Task<List<ProjectPeople>> ProcessInviteRequests(List<string> tenants, List<EnviromentDetails> enviromentDetails, User user)
-        {
-            var projectPeoples = new List<ProjectPeople>();
 
             var existingPeople = await _peopleRepository.GetProjectPeoplesAsync(user.ItemId, tenants) ?? new List<ProjectPeople>();
             var existingTenantIds = existingPeople.Select(p => p.TenantId).ToList();
@@ -230,37 +293,63 @@ namespace DomainService.People
             if (newEnviroments.Count == 0)
             {
                 _logger.LogInformation("User {Email} already has access to all requested projects", user.Email);
-                return projectPeoples;
+                return InvitationOutcomes.AlreadyHasAccess;
             }
 
-            var isFirstInvitation = existingPeople.Count == 0;
+            // Holding a row is not the same as having accepted it. Only someone who already accepted an
+            // invitation into this group (or owns it) may be added to further environments without confirming.
+            var hasAcceptedInvitation = existingPeople.Any(p => p.IsInvitationConfirmed || p.IsCreator);
 
-            foreach (var env in newEnviroments)
+            if (hasAcceptedInvitation)
             {
-                var projectPeople = new ProjectPeople
+                await _peopleRepository.InsertPeoplesAsync(BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: true));
+                _logger.LogInformation("Granted {Count} environments to already-accepted user: {Email}", newEnviroments.Count, user.Email);
+                return InvitationOutcomes.AccessGranted;
+            }
+
+            // They have to accept, but cannot sign in yet, so the mail must carry an activation key from IAM.
+            // IAM answers on the queue and the post-event handler creates the rows and sends the mail.
+            if (NeedsActivationKey(user))
+            {
+                _logger.LogInformation("User {Email} is not activated; requesting an activation key from IAM", user.Email);
+                await RequestInvitationFromIam(user.Email, newEnviroments.Select(e => e.TenantId), forceInvitation: false);
+                return InvitationOutcomes.InvitationRequested;
+            }
+
+            // They have to accept and can already sign in: no key needed, so blocks-os owns the whole invitation.
+            var projectPeoples = BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: false);
+
+            await _peopleRepository.InsertPeoplesAsync(projectPeoples);
+            _logger.LogInformation("Inserted {Count} project people records for email: {Email}", projectPeoples.Count, email);
+
+            var project = await _peopleRepository.GetProjectByIdAsync(newEnviroments[0].TenantId);
+
+            // One link confirms everything still pending for this person, not just the new rows,
+            // so an earlier unaccepted invitation cannot be stranded.
+            var projectPeopleIds = projectPeoples
+                .Select(x => x.ItemId)
+                .Concat(existingPeople.Where(p => !p.IsInvitationConfirmed).Select(p => p.ItemId))
+                .ToList();
+
+            var invitationSent = await ProcessInvitation(user, projectPeopleIds, project, string.Empty, null);
+
+            return invitationSent ? InvitationOutcomes.Invited : InvitationOutcomes.InvitationNotSent;
+        }
+
+        private static List<ProjectPeople> BuildProjectPeoples(User user, List<EnviromentDetails> enviromentDetails, bool isInvitationConfirmed)
+        {
+            return enviromentDetails
+                .Select(env => new ProjectPeople
                 {
                     ItemId = Guid.NewGuid().ToString(),
                     TenantId = env.TenantId,
                     Email = user.Email,
                     IsInvitationSent = true,
-                    IsInvitationConfirmed = !isFirstInvitation,
+                    IsInvitationConfirmed = isInvitationConfirmed,
                     UserId = user.ItemId,
                     Roles = env.Roles
-                };
-                projectPeoples.Add(projectPeople);
-            }
-
-            if (isFirstInvitation && newEnviroments.Count > 0)
-            {
-                var project = await _peopleRepository.GetProjectByIdAsync(newEnviroments[0].TenantId);
-                if (project != null)
-                {
-                    var projectPeopleIds = projectPeoples.Select(x => x.ItemId).ToList();
-                    await ProcessInvitation(user, projectPeopleIds, project, string.Empty);
-                }
-            }
-
-            return projectPeoples;
+                })
+                .ToList();
         }
 
         private ProjectPeople CreateProjectPeople(User user, string tenantId, string email)
@@ -275,11 +364,16 @@ namespace DomainService.People
             };
         }
 
-        public async Task<bool> ProcessUserCreateAndInvitation(string email, string tenantIds)
+        /// <summary>
+        /// Hands the invitation to IAM, which creates the account if it is missing and mints an activation key
+        /// if the account cannot sign in yet. IAM answers on <see cref="IdentifierConstants.IdentifierQueueName"/>,
+        /// where <see cref="SendProjectInvitationToNewUser"/> creates the rows and sends the mail.
+        /// </summary>
+        private async Task<bool> RequestInvitationFromIam(string? email, IEnumerable<string> tenantIds, bool forceInvitation)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
-                _logger.LogWarning("ProcessUserCreateAndInvitation called with empty email");
+                _logger.LogWarning("RequestInvitationFromIam called with empty email");
                 return false;
             }
 
@@ -290,7 +384,8 @@ namespace DomainService.People
                     Email = email,
                     EventQueue = IdentifierConstants.IdentifierQueueName,
                     EventType = IdentifierConstants.ProjectPeopleInvitationMailPurpose,
-                    TenantId = tenantIds
+                    TenantId = string.Join(";", tenantIds),
+                    ForceInvitation = forceInvitation
                 };
 
                 await _messageClient.SendToConsumerAsync(
@@ -301,17 +396,17 @@ namespace DomainService.People
                     }
                 );
 
-                _logger.LogInformation("User creation event sent for email: {Email}", email);
+                _logger.LogInformation("Invitation request sent to IAM for email: {Email}, ForceInvitation: {ForceInvitation}", email, forceInvitation);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending user creation event for email: {Email}", email);
+                _logger.LogError(ex, "Error sending invitation request to IAM for email: {Email}", email);
                 throw;
             }
         }
 
-        public async Task<bool> ProcessInvitation(User user, List<string> ids, Tenant project, string activationKey)
+        public async Task<bool> ProcessInvitation(User user, List<string> ids, Tenant project, string activationKey, DateTime? keyExpiresAtUtc)
         {
             if (user == null)
             {
@@ -325,11 +420,23 @@ namespace DomainService.People
                 return false;
             }
 
+            var invitationLifetimeSeconds = ResolveInvitationLifetimeSeconds(keyExpiresAtUtc);
+
+            // The link must never outlive the activation key it carries: confirming against a dead key leaves the
+            // person looking like a member while being unable to sign in, and that cannot be undone from the UI.
+            if (invitationLifetimeSeconds <= 0)
+            {
+                _logger.LogError("Activation key for {Email} expires at {Expiry}, which has already passed; not sending an invitation",
+                    user.Email, keyExpiresAtUtc);
+                return false;
+            }
+
             try
             {
                 var invitationCode = await SendInvitationEmail(user, project);
-                _logger.LogInformation("Invitation sent to {Email} with code: {Code}", user.Email, invitationCode);
-                await CacheInvitation(ids, activationKey, invitationCode);
+                _logger.LogInformation("Invitation sent to {Email} for project {ProjectName}, valid for {LifetimeSeconds}s",
+                    user.Email, project.Name, invitationLifetimeSeconds);
+                await CacheInvitation(ids, activationKey, invitationCode, user.ItemId, project.TenantGroupId, invitationLifetimeSeconds);
                 return true;
             }
             catch (Exception ex)
@@ -337,6 +444,25 @@ namespace DomainService.People
                 _logger.LogError(ex, "Error processing invitation for user: {Email}", user.Email);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// How long the invitation link stays valid. IAM owns the activation key's lifetime, so when the mail
+        /// carries a key we never outlive it; otherwise the link is ours alone and takes the configured lifetime.
+        /// </summary>
+        private int ResolveInvitationLifetimeSeconds(DateTime? keyExpiresAtUtc)
+        {
+            var configuredMinutes = int.TryParse(_configuration["InvitationLifetimeInMinutes"], out var minutes) && minutes > 0
+                ? minutes
+                : CacheConstants.DefaultInvitationLifetimeInMinutes;
+
+            var configuredSeconds = configuredMinutes * 60;
+
+            if (!keyExpiresAtUtc.HasValue) return configuredSeconds;
+
+            var keyLifetimeSeconds = (int)(keyExpiresAtUtc.Value - DateTime.UtcNow).TotalSeconds;
+
+            return Math.Min(configuredSeconds, keyLifetimeSeconds);
         }
 
         public async Task<string> SendInvitationEmail(User user, Tenant project)
@@ -357,6 +483,8 @@ namespace DomainService.People
             return invitationCode;
         }
 
+        // The code redeems an invitation and, for an account that was never activated, yields the key that sets its
+        // password. It is a bearer credential: never write it, or the link containing it, to the logs.
         private string GenerateInvitationLink(string code)
         {
             var blocksAppHost = _configuration["FrontendRuntime:BLOCKS_OS_URL"];
@@ -364,11 +492,9 @@ namespace DomainService.People
             {
                 _logger.LogWarning("BlocksAppHost configuration is missing");
                 blocksAppHost = "https://app.blocks.com";
-                return $"{blocksAppHost}/invitation?code={code}";
             }
-            var url = $"{blocksAppHost}/invitation?code={code}";
-            _logger.LogInformation("Generated invitation link: {Url}", url);
-            return url;
+
+            return $"{blocksAppHost}/invitation?code={code}";
         }
 
         private SendMail CreateSendMailCommand(User user, Tenant project, string invitationLink)
@@ -395,21 +521,23 @@ namespace DomainService.People
             };
         }
 
-        private async Task CacheInvitation(List<string> ids, string activationKey, string invitationCode)
+        private async Task CacheInvitation(List<string> ids, string activationKey, string invitationCode, string userId, string tenantGroupId, int lifetimeSeconds)
         {
             var cacheData = new CacheProjectPeopleInvitation
             {
                 ProjectPeopleIds = string.Join(";", ids),
-                UserActivationKey = activationKey
+                UserActivationKey = activationKey,
+                UserId = userId,
+                TenantGroupId = tenantGroupId
             };
 
             await _cacheClient.AddStringValueAsync(
                 invitationCode,
                 JsonSerializer.Serialize(cacheData),
-                CacheConstants.InvitationCacheExpirationSeconds
+                lifetimeSeconds
             );
 
-            _logger.LogInformation("Invitation cached with code: {Code}", invitationCode);
+            _logger.LogInformation("Invitation cached for UserId: {UserId} in TenantGroupId: {TenantGroupId}", userId, tenantGroupId);
         }
 
         public async Task<BaseResponse> RemoveAccessFromProjectAsync(RemoveAccessRequest request)
@@ -426,6 +554,8 @@ namespace DomainService.People
                     }
                 };
             }
+
+            request.Email = NormalizeEmail(request.Email);
 
             var tenants = await _projectRepository.GetProjectIdsByGroupId(request.GroupId);
 
@@ -508,13 +638,19 @@ namespace DomainService.People
                 return false;
             }
 
+            if (!string.Equals(@event.EventType, IdentifierConstants.ProjectPeopleInvitationMailPurpose, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Ignoring CreateUserByEmailPostEvent with unrelated EventType: {EventType}", @event.EventType);
+                return false;
+            }
+
             _logger.LogInformation("SendProjectInvitationToNewUser started for UserId: {UserId}", @event.UserId);
 
             try
             {
-                var tenantIds = @event.TenantId.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                var tenantIds = @event.TenantId.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-                if (tenantIds.Length == 0)
+                if (tenantIds.Count == 0)
                 {
                     _logger.LogWarning("No valid tenant ids found in event");
                     return false;
@@ -534,16 +670,36 @@ namespace DomainService.People
                     return false;
                 }
 
+                // The broker may redeliver this event; only create the rows that aren't there yet.
+                var existingPeople = await _peopleRepository.GetProjectPeoplesAsync(user.ItemId, tenantIds) ?? new List<ProjectPeople>();
+                var existingTenantIds = existingPeople.Select(p => p.TenantId).ToHashSet();
+
                 var projectPeoples = tenantIds
+                    .Where(tenantId => !existingTenantIds.Contains(tenantId))
                     .Select(tenantId => CreateProjectPeople(user, tenantId, user.Email))
                     .ToList();
 
-                await _peopleRepository.InsertPeoplesAsync(projectPeoples);
+                // Nothing new to create. A resend still has to go out; a redelivery must not.
+                if (projectPeoples.Count == 0 && !@event.ForceInvitation)
+                {
+                    _logger.LogInformation("User {Email} already has project people records for every requested environment; skipping invitation", user.Email);
+                    return true;
+                }
 
-                var projectPeopleIds = projectPeoples.Select(x => x.ItemId).ToList();
-                var result = await ProcessInvitation(user, projectPeopleIds, project, @event.Key);
+                if (projectPeoples.Count > 0)
+                {
+                    await _peopleRepository.InsertPeoplesAsync(projectPeoples);
+                }
 
-                _logger.LogInformation("Project invitation sent to new user: {Email}, Result: {Result}", user.Email, result);
+                // One link confirms everything still pending for this person, not just the rows created here.
+                var projectPeopleIds = projectPeoples
+                    .Select(x => x.ItemId)
+                    .Concat(existingPeople.Where(p => !p.IsInvitationConfirmed).Select(p => p.ItemId))
+                    .ToList();
+
+                var result = await ProcessInvitation(user, projectPeopleIds, project, @event.Key, @event.KeyExpiresAtUtc);
+
+                _logger.LogInformation("Project invitation sent to {Email}, Result: {Result}", user.Email, result);
                 return result;
             }
             catch (Exception ex)
@@ -551,6 +707,35 @@ namespace DomainService.People
                 _logger.LogError(ex, "Error sending invitation to new user: {UserId}", @event.UserId);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Every project people row of <paramref name="userId"/> that is still awaiting confirmation within
+        /// <paramref name="tenantGroupId"/>. Scoped to the group, so confirming one project never confirms another.
+        /// Returns nothing for codes cached before these fields existed; those keep their snapshot behaviour.
+        /// </summary>
+        private async Task<List<string>> GetPendingProjectPeopleIdsAsync(string? userId, string? tenantGroupId)
+        {
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(tenantGroupId))
+            {
+                _logger.LogInformation("Invitation cache has no user/group; confirming only the cached project people ids");
+                return [];
+            }
+
+            var tenants = await _projectRepository.GetProjectIdsByGroupId(tenantGroupId);
+
+            if (tenants == null || tenants.Count == 0)
+            {
+                _logger.LogWarning("No tenants found for TenantGroupId: {TenantGroupId}", tenantGroupId);
+                return [];
+            }
+
+            var projectPeoples = await _peopleRepository.GetProjectPeoplesAsync(userId, tenants) ?? new List<ProjectPeople>();
+
+            return projectPeoples
+                .Where(p => !p.IsInvitationConfirmed)
+                .Select(p => p.ItemId)
+                .ToList();
         }
 
         public async Task<ConfirmInvitationResponse> ConfirmInvitationAsync(ConfirmInvitationRequest request)
@@ -567,7 +752,9 @@ namespace DomainService.People
                 };
             }
 
-            _logger.LogInformation("ConfirmInvitationAsync started for code: {Code}", request.Code);
+            // The code is a bearer credential; it must never reach the logs. Correlate on the user and group
+            // carried in the cache entry instead.
+            _logger.LogInformation("ConfirmInvitationAsync started");
 
             try
             {
@@ -575,7 +762,7 @@ namespace DomainService.People
 
                 if (string.IsNullOrWhiteSpace(cachedValue))
                 {
-                    _logger.LogWarning("Invitation code not found or expired: {Code}", request.Code);
+                    _logger.LogWarning("Invitation code not found or expired");
                     return new ConfirmInvitationResponse
                     {
                         Errors = new Dictionary<string, string>
@@ -587,9 +774,13 @@ namespace DomainService.People
 
                 var parsedData = JsonSerializer.Deserialize<CacheProjectPeopleInvitation>(cachedValue);
 
-                if (parsedData == null || string.IsNullOrWhiteSpace(parsedData.ProjectPeopleIds))
+                // An invitation with nothing left to confirm is still valid: someone who accepted but never
+                // activated gets a resend purely to carry a fresh activation key. Only a cache entry that
+                // identifies neither rows nor a person is unusable.
+                if (parsedData == null ||
+                    (string.IsNullOrWhiteSpace(parsedData.ProjectPeopleIds) && string.IsNullOrWhiteSpace(parsedData.UserId)))
                 {
-                    _logger.LogWarning("Invalid cached data for code: {Code}", request.Code);
+                    _logger.LogWarning("Invalid cached invitation data");
                     return new ConfirmInvitationResponse
                     {
                         Errors = new Dictionary<string, string>
@@ -599,11 +790,25 @@ namespace DomainService.People
                     };
                 }
 
-                var ids = parsedData.ProjectPeopleIds.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
-                await _peopleRepository.UpdateProjectPeoples(ids);
+                var ids = (parsedData.ProjectPeopleIds ?? string.Empty)
+                    .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                    .ToList();
+
+                // The cached ids are a snapshot from the moment the mail was sent, so an older link is blind to
+                // environments added afterwards. Re-resolve everything still pending for this person in this
+                // project group, so whichever link they click confirms the same set.
+                var pendingIds = await GetPendingProjectPeopleIdsAsync(parsedData.UserId, parsedData.TenantGroupId);
+                ids = ids.Union(pendingIds).ToList();
+
+                if (ids.Count > 0)
+                {
+                    await _peopleRepository.UpdateProjectPeoples(ids);
+                }
+
                 await _cacheClient.RemoveKeyAsync(request.Code);
 
-                _logger.LogInformation("Invitation confirmed successfully for code: {Code}", request.Code);
+                _logger.LogInformation("Invitation confirmed for UserId: {UserId} in TenantGroupId: {TenantGroupId}. Rows confirmed: {Count}",
+                    parsedData.UserId, parsedData.TenantGroupId, ids.Count);
 
                 return new ConfirmInvitationResponse
                 {
@@ -613,7 +818,7 @@ namespace DomainService.People
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error confirming invitation for code: {Code}", request.Code);
+                _logger.LogError(ex, "Error confirming invitation");
                 throw;
             }
         }
@@ -632,6 +837,8 @@ namespace DomainService.People
                     }
                 };
             }
+
+            request.Email = NormalizeEmail(request.Email);
 
             _logger.LogInformation("ResendInvitationAsync started for Email: {Email}, GroupId: {GroupId}",
                 request.Email, request.GroupId);
@@ -698,6 +905,20 @@ namespace DomainService.People
                     };
                 }
 
+                // Never activated, so the resent mail has to carry a fresh activation key. Only IAM can mint one:
+                // it answers on the queue, and the post-event handler sends the mail.
+                if (NeedsActivationKey(user))
+                {
+                    _logger.LogInformation("User {Email} is not activated; requesting a fresh activation key from IAM for the resend", request.Email);
+
+                    await RequestInvitationFromIam(
+                        user.Email,
+                        existingPeople.Select(p => p.TenantId).Distinct(),
+                        forceInvitation: true);
+
+                    return new ResendInvitationResponse { IsSuccess = true };
+                }
+
                 var projectPeopleIds = existingPeople.Select(p => p.ItemId).ToList();
                 var projectId = existingPeople.First().TenantId;
                 var project = await _peopleRepository.GetProjectByIdAsync(projectId);
@@ -715,7 +936,7 @@ namespace DomainService.People
                     };
                 }
 
-                var result = await ProcessInvitation(user, projectPeopleIds, project, string.Empty);
+                var result = await ProcessInvitation(user, projectPeopleIds, project, string.Empty, null);
 
                 _logger.LogInformation("Invitation resent to {Email}, Result: {Result}", request.Email, result);
 
@@ -739,7 +960,9 @@ namespace DomainService.People
             {
                 return new BaseResponse { Errors = new Dictionary<string, string> {{"TransferToUserEmail", "TransferToUserEmail is required."}} };
             }
-            
+
+            request.TransferToUserEmail = NormalizeEmail(request.TransferToUserEmail);
+
             var user = await _peopleRepository.GetUserByEmailAsync(request.TransferToUserEmail);
 
             if(user == null)
@@ -751,7 +974,7 @@ namespace DomainService.People
             var tenantids = await _projectRepository.GetProjectIdsByGroupId(request.TenantGroupId);
             var bc = BlocksContext.GetContext();
 
-            if (!await _peopleRepository.IsOwner(bc.UserId, tenantids) || bc.UserName == request.TransferToUserEmail)
+            if (!await _peopleRepository.IsOwner(bc.UserId, tenantids) || NormalizeEmail(bc.UserName) == request.TransferToUserEmail)
             {
                 return new BaseResponse { Errors = new Dictionary<string, string> { { "own_project", "You are not allowed to transfer ownership of this projects" } } };
             }
