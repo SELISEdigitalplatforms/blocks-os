@@ -52,11 +52,13 @@ export function LmtServiceLogsRoute() {
         id: apiServiceName,
         label: "Api",
         serviceName: apiServiceName,
+        serviceNames: [apiServiceName],
       },
       {
         id: workerServiceName,
         label: "Worker",
         serviceName: workerServiceName,
+        serviceNames: [workerServiceName],
       },
     ],
     [apiServiceName, workerServiceName],

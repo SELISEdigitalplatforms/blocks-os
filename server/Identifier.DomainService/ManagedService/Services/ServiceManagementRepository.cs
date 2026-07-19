@@ -17,7 +17,6 @@ namespace DomainService.ManagedService.Services
         {
          _dbContextProvider = dbContextProvider;
          _blocksSecret = blocksSecret;
-         _clientDb = ResolvedClientDb();
         }
        private IMongoDatabase ResolvedClientDb()
        {
@@ -29,8 +28,9 @@ namespace DomainService.ManagedService.Services
         return _dbContextProvider.GetDatabase(blocksContext.TenantId);
        }
 
-  public async Task<(IQueryable<BlocksManagedService>, long)> GetAllServicesAsync(GetAllServiceRequest request)
+        public async Task<(IQueryable<BlocksManagedService>, long)> GetAllServicesAsync(GetAllServiceRequest request)
         {
+            _clientDb = ResolvedClientDb();
             var collection = _clientDb.GetCollection<BlocksManagedService>("BlocksManagedServices");
             var filter = Builders<BlocksManagedService>.Filter.Eq(s => s.TenantId, BlocksContext.GetContext()?.TenantId ?? string.Empty);
 
@@ -56,6 +56,7 @@ namespace DomainService.ManagedService.Services
 
         public async Task SaveAsync(BlocksManagedService service)
         {
+             _clientDb = ResolvedClientDb();
             var collection = _clientDb.GetCollection<BlocksManagedService>("BlocksManagedServices");
             await collection.InsertOneAsync(service);
         }
