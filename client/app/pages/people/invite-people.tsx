@@ -13,7 +13,13 @@ import {
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
 import { Plus, Trash2 } from "lucide-react"
 import { useForm, useFieldArray, type FieldArrayWithId } from "react-hook-form"
-import { buildInvitePeoplePayload, emailRegex } from "./invite-people-utils"
+import {
+  buildInvitePeoplePayload,
+  describeInviteSuccess,
+  describeSkippedInvites,
+  emailRegex,
+  summarizeInviteOutcomes,
+} from "./invite-people-utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Form,
@@ -150,7 +156,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
       values.invitations.forEach((inv) => {
         const emails = inv.recipients
           .split(/[\s,]+/)
-          .map((e) => e.trim())
+          .map((e) => e.trim().toLowerCase())
           .filter((e) => e.length > 0 && emailRegex.test(e))
         const uniqueEmails = Array.from(new Set(emails))
         uniqueEmails.forEach((email) => {
@@ -170,9 +176,16 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
         return
       }
 
-      await mutateAsync(buildInvitePeoplePayload(invitationsMap, groupId ?? ""))
+      const response = await mutateAsync(buildInvitePeoplePayload(invitationsMap, groupId ?? ""))
 
-      showSuccessToast({ description: "Invitation is sent" })
+      const { granted, skipped } = summarizeInviteOutcomes(response.results)
+
+      if (granted.length === 0 && skipped.length > 0) {
+        showErrorToast({ errors: describeSkippedInvites(skipped) })
+        return
+      }
+
+      showSuccessToast({ description: describeInviteSuccess(granted, skipped) })
       form.reset()
       setOpen(false)
     } catch (error) {
