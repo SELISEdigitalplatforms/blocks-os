@@ -198,7 +198,6 @@ export const PermissionForm = ({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Dependent permissions (Max 5)</FormLabel>
                     <FormControl>
                       <DependentPermissions
                         permissionsResource={field.value}

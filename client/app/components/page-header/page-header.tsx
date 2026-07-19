@@ -6,6 +6,7 @@ type PageHeaderProps = {
   description: string
   className?: string
   actions?: ReactNode
+  titleSuffix?: ReactNode
 }
 
 export const PageHeader = ({
@@ -13,12 +14,16 @@ export const PageHeader = ({
   description,
   className,
   actions,
+  titleSuffix,
 }: PageHeaderProps) => {
   const heading = (
     <>
-      <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
-        {title}
-      </h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
+          {title}
+        </h1>
+        {titleSuffix}
+      </div>
       <p className="text-sm text-muted-foreground">{description}</p>
     </>
   )

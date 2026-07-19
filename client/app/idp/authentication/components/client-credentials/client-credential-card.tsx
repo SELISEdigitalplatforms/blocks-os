@@ -15,7 +15,7 @@ import { useDeleteAuthClient } from "@blocks-idp/authentication/hooks/use-auth-c
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { isErrorWithErrors } from "@/lib/error";
 import {
   HoverCard,
@@ -85,20 +85,15 @@ const getBackendErrorMap = (response: unknown) => {
   return undefined;
 };
 
-const UserIdValue = ({ userId }: { userId?: string }) => {
-  if (!userId) return <span>—</span>;
+// const UserIdValue = ({ userId }: { userId?: string }) => {
+//   if (!userId) return <span>—</span>;
 
-  return (
-    <CopyToClipboardButton textToCopy={userId}>
-      <MaskedText
-        text={userId}
-        length={30}
-        showFirstN={4}
-        showLastN={4}
-      />
-    </CopyToClipboardButton>
-  );
-};
+//   return (
+//     <CopyToClipboardButton textToCopy={userId}>
+//       <MaskedText text={userId} length={30} showFirstN={4} showLastN={4} />
+//     </CopyToClipboardButton>
+//   );
+// };
 
 const PermissionChips = ({ permissions }: { permissions: string[] }) => {
   if (!permissions || permissions.length === 0) {
