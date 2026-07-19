@@ -148,7 +148,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
           className="w-full"
           disabled={isPending || !captchaCode || !requirementsMet || !isValid}
         >
-          Activate BTN
+          Activate
         </Button>
       </form>
     </Form>

@@ -24,7 +24,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Serial: these tests mutate shared backend state (create/delete real
+  // projects on dev), so running them in parallel would race.
+  workers: 1,
   reporter: [["html", { open: "never" }], ["list"]],
   // Patches the served index.html so BLOCKS_OS_BASE_URL points at the local
   // :5000 host (E2E_BASE_URL) instead of the remote dev server.
