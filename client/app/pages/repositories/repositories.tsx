@@ -1,6 +1,7 @@
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetAssets, useAddAssets } from "@/hooks/use-project";
-import { Plus, Github } from "lucide-react";
+import { Plus, Github, FolderGit2 } from "lucide-react";
+import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
@@ -61,9 +62,8 @@ export const RepositoriesPage = () => {
   const {
     data: resourcesResponse,
     isLoading: isLoadingAssets,
-    isFetching: isFetchingAssets,
     refetch,
-  } = useGetAssets(groupId ?? "", pageNumber, pageSize, debouncedSearchText);
+  } = useGetAssets(groupId ?? "");
   useEffect(() => {
     setPageNumber(0);
   }, [debouncedSearchText]);
@@ -166,102 +166,33 @@ export const RepositoriesPage = () => {
     ],
     [],
   );
+  const allResources = resourcesResponse?.assets?.resources ?? [];
+  const filteredResources = useMemo(() => {
+    const search = debouncedSearchText.trim().toLowerCase();
+    if (!search) return allResources;
+
+    return allResources.filter(
+      (resource) =>
+        resource.name.toLowerCase().includes(search) ||
+        resource.link.toLowerCase().includes(search),
+    );
+  }, [allResources, debouncedSearchText]);
+  const paginatedResources = useMemo(() => {
+    const start = pageNumber * pageSize;
+    return filteredResources.slice(start, start + pageSize);
+  }, [filteredResources, pageNumber, pageSize]);
   const table = useReactTable({
-    data: resourcesResponse?.assets?.resources ?? [],
+    data: paginatedResources,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
   const onPageChangeHandler = (page: number) => {
     setPageNumber(page);
   };
-  return (
-    <main className="p-6">
-      <div className="flex flex-row justify-between md:items-center">
-        <h4 className="text-lg font-semibold md:text-xl">Repositories</h4>
-        <Button
-          size="sm"
-          variant="default"
-          className="h-10 text-sm text-primary-foreground"
-          onClick={handleAddRepositoryClick}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          <span>Add</span>
-        </Button>
-      </div>
-      <div className="mt-4">
-        <Card>
-          <CardHeader>
-            <div className="w-1/3">
-              <Input
-                placeholder="Search repositories..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="mt-4 px-4 py-3 hover:bg-transparent">
-                  {table.getHeaderGroups().map((headerGroup) =>
-                    headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="text-xs md:text-sm">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    )),
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isFetchingAssets ? (
-                  Array(5)
-                    .fill(0)
-                    .map((_, index) => (
-                      <TableRow key={index}>
-                        {columns.map((_, colIndex) => (
-                          <TableCell key={colIndex}>
-                            <Skeleton className={`h-6 ${colIndex === 2 ? "w-24" : "w-full"}`} />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                ) : !resourcesResponse?.assets?.resources?.length ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center text-sm text-muted-foreground md:text-base"
-                    >
-                      No repositories found. Add a repository to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className="text-xs md:text-sm">
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="py-2 md:py-3">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-            {!isLoadingAssets && (resourcesResponse?.totalCount || 0) > pageSize && (
-              <div className="mt-5 flex flex-col items-center gap-4 md:flex-row md:justify-end">
-                <Pagination
-                  page={pageNumber}
-                  onChange={onPageChangeHandler}
-                  totalCount={resourcesResponse?.totalCount || 0}
-                  pageSize={pageSize}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+  const hasRepositories = allResources.length > 0;
+  const isEmptyWithoutSearch = !hasRepositories && !searchText.trim();
+  const repositoryModals = (
+    <>
       <Dialog open={repositoryModalOpen} onOpenChange={setRepositoryModalOpen}>
         <DialogContent className="w-[calc(100%-2rem)] rounded-lg border p-6 shadow-lg md:w-[425px]">
           <DialogHeader>
@@ -280,6 +211,105 @@ export const RepositoriesPage = () => {
         title="Select repository"
         description="Select the repositories you want to link to this project"
       />
+    </>
+  );
+
+  if (isLoadingAssets) {
+    return (
+      <>
+        <RepositoriesLoading />
+        {repositoryModals}
+      </>
+    );
+  }
+
+  return (
+    <main className="p-6">
+      <div className="flex flex-row justify-between md:items-center">
+        <h4 className="text-lg font-semibold md:text-xl">Repositories</h4>
+        <Button
+          size="sm"
+          variant="default"
+          className="h-10 text-sm text-primary-foreground"
+          onClick={handleAddRepositoryClick}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          <span>Add</span>
+        </Button>
+      </div>
+      <div className="mt-4">
+        {isEmptyWithoutSearch ? (
+          <EmptyState
+            icon={FolderGit2}
+            title="No repositories yet"
+            description="Add your first repository to get started."
+          />
+        ) : (
+          <Card>
+            {hasRepositories && (
+              <CardHeader>
+                <div className="w-1/3">
+                  <Input
+                    placeholder="Search repositories..."
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                  />
+                </div>
+              </CardHeader>
+            )}
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="mt-4 px-4 py-3 hover:bg-transparent">
+                    {table.getHeaderGroups().map((headerGroup) =>
+                      headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} className="text-xs md:text-sm">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      )),
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!filteredResources.length ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center text-sm text-muted-foreground md:text-base"
+                      >
+                        No repositories found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id} className="text-xs md:text-sm">
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="py-2 md:py-3">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              {filteredResources.length > pageSize && (
+                <div className="mt-5 flex flex-col items-center gap-4 md:flex-row md:justify-end">
+                  <Pagination
+                    page={pageNumber}
+                    onChange={onPageChangeHandler}
+                    totalCount={filteredResources.length}
+                    pageSize={pageSize}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      {repositoryModals}
     </main>
   );
 };
