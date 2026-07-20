@@ -10,6 +10,7 @@ export const PeopleList = () => {
     page: queryParams.page,
     pageSize: queryParams.pageSize,
     filter: queryParams.search,
+    searchField: queryParams.searchField as "name" | "email",
   })
 
   const isViewerOwner = data?.isOwner ?? false

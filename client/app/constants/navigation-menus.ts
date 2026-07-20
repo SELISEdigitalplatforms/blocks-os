@@ -7,11 +7,9 @@ import {
   Building2,
   CreditCard,
   Database,
-  FileCode,
   Fingerprint,
   GitBranch,
   Globe,
-  ScrollText,
   Home,
   Key,
   // KeyRound, // Temporarily hidden (My Secret)
@@ -20,6 +18,7 @@ import {
   Lock,
   Mail,
   Package,
+  ScrollText,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -129,7 +128,7 @@ export const navigationMenus: Menu[] = [
         desc: "Configure identity providers and federation",
         type: "menu",
       },
-  
+
       {
         id: "external-idp",
         name: "External IdP",

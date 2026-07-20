@@ -32,6 +32,7 @@ export const PeopleManagement = () => {
     page: 0,
     pageSize: 100,
     filter: "",
+    searchField: "name",
   })
 
   if (isLoading) return <PeopleManagementLoading />

@@ -26,6 +26,7 @@ export class PeopleService {
     page: number;
     pageSize: number;
     filter: string;
+    searchField: "name" | "email";
     projectGroupId: string;
   }): Promise<GetPeopleResponse> {
     return http.post<GetPeopleResponse>(PEOPLE_ENDPOINTS.GETS, payload);

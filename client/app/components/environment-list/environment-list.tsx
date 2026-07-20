@@ -94,9 +94,6 @@ export function EnvironmentList({
           disabled
           className="group relative flex h-10 w-full items-center justify-center rounded-lg">
           <Globe className="h-5 w-5 text-muted-foreground" />
-          {environment && (
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[hsl(var(--blocks-primary-50))] ring-1 ring-background" />
-          )}
           <div className="pointer-events-none absolute left-full top-0 z-20 ml-2 min-w-max whitespace-nowrap rounded bg-gray-300 px-2 py-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
             {environment
               ? `${environment}${applicationDomain ? ` · ${applicationDomain}` : ""}`
