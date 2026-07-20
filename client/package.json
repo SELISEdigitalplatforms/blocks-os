@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint \"app/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"app/**/*.{ts,tsx}\" --fix"
   },

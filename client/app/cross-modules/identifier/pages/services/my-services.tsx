@@ -1,12 +1,12 @@
 import { ServiceList } from "./service-list";
 import { GuideLineWrapper } from "@blocks-identifier/components/guideline/guideline-wrapper";
 import { useState } from "react";
-import { managedServicesGuidelineSteps } from "./guideline-docs";
-interface ManagedServicesProps {
+import { myServicesGuidelineSteps } from "./guideline-docs";
+interface MyServicesProps {
   guideOpen?: boolean;
   onGuideOpenChange?: (open: boolean) => void;
 }
-export const ManagedServices = ({ guideOpen, onGuideOpenChange }: ManagedServicesProps = {}) => {
+export const MyServices = ({ guideOpen, onGuideOpenChange }: MyServicesProps = {}) => {
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
   const open = guideOpen !== undefined ? guideOpen : internalOpen;
   const setOpen = onGuideOpenChange || setInternalOpen;
@@ -17,7 +17,7 @@ export const ManagedServices = ({ guideOpen, onGuideOpenChange }: ManagedService
         title="Guideline"
         open={open}
         onOpenChange={setOpen}
-        content={managedServicesGuidelineSteps}
+        content={myServicesGuidelineSteps}
       />
     </>
   );
