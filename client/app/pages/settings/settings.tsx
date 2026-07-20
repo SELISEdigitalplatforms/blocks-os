@@ -78,9 +78,10 @@ type ProjectNameForm = z.infer<typeof projectNameSchema>;
 export const SettingsPage = () => {
   const { selectedProject, selectedTenantGroup, setSelectedProject } =
     useProjectStore();
-  const { data: projectsData, isLoading } = useGetProjects(
-    selectedTenantGroup || "",
-  );
+  const { data: projectsData, isLoading } = useGetProjects({
+    tenantGroupId: selectedTenantGroup ?? "",
+    enabled: !!selectedTenantGroup,
+  });
   // Ordered like the "Select environments" step: dev → test → stg → … → prod
   const environments = (projectsData?.[0]?.projects ?? [])
     .filter((environment) => !environment.isDisabled)

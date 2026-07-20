@@ -10,7 +10,11 @@ const cardVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+    transition: {
+      delay: i * 0.06,
+      duration: 0.4,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
   }),
 };
 const SelfProjectLoading = () => {
@@ -25,7 +29,7 @@ const SelfProjectLoading = () => {
   );
 };
 export const SelfProject = () => {
-  const { data, isLoading, isFetching } = useGetProjects();
+  const { data, isLoading, isFetching } = useGetProjects({});
   if (isLoading || isFetching) return <SelfProjectLoading />;
   const projectGroups = data || [];
   if (!projectGroups.length) return <ConsoleCreateProject />;
@@ -48,7 +52,11 @@ export const SelfProject = () => {
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {projectGroups.length < 10 && (
-          <motion.div variants={cardVariants} custom={0} initial="hidden" animate="visible">
+          <motion.div
+            variants={cardVariants}
+            custom={0}
+            initial="hidden"
+            animate="visible">
             <AddProjectCard />
           </motion.div>
         )}
@@ -58,9 +66,11 @@ export const SelfProject = () => {
             variants={cardVariants}
             custom={projectGroups.length < 10 ? i + 1 : i}
             initial="hidden"
-            animate="visible"
-          >
-            <ProjectCard project={project.projects[0]} projects={project.projects} />
+            animate="visible">
+            <ProjectCard
+              project={project.projects[0]}
+              projects={project.projects}
+            />
           </motion.div>
         ))}
       </div>
