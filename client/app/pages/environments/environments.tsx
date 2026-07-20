@@ -63,7 +63,7 @@ export const EnvironmentsPage = () => {
     data: environmentList,
     isLoading,
     isFetching,
-  } = useGetProjects(groupId ?? "");
+  } = useGetProjects({ tenantGroupId: groupId ?? "", enabled: !!groupId });
   const { data: peopleData } = useGetPeople({
     page: 0,
     pageSize: 1,
