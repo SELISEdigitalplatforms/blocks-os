@@ -65,12 +65,12 @@ import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 // Temporarily disabled
 // import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
-import ManagedServicesPage from "./routes/dashboard/managed-services";
-import OidcBrandingPage from "./routes/dashboard/oidc-branding";
-import SecretManagementLayout from "./routes/dashboard/secret-management";
 import LmtLayout from "@/layouts/lmt/lmt-layout";
 import { ProjectOverviewRoute } from "@/layouts/project-overview-route";
 import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
+import ManagedServicesPage from "./routes/dashboard/managed-services";
+import OidcBrandingPage from "./routes/dashboard/oidc-branding";
+import SecretManagementLayout from "./routes/dashboard/secret-management";
 
 const redirectPaths: Record<string, string> = {
   "/app/idp/user-detail/*": "/app/idp",

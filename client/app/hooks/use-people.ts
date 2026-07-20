@@ -1,7 +1,13 @@
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { peopleService } from "@blocks-identifier/services/people.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { GetPeopleResponse } from "@/cross-modules/identifier/models/people.model";
 
+export type UseGetPeopleReturnType = {
+  peoples: GetPeopleResponse["peoples"];
+  totalCount: GetPeopleResponse["peoplesTotalCount"];
+  isOwner: GetPeopleResponse["isOwner"];
+};
 export const useGetPeople = (option: {
   page: number;
   pageSize: number;
