@@ -6,10 +6,10 @@ import {
   mockLogsResponse,
   mockEmptyLogsResponse,
 } from "../test-utils/__mocks__";
-import { lmtService } from "../lmt.service";
+import { lmtService } from "../services/lmt.service";
 import { useLogs } from "./use-logs";
 
-vi.mock("@blocks-lmt/lmt.service", () => mockLmtServiceFactory());
+vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("useLogs", () => {

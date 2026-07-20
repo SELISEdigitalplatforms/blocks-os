@@ -46,22 +46,25 @@ export const Activation = ({ code }: ActivationProps) => {
           projectKey: x_blocks_key as string,
           activationCode: code,
         });
+        // Backend contract (ValidateAccountActivationCodeAsync):
+        //   errors present            -> code is invalid
+        //   isSuccess true (+ userId) -> code is valid and still pending -> show the form
+        //   otherwise                 -> code not found / expired (userId may be null)
         if (res.errors != null) {
-          // Invalid code, doesn't exist code
           setActivationError("invalid");
           setActivationUserId(null);
           setResendMessage(null);
           setResendSuccess(false);
-        } else if (res.userId != null) {
-          // Code expired, resend activation link using this userId
-          setActivationError("expired");
-          setActivationUserId(res.userId);
+        } else if (res.isSuccess) {
+          // Valid, pending activation: show the activate account form.
+          setActivationError(null);
+          setActivationUserId(null);
           setResendMessage(null);
           setResendSuccess(false);
         } else {
-          // activation code is valid, show the activate account component
-          setActivationError(null);
-          setActivationUserId(null);
+          // Code is gone (expired or already used). Offer resend when we know the user.
+          setActivationError("expired");
+          setActivationUserId(res.userId ?? null);
           setResendMessage(null);
           setResendSuccess(false);
         }
