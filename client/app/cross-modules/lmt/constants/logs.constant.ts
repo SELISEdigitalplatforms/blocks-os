@@ -1,5 +1,5 @@
-import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model"
-import type { LucideIcon } from "lucide-react"
+import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model";
+import type { LucideIcon } from "lucide-react";
 import {
   Bot,
   Database,
@@ -10,7 +10,8 @@ import {
   Rocket,
   Shield,
   Wrench,
-} from "lucide-react"
+  Workflow,
+} from "lucide-react";
 
 export const LOG_SERVICE_ICONS = {
   iam: Shield,
@@ -18,13 +19,118 @@ export const LOG_SERVICE_ICONS = {
   monitor: LineChart,
   localization: Languages,
   data: Database,
+  logic: Workflow,
   release: Rocket,
   utilities: Wrench,
   studio: Palette,
   agent: Bot,
-} satisfies Record<LogServiceRow["icon"], LucideIcon>
+} satisfies Record<LogServiceRow["icon"], LucideIcon>;
 
-export const DUMMY_LOG_SERVICES: LogServiceRow[] = [
+type BlocksLogServiceNames =
+  | "blocks-iam"
+  | "blocks-iam-worker"
+  | "blocks-os"
+  | "blocks-os-api"
+  | "blocks-os-worker"
+  | "blocks-data"
+  | "blocks-data-worker"
+  | "blocks-monitor-api"
+  | "blocks-monitor-worker"
+  | "blocks-localization"
+  | "blocks-localization-worker"
+  | "blocks-logic"
+  | "blocks-logic-worker"
+  | "blocks-release-api"
+  | "blocks-release-worker"
+  | "blocks-utilities"
+  | "blocks-utilities-worker"
+  | "blocks-studio"
+  | "blocks-studio-worker"
+  | "blocks-ai-api"
+  | "blocks-ai-worker";
+
+export type BlocksLogService = {
+  id: string;
+  label: string;
+  routeSlug: string;
+  icon: LogServiceRow["icon"];
+  serviceNames: BlocksLogServiceNames[];
+};
+
+export const BLOCKS_LOG_SERVICES: BlocksLogService[] = [
+  {
+    id: "iam",
+    label: "IAM",
+    routeSlug: "iam",
+    icon: "iam",
+    serviceNames: ["blocks-iam", "blocks-iam-worker"],
+  },
+  {
+    id: "os",
+    label: "OS",
+    routeSlug: "os",
+    icon: "os",
+    serviceNames: ["blocks-os", "blocks-os-api", "blocks-os-worker"],
+  },
+  {
+    id: "data",
+    label: "Data",
+    routeSlug: "data",
+    icon: "data",
+    serviceNames: ["blocks-data", "blocks-data-worker"],
+  },
+  {
+    id: "monitor",
+    label: "Monitor",
+    routeSlug: "monitor",
+    icon: "monitor",
+    serviceNames: ["blocks-monitor-api", "blocks-monitor-worker"],
+  },
+  {
+    id: "localization",
+    label: "Localization",
+    routeSlug: "localization",
+    icon: "localization",
+    serviceNames: ["blocks-localization", "blocks-localization-worker"],
+  },
+  {
+    id: "logic",
+    label: "Logic",
+    routeSlug: "logic",
+    icon: "logic",
+    serviceNames: ["blocks-logic", "blocks-logic-worker"],
+  },
+  {
+    id: "release",
+    label: "Release",
+    routeSlug: "release",
+    icon: "release",
+    serviceNames: ["blocks-release-api", "blocks-release-worker"],
+  },
+  {
+    id: "utilities",
+    label: "Utilities",
+    routeSlug: "utilities",
+    icon: "utilities",
+    serviceNames: ["blocks-utilities", "blocks-utilities-worker"],
+  },
+  {
+    id: "studio",
+    label: "Studio",
+    routeSlug: "studio",
+    icon: "studio",
+    serviceNames: ["blocks-studio", "blocks-studio-worker"],
+  },
+  {
+    id: "agent",
+    label: "Agent",
+    routeSlug: "agent",
+    icon: "agent",
+    serviceNames: ["blocks-ai-api", "blocks-ai-worker"],
+  },
+];
+
+export const LOG_SERVICES: LogServiceRow[] = [
   {
     id: "blocks-iam",
     name: "Blocks IAM",
@@ -106,4 +212,4 @@ export const DUMMY_LOG_SERVICES: LogServiceRow[] = [
       "AI agent orchestration and tool-call logs. Trace prompt flows, model invocations, and agent-side failures.",
     status: "running",
   },
-]
+];

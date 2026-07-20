@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { IAPIResponse } from "@/models/api-response";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import type { ILog } from "../models/log.model";
@@ -6,6 +6,7 @@ import { lmtService } from "../services/lmt.service";
 
 type UseLogsParams = {
   serviceName: string;
+  serviceNames?: string[];
   pageSize?: number;
   startDate?: string;
   endDate?: string;
@@ -15,6 +16,7 @@ type UseLogsParams = {
 
 type LogsFetchKeyInput = {
   serviceName: string;
+  serviceNames: string[];
   tenantId: string;
   pageSize: number;
   startDate: string;
@@ -25,6 +27,7 @@ type LogsFetchKeyInput = {
 
 const buildInitialFetchKey = ({
   serviceName,
+  serviceNames,
   tenantId,
   pageSize,
   startDate,
@@ -34,6 +37,7 @@ const buildInitialFetchKey = ({
 }: LogsFetchKeyInput) =>
   JSON.stringify({
     serviceName,
+    serviceNames,
     tenantId,
     pageSize,
     startDate,
@@ -43,9 +47,11 @@ const buildInitialFetchKey = ({
   });
 
 const inFlightInitialFetches = new Map<string, Promise<IAPIResponse<ILog[]>>>();
+const EMPTY_SERVICE_NAMES: string[] = [];
 
 export const useLogs = ({
   serviceName,
+  serviceNames = EMPTY_SERVICE_NAMES,
   pageSize = 20,
   startDate = "",
   endDate = "",
@@ -58,11 +64,16 @@ export const useLogs = ({
   const [hasTopMore, setHasTopMore] = useState<boolean>(true);
   const [page, setPage] = useState<number>(0);
   const fetchKeyRef = useRef("");
+  const effectiveServiceNames = useMemo(
+    () => (serviceNames.length > 0 ? serviceNames : serviceName ? [serviceName] : []),
+    [serviceName, serviceNames],
+  );
 
   const generateFetchLogsPayload = useCallback(() => {
     return {
       pageSize,
       serviceName,
+      serviceNames: effectiveServiceNames,
       filter: {
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
@@ -70,13 +81,13 @@ export const useLogs = ({
       },
       search,
     };
-  }, [endDate, level, pageSize, search, serviceName, startDate]);
+  }, [effectiveServiceNames, endDate, level, pageSize, search, serviceName, startDate]);
 
   useEffect(() => {
     let cancelled = false;
 
     const fetchInitialLogs = async () => {
-      if (!serviceName) {
+      if (!effectiveServiceNames.length) {
         setInitialLogs([]);
         setIsLoading(false);
         setHasTopMore(false);
@@ -91,6 +102,7 @@ export const useLogs = ({
 
       const fetchKey = buildInitialFetchKey({
         serviceName,
+        serviceNames: effectiveServiceNames,
         tenantId,
         pageSize,
         startDate,
@@ -140,6 +152,7 @@ export const useLogs = ({
     };
   }, [
     endDate,
+    effectiveServiceNames,
     generateFetchLogsPayload,
     level,
     pageSize,
@@ -170,9 +183,10 @@ export const useLogs = ({
   const fetchNewLogs = useCallback(
     async (lastDate: string) => {
       try {
-        if (!serviceName || !tenantId || isLoading) return [];
+        if (!effectiveServiceNames.length || !tenantId || isLoading) return [];
         const response = await lmtService.log.getLiveLog({
           serviceName,
+          serviceNames: effectiveServiceNames,
           projectKey: tenantId,
           lastDate,
         });
@@ -181,7 +195,7 @@ export const useLogs = ({
         return [];
       }
     },
-    [isLoading, serviceName, tenantId],
+    [effectiveServiceNames, isLoading, serviceName, tenantId],
   );
 
   return { initialLogs, isLoading, hasTopMore, fetchOldLogs, fetchNewLogs };
