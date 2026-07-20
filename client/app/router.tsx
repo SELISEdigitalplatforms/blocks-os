@@ -65,7 +65,7 @@ import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 // Temporarily disabled
 // import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
-import ManagedServicesPage from "./routes/dashboard/managed-services";
+import MyServicesPage from "./routes/dashboard/my-services";
 import OidcBrandingPage from "./routes/dashboard/oidc-branding";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
 import LmtLayout from "@/layouts/lmt/lmt-layout";
@@ -215,7 +215,7 @@ export const router = createBrowserRouter([
                     children: [
                       {
                         index: true,
-                        element: <Navigate to="managed-services" replace />,
+                        element: <Navigate to="my-services" replace />,
                       },
                       // Temporarily disabled
                       // {
@@ -223,8 +223,13 @@ export const router = createBrowserRouter([
                       //   element: <SecretsList />,
                       // },
                       {
+                        path: "my-services",
+                        element: <MyServicesPage />,
+                      },
+                      // Redirect from the retired "managed-services" path
+                      {
                         path: "managed-services",
-                        element: <ManagedServicesPage />,
+                        element: <Navigate to="/app/secret-management/my-services" replace />,
                       },
                       {
                         path: "oidc",
