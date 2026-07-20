@@ -1,15 +1,15 @@
 import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
-import { useGetProjects } from "@seliseblocks/blocks-kit/hooks";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
 import type { Menu } from "@seliseblocks/blocks-kit/types";
 import { Navigate, Outlet, useParams } from "react-router-dom";
 import { ProjectOverviewLayout } from "./project-overview-layout";
+import { useGetProjects } from "@/hooks/use-project";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
-  basePath?: string;
+  basePath?: "/app/project";
   /** Where to redirect when no tenant-group id is present in the URL. */
-  consolePath?: string;
+  consolePath?: "/app/console";
   /** Route param that holds the tenant-group id. */
   paramName?: string;
 };
