@@ -2,7 +2,12 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { peopleService } from "@blocks-identifier/services/people.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export const useGetPeople = (option: { page: number; pageSize: number; filter: string }) => {
+export const useGetPeople = (option: {
+  page: number;
+  pageSize: number;
+  filter: string;
+  searchField: "name" | "email";
+}) => {
   const projectGroupId = useProjectStore().selectedTenantGroup || "";
   return useQuery({
     queryKey: ["people", option, projectGroupId],
@@ -13,7 +18,7 @@ export const useGetPeople = (option: { page: number; pageSize: number; filter: s
       }),
     select: (response) => ({
       peoples: response.peoples,
-      totalCount: response.totalCount,
+      totalCount: response.peoplesTotalCount,
       isOwner: response.isOwner,
     }),
     enabled: !!projectGroupId,
@@ -26,7 +31,12 @@ export const useInvitePeople = () => {
   return useMutation({
     mutationKey: ["people", "add"],
     mutationFn: peopleService.invitePeople,
-    onSuccess: () => {
+    onSuccess: async () => {
+      // New users are created by a background worker after the invite returns, so refreshing
+      // the list immediately would briefly show them missing. Wait a moment first so the
+      // invite feels like it completed on the fly. mutateAsync awaits this callback, so the
+      // dialog also stays in its pending state until the list is ready to show the person.
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       queryClient.invalidateQueries({ queryKey: ["people"] });
       queryClient.invalidateQueries({ queryKey: ["subscription-usage"] });
     },

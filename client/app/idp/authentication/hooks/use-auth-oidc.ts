@@ -1,4 +1,7 @@
 import { authOidc } from "@blocks-idp/authentication/services/auth-clients-oidc.service";
+import { ISaveOidcCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
+import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const useGetAuthOidcCredentials = (options: { projectKey: string }) => {
@@ -22,14 +25,26 @@ export const useGetAuthOidcCredential = (
 
 export const useSaveAuthOidc = () => {
   const queryClient = useQueryClient();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+
   return useMutation({
     mutationKey: ["authentication", "auth-oidc", "save"],
-    mutationFn: authOidc.clients.saveOidcCredential,
+    mutationFn: (payload: ISaveOidcCredentialPayload) => {
+      const savePayload: ISaveOidcCredentialPayload =
+        payload.registerAsIdentityProvider && tenantId
+          ? {
+              ...payload,
+              externalDiscoveryEndpoint: getBlocksOidcWellKnownUrl(tenantId),
+            }
+          : payload;
+      return authOidc.clients.saveOidcCredential(savePayload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["authentication"],
         exact: false,
       });
+      queryClient.invalidateQueries({ queryKey: ["identity-providers"] });
     },
   });
 };

@@ -37,6 +37,8 @@ describe("UserAccountService", () => {
       expect(http.post).toHaveBeenCalledWith(
         ACCOUNT_ENDPOINTS.ACTIVATE,
         mockAccountActivationPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -60,6 +62,8 @@ describe("UserAccountService", () => {
       expect(http.post).toHaveBeenCalledWith(
         ACCOUNT_ENDPOINTS.RESEND_ACTIVATION,
         mockResendActivationPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -80,7 +84,7 @@ describe("UserAccountService", () => {
 
       const result = await service.accountRecover(mockAccountRecoverPayload);
 
-      expect(http.post).toHaveBeenCalledWith(ACCOUNT_ENDPOINTS.RECOVER, mockAccountRecoverPayload);
+      expect(http.post).toHaveBeenCalledWith(ACCOUNT_ENDPOINTS.RECOVER, mockAccountRecoverPayload, undefined, { absoluteUrl: true });
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -103,6 +107,8 @@ describe("UserAccountService", () => {
       expect(http.post).toHaveBeenCalledWith(
         ACCOUNT_ENDPOINTS.RESET_PASSWORD,
         mockAccountResetPasswordPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -128,6 +134,8 @@ describe("UserAccountService", () => {
       expect(http.post).toHaveBeenCalledWith(
         ACCOUNT_ENDPOINTS.VALIDATE_ACTIVATION_CODE,
         mockActivationCodeValidationPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockActivationCodeExpirationResponse);
     });

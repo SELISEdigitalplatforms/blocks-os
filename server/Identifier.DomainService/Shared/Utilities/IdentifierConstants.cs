@@ -24,7 +24,7 @@ namespace DomainService.Shared
         public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_data_cleanup_listener";
         public const string LanguageDataMigrationQueue = "blocks_uilm_environment_data_migration_listener";
-        public const string IamQueue = "blocks_iam_listener_idp";
+        public const string IamQueue = "blocks_iam_listener_user";
         public const string MailQueue = "blocks_email_listener";
         public const string GenericMigrationQueue = "blocks_generic_migration_listener";
         public const string MigrationCompletionTopic = "migration_topic";
