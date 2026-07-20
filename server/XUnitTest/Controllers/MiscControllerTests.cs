@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Api.Controllers;
+using BlocksOs.Api.Controllers;
 using Blocks.Genesis;
 using Cloud.DomainService.Requests;
 using Cloud.DomainService.Responses;
@@ -9,7 +9,6 @@ using Cloud.LmtService.Models.Logs;
 using Cloud.LmtService.Models.Trace;
 using Cloud.LmtService.Services.Logs;
 using Cloud.LmtService.Services.Trace;
-using BlocksTemplate.Api.Controllers;
 using DomainService.Shared;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
@@ -162,9 +161,8 @@ namespace XUnitTest.Controllers
         private readonly Mock<ILogService> _service = new();
         private LogController Controller() => new(_service.Object);
 
-        // NOTE: All LogController endpoints are gated behind "blocks-os::mail::gets"
-        // which looks like a copy-paste bug (should be a log-specific permission).
-        // These tests assert current delegation behavior only; the attribute is not
+        // NOTE: All LogController endpoints are gated behind "blocks-os::log::gets".
+        // These tests assert delegation behavior only; the attribute is not
         // exercised by direct controller invocation.
 
         [Fact]

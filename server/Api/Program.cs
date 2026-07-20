@@ -1,5 +1,5 @@
 using Blocks.Genesis;
-using BlocksTemplate.Api;
+using BlocksOs.Api;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using CloudConfiguration.DomainService.Shared.Utilities;
