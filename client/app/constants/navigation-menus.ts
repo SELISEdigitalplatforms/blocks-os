@@ -100,8 +100,8 @@ export const navigationMenus: Menu[] = [
       {
         id: "managed-services",
         type: "menu",
-        name: "My Service",
-        path: "/app/secret-management/managed-services",
+        name: "My Services",
+        path: "/app/secret-management/my-services",
         icon: Layers,
         desc: "Service-level secrets and configurations",
       },
@@ -257,7 +257,7 @@ export const navigationMenus: Menu[] = [
   {
     id: "service-identity__lmt",
     type: "menu",
-    name: "LMT",
+    name: "Logs & Traces",
     path: "/app/lmt",
     icon: Zap,
     children: [
