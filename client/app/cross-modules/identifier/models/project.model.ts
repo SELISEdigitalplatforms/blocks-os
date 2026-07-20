@@ -1,7 +1,9 @@
+import { DomainAction } from "@/pages/dashboard/components/domain";
 import {
   GRANT_TYPES,
   SSO_PROVIDERS,
 } from "@blocks-idp/authentication/constants";
+import { IDomain } from "@seliseblocks/blocks-kit/models";
 
 export interface IProject {
   itemId: string;
@@ -112,14 +114,11 @@ export interface IValidateCNameProjectResponse {
 }
 
 export interface IUpdateProjectPayload {
-  name: string;
-  applicationDomain: string;
-  isCookieEnable?: boolean;
-  cookieDomain?: string;
-  useCustomDomain: boolean;
-  customDomain: string;
-  projectKey: string;
+  action: DomainAction;
+  application: IDomain;
+  applicationDomain?: string;
 }
+
 export interface IUpdateTenantGroupPayload {
   name: string;
   tenantGroupId: string;
