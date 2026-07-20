@@ -22,7 +22,6 @@ export const useGetPeople = (option: {
       isOwner: response.isOwner,
     }),
     enabled: !!projectGroupId,
-    refetchOnMount: "always",
   });
 };
 
