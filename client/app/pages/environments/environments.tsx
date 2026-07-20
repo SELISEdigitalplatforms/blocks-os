@@ -24,7 +24,6 @@ import type { IMigrationStatusResponse } from "@blocks-identifier/models/project
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { CircleHelp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const isRecentMigrationForTarget = (
   data: IMigrationStatusResponse[number],
@@ -73,7 +72,6 @@ export const EnvironmentsPage = () => {
   });
   const isViewerOwner = peopleData?.isOwner ?? false;
   const [addEnvModalOpen, setAddEnvModalOpen] = useState(false);
-  const navigate = useNavigate();
   const { data: migrationStatus, refetch: refetchMigrationStatus } =
     useGetMigrationStatus(groupId as string);
   const handleMigrationNotification = useCallback(
