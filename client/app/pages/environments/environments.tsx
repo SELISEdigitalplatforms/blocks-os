@@ -68,6 +68,7 @@ export const EnvironmentsPage = () => {
     page: 0,
     pageSize: 1,
     filter: "",
+    searchField: "name",
   });
   const isViewerOwner = peopleData?.isOwner ?? false;
   const [addEnvModalOpen, setAddEnvModalOpen] = useState(false);

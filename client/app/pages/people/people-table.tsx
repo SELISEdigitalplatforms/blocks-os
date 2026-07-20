@@ -208,22 +208,28 @@ export const PeopleTable = ({
                   className="w-fit bg-primary/10 px-2 py-0.5 text-[10px] text-xs font-normal text-primary"
                 />
               )}
+              {/* Pending Invite: they were sent an invitation but have not accepted it yet. */}
               {info.row.original.sharedEnviroments.some(
                 (env) => env.isInvitationSent && !env.isInvitationConfirmed,
               ) &&
                 !info.row.original.sharedEnviroments.some(
                   (env) => env.isCreator,
                 ) && (
-                  <>
-                    <PeopleStatusBadge
-                      status="Pending Invite"
-                      className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
-                    />
-                    <PeopleStatusBadge
-                      status="Inactive"
-                      className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
-                    />
-                  </>
+                  <PeopleStatusBadge
+                    status="Pending Invite"
+                    className="w-fit bg-warning-100 px-2 py-0.5 text-[10px] text-xs font-normal text-warning-700"
+                  />
+                )}
+              {/* Inactive: the account itself is not activated yet (no password / unverified).
+                  Independent of invite acceptance — accepting an invite does not activate the account. */}
+              {info.row.original.peopleDetails.allowResendActivation &&
+                !info.row.original.sharedEnviroments.some(
+                  (env) => env.isCreator,
+                ) && (
+                  <PeopleStatusBadge
+                    status="Inactive"
+                    className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
+                  />
                 )}
             </div>
           );

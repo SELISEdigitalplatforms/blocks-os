@@ -40,6 +40,7 @@ vi.mock("@blocks-identifier/services/project.service", () => ({
     addAssets: vi.fn(),
     getEnvRepositories: vi.fn(),
     repoUpdate: vi.fn(),
+    updateProject: vi.fn(),
     updateTenantGroup: vi.fn(),
     validateCNameProject: vi.fn(),
     disableProject: vi.fn(),
@@ -123,7 +124,7 @@ describe("use-project hooks", () => {
         wrapper: createWrapper(),
       });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(crossProjectService.getEnvRepositories).toHaveBeenCalledWith("pk");
+      expect(crossProjectService.getEnvRepositories).toHaveBeenCalledWith();
     });
 
     it("useGetMigrationStatus fetches status", async () => {
@@ -182,17 +183,31 @@ describe("use-project hooks", () => {
       expect(fn).toHaveBeenCalled();
     });
 
-    it("useUpdateProject and useUpdateTenantGroup both call updateTenantGroup", async () => {
+    it("useUpdateProject calls updateProject and useUpdateTenantGroup calls updateTenantGroup", async () => {
+      vi.mocked(crossProjectService.updateProject).mockResolvedValue({} as never);
       vi.mocked(crossProjectService.updateTenantGroup).mockResolvedValue({} as never);
-      const { result: r1 } = renderHook(() => useUpdateProject({ projectKey: "pk" }), {
+
+      const { result: r1 } = renderHook(() => useUpdateProject(), {
         wrapper: createWrapper(),
       });
-      await r1.current.mutateAsync({ name: "n", tenantGroupId: "tg" });
-      const { result: r2 } = renderHook(() => useUpdateTenantGroup({ tenantGroupId: "tg" }), {
+      await r1.current.mutateAsync({ projectKey: "pk", name: "n", applicationDomain: "d" });
+
+      const { result: r2 } = renderHook(() => useUpdateTenantGroup(), {
         wrapper: createWrapper(),
       });
       await r2.current.mutateAsync({ name: "n", tenantGroupId: "tg" });
-      expect(crossProjectService.updateTenantGroup).toHaveBeenCalledTimes(2);
+
+      expect(crossProjectService.updateProject).toHaveBeenCalledTimes(1);
+      expect(crossProjectService.updateProject).toHaveBeenCalledWith({
+        projectKey: "pk",
+        name: "n",
+        applicationDomain: "d",
+      });
+      expect(crossProjectService.updateTenantGroup).toHaveBeenCalledTimes(1);
+      expect(crossProjectService.updateTenantGroup).toHaveBeenCalledWith({
+        name: "n",
+        tenantGroupId: "tg",
+      });
     });
   });
 });
