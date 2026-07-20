@@ -30,7 +30,14 @@ const OldDataFetchingIndicator = () => (
   </div>
 );
 export const LogsList = () => {
-  const { selectedService, filter, pageSize } = useContext(LogsViewerContext);
+  const {
+    selectedService,
+    filter,
+    pageSize,
+    isManagedLoading,
+    isSourceBlocks,
+    services,
+  } = useContext(LogsViewerContext);
   const { level, startDate, endDate, search } = filter || {
     level: "",
     startDate: "",
@@ -61,13 +68,26 @@ export const LogsList = () => {
     if (search || level || startDate || endDate) return [];
     return await fetchNewLogs(lastItemTimestamp);
   };
+
+  // Check if we should show managed service specific states
+  const isManaged = !isSourceBlocks;
+  const noManagedServices = isManaged && services.length === 0;
+
   return (
     <Card className="relative">
       <CardHeader>
         <LogsFilterToolbar />
       </CardHeader>
       <CardContent className="h-[calc(100vh-340px)]">
-        {isLoading ? (
+        {isManagedLoading ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Loading managed services...
+          </div>
+        ) : noManagedServices ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            No managed services found.
+          </div>
+        ) : isLoading ? (
           <div className="grid h-full w-full gap-2 overflow-hidden">
             {Array.from({ length: 20 }).map((_, index) => (
               <Skeleton key={index} className="h-12 w-full rounded-lg" />
