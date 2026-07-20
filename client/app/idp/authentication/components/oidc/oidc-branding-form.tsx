@@ -188,7 +188,6 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
     pendingLogoFile,
     previewLogoUrl,
     saveOidc,
-    tenantId,
     uploadLogoToStorage,
   ]);
 

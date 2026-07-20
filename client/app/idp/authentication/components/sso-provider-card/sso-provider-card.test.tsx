@@ -51,13 +51,12 @@ vi.mock("../sso-provider-status-toggle", () => ({
   },
 }));
 
-const { SSOProviderCard, SSOProviderCardSkelton } = await import(
-  "./sso-provider-card"
-);
+const { SSOProviderCard, SSOProviderCardSkelton } =
+  await import("./sso-provider-card");
 
 type Config = Parameters<typeof SSOProviderCard>[0]["configuration"];
 
-const makeConfig = (overrides: Partial<Config> = {}): Config =>
+const makeConfig = (_overrides: Partial<Config> = {}): Config =>
   ({
     itemId: "cfg-1",
     provider: "google",

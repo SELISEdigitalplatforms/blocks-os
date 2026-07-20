@@ -9,6 +9,16 @@ namespace DomainService.People
         public string ProjectGroupId { get; set; }
         public List<string>? EnvironmentIds { get; set; }
         public bool? IsInvitationConfirmed { get; set; }
+
+        /// <summary>Which field <see cref="BaseGetsRequest{T}.Filter"/> searches: "name" or "email". Null/other = all fields.</summary>
+        public string? SearchField { get; set; }
+    }
+
+    /// <summary>Fields the People list can be searched on.</summary>
+    public static class PeopleSearchFields
+    {
+        public const string Name = "name";
+        public const string Email = "email";
     }
 
     public class GetPeoples
