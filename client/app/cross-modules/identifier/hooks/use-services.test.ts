@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
-import { serviceRegistryService } from "@blocks-identifier/services/service-registery.service";
+import { serviceRegistryService } from "@blocks-identifier/services/service-registry.service";
 import { useRegisterService, useGetAllServices } from "./use-services";
 
-vi.mock("@blocks-identifier/services/service-registery.service", () => ({
+vi.mock("@blocks-identifier/services/service-registry.service", () => ({
   serviceRegistryService: {
     registerService: vi.fn(),
     getAllServices: vi.fn(),

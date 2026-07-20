@@ -4,7 +4,7 @@ using FluentValidation;
 
 namespace CloudConfiguration.DomainService.Notification.Validators
 {
-    public class NotificationConfigurationValidator : AbstractValidator<SaveNotificatonConfigurationRequest>
+    public class NotificationConfigurationValidator : AbstractValidator<SaveNotificationConfigurationRequest>
     {
         private readonly IConfigurationRepository _configurationRepository;
 

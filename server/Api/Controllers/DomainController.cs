@@ -3,7 +3,7 @@ using DomainService.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
  [ApiController]
  [Route("[controller]/[action]")]
