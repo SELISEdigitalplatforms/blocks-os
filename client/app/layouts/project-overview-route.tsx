@@ -1,10 +1,9 @@
-import { Navigate, Outlet } from "react-router-dom";
 import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
-import type { Menu } from "@seliseblocks/blocks-kit/types";
-import { useSyncTenantGroupFromRoute } from "@seliseblocks/blocks-kit/hooks";
 import { useGetProjects } from "@seliseblocks/blocks-kit/hooks";
-import { ProjectOverviewLayout } from "./project-overview-layout";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
+import type { Menu } from "@seliseblocks/blocks-kit/types";
+import { Navigate, Outlet, useParams } from "react-router-dom";
+import { ProjectOverviewLayout } from "./project-overview-layout";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
@@ -56,9 +55,10 @@ export function ProjectOverviewRoute({
   consolePath = "/app/console",
   paramName = "tenantGroupId",
 }: ProjectOverviewRouteProps) {
-  const tenantGroupId = useSyncTenantGroupFromRoute(paramName);
+  const params = useParams();
+  const tenantGroupId = params[paramName];
   const { data, isLoading, isError } = useGetProjects({
-    tenantGroupId: tenantGroupId ?? "",
+    tenantGroupId: tenantGroupId,
   });
 
   if (!tenantGroupId) return <Navigate to={consolePath} replace />;

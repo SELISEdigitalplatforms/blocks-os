@@ -1,19 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http-client";
-import { OrganizationService } from "./organization.service";
-import { ORGANIZATION_ENDPOINTS } from "../constants/endpoint.constant";
+import { mockHttpClientFactory } from "@/test-utils/__mocks__";
+import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  mockGetOrganizationsPayload,
-  mockOrganizationsResponse,
   mockGetOrganizationByIdPayload,
   mockGetOrganizationByIdResponse,
-  mockSaveOrganizationPayload,
-  mockOrganizationConfigResponse,
+  mockGetOrganizationsPayload,
+  mockOrganizationsResponse,
   mockSaveOrganizationConfigPayload,
+  mockSaveOrganizationPayload,
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
-import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
+import { ORGANIZATION_ENDPOINTS } from "../constants/endpoint.constant";
+import { OrganizationService } from "./organization.service";
 
 vi.mock("@/lib/http-client", () => mockHttpClientFactory());
 
@@ -34,7 +33,9 @@ describe("OrganizationService", () => {
     it("should GET with correct query params", async () => {
       vi.mocked(http.get).mockResolvedValue(mockOrganizationsResponse);
 
-      const result = await service.getOrganizations(mockGetOrganizationsPayload);
+      const result = await service.getOrganizations(
+        mockGetOrganizationsPayload,
+      );
 
       expect(http.get).toHaveBeenCalledWith(
         `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${mockGetOrganizationsPayload.projectKey}&page=${mockGetOrganizationsPayload.page}&pageSize=${mockGetOrganizationsPayload.pageSize}`,
@@ -47,9 +48,9 @@ describe("OrganizationService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getOrganizations(mockGetOrganizationsPayload)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(
+        service.getOrganizations(mockGetOrganizationsPayload),
+      ).rejects.toThrow("Network error");
     });
   });
 
@@ -58,7 +59,9 @@ describe("OrganizationService", () => {
     it("should GET with correct query params", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetOrganizationByIdResponse);
 
-      const result = await service.getOrganizationById(mockGetOrganizationByIdPayload);
+      const result = await service.getOrganizationById(
+        mockGetOrganizationByIdPayload,
+      );
 
       expect(http.get).toHaveBeenCalledWith(
         `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}?ProjectKey=${mockGetOrganizationByIdPayload.projectKey}&ItemId=${mockGetOrganizationByIdPayload.itemId}`,
@@ -71,9 +74,9 @@ describe("OrganizationService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getOrganizationById(mockGetOrganizationByIdPayload)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(
+        service.getOrganizationById(mockGetOrganizationByIdPayload),
+      ).rejects.toThrow("Network error");
     });
   });
 
@@ -82,7 +85,9 @@ describe("OrganizationService", () => {
     it("should POST to the correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const result = await service.saveOrganization(mockSaveOrganizationPayload);
+      const result = await service.saveOrganization(
+        mockSaveOrganizationPayload,
+      );
 
       expect(http.post).toHaveBeenCalledWith(
         ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION,
@@ -96,9 +101,9 @@ describe("OrganizationService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.saveOrganization(mockSaveOrganizationPayload)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(
+        service.saveOrganization(mockSaveOrganizationPayload),
+      ).rejects.toThrow("Network error");
     });
   });
 
@@ -144,9 +149,9 @@ describe("OrganizationService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getOrganizationConfig(TEST_PROJECT_KEY)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(
+        service.getOrganizationConfig(TEST_PROJECT_KEY),
+      ).rejects.toThrow("Network error");
     });
   });
 
@@ -155,7 +160,9 @@ describe("OrganizationService", () => {
     it("should POST to the correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const result = await service.saveOrganizationConfig(mockSaveOrganizationConfigPayload);
+      const result = await service.saveOrganizationConfig(
+        mockSaveOrganizationConfigPayload,
+      );
 
       expect(http.post).toHaveBeenCalledWith(
         ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG,
