@@ -132,7 +132,7 @@ function SecretManagementHeaderActions({
           </DialogTrigger>
         </ConfigureMagicUrlModal>
       )}
-      {currentPath === "managed-services" && (
+      {currentPath === "my-services" && (
         <>
           <Button
             variant="outline"

@@ -19,7 +19,7 @@ namespace DomainService.Projects
         Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTrace, Tenant project);
         Task<long> GetProjectCountAsync();
         Task InsertPeopleAsync(ProjectPeople projectPeople);
-        Task<bool> SaveTenantCertificate(TenantCertificate tenantCertificate);
+        Task<bool> SaveTenantCertificateAsync(TenantCertificate tenantCertificate);
         Task<Tenant> GetByTenantIdAsync(string tenantId);
         Task<List<SsoInfo>> GetSsoInfoAsync();
         Task UpdateTenantAssetAsync(TenantAsset asset);
@@ -27,7 +27,7 @@ namespace DomainService.Projects
         Task SaveTenantAssetAsync(TenantAsset asset);
         Task UpdateRepoResourceAsync(AddAssetRequest request);
         Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources);
-        Task UpdateIamConfiguration(Tenant project);
+        Task UpdateIamConfigurationAsync(Tenant project);
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);
         Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper);
         Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId);

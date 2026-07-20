@@ -278,7 +278,7 @@ namespace XUnitTest.Validators
 
         private NotificationConfigurationValidator Validator() => new(_repo.Object);
 
-        private static SaveNotificatonConfigurationRequest Valid() => new()
+        private static SaveNotificationConfigurationRequest Valid() => new()
         {
             Name = "notif",
             ChannelToNotify = NotifierTypes.SignalR,
