@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 
-namespace Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
@@ -82,6 +82,20 @@ namespace Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
+        public async Task<BaseResponse> UpdateProjectGroup([FromBody] UpdateProjectGroupRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ProjectGroupId))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "property_missing", "ProjectGroupId or ProjectName should not be empty" } } };
+            }
+
+            return await _projectManagementService.UpdateTenantGroupAsync(new UpdateTenantGroupRequest { TenantGroupId = request.ProjectGroupId, Name = request.Name });
+        }
+
+        // Deprecated: use UpdateProjectGroup
+        [Obsolete("Renamed to UpdateProjectGroup.")]
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::mutate-project")]
         public async Task<BaseResponse> UpdateTenantGroup([FromBody] UpdateTenantGroupRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.TenantGroupId))
@@ -89,7 +103,7 @@ namespace Api.Controllers
                 return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "property_missing", "TenantGroupId or ProjectNane should not be empty" } } };
             }
 
-             return await _projectManagementService.UpdateTenantGroupAsync(request);
+            return await UpdateProjectGroup(new UpdateProjectGroupRequest { ProjectGroupId = request.TenantGroupId, Name = request.Name });
         }
 
 
