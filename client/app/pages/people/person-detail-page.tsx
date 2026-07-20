@@ -58,6 +58,7 @@ export const PersonDetailPage = () => {
     page: 0,
     pageSize: 100,
     filter: user?.email || "",
+    searchField: "email",
   })
 
   const { data: environmentList, isLoading: isProjectLoading } = useGetProjects(

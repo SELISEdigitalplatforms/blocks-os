@@ -1,4 +1,6 @@
 import { PageHeader } from "@/components/page-header/page-header";
+import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
+import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
@@ -25,14 +27,13 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import {
   Pencil,
   Plus,
-  ArrowLeft,
   Loader2,
   Notebook,
   Waypoints,
 } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 
 function SecretManagementHeaderActions({
@@ -198,10 +199,12 @@ function SecretManagementHeaderActions({
 
 export default function SecretManagementLayout() {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const scoped = useScopedPath();
   const currentPath = pathname.split("/").pop() ?? "my-secret";
-  const isOidcBranding = /\/oidc\/[^/]+\/branding$/.test(pathname);
+  const oidcBrandingMatch = pathname.match(/\/oidc\/([^/]+)\/branding$/);
+  const isOidcBranding = Boolean(oidcBrandingMatch);
+  const oidcClientId = oidcBrandingMatch?.[1];
+  const secretManagementBase = scoped("secret-management");
 
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   // Each query drives header actions for its own page only, so gate it on the
@@ -252,11 +255,17 @@ export default function SecretManagementLayout() {
     parseAsString.withDefault(""),
   );
 
+  if (isOidcBranding && oidcClientId) {
+    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc`] = "OIDC";
+    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc/${oidcClientId}`] =
+      null;
+    BREADCRUMB_CUSTOM_TITLES[
+      `${secretManagementBase}/oidc/${oidcClientId}/branding`
+    ] = "Template";
+  }
+
   const currentItem = isOidcBranding
-    ? {
-        label: "Template",
-        desc: "Customize the template appearance",
-      }
+    ? null
     : SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items).find(
         (item) => item.value === currentPath,
       );
@@ -305,37 +314,22 @@ export default function SecretManagementLayout() {
     <OidcBrandingHeaderProvider>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
-          {currentItem &&
-            (isOidcBranding ? (
-              <header className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <div className="flex min-w-0 items-start gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="mt-0.5 h-8 w-8 shrink-0"
-                    aria-label="Back to OIDC"
-                    onClick={() => navigate(scoped("secret-management/oidc"))}>
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                  <div className="min-w-0 space-y-1">
-                    <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
-                      {currentItem.label}
-                    </h1>
-                    <p className="text-sm text-muted-foreground">{currentItem.desc}</p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center justify-end gap-2 sm:pt-0.5">
-                  {headerActions}
-                </div>
-              </header>
-            ) : (
-              <PageHeader
-                title={currentItem.label}
-                description={currentItem.desc}
-                actions={headerActions}
+          {isOidcBranding ? (
+            <header className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
+              <PageBreadcrumb
+                breadcrumbIndex={4}
+                listClassName="text-base sm:text-lg"
+                className="flex"
               />
-            ))}
+              <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
+            </header>
+          ) : currentItem ? (
+            <PageHeader
+              title={currentItem.label}
+              description={currentItem.desc}
+              actions={headerActions}
+            />
+          ) : null}
           <Outlet />
         </div>
       </div>

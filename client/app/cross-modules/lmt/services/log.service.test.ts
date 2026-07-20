@@ -77,7 +77,12 @@ describe("LogService", () => {
 
       const result = await service.getLiveLog(payload);
 
-      const expectedUrl = `${LOG_ENDPOINTS.LIVE}?Name=${payload.serviceName}&LastDate=${payload.lastDate}&ProjectKey=${payload.projectKey}`;
+      const params = new URLSearchParams({
+        Name: payload.serviceName,
+        LastDate: payload.lastDate,
+        ProjectKey: payload.projectKey,
+      });
+      const expectedUrl = `${LOG_ENDPOINTS.LIVE}?${params.toString()}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockLogsResponse);
     });

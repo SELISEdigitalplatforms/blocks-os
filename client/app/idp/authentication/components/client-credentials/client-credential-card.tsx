@@ -15,7 +15,7 @@ import { useDeleteAuthClient } from "@blocks-idp/authentication/hooks/use-auth-c
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { isErrorWithErrors } from "@/lib/error";
 import {
   HoverCard,
@@ -28,11 +28,15 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
   return (
     <div className="min-w-0">
       <p className="mb-2 text-sm font-medium text-low-emphasis">{label}</p>
-      <div className="break-words text-base font-normal text-high-emphasis">
+      <div className="min-w-0 text-base font-normal text-high-emphasis">
         {children}
       </div>
     </div>
   );
+};
+
+const Column = ({ children }: { children: ReactNode }) => {
+  return <div className="flex min-w-0 flex-col gap-6">{children}</div>;
 };
 
 const formatLifetime = (minutes: number) => {
@@ -48,6 +52,13 @@ const formatLifetime = (minutes: number) => {
   if (rem === 0) return `${days} d`;
   const hours = Math.floor(rem / 60);
   return hours === 0 ? `${days} d ${rem} m` : `${days} d ${hours} h`;
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return format(date, "dd/MM/yyyy HH:mm");
 };
 
 const VISIBLE_BADGE_LIMIT = 5;
@@ -74,6 +85,16 @@ const getBackendErrorMap = (response: unknown) => {
   return undefined;
 };
 
+// const UserIdValue = ({ userId }: { userId?: string }) => {
+//   if (!userId) return <span>—</span>;
+
+//   return (
+//     <CopyToClipboardButton textToCopy={userId}>
+//       <MaskedText text={userId} length={30} showFirstN={4} showLastN={4} />
+//     </CopyToClipboardButton>
+//   );
+// };
+
 const PermissionChips = ({ permissions }: { permissions: string[] }) => {
   if (!permissions || permissions.length === 0) {
     return <span>N/A</span>;
@@ -83,7 +104,11 @@ const PermissionChips = ({ permissions }: { permissions: string[] }) => {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {visible.map((permission) => (
-        <Badge key={permission} variant="secondary" className="text-xs">
+        <Badge
+          key={permission}
+          variant="secondary"
+          className="max-w-full truncate text-xs"
+          title={permission}>
           {permission}
         </Badge>
       ))}
@@ -97,7 +122,11 @@ const PermissionChips = ({ permissions }: { permissions: string[] }) => {
           <HoverCardContent className="max-w-xs">
             <div className="flex flex-wrap gap-1.5">
               {permissions.slice(VISIBLE_BADGE_LIMIT).map((permission) => (
-                <Badge key={permission} variant="secondary" className="text-xs">
+                <Badge
+                  key={permission}
+                  variant="secondary"
+                  className="max-w-full truncate text-xs"
+                  title={permission}>
                   {permission}
                 </Badge>
               ))}
@@ -105,6 +134,20 @@ const PermissionChips = ({ permissions }: { permissions: string[] }) => {
           </HoverCardContent>
         </HoverCard>
       )}
+    </div>
+  );
+};
+
+const RoleChips = ({ roles }: { roles: string[] }) => {
+  if (!roles.length) return <span>N/A</span>;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {roles.map((role) => (
+        <Badge key={role} variant="secondary" className="text-xs">
+          {role}
+        </Badge>
+      ))}
     </div>
   );
 };
@@ -145,12 +188,12 @@ export const ClientCredentialsCard = ({
   return (
     <div className="grid gap-4">
       <Card
-        className="rounded-sm border bg-card py-6 shadow-sm"
+        className="overflow-hidden rounded-sm border bg-card py-4 shadow-sm sm:py-6"
         key={clientCredential.itemId}>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <CardTitle className="text-xl font-semibold text-high-emphasis">
+        <CardHeader className="px-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+              <CardTitle className="text-lg font-semibold text-high-emphasis sm:text-xl">
                 {clientCredential.name}
               </CardTitle>
               <Badge
@@ -158,12 +201,13 @@ export const ClientCredentialsCard = ({
                 {clientCredential.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               {onEdit && (
                 <Button
                   onClick={() => onEdit(clientCredential)}
                   variant="outline"
                   size="sm"
+                  className="w-full sm:w-auto"
                   aria-label="Edit client credential">
                   <Pencil className="h-4 w-4" />
                   <span className="ml-2">Edit</span>
@@ -174,15 +218,16 @@ export const ClientCredentialsCard = ({
                   setOpen(true);
                 }}
                 variant="outline"
-                className="text-[#D92127]">
+                size="sm"
+                className="w-full text-[#D92127] sm:w-auto">
                 Delete
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-8">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <CardContent className="px-4 sm:px-6">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-6">
+            <Column>
               <Item label="Client Id">
                 <CopyToClipboardButton textToCopy={clientCredential.itemId}>
                   <MaskedText
@@ -193,6 +238,12 @@ export const ClientCredentialsCard = ({
                   />
                 </CopyToClipboardButton>
               </Item>
+              <Item label="Role(s)">
+                <RoleChips roles={clientCredential.roles ?? []} />
+              </Item>
+            </Column>
+
+            <Column>
               <Item label="Client Secret">
                 <CopyToClipboardButton
                   textToCopy={clientCredential.clientSecret}>
@@ -204,6 +255,14 @@ export const ClientCredentialsCard = ({
                   />
                 </CopyToClipboardButton>
               </Item>
+              <Item label="Permission(s)">
+                <PermissionChips
+                  permissions={clientCredential.permissions ?? []}
+                />
+              </Item>
+            </Column>
+
+            <Column>
               <Item label="Token lifetime">
                 <span className="whitespace-nowrap">
                   {formatLifetime(
@@ -211,36 +270,17 @@ export const ClientCredentialsCard = ({
                   )}
                 </span>
               </Item>
-              <Item label="Role(s)">
-                <div className="flex items-center gap-2">
-                  {clientCredential.roles &&
-                  clientCredential.roles.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {clientCredential.roles.map((role: string) => (
-                        <Badge
-                          key={role}
-                          variant="secondary"
-                          className="text-xs">
-                          {role}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <span>N/A</span>
-                  )}
-                </div>
-              </Item>
-              <Item label="Permission(s)">
-                <PermissionChips
-                  permissions={clientCredential.permissions ?? []}
-                />
-              </Item>
               <Item label="Created on">
-                <span className="whitespace-nowrap">
-                  {format(clientCredential.createdDate, "dd/MM/yyyy HH:mm")}
+                <span className="text-sm sm:text-base">
+                  {formatDateTime(clientCredential.createdDate)}
                 </span>
               </Item>
-            </div>
+              <Item label="Updated on">
+                <span className="text-sm sm:text-base">
+                  {formatDateTime(clientCredential.lastUpdatedDate)}
+                </span>
+              </Item>
+            </Column>
           </div>
         </CardContent>
       </Card>
