@@ -26,7 +26,7 @@ import { Tabs, TabsContent } from "@/components/ui-kits/tabs/tabs";
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { formatDate, parseDateString } from "@/lib/utils";
-import { serviceRegistryService } from "@blocks-identifier/services/service-registery.service";
+import { serviceRegistryService } from "@blocks-identifier/services/service-registry.service";
 import { CLOUD_BUILTIN_SERVICES, TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
 import { useGetTraces } from "@blocks-lmt/hooks/use-trace";
 import { TraceTree, getTypeColor } from "@blocks-lmt/models/trace.model";

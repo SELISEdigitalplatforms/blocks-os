@@ -131,6 +131,17 @@ No Node process is required on the server at runtime.
 - Controllers live under **`server/Api/Controllers/`** (e.g. authentication, IAM, MFA, mail, storage, traces, projects). Route templates omit the **`api`** segment in code; **`GlobalApiRoutePrefixConvention`** in **`Program.cs`** adds the **`api`** prefix for attribute-routed controllers.
 - **`/api` is reserved for the HTTP API** in the integrated setup; keep client-side routes from colliding with API paths.
 
+### Version endpoint
+
+- **`GET /api/version`** returns the running API assembly version. No authentication is required.
+- Response body:
+
+  ```json
+  { "version": "1.0.0.0" }
+  ```
+
+  The value is read from the running assembly (`Assembly.GetExecutingAssembly().GetName().Version`), so it reflects whatever version the deployed build was stamped with.
+
 ## License
 
 See [LICENSE](LICENSE).
