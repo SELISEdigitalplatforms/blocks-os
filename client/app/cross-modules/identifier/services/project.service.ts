@@ -118,7 +118,7 @@ export class ProjectService {
   updateTenantGroup(
     payload: IUpdateTenantGroupPayload,
   ): Promise<IUpdateProjectResponse> {
-    return http.post(PROJECT_ENDPOINTS.UPDATE_TENANT_GROUP, payload);
+    return http.post(PROJECT_ENDPOINTS.UPDATE_PROJECT_GROUP, payload);
   }
   disableProject(
     payload: IDisableProjectPayload,
