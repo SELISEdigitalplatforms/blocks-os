@@ -371,7 +371,7 @@ namespace DomainService.Projects
             }
         }
 
-        public async Task UpdateIamConfiguration(Tenant project)
+        public async Task UpdateIamConfigurationAsync(Tenant project)
         {
             var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
             var collection = targetedDb.GetCollection<BsonDocument>("IamConfigurations");
@@ -474,7 +474,7 @@ namespace DomainService.Projects
             await _clientDb.GetCollection<ProjectPeople>("ProjectPeoples").InsertOneAsync(projectPeople);
         }
 
-        public async Task<bool> SaveTenantCertificate(TenantCertificate tenantCertificate)
+        public async Task<bool> SaveTenantCertificateAsync(TenantCertificate tenantCertificate)
         {
             await _clientDb.GetCollection<TenantCertificate>("TenantCertificates")
                 .ReplaceOneAsync(x => x.ItemId == tenantCertificate.ItemId, tenantCertificate, new ReplaceOptions { IsUpsert = true });

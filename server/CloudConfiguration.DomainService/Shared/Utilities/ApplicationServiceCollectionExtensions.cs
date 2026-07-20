@@ -19,7 +19,7 @@ namespace CloudConfiguration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IConfigurationService, ConfigurationService>();
             serviceCollection.AddSingleton<IConfigurationRepository, ConfigurationRepository>();
 
-            serviceCollection.AddSingleton<IValidator<SaveNotificatonConfigurationRequest>, NotificationConfigurationValidator>();
+            serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
         }
