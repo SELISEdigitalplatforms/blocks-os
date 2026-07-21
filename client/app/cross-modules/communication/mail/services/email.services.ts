@@ -4,7 +4,7 @@ import {
   IEmailUsageResponse,
   IGetMailBoxMailResponse,
 } from "../models/email";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import {
   EMAIL_TEMPLATE_ENDPOINTS,
   MAIL_CONFIG_ENDPOINTS,
@@ -33,7 +33,7 @@ class EmailService {
   ): Promise<IEmailConfig[]> => {
     return http.get(
       `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=${pageNumber + 1}&pageSize=${pageSize}`,
-       undefined,
+      undefined,
       { absoluteUrl: true },
     );
   };
@@ -110,7 +110,11 @@ class EmailService {
       params.append("SendDateRange.EndDate", endDate);
     }
 
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, { absoluteUrl: true });
+    return http.get(
+      `${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`,
+      undefined,
+      { absoluteUrl: true },
+    );
   };
 
   getMailBoxMail = (messageId: string): Promise<IGetMailBoxMailResponse> => {
@@ -121,18 +125,18 @@ class EmailService {
     );
   };
 
-  saveMailConfig = (payload: ISaveMailConfigPayload): Promise<{
+  saveMailConfig = (
+    payload: ISaveMailConfigPayload,
+  ): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
     itemId: string;
   }> => {
     return http
-      .post<{ errors: unknown; isSuccess: boolean }>(
-        MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG,
-        payload,
-        undefined,
-        { absoluteUrl: true },
-      )
+      .post<{
+        errors: unknown;
+        isSuccess: boolean;
+      }>(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload, undefined, { absoluteUrl: true })
       .then((response) => ({
         isSuccess: !!response?.isSuccess,
         errors: response?.errors ?? null,
@@ -156,7 +160,9 @@ class EmailService {
       replyTo: [data.to],
       isTestMail: true,
     };
-    return http.post(MAIL_ENDPOINTS.SEND_TO_ANY, payload, undefined, { absoluteUrl: true });
+    return http.post(MAIL_ENDPOINTS.SEND_TO_ANY, payload, undefined, {
+      absoluteUrl: true,
+    });
   };
 
   saveMailTemplate(requestBody: {
@@ -178,7 +184,9 @@ class EmailService {
         errors: null | unknown;
         isSuccess: boolean;
         itemId: string;
-      }>(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody, undefined, { absoluteUrl: true })
+      }>(EMAIL_TEMPLATE_ENDPOINTS.SAVE_TEMPLATE, requestBody, undefined, {
+        absoluteUrl: true,
+      })
       .then((response) => response);
   }
 
@@ -198,7 +206,9 @@ class EmailService {
         errors: null | unknown;
         isSuccess: boolean;
         itemId: string;
-      }>(EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE, requestBody, undefined, { absoluteUrl: true })
+      }>(EMAIL_TEMPLATE_ENDPOINTS.CLONE_TEMPLATE, requestBody, undefined, {
+        absoluteUrl: true,
+      })
       .then((response) => response);
   }
 
@@ -223,11 +233,10 @@ class EmailService {
     isSuccess: boolean;
   }> {
     return http
-      .delete<{ errors: unknown; isSuccess: boolean }>(
-        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${encodeURIComponent(payload.configurationId)}`,
-        undefined,
-        { absoluteUrl: true },
-      )
+      .delete<{
+        errors: unknown;
+        isSuccess: boolean;
+      }>(`${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${encodeURIComponent(payload.configurationId)}`, undefined, { absoluteUrl: true })
       .then((response) => ({
         isSuccess: !!response?.isSuccess,
         errors: response?.errors ?? null,

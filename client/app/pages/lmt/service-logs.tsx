@@ -1,7 +1,7 @@
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
-import { useLmtBasePath } from "@/hooks/use-scoped-path";
+import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import {
   LOG_SERVICE_AI_DESCRIPTION,
   LOG_SERVICE_AI_QUERIES,

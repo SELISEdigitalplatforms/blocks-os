@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import {
   IGetTraceByTraceIdPayload,
   IGetTracesPayload,
