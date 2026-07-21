@@ -163,9 +163,9 @@ server/Api/wwwroot/**
 
 #graphify out
 
-client/graphify-out/
+# client/graphify-out/
 
-graphify-out/
+# graphify-out/
 
 server/**/launchSettings.json
 
@@ -184,3 +184,5 @@ docs/
 change.md
 
 .kilo
+# build output (never commit)
+builds/
