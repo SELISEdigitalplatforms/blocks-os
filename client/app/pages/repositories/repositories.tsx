@@ -32,7 +32,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Input } from "@/components/ui-kits/input/input";
 import { IResource } from "@blocks-identifier/models/project.model";
 import { IRepository } from "@/cross-modules/devops/models/github-info";
-import { useDebounce } from "@seliseblocks/blocks-kit";
+import { useDebounce } from "@seliseblocks/blocks-kit/hooks";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { RepositorySelectionModal } from "@/components/repository-selection-modal/repository-selection-modal";
 import ProviderButtons from "@/cross-modules/devops/components/deployment-steps/render-repos/render-provider";
