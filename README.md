@@ -36,8 +36,8 @@ blocks-os/
 │   ├── Identifier.DomainService/
 │   ├── Mfa.DomainService/
 │   ├── XUnitTest/                  # Unit tests
-│   ├── Captcha.Driver/, Iam.Driver/, Mfa.Driver/   # Driver-style projects (not in Blocks.slnx)
-│   └── Blocks.slnx                 # Solution: Api, domain libraries, Worker, XUnitTest
+│   ├── Captcha.Driver/, Iam.Driver/, Mfa.Driver/   # Driver-style projects
+│   └── BlocksOS.sln                # Solution: Api, domain libraries, Worker, XUnitTest
 ├── run.sh                          # Build/run helpers (Unix/macOS; see below)
 ├── run.ps1                         # Same role on Windows (PowerShell; see below)
 ├── LICENSE
@@ -70,7 +70,13 @@ Both **`run.sh`** (Bash) and **`run.ps1`** (PowerShell) live at the repo root. T
 | **`-f`**, **`--frontend`** | Vite dev server: **`npm run dev`** in **`client/`** (`run.sh` installs dependencies only if **`node_modules`** is missing; **`run.ps1`** runs **`npm install`** every time) |
 | **`-k`**, **`--kill-port`** | Stop whatever is listening on the API port (**5000**) |
 | **`-n`**, **`--npm`** *args…* | Run **`npm`** in **`client/`** (e.g. `run test`, `run build`) |
+| **`-tf`**, **`--test-fe`** | Frontend unit tests in **`client/`** (build as a TS gate, then **vitest**; `SKIP_BUILD=1` skips the build) |
+| **`-te`**, **`--test-e2e`** | End-to-end tests in **`e2e/`** (**Playwright**; starts the API itself, needs **`e2e/.env.e2e`**) |
+| **`-tb`**, **`--test-be`** | Backend unit tests: **`dotnet clean`** → **`build`** → **`test`** on **`server/BlocksOS.sln`** |
+| **`-ta`**, **`--test-all`** | FE unit → BE unit → E2E, stopping at the first failure |
 | **`-h`**, **`--help`** | Show usage |
+
+Full task-runner reference, including test workflows: **[docs/run-scripts.md](docs/run-scripts.md)**.
 
 **Windows only (`run.ps1`):** **`-d`** / **`--dotnet`** *args…* runs **`dotnet`** from the repo root (for example restore, build, or test commands).
 
@@ -81,6 +87,10 @@ Both **`run.sh`** (Bash) and **`run.ps1`** (PowerShell) live at the repo root. T
 ./run.sh -b              # API only (frees port 5000 first)
 ./run.sh -f              # Vite dev server
 ./run.sh -n run test     # npm in client/
+./run.sh -tf             # frontend unit tests
+./run.sh -tb             # backend unit tests
+./run.sh -te             # e2e tests
+./run.sh -ta             # everything
 ```
 
 `run.sh` syncs the built SPA with **`rsync`** (`dist/` → `wwwroot/`). For **`-a`**, the API and Worker run as background jobs in the same terminal; **Ctrl+C** runs the script’s cleanup trap.
@@ -93,6 +103,10 @@ Both **`run.sh`** (Bash) and **`run.ps1`** (PowerShell) live at the repo root. T
 .\run.ps1 -f             # Vite dev server
 .\run.ps1 -n run test    # npm in client/
 .\run.ps1 -d test server/XUnitTest/XUnitTest.csproj
+.\run.ps1 -tf            # frontend unit tests
+.\run.ps1 -tb            # backend unit tests
+.\run.ps1 -te            # e2e tests
+.\run.ps1 -ta            # everything
 ```
 
 `run.ps1` syncs **`dist`** → **`wwwroot`** with **`robocopy`**. It runs **`dotnet restore`** on the Api and Worker projects before **`-b`**, **`-w`**, and **`-a`**. With **`-a`**, two extra PowerShell windows open (one for the API, one for the Worker); press **Enter** in the original window to stop those processes.
