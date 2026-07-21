@@ -284,7 +284,16 @@ namespace DomainService.Projects
             return await unfinishedList.ToListAsync();
         }
 
-        public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
+        public async Task<ProjectStatusTracer?> GetUnfinishedProjectByIdAsync(string itemId)
+        {
+           var collection = _clientDb.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
+
+           var filter = Builders<ProjectStatusTracer>.Filter.Eq(mc => mc.ProjectId, itemId);
+           var unfinishedList = await collection.FindAsync(filter);
+           return await unfinishedList.FirstOrDefaultAsync();
+        }      
+
+  public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
         {
             if (statusTracer.IsDefaultConfigurationCopied) return;
 
