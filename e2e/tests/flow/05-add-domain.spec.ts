@@ -1,13 +1,12 @@
-import { test, expect } from "@playwright/test";
-import { randomLetters, readFlowState } from "../../support/flow-state";
+import { test, expect } from "../../support/test-base";
+import { randomLetters, requireProject } from "../../support/flow-state";
 
 // Sequential flow — step 5: enter an environment's dashboard and add an
 // application domain. The domain field rejects "@" (schema requires a real
 // domain), so we use a dotted subdomain under selise.biz, e.g. abc.defgh.selise.biz.
 
 test("05 - add an application domain in an environment", async ({ page }) => {
-  const { tenantGroupId } = readFlowState();
-  expect(tenantGroupId, "run 01-create-project first").toBeTruthy();
+  const { tenantGroupId } = requireProject();
 
   const domain = `${randomLetters(3)}.${randomLetters(5)}.selise.biz`;
 

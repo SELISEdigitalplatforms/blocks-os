@@ -1,12 +1,11 @@
-import { test, expect } from "@playwright/test";
-import { randomToken, readFlowState, writeFlowState } from "../../support/flow-state";
+import { test, expect } from "../../support/test-base";
+import { randomToken, requireProject, writeFlowState } from "../../support/flow-state";
 
 // Sequential flow — step 3: invite a person to the project's Development
 // environment. Email: blocks.e2e.<random>@yopmail.com. Saves the email.
 
 test("03 - invite a person to Development", async ({ page }) => {
-  const { tenantGroupId } = readFlowState();
-  expect(tenantGroupId, "run 01-create-project first").toBeTruthy();
+  const { tenantGroupId } = requireProject();
 
   const personEmail = `blocks.e2e.${randomToken(6)}@yopmail.com`;
 
