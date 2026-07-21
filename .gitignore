@@ -184,6 +184,9 @@ docs/
 change.md
 
 .kilo
+# ai agent config (local to each machine; codex config is tracked deliberately)
+.claude/
+CLAUDE.md
 # build output (never commit)
 builds/
 .sonarqube/
