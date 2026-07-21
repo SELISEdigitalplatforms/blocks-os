@@ -5,7 +5,7 @@ using Secrets.DomainService.Entities;
 using Secrets.DomainService.ResponseModel;
 using Secrets.DomainService.Services;
 
-namespace BlocksTemplate.Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
