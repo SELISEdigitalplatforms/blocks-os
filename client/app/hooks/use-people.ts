@@ -1,8 +1,19 @@
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { peopleService } from "@blocks-identifier/services/people.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { GetPeopleResponse } from "@/cross-modules/identifier/models/people.model";
 
-export const useGetPeople = (option: { page: number; pageSize: number; filter: string }) => {
+export type UseGetPeopleReturnType = {
+  peoples: GetPeopleResponse["peoples"];
+  totalCount: GetPeopleResponse["peoplesTotalCount"];
+  isOwner: GetPeopleResponse["isOwner"];
+};
+export const useGetPeople = (option: {
+  page: number;
+  pageSize: number;
+  filter: string;
+  searchField: "name" | "email";
+}) => {
   const projectGroupId = useProjectStore().selectedTenantGroup || "";
   return useQuery({
     queryKey: ["people", option, projectGroupId],
@@ -17,7 +28,6 @@ export const useGetPeople = (option: { page: number; pageSize: number; filter: s
       isOwner: response.isOwner,
     }),
     enabled: !!projectGroupId,
-    refetchOnMount: "always",
   });
 };
 

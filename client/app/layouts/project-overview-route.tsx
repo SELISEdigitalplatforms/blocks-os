@@ -1,16 +1,15 @@
-import { Navigate, Outlet } from "react-router-dom";
 import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
-import type { Menu } from "@seliseblocks/blocks-kit/types";
-import { useSyncTenantGroupFromRoute } from "@seliseblocks/blocks-kit/hooks";
-import { useGetProjects } from "@seliseblocks/blocks-kit/hooks";
-import { ProjectOverviewLayout } from "./project-overview-layout";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
+import type { Menu } from "@seliseblocks/blocks-kit/types";
+import { Navigate, Outlet, useParams } from "react-router-dom";
+import { ProjectOverviewLayout } from "./project-overview-layout";
+import { useGetProjects } from "@/hooks/use-project";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
-  basePath?: string;
+  basePath?: "/app/project";
   /** Where to redirect when no tenant-group id is present in the URL. */
-  consolePath?: string;
+  consolePath?: "/app/console";
   /** Route param that holds the tenant-group id. */
   paramName?: string;
 };
@@ -56,9 +55,10 @@ export function ProjectOverviewRoute({
   consolePath = "/app/console",
   paramName = "tenantGroupId",
 }: ProjectOverviewRouteProps) {
-  const tenantGroupId = useSyncTenantGroupFromRoute(paramName);
+  const params = useParams();
+  const tenantGroupId = params[paramName];
   const { data, isLoading, isError } = useGetProjects({
-    tenantGroupId: tenantGroupId ?? "",
+    tenantGroupId: tenantGroupId,
   });
 
   if (!tenantGroupId) return <Navigate to={consolePath} replace />;
