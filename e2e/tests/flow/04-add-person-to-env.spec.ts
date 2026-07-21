@@ -1,12 +1,12 @@
-import { test, expect } from "@playwright/test";
-import { readFlowState } from "../../support/flow-state";
+import { test, expect } from "../../support/test-base";
+import { readFlowState, requireProject } from "../../support/flow-state";
 
 // Sequential flow — step 4: grant the invited person access to another
 // environment (Testing) via their detail page → Environments tab.
 
 test("04 - grant the invited person access to Testing", async ({ page }) => {
-  const { tenantGroupId, personEmail } = readFlowState();
-  expect(tenantGroupId, "run 01-create-project first").toBeTruthy();
+  const { tenantGroupId } = requireProject();
+  const { personEmail } = readFlowState();
   expect(personEmail, "run 03-invite-people first").toBeTruthy();
 
   await page.goto(`/app/project/${tenantGroupId}/people`);

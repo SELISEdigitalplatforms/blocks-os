@@ -1,12 +1,18 @@
-import { test, expect } from "@playwright/test";
-import { randomToken, writeFlowState } from "../../support/flow-state";
+import { test, expect } from "../../support/test-base";
+import { resetFlowState, resolveProjectName, writeFlowState } from "../../support/flow-state";
 
 // Sequential flow — step 1: create a project with 2 environments (Development,
 // Testing). Saves the project name + tenantGroupId for the later steps.
 // Runs authenticated via the saved login session (see playwright.config.ts).
+//
+// The name comes from E2E_PROJECT_NAME when set, otherwise e2e-<random>.
 
 test("01 - create project with 2 environments", async ({ page }) => {
-  const projectName = `e2e-${randomToken(6)}`;
+  // Drop any leftovers (project id, invited person) from a previous run so a
+  // later step can never act on a stale project.
+  resetFlowState();
+
+  const projectName = resolveProjectName();
   const visible = { visible: true } as const;
 
   await page.goto("/app/console");

@@ -1,12 +1,11 @@
-import { test, expect } from "@playwright/test";
-import { readFlowState } from "../../support/flow-state";
+import { test, expect } from "../../support/test-base";
+import { requireProject } from "../../support/flow-state";
 
 // Sequential flow — step 2: add a third environment (Staging) to the project
 // created in step 1, via the project's Environments page.
 
 test("02 - add another environment (Staging)", async ({ page }) => {
-  const { tenantGroupId } = readFlowState();
-  expect(tenantGroupId, "run 01-create-project first").toBeTruthy();
+  const { tenantGroupId } = requireProject();
 
   await page.goto(`/app/project/${tenantGroupId}/environments`);
 
