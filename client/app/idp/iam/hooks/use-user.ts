@@ -1,4 +1,4 @@
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuthStore } from "@seliseblocks/blocks-kit/store";
 import {
   IGetUserByIdPayload,
   IGetUserRolesPayload,
@@ -156,7 +156,11 @@ export const useGetUserPermissions = (option: IGetUserRolesPayload) => {
 };
 
 export const useUserRoles = (option: { id: string; projectKey: string }) => {
-  const { isLoading: isUserLoading, isFetching, data: userData } = useGetUserById(option);
+  const {
+    isLoading: isUserLoading,
+    isFetching,
+    data: userData,
+  } = useGetUserById(option);
   const { isLoading: isRolesLoading, data: rolesData } = useGetUserRoles({
     userId: option.id,
   });
@@ -209,13 +213,18 @@ export const useUserPermissions = (option: {
   userId: string;
   projectKey: string;
 }) => {
-  const { isLoading: isUserLoading, isFetching, data: userData } = useGetUserById({
+  const {
+    isLoading: isUserLoading,
+    isFetching,
+    data: userData,
+  } = useGetUserById({
     id: option.userId,
     projectKey: option.projectKey,
   });
-  const { isLoading: isPermissionsLoading, data: permissionsData } = useGetUserPermissions({
-    userId: option.userId,
-  });
+  const { isLoading: isPermissionsLoading, data: permissionsData } =
+    useGetUserPermissions({
+      userId: option.userId,
+    });
   const { isPending, mutateAsync } = useUpdateUser({
     id: option.userId,
     projectKey: option.projectKey,

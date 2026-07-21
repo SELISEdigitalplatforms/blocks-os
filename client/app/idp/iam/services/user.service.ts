@@ -27,12 +27,12 @@ import {
   IGetSignUpSettingResponse,
   ISaveSignUpSettingPayload,
   ISaveSignUpSettingResponse,
-  User,
 } from "@blocks-idp/iam/models/user";
 import { UserAccountService } from "./account.service";
 import { USER_ENDPOINTS } from "../constants/endpoint.constant";
 import { mapSignUpSettingFromApi } from "../utils/normalize-tenant-config";
 import { toSignupSettingsSaveApiPayload } from "../utils/signup-settings-payload";
+import { UserDetails } from "@seliseblocks/blocks-kit";
 
 export class UserService {
   constructor(public account: UserAccountService) {}
@@ -43,30 +43,28 @@ export class UserService {
     });
   }
 
-  getUser(): Promise<{ data: User }> {
+  getUser(): Promise<{ data: UserDetails }> {
     return http.get(`${USER_ENDPOINTS.GET_USERS}`, undefined, {
       absoluteUrl: true,
     });
   }
 
-  me(): Promise<{ data: User }> {
+  me(): Promise<{ data: UserDetails }> {
     return http.get(`${USER_ENDPOINTS.ME}`, undefined, {
       absoluteUrl: true,
     });
   }
 
-  getUserInfo(): Promise<User> {
+  getUserInfo(): Promise<UserDetails> {
     return http.get(`${USER_ENDPOINTS.USER_INFO}`, undefined, {
       absoluteUrl: true,
     });
   }
 
   getUserById(payload: IGetUserByIdPayload): Promise<IGetUserByIdResponse> {
-    return http.get(
-      `${USER_ENDPOINTS.GET_USERS}/${payload.id}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(`${USER_ENDPOINTS.GET_USERS}/${payload.id}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   addUser(createPayload: ICreateUserPayload): Promise<ICreateUserResponse> {
@@ -118,7 +116,9 @@ export class UserService {
   ): Promise<IGetSignUpSettingResponse> {
     return http
       .get(USER_ENDPOINTS.GET_SIGNUP_SETTING, undefined, { absoluteUrl: true })
-      .then((response) => mapSignUpSettingFromApi(response as Record<string, unknown>));
+      .then((response) =>
+        mapSignUpSettingFromApi(response as Record<string, unknown>),
+      );
   }
 
   saveSignUpSetting(
@@ -208,11 +208,15 @@ export class UserService {
   }
 
   async getPats(): Promise<IPATResponse> {
-    return http.get(USER_ENDPOINTS.GET_USER_CODES, undefined, { absoluteUrl: true });
+    return http.get(USER_ENDPOINTS.GET_USER_CODES, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   async generatePats(payload: IGeneratePATPayload): Promise<IPATResponse> {
-    return http.post(USER_ENDPOINTS.GENERATE_USER_CODE, payload, undefined, { absoluteUrl: true });
+    return http.post(USER_ENDPOINTS.GENERATE_USER_CODE, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 
