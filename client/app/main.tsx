@@ -8,8 +8,10 @@ import { Toaster } from "./components/ui-kits/toaster/toaster";
 import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
 import QueryProvider from "./providers/query-provider";
 import { router } from "./router";
-import { BlocksAppLayout } from "@seliseblocks/blocks-kit/providers";
-import { ThemeProvider } from "./hooks/use-theme";
+import {
+  BlocksAppLayout,
+  ThemeProvider,
+} from "@seliseblocks/blocks-kit/providers";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

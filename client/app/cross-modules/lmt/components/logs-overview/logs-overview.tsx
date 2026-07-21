@@ -5,7 +5,7 @@ import {
   LOG_SERVICE_ICONS,
 } from "@/cross-modules/lmt/constants/logs.constant";
 import type { LogServiceRow } from "@blocks-lmt/models/log-entry.model";
-import { useLmtBasePath } from "@/hooks/use-scoped-path";
+import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { ArrowRight, Shield } from "lucide-react";
 import { type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
