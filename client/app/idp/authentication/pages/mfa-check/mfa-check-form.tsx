@@ -6,10 +6,14 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui-kits/input-otp/input-otp";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui-kits/input-otp/input-otp";
 import { showErrorToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuthStore } from "@seliseblocks/blocks-kit/store";
 import { useResendOtp } from "@blocks-idp/mfa/hooks/use-resend-otp";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -42,14 +46,16 @@ export const MfaCheckFrom = () => {
       code: "",
     },
   });
-  const submitHandler = async ({ code }: { code: string }) => {
+  const submitHandler = async () => {
     try {
       setAuthenticated();
       // showSuccessToast({ description: "You've successfully logged in" });
       navigate("/console");
     } catch (error) {
       if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors.error_description || `Something went wrong` });
+        showErrorToast({
+          errors: error.errors.error_description || `Something went wrong`,
+        });
       } else {
         showErrorToast({ errors: "Something went wrong" });
       }
@@ -87,8 +93,7 @@ export const MfaCheckFrom = () => {
               variant="link"
               className="p-0 text-sm font-medium !no-underline"
               onClick={resend}
-              disabled={!!remainingTime}
-            >
+              disabled={!!remainingTime}>
               Resend Otp
               {remainingTime > 0 &&
                 ` (${Math.floor(remainingTime / 60)}:${String(remainingTime % 60).padStart(2, "0")})`}
