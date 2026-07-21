@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Blocks.Genesis;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]

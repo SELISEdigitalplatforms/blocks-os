@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BlocksTemplate.Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
 
     [ApiController]
@@ -22,14 +22,14 @@ namespace BlocksTemplate.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::trace::gets")]
-        public async Task<object> GetTraces([FromBody] GetTracesRequest request)
+        public async Task<BaseQueryListResponse<IQueryable<TraceProjection>>> GetTraces([FromBody] GetTracesRequest request)
         {
             return await _traceService.GetTracesAsync(request);
         }
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::trace::gets")]
-        public async Task<object> GetTrace([FromQuery] GetTraceRequest request)
+        public async Task<BaseQueryListResponse<IQueryable<SingleTraceProjection>>> GetTrace([FromQuery] GetTraceRequest request)
         {
             return await _traceService.GetTraceAsync(request);
         }

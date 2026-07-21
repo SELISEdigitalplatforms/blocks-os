@@ -22,7 +22,9 @@ export const PROJECT_ENDPOINTS = {
   GETS: `/api${PROJECT_SUBPATH}/Gets`,
   GET: `/api${PROJECT_SUBPATH}/Get`,
   CREATE: `/api${PROJECT_SUBPATH}/Create`,
-  UPDATE: `/api${PROJECT_SUBPATH}/UpdateProject`,
+  UPDATE_PROJECT: `/api${PROJECT_SUBPATH}/UpdateProject`,
+  UPDATE_PROJECT_GROUP: `/api${PROJECT_SUBPATH}/UpdateProjectGroup`,
+  /** @deprecated Renamed to UPDATE_PROJECT_GROUP. */
   UPDATE_TENANT_GROUP: `/api${PROJECT_SUBPATH}/UpdateTenantGroup`,
   DISABLE: `/api${PROJECT_SUBPATH}/Disable`,
 
@@ -72,9 +74,9 @@ export const SERVICE_REGISTRY_ENDPOINTS = {
 
 // ─── Cloud Build endpoints ────────────────────────────────────────────────────
 
-const BUILD_SUBPATH = "/build";
+// const BUILD_SUBPATH = "/build";
 
 export const CLOUD_BUILD_ENDPOINTS = {
-  REPOS_LIST: `${API_BASES.LOGIC}/deployment/repos-list`,
-  REPO_UPDATE: `${API_BASES.LOGIC}/deployment/repo-update`,
+  REPOS_LIST: `${API_BASES.LOGIC}/Deployment/GetReposList`,
+  REPO_UPDATE: `${API_BASES.LOGIC}/Deployment/UpdateRepoDomain`,
 } as const;

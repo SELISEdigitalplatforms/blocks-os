@@ -1,11 +1,11 @@
-export const managedServicesGuidelineSteps = [
+export const myServicesGuidelineSteps = [
   {
     id: "0",
     description: (
       <div className="text-sm text-medium-emphasis">
-        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">Managed Service Overview</h4>
+        <h4 className="mb-2 text-lg font-semibold text-high-emphasis">My Services Overview</h4>
         <p>
-          Our Managed Service lets you register your applications and automatically collect logs and
+          My Services lets you register your applications and automatically collect logs and
           traces using our official NuGet package. Once integrated, all telemetry is securely
           ingested, stored, and visualized in real time through the platform dashboard. This guide
           will explain in detail the following step:
@@ -59,7 +59,7 @@ export const managedServicesGuidelineSteps = [
         <h4 className="mb-2 text-lg font-semibold text-high-emphasis">Viewing Your Data</h4>
         <p className="text-sm">
           Once the client is active, all incoming telemetry becomes searchable and visualizable in
-          the Managed Service dashboard.
+          the My Services dashboard.
         </p>
         <ul className="mt-2 list-inside list-disc text-sm">
           <li>Use the list view to browse logs and traces per service.</li>

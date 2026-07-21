@@ -333,6 +333,12 @@ export interface IActivationCodeExpirationResponse {
   errors: unknown | null;
   isSuccess: boolean;
   userId: string;
+  /**
+   * Distinguishes an already-activated account from a genuinely invalid/expired code so the activation
+   * page can point the user to sign in. Optional for backward compatibility with responses that predate it.
+   */
+  status?: "valid" | "expired" | "invalid" | "already_activated";
+  isAlreadyActive?: boolean;
 }
 
 export interface ISaveSignUpSettingPayload {

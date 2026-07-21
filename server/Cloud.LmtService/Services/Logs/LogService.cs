@@ -3,6 +3,7 @@ using Cloud.LmtService.Repositories.Logs;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Cloud.LmtService.Services.Logs
@@ -21,10 +22,16 @@ namespace Cloud.LmtService.Services.Logs
             _logRepository = logRepository;
         }
 
+        private static bool HasAnyServiceName(string? serviceName, IEnumerable<string>? serviceNames)
+        {
+            return !string.IsNullOrWhiteSpace(serviceName) ||
+                   serviceNames?.Any(name => !string.IsNullOrWhiteSpace(name)) == true;
+        }
+
         public async Task<GetLogsResponse> GetLiveLogsAsync(LiveLogRequest request)
         {
             _logger.LogInformation("Start of GetLiveLogsAsync");
-            if (string.IsNullOrWhiteSpace(request.Name) || request.LastDate == DateTime.MinValue)
+            if (!HasAnyServiceName(request.Name, request.ServiceNames) || request.LastDate == DateTime.MinValue)
             {
                 return new GetLogsResponse
                 {
@@ -40,7 +47,7 @@ namespace Cloud.LmtService.Services.Logs
         public async Task<GetLogsResponse> GetLogsAsync(GetLogsRequest request)
         {
             _logger.LogInformation("Start of GetLogsAsync");
-            if (string.IsNullOrWhiteSpace(request.ServiceName))
+            if (!HasAnyServiceName(request.ServiceName, request.ServiceNames))
             {
                 return new GetLogsResponse
                 {
@@ -56,7 +63,7 @@ namespace Cloud.LmtService.Services.Logs
         public async Task<GetLogsResponse> GetLogsByDateAsync(LogsByDateRequest request)
         {
             _logger.LogInformation("Start of GetLogsAsync");
-            if (string.IsNullOrWhiteSpace(request.ServiceName))
+            if (!HasAnyServiceName(request.ServiceName, request.ServiceNames))
             {
                 return new GetLogsResponse
                 {

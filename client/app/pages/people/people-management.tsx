@@ -1,8 +1,10 @@
-import { InvitePeople } from "./invite-people"
-import { PeopleList } from "./people-list"
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
-import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card"
-import { useGetPeople } from "@/hooks/use-people"
+import { InvitePeople } from "./invite-people";
+import { PeopleList } from "./people-list";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
+import { useGetPeople } from "@/hooks/use-people";
+import { usePeopleFilterQueryParams } from "./people-filter-toolbar";
+import { useMemo } from "react";
 
 export const PeopleManagementLoading = () => (
   <main className="flex flex-col p-6">
@@ -25,21 +27,40 @@ export const PeopleManagementLoading = () => (
       </Card>
     </div>
   </main>
-)
+);
 
 export const PeopleManagement = () => {
-  const { isLoading, data } = useGetPeople({
-    page: 0,
-    pageSize: 100,
-    filter: "",
-  })
+  const { queryParams, setQueryParams } = usePeopleFilterQueryParams();
+  const { isLoading, isFetching, data } = useGetPeople({
+    page: queryParams.page,
+    pageSize: queryParams.pageSize,
+    filter: queryParams.search,
+    searchField: queryParams.searchField as "name" | "email",
+  });
 
-  if (isLoading) return <PeopleManagementLoading />
+  const existingEmails = useMemo(() => {
+    return (
+      data?.peoples
+        ?.map((p) => p.peopleDetails.email?.toLowerCase())
+        .filter((email): email is string => email !== undefined) ?? []
+    );
+  }, [data?.peoples]);
 
-  const existingEmails =
-    data?.peoples
-      ?.map((p) => p.peopleDetails.email?.toLowerCase())
-      .filter((email): email is string => email !== undefined) ?? []
+  const onPageChangeHandler = (page: number) => {
+    setQueryParams((prev) => ({
+      ...prev,
+      page,
+    }));
+  };
+
+  const onPageSizeChangeHandler = (pageSize: number) => {
+    setQueryParams((prev) => ({
+      ...prev,
+      pageSize,
+      page: 0,
+    }));
+  };
+  if (isLoading) return <PeopleManagementLoading />;
 
   return (
     <main className="flex flex-col p-6">
@@ -53,8 +74,15 @@ export const PeopleManagement = () => {
         </div>
       </div>
       <div className="mb-5 mt-4 flex w-full flex-col">
-        <PeopleList />
+        <PeopleList
+          data={data}
+          isPeopleLoading={isLoading || isFetching}
+          page={queryParams.page}
+          pageSize={queryParams.pageSize}
+          onPageChange={onPageChangeHandler}
+          onPageSizeChange={onPageSizeChangeHandler}
+        />
       </div>
     </main>
-  )
-}
+  );
+};
