@@ -5,6 +5,7 @@ using DomainService.Projects;
 using DomainService.Shared;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Text.RegularExpressions;
 
 namespace DomainService.People
 {
@@ -16,6 +17,23 @@ namespace DomainService.People
 
         private const string _userCollectionName = "Users";
         private const string _peopleCollectionName = "ProjectPeoples";
+
+        // Shortest search term that will actually query; below this the filter is ignored (all people returned).
+        private const int MinSearchTermLength = 3;
+
+        // One document per person: _id is the UserId, Email is carried along to give the page a stable order.
+        private static readonly BsonDocument GroupByPersonStage = new("$group", new BsonDocument
+        {
+            { "_id", "$UserId" },
+            { "Email", new BsonDocument("$min", "$Email") }
+        });
+
+        // Email is unique per user, so _id only breaks ties between rows that never got an email.
+        private static readonly BsonDocument SortByPersonStage = new("$sort", new BsonDocument
+        {
+            { "Email", 1 },
+            { "_id", 1 }
+        });
 
         public PeopleRepository(IDbContextProvider dbContextProvider, ITenants tenants, IProjectRepository projectRepository)
         {
@@ -42,60 +60,116 @@ namespace DomainService.People
                 projectPeopleFilter &= Builders<ProjectPeople>.Filter.Eq(x => x.IsInvitationConfirmed, request.IsInvitationConfirmed.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(request?.Filter))
+            var searchTerm = request?.Filter?.Trim() ?? string.Empty;
+
+            // Require a minimum length so short, over-broad terms don't scan the whole collection. Enforced
+            // here too (not just the client) since the request can be crafted directly.
+            if (searchTerm.Length >= MinSearchTermLength)
             {
-                var regex = new BsonRegularExpression(request.Filter.ToString(), "i");
-                var userFilter = Builders<User>.Filter.Or(
-                    Builders<User>.Filter.Regex(x => x.Email, regex),
-                    Builders<User>.Filter.Regex(x => x.FirstName, regex),
-                    Builders<User>.Filter.Regex(x => x.LastName, regex)
-                );
-                var matchingUserIds = await userCollection.Find(userFilter).Project(x => x.ItemId).ToListAsync();
-                projectPeopleFilter &= Builders<ProjectPeople>.Filter.In(x => x.UserId, matchingUserIds);
+                // Escape the user input so it is matched as a literal substring, not a regex. Passing raw input
+                // to BsonRegularExpression allowed regex injection and catastrophic-backtracking (ReDoS).
+                var regex = new BsonRegularExpression(Regex.Escape(searchTerm), "i");
+                var field = request.SearchField?.Trim().ToLowerInvariant();
+
+                if (field == PeopleSearchFields.Email)
+                {
+                    // Email is denormalized onto ProjectPeople, so match it on the already project-scoped rows.
+                    // No scan of the (tenant-wide) Users collection at all.
+                    projectPeopleFilter &= Builders<ProjectPeople>.Filter.Regex(x => x.Email, regex);
+                }
+                else
+                {
+                    // Name (and the all-fields fallback) needs the Users collection. A case-insensitive regex
+                    // cannot use an index, so first narrow to this project's members and run the regex only over
+                    // them, instead of scanning every user in the tenant.
+                    var memberUserIds = await peopleCollection.Distinct(x => x.UserId, projectPeopleFilter).ToListAsync();
+
+                    var scopedToMembers = Builders<User>.Filter.In(x => x.ItemId, memberUserIds);
+                    var textMatch = field == PeopleSearchFields.Name
+                        ? Builders<User>.Filter.Or(
+                            Builders<User>.Filter.Regex(x => x.FirstName, regex),
+                            Builders<User>.Filter.Regex(x => x.LastName, regex))
+                        : Builders<User>.Filter.Or(
+                            Builders<User>.Filter.Regex(x => x.Email, regex),
+                            Builders<User>.Filter.Regex(x => x.FirstName, regex),
+                            Builders<User>.Filter.Regex(x => x.LastName, regex));
+
+                    var matchingUserIds = await userCollection.Find(scopedToMembers & textMatch)
+                        .Project(x => x.ItemId).ToListAsync();
+                    projectPeopleFilter &= Builders<ProjectPeople>.Filter.In(x => x.UserId, matchingUserIds);
+                }
             }
 
+            var isOwner = await IsOwner(BlocksContext.GetContext().UserId ?? "", projectIds);
+
+            // TotalCount counts (person, environment) rows; the list itself is paged by distinct person.
             var totalCount = await peopleCollection.CountDocumentsAsync(projectPeopleFilter);
-            var peoplesTotalCount = await peopleCollection.Distinct(x => x.UserId, projectPeopleFilter).ToListAsync();
 
-            var options = new FindOptions<ProjectPeople>
+            var distinctPeopleCount = await peopleCollection
+                .Aggregate()
+                .Match(projectPeopleFilter)
+                .AppendStage<BsonDocument>(GroupByPersonStage)
+                .Count()
+                .FirstOrDefaultAsync();
+
+            var peoplesTotalCount = distinctPeopleCount?.Count ?? 0;
+
+            var pagedPeople = await peopleCollection
+                .Aggregate()
+                .Match(projectPeopleFilter)
+                .AppendStage<BsonDocument>(GroupByPersonStage)
+                .AppendStage<BsonDocument>(SortByPersonStage)
+                .Skip(request.PageSize * request.Page)
+                .Limit(request.PageSize)
+                .ToListAsync();
+
+            var pagedUserIds = pagedPeople.Select(x => x["_id"].AsString).ToList();
+
+            if (pagedUserIds.Count == 0)
             {
-                Skip = request.PageSize * request.Page,
-                Limit = request.PageSize
-            };
+                return ([], totalCount, peoplesTotalCount, isOwner);
+            }
 
-            var peopleCursor = await peopleCollection.FindAsync(projectPeopleFilter, options);
-            var projectPeoples = await peopleCursor.ToListAsync();
+            // Every environment row of the people on this page, so nobody is split across pages.
+            var pagedRowsFilter = projectPeopleFilter & Builders<ProjectPeople>.Filter.In(x => x.UserId, pagedUserIds);
+            var projectPeoples = await peopleCollection.Find(pagedRowsFilter).ToListAsync();
 
-            var filter = Builders<User>.Filter.In(x => x.ItemId, projectPeoples.Select(x => x.UserId));
+            var personOrder = pagedUserIds
+                .Select((userId, index) => (userId, index))
+                .ToDictionary(x => x.userId, x => x.index);
+
+            var filter = Builders<User>.Filter.In(x => x.ItemId, pagedUserIds);
             var users = (await userCollection.Find(filter).ToListAsync()).ToDictionary(x => x.ItemId, x => x);
 
-            var peoples = projectPeoples.Select(x =>
-            {
-                var projectPeople = new GetProjectPeople
+            var peoples = projectPeoples
+                .OrderBy(x => personOrder[x.UserId])
+                .ThenBy(x => x.ItemId)
+                .Select(x =>
                 {
-                    ItemId = x.ItemId,
-                    peopleDetails = new PeopleDetails { UserId = x.UserId },
-                    TenantId = x.TenantId,
-                    IsInvitationSent = x.IsInvitationSent,
-                    IsInvitationConfirmed = x.IsInvitationConfirmed,
-                    IsCreator = x.IsCreator,
-                    Enviroment = _tenants.GetTenantByID(x.TenantId)?.Environment ?? string.Empty,
-                };
+                    var projectPeople = new GetProjectPeople
+                    {
+                        ItemId = x.ItemId,
+                        peopleDetails = new PeopleDetails { UserId = x.UserId },
+                        TenantId = x.TenantId,
+                        IsInvitationSent = x.IsInvitationSent,
+                        IsInvitationConfirmed = x.IsInvitationConfirmed,
+                        IsCreator = x.IsCreator,
+                        Enviroment = _tenants.GetTenantByID(x.TenantId)?.Environment ?? string.Empty,
+                    };
 
-                var user = users.ContainsKey(x.UserId) ? users[x.UserId] : null; if (user != null)
-                {
-                    projectPeople.peopleDetails.Email = user.Email;
-                    projectPeople.peopleDetails.FirstName = user.FirstName;
-                    projectPeople.peopleDetails.LastName = user.LastName;
-                    projectPeople.peopleDetails.Salutation = user.Salutation;
-                    projectPeople.peopleDetails.ProfileImageUrl = user.ProfileImageUrl;
-                    projectPeople.peopleDetails.AllowResendActivation = !user.Active || !user.IsVerified;
-                }
-                return projectPeople;
-            });
+                    var user = users.ContainsKey(x.UserId) ? users[x.UserId] : null; if (user != null)
+                    {
+                        projectPeople.peopleDetails.Email = user.Email;
+                        projectPeople.peopleDetails.FirstName = user.FirstName;
+                        projectPeople.peopleDetails.LastName = user.LastName;
+                        projectPeople.peopleDetails.Salutation = user.Salutation;
+                        projectPeople.peopleDetails.ProfileImageUrl = user.ProfileImageUrl;
+                        projectPeople.peopleDetails.AllowResendActivation = !user.Active || !user.IsVerified;
+                    }
+                    return projectPeople;
+                });
 
-            var isOwner = await IsOwner(BlocksContext.GetContext().UserId ?? "", projectIds);
-            return (peoples.ToList(), totalCount, peoplesTotalCount.Count, isOwner);
+            return (peoples.ToList(), totalCount, peoplesTotalCount, isOwner);
         }
 
         public async Task<Tenant> GetProjectByIdAsync(string tenantId)

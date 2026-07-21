@@ -16,18 +16,20 @@ import {
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActivationForm } from "./activation-form";
+import { ActivationErrorState, isAlreadyActivatedSignal } from "./utils";
 type ActivationProps = {
   code?: string;
   lang?: string;
 };
 const x_blocks_key = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+
 export const Activation = ({ code }: ActivationProps) => {
   const { isPending: isActivationPending, mutateAsync: activationCodeValidation } =
     useAccountActivationCodeExpiration();
   const { mutateAsync: resendActivationLink, isPending: isResendPending } =
     useAccountResendActivation();
   const [isValidCode, setIsValidCode] = useState<boolean | null>(null);
-  const [activationError, setActivationError] = useState<"invalid" | "expired" | null>(null);
+  const [activationError, setActivationError] = useState<ActivationErrorState | null>(null);
   const [activationUserId, setActivationUserId] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resendSuccess, setResendSuccess] = useState(false);
@@ -46,31 +48,37 @@ export const Activation = ({ code }: ActivationProps) => {
           projectKey: x_blocks_key as string,
           activationCode: code,
         });
-        if (res.errors != null) {
-          // Invalid code, doesn't exist code
-          setActivationError("invalid");
-          setActivationUserId(null);
-          setResendMessage(null);
-          setResendSuccess(false);
-        } else if (res.userId != null) {
-          // Code expired, resend activation link using this userId
-          setActivationError("expired");
-          setActivationUserId(res.userId);
-          setResendMessage(null);
-          setResendSuccess(false);
-        } else {
-          // activation code is valid, show the activate account component
-          setActivationError(null);
-          setActivationUserId(null);
-          setResendMessage(null);
-          setResendSuccess(false);
-        }
-        setIsValidCode(res.isSuccess);
-      } catch {
-        setActivationError("invalid");
-        setActivationUserId(null);
         setResendMessage(null);
         setResendSuccess(false);
+        // Backend contract (ValidateAccountActivationCodeAsync):
+        //   isSuccess true (+ userId)  -> code is valid and still pending -> show the form
+        //   already-activated signal   -> account is already set up -> point to sign in
+        //   errors present             -> code is invalid
+        //   otherwise                  -> code not found / expired (userId may be null)
+        if (res.isSuccess) {
+          // Valid, pending activation: show the activate account form.
+          setActivationError(null);
+          setActivationUserId(null);
+        } else if (res.status === "already_activated" || res.isAlreadyActive || isAlreadyActivatedSignal(res.errors)) {
+          setActivationError("already_activated");
+          setActivationUserId(null);
+        } else if (res.errors != null) {
+          setActivationError("invalid");
+          setActivationUserId(null);
+        } else {
+          // Code is gone (expired or already used). Offer resend when we know the user.
+          setActivationError("expired");
+          setActivationUserId(res.userId ?? null);
+        }
+        setIsValidCode(res.isSuccess);
+      } catch (error) {
+        // A non-2xx response throws here (HttpError carries { status, errors }). Read the body instead of
+        // collapsing every failure to "invalid", so an already-activated account gets the correct screen.
+        const errorBody = (error as { errors?: unknown })?.errors;
+        setResendMessage(null);
+        setResendSuccess(false);
+        setActivationError(isAlreadyActivatedSignal(errorBody) ? "already_activated" : "invalid");
+        setActivationUserId(null);
         setIsValidCode(false);
       }
     };
@@ -125,6 +133,21 @@ export const Activation = ({ code }: ActivationProps) => {
             </CardContent>
           </Card>
         </>
+      ) : activationError === "already_activated" ? (
+        <Card className="mx-auto w-full max-w-lg rounded-none border-none text-center shadow-none">
+          <CardContent className="p-8">
+            <CheckCircle2 className="mx-auto flex h-10 w-10 items-center justify-center text-success" />
+            <h1 className="text-xl font-semibold">Your account is already active</h1>
+            <p className="mt-2 text-sm">
+              This account has already been activated. Please sign in to continue.
+            </p>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <Button asChild>
+                <Link to="/login">Go to sign in</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ) : activationError === "invalid" ? (
         <Card className="mx-auto w-full max-w-lg rounded-none border-none text-center shadow-none">
           <CardContent className="p-8">
@@ -132,8 +155,14 @@ export const Activation = ({ code }: ActivationProps) => {
             <h1 className="text-xl font-semibold">Invalid Activation Link</h1>
             <p className="mt-2 text-sm">
               The activation code is invalid. Please check the link or request a new activation
-              email from your administrator.
+              email from your administrator. If you have already activated your account, please sign
+              in instead.
             </p>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <Button asChild variant="outline">
+                <Link to="/login">Go to sign in</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (

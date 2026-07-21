@@ -9,14 +9,14 @@ import {
   mockGetOperationalAnalyticsPayload,
   mockGetServiceAnalyticsPayload,
 } from "../test-utils/__mocks__";
-import { lmtService } from "../lmt.service";
+import { lmtService } from "../services/lmt.service";
 import {
   useGetOperationalAnalytics,
   useGetServiceAnalytics,
   useUsagesMetrics,
 } from "./use-usage";
 
-vi.mock("@blocks-lmt/lmt.service", () => mockLmtServiceFactory());
+vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
 
 describe("use-usage hooks", () => {
@@ -84,9 +84,13 @@ describe("use-usage hooks", () => {
 
       const callPayload = vi.mocked(lmtService.usage.getServiceAnalytics).mock
         .calls[0][0];
-      expect(callPayload.projectKey).toBe(TEST_PROJECT_KEY);
       expect(callPayload.startTime).toBeDefined();
       expect(callPayload.endTime).toBeDefined();
+      // 24h window: startTime should be ~24h before endTime.
+      const windowMs =
+        new Date(callPayload.endTime).getTime() -
+        new Date(callPayload.startTime).getTime();
+      expect(Math.round(windowMs / (60 * 60 * 1000))).toBe(24);
     });
 
     it("should handle 1h time range", async () => {

@@ -1,4 +1,4 @@
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
@@ -7,7 +7,10 @@ type DeleteUserPermissionProps = {
   permission: IPermission;
   onDelete: (data: IPermission) => void;
 };
-export const DeleteSSOPermission = ({ permission, onDelete }: DeleteUserPermissionProps) => {
+export const DeleteSSOPermission = ({
+  permission,
+  onDelete,
+}: DeleteUserPermissionProps) => {
   const [open, setOpen] = useState<boolean>(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
