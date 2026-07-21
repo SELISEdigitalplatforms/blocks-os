@@ -78,9 +78,10 @@ type ProjectNameForm = z.infer<typeof projectNameSchema>;
 export const SettingsPage = () => {
   const { selectedProject, selectedTenantGroup, setSelectedProject } =
     useProjectStore();
-  const { data: projectsData, isLoading } = useGetProjects(
-    selectedTenantGroup || "",
-  );
+  const { data: projectsData, isLoading } = useGetProjects({
+    tenantGroupId: selectedTenantGroup ?? "",
+    enabled: !!selectedTenantGroup,
+  });
   // Ordered like the "Select environments" step: dev → test → stg → … → prod
   const environments = (projectsData?.[0]?.projects ?? [])
     .filter((environment) => !environment.isDisabled)
@@ -90,9 +91,7 @@ export const SettingsPage = () => {
     );
   const project = projectsData?.[0]?.projects?.[0];
   const { mutateAsync: updateTenantGroup, isPending: isUpdating } =
-    useUpdateTenantGroup({
-      tenantGroupId: selectedTenantGroup || "",
-    });
+    useUpdateTenantGroup();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const form = useForm<ProjectNameForm>({
     resolver: zodResolver(projectNameSchema),

@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/page-header/page-header"
+import { Badge } from "@/components/ui-kits/badge/badge"
 import { Button } from "@/components/ui-kits/button/button"
 import {
   Select,
@@ -79,6 +80,13 @@ export default function LmtLayout() {
             title={currentItem.label}
             description={currentItem.desc}
             actions={headerActions}
+            titleSuffix={
+              currentSegment === "usage" ? (
+                <Badge variant="default" className="h-fit text-xs">
+                  Coming soon
+                </Badge>
+              ) : undefined
+            }
           />
         )}
         <Outlet />

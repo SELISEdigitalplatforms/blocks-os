@@ -38,11 +38,14 @@ export const USER_ENDPOINTS = {
 // ─── Account endpoints (account.service) ────────────────────────────────────
 
 export const ACCOUNT_ENDPOINTS = {
-  ACTIVATE: `${API_BASES.IAM}${IAM_SUBPATH}/Activate`,
+  // IAM serves these account actions under /auth (kebab-case). The old /iam/PascalCase paths
+  // no longer exist and return 405. RECOVER/RESET_PASSWORD are the same stale pattern and still
+  // need migrating (password-recovery flow) — left as-is for now, out of the activation scope.
+  ACTIVATE: `${API_BASES.IAM}/auth/activate`,
   RESEND_ACTIVATION: `${API_BASES.IAM}/auth/resend-activation`,
   RECOVER: `${API_BASES.IAM}${IAM_SUBPATH}/Recover`,
   RESET_PASSWORD: `${API_BASES.IAM}${IAM_SUBPATH}/ResetPassword`,
-  VALIDATE_ACTIVATION_CODE: `${API_BASES.IAM}${IAM_SUBPATH}/ValidateActivationCode`,
+  VALIDATE_ACTIVATION_CODE: `${API_BASES.IAM}/auth/validate-activation`,
 } as const;
 
 // ─── Role endpoints (role.service) ──────────────────────────────────────────

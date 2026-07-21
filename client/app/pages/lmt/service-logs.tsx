@@ -21,6 +21,28 @@ export function LmtServiceLogsRoute() {
     [serviceName],
   );
 
+  const logServices = useMemo(() => {
+    if (!service) {
+      return [];
+    }
+
+    const { api: apiServiceName, worker: workerServiceName } =
+      getLmtLogCollections(service.serviceName);
+
+    return [
+      {
+        id: apiServiceName,
+        label: "Api",
+        serviceName: apiServiceName,
+      },
+      {
+        id: workerServiceName,
+        label: "Worker",
+        serviceName: workerServiceName,
+      },
+    ];
+  }, [service]);
+
   BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs`] = "Logs";
   if (serviceName) {
     BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}`] =
@@ -42,25 +64,6 @@ export function LmtServiceLogsRoute() {
       </div>
     );
   }
-
-  const { api: apiServiceName, worker: workerServiceName } =
-    getLmtLogCollections(service.serviceName);
-
-  const logServices = useMemo(
-    () => [
-      {
-        id: apiServiceName,
-        label: "Api",
-        serviceName: apiServiceName,
-      },
-      {
-        id: workerServiceName,
-        label: "Worker",
-        serviceName: workerServiceName,
-      },
-    ],
-    [apiServiceName, workerServiceName],
-  );
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">

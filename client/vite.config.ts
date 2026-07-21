@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from 'vite'
-import type { InlineConfig } from "vitest/node";
 import { getRuntimeEnv } from "./app/lib/runtime-env";
 
 function resolveDevHttps(): { cert: Buffer; key: Buffer } | undefined {
@@ -69,37 +68,6 @@ export default defineConfig(({ mode }) => {
       outDir: '../server/Api/wwwroot',
       emptyOutDir: true,
     },
-    test: {
-      environment: 'jsdom',
-      globals: true,
-      setupFiles: [],
-      alias: {
-        '@': path.resolve(__dirname, './app'),
-        '@blocks-idp': path.resolve(__dirname, './app/idp'),
-        '@blocks-lmt': path.resolve(__dirname, './app/cross-modules/lmt'),
-        '@blocks-storage': path.resolve(
-          __dirname,
-          './app/cross-modules/storage',
-        ),
-        '@blocks-communication': path.resolve(
-          __dirname,
-          './app/cross-modules/communication',
-        ),
-        '@blocks-identifier': path.resolve(
-          __dirname,
-          './app/cross-modules/identifier',
-        ),
-        '@blocks-localization': path.resolve(
-          __dirname,
-          './app/cross-modules/localization',
-        ),
-        '@blocks-utilities': path.resolve(
-          __dirname,
-          './app/cross-modules/utilities',
-        ),
-        '@blocks-ai': path.resolve(__dirname, './app/cross-modules/ai'),
-      },
-    } as InlineConfig,
     server: {
       host: true,
       port: 5000,

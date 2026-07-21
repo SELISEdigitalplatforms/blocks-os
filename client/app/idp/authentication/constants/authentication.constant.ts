@@ -53,8 +53,8 @@ export const SecretManagementTabs: { id: string; label: string; value: string }[
   },
   {
     id: "managed-services",
-    label: "My Service",
-    value: "managed-services",
+    label: "My Services",
+    value: "my-services",
   },
   {
     id: GRANT_TYPES.authorizationCode,

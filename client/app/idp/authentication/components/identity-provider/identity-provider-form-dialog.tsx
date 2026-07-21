@@ -340,6 +340,11 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
             <div className="space-y-1.5">
               <Label htmlFor="clientId">
                 Client ID <span className="text-destructive">*</span>
+                {isEditing && (
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    (Cannot be changed)
+                  </span>
+                )}
               </Label>
               <div className="relative">
                 <Input
@@ -347,6 +352,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                   type={showClientId ? "text" : "password"}
                   placeholder="Enter client ID"
                   className="pr-10"
+                  disabled={isEditing}
                   {...register("clientId", { required: "Client ID is required" })}
                 />
                 <button
