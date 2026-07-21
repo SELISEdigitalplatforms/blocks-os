@@ -184,3 +184,5 @@ docs/
 change.md
 
 .kilo
+# build output (never commit)
+builds/
