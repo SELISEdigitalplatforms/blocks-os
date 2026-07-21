@@ -1,13 +1,18 @@
-"use client"
+"use client";
 
-import { useProjectStore } from "@seliseblocks/blocks-kit"
-import { PeopleDetailsTab } from "./people-details-tab"
-import { PeopleEnvironmentsTab } from "./people-environments-tab"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs"
-import { useQueryState } from "nuqs"
-import { useNavigate, useParams } from "react-router-dom"
-import { useGetUserById } from "@blocks-idp/iam/hooks/use-user"
-import { PeopleStatusBadge } from "@/components/people/status-badge"
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { PeopleDetailsTab } from "./people-details-tab";
+import { PeopleEnvironmentsTab } from "./people-environments-tab";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui-kits/tabs/tabs";
+import { useQueryState } from "nuqs";
+import { useNavigate, useParams } from "react-router-dom";
+import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { PeopleStatusBadge } from "@/components/people/status-badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,19 +20,19 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui-kits/breadcrumb/breadcrumb"
+} from "@/components/ui-kits/breadcrumb/breadcrumb";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui-kits/select/select"
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
-import { Button } from "@/components/ui-kits/button/button"
-import { ArrowLeft } from "lucide-react"
-import { useGetPeople } from "@/hooks/use-people"
-import { useGetProjects } from "@/hooks/use-project"
+} from "@/components/ui-kits/select/select";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { Button } from "@/components/ui-kits/button/button";
+import { ArrowLeft } from "lucide-react";
+import { useGetPeople } from "@/hooks/use-people";
+import { useGetProjects } from "@/hooks/use-project";
 // Devices tab temporarily disabled.
 // import { UserDevices } from "@blocks-idp/iam/modules/user-management/user-devices"
 // import { getRuntimeEnv } from "@/lib/runtime-env"
@@ -36,47 +41,53 @@ const tabs = [
   { value: "details", label: "Details" },
   { value: "environments", label: "Environments" },
   // { value: "devices", label: "Devices" },
-]
+];
 
 export const PersonDetailPage = () => {
   const { id = "", tenantGroupId = "" } = useParams<{
-    id: string
-    tenantGroupId: string
-  }>()
-  const navigate = useNavigate()
-  const [currentTab, setCurrentTab] = useQueryState("tab", { defaultValue: "details" })
-  const { selectedTenantGroup } = useProjectStore()
+    id: string;
+    tenantGroupId: string;
+  }>();
+  const navigate = useNavigate();
+  const [currentTab, setCurrentTab] = useQueryState("tab", {
+    defaultValue: "details",
+  });
+  const { selectedTenantGroup } = useProjectStore();
 
   const { data: userResponse, isLoading: isUserLoading } = useGetUserById({
     id,
     projectKey: "",
-  })
-  const user = userResponse?.data
-  const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : ""
+  });
+  const user = userResponse?.data;
+  const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
 
   const { data: peopleData, isLoading: isPeopleLoading } = useGetPeople({
     page: 0,
     pageSize: 100,
     filter: user?.email || "",
     searchField: "email",
-  })
+  });
 
   const { data: environmentList, isLoading: isProjectLoading } = useGetProjects(
-    selectedTenantGroup || "",
-  )
+    {
+      tenantGroupId: selectedTenantGroup ?? "",
+      enabled: !!selectedTenantGroup,
+    },
+  );
 
-  const sharedEnvironments = peopleData?.peoples?.[0]?.sharedEnviroments || []
+  const sharedEnvironments = peopleData?.peoples?.[0]?.sharedEnviroments || [];
   const isPending =
     sharedEnvironments.some((env) => !env.isInvitationConfirmed) &&
-    !sharedEnvironments.some((env) => env.isCreator)
+    !sharedEnvironments.some((env) => env.isCreator);
 
-  const isLoading = isUserLoading || (user && (isPeopleLoading || isProjectLoading))
+  const isLoading =
+    isUserLoading || (user && (isPeopleLoading || isProjectLoading));
   // Devices tab temporarily disabled.
   // const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || ""
 
   const handleTabChange = (value: string) => {
-    void setCurrentTab(value)
-  }
+    void setCurrentTab(value);
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -87,8 +98,9 @@ export const PersonDetailPage = () => {
               <BreadcrumbLink asChild>
                 <button
                   type="button"
-                  onClick={() => navigate(`/app/project/${tenantGroupId}/people`)}
-                >
+                  onClick={() =>
+                    navigate(`/app/project/${tenantGroupId}/people`)
+                  }>
                   People
                 </button>
               </BreadcrumbLink>
@@ -132,14 +144,12 @@ export const PersonDetailPage = () => {
       <Tabs
         value={currentTab ?? "details"}
         onValueChange={handleTabChange}
-        className="mt-[18px] flex w-full flex-col md:mt-[24px]"
-      >
+        className="mt-[18px] flex w-full flex-col md:mt-[24px]">
         <div className="mb-5 flex items-center justify-between text-base">
           <div className="md:hidden">
             <Select
               value={currentTab ?? "details"}
-              onValueChange={(value) => handleTabChange(value)}
-            >
+              onValueChange={(value) => handleTabChange(value)}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -181,5 +191,5 @@ export const PersonDetailPage = () => {
         */}
       </Tabs>
     </div>
-  )
-}
+  );
+};
