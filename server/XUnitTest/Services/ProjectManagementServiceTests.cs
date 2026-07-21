@@ -113,7 +113,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task RestoreProjectAsync_SendsMessageAndReturnsSuccess()
         {
-            var response = await Service().RestoreProjectAsync(new RestoreProjectRequest { ProjectId = "p1" });
+            var response = await Service().RestoreProjectAsync(new RestoreProjectRequest { ItemId = "p1" });
 
             response.IsSuccess.Should().BeTrue();
             _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<RestoreProjectRequest>>()), Times.Once);

@@ -367,10 +367,27 @@ namespace DomainService.Projects
 
         public async Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest)
         {
-            await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
+           //await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
 
-            return new RestoreProjectResponse { IsSuccess = true };
-        }
+           var project = await _projectRepository.GetByIdAsync(restoreProjectRequest.ItemId);
+           ProjectStatusTracer? projectStatusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(restoreProjectRequest.ItemId);
+
+           if(project != null && projectStatusTracer == null)
+           {
+              projectStatusTracer = new ProjectStatusTracer { ProjectId = restoreProjectRequest.ItemId };
+           }
+
+           if (project is not null)
+           await ConfigureProjectAsync(project, projectStatusTracer);
+
+           if (string.IsNullOrWhiteSpace(projectStatusTracer.ErrorMessage))
+           {
+             projectStatusTracer.IsProjectCreationSuccess = true;
+             await _projectRepository.SaveStatusTracerAsync(projectStatusTracer);
+           }
+
+           return new RestoreProjectResponse { IsSuccess = true };
+         }
 
         public async Task<GetProjectResponse> GetAsync()
         {
