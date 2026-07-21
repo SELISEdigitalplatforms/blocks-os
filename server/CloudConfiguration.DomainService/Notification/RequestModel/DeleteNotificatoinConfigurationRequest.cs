@@ -1,6 +1,6 @@
 ﻿namespace CloudConfiguration.DomainService.Notification.RequestModel
 {
-    public class DeleteNotificatoinConfigurationRequest
+    public class DeleteNotificationConfigurationRequest
     {
         public string ItemId { get; set; }
     }

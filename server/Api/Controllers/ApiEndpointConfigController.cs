@@ -4,7 +4,7 @@ using Cloud.DomainService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]

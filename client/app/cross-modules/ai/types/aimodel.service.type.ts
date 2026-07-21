@@ -21,7 +21,7 @@ export interface IModelResponse {
   is_success: false;
   item_id: string;
   detail: string;
-  error: {};
+  error: object;
 }
 
 export interface IValid {
@@ -120,6 +120,7 @@ export interface IUpdateModelPayload {
   custom_headers?: Record<string, unknown> | null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ISeedProvidersPayload {}
 
 export interface IProvider {

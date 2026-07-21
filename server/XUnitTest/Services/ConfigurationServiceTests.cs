@@ -22,7 +22,7 @@ namespace XUnitTest.Services
     public class ConfigurationServiceTests
     {
         private readonly Mock<IConfigurationRepository> _repo = new();
-        private readonly Mock<IValidator<SaveNotificatonConfigurationRequest>> _notifValidator = new();
+        private readonly Mock<IValidator<SaveNotificationConfigurationRequest>> _notifValidator = new();
         private readonly Mock<IValidator<SaveStorageConfigurationRequest>> _storageValidator = new();
         private readonly Mock<IValidator<MailConfiguration>> _mailValidator = new();
         private readonly Mock<IMessageClient> _messageClient = new();
@@ -44,10 +44,10 @@ namespace XUnitTest.Services
         [Fact]
         public async Task SaveNotificationConfiguration_Invalid_ReturnsErrors()
         {
-            _notifValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveNotificatonConfigurationRequest>(), It.IsAny<CancellationToken>()))
+            _notifValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveNotificationConfigurationRequest>(), It.IsAny<CancellationToken>()))
                            .ReturnsAsync(Invalid());
 
-            var response = await Service().SaveNotificationConfigurationAsync(new SaveNotificatonConfigurationRequest());
+            var response = await Service().SaveNotificationConfigurationAsync(new SaveNotificationConfigurationRequest());
 
             response.IsSuccess.Should().BeFalse();
             response.Errors.Should().ContainKey("Name");
@@ -58,7 +58,7 @@ namespace XUnitTest.Services
         public async Task SaveNotificationConfiguration_Valid_NewConfig_Saves()
         {
             using var _ = new BlocksTestContext(userId: "u1");
-            _notifValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveNotificatonConfigurationRequest>(), It.IsAny<CancellationToken>()))
+            _notifValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveNotificationConfigurationRequest>(), It.IsAny<CancellationToken>()))
                            .ReturnsAsync(Valid());
             _repo.Setup(r => r.GetNotificationConfigurationByNameAsync(It.IsAny<string>()))
                  .ReturnsAsync((NotificationConfiguration?)null);
@@ -67,7 +67,7 @@ namespace XUnitTest.Services
                  .Callback<NotificationConfiguration>(c => saved = c)
                  .Returns(Task.CompletedTask);
 
-            var response = await Service().SaveNotificationConfigurationAsync(new SaveNotificatonConfigurationRequest
+            var response = await Service().SaveNotificationConfigurationAsync(new SaveNotificationConfigurationRequest
             {
                 Name = "notif",
                 NotifyMethod = "push"
@@ -92,12 +92,12 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task GetNotificatoinConfiguration_DelegatesToRepository()
+        public async Task GetNotificationConfiguration_DelegatesToRepository()
         {
             var expected = new NotificationConfiguration { ItemId = "n-1" };
             _repo.Setup(r => r.GetNotificationConfigurationByIdAsync("n-1")).ReturnsAsync(expected);
 
-            var result = await Service().GetNotificatoinConfigurationAsync(new GetNotificationConfigurationRequest { ItemId = "n-1" });
+            var result = await Service().GetNotificationConfigurationAsync(new GetNotificationConfigurationRequest { ItemId = "n-1" });
 
             result.Should().BeSameAs(expected);
         }
@@ -106,10 +106,10 @@ namespace XUnitTest.Services
         public async Task DeleteNotificationConfiguration_DelegatesToRepository()
         {
             var expected = new BaseResponse { IsSuccess = true };
-            _repo.Setup(r => r.DeleteNotificationConfigurationAsync(It.IsAny<DeleteNotificatoinConfigurationRequest>()))
+            _repo.Setup(r => r.DeleteNotificationConfigurationAsync(It.IsAny<DeleteNotificationConfigurationRequest>()))
                  .ReturnsAsync(expected);
 
-            var response = await Service().DeleteNotificationConfigurationAsync(new DeleteNotificatoinConfigurationRequest());
+            var response = await Service().DeleteNotificationConfigurationAsync(new DeleteNotificationConfigurationRequest());
 
             response.Should().BeSameAs(expected);
         }
@@ -258,6 +258,17 @@ namespace XUnitTest.Services
             var config = await Service().GetMailConfigurationAsync(new GetMailConfigurationRequest { ConfigurationName = "Primary" });
 
             config.AccountPassword.Should().Be("********");
+        }
+
+        [Fact]
+        public async Task GetMailConfiguration_Missing_ReturnsNull()
+        {
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((MailConfiguration?)null!);
+
+            var config = await Service().GetMailConfigurationAsync(new GetMailConfigurationRequest { ConfigurationName = "missing" });
+
+            config.Should().BeNull();
         }
 
         [Fact]

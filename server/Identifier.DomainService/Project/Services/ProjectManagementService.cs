@@ -353,6 +353,8 @@ namespace DomainService.Projects
             {
                 var project = await _projectRepository.GetByIdAsync(projectStatusTracer.ProjectId);
                 projectStatusTracer.ErrorMessage = string.Empty;
+
+                if(project is not null)
                 await ConfigureProjectAsync(project, projectStatusTracer);
 
                 if (string.IsNullOrWhiteSpace(projectStatusTracer.ErrorMessage))

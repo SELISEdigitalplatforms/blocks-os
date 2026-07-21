@@ -14,13 +14,20 @@ import {
   IValidateCnameProjectPayload,
 } from "@/models/project.model";
 
-export const useGetProjects = (tenantGroupId = "") => {
+export const useGetProjects = ({
+  tenantGroupId,
+  enabled = true,
+}: {
+  tenantGroupId?: string;
+  enabled?: boolean;
+}) => {
   const { setProjects } = useProjectStore();
 
   const query = useQuery({
     queryKey: ["identifier", "projects", tenantGroupId],
     queryFn: () => projectService.getProjects(0, 100, tenantGroupId),
-    staleTime: 5 * 60 * 1000, // 5 minutes - prevent unnecessary refetches during navigation
+    enabled: enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes - prevent unnecessary re-fetches during navigation
   });
 
   useEffect(() => {
@@ -160,6 +167,8 @@ export const useGetMigrationStatus = (tenantGroupId: string) => {
   return useQuery({
     queryKey: ["identifier", "migration-status", tenantGroupId],
     queryFn: () => crossProjectService.getMigrationStatus(tenantGroupId),
+    //TODO: Enable this query when the migration feature is ready to be used
+    enabled: false,
   });
 };
 
