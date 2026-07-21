@@ -1,5 +1,6 @@
 import { test, expect } from "../../support/test-base";
 import { resetFlowState, resolveProjectName, writeFlowState } from "../../support/flow-state";
+import { openCreateProjectWizard } from "../../support/console";
 
 // Sequential flow — step 1: create a project with 2 environments (Development,
 // Testing). Saves the project name + tenantGroupId for the later steps.
@@ -15,9 +16,8 @@ test("01 - create project with 2 environments", async ({ page }) => {
   const projectName = resolveProjectName();
   const visible = { visible: true } as const;
 
-  await page.goto("/app/console");
-  await page.getByText("Add Project", { exact: true }).click();
-  await page.waitForURL("**/app/create-project");
+  // Works from both the empty console and one that already has projects.
+  await openCreateProjectWizard(page);
 
   // Step 1 — name + confirmations.
   await page
