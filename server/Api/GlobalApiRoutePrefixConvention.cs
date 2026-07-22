@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
-namespace BlocksTemplate.Api;
+namespace BlocksOs.Api;
 
 /// <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
 internal sealed class GlobalApiRoutePrefixConvention(string routeTemplate) : IApplicationModelConvention

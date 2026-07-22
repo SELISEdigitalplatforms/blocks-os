@@ -1,11 +1,11 @@
-﻿
+
 using Blocks.Genesis;
 
 namespace DomainService.Projects
 {
     public class RestoreProjectRequest
     {
-        public string? ProjectId { get; set; }
+        public string ItemId { get; set; }
     }
 
     public class RestoreProjectResponse: BaseResponse

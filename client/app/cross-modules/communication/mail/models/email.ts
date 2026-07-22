@@ -105,12 +105,12 @@ export interface IEmailUsage {
 export interface IEmailUsageResponse {
   totalCount: number;
   mails: IEmailUsage[];
-  errors: any;
+  errors: Record<string, unknown> | null;
   isSuccess: boolean;
 }
 
 export interface IGetMailBoxMailResponse {
   mail: IEmailUsage;
-  errors: any;
+  errors: Record<string, unknown> | null;
   isSuccess: boolean;
 }

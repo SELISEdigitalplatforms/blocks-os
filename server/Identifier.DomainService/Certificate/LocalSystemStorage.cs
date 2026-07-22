@@ -34,7 +34,7 @@ namespace DomainService.Certificate
                 LastUpdatedBy = bcontext.UserId
             };
 
-            await _projectRepository.SaveTenantCertificate(document);
+            await _projectRepository.SaveTenantCertificateAsync(document);
         }
     }
 }

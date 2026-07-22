@@ -282,7 +282,7 @@ namespace DomainService.People
             if (user == null)
             {
                 _logger.LogInformation("User not found for email: {Email}. Creating new user.", email);
-                await RequestInvitationFromIam(email, enviromentDetails.Select(e => e.TenantId), forceInvitation: false);
+                await RequestInvitationFromIam(email, enviromentDetails, forceInvitation: false);
                 return InvitationOutcomes.UserCreationRequested;
             }
 
@@ -312,7 +312,7 @@ namespace DomainService.People
             if (NeedsActivationKey(user))
             {
                 _logger.LogInformation("User {Email} is not activated; requesting an activation key from IAM", user.Email);
-                await RequestInvitationFromIam(user.Email, newEnviroments.Select(e => e.TenantId), forceInvitation: false);
+                await RequestInvitationFromIam(user.Email, newEnviroments, forceInvitation: false);
                 return InvitationOutcomes.InvitationRequested;
             }
 
@@ -352,7 +352,7 @@ namespace DomainService.People
                 .ToList();
         }
 
-        private ProjectPeople CreateProjectPeople(User user, string tenantId, string email)
+        private ProjectPeople CreateProjectPeople(User user, string tenantId, string email, List<string> roles)
         {
             return new ProjectPeople
             {
@@ -361,7 +361,48 @@ namespace DomainService.People
                 Email = email,
                 IsInvitationSent = true,
                 UserId = user.ItemId,
+                Roles = roles ?? []
             };
+        }
+
+        private static string InvitationRolesCacheKey(string email) => $"invitation-roles:{email.ToLowerInvariant()}";
+
+        /// <summary>
+        /// Persists the per-environment roles chosen at invite time so the asynchronous IAM path can set
+        /// <see cref="ProjectPeople.Roles"/> the same way <see cref="BuildProjectPeoples"/> does on the sync path.
+        /// The IAM round-trip carries only the tenant ids, not the roles, so blocks-os keeps them itself keyed by
+        /// the invited address and reads them back in <see cref="SendProjectInvitationToNewUser"/>. A missing or
+        /// expired entry falls back to no roles, which is the historical behaviour.
+        /// </summary>
+        private async Task CacheInvitationRolesAsync(string email, IReadOnlyCollection<EnviromentDetails> environments)
+        {
+            var rolesByTenant = environments
+                .Where(e => e != null && !string.IsNullOrWhiteSpace(e.TenantId) && e.Roles is { Count: > 0 })
+                .GroupBy(e => e.TenantId)
+                .ToDictionary(g => g.Key, g => g.SelectMany(e => e.Roles).Distinct().ToList());
+
+            if (rolesByTenant.Count == 0) return;
+
+            await _cacheClient.AddStringValueAsync(
+                InvitationRolesCacheKey(email),
+                JsonSerializer.Serialize(rolesByTenant),
+                ResolveInvitationLifetimeSeconds(null));
+        }
+
+        private async Task<Dictionary<string, List<string>>> GetCachedInvitationRolesAsync(string email)
+        {
+            var cached = await _cacheClient.GetStringValueAsync(InvitationRolesCacheKey(email));
+            if (string.IsNullOrWhiteSpace(cached)) return new Dictionary<string, List<string>>();
+
+            try
+            {
+                return JsonSerializer.Deserialize<Dictionary<string, List<string>>>(cached) ?? new Dictionary<string, List<string>>();
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse cached invitation roles for the invited address; falling back to no roles");
+                return new Dictionary<string, List<string>>();
+            }
         }
 
         /// <summary>
@@ -369,7 +410,7 @@ namespace DomainService.People
         /// if the account cannot sign in yet. IAM answers on <see cref="IdentifierConstants.IdentifierQueueName"/>,
         /// where <see cref="SendProjectInvitationToNewUser"/> creates the rows and sends the mail.
         /// </summary>
-        private async Task<bool> RequestInvitationFromIam(string? email, IEnumerable<string> tenantIds, bool forceInvitation)
+        private async Task<bool> RequestInvitationFromIam(string? email, IReadOnlyCollection<EnviromentDetails> environments, bool forceInvitation)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -379,6 +420,16 @@ namespace DomainService.People
 
             try
             {
+                var tenantIds = environments
+                    .Select(e => e.TenantId)
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Distinct()
+                    .ToList();
+
+                // The IAM round-trip does not carry the roles, so keep them on the blocks-os side and apply them
+                // when the post-event handler creates the rows.
+                await CacheInvitationRolesAsync(email, environments);
+
                 var createUserCommand = new CreateUserByEmailEvent
                 {
                     Email = email,
@@ -632,7 +683,24 @@ namespace DomainService.People
 
         public async Task<bool> SendProjectInvitationToNewUser(CreateUserByEmailPostEvent @event)
         {
-            if (@event == null || string.IsNullOrWhiteSpace(@event.UserId) || string.IsNullOrWhiteSpace(@event.TenantId))
+            if (@event == null)
+            {
+                _logger.LogWarning("SendProjectInvitationToNewUser called with null event");
+                return false;
+            }
+
+            // IAM reports a rejected invitation explicitly so it is not lost in silence. A null Success is a
+            // legacy success (older IAM only posted back on success); only an explicit false is a reported failure.
+            if (@event.Success == false)
+            {
+                _logger.LogError(
+                    "IAM rejected the invitation for UserId: {UserId}. Reason: {FailureReason}",
+                    @event.UserId,
+                    string.IsNullOrWhiteSpace(@event.FailureReason) ? "(none provided)" : @event.FailureReason);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(@event.UserId) || string.IsNullOrWhiteSpace(@event.TenantId))
             {
                 _logger.LogWarning("SendProjectInvitationToNewUser called with invalid event");
                 return false;
@@ -674,9 +742,17 @@ namespace DomainService.People
                 var existingPeople = await _peopleRepository.GetProjectPeoplesAsync(user.ItemId, tenantIds) ?? new List<ProjectPeople>();
                 var existingTenantIds = existingPeople.Select(p => p.TenantId).ToHashSet();
 
+                // The roles chosen at invite time were kept on the blocks-os side (the IAM round-trip drops them),
+                // so the rows created here carry the same roles as the synchronous path would.
+                var rolesByTenant = await GetCachedInvitationRolesAsync(user.Email);
+
                 var projectPeoples = tenantIds
                     .Where(tenantId => !existingTenantIds.Contains(tenantId))
-                    .Select(tenantId => CreateProjectPeople(user, tenantId, user.Email))
+                    .Select(tenantId => CreateProjectPeople(
+                        user,
+                        tenantId,
+                        user.Email,
+                        rolesByTenant.TryGetValue(tenantId, out var roles) ? roles : []))
                     .ToList();
 
                 // Nothing new to create. A resend still has to go out; a redelivery must not.
@@ -911,10 +987,18 @@ namespace DomainService.People
                 {
                     _logger.LogInformation("User {Email} is not activated; requesting a fresh activation key from IAM for the resend", request.Email);
 
-                    await RequestInvitationFromIam(
-                        user.Email,
-                        existingPeople.Select(p => p.TenantId).Distinct(),
-                        forceInvitation: true);
+                    // Preserve the roles already recorded on the existing rows so the resend re-provisions them
+                    // consistently rather than dropping them.
+                    var resendEnvironments = existingPeople
+                        .GroupBy(p => p.TenantId)
+                        .Select(g => new EnviromentDetails
+                        {
+                            TenantId = g.Key,
+                            Roles = g.SelectMany(p => p.Roles ?? []).Distinct().ToList()
+                        })
+                        .ToList();
+
+                    await RequestInvitationFromIam(user.Email, resendEnvironments, forceInvitation: true);
 
                     return new ResendInvitationResponse { IsSuccess = true };
                 }
