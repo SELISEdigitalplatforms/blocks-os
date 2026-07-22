@@ -52,12 +52,12 @@ const PageBreadcrumb: React.FC<{
   listClassName?: string;
 }> = ({ breadcrumbIndex, disabledHrefs = [], className, listClassName }) => {
   const { pathname } = useLocation();
-  const breadcrumbs = usePathSegments(pathname);
+  let breadcrumbs = usePathSegments(pathname);
   if (breadcrumbIndex && breadcrumbIndex > 0) {
-    breadcrumbs.splice(breadcrumbIndex - 1);
+    breadcrumbs = breadcrumbs.slice(breadcrumbIndex - 1);
   }
 
-  const filteredBreadcrumbs = breadcrumbs.filter(
+  breadcrumbs = breadcrumbs.filter(
     (breadcrumb) =>
       getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) !== null,
   );
@@ -66,7 +66,7 @@ const PageBreadcrumb: React.FC<{
     <Breadcrumb className={cn("hidden md:flex", className)}>
       <BreadcrumbList
         className={cn("flex text-base sm:text-lg", listClassName)}>
-        {filteredBreadcrumbs.map((breadcrumb, index) => {
+        {breadcrumbs.map((breadcrumb, index) => {
           const title =
             getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) ??
             breadcrumb.label;
@@ -90,9 +90,7 @@ const PageBreadcrumb: React.FC<{
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
-              {index < filteredBreadcrumbs.length - 1 && (
-                <BreadcrumbSeparator />
-              )}
+              {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
             </React.Fragment>
           );
         })}
