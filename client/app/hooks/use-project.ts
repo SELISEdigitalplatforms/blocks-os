@@ -10,7 +10,7 @@ import {
 } from "@/models/project.model";
 import { projectService } from "@/services/project.service";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useImpersonateStore, useProjectStore } from "@seliseblocks/blocks-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -40,14 +40,21 @@ export const useGetProjects = ({
  return query;
 };
 
-export const useGetProject = (options?: { projectId: string }) => {
- const { selectedProject } = useProjectStore();
- const projectId = options?.projectId ?? selectedProject?.itemId ?? "";
- const resolvedOptions = { projectId };
+export const useGetProject = () => {
+ const { isInitialized, isImpersonated, impersonatedTenantId, originalTenantId } =
+  useImpersonateStore();
+
+ // The endpoint answers "the project of whoever I am", so the tenant the token
+ // is scoped to is what identifies the response — key the cache on that, not on
+ // a URL id the server never reads. Staying disabled until the impersonation
+ // state is known keeps the request from firing against an unresolved token and
+ // caching another tenant's project.
+ const tenantId = isImpersonated ? impersonatedTenantId : originalTenantId;
+
  return useQuery({
-  queryKey: ["identifier", "project", resolvedOptions],
-  queryFn: () => projectService.getProject(resolvedOptions),
-  enabled: Boolean(projectId),
+  queryKey: ["identifier", "project", tenantId],
+  queryFn: () => projectService.getProject(),
+  enabled: isInitialized && Boolean(tenantId),
  });
 };
 
