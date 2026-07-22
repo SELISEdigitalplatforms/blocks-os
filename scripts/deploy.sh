@@ -59,18 +59,42 @@ deploy(){
   if [ -d "$REPO/client" ]; then ( cd "$REPO/client" && npm ci --no-audit --no-fund && npm run build ); fi
   dotnet publish "$REPO/server/Api/Api.csproj" -c Release -o "$REPO/builds/api" --nologo
   dotnet publish "$REPO/server/Worker/Worker.csproj" -c Release -o "$REPO/builds/worker" --nologo
+  local r0a r0w r1a r1w
+  r0a=$(systemctl show "blocks-$SVC-api" -p NRestarts --value)
+  r0w=$(systemctl show "blocks-$SVC-worker" -p NRestarts --value)
   systemctl restart "blocks-$SVC-api" "blocks-$SVC-worker"
+  sleep 10
+  r1a=$(systemctl show "blocks-$SVC-api" -p NRestarts --value)
+  r1w=$(systemctl show "blocks-$SVC-worker" -p NRestarts --value)
+  systemctl is-active --quiet "blocks-$SVC-api"    || { echo "api not active after restart"; return 1; }
+  systemctl is-active --quiet "blocks-$SVC-worker" || { echo "worker not active after restart"; return 1; }
+  [ "$r1a" = "$r0a" ] || { echo "api crash-looped after restart (restarts $r0a->$r1a)"; return 1; }
+  [ "$r1w" = "$r0w" ] || { echo "worker crash-looped after restart (restarts $r0w->$r1w)"; return 1; }
 }
 
-step "pull inception"                     pull
-step "secret scan (trufflehog -> shield)" secret
-step "sca scan (trivy -> dependency-track)" sca
-step "sast scan (sonarqube)"              sast
-step "dast scan (zap -> defectdojo)"      dast
-step "deploy (build + restart service)"   deploy
+status(){
+  echo "=== service status (latest build) ==="
+  for u in "blocks-$SVC-api" "blocks-$SVC-worker"; do
+    local st sub since nr
+    st=$(systemctl is-active "$u" 2>/dev/null)
+    sub=$(systemctl show "$u" -p SubState --value 2>/dev/null)
+    since=$(systemctl show "$u" -p ActiveEnterTimestamp --value 2>/dev/null)
+    nr=$(systemctl show "$u" -p NRestarts --value 2>/dev/null)
+    printf "  %-22s %s (%s) since %s | restarts=%s\n" "$u" "$st" "$sub" "${since:-n/a}" "$nr"
+  done
+}
 
-END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+step "pull inception"                       pull
+step "secret scan (trufflehog -> shield)"   secret
+step "sca scan (trivy -> dependency-track)" sca
+step "sast scan (sonarqube)"                sast
+step "dast scan (zap -> defectdojo)"        dast
+step "deploy (build + restart service)"     deploy
+
 echo "--------------------------------------------------"
+status
+echo "--------------------------------------------------"
+END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 if [ "$FAIL" -eq 0 ]; then echo "RESULT: SUCCESS - all steps passed"; else echo "RESULT: FAILURE - see FAIL step(s) above"; fi
 echo "started: $START"
 echo "ended:   $END"
