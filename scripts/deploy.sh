@@ -84,12 +84,33 @@ status(){
   done
 }
 
+# graphify knowledge graph - best-effort, never fails the deploy.
+graphify(){
+  export PATH="$HOME/.local/bin:$PATH"
+  (
+    set +e
+    if ! command -v graphify >/dev/null 2>&1; then
+      command -v pipx >/dev/null 2>&1 || { export DEBIAN_FRONTEND=noninteractive; apt-get update -qq && apt-get install -y -qq pipx; }
+      pipx install graphifyy
+    fi
+    if command -v graphify >/dev/null 2>&1; then
+      cd "$REPO" || exit 0
+      graphify install --platform codex --project
+      graphify extract "$REPO" --code-only
+    else
+      echo "graphify unavailable - skipping graph build (deploy unaffected)"
+    fi
+  ) </dev/null >/tmp/graphify-$SVC.log 2>&1
+  return 0
+}
+
 step "pull inception"                       pull
 step "secret scan (trufflehog -> shield)"   secret
 step "sca scan (trivy -> dependency-track)" sca
 step "sast scan (sonarqube)"                sast
 step "dast scan (zap -> defectdojo)"        dast
 step "deploy (build + restart service)"     deploy
+step "graphify (code graph)"                graphify
 
 echo "--------------------------------------------------"
 status
