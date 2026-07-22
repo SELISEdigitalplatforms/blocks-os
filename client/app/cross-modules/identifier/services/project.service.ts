@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { IValidateCnameProjectPayload } from "@/models/project.model";
 import {
   CLOUD_BUILD_ENDPOINTS,
@@ -118,7 +118,7 @@ export class ProjectService {
   updateTenantGroup(
     payload: IUpdateTenantGroupPayload,
   ): Promise<IUpdateProjectResponse> {
-    return http.post(PROJECT_ENDPOINTS.UPDATE_TENANT_GROUP, payload);
+    return http.post(PROJECT_ENDPOINTS.UPDATE_PROJECT_GROUP, payload);
   }
   disableProject(
     payload: IDisableProjectPayload,

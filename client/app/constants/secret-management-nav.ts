@@ -43,8 +43,8 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
       },
       {
         id: "managed-services",
-        label: "My Service",
-        value: "managed-services",
+        label: "My Services",
+        value: "my-services",
         icon: Layers,
         desc: "Manage connected services",
       },

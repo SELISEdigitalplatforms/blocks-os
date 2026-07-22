@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@/hooks/use-scoped-path";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import {
   Card,
   CardContent,

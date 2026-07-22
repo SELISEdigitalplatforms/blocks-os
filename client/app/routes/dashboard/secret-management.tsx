@@ -24,17 +24,11 @@ import {
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import {
-  Pencil,
-  Plus,
-  Loader2,
-  Notebook,
-  Waypoints,
-} from "lucide-react";
+import { Pencil, Plus, Loader2, Notebook, Waypoints } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { useScopedPath } from "@/hooks/use-scoped-path";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 
 function SecretManagementHeaderActions({
   isOidcBranding,
@@ -132,7 +126,7 @@ function SecretManagementHeaderActions({
           </DialogTrigger>
         </ConfigureMagicUrlModal>
       )}
-      {currentPath === "managed-services" && (
+      {currentPath === "my-services" && (
         <>
           <Button
             variant="outline"
@@ -321,7 +315,9 @@ export default function SecretManagementLayout() {
                 listClassName="text-base sm:text-lg"
                 className="flex"
               />
-              <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
+              <div className="flex shrink-0 items-center gap-2">
+                {headerActions}
+              </div>
             </header>
           ) : currentItem ? (
             <PageHeader

@@ -1,44 +1,45 @@
-import { PageHeader } from "@/components/page-header/page-header"
-import { Badge } from "@/components/ui-kits/badge/badge"
-import { Button } from "@/components/ui-kits/button/button"
+import { PageHeader } from "@/components/page-header/page-header";
+import { Button } from "@/components/ui-kits/button/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui-kits/select/select"
-import { LMT_NAV_GROUPS } from "@/constants/lmt-nav"
-import { useLmtBasePath } from "@/hooks/use-scoped-path"
-import { cn } from "@/lib/utils"
-import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage"
-import { useProjectStore } from "@seliseblocks/blocks-kit"
-import { RefreshCcw } from "lucide-react"
-import { parseAsString, useQueryState } from "nuqs"
-import { Outlet, useLocation } from "react-router-dom"
+} from "@/components/ui-kits/select/select";
+import { LMT_NAV_GROUPS } from "@/constants/lmt-nav";
+import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
+import { cn } from "@/lib/utils";
+import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { RefreshCcw } from "lucide-react";
+import { parseAsString, useQueryState } from "nuqs";
+import { Outlet, useLocation } from "react-router-dom";
 
 export default function LmtLayout() {
-  const { pathname } = useLocation()
-  const LMT_BASE_PATH = useLmtBasePath()
+  const { pathname } = useLocation();
+  const LMT_BASE_PATH = useLmtBasePath();
   const isLogsDetail = new RegExp(
     `^${LMT_BASE_PATH}/logs/[^/]+(/trace/[^/]+)?$`,
-  ).test(pathname)
-  const isTraceDetail = new RegExp(`^${LMT_BASE_PATH}/tracing/[^/]+$`).test(pathname)
-  const isLmtDetail = isLogsDetail || isTraceDetail
-  const currentSegment = pathname.split("/").pop() ?? "usage"
+  ).test(pathname);
+  const isTraceDetail = new RegExp(`^${LMT_BASE_PATH}/tracing/[^/]+$`).test(
+    pathname,
+  );
+  const isLmtDetail = isLogsDetail || isTraceDetail;
+  const currentSegment = pathname.split("/").pop() ?? "usage";
 
-  const tenantId = useProjectStore().selectedProject?.tenantId || ""
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
   const [timeRange, setTimeRange] = useQueryState(
     "timeRange",
     parseAsString.withDefault("1h"),
-  )
+  );
 
-  const { isLoading, isFetching, refetch } = useUsagesMetrics({ timeRange })
+  const { isLoading, isFetching, refetch } = useUsagesMetrics({ timeRange });
 
   const currentItem = LMT_NAV_GROUPS.flatMap((g) => g.items).find(
     (item) => item.value === currentSegment,
-  )
+  );
 
   const headerActions =
     currentSegment === "usage" ? (
@@ -59,8 +60,7 @@ export default function LmtLayout() {
           variant="outline"
           size="sm"
           onClick={() => refetch()}
-          disabled={isLoading || isFetching || !tenantId}
-        >
+          disabled={isLoading || isFetching || !tenantId}>
           <RefreshCcw
             className={cn(
               "aspect-square w-4",
@@ -70,7 +70,7 @@ export default function LmtLayout() {
           <span className="sr-only sm:not-sr-only sm:ml-2">Refresh</span>
         </Button>
       </div>
-    ) : undefined
+    ) : undefined;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -80,17 +80,10 @@ export default function LmtLayout() {
             title={currentItem.label}
             description={currentItem.desc}
             actions={headerActions}
-            titleSuffix={
-              currentSegment === "usage" ? (
-                <Badge variant="default" className="h-fit text-xs">
-                  Coming soon
-                </Badge>
-              ) : undefined
-            }
           />
         )}
         <Outlet />
       </div>
     </div>
-  )
+  );
 }

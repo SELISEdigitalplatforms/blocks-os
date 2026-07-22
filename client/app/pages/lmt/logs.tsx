@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { BLOCKS_LOG_SERVICES } from "@/cross-modules/lmt/constants/logs.constant";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
 import { LogsViewer, type Service } from "@blocks-lmt/components";
@@ -65,29 +64,16 @@ export function LogsRoute() {
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
-      {isManagedLoading ? (
-        <Card>
-          <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-            Loading managed services...
-          </CardContent>
-        </Card>
-      ) : source === "managed" && services.length === 0 ? (
-        <Card>
-          <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-            No managed services found.
-          </CardContent>
-        </Card>
-      ) : (
-        <LogsViewer
-          key={source}
-          services={services}
-          predefinedQueries={predefinedQueries}
-          askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
-          agentName="Ask AI"
-          useGenericTraceLinks
-          isSourceBlocks={source === "blocks"}
-        />
-      )}
+      <LogsViewer
+        key={source}
+        services={services}
+        predefinedQueries={predefinedQueries}
+        askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
+        agentName="Ask AI"
+        useGenericTraceLinks
+        isSourceBlocks={source === "blocks"}
+        isManagedLoading={isManagedLoading}
+      />
     </div>
   );
 }
