@@ -19,7 +19,7 @@ namespace CloudConfiguration.DomainService.Shared.Services
         private const string MaskedSecretValue = "********";
 
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly IValidator<SaveNotificatonConfigurationRequest> _notificatonConfigurationValidator;
+        private readonly IValidator<SaveNotificationConfigurationRequest> _notificatonConfigurationValidator;
         private readonly IValidator<SaveStorageConfigurationRequest> _storageConfigurationValidator;
         private readonly IValidator<MailConfiguration> _mailConfigurationValidator;
         private readonly IMessageClient _messageClient;
@@ -27,7 +27,7 @@ namespace CloudConfiguration.DomainService.Shared.Services
 
 
         public ConfigurationService(IConfigurationRepository configurationRepository,
-                                    IValidator<SaveNotificatonConfigurationRequest> notificatonConfigurationValidator,
+                                    IValidator<SaveNotificationConfigurationRequest> notificatonConfigurationValidator,
                                     IValidator<SaveStorageConfigurationRequest> storageConfigurationValidator,
                                     IValidator<MailConfiguration> mailConfigurationValidator,
                                     IMessageClient messageClient,
@@ -43,7 +43,7 @@ namespace CloudConfiguration.DomainService.Shared.Services
 
         #region Notification
 
-        public async Task<BaseResponse> SaveNotificationConfigurationAsync(SaveNotificatonConfigurationRequest configuration)
+        public async Task<BaseResponse> SaveNotificationConfigurationAsync(SaveNotificationConfigurationRequest configuration)
         {
             var validationResult = await _notificatonConfigurationValidator.ValidateAsync(configuration);
 
@@ -66,17 +66,17 @@ namespace CloudConfiguration.DomainService.Shared.Services
             return await _configurationRepository.GetNotificationConfigurationsAsync(request);
         }
 
-        public async Task<NotificationConfiguration> GetNotificatoinConfigurationAsync(GetNotificationConfigurationRequest request)
+        public async Task<NotificationConfiguration> GetNotificationConfigurationAsync(GetNotificationConfigurationRequest request)
         {
             return await _configurationRepository.GetNotificationConfigurationByIdAsync(request.ItemId);
         }
 
-        public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificatoinConfigurationRequest request)
+        public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request)
         {
             return await _configurationRepository.DeleteNotificationConfigurationAsync(request);
         }
 
-        private async Task<NotificationConfiguration> MapAsync(SaveNotificatonConfigurationRequest configuration)
+        private async Task<NotificationConfiguration> MapAsync(SaveNotificationConfigurationRequest configuration)
         {
             var repoConfig = await _configurationRepository.GetNotificationConfigurationByNameAsync(configuration.Name);
 
@@ -253,6 +253,11 @@ namespace CloudConfiguration.DomainService.Shared.Services
         public async Task<MailConfiguration> GetMailConfigurationAsync(GetMailConfigurationRequest request)
         {
             var configuration = await _configurationRepository.GetMailConfigurationByNameAsync(request.ConfigurationName);
+            if (configuration == null)
+            {
+                return null;
+            }
+
             configuration.AccountPassword = MaskedSecretValue;
             return configuration;
         }

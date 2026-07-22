@@ -1,6 +1,10 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { PROJECT_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
-import { IGetProjectPayload, IGetProjectResponse, IProjectGroup } from "@/models/project.model";
+import {
+  IGetProjectPayload,
+  IGetProjectResponse,
+  IProjectGroup,
+} from "@/models/project.model";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export class ProjectService {
@@ -13,7 +17,7 @@ export class ProjectService {
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
- getProject(payload: IGetProjectPayload): Promise<IGetProjectResponse> {
+  getProject(payload: IGetProjectPayload): Promise<IGetProjectResponse> {
     const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.GET}?projectId=${payload.projectId}`;
     return http.get(url, undefined, { absoluteUrl: true });
   }

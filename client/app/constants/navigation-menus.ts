@@ -7,11 +7,9 @@ import {
   Building2,
   CreditCard,
   Database,
-  FileCode,
   Fingerprint,
   GitBranch,
   Globe,
-  ScrollText,
   Home,
   Key,
   // KeyRound, // Temporarily hidden (My Secret)
@@ -20,6 +18,7 @@ import {
   Lock,
   Mail,
   Package,
+  ScrollText,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -100,8 +99,8 @@ export const navigationMenus: Menu[] = [
       {
         id: "managed-services",
         type: "menu",
-        name: "My Service",
-        path: "/app/secret-management/managed-services",
+        name: "My Services",
+        path: "/app/secret-management/my-services",
         icon: Layers,
         desc: "Service-level secrets and configurations",
       },
@@ -129,7 +128,7 @@ export const navigationMenus: Menu[] = [
         desc: "Configure identity providers and federation",
         type: "menu",
       },
-  
+
       {
         id: "external-idp",
         name: "External IdP",
@@ -257,7 +256,7 @@ export const navigationMenus: Menu[] = [
   {
     id: "service-identity__lmt",
     type: "menu",
-    name: "LMT",
+    name: "Logs & Traces",
     path: "/app/lmt",
     icon: Zap,
     children: [

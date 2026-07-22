@@ -1,5 +1,7 @@
 import {
   createContext,
+  Dispatch,
+  SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -29,22 +31,22 @@ export interface LogFilter {
   subService: string;
 }
 interface LogsViewerContextType {
+  pageSize: number;
   services: Service[];
   selectedService: Service | null;
   changeService: (service: Service) => void;
-  pageSize: number;
   filter: Partial<LogFilter> | null;
-  setFilter: React.Dispatch<React.SetStateAction<Partial<LogFilter> | null>>;
+  setFilter: Dispatch<SetStateAction<Partial<LogFilter> | null>>;
   resetFilter: () => void;
   predefinedQueries?: string[];
-  serviceNames?: string[];
   agentName?: string;
   askAiDescription?: string;
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks: boolean;
   subService: string;
-  setSubService: (value: string) => void;
+  setSubService: (value: string | null) => Promise<URLSearchParams>;
+  isManagedLoading: boolean;
 }
 const initialContextValue: LogsViewerContextType = {
   services: [],
@@ -61,7 +63,9 @@ const initialContextValue: LogsViewerContextType = {
   useGenericTraceLinks: false,
   isSourceBlocks: true,
   subService: "all",
-  setSubService: () => {},
+  setSubService: (value: string | null) =>
+    Promise.resolve(new URLSearchParams({ subService: value || "" })),
+  isManagedLoading: false,
 };
 // Create context with the initial value
 export const LogsViewerContext =
@@ -78,6 +82,7 @@ interface LogsViewerProps {
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks?: boolean;
+  isManagedLoading?: boolean;
 }
 export const LogsViewer = ({
   pageSize = 20,
@@ -89,6 +94,7 @@ export const LogsViewer = ({
   logsRouteServiceName,
   useGenericTraceLinks = false,
   isSourceBlocks = true,
+  isManagedLoading = false,
 }: LogsViewerProps) => {
   const defaultServiceId = services.length > 0 ? services[0].id : "";
   const [serviceId, setServiceId] = useQueryState("service", {
@@ -173,6 +179,7 @@ export const LogsViewer = ({
         isSourceBlocks,
         subService,
         setSubService,
+        isManagedLoading,
       }}>
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />

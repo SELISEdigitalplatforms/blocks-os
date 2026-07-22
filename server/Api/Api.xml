@@ -4,10 +4,17 @@
         <name>Api</name>
     </assembly>
     <members>
-        <member name="T:BlocksTemplate.Api.GlobalApiRoutePrefixConvention">
+        <member name="T:BlocksOs.Api.Controllers.VersionController">
+            <summary>
+            Reports the running API assembly version. Public by design (no auth) so health/deploy
+            tooling can read it without a token. Route is <c>GET /api/version</c> via the global
+            <see cref="T:BlocksOs.Api.GlobalApiRoutePrefixConvention"/> "api" prefix.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.GlobalApiRoutePrefixConvention">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
         </member>
-        <member name="M:BlocksTemplate.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
+        <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
         </member>
         <member name="T:Program">

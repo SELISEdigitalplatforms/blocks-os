@@ -35,7 +35,7 @@ namespace DomainService.Projects
         {
             var blocksContext = BlocksContext.GetContext();
 
-            if(blocksContext.Impersonated)
+            if(blocksContext?.Impersonated ?? true)
             {
                 return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
             }
@@ -284,7 +284,16 @@ namespace DomainService.Projects
             return await unfinishedList.ToListAsync();
         }
 
-        public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
+        public async Task<ProjectStatusTracer?> GetUnfinishedProjectByIdAsync(string itemId)
+        {
+           var collection = _clientDb.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
+
+           var filter = Builders<ProjectStatusTracer>.Filter.Eq(mc => mc.ProjectId, itemId);
+           var unfinishedList = await collection.FindAsync(filter);
+           return await unfinishedList.FirstOrDefaultAsync();
+        }      
+
+  public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
         {
             if (statusTracer.IsDefaultConfigurationCopied) return;
 
@@ -299,33 +308,39 @@ namespace DomainService.Projects
             var sourceDatabase = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksConfiguration");
 
             await Task.WhenAll(
-                CopyDocumentAsync(sourceDatabase, consumerDb, "MailServerConfigurations", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "StorageConfigurations", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "UilmFiles", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageModules", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageKeys", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project.TenantId),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "MailServerConfigurations", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "StorageConfigurations", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "UilmFiles", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageModules", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageKeys", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project),
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project.TenantId),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "DmsArtifacts", project.TenantId));
+                CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "DmsArtifacts", project));
         }
 
-        private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, string tenantId)
+        private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, Tenant project)
         {
+            var collectionExists = await targetDb.ListCollectionNames(new ListCollectionNamesOptions{ Filter = new BsonDocument("name", collectionName)}).AnyAsync();
+
+            if(collectionExists)
+            {
+               await targetDb.DropCollectionAsync(collectionName);
+            }
+
             var sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
             var documents = await (await sourceCollection.FindAsync(_ => true)).ToListAsync();
-            var userId = BlocksContext.GetContext()?.UserId;
 
             foreach (var document in documents)
             {
-                document["CreatedBy"] = userId;
-                document["LastUpdatedBy"] = userId;
+                document["CreatedBy"] = project.CreatedBy;
+                document["LastUpdatedBy"] = project.CreatedBy;
                 var targetCollection = targetDb.GetCollection<BsonDocument>(collectionName);
                 await targetCollection.InsertOneAsync(document);
             }
@@ -371,7 +386,7 @@ namespace DomainService.Projects
             }
         }
 
-        public async Task UpdateIamConfiguration(Tenant project)
+        public async Task UpdateIamConfigurationAsync(Tenant project)
         {
             var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
             var collection = targetedDb.GetCollection<BsonDocument>("IamConfigurations");
@@ -474,7 +489,7 @@ namespace DomainService.Projects
             await _clientDb.GetCollection<ProjectPeople>("ProjectPeoples").InsertOneAsync(projectPeople);
         }
 
-        public async Task<bool> SaveTenantCertificate(TenantCertificate tenantCertificate)
+        public async Task<bool> SaveTenantCertificateAsync(TenantCertificate tenantCertificate)
         {
             await _clientDb.GetCollection<TenantCertificate>("TenantCertificates")
                 .ReplaceOneAsync(x => x.ItemId == tenantCertificate.ItemId, tenantCertificate, new ReplaceOptions { IsUpsert = true });

@@ -2,7 +2,7 @@
 
 namespace CloudConfiguration.DomainService.Notification.RequestModel
 {
-    public class SaveNotificatonConfigurationRequest
+    public class SaveNotificationConfigurationRequest
     {
         public string Name { get; set; }
         public NotifierTypes ChannelToNotify { get; set; }

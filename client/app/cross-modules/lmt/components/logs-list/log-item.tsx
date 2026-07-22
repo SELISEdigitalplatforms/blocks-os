@@ -1,6 +1,6 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
-import { useLmtBasePath } from "@/hooks/use-scoped-path";
+import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
 import { useContext, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
