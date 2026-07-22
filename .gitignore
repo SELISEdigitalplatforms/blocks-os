@@ -206,3 +206,11 @@ zap-*.xml
 *.md
 !README.md
 !LICENSE.md
+
+# --- markdown policy v2: only standard docs may be tracked ---
+*.md
+!README.md
+!LICENSE.md
+!CONTRIBUTING.md
+!SECURITY.md
+!CODE_OF_CONDUCT.md
