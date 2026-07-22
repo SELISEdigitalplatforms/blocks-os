@@ -39,7 +39,6 @@ export interface ICreateProjectPayload {
   name: string;
   isAcceptBlocksTerms: boolean;
   isUseBlocksExclusively: boolean;
-  isProduction: boolean;
   resources: IResource[];
   applicationContexts: {
     environment: string;
