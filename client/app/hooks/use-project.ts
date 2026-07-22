@@ -9,6 +9,7 @@ import {
   shortGuidGenerator,
 } from "@/components/create-project/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export const useGetProjects = (tenantGroupId = "") => {
   const { setProjects } = useProjectStore();
@@ -193,7 +194,7 @@ export const useProjectForm = () => {
       const environments = formData[2]?.environments || [];
       const shortGuid = shortGuidGenerator(5);
       const baseDomain =
-        import.meta.env.BLOCKS_BASE_DOMAIN || "seliseblocks.com";
+        getRuntimeEnv("BLOCKS_BASE_DOMAIN") || "seliseblocks.com";
       const applicationContexts =
         environments.map((env: { value: string }) => ({
           environment: env.value,
