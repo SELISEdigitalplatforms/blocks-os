@@ -8,6 +8,8 @@ concurrency:
 jobs:
   scan-deploy:
     runs-on: [self-hosted, inception]
+    env:
+      HOME: /root
     steps:
       - name: Scan + deploy (deploy.sh)
         run: bash /opt/blocks/code/blocks-os/scripts/deploy.sh
