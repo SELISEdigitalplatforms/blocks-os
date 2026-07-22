@@ -197,3 +197,12 @@ builds/
 *.cdx.json
 zap-*.xml
 *-semgrep.sarif
+
+# ---------------------------------------------------------------------------
+# Markdown policy: no .md files in the repository except README.md (any
+# directory) and LICENSE.md. Docs/specs stay local, untracked.
+# Mirrored in .git/info/exclude and enforced by .git/hooks/pre-commit on the
+# deployment VM - keep the three in sync.
+*.md
+!README.md
+!LICENSE.md
