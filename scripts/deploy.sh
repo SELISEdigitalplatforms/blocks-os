@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+export HOME="${HOME:-/root}"
 SVC=os
 PORT=5002
 REPO=/opt/blocks/code/blocks-$SVC
