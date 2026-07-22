@@ -1,0 +1,13 @@
+name: Inception Scan & Deploy
+on:
+  push:
+    branches: [inception]
+concurrency:
+  group: inception-deploy
+  cancel-in-progress: false
+jobs:
+  scan-deploy:
+    runs-on: [self-hosted]
+    steps:
+      - name: Scan + deploy (deploy.sh)
+        run: bash /opt/blocks/code/blocks-os/scripts/deploy.sh
