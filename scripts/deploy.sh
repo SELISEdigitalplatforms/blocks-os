@@ -6,8 +6,8 @@ REPO=/opt/blocks/code/blocks-$SVC
 SEC=/opt/blocks/security
 SONAR=http://127.0.0.1:9000
 DT=http://127.0.0.1:8081
-DDH=inception-dast.blocksdevelopers.com
-SHIELDH=inception-shield.blocksdevelopers.com
+DD=http://127.0.0.1:8083
+SHIELD_DATA=/var/www/trufflehog-explorer/data
 export PATH="$PATH:$HOME/.dotnet/tools"
 [ -f /opt/blocks/secrets/scan.env ] && . /opt/blocks/secrets/scan.env
 
@@ -33,7 +33,7 @@ pull(){ git -C "$REPO" fetch --prune origin inception && git -C "$REPO" checkout
 secret(){
   trufflehog git "file://$REPO" --json --no-update > "$SEC/secrets/blocks-$SVC.trufflehog.json" 2>/dev/null
   python3 "$SEC/th_transform.py" "$SVC" < "$SEC/secrets/blocks-$SVC.trufflehog.json" > "$SEC/secrets/blocks-$SVC.gh.json"
-  curl -fsS -u "$SHIELD_USER:$SHIELD_PASS" -T "$SEC/secrets/blocks-$SVC.gh.json" "https://$SHIELDH/data/blocks-$SVC.trufflehog.json" -o /dev/null
+  cp "$SEC/secrets/blocks-$SVC.gh.json" "$SHIELD_DATA/blocks-$SVC.trufflehog.json"
 }
 
 sca(){
@@ -52,7 +52,7 @@ sast(){
 dast(){
   mkdir -p "$SEC/dast"; chmod 777 "$SEC/dast"
   docker run --rm -v "$SEC/dast:/zap/wrk:rw" zaproxy/zap-stable zap-baseline.py -t "https://inception-$SVC.blocksdevelopers.com" -x "zap-$SVC.xml" -I
-  curl -fsS -X POST "https://$DDH/api/v2/import-scan/" -H "Authorization: Token $DD_TOKEN" -F "scan_type=ZAP Scan" -F "product_type_name=Blocks Inception" -F "product_name=blocks-$SVC" -F "engagement_name=DAST-inception" -F auto_create_context=true -F active=true -F verified=false -F minimum_severity=Info -F "file=@$SEC/dast/zap-$SVC.xml" -o /dev/null
+  curl -fsS -X POST "$DD/api/v2/import-scan/" -H "Authorization: Token $DD_TOKEN" -F "scan_type=ZAP Scan" -F "product_type_name=Blocks Inception" -F "product_name=blocks-$SVC" -F "engagement_name=DAST-inception" -F auto_create_context=true -F active=true -F verified=false -F minimum_severity=Info -F "file=@$SEC/dast/zap-$SVC.xml" -o /dev/null
 }
 
 deploy(){
