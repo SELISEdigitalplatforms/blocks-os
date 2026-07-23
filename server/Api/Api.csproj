@@ -20,7 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Cloud.DomainService\Cloud.DomainService.csproj" />
     <ProjectReference Include="..\Cloud.LmtService\Cloud.LmtService.csproj" />
-    <ProjectReference Include="..\CloudConfiguration.DomainService\CloudConfiguration.DomainService.csproj" />
+    <ProjectReference Include="..\Configuration.DomainService\Configuration.DomainService.csproj" />
     <ProjectReference Include="..\Identifier.DomainService\Identifier.DomainService.csproj" />
     <ProjectReference Include="..\Secrets.DomainService\Secrets.DomainService.csproj" />
   </ItemGroup>

@@ -1,5 +1,5 @@
 using Blocks.Genesis;
-using CloudConfiguration.DomainService.Shared.Utilities;
+using Configuration.DomainService.Shared.Utilities;
 using FluentAssertions;
 
 namespace XUnitTest.Helpers

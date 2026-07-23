@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,9 +18,12 @@ export const EmailUsageDetailsBreadcrumb = ({
   isInbound,
 }: EmailUsageDetailsBreadcrumbProps) => {
   const navigate = useNavigate();
-  const backLink = isInbound
-    ? "/utilities/email?emailAnalytics=Inbox"
-    : "/utilities/email?emailAnalytics=Outgoingmails";
+  const scoped = useScopedPath();
+  const backLink = scoped(
+    isInbound
+      ? "secret-management/email?emailAnalytics=Inbox"
+      : "secret-management/email?emailAnalytics=Outgoingmails",
+  );
   return (
     <Breadcrumb>
       <BreadcrumbList>

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import {
   useGetEmailTemplate,
   useSaveEmailTemplate,
@@ -20,6 +21,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     itemId: "",
   });
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   useEffect(() => {
     if (id) {
       const email = data;
@@ -58,7 +60,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     };
     await saveEmailTemplate(currentData);
     setTemplateData(currentData);
-    navigate(`/utilities/email/communications/${emailDetails.itemId}`);
+    navigate(scoped(`secret-management/email/communications/${emailDetails.itemId}`));
   };
   return (
     <div>
