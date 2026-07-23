@@ -21,6 +21,12 @@ interface DropdownSearchInputProps {
     input?: string;
   };
   options: { label: ReactNode; value: string }[];
+  /** Debounce (ms) before propagating a search change. Default 300. */
+  debounceMs?: number;
+  /** Only search once the trimmed value reaches this length; below it the search is cleared. Default 0 (no minimum). */
+  minSearchLength?: number;
+  /** Keep the typed value when the user switches the search field instead of clearing it. Default false. */
+  keepValueOnTypeChange?: boolean;
 }
 export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   onChange,
@@ -28,6 +34,9 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   value,
   className = {},
   options = [],
+  debounceMs = 300,
+  minSearchLength = 0,
+  keepValueOnTypeChange = false,
 }) => {
   const [state, setState] = useState<ValueType>(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +46,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   const debounced = useRef(
     debounce((val: ValueType) => {
       onChange(val);
-    }, 300),
+    }, debounceMs),
   ).current;
   useEffect(() => {
     return () => {
@@ -46,9 +55,12 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   }, [debounced]);
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     event.stopPropagation();
-    const data = { ...state, value: event.target.value };
-    setState(data);
-    debounced(data);
+    const raw = event.target.value;
+    setState((prev) => ({ ...prev, value: raw }));
+    // Only search once the term is long enough; below the minimum, clear the active search so the
+    // list falls back to showing everything rather than filtering on one or two characters.
+    const meetsMin = raw.trim().length >= minSearchLength;
+    debounced({ selected: state.selected, value: meetsMin ? raw : "" });
   };
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();
@@ -57,8 +69,11 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
     onChange(data);
   };
   const handleSelect = (value: string) => {
-    setState({ selected: value, value: "" });
-    onChange({ selected: value, value: "" });
+    // Keep the current term when switching fields (e.g. name <-> email) so the user can re-run the same
+    // search against the other field without retyping; otherwise fall back to clearing it.
+    const nextValue = keepValueOnTypeChange ? state.value : "";
+    setState({ selected: value, value: nextValue });
+    onChange({ selected: value, value: nextValue });
   };
   return (
     <div className="flex items-center gap-2 rounded-md border pr-2">
