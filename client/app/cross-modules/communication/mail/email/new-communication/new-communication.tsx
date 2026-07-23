@@ -6,14 +6,13 @@ import StepperProvider, {
 import { Steps } from "@/components/stepper/stepper-models";
 import { Button } from "@/components/ui-kits/button/button";
 import { toast } from "@/hooks/use-toast";
-import useIsMobile from "@/hooks/use-is-mobile";
 import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile, useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import { X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -34,6 +33,7 @@ function NewCommunicationContent() {
   const [isFormValid, setIsFormValid] = useState(false);
   const navigate = useNavigate();
   const scoped = useScopedPath();
+  const isMobile = useIsMobile();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const emailBasePath = scoped("secret-management/email");
 
@@ -106,7 +106,7 @@ function NewCommunicationContent() {
 
       <div
         className={`ml-0 flex-1 py-5 sm:ml-5 ${
-          useIsMobile() ? "mt-16" : ""
+          isMobile ? "mt-16" : ""
         }`}
       >
         <div className="flex flex-col items-center justify-center md:hidden">
