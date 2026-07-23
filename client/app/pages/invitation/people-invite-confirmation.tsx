@@ -34,6 +34,7 @@ export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps
             success: "1",
             old: "0",
             code: res.activationKey,
+            tenant: res.tenantId ?? "",
           }),
           { replace: true },
         )
