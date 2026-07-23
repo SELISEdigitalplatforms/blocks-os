@@ -91,9 +91,11 @@ const redirectPaths: Record<string, string> = {
   "/app/idp/permission-detail/*": "/app/idp/permissions",
 };
 
+const emailPageShellClassName = "flex flex-col gap-6 p-6";
+
 function EmailPage() {
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className={emailPageShellClassName}>
       <EmailServiceTable />
     </div>
   );
@@ -102,19 +104,31 @@ function EmailPage() {
 function EmailCommunicationDetailsPage() {
   const { id } = useParams<{ id: string }>();
 
-  return <EmailCommunicationDetails params={{ id: id || "" }} />;
+  return (
+    <div className={emailPageShellClassName}>
+      <EmailCommunicationDetails params={{ id: id || "" }} />
+    </div>
+  );
 }
 
 function EmailTemplateEditPage() {
   const { id } = useParams<{ id: string }>();
 
-  return <EditEmailTemplate params={{ id: id || "" }} />;
+  return (
+    <div className={emailPageShellClassName}>
+      <EditEmailTemplate params={{ id: id || "" }} />
+    </div>
+  );
 }
 
 function EmailUsageDetailsPage() {
   const { id } = useParams<{ id: string }>();
 
-  return <EmailUsageDetails id={id || ""} />;
+  return (
+    <div className={emailPageShellClassName}>
+      <EmailUsageDetails id={id || ""} />
+    </div>
+  );
 }
 
 export const router = createBrowserRouter([
