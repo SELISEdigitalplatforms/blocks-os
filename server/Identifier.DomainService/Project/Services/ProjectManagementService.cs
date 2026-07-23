@@ -353,6 +353,8 @@ namespace DomainService.Projects
             {
                 var project = await _projectRepository.GetByIdAsync(projectStatusTracer.ProjectId);
                 projectStatusTracer.ErrorMessage = string.Empty;
+
+                if(project is not null)
                 await ConfigureProjectAsync(project, projectStatusTracer);
 
                 if (string.IsNullOrWhiteSpace(projectStatusTracer.ErrorMessage))
@@ -365,9 +367,45 @@ namespace DomainService.Projects
 
         public async Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest)
         {
-            await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
+           //await _messageClient.SendToConsumerAsync(new ConsumerMessage<RestoreProjectRequest> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = restoreProjectRequest });
+
+           var project = await _projectRepository.GetByIdAsync(restoreProjectRequest.ItemId);
+           ProjectStatusTracer? projectStatusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(restoreProjectRequest.ItemId);
+
+           if(project != null && projectStatusTracer == null)
+           {
+              projectStatusTracer = new ProjectStatusTracer { ProjectId = restoreProjectRequest.ItemId };
+           }
+
+           if (project is not null)
+           await ConfigureProjectAsync(project, projectStatusTracer);
+
+           if (string.IsNullOrWhiteSpace(projectStatusTracer.ErrorMessage))
+           {
+             projectStatusTracer.IsProjectCreationSuccess = true;
+             await _projectRepository.SaveStatusTracerAsync(projectStatusTracer);
+           }
 
             return new RestoreProjectResponse { IsSuccess = true };
+         }
+
+        public async Task<bool> GetProjectStatusAsync(string itemId)
+        {
+            var statusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(itemId);
+
+            if (statusTracer is not null)
+            {
+               return statusTracer.IsProjectCreationSuccess;
+            }
+
+            var tenant = await _projectRepository.GetByIdAsync(itemId);
+
+            if (tenant is not null)
+            {
+              return false;
+            }
+
+            return true;
         }
 
         public async Task<GetProjectResponse> GetAsync()

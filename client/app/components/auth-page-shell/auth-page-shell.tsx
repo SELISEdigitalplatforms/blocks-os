@@ -1,15 +1,15 @@
-import type { ReactNode } from "react"
-import { Link } from "react-router-dom"
-import { KeyRound, Lock, ShieldCheck } from "lucide-react"
-import { Logo } from "@/components/logo"
-import { ModeToggle } from "@/components/mode-toggle/mode-toggle"
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { KeyRound, Lock, ShieldCheck } from "lucide-react";
+import { Logo } from "@/components/logo";
+import { ThemeSwitcher } from "@seliseblocks/blocks-kit";
 
 export interface AuthPageShellProps {
-  badge: string
-  title: string
-  subtitle?: string
-  children: ReactNode
-  logoHref?: string
+  badge: string;
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  logoHref?: string;
 }
 
 export const AuthPageShell = ({
@@ -19,7 +19,7 @@ export const AuthPageShell = ({
   children,
   logoHref = "/login",
 }: AuthPageShellProps) => {
-  const logo = <Logo width={120} height={52} />
+  const logo = <Logo width={120} height={52} />;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[hsl(var(--surface-app))]">
@@ -38,7 +38,7 @@ export const AuthPageShell = ({
           logo
         )}
         <div className="absolute right-6 top-5 xl:right-[154px]">
-          <ModeToggle />
+          <ThemeSwitcher />
         </div>
       </header>
 
@@ -53,9 +53,13 @@ export const AuthPageShell = ({
                   {badge}
                 </span>
                 <div className="relative mt-3">
-                  <h1 className="text-lg font-bold leading-tight text-primary-foreground">{title}</h1>
+                  <h1 className="text-lg font-bold leading-tight text-primary-foreground">
+                    {title}
+                  </h1>
                   {subtitle ? (
-                    <p className="mt-0.5 text-xs text-primary-foreground/70">{subtitle}</p>
+                    <p className="mt-0.5 text-xs text-primary-foreground/70">
+                      {subtitle}
+                    </p>
                   ) : null}
                 </div>
               </div>
@@ -80,11 +84,12 @@ export const AuthPageShell = ({
             </div>
 
             <p className="mt-4 text-center text-[11px] text-[hsl(var(--low-emphasis))]">
-              © {new Date().getFullYear()} SELISE Digital Platforms. All rights reserved.
+              © {new Date().getFullYear()} SELISE Digital Platforms. All rights
+              reserved.
             </p>
           </div>
         </div>
       </main>
     </div>
-  )
-}
+  );
+};

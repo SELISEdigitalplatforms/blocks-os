@@ -25,7 +25,7 @@ import {
   useSeedProviders,
 } from "@blocks-ai/hooks/use-aimodel";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useScopedPath } from "@/hooks/use-scoped-path";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Plus, ArrowLeft } from "lucide-react";
 const PROVIDER_PNG_MAP: Record<string, string> = {
