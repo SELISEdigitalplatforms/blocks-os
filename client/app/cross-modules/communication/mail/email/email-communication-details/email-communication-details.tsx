@@ -64,10 +64,10 @@ export function EmailCommunicationDetails({
   ) {
     return <EmailTemplateDetailsSkeleton />;
   }
-  BREADCRUMB_CUSTOM_TITLES["/secret-management/email/communications"] =
+  BREADCRUMB_CUSTOM_TITLES["/email-management/communications"] =
     "Email Templates";
   BREADCRUMB_CUSTOM_TITLES[
-    "/secret-management/email/communications/" + emailDetails?.itemId
+    "/email-management/communications/" + emailDetails?.itemId
   ] = emailDetails?.name ? emailDetails.name : "";
   const confirmationModalData = {
     dialogTitle: "Send test email",
@@ -183,7 +183,7 @@ export function EmailCommunicationDetails({
                 className="gap-2 shadow-none hover:bg-white"
                 onClick={() =>
                   navigate(
-                    scoped(`secret-management/email/communications/${emailDetails.itemId}/edit`),
+                    scoped(`email-management/communications/${emailDetails.itemId}/edit`),
                   )
                 }>
                 <Pencil className="h-5 w-5" />

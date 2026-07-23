@@ -23,6 +23,7 @@ import { navigationMenus } from "./constants/navigation-menus";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import {
+  EmailConfigurationPage,
   EmailCommunicationDetails,
   EmailServiceTable,
   NewCommunication,
@@ -92,7 +93,7 @@ const redirectPaths: Record<string, string> = {
 
 function EmailPage() {
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6">
       <EmailServiceTable />
     </div>
   );
@@ -327,28 +328,7 @@ export const router = createBrowserRouter([
                       },
                       {
                         path: "email",
-                        children: [
-                          {
-                            index: true,
-                            element: <EmailPage />,
-                          },
-                          {
-                            path: "new-communication",
-                            element: <NewCommunication />,
-                          },
-                          {
-                            path: "communications/:id",
-                            element: <EmailCommunicationDetailsPage />,
-                          },
-                          {
-                            path: "communications/:id/edit",
-                            element: <EmailTemplateEditPage />,
-                          },
-                          {
-                            path: "usage/:id",
-                            element: <EmailUsageDetailsPage />,
-                          },
-                        ],
+                        element: <EmailConfigurationPage />,
                       },
                       {
                         path: "notification",
@@ -428,6 +408,31 @@ export const router = createBrowserRouter([
                   {
                     path: "api-settings",
                     element: <ApiSettingsPage />,
+                  },
+                  {
+                    path: "email-management",
+                    children: [
+                      {
+                        index: true,
+                        element: <EmailPage />,
+                      },
+                      {
+                        path: "new-communication",
+                        element: <NewCommunication />,
+                      },
+                      {
+                        path: "communications/:id",
+                        element: <EmailCommunicationDetailsPage />,
+                      },
+                      {
+                        path: "communications/:id/edit",
+                        element: <EmailTemplateEditPage />,
+                      },
+                      {
+                        path: "usage/:id",
+                        element: <EmailUsageDetailsPage />,
+                      },
+                    ],
                   },
                   {
                     path: "lmt",

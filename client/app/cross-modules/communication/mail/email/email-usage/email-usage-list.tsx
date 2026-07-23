@@ -99,7 +99,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                     }}
                   >
                     <Link
-                      to={scoped(`secret-management/email/usage/${row.original.messageId}`)}
+                      to={scoped(`email-management/usage/${row.original.messageId}`)}
                       className="flex items-center"
                     >
                       <Eye className="mr-2 h-4 w-4" />
@@ -155,7 +155,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                   table.getRowModel().rows.map((row) => (
                     <Link
                       key={row.id}
-                      to={scoped(`secret-management/email/usage/${row.original.messageId}`)}
+                      to={scoped(`email-management/usage/${row.original.messageId}`)}
                     >
                       <TableRow data-state={row.getIsSelected() && "selected"} isHoverable>
                         {row.getVisibleCells().map((cell) => (
