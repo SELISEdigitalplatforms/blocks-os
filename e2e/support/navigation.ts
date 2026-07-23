@@ -66,6 +66,43 @@ export async function enterConsole(page: Page): Promise<void> {
 }
 
 /**
+ * Enter a project by clicking the first environment chip on the first project
+ * card. The console's ProjectCard component navigates to
+ * `/app/<itemId>/dashboard` (which is the only route that mounts the full
+ * sidebar containing API Settings / IDP / Secrets & Configs / Logs & Traces).
+ *
+ * Returns the resulting `:itemId` so callers can build direct URLs.
+ */
+export async function enterProject(page: Page): Promise<string> {
+  await enterConsole(page);
+
+  // Wait for at least one project card to render. The console shows a "Your
+  // Blocks Projects" heading once the projects API has returned.
+  await expect(
+    page.getByRole("heading", { name: "Your Blocks Projects" }),
+  ).toBeVisible({ timeout: 30_000 });
+
+  // The first environment chip is the entry point into the dashboard layout.
+  // The chip label comes from environmentOptions (e.g. "Development" /
+  // "Testing" / "Staging"). The first one is always present after the project
+  // is created with at least one environment.
+  const firstChip = page
+    .locator("button")
+    .filter({ hasText: /^(Development|Testing|Staging|Production)$/ })
+    .first();
+  await expect(
+    firstChip,
+    "no project environment chip visible on console",
+  ).toBeVisible({ timeout: 30_000 });
+  await firstChip.click();
+
+  await page.waitForURL(/\/app\/[^/]+\/dashboard/, { timeout: 30_000 });
+  const itemId = page.url().match(/\/app\/([^/]+)\/dashboard/)?.[1] ?? "";
+  expect(itemId, "could not read itemId from URL").not.toBe("");
+  return itemId;
+}
+
+/**
  * Open a top-level sidebar group by visible name and wait for its expanded
  * child items. The sidebar uses accordion semantics — clicking the parent
  * triggers navigation to its `path` and reveals `children`.
