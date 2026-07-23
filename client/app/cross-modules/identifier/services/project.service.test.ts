@@ -190,23 +190,19 @@ describe("ProjectService", () => {
   // ─── getProject ─────────────────────────────────────────────────────────────
 
   describe("getProject", () => {
-    it("should call correct endpoint with projectId", async () => {
+    it("should call the endpoint with no query params", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetProjectResponse);
 
-      const result = await service.getProject({ projectId: "proj-123" });
+      const result = await service.getProject();
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${PROJECT_ENDPOINTS.GET}?projectId=proj-123`,
-      );
+      expect(http.get).toHaveBeenCalledWith(PROJECT_ENDPOINTS.GET);
       expect(result).toEqual(mockGetProjectResponse);
     });
 
     it("should handle API errors", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Project not found"));
 
-      await expect(service.getProject({ projectId: "bad" })).rejects.toThrow(
-        "Project not found",
-      );
+      await expect(service.getProject()).rejects.toThrow("Project not found");
     });
   });
 

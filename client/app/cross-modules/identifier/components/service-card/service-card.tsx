@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { useLmtBasePath } from "@/hooks/use-scoped-path";
+import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { useNavigate } from "react-router-dom";
 import { RegisteredService } from "@blocks-identifier/models/service.model";
 import { Button } from "@/components/ui-kits/button/button";
@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { MaskedText } from "@/components/masked-text";
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
+import { useCopyToClipboard } from "@seliseblocks/blocks-kit/hooks";
 import { showSuccessToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { AccordionTrigger } from "@/components/ui-kits/accordion/accordion";
@@ -44,9 +44,10 @@ const ServiceCardCopiedItem = ({
           size="sm"
           className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600"
           onClick={() =>
-            copy(value, () =>
-              showSuccessToast({ description: `${label} copied` }),
-            )
+            copy(value, {
+              onSuccess: () =>
+                showSuccessToast({ description: `${label} copied` }),
+            })
           }>
           <Copy className="h-4 w-4" />
         </Button>

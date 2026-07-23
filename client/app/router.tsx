@@ -24,18 +24,17 @@ import { NotificationConfigurationListPage } from "./cross-modules/communication
 import { StorageContents } from "./cross-modules/storage/pages/storage/storage-contents";
 // Temporarily disabled
 // import { MagicUrls } from "./cross-modules/utilities/pages/magic-urls/magic-urls";
-import { ClientCredentials } from "./idp/authentication/components/client-credentials";
-import { IdentityProviderPage } from "./idp/authentication/components/identity-provider/identity-provider";
-import { OIDC } from "./idp/authentication/components/oidc";
-import OidcTemplate from "./idp/authentication/components/oidc/oidc-template";
-import { AuthenticationConfigLayout } from "./idp/authentication/pages/authentication-config";
-import { Certificates } from "./idp/authentication/pages/authentication-config/general/certificates/certificates";
-import { SSO } from "./idp/authentication/pages/authentication-config/sso";
-import { ConfigureCaptcha } from "./idp/captcha/pages/configure-captcha";
-import { Permissions } from "./idp/iam/modules/permission-management";
-import { Roles } from "./idp/iam/modules/role-management";
-import { ConfigureMFA } from "./idp/mfa/pages/configure-mfa/configure-mfa";
-import { IdpSettingsPage } from "./idp/settings/pages/settings-page";
+import { ClientCredentials } from "@blocks-idp/authentication/components/client-credentials";
+import { OIDC } from "@blocks-idp/authentication/components/oidc";
+import OidcTemplate from "@blocks-idp/authentication/components/oidc/oidc-template";
+import { AuthenticationConfigLayout } from "@blocks-idp/authentication/pages/authentication-config";
+import { Certificates } from "@blocks-idp/authentication/pages/authentication-config/general/certificates/certificates";
+import { SSO } from "@blocks-idp/authentication/pages/authentication-config/sso";
+import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
+import { Permissions } from "@blocks-idp/iam/modules/permission-management";
+import { Roles } from "@blocks-idp/iam/modules/role-management";
+import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
+import { IdpSettingsPage } from "@blocks-idp/settings/pages/settings-page";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
 import {
   EnvironmentMigrationPage,
@@ -55,7 +54,7 @@ import { RepositoriesPage } from "./pages/repositories/repositories";
 import { SettingsPage } from "./pages/settings/settings";
 import { SubscriptionUsagePage } from "./pages/subscription-usage/subscription-usage-page";
 import ActivatePage from "./routes/auth/activate-page";
-import GitHubCallbackPage from "./routes/callback/callback";
+import GitHubCallbackPage from "./routes/github-callback/github-callback";
 // Temporarily disabled
 // import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ApiSettingsPage from "./routes/dashboard/api-settings";
@@ -71,6 +70,7 @@ import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
 import MyServicesPage from "./routes/dashboard/my-services";
 import OidcBrandingPage from "./routes/dashboard/oidc-branding";
 import SecretManagementLayout from "./routes/dashboard/secret-management";
+import { IdentityProviderPage } from "@blocks-idp/authentication/components/identity-provider/identity-provider";
 
 const redirectPaths: Record<string, string> = {
   "/app/idp/user-detail/*": "/app/idp",
