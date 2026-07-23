@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import type { IAPIResponse } from "@/models/api-response";
 import { NOTIFICATION_ENDPOINTS } from "../constants/endpoint.constant";
 import {
@@ -53,17 +53,19 @@ export class NotificationConfigService {
     }
 
     return http
-      .get<INotificationGetsApiResponse | IAPIResponse<INotificationGetsApiResponse>>(
-        `${NOTIFICATION_ENDPOINTS.GET_CONFIGS}?${params.toString()}`,
-      )
+      .get<
+        | INotificationGetsApiResponse
+        | IAPIResponse<INotificationGetsApiResponse>
+      >(`${NOTIFICATION_ENDPOINTS.GET_CONFIGS}?${params.toString()}`)
       .then((response) => {
         const data: INotificationGetsApiResponse = Array.isArray(
           (response as IAPIResponse<INotificationGetsApiResponse>).data,
         )
           ? (response as IAPIResponse<INotificationGetsApiResponse>).data
-          : ((response as INotificationGetsApiResponse).configurations !== undefined
-              ? (response as INotificationGetsApiResponse)
-              : { configurations: [], totalCount: 0 });
+          : (response as INotificationGetsApiResponse).configurations !==
+              undefined
+            ? (response as INotificationGetsApiResponse)
+            : { configurations: [], totalCount: 0 };
 
         const configurations = data.configurations ?? [];
         const filtered = filterBySearch(configurations, payload.searchText);
@@ -105,13 +107,11 @@ export class NotificationConfigService {
       .then(() => undefined);
   }
 
-  getNotificationConfig(
-    itemId: string,
-  ): Promise<INotificationConfigRow> {
+  getNotificationConfig(itemId: string): Promise<INotificationConfigRow> {
     return http
-      .get<INotificationConfigRow | IAPIResponse<INotificationConfigRow>>(
-        `${NOTIFICATION_ENDPOINTS.GET_CONFIG}?itemId=${encodeURIComponent(itemId)}`,
-      )
+      .get<
+        INotificationConfigRow | IAPIResponse<INotificationConfigRow>
+      >(`${NOTIFICATION_ENDPOINTS.GET_CONFIG}?itemId=${encodeURIComponent(itemId)}`)
       .then((response) =>
         (response as IAPIResponse<INotificationConfigRow>).data
           ? (response as IAPIResponse<INotificationConfigRow>).data

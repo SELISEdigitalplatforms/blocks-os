@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { IValidateCnameProjectPayload } from "@/models/project.model";
 import {
   CLOUD_BUILD_ENDPOINTS,
@@ -12,7 +12,6 @@ import {
   IDisableProjectPayload,
   IDisableProjectResponse,
   IEnvRepository,
-  IGetProjectPayload,
   IGetProjectResponse,
   IGetPublicCertificateResponse,
   IGetSubscriptionUsageResponse,
@@ -90,9 +89,10 @@ export class ProjectService {
     return http.post(CLOUD_BUILD_ENDPOINTS.REPO_UPDATE, payload);
   }
 
-  getProject(payload: IGetProjectPayload): Promise<IGetProjectResponse> {
-    const url = `${PROJECT_ENDPOINTS.GET}?projectId=${payload.projectId}`;
-    return http.get(url);
+  // Resolves the project from the caller's auth context — there is no
+  // parameter to pass; the token's tenant selects the project.
+  getProject(): Promise<IGetProjectResponse> {
+    return http.get(PROJECT_ENDPOINTS.GET);
   }
 
   createProject(payload: ICreateProjectPayload): Promise<{
@@ -118,7 +118,7 @@ export class ProjectService {
   updateTenantGroup(
     payload: IUpdateTenantGroupPayload,
   ): Promise<IUpdateProjectResponse> {
-    return http.post(PROJECT_ENDPOINTS.UPDATE_TENANT_GROUP, payload);
+    return http.post(PROJECT_ENDPOINTS.UPDATE_PROJECT_GROUP, payload);
   }
   disableProject(
     payload: IDisableProjectPayload,
