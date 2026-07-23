@@ -313,6 +313,7 @@ namespace DomainService.Projects
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project.TenantId),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "TemplatePluginConfigs", project.TenantId),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "DmsArtifacts", project.TenantId));
         }
 
