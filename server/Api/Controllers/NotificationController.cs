@@ -1,8 +1,8 @@
-﻿using Blocks.Genesis;
-using CloudConfiguration.DomainService.Notification.Entities;
-using CloudConfiguration.DomainService.Notification.RequestModel;
-using CloudConfiguration.DomainService.Notification.ResponseModel;
-using CloudConfiguration.DomainService.Shared.Services;
+using Blocks.Genesis;
+using Configuration.DomainService.Notification.Entities;
+using Configuration.DomainService.Notification.RequestModel;
+using Configuration.DomainService.Notification.ResponseModel;
+using Configuration.DomainService.Shared.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlocksOs.Api.Controllers
