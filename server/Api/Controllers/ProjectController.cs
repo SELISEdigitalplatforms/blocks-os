@@ -56,9 +56,9 @@ namespace BlocksOs.Api.Controllers
             return await _projectManagementService.RestoreProjectAsync(restoreProjectRequest);
         }
 
-        [HttpPost]
+        [HttpGet]
         [Authorize]  
-        public async Task<bool> GetProjectStatus([FromBody] GetProjectStatusRequest request)
+        public async Task<bool> GetProjectStatus([FromQuery] GetProjectStatusRequest request)
         {
             return await _projectManagementService.GetProjectStatusAsync(request.ItemId);
         }
