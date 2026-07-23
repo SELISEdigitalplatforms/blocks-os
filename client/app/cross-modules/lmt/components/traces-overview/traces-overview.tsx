@@ -29,8 +29,8 @@ import {
 } from "@/components/ui-kits/table/table";
 import { Tabs, TabsContent } from "@/components/ui-kits/tabs/tabs";
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
-import useIsMobile from "@/hooks/use-is-mobile";
-import { useLmtBasePath } from "@/hooks/use-scoped-path";
+import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { formatDate, parseDateString } from "@/lib/utils";
 import { TraceProviderSetupGuideLine } from "@blocks-lmt/components/trace-guideline/trace-provider-guideline";
 import {

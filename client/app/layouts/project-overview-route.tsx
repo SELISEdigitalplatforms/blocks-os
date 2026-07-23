@@ -1,6 +1,8 @@
 import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
 import type { Menu } from "@seliseblocks/blocks-kit/types";
+import { useProjectStore } from "@seliseblocks/blocks-kit/store";
+import { useEffect } from "react";
 import { Navigate, Outlet, useParams } from "react-router-dom";
 import { ProjectOverviewLayout } from "./project-overview-layout";
 import { useGetProjects } from "@/hooks/use-project";
@@ -60,6 +62,22 @@ export function ProjectOverviewRoute({
   const { data, isLoading, isError } = useGetProjects({
     tenantGroupId: tenantGroupId,
   });
+  const setTenantGroup = useProjectStore((state) => state.setTenantGroup);
+  const setSelectedProject = useProjectStore(
+    (state) => state.setSelectedProject,
+  );
+
+  // Make the URL the source of truth for the selected project: once the id
+  // resolves to a real group, push it into the shared store so the sub-pages
+  // (environments/people/repositories/settings) — which read
+  // `selectedTenantGroup` from the store, not the URL — work on deep-link,
+  // refresh, and back/forward, not only after clicking a project card.
+  useEffect(() => {
+    if (!tenantGroupId || !Array.isArray(data) || data.length === 0) return;
+    setTenantGroup(tenantGroupId);
+    const project = data[0]?.projects?.[0];
+    if (project) setSelectedProject(project);
+  }, [tenantGroupId, data, setTenantGroup, setSelectedProject]);
 
   if (!tenantGroupId) return <Navigate to={consolePath} replace />;
   if (isLoading) return <AppLoadingSpinner />;

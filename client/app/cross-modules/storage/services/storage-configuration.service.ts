@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import {
   IStorageConfiguration,
   IStorageConfigurationDeletePayload,
@@ -8,7 +8,9 @@ import { STORAGE_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class StorageConfiguration {
   gets(): Promise<IStorageConfiguration[]> {
-    return http.get<IStorageConfiguration[]>(STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS);
+    return http.get<IStorageConfiguration[]>(
+      STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS,
+    );
   }
 
   save(values: IStorageConfigurationSavePayload): Promise<{
@@ -20,38 +22,38 @@ export class StorageConfiguration {
     const resetValues =
       values.storageStrategy === "AWS"
         ? {
-          host: "",
-          port: "",
-          userName: "",
-          password: "",
-          remoteBasePath: "",
-          connectionString: "",
-        }
-        : values.storageStrategy === "Azure"
-          ? {
             host: "",
             port: "",
             userName: "",
             password: "",
-            accessKey: "",
-            secretKey: "",
-            cloudStorageRegionEndPoint: "",
+            remoteBasePath: "",
+            connectionString: "",
           }
-          : values.storageStrategy === "S3Compatible"
-            ? {
+        : values.storageStrategy === "Azure"
+          ? {
+              host: "",
               port: "",
               userName: "",
               password: "",
-              remoteBasePath: "",
-              connectionString: "",
-              cloudStorageRegionEndPoint: "",
-            }
-            : {
               accessKey: "",
               secretKey: "",
               cloudStorageRegionEndPoint: "",
-              connectionString: "",
-            };
+            }
+          : values.storageStrategy === "S3Compatible"
+            ? {
+                port: "",
+                userName: "",
+                password: "",
+                remoteBasePath: "",
+                connectionString: "",
+                cloudStorageRegionEndPoint: "",
+              }
+            : {
+                accessKey: "",
+                secretKey: "",
+                cloudStorageRegionEndPoint: "",
+                connectionString: "",
+              };
 
     // Merge the reset values with the original values
     const payload = { ...resetValues, ...values };
