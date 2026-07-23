@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { AI_ENDPOINTS } from "@blocks-ai/constants/endpoint.constant";
 import {
@@ -18,10 +18,18 @@ const agentsBase = () => getRuntimeEnv("BLOCKS_AGENTS_BASE_URL");
 
 export class ModelService {
   createModel(payload: ICreateModelPayload): Promise<IModelResponse> {
-    return http.post(`${agentsBase()}/api${AI_ENDPOINTS.MODELS}/`, payload, undefined, { absoluteUrl: true });
+    return http.post(
+      `${agentsBase()}/api${AI_ENDPOINTS.MODELS}/`,
+      payload,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
-  getModels(payload: IModelListPayload, project_key: string): Promise<IModelListResponse> {
+  getModels(
+    payload: IModelListPayload,
+    project_key: string,
+  ): Promise<IModelListResponse> {
     return http.get(
       `${agentsBase()}/api${AI_ENDPOINTS.MODELS}/?provider=${payload.provider}&search=${payload.search ?? ""}&page=${payload.page}&page_size=${payload.page_size}&project_key=${project_key}`,
       undefined,
@@ -29,7 +37,10 @@ export class ModelService {
     );
   }
 
-  getAllModels(payload: IModelListPayload, project_key: string): Promise<IModelListResponse> {
+  getAllModels(
+    payload: IModelListPayload,
+    project_key: string,
+  ): Promise<IModelListResponse> {
     const params = new URLSearchParams();
 
     if (payload.provider) params.append("provider", payload.provider);
@@ -38,10 +49,12 @@ export class ModelService {
       params.append("is_active", String(payload.is_active));
     if (payload.search) params.append("search", payload.search);
     if (payload.page) params.append("page", String(payload.page));
-    if (payload.page_size) params.append("page_size", String(payload.page_size));
+    if (payload.page_size)
+      params.append("page_size", String(payload.page_size));
     if (
       payload.status &&
-      (payload.status == ModelStatus.VALID || payload.status == ModelStatus.INVALID)
+      (payload.status == ModelStatus.VALID ||
+        payload.status == ModelStatus.INVALID)
     )
       params.append("status", payload.status);
 
@@ -61,7 +74,10 @@ export class ModelService {
     );
   }
 
-  updateModel(modelId: string, payload: IUpdateModelPayload): Promise<IModelResponse> {
+  updateModel(
+    modelId: string,
+    payload: IUpdateModelPayload,
+  ): Promise<IModelResponse> {
     return http.post(
       `${agentsBase()}/api${AI_ENDPOINTS.MODEL_BY_ID.replace(":id", modelId)}`,
       payload,
@@ -78,7 +94,10 @@ export class ModelService {
     );
   }
 
-  validateModel(modelId: string, project_key: string): Promise<IValidateModelResponse> {
+  validateModel(
+    modelId: string,
+    project_key: string,
+  ): Promise<IValidateModelResponse> {
     return http.post(
       `${agentsBase()}/api${AI_ENDPOINTS.MODEL_VALIDATE.replace(":id", modelId)}?project_key=${project_key}`,
       "",
@@ -88,7 +107,11 @@ export class ModelService {
   }
 
   getSeedProviders(): Promise<IProvider[]> {
-    return http.get(`${agentsBase()}/api${AI_ENDPOINTS.MODEL_SEED_PROVIDERS}`, undefined, { absoluteUrl: true });
+    return http.get(
+      `${agentsBase()}/api${AI_ENDPOINTS.MODEL_SEED_PROVIDERS}`,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   getSeedModelsByProvider(provider: string): Promise<ISeedModelInfo[]> {

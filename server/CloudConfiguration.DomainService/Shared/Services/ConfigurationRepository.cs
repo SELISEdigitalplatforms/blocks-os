@@ -77,7 +77,7 @@ namespace CloudConfiguration.DomainService.Shared.Services
             return await (await collection.FindAsync(filter)).FirstOrDefaultAsync();
         }
 
-        public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificatoinConfigurationRequest request)
+        public async Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request)
         {
             var collection = _dbContextProvider.GetCollection<NotificationConfiguration>(_notificatonConfigurationCollectionName);
             var filter = Builders<NotificationConfiguration>.Filter.Eq(mc => mc.ItemId, request.ItemId);

@@ -12,7 +12,7 @@ import {
   abbreviateNumber,
   abbreviateDurationMs,
 } from "@/cross-modules/lmt/utils";
-import { useLmtBasePath } from "@/hooks/use-scoped-path";
+import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import {
   Card,
   CardContent,
