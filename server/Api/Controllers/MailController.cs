@@ -4,7 +4,7 @@ using CloudConfiguration.DomainService.Mail.RequestModel;
 using CloudConfiguration.DomainService.Shared.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BlocksTemplate.Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
@@ -33,48 +33,31 @@ namespace BlocksTemplate.Api.Controllers
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::mail::gets")]
-        public async Task<MailConfiguration> Get([FromQuery] GetMailConfigurationRequest request)
+        public async Task<IActionResult> Get([FromQuery] GetMailConfigurationRequest request)
         {
             var result = await _configurationService.GetMailConfigurationAsync(request);
 
             if (result == null)
             {
-                var response = new BaseMutationResponse
+                return NotFound(new BaseMutationResponse
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string>
                     {
                         { "Configuration", "No configuration found" }
                     }
-                };
-
-                BadRequest(response);
+                });
             }
 
-            return result;
+            return Ok(result);
         }
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::mail::gets")]
-        public async Task<List<MailServerConfiguration>> Gets([FromQuery] GetAllMailConfigurationsRequest request)
+        public async Task<IActionResult> Gets([FromQuery] GetAllMailConfigurationsRequest request)
         {
             var result = await _configurationService.GetAllMailConfigurationsAsync();
-
-            if (result == null)
-            {
-                var response = new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
-                    {
-                        { "Configuration", "No configuration found" }
-                    }
-                };
-
-                BadRequest(response);
-            }
-
-            return result;
+            return Ok(result);
         }
 
         [HttpDelete]

@@ -1,16 +1,17 @@
-import { Navigate, Outlet } from "react-router-dom";
 import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
-import type { Menu } from "@seliseblocks/blocks-kit/types";
-import { useSyncTenantGroupFromRoute } from "@seliseblocks/blocks-kit/hooks";
-import { useGetProjects } from "@seliseblocks/blocks-kit/hooks";
-import { ProjectOverviewLayout } from "./project-overview-layout";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
+import type { Menu } from "@seliseblocks/blocks-kit/types";
+import { useProjectStore } from "@seliseblocks/blocks-kit/store";
+import { useEffect } from "react";
+import { Navigate, Outlet, useParams } from "react-router-dom";
+import { ProjectOverviewLayout } from "./project-overview-layout";
+import { useGetProjects } from "@/hooks/use-project";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
-  basePath?: string;
+  basePath?: "/app/project";
   /** Where to redirect when no tenant-group id is present in the URL. */
-  consolePath?: string;
+  consolePath?: "/app/console";
   /** Route param that holds the tenant-group id. */
   paramName?: string;
 };
@@ -56,10 +57,27 @@ export function ProjectOverviewRoute({
   consolePath = "/app/console",
   paramName = "tenantGroupId",
 }: ProjectOverviewRouteProps) {
-  const tenantGroupId = useSyncTenantGroupFromRoute(paramName);
+  const params = useParams();
+  const tenantGroupId = params[paramName];
   const { data, isLoading, isError } = useGetProjects({
-    tenantGroupId: tenantGroupId ?? "",
+    tenantGroupId: tenantGroupId,
   });
+  const setTenantGroup = useProjectStore((state) => state.setTenantGroup);
+  const setSelectedProject = useProjectStore(
+    (state) => state.setSelectedProject,
+  );
+
+  // Make the URL the source of truth for the selected project: once the id
+  // resolves to a real group, push it into the shared store so the sub-pages
+  // (environments/people/repositories/settings) — which read
+  // `selectedTenantGroup` from the store, not the URL — work on deep-link,
+  // refresh, and back/forward, not only after clicking a project card.
+  useEffect(() => {
+    if (!tenantGroupId || !Array.isArray(data) || data.length === 0) return;
+    setTenantGroup(tenantGroupId);
+    const project = data[0]?.projects?.[0];
+    if (project) setSelectedProject(project);
+  }, [tenantGroupId, data, setTenantGroup, setSelectedProject]);
 
   if (!tenantGroupId) return <Navigate to={consolePath} replace />;
   if (isLoading) return <AppLoadingSpinner />;
