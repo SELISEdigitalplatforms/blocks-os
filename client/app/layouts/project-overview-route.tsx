@@ -1,11 +1,11 @@
 import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
 import type { Menu } from "@seliseblocks/blocks-kit/types";
-import { useProjectStore } from "@seliseblocks/blocks-kit/store";
 import { useEffect } from "react";
 import { Navigate, Outlet, useParams } from "react-router-dom";
 import { ProjectOverviewLayout } from "./project-overview-layout";
 import { useGetProjects } from "@/hooks/use-project";
+import { useAuthStore, useProjectStore } from "@seliseblocks/blocks-kit/store";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
@@ -59,6 +59,9 @@ export function ProjectOverviewRoute({
 }: ProjectOverviewRouteProps) {
   const params = useParams();
   const tenantGroupId = params[paramName];
+  const { user } = useAuthStore();
+  const { selectedProject } = useProjectStore();
+
   const { data, isLoading, isError } = useGetProjects({
     tenantGroupId: tenantGroupId,
   });
@@ -86,6 +89,9 @@ export function ProjectOverviewRoute({
   // means the id resolves to a real project group.
   const isValidTenantGroup = !isError && Array.isArray(data) && data.length > 0;
   if (!isValidTenantGroup) return <Navigate to={consolePath} replace />;
+
+  const isOwner = user?.sub === selectedProject?.createdBy;
+  if (!isOwner) return <Navigate to={consolePath} replace />;
 
   return (
     <ProjectOverviewLayout

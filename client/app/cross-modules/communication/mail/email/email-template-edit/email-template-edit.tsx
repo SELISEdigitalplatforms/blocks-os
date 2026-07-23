@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import {
   useGetEmailTemplate,
   useSaveEmailTemplate,
@@ -15,11 +16,16 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
   const { saveEmailTemplate, isPending } = useSaveEmailTemplate();
-  const beeRef = useRef<{ submit: () => void; preview: () => void; reset: () => void }>();
+  const beeRef = useRef<{
+    submit: () => void;
+    preview: () => void;
+    reset: () => void;
+  }>();
   const [, setTemplateData] = useState<IEmailTemplate>({
     itemId: "",
   });
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   useEffect(() => {
     if (id) {
       const email = data;
@@ -48,9 +54,10 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
       </div>
     );
   }
-  const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
-    console.log("newsletter-template.html", data.htmlFile);
-    console.log("newsletter-template.json", data.jsonFile);
+  const handleBeePluginData = async (data: {
+    htmlFile: string;
+    jsonFile: string;
+  }) => {
     const currentData: IEmailTemplate = {
       itemId: emailDetails?.itemId || "",
       templateBody: data.htmlFile,
@@ -58,7 +65,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     };
     await saveEmailTemplate(currentData);
     setTemplateData(currentData);
-    navigate(`/utilities/email/communications/${emailDetails.itemId}`);
+    navigate(scoped(`email-management/communications/${emailDetails.itemId}`));
   };
   return (
     <div>
@@ -67,15 +74,16 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
       </div>
       <div>
         <div className="mb-[20px] mt-[16px] flex items-center justify-between">
-          <h3 className="text-3xl font-semibold tracking-tight">{emailDetails.name}</h3>
+          <h3 className="text-3xl font-semibold tracking-tight">
+            {emailDetails.name}
+          </h3>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="lg"
               className="gap-1 text-sm font-medium"
               disabled={isLoading || isFetching}
-              onClick={() => beeRef?.current?.reset()}
-            >
+              onClick={() => beeRef?.current?.reset()}>
               <span className="sr-only sm:not-sr-only">Reset</span>
             </Button>
             <Button
@@ -83,8 +91,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
               size="lg"
               className="gap-1 text-sm font-medium"
               disabled={isLoading || isFetching}
-              onClick={() => beeRef?.current?.preview()}
-            >
+              onClick={() => beeRef?.current?.preview()}>
               <span className="sr-only sm:not-sr-only">Preview</span>
             </Button>
             <Button
@@ -92,8 +99,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
               size="lg"
               onClick={() => {
                 beeRef?.current?.submit();
-              }}
-            >
+              }}>
               Save
             </Button>
           </div>
@@ -110,7 +116,11 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
           <BeePluginStarter
             onBeeSave={handleBeePluginData}
             ref={beeRef}
-            jsonFile={emailDetails.jsonContent ? JSON.parse(emailDetails.jsonContent) : undefined}
+            jsonFile={
+              emailDetails.jsonContent
+                ? JSON.parse(emailDetails.jsonContent)
+                : undefined
+            }
           />
         </div>
         <div className="mb-4"></div>

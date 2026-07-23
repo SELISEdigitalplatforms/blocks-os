@@ -1,0 +1,15 @@
+using Configuration.DomainService.Notification.Enums;
+
+namespace Configuration.DomainService.Notification.RequestModel
+{
+    public class SaveNotificationConfigurationRequest
+    {
+        public string Name { get; set; }
+        public NotifierTypes ChannelToNotify { get; set; }
+        public NotificationReceiverTypes NotificationType { get; set; }
+        public bool EnablePersistence { get; set; }
+        public string NotifyMethod { get; set; }
+        public bool IsUpdateRequest { get; set; }
+    }
+}
+
