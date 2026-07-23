@@ -21,6 +21,12 @@ import {
 } from "./use-project";
 
 const setProjects = vi.fn();
+const impersonateState = {
+  isInitialized: true,
+  isImpersonated: true,
+  impersonatedTenantId: "tenant-impersonated",
+  originalTenantId: "tenant-root",
+};
 vi.mock("@seliseblocks/blocks-kit", () => ({
   useProjectStore: vi.fn(() => ({
     setProjects,
@@ -28,6 +34,7 @@ vi.mock("@seliseblocks/blocks-kit", () => ({
     setTenantGroup: vi.fn(),
     setSelectedProject: vi.fn(),
   })),
+  useImpersonateStore: vi.fn(() => impersonateState),
 }));
 
 vi.mock("@/services/project.service", () => ({
@@ -40,6 +47,7 @@ vi.mock("@blocks-identifier/services/project.service", () => ({
     addAssets: vi.fn(),
     getEnvRepositories: vi.fn(),
     repoUpdate: vi.fn(),
+    updateProject: vi.fn(),
     updateTenantGroup: vi.fn(),
     validateCNameProject: vi.fn(),
     disableProject: vi.fn(),
@@ -81,22 +89,24 @@ describe("use-project hooks", () => {
   });
 
   describe("useGetProject", () => {
-    it("falls back to the selected project id from the store", async () => {
+    it("fetches the project of the current auth context, without arguments", async () => {
       vi.mocked(projectService.getProject).mockResolvedValue({ itemId: "p-selected" } as never);
       const { result } = renderHook(() => useGetProject(), {
         wrapper: createWrapper(),
       });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(projectService.getProject).toHaveBeenCalledWith({ projectId: "p-selected" });
+      expect(projectService.getProject).toHaveBeenCalledWith();
     });
 
-    it("uses the explicitly provided project id", async () => {
+    it("stays idle until the impersonation state is known", async () => {
+      impersonateState.isInitialized = false;
       vi.mocked(projectService.getProject).mockResolvedValue({ itemId: "p-x" } as never);
-      const { result } = renderHook(() => useGetProject({ projectId: "p-x" }), {
+      const { result } = renderHook(() => useGetProject(), {
         wrapper: createWrapper(),
       });
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(projectService.getProject).toHaveBeenCalledWith({ projectId: "p-x" });
+      await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+      expect(projectService.getProject).not.toHaveBeenCalled();
+      impersonateState.isInitialized = true;
     });
   });
 
@@ -123,7 +133,7 @@ describe("use-project hooks", () => {
         wrapper: createWrapper(),
       });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(crossProjectService.getEnvRepositories).toHaveBeenCalledWith("pk");
+      expect(crossProjectService.getEnvRepositories).toHaveBeenCalledWith();
     });
 
     it("useGetMigrationStatus fetches status", async () => {
@@ -182,17 +192,31 @@ describe("use-project hooks", () => {
       expect(fn).toHaveBeenCalled();
     });
 
-    it("useUpdateProject and useUpdateTenantGroup both call updateTenantGroup", async () => {
+    it("useUpdateProject calls updateProject and useUpdateTenantGroup calls updateTenantGroup", async () => {
+      vi.mocked(crossProjectService.updateProject).mockResolvedValue({} as never);
       vi.mocked(crossProjectService.updateTenantGroup).mockResolvedValue({} as never);
-      const { result: r1 } = renderHook(() => useUpdateProject({ projectKey: "pk" }), {
+
+      const { result: r1 } = renderHook(() => useUpdateProject(), {
         wrapper: createWrapper(),
       });
-      await r1.current.mutateAsync({ name: "n", tenantGroupId: "tg" });
-      const { result: r2 } = renderHook(() => useUpdateTenantGroup({ tenantGroupId: "tg" }), {
+      await r1.current.mutateAsync({ projectKey: "pk", name: "n", applicationDomain: "d" });
+
+      const { result: r2 } = renderHook(() => useUpdateTenantGroup(), {
         wrapper: createWrapper(),
       });
       await r2.current.mutateAsync({ name: "n", tenantGroupId: "tg" });
-      expect(crossProjectService.updateTenantGroup).toHaveBeenCalledTimes(2);
+
+      expect(crossProjectService.updateProject).toHaveBeenCalledTimes(1);
+      expect(crossProjectService.updateProject).toHaveBeenCalledWith({
+        projectKey: "pk",
+        name: "n",
+        applicationDomain: "d",
+      });
+      expect(crossProjectService.updateTenantGroup).toHaveBeenCalledTimes(1);
+      expect(crossProjectService.updateTenantGroup).toHaveBeenCalledWith({
+        name: "n",
+        tenantGroupId: "tg",
+      });
     });
   });
 });

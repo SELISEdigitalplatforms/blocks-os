@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { CLOUD_BUILD_ENDPOINTS } from "../constants/endpoint.constant";
 import { IBuildApiResponse } from "../models/deployed-logs";
 import {

@@ -7,7 +7,7 @@ export const LMT_BASE_PATH = "/app/lmt" as const;
 
 export const LMT_NAV_GROUPS: NavGroup[] = [
   {
-    label: "Metrics",
+    label: "Usage",
     items: [
       {
         id: "usage",
@@ -19,7 +19,7 @@ export const LMT_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Observability",
+    label: "Logs & Traces",
     items: [
       {
         id: "tracing",

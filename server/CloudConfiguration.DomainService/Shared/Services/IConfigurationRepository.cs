@@ -16,7 +16,7 @@ namespace CloudConfiguration.DomainService.Shared.Services
         Task SaveNotificationConfigurationAsync(NotificationConfiguration configuration);
         Task<NotificationConfiguration> GetNotificationConfigurationByIdAsync(string id);
         Task<GetNotificationConfigurationsResponse> GetNotificationConfigurationsAsync(GetNotificationConfigurationsRequest request);
-        Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificatoinConfigurationRequest request);
+        Task<BaseResponse> DeleteNotificationConfigurationAsync(DeleteNotificationConfigurationRequest request);
         Task<NotificationConfiguration> GetNotificationConfigurationByNameAsync(string name);
 
         #endregion
