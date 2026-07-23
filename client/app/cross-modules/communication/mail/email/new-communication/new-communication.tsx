@@ -1,10 +1,13 @@
-import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";
-import StepVerticalTrackBar from "@/components/stepper/vertical-track-bar";
-import StepperProvider, {
-  useStepper,
-} from "@/components/stepper/stepper-provider";
-import { Steps } from "@/components/stepper/stepper-models";
+import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
+import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
+import {
+  Step,
+  Stepper,
+  useStepper,
+  type StepItem,
+} from "@/components/ui-kits/stepper";
 import { toast } from "@/hooks/use-toast";
 import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
@@ -12,30 +15,56 @@ import { blankTemplate } from "@blocks-communication/mail/constants/email-templa
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useIsMobile, useScopedPath } from "@seliseblocks/blocks-kit/hooks";
-import { X } from "lucide-react";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const stepData: Steps = [
-  { id: 1, title: "Basic information" },
-  { id: 2, title: "Template" },
+const EMAIL_TEMPLATE_STEPS: StepItem[] = [
+  { id: "basic-information" },
+  { id: "template" },
 ];
 
-function NewCommunicationContent() {
-  const { currentStep, nextStep, totalSteps } = useStepper();
+const basicInformationLabel = (
+  <span className="flex flex-wrap items-center gap-2">
+    Basic information
+    <Badge
+      variant="secondary"
+      className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+    >
+      Required
+    </Badge>
+  </span>
+);
+
+const templateLabel = (
+  <span className="flex flex-wrap items-center gap-2">
+    Template
+    <Badge
+      variant="outline"
+      className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+    >
+      Design
+    </Badge>
+  </span>
+);
+
+type BasicInformationStepProps = {
+  templateData: IEmailTemplate;
+  setTemplateData: (data: IEmailTemplate) => void;
+  onStepComplete: () => void;
+};
+
+const BasicInformationStep = ({
+  templateData,
+  setTemplateData,
+  onStepComplete,
+}: BasicInformationStepProps) => {
+  const { nextStep } = useStepper();
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const ref = useRef<{ submit: () => void; isValid: boolean }>();
-  const beeRef = useRef<{ submit: () => void; preview: () => void }>();
-  const [templateData, setTemplateData] = useState<IEmailTemplate>({
-    itemId: "",
-  });
   const [isFormValid, setIsFormValid] = useState(false);
-  const navigate = useNavigate();
-  const scoped = useScopedPath();
-  const isMobile = useIsMobile();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  const emailBasePath = scoped("email-management");
 
   const formSubmitHandler = async (data: IEmailTemplate) => {
     data.itemId = templateData?.itemId || "";
@@ -46,8 +75,48 @@ function NewCommunicationContent() {
     const response = await saveTemplate(payload);
     data.itemId = response.itemId;
     setTemplateData(data);
+    onStepComplete();
     nextStep();
   };
+
+  return (
+    <div className="mt-6 flex flex-col gap-6">
+      <BasicInformation
+        onSubmit={formSubmitHandler}
+        templateData={templateData}
+        onValidityChange={setIsFormValid}
+        ref={ref}
+      />
+      <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-end">
+        <Button
+          type="button"
+          size="default"
+          className="w-full sm:w-auto"
+          onClick={() => ref?.current?.submit()}
+          disabled={isPending || !isFormValid}
+        >
+          Save &amp; continue
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+type TemplateDesignStepProps = {
+  templateData: IEmailTemplate;
+  setTemplateData: (data: IEmailTemplate) => void;
+};
+
+const TemplateDesignStep = ({
+  templateData,
+  setTemplateData,
+}: TemplateDesignStepProps) => {
+  const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
+  const beeRef = useRef<{ submit: () => void; preview: () => void }>();
+  const navigate = useNavigate();
+  const scoped = useScopedPath();
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  const emailBasePath = scoped("email-management");
 
   const handleBeePluginData = async (data: {
     htmlFile: string;
@@ -88,100 +157,115 @@ function NewCommunicationContent() {
   };
 
   return (
-    <div className="flex px-10">
-      <div className="hidden min-h-screen max-w-80 flex-col gap-5 bg-background p-5 pt-24 md:flex">
-        <div className="mx-2 my-3">
-          <div className="flex gap-2">
-            <Link to={emailBasePath}>
-              <X size={32} strokeWidth={1} />
-            </Link>
-            <p className="mt-[2px] text-lg font-semibold">New Template</p>
-          </div>
-          <p className="mb-7 mt-2 text-sm font-normal text-medium-emphasis">
-            Create a new template
-          </p>
-        </div>
-        <StepVerticalTrackBar />
+    <div className="mt-6 flex flex-col gap-4">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="w-full shadow-none sm:w-auto"
+          onClick={() => beeRef?.current?.preview()}
+        >
+          Preview
+        </Button>
+        <Button
+          type="button"
+          size="default"
+          className="w-full sm:w-auto"
+          disabled={isPending}
+          onClick={() => beeRef?.current?.submit()}
+        >
+          Save template
+        </Button>
       </div>
-
-      <div
-        className={`ml-0 flex-1 py-5 sm:ml-5 ${
-          isMobile ? "mt-16" : ""
-        }`}
-      >
-        <div className="flex flex-col items-center justify-center md:hidden">
-          <div className="flex gap-2">
-            <Link to={emailBasePath}>
-              <X size={32} strokeWidth={1} />
-            </Link>
-            <p className="mt-[2px] text-lg font-semibold">New Template</p>
-          </div>
-          <p className="mt-2 text-sm text-[#555]">Create a new template</p>
-        </div>
-        <div className="mt-8 w-full flex-row flex-wrap justify-between md:hidden">
-          <StepHorizontalTrackBar />
-        </div>
-        <div className="grid w-full grid-cols-1 items-start">
-          {currentStep === 1 ? (
-            <BasicInformation
-              onSubmit={formSubmitHandler}
-              templateData={templateData}
-              onValidityChange={setIsFormValid}
-              ref={ref}
-            />
-          ) : (
-            <div>
-              <div className="mb-[20px] mt-[16px] flex items-center justify-between">
-                <h3 className="text-3xl font-semibold tracking-tight">
-                  Template
-                </h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="gap-1 text-sm font-medium"
-                    onClick={() => beeRef?.current?.preview()}
-                  >
-                    <span className="sr-only sm:not-sr-only">Preview</span>
-                  </Button>
-                  <Button
-                    disabled={isPending}
-                    size="lg"
-                    onClick={() => beeRef?.current?.submit()}
-                  >
-                    Save
-                  </Button>
-                </div>
-              </div>
-              <BeePluginStarter
-                onBeeSave={handleBeePluginData}
-                ref={beeRef}
-                jsonFile={blankTemplate}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="mt-10">
-          {currentStep === 1 ? (
-            <Button
-              size="lg"
-              onClick={() => ref?.current?.submit()}
-              disabled={currentStep === totalSteps || isPending || !isFormValid}
-            >
-              Save & Continue
-            </Button>
-          ) : null}
-        </div>
+      <div className="flex min-h-[480px] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-none">
+        <BeePluginStarter
+          onBeeSave={handleBeePluginData}
+          ref={beeRef}
+          jsonFile={blankTemplate}
+        />
       </div>
     </div>
+  );
+};
+
+function EmailTemplateStepper() {
+  const completedStepRef = useRef(0);
+  const [templateData, setTemplateData] = useState<IEmailTemplate>({
+    itemId: "",
+  });
+  const { isPending } = useSaveMailTemplate();
+
+  const handleClickStep = (step: number, setStep: (step: number) => void) => {
+    if (step <= completedStepRef.current) {
+      setStep(step);
+    }
+  };
+
+  const handleStepComplete = () => {
+    completedStepRef.current = 1;
+  };
+
+  return (
+    <Stepper
+        initialStep={0}
+        steps={EMAIL_TEMPLATE_STEPS}
+        responsive
+        state={isPending ? "loading" : undefined}
+        onClickStep={handleClickStep}
+        styles={{
+          "main-container":
+            "w-full justify-start gap-y-4 rounded-lg border border-border bg-card px-4 py-4 sm:px-6 sm:py-5 md:gap-y-0",
+          "horizontal-step":
+            "flex-none shrink-0 [&:not(:last-child)]:flex-none [&:not(:last-child)]:after:flex-none [&:not(:last-child)]:after:w-8 sm:[&:not(:last-child)]:after:w-12 lg:[&:not(:last-child)]:after:w-16",
+          "horizontal-step-container": "min-w-0",
+          "step-label-container": "min-w-0",
+          "step-label": "font-medium",
+          "step-description": "max-w-[12rem] sm:max-w-none",
+        }}
+      >
+        <Step
+          icon={FileText}
+          label={basicInformationLabel}
+          description="Name, mail configuration, and subject line"
+        >
+          <BasicInformationStep
+            templateData={templateData}
+            setTemplateData={setTemplateData}
+            onStepComplete={handleStepComplete}
+          />
+        </Step>
+
+        <Step
+          icon={LayoutTemplate}
+          label={templateLabel}
+          description="Build and preview your email body"
+        >
+          <TemplateDesignStep
+            templateData={templateData}
+            setTemplateData={setTemplateData}
+          />
+        </Step>
+      </Stepper>
   );
 }
 
 export default function NewCommunication() {
+  BREADCRUMB_CUSTOM_TITLES["/email-management"] = "Email Management";
+  BREADCRUMB_CUSTOM_TITLES["/email-management/new-communication"] =
+    "New Template";
+
   return (
-    <StepperProvider steps={stepData}>
-      <NewCommunicationContent />
-    </StepperProvider>
+    <main className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">
+      <header>
+        <PageBreadcrumb
+          breadcrumbIndex={3}
+          listClassName="text-sm sm:text-base md:text-lg"
+          className="flex"
+        />
+      </header>
+
+      <EmailTemplateStepper />
+    </main>
   );
 }
