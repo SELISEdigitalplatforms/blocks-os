@@ -21,6 +21,12 @@ import {
 } from "./use-project";
 
 const setProjects = vi.fn();
+const impersonateState = {
+  isInitialized: true,
+  isImpersonated: true,
+  impersonatedTenantId: "tenant-impersonated",
+  originalTenantId: "tenant-root",
+};
 vi.mock("@seliseblocks/blocks-kit", () => ({
   useProjectStore: vi.fn(() => ({
     setProjects,
@@ -28,6 +34,7 @@ vi.mock("@seliseblocks/blocks-kit", () => ({
     setTenantGroup: vi.fn(),
     setSelectedProject: vi.fn(),
   })),
+  useImpersonateStore: vi.fn(() => impersonateState),
 }));
 
 vi.mock("@/services/project.service", () => ({
@@ -82,22 +89,24 @@ describe("use-project hooks", () => {
   });
 
   describe("useGetProject", () => {
-    it("falls back to the selected project id from the store", async () => {
+    it("fetches the project of the current auth context, without arguments", async () => {
       vi.mocked(projectService.getProject).mockResolvedValue({ itemId: "p-selected" } as never);
       const { result } = renderHook(() => useGetProject(), {
         wrapper: createWrapper(),
       });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(projectService.getProject).toHaveBeenCalledWith({ projectId: "p-selected" });
+      expect(projectService.getProject).toHaveBeenCalledWith();
     });
 
-    it("uses the explicitly provided project id", async () => {
+    it("stays idle until the impersonation state is known", async () => {
+      impersonateState.isInitialized = false;
       vi.mocked(projectService.getProject).mockResolvedValue({ itemId: "p-x" } as never);
-      const { result } = renderHook(() => useGetProject({ projectId: "p-x" }), {
+      const { result } = renderHook(() => useGetProject(), {
         wrapper: createWrapper(),
       });
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(projectService.getProject).toHaveBeenCalledWith({ projectId: "p-x" });
+      await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+      expect(projectService.getProject).not.toHaveBeenCalled();
+      impersonateState.isInitialized = true;
     });
   });
 

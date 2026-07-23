@@ -1,7 +1,6 @@
 import { http } from "@/lib/http/http-client";
 import { PROJECT_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
 import {
-  IGetProjectPayload,
   IGetProjectResponse,
   IProjectGroup,
 } from "@/models/project.model";
@@ -17,8 +16,10 @@ export class ProjectService {
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  getProject(payload: IGetProjectPayload): Promise<IGetProjectResponse> {
-    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.GET}?projectId=${payload.projectId}`;
+  // Resolves the project from the caller's auth context — there is no
+  // parameter to pass; the token's tenant selects the project.
+  getProject(): Promise<IGetProjectResponse> {
+    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.GET}`;
     return http.get(url, undefined, { absoluteUrl: true });
   }
 }

@@ -1,5 +1,4 @@
 import { useGetProject } from "@/hooks/use-project";
-import { useProjectStore } from "@seliseblocks/blocks-kit/store";
 import { DomainsSection } from "./components/domain";
 import {
   ProjectActions,
@@ -8,11 +7,7 @@ import {
 } from "./components/project";
 
 export const DashboardOverview = () => {
-  const { itemId } = useProjectStore().selectedProject || {
-    itemId: "",
-    tenantId: "",
-  };
-  const { data, isFetching } = useGetProject({ projectId: itemId });
+  const { data, isFetching } = useGetProject();
 
   if (!data?.data) return null;
 
