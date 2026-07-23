@@ -60,7 +60,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     };
     await saveEmailTemplate(currentData);
     setTemplateData(currentData);
-    navigate(scoped(`secret-management/email/communications/${emailDetails.itemId}`));
+    navigate(scoped(`email-management/communications/${emailDetails.itemId}`));
   };
   return (
     <div>

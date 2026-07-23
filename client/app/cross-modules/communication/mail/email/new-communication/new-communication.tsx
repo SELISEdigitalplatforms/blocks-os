@@ -35,7 +35,7 @@ function NewCommunicationContent() {
   const scoped = useScopedPath();
   const isMobile = useIsMobile();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  const emailBasePath = scoped("secret-management/email");
+  const emailBasePath = scoped("email-management");
 
   const formSubmitHandler = async (data: IEmailTemplate) => {
     data.itemId = templateData?.itemId || "";

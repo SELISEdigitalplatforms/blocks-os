@@ -117,7 +117,7 @@ export const EmailTemplateList = ({
           description: "Cloned template successfully",
         });
         setIsCloneDialogOpen(false);
-        navigate(scoped(`secret-management/email/communications/${res?.itemId}`));
+        navigate(scoped(`email-management/communications/${res?.itemId}`));
       } else {
         toast({
           variant: "destructive",
