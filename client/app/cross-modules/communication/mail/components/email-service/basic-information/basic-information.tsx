@@ -99,10 +99,9 @@ const BasicInformation = forwardRef(function Inner(
   //   }
   // }, [tenantId]);
   return (
-    <main className="mt-[20%] text-left sm:mt-[10%]">
-      <h3 className="mt-[-16px] text-3xl font-semibold tracking-tight">Basic Information</h3>
+    <div className="w-full max-w-4xl text-left">
       {data && !isLoading && !isLanguageListLoading && (
-        <Card className="mt-6 rounded-sm shadow-none">
+        <Card className="rounded-sm shadow-none">
           <Form {...form}>
             {" "}
             <form>
@@ -276,7 +275,7 @@ const BasicInformation = forwardRef(function Inner(
           </Form>
         </Card>
       )}
-    </main>
+    </div>
   );
 });
 export default BasicInformation;
