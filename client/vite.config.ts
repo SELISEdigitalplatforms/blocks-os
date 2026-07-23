@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './app'),
-        '@blocks-idp': path.resolve(__dirname, './app/idp'),
+        '@blocks-idp': path.resolve(__dirname, './app/cross-modules/idp'),
         '@blocks-lmt': path.resolve(__dirname, './app/cross-modules/lmt'),
         '@blocks-storage': path.resolve(
           __dirname,

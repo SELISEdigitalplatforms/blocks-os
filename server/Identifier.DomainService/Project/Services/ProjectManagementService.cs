@@ -386,8 +386,27 @@ namespace DomainService.Projects
              await _projectRepository.SaveStatusTracerAsync(projectStatusTracer);
            }
 
-           return new RestoreProjectResponse { IsSuccess = true };
+            return new RestoreProjectResponse { IsSuccess = true };
          }
+
+        public async Task<bool> GetProjectStatusAsync(string itemId)
+        {
+            var statusTracer = await _projectRepository.GetUnfinishedProjectByIdAsync(itemId);
+
+            if (statusTracer is not null)
+            {
+               return statusTracer.IsProjectCreationSuccess;
+            }
+
+            var tenant = await _projectRepository.GetByIdAsync(itemId);
+
+            if (tenant is not null)
+            {
+              return false;
+            }
+
+            return true;
+        }
 
         public async Task<GetProjectResponse> GetAsync()
         {

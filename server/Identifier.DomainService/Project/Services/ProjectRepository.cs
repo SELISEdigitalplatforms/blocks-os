@@ -19,6 +19,8 @@ namespace DomainService.Projects
         private readonly IEncodingService _urlEncodingService;
         private IMongoDatabase _clientDb;
 
+        private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
+
         public ProjectRepository(IDbContextProvider dbContextProvider,
                                  IConfiguration configuration,
                                  IBlocksSecret blocksSecret,
@@ -269,7 +271,7 @@ namespace DomainService.Projects
 
         public async Task SaveStatusTracerAsync(ProjectStatusTracer statusTrace)
         {
-            var collection = _clientDb.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
+            var collection = _clientDb.GetCollection<ProjectStatusTracer>(_projectStatusTraceCollectionName);
 
             var filter = Builders<ProjectStatusTracer>.Filter.Eq(tracer => tracer.ProjectId, statusTrace.ProjectId);
             await collection.ReplaceOneAsync(filter, statusTrace, new ReplaceOptions { IsUpsert = true });
@@ -277,7 +279,7 @@ namespace DomainService.Projects
 
         public async Task<List<ProjectStatusTracer>> GetAllUnfinishedProjectAsync()
         {
-            var collection = _clientDb.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
+            var collection = _clientDb.GetCollection<ProjectStatusTracer>(_projectStatusTraceCollectionName);
 
             var filter = Builders<ProjectStatusTracer>.Filter.Eq(mc => mc.IsProjectCreationSuccess, false);
             var unfinishedList = await collection.FindAsync(filter);
@@ -286,7 +288,7 @@ namespace DomainService.Projects
 
         public async Task<ProjectStatusTracer?> GetUnfinishedProjectByIdAsync(string itemId)
         {
-           var collection = _clientDb.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
+           var collection = _clientDb.GetCollection<ProjectStatusTracer>(_projectStatusTraceCollectionName);
 
            var filter = Builders<ProjectStatusTracer>.Filter.Eq(mc => mc.ProjectId, itemId);
            var unfinishedList = await collection.FindAsync(filter);
@@ -322,6 +324,7 @@ namespace DomainService.Projects
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "TemplatePluginConfigs", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "DmsArtifacts", project));
         }
 
