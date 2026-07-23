@@ -4,7 +4,7 @@ import { Table } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui-kits/button/button";
-import useIsMobile from "@/hooks/use-is-mobile";
+import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import {
   Sheet,
@@ -20,7 +20,9 @@ import useIsServiceBarOpenComm from "@blocks-communication/mail/hooks/use-is-ser
 interface EmailTableToolbarProps<TData> {
   table: Table<TData>;
 }
-export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData>) {
+export function EmailTableToolbar<TData>({
+  table,
+}: EmailTableToolbarProps<TData>) {
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenComm();
   const textSearchColumn = table.getColumn("name");
@@ -45,7 +47,8 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
   }
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
+      <div
+        className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter communication"
           onSearch={onSearchInputChange}
@@ -58,7 +61,10 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
         {isServiceBarOpen && (
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="relative h-8 w-8 p-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="relative h-8 w-8 p-0">
                 <Filter className="h-4 w-4" />
                 {activeFiltersCount > 0 && (
                   <Badge className="absolute -right-2 -top-2 h-4 w-4 px-1 text-xs font-medium">
@@ -67,7 +73,10 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full" aria-describedby="filter-description">
+            <SheetContent
+              side="right"
+              className="w-full"
+              aria-describedby="filter-description">
               <SheetTitle className="mb-4">Filter</SheetTitle>
               <SheetDescription></SheetDescription>
               <div className="flex flex-col space-y-4">
@@ -77,7 +86,10 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
                   </Button>
                 </SheetClose>
                 {isFiltered && (
-                  <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
+                  <Button
+                    variant="outline"
+                    onClick={resetFilters}
+                    className="h-8 px-2 lg:px-3">
                     Reset
                     <Cross2Icon className="ml-2 h-4 w-4" />
                   </Button>
@@ -87,7 +99,8 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
           </Sheet>
         )}
       </div>
-      <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
+      <div
+        className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter communication"
           onSearch={onSearchInputChange}
@@ -97,7 +110,10 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
           setIsVisible={setIsSearchVisible}
         />
         {isFiltered && (
-          <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
+          <Button
+            variant="outline"
+            onClick={resetFilters}
+            className="h-8 px-2 lg:px-3">
             Reset
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>

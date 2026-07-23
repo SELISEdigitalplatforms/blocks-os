@@ -8,7 +8,8 @@ namespace Cloud.LmtService.Models.Logs
     public class GetLogsRequest : BaseGetsRequest<GetLogsRequestFilter>
     {
         public string? Search { get; set; }
-        public required string ServiceName { get; set; }
+        public string? ServiceName { get; set; }
+        public List<string> ServiceNames { get; set; } = [];
     }
 
     public class GetLogsRequestFilter

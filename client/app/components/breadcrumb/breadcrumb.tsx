@@ -7,35 +7,43 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "../ui-kits/breadcrumb/breadcrumb";
-import { Link } from "react-router-dom";
-import useRoutePathSegments from "@/hooks/use-path-segments";
+import { Link, useLocation } from "react-router-dom";
+import { usePathSegments } from "@seliseblocks/blocks-kit/hooks";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { cn } from "@/lib/utils";
 
 const normalizeBreadcrumbHref = (href: string): string =>
-  href.replace(/^\/app\/[^/]+(?=\/)/, "/app")
+  href.replace(/^\/app\/[^/]+(?=\/)/, "/app");
 
-const getBreadcrumbTitle = (href: string, defaultLabel: string): string | null => {
-  const normalizedHref = normalizeBreadcrumbHref(href)
-  if (Object.prototype.hasOwnProperty.call(BREADCRUMB_CUSTOM_TITLES, normalizedHref)) {
-    return BREADCRUMB_CUSTOM_TITLES[normalizedHref]
+const getBreadcrumbTitle = (
+  href: string,
+  defaultLabel: string,
+): string | null => {
+  const normalizedHref = normalizeBreadcrumbHref(href);
+  if (
+    Object.prototype.hasOwnProperty.call(
+      BREADCRUMB_CUSTOM_TITLES,
+      normalizedHref,
+    )
+  ) {
+    return BREADCRUMB_CUSTOM_TITLES[normalizedHref];
   }
   if (Object.prototype.hasOwnProperty.call(BREADCRUMB_CUSTOM_TITLES, href)) {
-    return BREADCRUMB_CUSTOM_TITLES[href]
+    return BREADCRUMB_CUSTOM_TITLES[href];
   }
-  return defaultLabel
-}
+  return defaultLabel;
+};
 
 const getBreadcrumbLinkHref = (href: string): string => {
-  const normalizedHref = normalizeBreadcrumbHref(href)
+  const normalizedHref = normalizeBreadcrumbHref(href);
   if (normalizedHref === "/app/idp/role-detail") {
-    return href.replace("/idp/role-detail", "/idp/roles")
+    return href.replace("/idp/role-detail", "/idp/roles");
   }
   if (normalizedHref === "/app/idp/permission-detail") {
-    return href.replace("/idp/permission-detail", "/idp/permissions")
+    return href.replace("/idp/permission-detail", "/idp/permissions");
   }
-  return href
-}
+  return href;
+};
 
 const PageBreadcrumb: React.FC<{
   breadcrumbIndex?: number;
@@ -43,40 +51,48 @@ const PageBreadcrumb: React.FC<{
   className?: string;
   listClassName?: string;
 }> = ({ breadcrumbIndex, disabledHrefs = [], className, listClassName }) => {
-  let breadcrumbs = useRoutePathSegments();
+  const { pathname } = useLocation();
+  let breadcrumbs = usePathSegments(pathname);
   if (breadcrumbIndex && breadcrumbIndex > 0) {
     breadcrumbs = breadcrumbs.slice(breadcrumbIndex - 1);
   }
 
   breadcrumbs = breadcrumbs.filter(
-    (breadcrumb) => getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) !== null,
-  )
+    (breadcrumb) =>
+      getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) !== null,
+  );
 
   return (
     <Breadcrumb className={cn("hidden md:flex", className)}>
-      <BreadcrumbList className={cn("flex text-base sm:text-lg", listClassName)}>
+      <BreadcrumbList
+        className={cn("flex text-base sm:text-lg", listClassName)}>
         {breadcrumbs.map((breadcrumb, index) => {
-          const title = getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) ?? breadcrumb.label
-          const linkHref = getBreadcrumbLinkHref(breadcrumb.href)
+          const title =
+            getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) ??
+            breadcrumb.label;
+          const linkHref = getBreadcrumbLinkHref(breadcrumb.href);
 
           return (
-          <React.Fragment key={breadcrumb.href}>
-            <BreadcrumbItem>
-              {index === breadcrumbs.length - 1 || disabledHrefs.includes(breadcrumb.href) ? (
-                <BreadcrumbPage className="text-low-emphasis">
-                  {title}
-                </BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link to={linkHref} className="text-foreground hover:text-foreground">
+            <React.Fragment key={breadcrumb.href}>
+              <BreadcrumbItem>
+                {index === breadcrumbs.length - 1 ||
+                disabledHrefs.includes(breadcrumb.href) ? (
+                  <BreadcrumbPage className="text-low-emphasis">
                     {title}
-                  </Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
-            {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
-          </React.Fragment>
-          )
+                  </BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link
+                      to={linkHref}
+                      className="text-foreground hover:text-foreground">
+                      {title}
+                    </Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+              {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+            </React.Fragment>
+          );
         })}
       </BreadcrumbList>
     </Breadcrumb>

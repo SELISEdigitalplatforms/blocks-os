@@ -32,6 +32,21 @@ describe("lib/domain", () => {
     it("accepts a valid protocol-prefixed subdomain label", () => {
       expect(isValidSubdomain("https://app")).toBe(true);
     });
+    it("accepts a protocol-prefixed multi-label host", () => {
+      expect(isValidSubdomain("https://app.example.com")).toBe(true);
+    });
+    it("accepts a deeply nested protocol-prefixed host", () => {
+      expect(isValidSubdomain("https://a.b.c.example.com")).toBe(true);
+    });
+    it("trims surrounding whitespace before validating", () => {
+      expect(isValidSubdomain("  https://app.example.com  ")).toBe(true);
+    });
+    it("rejects a host without a protocol scheme", () => {
+      expect(isValidSubdomain("app.example.com")).toBe(false);
+    });
+    it("rejects a host with a trailing dot", () => {
+      expect(isValidSubdomain("https://app.example.com.")).toBe(false);
+    });
     it("rejects labels that start with a hyphen", () => {
       expect(isValidSubdomain("https://-bad")).toBe(false);
     });
