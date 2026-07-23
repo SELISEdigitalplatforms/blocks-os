@@ -27,6 +27,7 @@ import {
   useEmailUsageFilterQueryParams,
 } from "@blocks-communication/mail/email/email-usage/email-usage-filter-toolbar";
 import { Link } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -35,6 +36,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
+  const scoped = useScopedPath();
   const { queryParams, setQueryParams } = useEmailUsageFilterQueryParams();
   const { page, pageSize, search, status, startDate, endDate } = queryParams;
   const { data, isLoading } = useGetEmailUsage(
@@ -97,7 +99,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                     }}
                   >
                     <Link
-                      to={`/utilities/email/usage/${row.original.messageId}`}
+                      to={scoped(`secret-management/email/usage/${row.original.messageId}`)}
                       className="flex items-center"
                     >
                       <Eye className="mr-2 h-4 w-4" />
@@ -153,7 +155,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                   table.getRowModel().rows.map((row) => (
                     <Link
                       key={row.id}
-                      to={`/utilities/email/usage/${row.original.messageId}`}
+                      to={scoped(`secret-management/email/usage/${row.original.messageId}`)}
                     >
                       <TableRow data-state={row.getIsSelected() && "selected"} isHoverable>
                         {row.getVisibleCells().map((cell) => (
