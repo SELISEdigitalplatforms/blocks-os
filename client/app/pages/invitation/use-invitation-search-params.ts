@@ -8,8 +8,6 @@ export type InvitationResultSearchParams = {
   error: string
   /** Activation key from accept API (query name `code` on `/invitation/result`). */
   code: string
-  /** Invited project's IAM tenant, used to build the IAM OIDC activation URL (query name `tenant`). */
-  tenant: string
 }
 
 /** Invitation email link: `/invitation?code=...` */
@@ -32,7 +30,6 @@ export const useInvitationResultSearchParams = (): InvitationResultSearchParams 
       old: getTrimmedSearchParam(searchParams, "old"),
       error: getTrimmedSearchParam(searchParams, "error"),
       code: getTrimmedSearchParam(searchParams, "code"),
-      tenant: getTrimmedSearchParam(searchParams, "tenant"),
     }),
     [searchParams],
   )
