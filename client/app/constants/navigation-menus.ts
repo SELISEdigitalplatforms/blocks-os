@@ -205,6 +205,14 @@ export const navigationMenus: Menu[] = [
     icon: Settings,
   },
   {
+    id: "service-identity__email-management",
+    type: "menu",
+    name: "Email Management",
+    path: "/app/email-management",
+    icon: Mail,
+    desc: "Manage email templates and mailbox activity",
+  },
+  {
     id: "service-identity__authentication",
     type: "menu",
     name: "IDP",
