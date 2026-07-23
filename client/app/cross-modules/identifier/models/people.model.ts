@@ -7,8 +7,6 @@ export interface IPeopleAcceptInvitationPayload {
 export interface IPeopleAcceptInvitationResponse {
   isSuccess: boolean;
   activationKey?: string;
-  /** The project (IAM tenant) the invitation was for, used to build the IAM OIDC activation URL. */
-  tenantId?: string;
   errors?: Record<string, string>;
 }
 
