@@ -487,7 +487,7 @@ namespace DomainService.People
                 var invitationCode = await SendInvitationEmail(user, project);
                 _logger.LogInformation("Invitation sent to {Email} for project {ProjectName}, valid for {LifetimeSeconds}s",
                     user.Email, project.Name, invitationLifetimeSeconds);
-                await CacheInvitation(ids, activationKey, invitationCode, user.ItemId, project.TenantGroupId, project.TenantId, invitationLifetimeSeconds);
+                await CacheInvitation(ids, activationKey, invitationCode, user.ItemId, project.TenantGroupId, invitationLifetimeSeconds);
                 return true;
             }
             catch (Exception ex)
@@ -572,15 +572,14 @@ namespace DomainService.People
             };
         }
 
-        private async Task CacheInvitation(List<string> ids, string activationKey, string invitationCode, string userId, string tenantGroupId, string tenantId, int lifetimeSeconds)
+        private async Task CacheInvitation(List<string> ids, string activationKey, string invitationCode, string userId, string tenantGroupId, int lifetimeSeconds)
         {
             var cacheData = new CacheProjectPeopleInvitation
             {
                 ProjectPeopleIds = string.Join(";", ids),
                 UserActivationKey = activationKey,
                 UserId = userId,
-                TenantGroupId = tenantGroupId,
-                TenantId = tenantId
+                TenantGroupId = tenantGroupId
             };
 
             await _cacheClient.AddStringValueAsync(
@@ -890,8 +889,7 @@ namespace DomainService.People
                 return new ConfirmInvitationResponse
                 {
                     IsSuccess = true,
-                    ActivationKey = parsedData.UserActivationKey ?? string.Empty,
-                    TenantId = parsedData.TenantId ?? string.Empty
+                    ActivationKey = parsedData.UserActivationKey ?? string.Empty
                 };
             }
             catch (Exception ex)

@@ -33,14 +33,13 @@ describe("use-invitation-search-params", () => {
   describe("useInvitationResultSearchParams", () => {
     it("reads all result params", () => {
       const { result } = renderHook(() => useInvitationResultSearchParams(), {
-        wrapper: wrapperFor("/invitation/result?success=true&old=1&error=&code=k&tenant=t1"),
+        wrapper: wrapperFor("/invitation/result?success=true&old=1&error=&code=k"),
       });
       expect(result.current).toEqual({
         success: "true",
         old: "1",
         error: "",
         code: "k",
-        tenant: "t1",
       });
     });
   });

@@ -15,20 +15,26 @@ type PeopleInvitationResultProps = {
   old: string
   error: string
   code: string
-  tenant: string
 }
 
 const trimTrailingSlash = (value: string) => value.replace(/\/$/, "")
 
 /**
- * IAM's OIDC activation page for a specific project tenant, e.g.
+ * IAM's OIDC activation page, e.g.
  * `https://iam.seliseblocks.com/oidc/activate/{tenantId}?code={key}&lang=en-US`.
  * This mirrors the link IAM itself sends from "Resend Activation", so a freshly invited
  * user completes account setup against IAM rather than the OS-hosted activation page.
- * Returns null when we lack the IAM base URL or the tenant (older invitation links).
+ *
+ * The tenant is the blocks-os IAM (root) tenant — `BLOCKS_X_BLOCKS_KEY` — because a
+ * project-people invitee's identity and its activation `UserKeyMap` are created there,
+ * NOT under the invited project's resource tenant. Validating against any other tenant
+ * misses the keymap and fails with `Invalid_ActivationCode`. This is the same tenant the
+ * People-list resend and the OS `/activate` page target.
+ * Returns null when the IAM base URL or the tenant key is unavailable.
  */
-const buildIamActivationUrl = (tenant: string, code: string): string | null => {
+const buildIamActivationUrl = (code: string): string | null => {
   const iamBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL")
+  const tenant = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY")
   if (!iamBaseUrl || !tenant) return null
 
   const params = new URLSearchParams({ code, lang: "en-US" })
@@ -81,7 +87,6 @@ export const PeopleInvitationResult = ({
   error,
   old,
   code,
-  tenant,
 }: PeopleInvitationResultProps) => {
   if (success === "0") {
     const errorMessage =
@@ -100,10 +105,9 @@ export const PeopleInvitationResult = ({
   }
 
   if (old === "0") {
-    // Prefer IAM's OIDC activation page for the invited tenant. Fall back to the OS-hosted
-    // activation page only when the tenant/IAM URL is unavailable (e.g. links cached before
-    // the tenant was returned by the confirm API).
-    const iamActivationUrl = buildIamActivationUrl(tenant, code)
+    // Prefer IAM's OIDC activation page. Fall back to the OS-hosted activation page only
+    // when the IAM base URL / tenant key is unavailable.
+    const iamActivationUrl = buildIamActivationUrl(code)
     if (iamActivationUrl) {
       return (
         <InvitationResultShell
