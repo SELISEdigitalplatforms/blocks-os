@@ -20,6 +20,7 @@ import {
   IRollbackResponse,
   IValidationError,
 } from "@blocks-localization/models/language";
+import { getRuntimeEnv } from "@seliseblocks/blocks-kit";
 
 class LanguageManagerService {
   fetchBlocksLanguageKey = (request: {
@@ -78,7 +79,7 @@ class LanguageManagerService {
   };
 
   fetchBlocksLanguages = (projectKey: string): Promise<ILanguageConfig[]> => {
-    return http.get(`${LANGUAGE_ENDPOINTS.GETS}?projectKey=${projectKey}`);
+    return http.get(`${getRuntimeEnv("BLOCKS_LOGIC_BASE_URL")}${LANGUAGE_ENDPOINTS.GETS}`, undefined, { absoluteUrl: true });
   };
 
   saveBlocksLanguageKey = (payload: {
