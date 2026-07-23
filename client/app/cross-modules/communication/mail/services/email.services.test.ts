@@ -40,7 +40,7 @@ describe("EmailService", () => {
       const result = await service.fetchEmailConfigs(0, 10);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=1&pageSize=10`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=10`,
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );
@@ -53,7 +53,7 @@ describe("EmailService", () => {
       await service.fetchEmailConfigs(2, 20);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=3&pageSize=20`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=3&pageSize=20`,
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );
@@ -74,7 +74,7 @@ describe("EmailService", () => {
       await service.fetchEmailConfigs(0, 50);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=1&pageSize=50`,
+        `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=1&pageSize=50`,
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );
