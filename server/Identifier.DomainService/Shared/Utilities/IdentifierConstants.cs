@@ -16,7 +16,6 @@ namespace DomainService.Shared
         public const string TenantCollectionName = "Tenants";
         public const string TenantAssetCollectionName = "TenantAssets";
         public const string ProjectPeopleCollectionName = "ProjectPeoples";
-        public const string ProjectStatusTracerCollectionName = "ProjectStatusTracers";
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string ThirdPartyJWTClaimsCollectionName = "ThirdPartyJWTClaims";
         public const string CookieDomainPrefix = "blocksapi.";
