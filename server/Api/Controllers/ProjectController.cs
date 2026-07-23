@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
@@ -54,6 +54,13 @@ namespace BlocksOs.Api.Controllers
         public async Task<RestoreProjectResponse> Restore([FromBody] RestoreProjectRequest restoreProjectRequest)
         {
             return await _projectManagementService.RestoreProjectAsync(restoreProjectRequest);
+        }
+
+        [HttpPost]
+        [Authorize]  
+        public async Task<bool> GetProjectStatus([FromBody] GetProjectStatusRequest request)
+        {
+            return await _projectManagementService.GetProjectStatusAsync(request.ItemId);
         }
 
 
