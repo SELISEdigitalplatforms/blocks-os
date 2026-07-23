@@ -37,6 +37,7 @@ import {
   useDeleteEmailTemplate,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;
@@ -57,6 +58,7 @@ export const EmailTemplateList = ({
   onRowClick,
 }: EmailTemplateListProps) => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useTemplatesSortQueryParams();
   const { isPending: isClonePending, mutateAsync: cloneMailTemplate } =
     useCloneTemplate();
@@ -115,7 +117,7 @@ export const EmailTemplateList = ({
           description: "Cloned template successfully",
         });
         setIsCloneDialogOpen(false);
-        navigate(`/utilities/email/communications/${res?.itemId}`);
+        navigate(scoped(`email-management/communications/${res?.itemId}`));
       } else {
         toast({
           variant: "destructive",

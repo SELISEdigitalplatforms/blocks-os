@@ -16,6 +16,7 @@ import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { langConfigureData } from "@blocks-localization/constants/language-dummy-data";
 import {
@@ -41,6 +42,7 @@ export function EmailCommunicationDetails({
   } = useGetEmailConfigs(0, 100);
   const { isPending, mutateAsync } = useSendTestMail();
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSendTestEmailModalOpen, setIsSendTestEmailModalOpen] =
     useState(false);
@@ -62,10 +64,10 @@ export function EmailCommunicationDetails({
   ) {
     return <EmailTemplateDetailsSkeleton />;
   }
-  BREADCRUMB_CUSTOM_TITLES["/utilities/email/communications"] =
+  BREADCRUMB_CUSTOM_TITLES["/email-management/communications"] =
     "Email Templates";
   BREADCRUMB_CUSTOM_TITLES[
-    "/utilities/email/communications/" + emailDetails?.itemId
+    "/email-management/communications/" + emailDetails?.itemId
   ] = emailDetails?.name ? emailDetails.name : "";
   const confirmationModalData = {
     dialogTitle: "Send test email",
@@ -181,7 +183,7 @@ export function EmailCommunicationDetails({
                 className="gap-2 shadow-none hover:bg-white"
                 onClick={() =>
                   navigate(
-                    `/utilities/email/communications/${emailDetails.itemId}/edit`,
+                    scoped(`email-management/communications/${emailDetails.itemId}/edit`),
                   )
                 }>
                 <Pencil className="h-5 w-5" />

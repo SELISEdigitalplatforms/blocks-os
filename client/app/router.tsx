@@ -13,11 +13,23 @@ import {
   LoginPage,
   ProfilePage,
 } from "@seliseblocks/blocks-kit/pages";
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  useParams,
+} from "react-router-dom";
 import { navigationMenus } from "./constants/navigation-menus";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
-import { EmailConfigurationPage } from "./cross-modules/communication/mail";
+import {
+  EmailConfigurationPage,
+  EmailCommunicationDetails,
+  EmailServiceTable,
+  NewCommunication,
+} from "./cross-modules/communication/mail";
+import { EditEmailTemplate } from "./cross-modules/communication/mail/email/email-template-edit/email-template-edit";
+import { EmailUsageDetails } from "./cross-modules/communication/mail/email/email-usage/email-usage-details";
 import { NotificationConfigurationListPage } from "./cross-modules/communication/notification/components/notification-configuration-list";
 // Temporarily disabled
 // import { SecretsList } from "./cross-modules/secrets/components/secrets-list/secrets-list";
@@ -78,6 +90,32 @@ const redirectPaths: Record<string, string> = {
   "/app/idp/organization-detail/*": "/app/idp/organizations",
   "/app/idp/permission-detail/*": "/app/idp/permissions",
 };
+
+function EmailPage() {
+  return (
+    <div className="flex flex-col gap-6">
+      <EmailServiceTable />
+    </div>
+  );
+}
+
+function EmailCommunicationDetailsPage() {
+  const { id } = useParams<{ id: string }>();
+
+  return <EmailCommunicationDetails params={{ id: id || "" }} />;
+}
+
+function EmailTemplateEditPage() {
+  const { id } = useParams<{ id: string }>();
+
+  return <EditEmailTemplate params={{ id: id || "" }} />;
+}
+
+function EmailUsageDetailsPage() {
+  const { id } = useParams<{ id: string }>();
+
+  return <EmailUsageDetails id={id || ""} />;
+}
 
 export const router = createBrowserRouter([
   // ── Public invitation accept flow (no auth guard) ──
@@ -370,6 +408,31 @@ export const router = createBrowserRouter([
                   {
                     path: "api-settings",
                     element: <ApiSettingsPage />,
+                  },
+                  {
+                    path: "email-management",
+                    children: [
+                      {
+                        index: true,
+                        element: <EmailPage />,
+                      },
+                      {
+                        path: "new-communication",
+                        element: <NewCommunication />,
+                      },
+                      {
+                        path: "communications/:id",
+                        element: <EmailCommunicationDetailsPage />,
+                      },
+                      {
+                        path: "communications/:id/edit",
+                        element: <EmailTemplateEditPage />,
+                      },
+                      {
+                        path: "usage/:id",
+                        element: <EmailUsageDetailsPage />,
+                      },
+                    ],
                   },
                   {
                     path: "lmt",

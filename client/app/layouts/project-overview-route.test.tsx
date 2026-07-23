@@ -23,17 +23,35 @@ vi.stubGlobal(
 );
 
 const h = vi.hoisted(() => ({
-  tenantGroupId: "grp-1" as string,
+  params: { tenantGroupId: "grp-1" } as Record<string, string | undefined>,
   projects: {
-    data: [{ itemId: "p-1" }] as unknown,
+    data: [{ projects: [{ itemId: "p-1", tenantGroupId: "grp-1" }] }] as unknown,
     isLoading: false,
     isError: false,
   },
+  setTenantGroup: vi.fn(),
+  setSelectedProject: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
-  useSyncTenantGroupFromRoute: () => h.tenantGroupId,
+// The route param is the source of the tenant-group id (the source reads it via
+// useParams). Mock only useParams so Navigate/Outlet/MemoryRouter stay real.
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return { ...actual, useParams: () => h.params };
+});
+
+vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => h.projects,
+}));
+
+// Lightweight stand-in for the shared zustand store, supporting the selector
+// call form `useProjectStore((s) => s.setTenantGroup)` the source uses.
+vi.mock("@seliseblocks/blocks-kit/store", () => ({
+  useProjectStore: (selector: (s: unknown) => unknown) =>
+    selector({
+      setTenantGroup: h.setTenantGroup,
+      setSelectedProject: h.setSelectedProject,
+    }),
 }));
 
 vi.mock("@seliseblocks/blocks-kit/components", () => ({
@@ -69,12 +87,16 @@ const renderRoute = () =>
 describe("ProjectOverviewRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.tenantGroupId = "grp-1";
-    h.projects = { data: [{ itemId: "p-1" }], isLoading: false, isError: false };
+    h.params = { tenantGroupId: "grp-1" };
+    h.projects = {
+      data: [{ projects: [{ itemId: "p-1", tenantGroupId: "grp-1" }] }],
+      isLoading: false,
+      isError: false,
+    };
   });
 
   it("redirects to the console when no tenant-group id is present", () => {
-    h.tenantGroupId = "";
+    h.params = {};
     renderRoute();
     expect(screen.getByText("console page")).toBeTruthy();
   });
@@ -89,6 +111,22 @@ describe("ProjectOverviewRoute", () => {
     renderRoute();
     expect(screen.getByText("overview layout")).toBeTruthy();
     expect(screen.getByText("overview child")).toBeTruthy();
+  });
+
+  it("hydrates the store from the URL tenant-group id (deep-link/refresh)", () => {
+    renderRoute();
+    expect(h.setTenantGroup).toHaveBeenCalledWith("grp-1");
+    expect(h.setSelectedProject).toHaveBeenCalledWith({
+      itemId: "p-1",
+      tenantGroupId: "grp-1",
+    });
+  });
+
+  it("does not hydrate the store when the id resolves to no projects", () => {
+    h.projects = { data: [], isLoading: false, isError: false };
+    renderRoute();
+    expect(h.setTenantGroup).not.toHaveBeenCalled();
+    expect(h.setSelectedProject).not.toHaveBeenCalled();
   });
 
   it("redirects to the console when the tenant group resolves to no projects", () => {

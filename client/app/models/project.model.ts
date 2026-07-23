@@ -8,10 +8,6 @@ export interface IProjectGroup {
   isShared: boolean;
 }
 
-export interface IGetProjectPayload {
-  projectId?: string;
-}
-
 export interface IGetProjectResponse {
   data: IProject;
   errors: unknown | null;
