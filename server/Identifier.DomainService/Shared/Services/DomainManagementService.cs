@@ -28,7 +28,8 @@ namespace DomainService.Shared
         // it can reach one.
         private static readonly Regex HostnameRegex = new(
             @"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$",
-            RegexOptions.Compiled);
+            RegexOptions.Compiled,
+            TimeSpan.FromSeconds(1));
 
         public DomainManagementService(ILogger<DomainManagementService> logger,
                                        IBlocksSecret blocksSecret,

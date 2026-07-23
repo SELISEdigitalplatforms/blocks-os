@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { randomInt } from "crypto";
 
 // Shared state for the sequential flow specs (tests/flow/*). Each numbered file
 // runs in order (workers: 1) and reads/writes this file so later steps know the
@@ -70,7 +71,7 @@ export function randomToken(length = 6): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let out = "";
   for (let i = 0; i < length; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
+    out += chars[randomInt(chars.length)];
   }
   return out;
 }
@@ -80,7 +81,7 @@ export function randomLetters(length: number): string {
   const chars = "abcdefghijklmnopqrstuvwxyz";
   let out = "";
   for (let i = 0; i < length; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
+    out += chars[randomInt(chars.length)];
   }
   return out;
 }
