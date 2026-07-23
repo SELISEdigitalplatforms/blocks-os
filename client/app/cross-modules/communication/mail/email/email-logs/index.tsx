@@ -3,8 +3,8 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { LogsViewer } from "@blocks-lmt/components";
 export function EmailLogs() {
-  BREADCRUMB_CUSTOM_TITLES["/utilities/email"] = "Email";
-  BREADCRUMB_CUSTOM_TITLES["/utilities/email/logs"] = "Logs";
+  BREADCRUMB_CUSTOM_TITLES["/secret-management/email"] = "Email";
+  BREADCRUMB_CUSTOM_TITLES["/secret-management/email/logs"] = "Logs";
   return (
     <div>
       <PageBreadcrumb breadcrumbIndex={2} />

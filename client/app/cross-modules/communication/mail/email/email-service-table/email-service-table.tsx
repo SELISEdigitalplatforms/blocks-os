@@ -1,13 +1,38 @@
+import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui-kits/tabs/tabs";
+import {
+  EMAIL_TABS,
+  type EmailTabKey,
+} from "@blocks-communication/mail/constants/email-tabs";
+import NewConfiguration from "@blocks-communication/mail/components/email-service/modals/new-configuration/new-configuration";
 import { EmailTemplateList } from "@blocks-communication/mail/email/email-service-table/email-template-list";
+import { EmailUsageList } from "@blocks-communication/mail/email/email-usage/email-usage-list";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
-import { useNavigate } from "react-router-dom";
+import { CirclePlus } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMemo } from "react";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useEmailUsageFilterQueryParams } from "../email-usage/email-usage-filter-toolbar";
+import { parseAsBoolean, useQueryState } from "nuqs";
 import {
   TemplateFilterToolbar,
   useTemplatesFilterQueryParams,
@@ -40,6 +65,22 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
   const { isLoading: isConfigsLoading, data: emailConfigsData } = useGetEmailConfigs(0, 100);
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const navigate = useNavigate();
+  const scoped = useScopedPath();
+  const { setQueryParams: setEmailUsageQueryParams } =
+    useEmailUsageFilterQueryParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [emailConfigOpen, setEmailConfigOpen] = useQueryState(
+    "emailConfig",
+    parseAsBoolean.withDefault(false),
+  );
+  const tabId = searchParams.get("emailAnalytics") || "Emailstemplates";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ emailAnalytics: value });
+    setQueryParams(null);
+    setEmailUsageQueryParams(null);
+  };
+
   const onPageChangeHandler = (pageNumber: number) => {
     setQueryParams((prev) => ({
       ...prev,
@@ -50,7 +91,7 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     if (onRowClick) {
       onRowClick(emailId);
     } else {
-      navigate(`/utilities/email/communications/${emailId}`);
+      navigate(scoped(`secret-management/email/communications/${emailId}`));
     }
   };
   const tableData = useMemo(() => {
@@ -59,44 +100,123 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
   }, [data]);
   return (
     <main className="flex flex-col">
-      <Card className="rounded shadow-none">
-        <CardContent className="mb-4">
-          {isConfigsLoading || isLanguageListLoading ? (
-            <Skeleton className="h-12 w-full rounded" />
-          ) : (
-            <TemplateFilterToolbar
-              emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
-              languageListData={Array.isArray(languageListData) ? languageListData : []}
-            />
-          )}
-        </CardContent>
-        <CardContent>
-          <ScrollArea className="w-full">
-            {isLoading || isConfigsLoading ? (
-              <LoadingSkelton />
-            ) : (
-              <EmailTemplateList
-                templates={tableData}
-                isLoading={isLoading}
-                emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
-                onRowClick={handleRowClick}
-              />
-            )}
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </CardContent>
-        {!isLoading && data && data.totalCount > queryParams.pageSize && (
-          <div className="mt-5 flex items-center md:justify-end">
-            <Pagination
-              page={queryParams.pageNumber}
-              pageSize={queryParams.pageSize}
-              totalCount={data?.totalCount || 0}
-              pageSizeOptions={[10]}
-              onChange={onPageChangeHandler}
-            />
+      <Dialog open={emailConfigOpen} onOpenChange={setEmailConfigOpen}>
+        <NewConfiguration
+          dialogTitle="Add Configuration"
+          onClose={() => setEmailConfigOpen(false)}
+          isEdit={false}
+        />
+      </Dialog>
+      <div className="flex w-full flex-col">
+        <div className="flex w-full justify-between text-high-emphasis">
+          <div className="item-center flex gap-2">
+            <h3 className="text-2xl font-bold tracking-tight">Email</h3>
           </div>
-        )}
-      </Card>
+        </div>
+        <Tabs
+          value={tabId}
+          onValueChange={handleTabChange}
+          className="mt-[18px] flex w-full flex-col md:mt-[24px]"
+        >
+          <div className="mb-5 flex items-center justify-between text-base">
+            <div className="md:hidden">
+              <Select
+                value={tabId}
+                onValueChange={(value) => handleTabChange(value as EmailTabKey)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(EMAIL_TABS).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="hidden items-center md:flex">
+              <TabsList className="h-[42px] bg-blocks-primary-shades-300">
+                {Object.entries(EMAIL_TABS).map(([key, { label }]) => (
+                  <TabsTrigger key={key} value={key} className="h-8">
+                    {label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            {tabId === "Emailstemplates" ? (
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  size="default"
+                  variant="default"
+                  className="bg-primary text-primary-foreground shadow-none"
+                  onClick={() => navigate(scoped("secret-management/email/new-communication"))}
+                >
+                  <CirclePlus className="h-5 w-5 lg:mr-2" />
+                  <span className="sr-only lg:not-sr-only">Add Template</span>
+                </Button>
+              </div>
+            ) : null}
+          </div>
+          <TabsContent value="Emailstemplates">
+            <Card className="rounded shadow-none">
+              <CardContent className="mb-4">
+                {isConfigsLoading || isLanguageListLoading ? (
+                  <Skeleton className="h-12 w-full rounded" />
+                ) : (
+                  <TemplateFilterToolbar
+                    emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
+                    languageListData={Array.isArray(languageListData) ? languageListData : []}
+                  />
+                )}
+              </CardContent>
+              <CardContent>
+                <ScrollArea className="w-full">
+                  {isLoading || isConfigsLoading ? (
+                    <LoadingSkelton />
+                  ) : (
+                    <EmailTemplateList
+                      templates={tableData}
+                      isLoading={isLoading}
+                      emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
+                      onRowClick={handleRowClick}
+                    />
+                  )}
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </CardContent>
+              {!isLoading && data && data.totalCount > queryParams.pageSize && (
+                <div className="mt-5 flex items-center md:justify-end">
+                  <Pagination
+                    page={queryParams.pageNumber}
+                    pageSize={queryParams.pageSize}
+                    totalCount={data?.totalCount || 0}
+                    pageSizeOptions={[10]}
+                    onChange={onPageChangeHandler}
+                  />
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+          <TabsContent value="Inbox">
+            <Card className="rounded shadow-none">
+              <CardContent>
+                <EmailUsageList isInbound />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="Outgoingmails">
+            <Card className="rounded shadow-none">
+              <CardContent>
+                <EmailUsageList isInbound={false} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </main>
   );
 }
