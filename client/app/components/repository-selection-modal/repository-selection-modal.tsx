@@ -1,7 +1,6 @@
 "use client";
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Check, ChevronsUpDown, ExternalLink } from "lucide-react";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { Button } from "@/components/ui-kits/button/button";
 import {
   Dialog,
   DialogContent,
@@ -10,14 +9,16 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { Input } from "@/components/ui-kits/input/input";
-import { Button } from "@/components/ui-kits/button/button";
-import { cn } from "@/lib/utils";
 import { useGetGithubRepos } from "@/cross-modules/devops/hooks/github-info";
-import { IRepository, iconMap } from "@/cross-modules/devops/models/github-info";
 import { providers } from "@/cross-modules/devops/models/git-dummy";
-import { debounce } from "@/lib/utils";
-import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import {
+  IRepository,
+  iconMap,
+} from "@/cross-modules/devops/models/github-info";
 import { githubInfoService } from "@/cross-modules/devops/services/github-info.service";
+import { cn, debounce } from "@/lib/utils";
+import { Check, ChevronsUpDown, ExternalLink, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 interface RepositorySelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,7 +46,6 @@ export const RepositorySelectionModal = ({
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const queryClient = useQueryClient();
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [isLoadingRevoke, setIsLoadingRevoke] = useState(false);
   // Custom debounce implementation
@@ -109,7 +109,8 @@ export const RepositorySelectionModal = ({
       }
       // Check if there's more data to load
       const totalLoadedItems = (currentPage + 1) * itemsPerPage;
-      const hasMore = totalLoadedItems < totalCount && items.length === itemsPerPage;
+      const hasMore =
+        totalLoadedItems < totalCount && items.length === itemsPerPage;
       setHasMoreData(hasMore);
     } else {
       // Empty array returned - no more data
@@ -125,7 +126,13 @@ export const RepositorySelectionModal = ({
       const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
       const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // Load when 50px from bottom
       // Only load more if near bottom, has more data, not loading, and have some repositories
-      if (isNearBottom && hasMoreData && !isLoading && !isFetching && allRepositories.length > 0) {
+      if (
+        isNearBottom &&
+        hasMoreData &&
+        !isLoading &&
+        !isFetching &&
+        allRepositories.length > 0
+      ) {
         setCurrentPage((prev) => prev + 1);
       }
     },
@@ -184,7 +191,12 @@ export const RepositorySelectionModal = ({
     setRepoError("");
     onSelectRepository(repo);
     setSelectedRepoId("");
-  }, [selectedRepoId, allRepositories, selectedRepositories, onSelectRepository]);
+  }, [
+    selectedRepoId,
+    allRepositories,
+    selectedRepositories,
+    onSelectRepository,
+  ]);
   const handleRepoChange = useCallback((val: string) => {
     setSelectedRepoId(val);
     setRepoError("");
@@ -194,10 +206,14 @@ export const RepositorySelectionModal = ({
       if (!isPopoverOpen || allRepositories.length === 0) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setHighlightedIndex((prev) => (prev < allRepositories.length - 1 ? prev + 1 : 0));
+        setHighlightedIndex((prev) =>
+          prev < allRepositories.length - 1 ? prev + 1 : 0,
+        );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : allRepositories.length - 1));
+        setHighlightedIndex((prev) =>
+          prev > 0 ? prev - 1 : allRepositories.length - 1,
+        );
       } else if (e.key === "Enter") {
         e.preventDefault();
         const idx = highlightedIndex >= 0 ? highlightedIndex : 0;
@@ -260,8 +276,7 @@ export const RepositorySelectionModal = ({
             return (
               <div
                 key={provider.id}
-                className={`flex items-center gap-2 ${isGithub ? "" : "cursor-not-allowed opacity-50"}`}
-              >
+                className={`flex items-center gap-2 ${isGithub ? "" : "cursor-not-allowed opacity-50"}`}>
                 <input
                   type="radio"
                   checked={isGithub}
@@ -270,7 +285,9 @@ export const RepositorySelectionModal = ({
                   id={`${provider.id}-radio`}
                 />
                 <img src={iconSrc} alt={provider.name} width={20} height={20} />
-                <label htmlFor={`${provider.id}-radio`} className="text-sm font-medium">
+                <label
+                  htmlFor={`${provider.id}-radio`}
+                  className="text-sm font-medium">
                   {provider.name}
                 </label>
               </div>
@@ -281,8 +298,7 @@ export const RepositorySelectionModal = ({
           {"Not seeing the repositories you expected here? "}
           <span
             className="cursor-pointer text-blue-600 underline transition-colors hover:text-blue-800"
-            onClick={() => setShowAccessModal(true)}
-          >
+            onClick={() => setShowAccessModal(true)}>
             <span className="flex items-center gap-1">
               Revoke repository access
               <ExternalLink className="h-3 w-3" />
@@ -292,8 +308,7 @@ export const RepositorySelectionModal = ({
             open={showAccessModal}
             onOpenChange={(open) => {
               setShowAccessModal(open);
-            }}
-          >
+            }}>
             <ConfirmationModal
               data={modalData}
               onCancel={handleCancelAccessModal}
@@ -307,12 +322,11 @@ export const RepositorySelectionModal = ({
         <div className="mb-6">
           <label className="mb-1 block text-sm font-medium">
             Github repository{" "}
-            {repositories?.data?.total_count ? `(${repositories.data.total_count} results)` : ""}
+            {repositories?.data?.total_count
+              ? `(${repositories.data.total_count} results)`
+              : ""}
           </label>
-          <div
-            className="relative"
-            onKeyDown={handleKeyDown}
-          >
+          <div className="relative" onKeyDown={handleKeyDown}>
             <Button
               ref={triggerRef}
               type="button"
@@ -324,19 +338,17 @@ export const RepositorySelectionModal = ({
               onClick={() => {
                 setIsPopoverOpen((prev) => !prev);
                 setHighlightedIndex(allRepositories.length > 0 ? 0 : -1);
-              }}
-            >
+              }}>
               {selectedRepoId
-                ? allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name
+                ? allRepositories.find((r) => String(r.id) === selectedRepoId)
+                    ?.full_name
                 : isLoading || isFetching
                   ? "Loading repositories..."
                   : "Select a repository"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
             {isPopoverOpen && (
-              <div
-                className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover text-popover-foreground shadow-md"
-              >
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover text-popover-foreground shadow-md">
                 <div className="flex items-center border-b px-3">
                   <Input
                     autoFocus
@@ -349,17 +361,21 @@ export const RepositorySelectionModal = ({
                 <div
                   ref={listRef}
                   onScroll={handleScroll}
-                  className="max-h-60 overflow-y-auto overflow-x-hidden p-1"
-                >
-                  {!isLoading && !isFetching && allRepositories.length === 0 && (
-                    <div className="py-6 text-center text-sm">No repositories found.</div>
-                  )}
-                  {(isLoading || isFetching) && allRepositories.length === 0 && (
-                    <div className="flex items-center justify-center p-4 text-sm text-gray-500">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading repositories...
-                    </div>
-                  )}
+                  className="max-h-60 overflow-y-auto overflow-x-hidden p-1">
+                  {!isLoading &&
+                    !isFetching &&
+                    allRepositories.length === 0 && (
+                      <div className="py-6 text-center text-sm">
+                        No repositories found.
+                      </div>
+                    )}
+                  {(isLoading || isFetching) &&
+                    allRepositories.length === 0 && (
+                      <div className="flex items-center justify-center p-4 text-sm text-gray-500">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading repositories...
+                      </div>
+                    )}
                   {allRepositories.map((repo: IRepository, idx: number) => (
                     <div
                       key={repo.id}
@@ -375,14 +391,17 @@ export const RepositorySelectionModal = ({
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       className={cn(
                         "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
-                        highlightedIndex === idx && "bg-accent text-accent-foreground",
-                        selectedRepoId === String(repo.id) && "bg-accent text-accent-foreground",
-                      )}
-                    >
+                        highlightedIndex === idx &&
+                          "bg-accent text-accent-foreground",
+                        selectedRepoId === String(repo.id) &&
+                          "bg-accent text-accent-foreground",
+                      )}>
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          selectedRepoId === String(repo.id) ? "opacity-100" : "opacity-0",
+                          selectedRepoId === String(repo.id)
+                            ? "opacity-100"
+                            : "opacity-0",
                         )}
                       />
                       <div className="flex flex-col">
@@ -400,7 +419,9 @@ export const RepositorySelectionModal = ({
               </div>
             )}
           </div>
-          {repoError && <div className="mt-1 text-xs text-red-500">{repoError}</div>}
+          {repoError && (
+            <div className="mt-1 text-xs text-red-500">{repoError}</div>
+          )}
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleCancel}>
@@ -409,8 +430,7 @@ export const RepositorySelectionModal = ({
           <Button
             type="button"
             disabled={!selectedRepoId || isLoading || isFetching}
-            onClick={handleSelectRepository}
-          >
+            onClick={handleSelectRepository}>
             Add
           </Button>
         </div>

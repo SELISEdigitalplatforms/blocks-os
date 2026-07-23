@@ -5,7 +5,7 @@ using CloudConfiguration.DomainService.Notification.ResponseModel;
 using CloudConfiguration.DomainService.Shared.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BlocksTemplate.Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
@@ -20,7 +20,7 @@ namespace BlocksTemplate.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::notification::save")]
-        public async Task<BaseResponse> Save([FromBody] SaveNotificatonConfigurationRequest request)
+        public async Task<BaseResponse> Save([FromBody] SaveNotificationConfigurationRequest request)
         {
             return await _configurationService.SaveNotificationConfigurationAsync(request);
         }
@@ -36,12 +36,12 @@ namespace BlocksTemplate.Api.Controllers
         [ProtectedEndPoint("blocks-os::notification::gets")]
         public async Task<NotificationConfiguration> Get([FromQuery] GetNotificationConfigurationRequest request)
         {
-            return await _configurationService.GetNotificatoinConfigurationAsync(request);
+            return await _configurationService.GetNotificationConfigurationAsync(request);
         }
 
         [HttpDelete]
         [ProtectedEndPoint("blocks-os::notification::delete")]
-        public async Task<BaseResponse> Delete([FromQuery] DeleteNotificatoinConfigurationRequest request)
+        public async Task<BaseResponse> Delete([FromQuery] DeleteNotificationConfigurationRequest request)
         {
             return await _configurationService.DeleteNotificationConfigurationAsync(request);
         }

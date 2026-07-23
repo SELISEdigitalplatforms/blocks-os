@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { secretsService, SECRETS_ENDPOINTS } from "@/services/secrets.service";
 import type { SecretItem } from "@/cross-modules/secrets/constants/secret-key.enum";
 import type { IAPIResponse } from "@/models/api-response";
@@ -33,7 +33,10 @@ const normalizeSecretsResponse = (
   return response.data ?? [];
 };
 
-const filterBySearch = (configs: IMagicUrlConfig[], searchText?: string): IMagicUrlConfig[] => {
+const filterBySearch = (
+  configs: IMagicUrlConfig[],
+  searchText?: string,
+): IMagicUrlConfig[] => {
   const query = searchText?.trim().toLowerCase();
   if (!query) return configs;
   return configs.filter(
@@ -44,7 +47,9 @@ const filterBySearch = (configs: IMagicUrlConfig[], searchText?: string): IMagic
 };
 
 export class MagicUrlConfigService {
-  getMagicUrlConfigs(payload: IGetMagicUrlConfigsPayload): Promise<IGetMagicUrlConfigsResponse> {
+  getMagicUrlConfigs(
+    payload: IGetMagicUrlConfigsPayload,
+  ): Promise<IGetMagicUrlConfigsResponse> {
     const params = new URLSearchParams({
       secretKey: MAGIC_URL_CONFIG_SECRET_KEY,
       PageSize: payload.pageSize.toString(),
@@ -55,9 +60,9 @@ export class MagicUrlConfigService {
     }
 
     return http
-      .get<SecretItem[] | IAPIResponse<SecretItem[]>>(
-        `${SECRETS_ENDPOINTS.GETS}?${params.toString()}`,
-      )
+      .get<
+        SecretItem[] | IAPIResponse<SecretItem[]>
+      >(`${SECRETS_ENDPOINTS.GETS}?${params.toString()}`)
       .then((response) => {
         const secrets = normalizeSecretsResponse(response);
         const mapped = secrets.map(mapSecretToConfig);
