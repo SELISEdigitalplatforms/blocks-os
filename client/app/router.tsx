@@ -93,7 +93,7 @@ const redirectPaths: Record<string, string> = {
 
 function EmailPage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 p-6">
       <EmailServiceTable />
     </div>
   );
