@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cloud.DomainService", "Clou
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cloud.LmtService", "Cloud.LmtService\Cloud.LmtService.csproj", "{B798BDE8-DE5E-4449-9CB9-C5C9B2EF519B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudConfiguration.DomainService", "CloudConfiguration.DomainService\CloudConfiguration.DomainService.csproj", "{5DB8EE31-1C0F-467A-BB1B-D010A824B305}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Configuration.DomainService", "Configuration.DomainService\Configuration.DomainService.csproj", "{5DB8EE31-1C0F-467A-BB1B-D010A824B305}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identifier.DomainService", "Identifier.DomainService\Identifier.DomainService.csproj", "{A0E1C5B2-3D7F-4E8A-9C2B-1D3E5F7A8B6C}"
 EndProject
