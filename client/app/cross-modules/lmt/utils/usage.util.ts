@@ -95,6 +95,67 @@ export function transformMatrixData(item: Partial<UsageMatrix>): UsageMatrix {
   };
 }
 
+type NumericUsageMatrix = {
+  [K in keyof UsageMatrix]: NonNullable<UsageMatrix[K]>;
+};
+
+const mergeUsageMatrices = (items: UsageMatrix[]): UsageMatrix => {
+  if (items.length === 0) return defaultUsagesMetrics;
+  if (items.length === 1) return items[0];
+
+  const merged = items.reduce<NumericUsageMatrix>(
+    (acc, item) => {
+      const row = transformMatrixData(item);
+      return {
+        _id: acc._id || row._id,
+        TotalRequests: acc.TotalRequests + row.TotalRequests,
+        Status1xx: acc.Status1xx + row.Status1xx,
+        Status2xx: acc.Status2xx + row.Status2xx,
+        Status3xx: acc.Status3xx + row.Status3xx,
+        Status4xx: acc.Status4xx + row.Status4xx,
+        Status5xx: acc.Status5xx + row.Status5xx,
+        TotalDuration: acc.TotalDuration + row.TotalDuration,
+        AverageDuration: 0,
+        PeakDuration: Math.max(acc.PeakDuration, row.PeakDuration),
+        AverageThroughput: acc.AverageThroughput + (row.AverageThroughput ?? 0),
+        TotalThroughput: acc.TotalThroughput + (row.TotalThroughput ?? 0),
+      };
+    },
+    {
+      _id: "",
+      TotalRequests: 0,
+      Status1xx: 0,
+      Status2xx: 0,
+      Status3xx: 0,
+      Status4xx: 0,
+      Status5xx: 0,
+      TotalDuration: 0,
+      AverageDuration: 0,
+      PeakDuration: 0,
+      AverageThroughput: 0,
+      TotalThroughput: 0,
+    },
+  );
+
+  return {
+    ...merged,
+    AverageDuration: merged.TotalRequests
+      ? merged.TotalDuration / merged.TotalRequests
+      : 0,
+    AverageThroughput: merged.TotalRequests
+      ? merged.AverageThroughput / items.length
+      : 0,
+  };
+};
+
+const resolveMatrixByIds = (
+  ids: string[],
+  byId: Record<string, UsageMatrix>,
+): UsageMatrix => {
+  const matched = ids.map((id) => byId[id]).filter(Boolean);
+  return mergeUsageMatrices(matched);
+};
+
 export function getNormalizeUsageMetricsData(
   data: UsageMatrix[],
   payload: IGetServiceAnalyticsPayload,
@@ -125,11 +186,11 @@ export function getNormalizeUsageMetricsData(
   let accumulatedError = 0;
 
   (Object.keys(USAGES_SERVICE_MAP) as Array<keyof UsageServiceMap>).forEach((key) => {
-    const { apiName, workerName } = USAGES_SERVICE_MAP[key];
+    const { apiNames, workerName } = USAGES_SERVICE_MAP[key];
 
-    const apiData = modifiedData[apiName] || defaultUsagesMetrics;
+    const apiData = resolveMatrixByIds(apiNames, modifiedData);
     const workerData = workerName
-      ? modifiedData[workerName] || defaultUsagesMetrics
+      ? resolveMatrixByIds([workerName], modifiedData)
       : defaultUsagesMetrics;
 
     const formatSummary = (item: UsageMatrix): UsageMatrixSummary => {

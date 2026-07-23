@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Shared;
@@ -16,6 +16,7 @@ namespace DomainService.Projects
         Task<GetProjectResponse> GetAsync();
         Task RestoreUnfinishedProjectAsync();
         Task<RestoreProjectResponse> RestoreProjectAsync(RestoreProjectRequest restoreProjectRequest);
+        Task<bool> GetProjectStatusAsync(string itemId);
         Task<BaseResponse> UpdateProjectAsync(UpdateProjectRequest request);
         Task<BaseResponse> DisableProjectAsync(string projectId);
         Task<GetAssetResponse> GetAssetAsync(GetAssetRequest request);

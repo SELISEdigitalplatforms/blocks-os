@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Entities;
 using DomainService.Dtos;
 using DomainService.Shared.Entities;
@@ -37,5 +37,6 @@ namespace DomainService.Projects
         Task<List<string>> GetProjectIdsByGroupId(string projectGroupId);
         Task UpdateTenantGroupAsync(UpdateTenantGroupRequest request);
         Task DeletePrjectPeopleAsync(string tenantId);
+        Task<ProjectStatusTracer?> GetUnfinishedProjectByIdAsync(string itemId);
     }
 }
