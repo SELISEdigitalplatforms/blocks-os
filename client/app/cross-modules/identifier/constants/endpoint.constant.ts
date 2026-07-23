@@ -23,6 +23,8 @@ export const PROJECT_ENDPOINTS = {
   GET: `/api${PROJECT_SUBPATH}/Get`,
   CREATE: `/api${PROJECT_SUBPATH}/Create`,
   UPDATE_PROJECT: `/api${PROJECT_SUBPATH}/UpdateProject`,
+  UPDATE_PROJECT_GROUP: `/api${PROJECT_SUBPATH}/UpdateProjectGroup`,
+  /** @deprecated Renamed to UPDATE_PROJECT_GROUP. */
   UPDATE_TENANT_GROUP: `/api${PROJECT_SUBPATH}/UpdateTenantGroup`,
   DISABLE: `/api${PROJECT_SUBPATH}/Disable`,
 

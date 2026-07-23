@@ -78,7 +78,8 @@ export const InfiniteScroll = <T,>({
       }
       if (
         scrollContainer &&
-        scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer?.scrollHeight
+        scrollContainer.scrollTop + scrollContainer.clientHeight >=
+          scrollContainer?.scrollHeight
       ) {
         setNewDataAvailable(false);
       }
@@ -93,7 +94,7 @@ export const InfiniteScroll = <T,>({
     }, pollingInterval);
     return () => clearInterval(interval);
   }, [handleFetchNewerData, pollingInterval]);
-  const bottomIndicatorHanlder = () => {
+  const bottomIndicatorHandler = () => {
     scrollContainerRef.current?.scrollTo({
       top: scrollContainerRef.current?.scrollHeight,
       behavior: "smooth",
@@ -102,7 +103,9 @@ export const InfiniteScroll = <T,>({
   };
   useEffect(() => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight });
+      scrollContainerRef.current?.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+      });
     }
   }, []);
   return (
@@ -119,7 +122,7 @@ export const InfiniteScroll = <T,>({
           </div>
         )}
       </div>
-      {isNewDataAvailable && bottomIndicator(bottomIndicatorHanlder)}
+      {isNewDataAvailable && bottomIndicator(bottomIndicatorHandler)}
     </div>
   );
 };

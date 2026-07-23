@@ -124,7 +124,7 @@ namespace XUnitTest.Services
             _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
             _peopleRepo.Setup(r => r.IsOwner(It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(true);
             _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
-                       .ReturnsAsync(new List<User> { new() { ItemId = "u2", Email = "invitee@x.com", FirstName = "Inv" } });
+                       .ReturnsAsync(new List<User> { new() { ItemId = "u2", Email = "invitee@x.com", FirstName = "Inv", Active = true, IsVerified = true } });
             _peopleRepo.Setup(r => r.GetProjectPeoplesAsync("u2", It.IsAny<List<string>>()))
                        .ReturnsAsync(new List<ProjectPeople>());
             _peopleRepo.Setup(r => r.GetProjectByIdAsync("t1"))
@@ -169,6 +169,34 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeTrue();
             _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<CreateUserByEmailEvent>>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task InvitePeoplesAsync_NewUserWithRoles_PersistsRolesForAsyncPath()
+        {
+            using var _ = new BlocksTestContext(userName: "owner@x.com");
+            _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
+            _peopleRepo.Setup(r => r.IsOwner(It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(true);
+            _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>())).ReturnsAsync(new List<User>());
+            _cache.Setup(c => c.AddStringValueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>())).ReturnsAsync(true);
+
+            var request = new InviteRequest
+            {
+                GroupId = "grp",
+                Invitations = new Dictionary<string, List<EnviromentDetails>>
+                {
+                    { "new@x.com", new List<EnviromentDetails> { new() { TenantId = "t1", Roles = new List<string> { "admin" } } } }
+                }
+            };
+
+            var response = await Service().InvitePeoplesAsync(request);
+
+            response.IsSuccess.Should().BeTrue();
+            // The roles are cached under the invited address so the IAM post-event handler can re-apply them.
+            _cache.Verify(c => c.AddStringValueAsync(
+                "invitation-roles:new@x.com",
+                It.Is<string>(v => v.Contains("admin") && v.Contains("t1")),
+                It.IsAny<long>()), Times.Once);
         }
 
         // ---------- RemoveAccessFromProjectAsync ----------
@@ -294,11 +322,58 @@ namespace XUnitTest.Services
             {
                 UserId = "u1",
                 TenantId = "t1",
-                Key = "k1"
+                Key = "k1",
+                EventType = DomainService.Shared.IdentifierConstants.ProjectPeopleInvitationMailPurpose
             });
 
             result.Should().BeTrue();
             _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DomainService.Dtos.SendMail>>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendProjectInvitationToNewUser_AppliesCachedRolesToCreatedRows()
+        {
+            using var _ = new BlocksTestContext();
+            _peopleRepo.Setup(r => r.GetProjectByIdAsync("t1")).ReturnsAsync(NewTenant());
+            _peopleRepo.Setup(r => r.GetUserByIdAsync("u1")).ReturnsAsync(new User { ItemId = "u1", Email = "u@x.com" });
+            // Roles were persisted by the invite path, keyed by the invited address.
+            _cache.Setup(c => c.GetStringValueAsync("invitation-roles:u@x.com"))
+                  .ReturnsAsync("{\"t1\":[\"admin\",\"member\"]}");
+            _cache.Setup(c => c.AddStringValueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>())).ReturnsAsync(true);
+
+            List<ProjectPeople>? inserted = null;
+            _peopleRepo.Setup(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>()))
+                       .Callback<List<ProjectPeople>>(l => inserted = l)
+                       .ReturnsAsync(true);
+
+            var result = await Service().SendProjectInvitationToNewUser(new CreateUserByEmailPostEvent
+            {
+                UserId = "u1",
+                TenantId = "t1",
+                Key = "k1",
+                EventType = DomainService.Shared.IdentifierConstants.ProjectPeopleInvitationMailPurpose
+            });
+
+            result.Should().BeTrue();
+            inserted.Should().ContainSingle();
+            inserted![0].Roles.Should().BeEquivalentTo(new[] { "admin", "member" });
+        }
+
+        [Fact]
+        public async Task SendProjectInvitationToNewUser_IamReportedFailure_ReturnsFalseAndDoesNotInsert()
+        {
+            var result = await Service().SendProjectInvitationToNewUser(new CreateUserByEmailPostEvent
+            {
+                UserId = "u1",
+                TenantId = "t1",
+                EventType = DomainService.Shared.IdentifierConstants.ProjectPeopleInvitationMailPurpose,
+                Success = false,
+                FailureReason = "Signup Policy Validation Error"
+            });
+
+            result.Should().BeFalse();
+            _peopleRepo.Verify(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>()), Times.Never);
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DomainService.Dtos.SendMail>>()), Times.Never);
         }
 
         // ---------- ResendInvitationAsync ----------
@@ -494,9 +569,9 @@ namespace XUnitTest.Services
             _peopleRepo.Setup(r => r.IsOwner(It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(true);
             _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
                        .ReturnsAsync(new List<User> { new() { ItemId = "u2", Email = "invitee@x.com" } });
-            // Already a member of t1, so this is not a first invitation; adding t2 should not send an email.
+            // Already an accepted member of t1, so this is not a first invitation; adding t2 should not send an email.
             _peopleRepo.Setup(r => r.GetProjectPeoplesAsync("u2", It.IsAny<List<string>>()))
-                       .ReturnsAsync(new List<ProjectPeople> { new() { TenantId = "t1" } });
+                       .ReturnsAsync(new List<ProjectPeople> { new() { TenantId = "t1", IsInvitationConfirmed = true } });
             _peopleRepo.Setup(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>())).ReturnsAsync(true);
 
             var request = new InviteRequest
@@ -637,7 +712,7 @@ namespace XUnitTest.Services
             _projectRepo.Setup(r => r.GetProjectIdsByGroupId("grp")).ReturnsAsync(new List<string> { "t1" });
             _peopleRepo.Setup(r => r.IsOwner(It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(true);
             _peopleRepo.Setup(r => r.GetUsersByEmailAsync(It.IsAny<List<string>>()))
-                       .ReturnsAsync(new List<User> { new() { ItemId = "u1", Email = "user@x.com" } });
+                       .ReturnsAsync(new List<User> { new() { ItemId = "u1", Email = "user@x.com", Active = true, IsVerified = true } });
             _peopleRepo.Setup(r => r.GetProjectPeoplesAsync("u1", It.IsAny<List<string>>()))
                        .ReturnsAsync(new List<ProjectPeople> { new() { ItemId = "p1", TenantId = "t1" } });
             _peopleRepo.Setup(r => r.GetProjectByIdAsync("t1")).ReturnsAsync((Tenant?)null);

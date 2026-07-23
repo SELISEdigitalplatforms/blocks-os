@@ -12,11 +12,15 @@ import {
   CommandList,
   CommandSeparator,
 } from "../ui-kits/command/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui-kits/popover/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../ui-kits/popover/popover";
 import { Separator } from "../ui-kits/separator/separator";
 import { Badge } from "../ui-kits/badge/badge";
-import usePopoverWidth from "@/hooks/use-popover-width";
-import useIsMobile from "@/hooks/use-is-mobile";
+import { usePopoverWidth } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title?: string;
@@ -31,14 +35,20 @@ export function DataTableFacetedFilter<TData, TValue>({
   options,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const facets = column?.getFacetedUniqueValues();
-  const columnFilterValue = column?.getFilterValue() as { types?: string[] } | undefined;
+  const columnFilterValue = column?.getFilterValue() as
+    | { types?: string[] }
+    | undefined;
   const selectedValues = new Set(columnFilterValue?.types || []);
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const isMobile = useIsMobile();
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button ref={buttonRef} variant="outline" size="sm" className="h-8 border-dashed">
+        <Button
+          ref={buttonRef}
+          variant="outline"
+          size="sm"
+          className="h-8 border-dashed">
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center">
               <PlusCircledIcon className="mr-2 h-4 w-4" />
@@ -47,10 +57,15 @@ export function DataTableFacetedFilter<TData, TValue>({
             </div>
             {selectedValues?.size > 0 && (
               <>
-                <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
+                <Separator
+                  orientation="vertical"
+                  className="hidden h-4 sm:mx-2 sm:block"
+                />
                 <div className="flex space-x-1">
                   {selectedValues.size > 2 ? (
-                    <Badge variant="secondary" className="rounded-sm px-1 font-normal">
+                    <Badge
+                      variant="secondary"
+                      className="rounded-sm px-1 font-normal">
                       {selectedValues.size} selected
                     </Badge>
                   ) : (
@@ -60,8 +75,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                         <Badge
                           variant="secondary"
                           key={option.value}
-                          className="rounded-sm px-1 font-normal"
-                        >
+                          className="rounded-sm px-1 font-normal">
                           {option.label}
                         </Badge>
                       ))
@@ -75,8 +89,11 @@ export function DataTableFacetedFilter<TData, TValue>({
       <PopoverContent
         className="w-auto p-0 sm:w-full"
         align="start"
-        style={isMobile ? { width: popoverWidth ? `${popoverWidth}px` : "auto" } : undefined}
-      >
+        style={
+          isMobile
+            ? { width: popoverWidth ? `${popoverWidth}px` : "auto" }
+            : undefined
+        }>
         <Command>
           <CommandInput placeholder={title} />
           <CommandList>
@@ -99,16 +116,14 @@ export function DataTableFacetedFilter<TData, TValue>({
                           ? { ...columnFilterValue, types: filterValues }
                           : undefined,
                       );
-                    }}
-                  >
+                    }}>
                     <div
                       className={cn(
                         "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
                         isSelected
                           ? "bg-primary text-primary-foreground"
                           : "opacity-50 [&_svg]:invisible",
-                      )}
-                    >
+                      )}>
                       <CheckIcon className={cn("h-4 w-4")} />
                     </div>
                     <span>{option.label}</span>
@@ -127,8 +142,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <CommandGroup>
                   <CommandItem
                     onSelect={() => column?.setFilterValue(undefined)}
-                    className="justify-center text-center"
-                  >
+                    className="justify-center text-center">
                     Clear
                   </CommandItem>
                 </CommandGroup>
