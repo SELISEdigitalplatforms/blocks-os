@@ -47,7 +47,6 @@ export const AddEnvironmentModal = ({
         name: projectName || "old Project",
         isAcceptBlocksTerms: true,
         isUseBlocksExclusively: true,
-        isProduction: false,
         resources: [],
         tenantGroupId: tenantGroupId || "default-tenant-group-id",
         applicationContexts: applicationContexts,

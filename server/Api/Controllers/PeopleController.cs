@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Blocks.Genesis;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Api.Controllers
+namespace BlocksOs.Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
@@ -52,7 +52,11 @@ namespace Api.Controllers
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 
+        // Public by design: a brand-new invitee has no account yet and cannot authenticate,
+        // so this endpoint is intentionally anonymous. Marked explicitly so the intent is
+        // declared and a future default-deny fallback policy will not silently break it.
         [HttpPost]
+        [AllowAnonymous]
         public async Task<IActionResult> ConfirmInvitation([FromBody] ConfirmInvitationRequest command)
         {
             var result = await _peopleService.ConfirmInvitationAsync(command);

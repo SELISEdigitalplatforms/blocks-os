@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { ServiceGroupCard } from "@blocks-idp/api-settings/components/service-group-card";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { BulkActionBar } from "@blocks-idp/api-settings/components/bulk-action-bar";
+import { ServiceGroupCard } from "@blocks-idp/api-settings/components/service-group-card";
 import {
+  useBulkUpdateApiEndpoints,
   useGetApiEndpointsInfinite,
   useUpdateApiEndpoint,
-  useBulkUpdateApiEndpoints,
 } from "@blocks-idp/api-settings/hooks/use-api-settings";
 import { IApiEndpoint } from "@blocks-idp/api-settings/models/api-endpoint.model";
 import { getServiceSwaggerUrl } from "@blocks-idp/api-settings/utils/service-swagger";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { BookOpen, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /** ─── Loading skeleton ──────────────────────────────────────────────────────── */
 const ServiceGroupSkeleton = () => (
   <div className="rounded-lg border border-border bg-card p-4">
@@ -31,24 +31,25 @@ const ServiceGroupSkeleton = () => (
 /** ─── Page component ────────────────────────────────────────────────────────── */
 export default function ApiSettingsPage() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-  } = useGetApiEndpointsInfinite({ projectKey: tenantId });
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useGetApiEndpointsInfinite({ projectKey: tenantId });
   const { mutateAsync: updateEndpoint } = useUpdateApiEndpoint();
   const { mutateAsync: bulkUpdate } = useBulkUpdateApiEndpoints();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const endpoints = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const endpoints = useMemo(
+    () => data?.pages.flatMap((p) => p.data) ?? [],
+    [data],
+  );
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage(); },
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage)
+          fetchNextPage();
+      },
       { threshold: 0.1 },
     );
     observer.observe(el);
@@ -75,7 +76,13 @@ export default function ApiSettingsPage() {
               ctrl,
               eps.sort((a, b) => {
                 // Sort by method first (GET, POST, PUT, etc.), then by controller
-                const methodOrder: Record<string, number> = { GET: 0, POST: 1, PUT: 2, PATCH: 3, DELETE: 4 };
+                const methodOrder: Record<string, number> = {
+                  GET: 0,
+                  POST: 1,
+                  PUT: 2,
+                  PATCH: 3,
+                  DELETE: 4,
+                };
                 const aMethodKey = a.method?.toUpperCase?.() || "";
                 const bMethodKey = b.method?.toUpperCase?.() || "";
                 const aMethod = methodOrder[aMethodKey] ?? 999;
@@ -122,14 +129,23 @@ export default function ApiSettingsPage() {
           captchaProvider: ep.captchaProvider,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to update MFA setting");
+          throw new Error(
+            result.errors?.join(", ") || "Failed to update MFA setting",
+          );
         }
-        showSuccessToast({ description: `MFA ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}` });
+        showSuccessToast({
+          description: `MFA ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}`,
+        });
       } catch (error) {
-        showErrorToast({ errors: error instanceof Error ? error.message : "Failed to update MFA setting" });
+        showErrorToast({
+          errors:
+            error instanceof Error
+              ? error.message
+              : "Failed to update MFA setting",
+        });
       }
     },
-    [tenantId, updateEndpoint],
+    [updateEndpoint],
   );
   const handleToggleCaptcha = useCallback(
     async (ep: IApiEndpoint, value: boolean) => {
@@ -146,21 +162,32 @@ export default function ApiSettingsPage() {
           mfaType: ep.mfaType,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to update Captcha setting");
+          throw new Error(
+            result.errors?.join(", ") || "Failed to update Captcha setting",
+          );
         }
-        showSuccessToast({ description: `Captcha ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}` });
+        showSuccessToast({
+          description: `Captcha ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}`,
+        });
       } catch (error) {
-        showErrorToast({ errors: error instanceof Error ? error.message : "Failed to update Captcha setting" });
+        showErrorToast({
+          errors:
+            error instanceof Error
+              ? error.message
+              : "Failed to update Captcha setting",
+        });
       }
     },
-    [tenantId, updateEndpoint],
+    [updateEndpoint],
   );
   // ── Bulk handlers (group presets) ─────────────────────────────────────────
   const handleBulkGroupMfa = useCallback(
     async (ids: string[], value: boolean) => {
       try {
         // Preserve current Captcha state when toggling MFA
-        const groupEndpoints = endpoints.filter((ep) => ids.includes(ep.itemId));
+        const groupEndpoints = endpoints.filter((ep) =>
+          ids.includes(ep.itemId),
+        );
         const captchaState =
           groupEndpoints.length > 0
             ? groupEndpoints.every((ep) => ep.isCaptchaRequired)
@@ -176,20 +203,31 @@ export default function ApiSettingsPage() {
           disableAll: false,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to bulk update MFA");
+          throw new Error(
+            result.errors?.join(", ") || "Failed to bulk update MFA",
+          );
         }
-        showSuccessToast({ description: `MFA ${value ? "enabled" : "disabled"} for ${ids.length} endpoints` });
+        showSuccessToast({
+          description: `MFA ${value ? "enabled" : "disabled"} for ${ids.length} endpoints`,
+        });
       } catch (error) {
-        showErrorToast({ errors: error instanceof Error ? error.message : "Failed to bulk update MFA" });
+        showErrorToast({
+          errors:
+            error instanceof Error
+              ? error.message
+              : "Failed to bulk update MFA",
+        });
       }
     },
-    [tenantId, endpoints, bulkUpdate],
+    [endpoints, bulkUpdate],
   );
   const handleBulkGroupCaptcha = useCallback(
     async (ids: string[], value: boolean) => {
       try {
         // Preserve current MFA state when toggling Captcha
-        const groupEndpoints = endpoints.filter((ep) => ids.includes(ep.itemId));
+        const groupEndpoints = endpoints.filter((ep) =>
+          ids.includes(ep.itemId),
+        );
         const mfaState =
           groupEndpoints.length > 0
             ? groupEndpoints.every((ep) => ep.isMFARequired)
@@ -205,35 +243,33 @@ export default function ApiSettingsPage() {
           disableAll: false,
         });
         if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to bulk update Captcha");
+          throw new Error(
+            result.errors?.join(", ") || "Failed to bulk update Captcha",
+          );
         }
-        showSuccessToast({ description: `Captcha ${value ? "enabled" : "disabled"} for ${ids.length} endpoints` });
+        showSuccessToast({
+          description: `Captcha ${value ? "enabled" : "disabled"} for ${ids.length} endpoints`,
+        });
       } catch (error) {
-        showErrorToast({ errors: error instanceof Error ? error.message : "Failed to bulk update Captcha" });
+        showErrorToast({
+          errors:
+            error instanceof Error
+              ? error.message
+              : "Failed to bulk update Captcha",
+        });
       }
     },
-    [tenantId, endpoints, bulkUpdate],
+    [endpoints, bulkUpdate],
   );
-  const handleBulkGroupDisableAll = useCallback(
-    async (ids: string[]) => {
-      try {
-        const result = await bulkUpdate({ itemIds: ids, isMFARequired: false, isCaptchaRequired: false, disableAll: true });
-        if (!result.isSuccess) {
-          throw new Error(result.errors?.join(", ") || "Failed to disable security features");
-        }
-        showSuccessToast({ description: `All security features disabled for ${ids.length} endpoints` });
-      } catch (error) {
-        showErrorToast({ errors: error instanceof Error ? error.message : "Failed to disable security features" });
-      }
-    },
-    [tenantId, bulkUpdate],
-  );
+
   // ── Bulk bar actions ───────────────────────────────────────────────────────
   const selectedArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
   const handleBulkMfa = useCallback(async () => {
     try {
       // Preserve current Captcha state when enabling MFA
-      const selectedEndpoints = endpoints.filter((ep) => selectedArray.includes(ep.itemId));
+      const selectedEndpoints = endpoints.filter((ep) =>
+        selectedArray.includes(ep.itemId),
+      );
       const captchaState =
         selectedEndpoints.length > 0
           ? selectedEndpoints.every((ep) => ep.isCaptchaRequired)
@@ -251,16 +287,22 @@ export default function ApiSettingsPage() {
       if (!result.isSuccess) {
         throw new Error(result.errors?.join(", ") || "Failed to enable MFA");
       }
-      showSuccessToast({ description: `MFA enabled for ${selectedArray.length} endpoints` });
+      showSuccessToast({
+        description: `MFA enabled for ${selectedArray.length} endpoints`,
+      });
       clearSelection();
     } catch (error) {
-      showErrorToast({ errors: error instanceof Error ? error.message : "Failed to enable MFA" });
+      showErrorToast({
+        errors: error instanceof Error ? error.message : "Failed to enable MFA",
+      });
     }
-  }, [tenantId, endpoints, selectedArray, bulkUpdate, clearSelection]);
+  }, [endpoints, selectedArray, bulkUpdate, clearSelection]);
   const handleBulkCaptcha = useCallback(async () => {
     try {
       // Preserve current MFA state when enabling Captcha
-      const selectedEndpoints = endpoints.filter((ep) => selectedArray.includes(ep.itemId));
+      const selectedEndpoints = endpoints.filter((ep) =>
+        selectedArray.includes(ep.itemId),
+      );
       const mfaState =
         selectedEndpoints.length > 0
           ? selectedEndpoints.every((ep) => ep.isMFARequired)
@@ -276,20 +318,30 @@ export default function ApiSettingsPage() {
         disableAll: false,
       });
       if (!result.isSuccess) {
-        throw new Error(result.errors?.join(", ") || "Failed to enable Captcha");
+        throw new Error(
+          result.errors?.join(", ") || "Failed to enable Captcha",
+        );
       }
-      showSuccessToast({ description: `Captcha enabled for ${selectedArray.length} endpoints` });
+      showSuccessToast({
+        description: `Captcha enabled for ${selectedArray.length} endpoints`,
+      });
       clearSelection();
     } catch (error) {
-      showErrorToast({ errors: error instanceof Error ? error.message : "Failed to enable Captcha" });
+      showErrorToast({
+        errors:
+          error instanceof Error ? error.message : "Failed to enable Captcha",
+      });
     }
-  }, [tenantId, endpoints, selectedArray, bulkUpdate, clearSelection]);
+  }, [endpoints, selectedArray, bulkUpdate, clearSelection]);
   return (
     <main className="flex flex-col gap-4 p-4 pb-24 sm:gap-6 sm:p-6">
       <div>
-        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">API Settings</h1>
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
+          API Settings
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Configure security policies for your API endpoints — enable MFA, Captcha, and manage access controls.
+          Configure security policies for your API endpoints — enable MFA,
+          Captcha, and manage access controls.
         </p>
       </div>
       {isLoading ? (
@@ -308,15 +360,16 @@ export default function ApiSettingsPage() {
             <div key={service} className="flex flex-col gap-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
+                  <h2 className="text-base font-bold capitalize sm:text-lg">
+                    {service}
+                  </h2>
                   {swaggerUrl && (
                     <a
                       href={swaggerUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="hidden items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-primary hover:underline sm:inline-flex"
-                      title={swaggerUrl}
-                    >
+                      title={swaggerUrl}>
                       <span className="truncate">{swaggerUrl}</span>
                       <ExternalLink className="h-3 w-3 shrink-0" />
                     </a>
@@ -327,8 +380,7 @@ export default function ApiSettingsPage() {
                     size="sm"
                     variant="outline"
                     asChild
-                    className="w-fit shrink-0 gap-1.5"
-                  >
+                    className="w-fit shrink-0 gap-1.5">
                     <a href={swaggerUrl} target="_blank" rel="noreferrer">
                       <BookOpen className="h-3.5 w-3.5" />
                       <span>API Docs</span>

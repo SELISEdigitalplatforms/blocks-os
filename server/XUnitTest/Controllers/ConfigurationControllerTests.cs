@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Blocks.Genesis;
-using BlocksTemplate.Api.Controllers;
+using BlocksOs.Api.Controllers;
 using CloudConfiguration.DomainService.Mail.Entities;
 using CloudConfiguration.DomainService.Mail.RequestModel;
 using CloudConfiguration.DomainService.Notification.Entities;
@@ -54,18 +54,19 @@ namespace XUnitTest.Controllers
 
             var result = await Controller().Get(new GetMailConfigurationRequest { ConfigurationName = "Primary" });
 
-            result.Should().BeSameAs(config);
+            result.Should().BeOfType<OkObjectResult>()
+                  .Which.Value.Should().BeSameAs(config);
         }
 
         [Fact]
-        public async Task Get_NullConfiguration_ReturnsNull()
+        public async Task Get_NullConfiguration_ReturnsNotFound()
         {
             _service.Setup(s => s.GetMailConfigurationAsync(It.IsAny<GetMailConfigurationRequest>()))
                     .ReturnsAsync((MailConfiguration?)null!);
 
             var result = await Controller().Get(new GetMailConfigurationRequest { ConfigurationName = "x" });
 
-            result.Should().BeNull();
+            result.Should().BeOfType<NotFoundObjectResult>();
         }
 
         [Fact]
@@ -76,17 +77,8 @@ namespace XUnitTest.Controllers
 
             var result = await Controller().Gets(new GetAllMailConfigurationsRequest());
 
-            result.Should().BeSameAs(configs);
-        }
-
-        [Fact]
-        public async Task Gets_NullList_ReturnsNull()
-        {
-            _service.Setup(s => s.GetAllMailConfigurationsAsync()).ReturnsAsync((List<MailServerConfiguration>?)null!);
-
-            var result = await Controller().Gets(new GetAllMailConfigurationsRequest());
-
-            result.Should().BeNull();
+            result.Should().BeOfType<OkObjectResult>()
+                  .Which.Value.Should().BeSameAs(configs);
         }
 
         [Fact]
@@ -137,10 +129,10 @@ namespace XUnitTest.Controllers
         [Fact]
         public async Task Save_DelegatesToService()
         {
-            _service.Setup(s => s.SaveNotificationConfigurationAsync(It.IsAny<SaveNotificatonConfigurationRequest>()))
+            _service.Setup(s => s.SaveNotificationConfigurationAsync(It.IsAny<SaveNotificationConfigurationRequest>()))
                     .ReturnsAsync(new BaseResponse { IsSuccess = true });
 
-            var response = await Controller().Save(new SaveNotificatonConfigurationRequest());
+            var response = await Controller().Save(new SaveNotificationConfigurationRequest());
 
             response.IsSuccess.Should().BeTrue();
         }
@@ -161,7 +153,7 @@ namespace XUnitTest.Controllers
         public async Task Get_DelegatesToService()
         {
             var expected = new NotificationConfiguration { ItemId = "n1" };
-            _service.Setup(s => s.GetNotificatoinConfigurationAsync(It.IsAny<GetNotificationConfigurationRequest>()))
+            _service.Setup(s => s.GetNotificationConfigurationAsync(It.IsAny<GetNotificationConfigurationRequest>()))
                     .ReturnsAsync(expected);
 
             var response = await Controller().Get(new GetNotificationConfigurationRequest { ItemId = "n1" });
@@ -172,10 +164,10 @@ namespace XUnitTest.Controllers
         [Fact]
         public async Task Delete_DelegatesToService()
         {
-            _service.Setup(s => s.DeleteNotificationConfigurationAsync(It.IsAny<DeleteNotificatoinConfigurationRequest>()))
+            _service.Setup(s => s.DeleteNotificationConfigurationAsync(It.IsAny<DeleteNotificationConfigurationRequest>()))
                     .ReturnsAsync(new BaseResponse { IsSuccess = true });
 
-            var response = await Controller().Delete(new DeleteNotificatoinConfigurationRequest());
+            var response = await Controller().Delete(new DeleteNotificationConfigurationRequest());
 
             response.IsSuccess.Should().BeTrue();
         }

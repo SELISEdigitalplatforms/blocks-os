@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint \"app/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"app/**/*.{ts,tsx}\" --fix"
   },
@@ -44,7 +45,7 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.2",
     "@radix-ui/react-tooltip": "^1.1.2",
-    "@seliseblocks/blocks-kit": "^0.0.60",
+    "@seliseblocks/blocks-kit": "^0.0.65",
     "@tanstack/react-query": "^5.62.11",
     "@tanstack/react-query-devtools": "^5.62.11",
     "@tanstack/react-table": "^8.20.5",

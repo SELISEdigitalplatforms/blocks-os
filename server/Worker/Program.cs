@@ -36,6 +36,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.Configure<VerioSystemSettings>(services.BuildServiceProvider().GetRequiredService<IConfiguration>().GetSection("VerioSystemSettings"));
 
             services.AddHostedService<PeriodicPingBackgroundService>();
+          //  services.AddHostedService<RestoreUnfinishedProjectBackgroundService>();
 
             #region Identifier Service Consumers
             services.AddApplicationServices();

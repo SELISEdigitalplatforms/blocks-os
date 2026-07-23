@@ -34,7 +34,7 @@ describe("use-people hooks", () => {
   it("useGetPeople fetches with the tenant group and selects fields", async () => {
     vi.mocked(peopleService.getPeople).mockResolvedValue({
       peoples: [{ id: "u-1" }],
-      totalCount: 1,
+      peoplesTotalCount: 1,
       isOwner: true,
     } as never);
     const { result } = renderHook(
