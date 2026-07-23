@@ -2,7 +2,7 @@ using Blocks.Genesis;
 using BlocksOs.Api;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
-using CloudConfiguration.DomainService.Shared.Utilities;
+using Configuration.DomainService.Shared.Utilities;
 using DomainService.Shared;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -51,7 +51,7 @@ ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath);
 services.AddApplicationServices();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
-services.AddCloudConfigurationServices();
+services.AddConfigurationServices();
 services.AddSingleton<ISecretManagementService, SecretManagementService>();
 services.AddSingleton<ISecretRepository, SecretRepository>();
 
