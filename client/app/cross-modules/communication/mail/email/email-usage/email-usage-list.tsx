@@ -1,5 +1,10 @@
 import React, { useMemo } from "react";
-import { ColumnDef, getCoreRowModel, useReactTable, flexRender } from "@tanstack/react-table";
+import {
+  ColumnDef,
+  getCoreRowModel,
+  useReactTable,
+  flexRender,
+} from "@tanstack/react-table";
 import { Eye, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -27,6 +32,7 @@ import {
   useEmailUsageFilterQueryParams,
 } from "@blocks-communication/mail/email/email-usage/email-usage-filter-toolbar";
 import { Link } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -35,6 +41,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
+  const scoped = useScopedPath();
   const { queryParams, setQueryParams } = useEmailUsageFilterQueryParams();
   const { page, pageSize, search, status, startDate, endDate } = queryParams;
   const { data, isLoading } = useGetEmailUsage(
@@ -51,17 +58,23 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
       {
         accessorKey: "from",
         header: "From",
-        cell: ({ row }) => <div className="truncate">{row.getValue("from") || "-"}</div>,
+        cell: ({ row }) => (
+          <div className="truncate">{row.getValue("from") || "-"}</div>
+        ),
       },
       {
         accessorKey: "to",
         header: "To",
-        cell: ({ row }) => <div className="truncate">{row.getValue("to") || "-"}</div>,
+        cell: ({ row }) => (
+          <div className="truncate">{row.getValue("to") || "-"}</div>
+        ),
       },
       {
         accessorKey: "subject",
         header: "Subject",
-        cell: ({ row }) => <div className="truncate">{row.getValue("subject") || "-"}</div>,
+        cell: ({ row }) => (
+          <div className="truncate">{row.getValue("subject") || "-"}</div>
+        ),
       },
       {
         accessorKey: "status",
@@ -94,12 +107,12 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                     className="cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                    }}
-                  >
+                    }}>
                     <Link
-                      to={`/utilities/email/usage/${row.original.messageId}`}
-                      className="flex items-center"
-                    >
+                      to={scoped(
+                        `email-management/usage/${row.original.messageId}`,
+                      )}
+                      className="flex items-center">
                       <Eye className="mr-2 h-4 w-4" />
                       View Details
                     </Link>
@@ -115,7 +128,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
       return allColumns.filter((col) => col.header !== "Status");
     }
     return allColumns;
-  }, [isInbound]);
+  }, [isInbound, scoped]);
   const table = useReactTable({
     data: data?.data || [],
     columns,
@@ -137,11 +150,13 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                       return (
                         <TableHead
                           key={header.id}
-                          className={header.id === "actions" ? "w-10" : ""}
-                        >
+                          className={header.id === "actions" ? "w-10" : ""}>
                           {header.isPlaceholder
                             ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
                         </TableHead>
                       );
                     })}
@@ -153,15 +168,22 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                   table.getRowModel().rows.map((row) => (
                     <Link
                       key={row.id}
-                      to={`/utilities/email/usage/${row.original.messageId}`}
-                    >
-                      <TableRow data-state={row.getIsSelected() && "selected"} isHoverable>
+                      to={scoped(
+                        `email-management/usage/${row.original.messageId}`,
+                      )}>
+                      <TableRow
+                        data-state={row.getIsSelected() && "selected"}
+                        isHoverable>
                         {row.getVisibleCells().map((cell) => (
                           <TableCell
                             key={cell.id}
-                            className={cell.column.id === "actions" ? "text-right" : ""}
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            className={
+                              cell.column.id === "actions" ? "text-right" : ""
+                            }>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -169,7 +191,9 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center">
                       No results.
                     </TableCell>
                   </TableRow>
