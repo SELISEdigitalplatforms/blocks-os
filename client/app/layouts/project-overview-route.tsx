@@ -1,11 +1,11 @@
 import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
 import type { Menu } from "@seliseblocks/blocks-kit/types";
-import { useProjectStore } from "@seliseblocks/blocks-kit/store";
 import { useEffect } from "react";
 import { Navigate, Outlet, useParams } from "react-router-dom";
 import { ProjectOverviewLayout } from "./project-overview-layout";
 import { useGetProjects } from "@/hooks/use-project";
+import { useAuthStore, useProjectStore } from "@seliseblocks/blocks-kit/store";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
@@ -59,6 +59,8 @@ export function ProjectOverviewRoute({
 }: ProjectOverviewRouteProps) {
   const params = useParams();
   const tenantGroupId = params[paramName];
+  const { user } = useAuthStore();
+
   const { data, isLoading, isError } = useGetProjects({
     tenantGroupId: tenantGroupId,
   });
@@ -86,6 +88,15 @@ export function ProjectOverviewRoute({
   // means the id resolves to a real project group.
   const isValidTenantGroup = !isError && Array.isArray(data) && data.length > 0;
   if (!isValidTenantGroup) return <Navigate to={consolePath} replace />;
+
+  // Ownership must be decided for the project in the URL, not the store's
+  // `selectedProject` — the console resets that to null and the Configure button
+  // never sets it, so reading the store here would reject the real owner. The
+  // fetched `data` is scoped to this `tenantGroupId`, so its project is the one
+  // being opened.
+  const resolvedProject = data[0]?.projects?.[0];
+  const isOwner = user?.sub === resolvedProject?.createdBy;
+  if (!isOwner) return <Navigate to={consolePath} replace />;
 
   return (
     <ProjectOverviewLayout

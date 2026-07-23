@@ -32,7 +32,7 @@ class EmailService {
     pageSize: number,
   ): Promise<IEmailConfig[]> => {
     return http.get(
-      `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}&pageNumber=${pageNumber + 1}&pageSize=${pageSize}`,
+      `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=${pageNumber + 1}&pageSize=${pageSize}`,
       undefined,
       { absoluteUrl: true },
     );
