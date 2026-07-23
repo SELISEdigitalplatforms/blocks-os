@@ -40,7 +40,6 @@ export function EmailConfiguration({
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const isMediumScreen = useMediaQuery(`(max-width: 1180px)`);
   const isMobileScreen = useMediaQuery(`(max-width: 768px)`);
-  const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
   const { isLoading, data: secretData } = useGetEmailSecretConfigs();
   const data = secretData?.configurations || [];
   if (isLoading) {
