@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { IdentityProviderService } from "./identity-provider.service";
 import { IDENTITY_PROVIDER_ENDPOINTS } from "@blocks-idp/authentication/constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const ABS = { absoluteUrl: true };
 

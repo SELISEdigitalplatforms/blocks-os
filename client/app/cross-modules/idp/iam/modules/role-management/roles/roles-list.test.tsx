@@ -29,7 +29,7 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (path: string) => `/scoped/${path}`,
 }));
 

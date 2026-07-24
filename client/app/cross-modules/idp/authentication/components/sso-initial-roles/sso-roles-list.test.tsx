@@ -31,7 +31,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return { ...actual, useNavigate: () => navigate };
 });
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (path: string) => `/app/tenant-1/${path}`,
 }));
 

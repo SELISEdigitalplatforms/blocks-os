@@ -94,7 +94,7 @@ describe("useProjectForm", () => {
       expect.objectContaining({
         name: "My Project",
         isAcceptBlocksTerms: true,
-        isProduction: false,
+        isUseBlocksExclusively: false,
         resources: [
           {
             name: "org/repo",

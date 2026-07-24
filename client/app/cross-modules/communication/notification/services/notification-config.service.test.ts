@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { NotificationConfigService } from "./notification-config.service";
 
-vi.mock("@/lib/http-client", () => ({
+vi.mock("@/lib/http/http-client", () => ({
   http: {
     get: vi.fn(),
     post: vi.fn(),

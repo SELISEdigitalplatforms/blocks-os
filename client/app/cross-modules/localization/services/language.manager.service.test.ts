@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { languageManagerService } from "./language.manager.service";
 import {
   LANGUAGE_ENDPOINTS,
@@ -8,7 +8,10 @@ import {
   LANGUAGE_MODULE_ENDPOINTS,
 } from "@blocks-localization/constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/runtime-env", () => ({
+  getRuntimeEnv: vi.fn(() => "https://logic.test"),
+}));
 
 const baseKeyRequest = {
   projectKey: "pk",
@@ -65,10 +68,14 @@ describe("LanguageManagerService", () => {
     );
   });
 
-  it("fetchBlocksLanguages queries by projectKey", async () => {
+  it("fetchBlocksLanguages queries the logic base url with an absolute url", async () => {
     vi.mocked(http.get).mockResolvedValue([]);
     await languageManagerService.fetchBlocksLanguages("pk");
-    expect(http.get).toHaveBeenCalledWith(`${LANGUAGE_ENDPOINTS.GETS}?projectKey=pk`);
+    expect(http.get).toHaveBeenCalledWith(
+      `https://logic.test${LANGUAGE_ENDPOINTS.GETS}`,
+      undefined,
+      { absoluteUrl: true },
+    );
   });
 
   it("saveBlocksLanguageKey defaults isNewKey to false", async () => {

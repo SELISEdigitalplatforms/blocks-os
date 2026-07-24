@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { AuthOidc } from "./auth-clients-oidc.service";
 import { AUTH_OIDC_ENDPOINTS } from "../constants/endpoint.constant";
 import {
@@ -14,7 +14,7 @@ import {
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("AuthOidc", () => {
   let service: AuthOidc;

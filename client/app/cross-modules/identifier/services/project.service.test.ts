@@ -1,5 +1,5 @@
-import { http } from "@/lib/http-client";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
+import { http } from "@/lib/http/http-client";
 import {
   CLOUD_BUILD_ENDPOINTS,
   DOMAIN_ENDPOINTS,
@@ -27,7 +27,7 @@ import {
 } from "../test-utils/__mocks__";
 import { ProjectService } from "./project.service";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("ProjectService", () => {
   let service: ProjectService;
