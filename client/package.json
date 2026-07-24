@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint \"app/**/*.{ts,tsx}\"",
-    "lint:fix": "eslint \"app/**/*.{ts,tsx}\" --fix"
+    "lint:fix": "eslint \"app/**/*.{ts,tsx}\" --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "lint-staged": {
     "app/**/*.{ts,tsx}": "eslint --max-warnings 0"
@@ -102,6 +104,8 @@
     "typescript": "~5.7.0",
     "vite": "^6.0.0",
     "vitest": "^4.1.5",
-    "@typescript-eslint/parser": "^8.62.0"
+    "@typescript-eslint/parser": "^8.62.0",
+    "prettier": "^3",
+    "eslint-config-prettier": "^9"
   }
 }
