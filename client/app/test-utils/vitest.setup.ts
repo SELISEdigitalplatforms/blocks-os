@@ -118,3 +118,27 @@ if (typeof window !== "undefined" && typeof window.scrollTo !== "function") {
     value: () => {},
   });
 }
+
+// Radix UI primitives (Select, Dropdown, etc.) call these DOM APIs that jsdom
+// does not implement. Define no-op stubs only when they are missing so that
+// components using those primitives can be exercised under jsdom.
+if (typeof Element !== "undefined") {
+  const proto = Element.prototype as unknown as Record<string, unknown>;
+  if (typeof proto.scrollIntoView !== "function") {
+    proto.scrollIntoView = function scrollIntoView(): void {};
+  }
+  if (typeof proto.scrollTo !== "function") {
+    proto.scrollTo = function scrollTo(): void {};
+  }
+  if (typeof proto.hasPointerCapture !== "function") {
+    proto.hasPointerCapture = function hasPointerCapture(): boolean {
+      return false;
+    };
+  }
+  if (typeof proto.setPointerCapture !== "function") {
+    proto.setPointerCapture = function setPointerCapture(): void {};
+  }
+  if (typeof proto.releasePointerCapture !== "function") {
+    proto.releasePointerCapture = function releasePointerCapture(): void {};
+  }
+}
