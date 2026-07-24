@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { languageManagerService } from "./language.manager.service";
 import {
   LANGUAGE_KEY_ENDPOINTS,
   LANGUAGE_MODULE_ENDPOINTS,
 } from "@blocks-localization/constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const baseKeyRequest = {
   projectKey: "pk",

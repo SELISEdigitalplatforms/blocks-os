@@ -1,5 +1,5 @@
-import { http } from "@/lib/http-client";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
+import { http } from "@/lib/http/http-client";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -14,7 +14,7 @@ import {
 import { ORGANIZATION_ENDPOINTS } from "../constants/endpoint.constant";
 import { OrganizationService } from "./organization.service";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("OrganizationService", () => {
   let service: OrganizationService;

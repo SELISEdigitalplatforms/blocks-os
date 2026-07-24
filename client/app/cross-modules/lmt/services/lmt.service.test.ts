@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { lmtService } from "./lmt.service";
 import { LogService } from "./log.service";
 import { TraceService } from "./trace.service";
 import { UsageService } from "./usage.service";
 import { LOG_ENDPOINTS, TRACE_ENDPOINTS } from "../constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("lmtService", () => {
   beforeEach(() => vi.clearAllMocks());

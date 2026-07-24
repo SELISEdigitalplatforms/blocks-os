@@ -23,7 +23,7 @@ vi.stubGlobal(
 );
 
 const h = vi.hoisted(() => ({ setAuthenticated: vi.fn() }));
-vi.mock("@/store/useAuthStore", () => ({
+vi.mock("@seliseblocks/blocks-kit/store", () => ({
   useAuthStore: () => ({ setAuthenticated: h.setAuthenticated }),
 }));
 const setAuthenticated = h.setAuthenticated;

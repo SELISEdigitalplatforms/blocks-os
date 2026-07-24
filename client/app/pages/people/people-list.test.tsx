@@ -21,20 +21,6 @@ vi.stubGlobal(
   },
 );
 
-const h = vi.hoisted(() => ({
-  people: {
-    isLoading: false,
-    isFetching: false,
-    data: undefined as
-      | { peoples: unknown[]; totalCount: number; isOwner: boolean }
-      | undefined,
-  },
-}));
-
-vi.mock("@/hooks/use-people", () => ({
-  useGetPeople: () => h.people,
-}));
-
 vi.mock("./people-filter-toolbar", () => ({
   usePeopleFilterQueryParams: () => ({
     queryParams: { page: 0, pageSize: 10, search: "" },
@@ -55,40 +41,45 @@ vi.mock("@/components/ui-kits/pagination/pagination", () => ({
 
 import { PeopleList } from "./people-list";
 
+type PeopleData = { peoples: unknown[]; totalCount: number; isOwner: boolean };
+
+const renderList = (data: PeopleData | undefined, isPeopleLoading = false) =>
+  render(
+    <PeopleList
+      data={data as never}
+      isPeopleLoading={isPeopleLoading}
+      page={0}
+      pageSize={10}
+      onPageChange={vi.fn()}
+      onPageSizeChange={vi.fn()}
+    />,
+  );
+
 describe("PeopleList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.people = { isLoading: false, isFetching: false, data: undefined };
   });
 
   it("renders pagination when there is loaded, non-empty data", () => {
-    h.people = {
-      isLoading: false,
-      isFetching: false,
-      data: { peoples: [{ id: "a" }, { id: "b" }], totalCount: 2, isOwner: false },
-    };
-    render(<PeopleList />);
+    renderList({
+      peoples: [{ id: "a" }, { id: "b" }],
+      totalCount: 2,
+      isOwner: false,
+    });
     expect(screen.getByTestId("people-table").textContent).toContain("rows:2");
     expect(screen.getByTestId("pagination")).toBeTruthy();
   });
 
   it("hides pagination when the list is empty", () => {
-    h.people = {
-      isLoading: false,
-      isFetching: false,
-      data: { peoples: [], totalCount: 0, isOwner: false },
-    };
-    render(<PeopleList />);
+    renderList({ peoples: [], totalCount: 0, isOwner: false });
     expect(screen.queryByTestId("pagination")).toBeNull();
   });
 
   it("hides pagination while loading even if data exists", () => {
-    h.people = {
-      isLoading: true,
-      isFetching: false,
-      data: { peoples: [{ id: "a" }], totalCount: 1, isOwner: false },
-    };
-    render(<PeopleList />);
+    renderList(
+      { peoples: [{ id: "a" }], totalCount: 1, isOwner: false },
+      true,
+    );
     expect(screen.queryByTestId("pagination")).toBeNull();
   });
 });

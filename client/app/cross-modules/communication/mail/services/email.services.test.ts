@@ -8,7 +8,7 @@ import {
   mockGetMailBoxMailResponse,
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import EmailService from "./email.services";
 import {
   EMAIL_TEMPLATE_ENDPOINTS,
@@ -16,7 +16,7 @@ import {
   MAIL_ENDPOINTS,
 } from "../constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const ABSOLUTE_OPTIONS = undefined;
 const ABSOLUTE_FLAGS = { absoluteUrl: true };
