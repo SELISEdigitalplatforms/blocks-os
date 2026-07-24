@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # =============================================================================
-# Blocks OS Worker — background workers / consumers only (no HTTP host)
+# Blocks OS Worker: background workers / consumers only (no HTTP host)
 # Build: docker build -f Dockerfile.worker -t blocks-os-worker .
 # =============================================================================
 

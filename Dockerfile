@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # =============================================================================
-# Blocks OS API — production image (Kestrel + static React from wwwroot)
+# Blocks OS API: production image (Kestrel + static React from wwwroot)
 # Build: docker build -t blocks-os-api .
 # =============================================================================
 
