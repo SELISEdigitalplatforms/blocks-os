@@ -29,7 +29,7 @@ vi.mock("@/cross-modules/devops/services/github-info.service", () => ({
 }));
 const verifyAuthorization = h.verifyAuthorization;
 
-import CallbackPage from "./callback";
+import CallbackPage from "./github-callback";
 
 const renderAt = (search: string) =>
   render(

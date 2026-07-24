@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { jwtClaimServices } from "./auth-jwt-claim.service";
 import { PROJECT_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
 import { mockJwtClaimPayload, mockSuccessResponse } from "../../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("JwtClaimServices", () => {
   beforeEach(() => {

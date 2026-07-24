@@ -34,7 +34,7 @@ vi.mock("react-router-dom", () => ({
   ),
 }));
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (path: string) => `/scoped/${path}`,
 }));
 

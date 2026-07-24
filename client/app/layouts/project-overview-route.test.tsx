@@ -44,15 +44,23 @@ vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => h.projects,
 }));
 
-// Lightweight stand-in for the shared zustand store, supporting the selector
-// call form `useProjectStore((s) => s.setTenantGroup)` the source uses.
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
-  useProjectStore: (selector: (s: unknown) => unknown) =>
-    selector({
-      setTenantGroup: h.setTenantGroup,
-      setSelectedProject: h.setSelectedProject,
-    }),
-}));
+// Lightweight stand-in for the shared zustand store. The source calls
+// useProjectStore both bare (`const { selectedProject } = useProjectStore()`)
+// and with a selector (`useProjectStore((s) => s.setTenantGroup)`), so support
+// both forms. useAuthStore drives the ownership check; the current user owns the
+// selected project so the layout renders for a valid tenant group.
+vi.mock("@seliseblocks/blocks-kit/store", () => {
+  const state = {
+    selectedProject: { itemId: "p-1", createdBy: "owner-1" },
+    setTenantGroup: h.setTenantGroup,
+    setSelectedProject: h.setSelectedProject,
+  };
+  return {
+    useAuthStore: () => ({ user: { sub: "owner-1" } }),
+    useProjectStore: (selector?: (s: unknown) => unknown) =>
+      selector ? selector(state) : state,
+  };
+});
 
 vi.mock("@seliseblocks/blocks-kit/components", () => ({
   AppLoadingSpinner: () => <div>loading spinner</div>,

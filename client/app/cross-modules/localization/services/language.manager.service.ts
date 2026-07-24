@@ -20,7 +20,7 @@ import {
   IRollbackResponse,
   IValidationError,
 } from "@blocks-localization/models/language";
-import { getRuntimeEnv } from "@seliseblocks/blocks-kit";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 class LanguageManagerService {
   fetchBlocksLanguageKey = (request: {
