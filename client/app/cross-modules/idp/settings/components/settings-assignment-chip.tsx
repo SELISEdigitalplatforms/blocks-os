@@ -1,13 +1,13 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-export type SettingsAssignmentChipVariant = "saved" | "unsaved" | "removed"
+export type SettingsAssignmentChipVariant = "saved" | "unsaved" | "removed";
 
 type SettingsAssignmentChipProps = {
-  label: string
-  meta?: string
-  variant?: SettingsAssignmentChipVariant
-  className?: string
-}
+  label: string;
+  meta?: string;
+  variant?: SettingsAssignmentChipVariant;
+  className?: string;
+};
 
 const CHIP_STYLES: Record<
   SettingsAssignmentChipVariant,
@@ -31,7 +31,7 @@ const CHIP_STYLES: Record<
     label: "text-muted-foreground line-through",
     hint: "will be removed on save",
   },
-}
+};
 
 export const SettingsAssignmentChip = ({
   label,
@@ -39,9 +39,9 @@ export const SettingsAssignmentChip = ({
   variant = "saved",
   className,
 }: SettingsAssignmentChipProps) => {
-  const styles = CHIP_STYLES[variant]
-  const baseName = meta ? `${label} (${meta})` : label
-  const accessibleName = styles.hint ? `${baseName} — ${styles.hint}` : baseName
+  const styles = CHIP_STYLES[variant];
+  const baseName = meta ? `${label} (${meta})` : label;
+  const accessibleName = styles.hint ? `${baseName} — ${styles.hint}` : baseName;
 
   return (
     <span
@@ -60,11 +60,9 @@ export const SettingsAssignmentChip = ({
       <span className="flex min-w-0 items-baseline gap-1 truncate leading-none">
         <span className={cn("truncate font-medium", styles.label)}>{label}</span>
         {meta ? (
-          <span className="truncate text-xs font-normal text-muted-foreground">
-            ({meta})
-          </span>
+          <span className="truncate text-xs font-normal text-muted-foreground">({meta})</span>
         ) : null}
       </span>
     </span>
-  )
-}
+  );
+};

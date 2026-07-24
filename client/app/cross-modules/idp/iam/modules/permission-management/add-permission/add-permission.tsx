@@ -14,10 +14,7 @@ export const AddPermission = () => {
   const { isPending, mutateAsync } = useAddPermission();
   const onSubmit = async (data: permissionFormSchemaType) => {
     // None is a valid severity (0), so only an unset value counts as missing.
-    if (
-      data.permissionSeverity === undefined ||
-      data.permissionSeverity === null
-    ) {
+    if (data.permissionSeverity === undefined || data.permissionSeverity === null) {
       showErrorToast({ errors: "Severity is required" });
       return;
     }
@@ -34,8 +31,7 @@ export const AddPermission = () => {
       showSuccessToast({ description: "Permission created successfully" });
       navigate(scoped(`idp/permissions`));
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };

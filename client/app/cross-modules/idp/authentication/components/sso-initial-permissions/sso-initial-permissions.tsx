@@ -54,9 +54,7 @@ export function SSOInitialPermissions({ permissions, onChange }: SSOInitialPermi
             </svg>
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">No permissions added</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add permissions for SSO users
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Add permissions for SSO users</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border">

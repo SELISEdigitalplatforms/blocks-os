@@ -60,9 +60,7 @@ describe("UserPermissionsList", () => {
   });
 
   it("shows the empty-state message when there are no permissions", () => {
-    render(
-      <UserPermissionsList permissions={[]} isLoading={false} {...baseProps} />,
-    );
+    render(<UserPermissionsList permissions={[]} isLoading={false} {...baseProps} />);
     expect(screen.getByText("No permission found")).toBeTruthy();
   });
 

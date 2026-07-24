@@ -139,7 +139,11 @@ describe("PeopleService", () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Remove access failed"));
 
       await expect(
-        service.removeAccess({ email: "user@example.com", tenantIds: ["tenant-1"], groupId: "group-1" }),
+        service.removeAccess({
+          email: "user@example.com",
+          tenantIds: ["tenant-1"],
+          groupId: "group-1",
+        }),
       ).rejects.toThrow("Remove access failed");
     });
   });

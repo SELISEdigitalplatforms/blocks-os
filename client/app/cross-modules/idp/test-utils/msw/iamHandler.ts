@@ -84,9 +84,7 @@ export const iamHandlers = [
   // User
   http.post(GET_USERS_PATTERN, () => HttpResponse.json(mockUsersResponse)),
   http.get(GET_USERS_EXACT_PATTERN, () => HttpResponse.json({ data: mockUser })),
-  http.get(GET_USER_BY_ID_PATTERN, () =>
-    HttpResponse.json({ data: mockUser, errors: null }),
-  ),
+  http.get(GET_USER_BY_ID_PATTERN, () => HttpResponse.json({ data: mockUser, errors: null })),
   http.post(CREATE_USER_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
   http.post(UPDATE_USER_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
   http.get(GET_SIGNUP_SETTING_PATTERN, () => HttpResponse.json(mockSignUpSettingResponse)),
@@ -161,9 +159,8 @@ export const getUsersErrorHandler = (status = 500) =>
 export const getUserHandler = (response: JsonBodyType = { data: mockUser }) =>
   http.get(GET_USERS_EXACT_PATTERN, () => HttpResponse.json(response));
 
-export const getUserByIdHandler = (
-  response: JsonBodyType = { data: mockUser, errors: null },
-) => http.get(GET_USER_BY_ID_PATTERN, () => HttpResponse.json(response));
+export const getUserByIdHandler = (response: JsonBodyType = { data: mockUser, errors: null }) =>
+  http.get(GET_USER_BY_ID_PATTERN, () => HttpResponse.json(response));
 
 export const createUserHandler = (response: JsonBodyType = mockSuccessResponseWithItemId) =>
   http.post(CREATE_USER_PATTERN, () => HttpResponse.json(response));

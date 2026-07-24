@@ -40,9 +40,7 @@ class MemoryStorage implements Storage {
 function ensureStorage(name: "localStorage" | "sessionStorage"): void {
   let usable = false;
   try {
-    const existing = (globalThis as Record<string, unknown>)[name] as
-      | Storage
-      | undefined;
+    const existing = (globalThis as Record<string, unknown>)[name] as Storage | undefined;
     if (existing) {
       existing.setItem("__probe__", "1");
       existing.removeItem("__probe__");
@@ -110,8 +108,7 @@ if (typeof globalThis.IntersectionObserver === "undefined") {
       return [];
     }
   }
-  (globalThis as Record<string, unknown>).IntersectionObserver =
-    IntersectionObserverStub;
+  (globalThis as Record<string, unknown>).IntersectionObserver = IntersectionObserverStub;
 }
 
 if (typeof window !== "undefined" && typeof window.scrollTo !== "function") {

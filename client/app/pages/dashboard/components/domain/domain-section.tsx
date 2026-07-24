@@ -31,11 +31,13 @@ export const DomainsSection = ({ applications }: DomainsSectionProps) => {
             variant="outline"
             size="sm"
             className="gap-1.5"
-            onClick={() => setAddDialogOpen(true)}>
+            onClick={() => setAddDialogOpen(true)}
+          >
             <Plus className="h-4 w-4" />
             Add Domain
           </Button>
-        }>
+        }
+      >
         <DomainTable data={applications} />
       </DashboardSectionCard>
     </>

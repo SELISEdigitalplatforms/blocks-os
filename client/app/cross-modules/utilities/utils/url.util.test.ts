@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  getDefaultShortUrlBase,
-  isValidUrl,
-  magicUrlSchema,
-} from "./url.util";
+import { getDefaultShortUrlBase, isValidUrl, magicUrlSchema } from "./url.util";
 
 type BlocksWindow = Window & {
   __BLOCKS_ENV__?: Record<string, string | undefined>;

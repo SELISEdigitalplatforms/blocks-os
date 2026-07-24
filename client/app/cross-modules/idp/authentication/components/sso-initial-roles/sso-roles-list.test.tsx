@@ -36,13 +36,7 @@ vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
 }));
 
 vi.mock("./delete-sso-role", () => ({
-  DeleteSSORole: ({
-    role,
-    onDelete,
-  }: {
-    role: IRole;
-    onDelete: (role: IRole) => void;
-  }) => (
+  DeleteSSORole: ({ role, onDelete }: { role: IRole; onDelete: (role: IRole) => void }) => (
     <button type="button" onClick={() => onDelete(role)}>
       delete-{role.slug}
     </button>

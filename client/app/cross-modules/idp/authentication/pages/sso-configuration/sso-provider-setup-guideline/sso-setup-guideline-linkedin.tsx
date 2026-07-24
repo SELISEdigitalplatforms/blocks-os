@@ -38,8 +38,12 @@ export const linkedinStepupDocs = [
           In your LinkedIn App Dashboard under <b>Auth</b>, you’ll find:
         </p>
         <ul className="mt-2 list-inside list-disc">
-          <li><b>Client ID</b></li>
-          <li><b>Client Secret</b></li>
+          <li>
+            <b>Client ID</b>
+          </li>
+          <li>
+            <b>Client Secret</b>
+          </li>
         </ul>
         <p className="mt-2">
           Keep these credentials secure and do not expose them on the frontend.

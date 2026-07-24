@@ -40,20 +40,10 @@ vi.mock("./add-sso-role", () => ({
 }));
 
 vi.mock("./sso-roles-list", () => ({
-  SSORolesList: ({
-    roles,
-    onDelete,
-  }: {
-    roles: IRole[];
-    onDelete: (role: IRole) => void;
-  }) => (
+  SSORolesList: ({ roles, onDelete }: { roles: IRole[]; onDelete: (role: IRole) => void }) => (
     <div data-testid="roles-list">
       {roles.map((role) => (
-        <button
-          key={role.slug}
-          type="button"
-          onClick={() => onDelete(role)}
-        >
+        <button key={role.slug} type="button" onClick={() => onDelete(role)}>
           delete-{role.slug}
         </button>
       ))}
@@ -82,12 +72,7 @@ describe("SSOInitialRoles", () => {
   });
 
   it("renders the roles list with a count badge", () => {
-    render(
-      <SSOInitialRoles
-        roles={[makeRole("admin"), makeRole("editor")]}
-        onChange={vi.fn()}
-      />,
-    );
+    render(<SSOInitialRoles roles={[makeRole("admin"), makeRole("editor")]} onChange={vi.fn()} />);
     expect(screen.getByTestId("roles-list")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
     expect(screen.queryByText("No roles added")).toBeNull();

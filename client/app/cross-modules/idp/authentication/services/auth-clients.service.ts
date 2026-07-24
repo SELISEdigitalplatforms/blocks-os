@@ -15,22 +15,16 @@ export class AuthClientsService {
     });
   }
 
-  save(
-    payload: ISaveClientCredentialPayload,
-  ): Promise<APIResponse<ISaveClientCredentialResponse>> {
+  save(payload: ISaveClientCredentialPayload): Promise<APIResponse<ISaveClientCredentialResponse>> {
     return http.post(AUTH_CLIENT_ENDPOINTS.SAVE, payload, undefined, {
       absoluteUrl: true,
     });
   }
 
-  delete(payload: {
-    itemId: string;
-  }): Promise<APIResponse<{ isSuccess: boolean }>> {
-    return http.delete(
-      `${AUTH_CLIENT_ENDPOINTS.DELETE}/${payload.itemId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+  delete(payload: { itemId: string }): Promise<APIResponse<{ isSuccess: boolean }>> {
+    return http.delete(`${AUTH_CLIENT_ENDPOINTS.DELETE}/${payload.itemId}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 

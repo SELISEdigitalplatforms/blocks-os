@@ -32,9 +32,7 @@ vi.mock("@blocks-idp/authentication/components/sso-initial-permissions", () => (
   SSOInitialPermissions: () => <div data-testid="initial-permissions" />,
 }));
 
-const { SSOProviderConfigGithubForm } = await import(
-  "./sso-provider-config-github-form"
-);
+const { SSOProviderConfigGithubForm } = await import("./sso-provider-config-github-form");
 
 const validConfiguration = {
   provider: "github",
@@ -44,9 +42,7 @@ const validConfiguration = {
   redirectUrl: "https://redirect.example.com/callback",
   initialRoles: [],
   initialPermissions: [],
-  userRoles: [
-    { itemId: "1", name: "user", slug: "user", description: "default" },
-  ],
+  userRoles: [{ itemId: "1", name: "user", slug: "user", description: "default" }],
   userPermissions: [],
 };
 

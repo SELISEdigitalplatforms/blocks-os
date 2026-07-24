@@ -44,11 +44,9 @@ describe("AuthConfiguration", () => {
 
       const result = await service.getConfig();
 
-      expect(http.get).toHaveBeenCalledWith(
-        AUTH_CONFIG_ENDPOINTS.GET_CONFIG,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(AUTH_CONFIG_ENDPOINTS.GET_CONFIG, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockGetAuthConfigResponse);
     });
 

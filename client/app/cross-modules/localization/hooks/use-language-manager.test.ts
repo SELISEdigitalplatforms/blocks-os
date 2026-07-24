@@ -437,7 +437,10 @@ describe("Language Manager Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(languageManagerService.saveLanguage).toHaveBeenCalledWith(mockSaveLanguagePayload, expect.anything());
+      expect(languageManagerService.saveLanguage).toHaveBeenCalledWith(
+        mockSaveLanguagePayload,
+        expect.anything(),
+      );
     });
 
     it("should invalidate get-languages on success", async () => {
@@ -533,7 +536,10 @@ describe("Language Manager Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(languageManagerService.deleteLanguage).toHaveBeenCalledWith(mockDeleteLanguagePayload, expect.anything());
+      expect(languageManagerService.deleteLanguage).toHaveBeenCalledWith(
+        mockDeleteLanguagePayload,
+        expect.anything(),
+      );
     });
 
     it("should invalidate get-languages on success", async () => {
@@ -570,7 +576,10 @@ describe("Language Manager Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(languageManagerService.setDefault).toHaveBeenCalledWith(mockSetDefaultPayload, expect.anything());
+      expect(languageManagerService.setDefault).toHaveBeenCalledWith(
+        mockSetDefaultPayload,
+        expect.anything(),
+      );
     });
 
     it("should invalidate get-languages on success", async () => {
@@ -610,7 +619,10 @@ describe("Language Manager Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(languageManagerService.translateAll).toHaveBeenCalledWith(mockTranslateAllPayload, expect.anything());
+      expect(languageManagerService.translateAll).toHaveBeenCalledWith(
+        mockTranslateAllPayload,
+        expect.anything(),
+      );
     });
 
     it("should invalidate get-blocksLanguageKeys and get-blocksLanguageKey on success", async () => {
@@ -656,7 +668,10 @@ describe("Language Manager Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(languageManagerService.translateKey).toHaveBeenCalledWith(mockTranslateKeyPayload, expect.anything());
+      expect(languageManagerService.translateKey).toHaveBeenCalledWith(
+        mockTranslateKeyPayload,
+        expect.anything(),
+      );
     });
   });
 
@@ -734,7 +749,10 @@ describe("Language Manager Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(languageManagerService.importLanguageFile).toHaveBeenCalledWith(mockImportFile, expect.anything());
+      expect(languageManagerService.importLanguageFile).toHaveBeenCalledWith(
+        mockImportFile,
+        expect.anything(),
+      );
     });
   });
 

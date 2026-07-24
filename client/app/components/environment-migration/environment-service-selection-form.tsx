@@ -10,12 +10,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { Badge } from "@/components/ui-kits/badge/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import {
   Form,
   FormControl,
@@ -58,9 +53,7 @@ export const EnvironmentServiceSelectionForm = () => {
     resolver: zodResolver(environmentServiceSelectionFormSchema),
   });
 
-  const handleSubmit = (
-    values: typeof environmentServiceSelectionFormDefaultValue,
-  ) => {
+  const handleSubmit = (values: typeof environmentServiceSelectionFormDefaultValue) => {
     setFormData(0, values);
     nextStep();
   };
@@ -73,16 +66,12 @@ export const EnvironmentServiceSelectionForm = () => {
   const projectEnvironmentOptions = useMemo(() => {
     if (!groupId || isLoading) return [];
 
-    const currentTenantGroup = projectGroups.find(
-      (group) => group.tenantGroupId === groupId,
-    );
+    const currentTenantGroup = projectGroups.find((group) => group.tenantGroupId === groupId);
 
     if (!currentTenantGroup) return [];
 
     return currentTenantGroup.projects.map((project) => {
-      const envOption = environmentOptions.find(
-        (env) => env.value === project.environment,
-      );
+      const envOption = environmentOptions.find((env) => env.value === project.environment);
       return {
         value: project.tenantId,
         label: envOption?.label || project.environment,
@@ -102,12 +91,9 @@ export const EnvironmentServiceSelectionForm = () => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)}>
           <div className="mt-4 flex flex-col gap-1 text-left">
-            <p className="text-3xl font-bold tracking-tight">
-              Select environments &amp; services
-            </p>
+            <p className="text-3xl font-bold tracking-tight">Select environments &amp; services</p>
             <p className="mb-8 text-sm text-medium-emphasis">
-              Choose the source and target environments, then select which
-              services to migrate.
+              Choose the source and target environments, then select which services to migrate.
             </p>
           </div>
 
@@ -130,20 +116,16 @@ export const EnvironmentServiceSelectionForm = () => {
                             (opt) => opt.value === value,
                           );
                           if (selectedOption) {
-                            form.setValue(
-                              "sourceEnvironmentName",
-                              selectedOption.label,
-                            );
+                            form.setValue("sourceEnvironmentName", selectedOption.label);
                           }
                         }}
-                        disabled={isLoading}>
+                        disabled={isLoading}
+                      >
                         <FormControl>
                           <SelectTrigger aria-label="Source environment">
                             <SelectValue
                               placeholder={
-                                isLoading
-                                  ? "Loading environments..."
-                                  : "Select source environment"
+                                isLoading ? "Loading environments..." : "Select source environment"
                               }
                             />
                           </SelectTrigger>
@@ -153,7 +135,8 @@ export const EnvironmentServiceSelectionForm = () => {
                             <SelectItem
                               key={option.value}
                               value={option.value}
-                              disabled={option.value === targetEnvironment}>
+                              disabled={option.value === targetEnvironment}
+                            >
                               {option.label}
                             </SelectItem>
                           ))}
@@ -179,20 +162,16 @@ export const EnvironmentServiceSelectionForm = () => {
                             (opt) => opt.value === value,
                           );
                           if (selectedOption) {
-                            form.setValue(
-                              "targetEnvironmentName",
-                              selectedOption.label,
-                            );
+                            form.setValue("targetEnvironmentName", selectedOption.label);
                           }
                         }}
-                        disabled={isLoading}>
+                        disabled={isLoading}
+                      >
                         <FormControl>
                           <SelectTrigger aria-label="Target environment">
                             <SelectValue
                               placeholder={
-                                isLoading
-                                  ? "Loading environments..."
-                                  : "Select target environment"
+                                isLoading ? "Loading environments..." : "Select target environment"
                               }
                             />
                           </SelectTrigger>
@@ -202,7 +181,8 @@ export const EnvironmentServiceSelectionForm = () => {
                             <SelectItem
                               key={option.value}
                               value={option.value}
-                              disabled={option.value === sourceEnvironment}>
+                              disabled={option.value === sourceEnvironment}
+                            >
                               {option.label}
                             </SelectItem>
                           ))}
@@ -236,7 +216,8 @@ export const EnvironmentServiceSelectionForm = () => {
                                 : isSelected
                                   ? "cursor-pointer border-primary"
                                   : "cursor-pointer hover:border-primary/50"
-                            }`}>
+                            }`}
+                          >
                             <CardHeader className="pb-3">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
@@ -248,24 +229,17 @@ export const EnvironmentServiceSelectionForm = () => {
                                         <FormControl>
                                           <Checkbox
                                             checked={field.value?.some(
-                                              (s) =>
-                                                s.name === service.id &&
-                                                s.selected,
+                                              (s) => s.name === service.id && s.selected,
                                             )}
                                             disabled={!service.available}
                                             onCheckedChange={(checked) => {
-                                              const currentServices =
-                                                field.value || [];
+                                              const currentServices = field.value || [];
                                               if (checked) {
-                                                const existingIndex =
-                                                  currentServices.findIndex(
-                                                    (s) =>
-                                                      s.name === service.id,
-                                                  );
+                                                const existingIndex = currentServices.findIndex(
+                                                  (s) => s.name === service.id,
+                                                );
                                                 if (existingIndex >= 0) {
-                                                  const updated = [
-                                                    ...currentServices,
-                                                  ];
+                                                  const updated = [...currentServices];
                                                   updated[existingIndex] = {
                                                     ...updated[existingIndex],
                                                     selected: true,
@@ -311,13 +285,10 @@ export const EnvironmentServiceSelectionForm = () => {
                                     name="services"
                                     render={({ field }) => (
                                       <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                        {field.value?.find(
-                                          (s) => s.name === service.id,
-                                        )?.overrideData ? (
+                                        {field.value?.find((s) => s.name === service.id)
+                                          ?.overrideData ? (
                                           <Tooltip>
-                                            <TooltipTrigger
-                                              type="button"
-                                              asChild>
+                                            <TooltipTrigger type="button" asChild>
                                               <div className="flex cursor-help items-center space-x-1">
                                                 <FormLabel className="text-xs font-normal text-muted-foreground">
                                                   Overwrite data
@@ -327,8 +298,8 @@ export const EnvironmentServiceSelectionForm = () => {
                                             </TooltipTrigger>
                                             <TooltipContent>
                                               <p>
-                                                This will overwrite existing
-                                                data in the target environment
+                                                This will overwrite existing data in the target
+                                                environment
                                               </p>
                                             </TooltipContent>
                                           </Tooltip>
@@ -340,13 +311,11 @@ export const EnvironmentServiceSelectionForm = () => {
                                         <FormControl>
                                           <Switch
                                             checked={
-                                              field.value?.find(
-                                                (s) => s.name === service.id,
-                                              )?.overrideData || false
+                                              field.value?.find((s) => s.name === service.id)
+                                                ?.overrideData || false
                                             }
                                             onCheckedChange={(checked) => {
-                                              const currentServices =
-                                                field.value || [];
+                                              const currentServices = field.value || [];
                                               field.onChange(
                                                 currentServices.map((s) =>
                                                   s.name === service.id
@@ -371,10 +340,7 @@ export const EnvironmentServiceSelectionForm = () => {
                               {service.available ? (
                                 <div className="flex flex-wrap gap-2">
                                   {service.chips.map((chip) => (
-                                    <Badge
-                                      key={chip}
-                                      variant="secondary"
-                                      className="text-xs">
+                                    <Badge key={chip} variant="secondary" className="text-xs">
                                       {chip}
                                     </Badge>
                                   ))}

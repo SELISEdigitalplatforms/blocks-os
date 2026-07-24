@@ -32,11 +32,7 @@ describe("GithubInfoService", () => {
   it("checkAlreadyAuthorization GETs the authorized endpoint", async () => {
     vi.mocked(http.get).mockResolvedValue({ isSuccess: true });
     await service.checkAlreadyAuthorization();
-    expect(http.get).toHaveBeenCalledWith(
-      CLOUD_BUILD_ENDPOINTS.IS_AUTHORIZED,
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.IS_AUTHORIZED, undefined, ABS);
   });
 
   it("revokeAccess POSTs an empty body", async () => {
@@ -64,11 +60,7 @@ describe("GithubInfoService", () => {
   it("getGithubRepos omits optional query params when not provided", async () => {
     vi.mocked(http.get).mockResolvedValue({} as never);
     await service.getGithubRepos();
-    expect(http.get).toHaveBeenCalledWith(
-      `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?`,
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?`, undefined, ABS);
   });
 
   it("getGithubRepos includes search, pageNumber and pageSize", async () => {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
-import { toOrganizationConfigSaveApiPayload } from "./organization-config-payload"
+import { describe, expect, it } from "vitest";
+import { toOrganizationConfigSaveApiPayload } from "./organization-config-payload";
 
 describe("organization-config-payload", () => {
   it("maps save payload to API camelCase body", () => {
@@ -27,8 +27,8 @@ describe("organization-config-payload", () => {
       defaultPermissionsOnOrgCreation: ["blocks-idp::read-users"],
       keepOrgRolesSameAsDefaultRoles: false,
       keepOrgPermissionsSameAsDefaultPermissions: true,
-    })
-  })
+    });
+  });
 
   it("omits consent flag when false", () => {
     expect(
@@ -44,6 +44,6 @@ describe("organization-config-payload", () => {
         keepOrgRolesSameAsDefaultRoles: true,
         keepOrgPermissionsSameAsDefaultPermissions: true,
       }),
-    ).not.toHaveProperty("consentForMultiOrgEnable")
-  })
-})
+    ).not.toHaveProperty("consentForMultiOrgEnable");
+  });
+});

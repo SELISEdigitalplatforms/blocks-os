@@ -42,7 +42,7 @@ export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: res.errors as string || "Something went wrong",
+          description: (res.errors as string) || "Something went wrong",
         });
       }
     } catch (error) {
@@ -64,10 +64,21 @@ export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
             <div className="flex gap-2">
               {!!removedResources.length && (
                 <>
-                  <Button variant="outline" onClick={onReset} disabled={isSaving || (!removedResources.length && localPermissions.length === permissions.length)}>
+                  <Button
+                    variant="outline"
+                    onClick={onReset}
+                    disabled={
+                      isSaving ||
+                      (!removedResources.length && localPermissions.length === permissions.length)
+                    }
+                  >
                     Reset
                   </Button>
-                  <Button variant="outline" onClick={onSave} disabled={isSaving || !removedResources.length}>
+                  <Button
+                    variant="outline"
+                    onClick={onSave}
+                    disabled={isSaving || !removedResources.length}
+                  >
                     {isSaving ? "Saving..." : "Save"}
                   </Button>
                 </>

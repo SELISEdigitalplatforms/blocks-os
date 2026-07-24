@@ -86,7 +86,10 @@ describe("use-account hooks", () => {
 
       result.current.mutate(mockAccountRecoverPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.account.accountRecover).toHaveBeenCalledWith(mockAccountRecoverPayload, expect.anything());
+      expect(userService.account.accountRecover).toHaveBeenCalledWith(
+        mockAccountRecoverPayload,
+        expect.anything(),
+      );
     });
   });
 

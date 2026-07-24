@@ -1,1 +1,1 @@
-export { IdpSettingsPage } from "./pages/settings-page"
+export { IdpSettingsPage } from "./pages/settings-page";

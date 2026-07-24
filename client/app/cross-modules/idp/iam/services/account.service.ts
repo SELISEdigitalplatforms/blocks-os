@@ -14,9 +14,7 @@ import {
 import { ACCOUNT_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class UserAccountService {
-  accountActivation(
-    payload: IAccountActivationPayload,
-  ): Promise<IAccountActivationResponse> {
+  accountActivation(payload: IAccountActivationPayload): Promise<IAccountActivationResponse> {
     return http.post(ACCOUNT_ENDPOINTS.ACTIVATE, payload, undefined, {
       absoluteUrl: true,
     });
@@ -30,9 +28,7 @@ export class UserAccountService {
     });
   }
 
-  accountRecover(
-    payload: IAccountRecoverPayload,
-  ): Promise<IAccountRecoverResponse> {
+  accountRecover(payload: IAccountRecoverPayload): Promise<IAccountRecoverResponse> {
     return http.post(ACCOUNT_ENDPOINTS.RECOVER, payload, undefined, {
       absoluteUrl: true,
     });
@@ -49,11 +45,8 @@ export class UserAccountService {
   checkActivationCodeExpiration(
     payload: IActivationCodeValidationPayload,
   ): Promise<IActivationCodeExpirationResponse> {
-    return http.post(
-      ACCOUNT_ENDPOINTS.VALIDATE_ACTIVATION_CODE,
-      payload,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.post(ACCOUNT_ENDPOINTS.VALIDATE_ACTIVATION_CODE, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 }

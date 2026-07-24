@@ -26,7 +26,7 @@ const RoleDetailsPageSkeleton = () => (
       </CardContent>
     </Card>
   </>
-)
+);
 
 export function RoleDetailsContainer() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -79,7 +79,7 @@ export function RoleDetailsContainer() {
   };
 
   if (!isInitialized || !role?.slug) {
-    return <RoleDetailsPageSkeleton />
+    return <RoleDetailsPageSkeleton />;
   }
 
   return (

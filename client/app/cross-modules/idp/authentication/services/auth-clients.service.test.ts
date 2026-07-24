@@ -32,11 +32,9 @@ describe("AuthClientsService", () => {
 
       const result = await service.list(mockGetClientsPayload);
 
-      expect(http.get).toHaveBeenCalledWith(
-        AUTH_CLIENT_ENDPOINTS.LIST,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(AUTH_CLIENT_ENDPOINTS.LIST, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockClientCredentialsResponse);
     });
 
@@ -88,9 +86,9 @@ describe("AuthClientsService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.delete).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.delete({ itemId: mockDeleteClientPayload.itemId }),
-      ).rejects.toThrow("Network error");
+      await expect(service.delete({ itemId: mockDeleteClientPayload.itemId })).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 });

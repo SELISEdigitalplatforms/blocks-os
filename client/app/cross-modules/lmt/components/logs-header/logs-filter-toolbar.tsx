@@ -69,8 +69,7 @@ export const LogsFilterToolbar = () => {
   ) => {
     if (key === "service") return handleServiceChange(value as string);
     if (key === "subService") return handleSubServiceChange(value as string);
-    if (key === "date")
-      return updateDate(value as { from?: Date; to?: Date } | null);
+    if (key === "date") return updateDate(value as { from?: Date; to?: Date } | null);
     return updateFilter(key as keyof typeof filter, value);
   };
 
@@ -107,10 +106,8 @@ export const LogsFilterToolbar = () => {
     const searchChanged = currentValues.search !== defaultValues.search;
     const levelChanged = currentValues.level !== defaultValues.level;
     const dateChanged =
-      (currentValues.date?.from?.getTime() ?? 0) !==
-        (defaultValues.date?.from?.getTime() ?? 0) ||
-      (currentValues.date?.to?.getTime() ?? 0) !==
-        (defaultValues.date?.to?.getTime() ?? 0);
+      (currentValues.date?.from?.getTime() ?? 0) !== (defaultValues.date?.from?.getTime() ?? 0) ||
+      (currentValues.date?.to?.getTime() ?? 0) !== (defaultValues.date?.to?.getTime() ?? 0);
     return !searchChanged && !levelChanged && !dateChanged;
   }, [currentValues, defaultValues]);
 

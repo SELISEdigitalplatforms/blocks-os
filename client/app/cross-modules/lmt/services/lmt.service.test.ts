@@ -30,9 +30,6 @@ describe("lmtService", () => {
     vi.mocked(http.post).mockResolvedValue([] as never);
     const payload = { from: "a", to: "b" } as never;
     await lmtService.usage.getOperationalAnalytics(payload);
-    expect(http.post).toHaveBeenCalledWith(
-      TRACE_ENDPOINTS.GET_OPERATIONAL_ANALYTICS,
-      payload,
-    );
+    expect(http.post).toHaveBeenCalledWith(TRACE_ENDPOINTS.GET_OPERATIONAL_ANALYTICS, payload);
   });
 });

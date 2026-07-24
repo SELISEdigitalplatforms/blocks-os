@@ -1,14 +1,14 @@
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
-import type { ReactNode } from "react"
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import type { ReactNode } from "react";
 
 export type ConfigField = {
-  label: string
-  value: ReactNode
-}
+  label: string;
+  value: ReactNode;
+};
 
 type ConfigFieldGridProps = {
-  fields: ConfigField[]
-}
+  fields: ConfigField[];
+};
 
 export const ConfigFieldGrid = ({ fields }: ConfigFieldGridProps) => (
   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-y-8 lg:grid-cols-3">
@@ -19,4 +19,4 @@ export const ConfigFieldGrid = ({ fields }: ConfigFieldGridProps) => (
       </div>
     ))}
   </div>
-)
+);

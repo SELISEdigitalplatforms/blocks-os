@@ -168,11 +168,9 @@ describe("SSOService", () => {
 
       const result = await service.getBlocksSsoCredential(projectKey);
 
-      expect(http.get).toHaveBeenCalledWith(
-        AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockSuccessResponse);
     });
 

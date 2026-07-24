@@ -12,18 +12,11 @@ import {
   IUpdateSsoCredentialStatusPayload,
   IUpdateSsoCredentialStatusResponse,
 } from "@blocks-idp/authentication/models/sso.model";
-import {
-  SSO_ENDPOINTS,
-  AUTH_OIDC_ENDPOINTS,
-} from "../constants/endpoint.constant";
+import { SSO_ENDPOINTS, AUTH_OIDC_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class SSOService {
-  getSsoCredentials(
-    payload: IGetSsoCredentialsPayload,
-  ): Promise<IGetSsoCredentialsResponse> {
-    return http.get(
-      `${SSO_ENDPOINTS.GET_SSO_CREDENTIALS}?ProjectKey=${payload.projectKey}`,
-    );
+  getSsoCredentials(payload: IGetSsoCredentialsPayload): Promise<IGetSsoCredentialsResponse> {
+    return http.get(`${SSO_ENDPOINTS.GET_SSO_CREDENTIALS}?ProjectKey=${payload.projectKey}`);
   }
 
   getSsoCredentialId(
@@ -34,15 +27,11 @@ export class SSOService {
     );
   }
 
-  saveSsoCredential(
-    payload: ISaveSsoCredentialPayload,
-  ): Promise<ISaveSsoCredentialResponse> {
+  saveSsoCredential(payload: ISaveSsoCredentialPayload): Promise<ISaveSsoCredentialResponse> {
     return http.post(SSO_ENDPOINTS.SAVE_SSO_CREDENTIAL, payload);
   }
 
-  deleteSsoCredential(
-    payload: IDeleteSsoCredentialPayload,
-  ): Promise<IDeleteSsoCredentialResponse> {
+  deleteSsoCredential(payload: IDeleteSsoCredentialPayload): Promise<IDeleteSsoCredentialResponse> {
     return http.post(SSO_ENDPOINTS.DELETE_SSO_CREDENTIAL, payload);
   }
 
@@ -58,9 +47,7 @@ export class SSOService {
     });
   }
 
-  getBlocksSsoCredential(
-    _projectKey: string,
-  ): Promise<IGetOIDCCredentialResponse> {
+  getBlocksSsoCredential(_projectKey: string): Promise<IGetOIDCCredentialResponse> {
     return http.get(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS, undefined, {
       absoluteUrl: true,
     });

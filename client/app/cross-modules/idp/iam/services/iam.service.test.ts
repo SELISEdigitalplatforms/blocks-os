@@ -4,10 +4,7 @@ import { http } from "@/lib/http/http-client";
 import { iamService } from "./iam.service";
 import { PermissionService } from "./permission.service";
 import { OrganizationService } from "./organization.service";
-import {
-  ORGANIZATION_ENDPOINTS,
-  PERMISSION_ENDPOINTS,
-} from "../constants/endpoint.constant";
+import { ORGANIZATION_ENDPOINTS, PERMISSION_ENDPOINTS } from "../constants/endpoint.constant";
 
 vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 

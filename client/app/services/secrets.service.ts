@@ -21,12 +21,10 @@ export class SecretsService {
 
   gets(secretKey: string): Promise<SecretItem[]> {
     return http
-      .get<
-        SecretItem[] | IAPIResponse<SecretItem[]>
-      >(`${SECRETS_ENDPOINTS.GETS}?secretKey=${secretKey}&PageNumber=0&PageSize=10`)
-      .then((response) =>
-        Array.isArray(response) ? response : (response.data ?? []),
-      );
+      .get<SecretItem[] | IAPIResponse<SecretItem[]>>(
+        `${SECRETS_ENDPOINTS.GETS}?secretKey=${secretKey}&PageNumber=0&PageSize=10`,
+      )
+      .then((response) => (Array.isArray(response) ? response : (response.data ?? [])));
   }
 
   get(itemId: string): Promise<SecretItem> {

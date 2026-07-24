@@ -3,7 +3,14 @@ import { useLocation } from "react-router-dom";
 import { ChevronsLeft, Menu } from "lucide-react";
 import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui-kits/sheet/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui-kits/sheet/sheet";
 import { cn } from "@/lib/utils";
 import { NavGroup } from "@/constants/secret-management-nav";
 type PageSidebarLayoutProps = {
@@ -51,7 +58,7 @@ export function PageSidebarLayout({
                     "relative flex h-10 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-sm transition-colors",
                     isActive
                       ? "text-primary"
-                      : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]"
+                      : "text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -88,7 +95,9 @@ export function PageSidebarLayout({
                 <SheetContent side="left" className="w-52 p-0" hideClose>
                   <div className="flex h-full flex-col">
                     <SheetHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
-                      <SheetTitle className="text-sm font-semibold">Secrets &amp; Configs</SheetTitle>
+                      <SheetTitle className="text-sm font-semibold">
+                        Secrets &amp; Configs
+                      </SheetTitle>
                       <SheetClose asChild>
                         <Button variant="ghost" size="icon" className="!mt-0 h-7 w-7 shrink-0">
                           <ChevronsLeft className="h-4 w-4" />
