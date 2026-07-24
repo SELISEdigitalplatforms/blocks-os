@@ -18,9 +18,7 @@ describe("MagicUrlService", () => {
   it("getMagicUrl unwraps the API response data", async () => {
     vi.mocked(http.get).mockResolvedValue({ data: { itemId: "m-1" } });
     const result = await service.getMagicUrl({ ItemId: "m-1" } as never);
-    expect(http.get).toHaveBeenCalledWith(
-      `${MAGIC_URL_ENDPOINTS.GET_LINK}?ItemId=m-1`,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${MAGIC_URL_ENDPOINTS.GET_LINK}?ItemId=m-1`);
     expect(result).toEqual({ itemId: "m-1" });
   });
 

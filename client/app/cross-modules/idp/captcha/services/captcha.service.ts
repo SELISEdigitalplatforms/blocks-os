@@ -13,17 +13,13 @@ import {
 import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class CaptchaService {
-  getCaptchaConfigs(
-    payload: IGetCaptchaConfigsPayload,
-  ): Promise<IGetCaptchaConfigsResponse> {
+  getCaptchaConfigs(payload: IGetCaptchaConfigsPayload): Promise<IGetCaptchaConfigsResponse> {
     return http
-      .get<
-        ICaptchaSecretResponse[] | IAPIResponse<ICaptchaSecretResponse[]>
-      >(`${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`)
+      .get<ICaptchaSecretResponse[] | IAPIResponse<ICaptchaSecretResponse[]>>(
+        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`,
+      )
       .then((response) => {
-        const secrets = Array.isArray(response)
-          ? response
-          : (response.data ?? []);
+        const secrets = Array.isArray(response) ? response : (response.data ?? []);
         if (!secrets?.length) return { configurations: [] };
         return {
           configurations: secrets.map((secret) => {
@@ -38,23 +34,18 @@ export class CaptchaService {
               tags: secret.tags,
               captchaKey: kv.captchaKey,
               captchaSecret: kv.captchaSecret,
-              provider:
-                kv.provider as IGetCaptchaConfigsResponse["configurations"][0]["provider"],
+              provider: kv.provider as IGetCaptchaConfigsResponse["configurations"][0]["provider"],
               captchaGenerator:
                 kv.captchaGenerator as IGetCaptchaConfigsResponse["configurations"][0]["captchaGenerator"],
               isEnable:
-                typeof kv.isEnable === "string"
-                  ? kv.isEnable === "true"
-                  : Boolean(kv.isEnable),
+                typeof kv.isEnable === "string" ? kv.isEnable === "true" : Boolean(kv.isEnable),
             };
           }),
         };
       });
   }
 
-  saveCaptcha = (
-    payload: ISaveCaptchaConfigsPayload,
-  ): Promise<ISaveCaptchaConfigsResponse> => {
+  saveCaptcha = (payload: ISaveCaptchaConfigsPayload): Promise<ISaveCaptchaConfigsResponse> => {
     return secretsService
       .save({
         secretKey: "captcha",

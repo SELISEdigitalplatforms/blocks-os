@@ -33,10 +33,7 @@ const normalizeSecretsResponse = (
   return response.data ?? [];
 };
 
-const filterBySearch = (
-  configs: IMagicUrlConfig[],
-  searchText?: string,
-): IMagicUrlConfig[] => {
+const filterBySearch = (configs: IMagicUrlConfig[], searchText?: string): IMagicUrlConfig[] => {
   const query = searchText?.trim().toLowerCase();
   if (!query) return configs;
   return configs.filter(
@@ -47,9 +44,7 @@ const filterBySearch = (
 };
 
 export class MagicUrlConfigService {
-  getMagicUrlConfigs(
-    payload: IGetMagicUrlConfigsPayload,
-  ): Promise<IGetMagicUrlConfigsResponse> {
+  getMagicUrlConfigs(payload: IGetMagicUrlConfigsPayload): Promise<IGetMagicUrlConfigsResponse> {
     const params = new URLSearchParams({
       secretKey: MAGIC_URL_CONFIG_SECRET_KEY,
       PageSize: payload.pageSize.toString(),
@@ -60,9 +55,9 @@ export class MagicUrlConfigService {
     }
 
     return http
-      .get<
-        SecretItem[] | IAPIResponse<SecretItem[]>
-      >(`${SECRETS_ENDPOINTS.GETS}?${params.toString()}`)
+      .get<SecretItem[] | IAPIResponse<SecretItem[]>>(
+        `${SECRETS_ENDPOINTS.GETS}?${params.toString()}`,
+      )
       .then((response) => {
         const secrets = normalizeSecretsResponse(response);
         const mapped = secrets.map(mapSecretToConfig);
@@ -78,9 +73,7 @@ export class MagicUrlConfigService {
       });
   }
 
-  saveMagicUrlConfig(
-    payload: ISaveMagicUrlConfigPayload,
-  ): Promise<ISaveMagicUrlConfigResponse> {
+  saveMagicUrlConfig(payload: ISaveMagicUrlConfigPayload): Promise<ISaveMagicUrlConfigResponse> {
     return secretsService
       .save({
         secretKey: MAGIC_URL_CONFIG_SECRET_KEY,

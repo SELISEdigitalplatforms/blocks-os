@@ -50,11 +50,7 @@ describe("ProjectService", () => {
 
     const result = await service.getProject();
 
-    expect(http.get).toHaveBeenCalledWith(
-      `${BASE}${PROJECT_ENDPOINTS.GET}`,
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${BASE}${PROJECT_ENDPOINTS.GET}`, undefined, ABS);
     expect(result).toBe(project);
   });
 

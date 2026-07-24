@@ -61,11 +61,7 @@ export const Certificates = () => {
       {!isLoading && !isJwtClaimLoading && !hasJwtClaimData && (
         <Banner variant="warning">
           You didn&apos;t map the jwt claims. To ignore 401(Unauthorized) in api request please{" "}
-          <button
-            type="button"
-            onClick={openJwtClaimModal}
-            className="font-semibold underline"
-          >
+          <button type="button" onClick={openJwtClaimModal} className="font-semibold underline">
             Map JWT Claims
           </button>
           .
@@ -75,7 +71,9 @@ export const Certificates = () => {
         <CardContent className="space-y-3 pt-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Provider</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Provider
+              </p>
               <div className="flex items-center gap-2 text-sm font-medium">
                 {(() => {
                   const provider = providers.find(
@@ -105,19 +103,25 @@ export const Certificates = () => {
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">URL</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                URL
+              </p>
               <div className="break-all text-sm font-medium">
                 {existingCertificate.jwksUrl || existingCertificate.publicCertificatePath || "-"}
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Issuer</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Issuer
+              </p>
               <div className="break-all text-sm font-medium">
                 {existingCertificate.issuer || "-"}
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Audience</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Audience
+              </p>
               <div className="break-all text-sm font-medium">
                 {existingCertificate.audiences?.length
                   ? existingCertificate.audiences.join(", ")

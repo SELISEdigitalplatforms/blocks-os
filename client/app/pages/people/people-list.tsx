@@ -31,11 +31,7 @@ export const PeopleList = ({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="bg-card text-card-foreground">
-          <PeopleTable
-            people={peoples}
-            isLoading={isPeopleLoading}
-            isViewerOwner={isViewerOwner}
-          />
+          <PeopleTable people={peoples} isLoading={isPeopleLoading} isViewerOwner={isViewerOwner} />
         </div>
 
         {!isPeopleLoading && peoples.length > 0 && (

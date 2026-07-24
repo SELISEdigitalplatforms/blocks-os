@@ -29,7 +29,9 @@ export const useGetPermissions = (
           isBuiltIn: options.isBuiltIn,
           resourceGroup: options.resourceGroup || "",
           ...(options.type && { type: options.type }),
-          ...(options.permissionSeverity && { permissionSeverity: Number(options.permissionSeverity) }),
+          ...(options.permissionSeverity && {
+            permissionSeverity: Number(options.permissionSeverity),
+          }),
           ...(options.tags && { tags: options.tags }),
           ...(options.resources && { resources: options.resources }),
           ...(options.isArchived !== undefined && { isArchived: options.isArchived }),
@@ -77,7 +79,9 @@ export const useGetResourceGroup = (options: IGetResourceGroupPayload) => {
   });
 };
 
-export const useGetPermissionsGroupBySeverity = (options: IGetPermissionsSeverityRequestPayload) => {
+export const useGetPermissionsGroupBySeverity = (
+  options: IGetPermissionsSeverityRequestPayload,
+) => {
   return useQuery({
     queryKey: ["permissions-group-by-severity", options],
     queryFn: () => iamService.permission.getPermissionsSeverity(options),

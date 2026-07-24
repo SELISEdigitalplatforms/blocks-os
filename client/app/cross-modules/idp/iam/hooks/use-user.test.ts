@@ -140,7 +140,10 @@ describe("use-user hooks", () => {
 
       result.current.mutate(mockSaveSignUpSettingPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.saveSignUpSetting).toHaveBeenCalledWith(mockSaveSignUpSettingPayload, expect.anything());
+      expect(userService.saveSignUpSetting).toHaveBeenCalledWith(
+        mockSaveSignUpSettingPayload,
+        expect.anything(),
+      );
     });
   });
 

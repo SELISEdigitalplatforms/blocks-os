@@ -73,20 +73,14 @@ describe("use-project hooks", () => {
         { projects: [{ itemId: "b" }] },
       ] as never);
 
-      const { result } = renderHook(
-        () => useGetProjects({ tenantGroupId: "tg-1" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useGetProjects({ tenantGroupId: "tg-1" }), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(projectService.getProjects).toHaveBeenCalledWith(0, 100, "tg-1");
       await waitFor(() =>
-        expect(setProjects).toHaveBeenCalledWith([
-          { itemId: "a" },
-          { itemId: "b" },
-        ]),
+        expect(setProjects).toHaveBeenCalledWith([{ itemId: "a" }, { itemId: "b" }]),
       );
     });
   });

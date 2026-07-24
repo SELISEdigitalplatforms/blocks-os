@@ -6,22 +6,22 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui-kits/form/form"
-import { Input } from "@/components/ui-kits/input/input"
-import { Switch } from "@/components/ui-kits/switch/switch"
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
-import { isErrorWithErrors } from "@/lib/error"
-import { cn } from "@/lib/utils"
-import { SettingsFieldGrid } from "@blocks-idp/settings/components/settings-field-grid"
-import { SettingsFormSection } from "@blocks-idp/settings/components/settings-form-section"
+} from "@/components/ui-kits/form/form";
+import { Input } from "@/components/ui-kits/input/input";
+import { Switch } from "@/components/ui-kits/switch/switch";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
+import { cn } from "@/lib/utils";
+import { SettingsFieldGrid } from "@blocks-idp/settings/components/settings-field-grid";
+import { SettingsFormSection } from "@blocks-idp/settings/components/settings-form-section";
 import {
   SettingsFormTabButtons,
   SettingsTabActions,
-} from "@blocks-idp/settings/components/settings-tab-actions"
-import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
-import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config"
-import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model"
+} from "@blocks-idp/settings/components/settings-tab-actions";
+import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card";
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config";
+import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model";
 import {
   applyOidcIamConfigOverrides,
   buildSavePayload,
@@ -30,21 +30,21 @@ import {
   iamConfigFormSchema,
   toIamConfigFormValues,
   type IamConfigFormValues,
-} from "@blocks-idp/settings/utils/auth-config-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useCallback, useEffect, useMemo } from "react"
-import { useForm, useFormState } from "react-hook-form"
+} from "@blocks-idp/settings/utils/auth-config-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useEffect, useMemo } from "react";
+import { useForm, useFormState } from "react-hook-form";
 
 type IamSettingsFormProps = {
-  config: ISettingsAuthConfig
-}
+  config: ISettingsAuthConfig;
+};
 
 type MinutesInputProps = {
-  value: number
-  onChange: (value: number) => void
-  onBlur: () => void
-  name: string
-}
+  value: number;
+  onChange: (value: number) => void;
+  onBlur: () => void;
+  name: string;
+};
 
 const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => (
   <div className="relative w-full">
@@ -66,24 +66,24 @@ const MinutesInput = ({ value, onChange, onBlur, name }: MinutesInputProps) => (
       Minutes
     </span>
   </div>
-)
+);
 
 type AccountActionBaseUrlInputProps = {
-  value: string
-  onChange: (value: string) => void
-  onBlur: () => void
-  name: string
-  readOnly?: boolean
-}
+  value: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+  name: string;
+  readOnly?: boolean;
+};
 
-const stripUrlProtocol = (value: string) => value.replace(/^https?:\/\//, "")
+const stripUrlProtocol = (value: string) => value.replace(/^https?:\/\//, "");
 
 const toHttpsUrl = (value: string) => {
-  const trimmed = value.trim()
-  if (!trimmed) return ""
-  if (/^https?:\/\//i.test(trimmed)) return trimmed
-  return `https://${trimmed}`
-}
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
 
 const AccountActionBaseUrlInput = ({
   value,
@@ -127,31 +127,21 @@ const AccountActionBaseUrlInput = ({
       placeholder="console.enterprise.cloud"
     />
   </div>
-)
+);
 
 type SwitchRowProps = {
-  label: string
-  description?: string
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-  disabled?: boolean
-}
+  label: string;
+  description?: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+};
 
-const SwitchRow = ({
-  label,
-  description,
-  checked,
-  onCheckedChange,
-  disabled,
-}: SwitchRowProps) => (
-  <FormItem
-    className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}
-  >
+const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: SwitchRowProps) => (
+  <FormItem className={cn(SETTINGS_FORM_LAYOUT.toggleRow, "pb-2")}>
     <div className={SETTINGS_FORM_LAYOUT.toggleLabelGroup}>
       <FormLabel className={cn("!mt-0", SETTINGS_FORM_LAYOUT.toggleTitle)}>{label}</FormLabel>
-      {description ? (
-        <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>{description}</p>
-      ) : null}
+      {description ? <p className={SETTINGS_FORM_LAYOUT.toggleDescription}>{description}</p> : null}
     </div>
     <FormControl className="shrink-0 self-start sm:self-center">
       <Switch
@@ -162,51 +152,51 @@ const SwitchRow = ({
       />
     </FormControl>
   </FormItem>
-)
+);
 
 export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
-  const { mutateAsync, isPending } = useSaveSettingsAuthConfig()
+  const { mutateAsync, isPending } = useSaveSettingsAuthConfig();
 
-  const formValues = useMemo(() => toIamConfigFormValues(config), [config])
+  const formValues = useMemo(() => toIamConfigFormValues(config), [config]);
 
   const form = useForm<IamConfigFormValues>({
     values: formValues,
     resolver: zodResolver(iamConfigFormSchema),
-  })
+  });
 
-  const { isDirty } = useFormState({ control: form.control })
-  const isOidcEnabled = form.watch("isOidcEnabled")
-  const blocksIamBaseUrl = useMemo(() => getBlocksIamBaseUrl(), [])
+  const { isDirty } = useFormState({ control: form.control });
+  const isOidcEnabled = form.watch("isOidcEnabled");
+  const blocksIamBaseUrl = useMemo(() => getBlocksIamBaseUrl(), []);
 
   useEffect(() => {
-    const nextBaseUrl = isOidcEnabled ? blocksIamBaseUrl : config.accountActionBaseUrl
+    const nextBaseUrl = isOidcEnabled ? blocksIamBaseUrl : config.accountActionBaseUrl;
 
-    if (form.getValues("accountActionBaseUrl") === nextBaseUrl) return
+    if (form.getValues("accountActionBaseUrl") === nextBaseUrl) return;
 
     form.setValue("accountActionBaseUrl", nextBaseUrl, {
       shouldDirty: true,
       shouldValidate: true,
-    })
-  }, [blocksIamBaseUrl, config.accountActionBaseUrl, form, isOidcEnabled])
+    });
+  }, [blocksIamBaseUrl, config.accountActionBaseUrl, form, isOidcEnabled]);
 
   const handleReset = useCallback(() => {
-    form.reset(toIamConfigFormValues(config))
-  }, [config, form])
+    form.reset(toIamConfigFormValues(config));
+  }, [config, form]);
 
   const handleSubmit = useCallback(
     async (values: IamConfigFormValues) => {
       try {
-        const payload = buildSavePayload(config, applyOidcIamConfigOverrides(values))
-        const res = await mutateAsync(payload)
-        if (!res.isSuccess) return showErrorToast({ errors: res.errors })
-        showSuccessToast({ description: "IAM configuration updated successfully" })
+        const payload = buildSavePayload(config, applyOidcIamConfigOverrides(values));
+        const res = await mutateAsync(payload);
+        if (!res.isSuccess) return showErrorToast({ errors: res.errors });
+        showSuccessToast({ description: "IAM configuration updated successfully" });
       } catch (error) {
-        if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors })
-        showErrorToast({ errors: "Something went wrong" })
+        if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+        showErrorToast({ errors: "Something went wrong" });
       }
     },
     [config, mutateAsync],
-  )
+  );
 
   const tabActions = useMemo(
     () => (
@@ -218,16 +208,13 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
       />
     ),
     [form, handleReset, handleSubmit, isDirty, isPending],
-  )
+  );
 
   return (
     <div className={SETTINGS_FORM_LAYOUT.formRoot}>
       <Form {...form}>
         <SettingsTabActions tabId="iam-config">{tabActions}</SettingsTabActions>
-        <form
-          className={SETTINGS_FORM_LAYOUT.formStack}
-          onSubmit={form.handleSubmit(handleSubmit)}
-        >
+        <form className={SETTINGS_FORM_LAYOUT.formStack} onSubmit={form.handleSubmit(handleSubmit)}>
           <FormField
             name="isOidcEnabled"
             control={form.control}
@@ -437,5 +424,5 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
         </form>
       </Form>
     </div>
-  )
-}
+  );
+};

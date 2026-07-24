@@ -46,9 +46,7 @@ describe("UrlWithActions", () => {
     const link = screen.getByRole("link", {
       name: "Public Certificate",
     }) as HTMLAnchorElement;
-    expect(link.getAttribute("href")).toBe(
-      "https://certs.example.com/public.pem",
-    );
+    expect(link.getAttribute("href")).toBe("https://certs.example.com/public.pem");
     expect(screen.getByLabelText("Copy certificate URL")).toBeTruthy();
     expect(screen.getByLabelText("Download certificate")).toBeTruthy();
   });

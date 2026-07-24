@@ -55,17 +55,13 @@ describe("LanguageManagerService", () => {
       projectKey: "pk",
       itemId: "k-1",
     });
-    expect(http.get).toHaveBeenCalledWith(
-      `${LANGUAGE_KEY_ENDPOINTS.GET}?projectKey=pk&itemId=k-1`,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${LANGUAGE_KEY_ENDPOINTS.GET}?projectKey=pk&itemId=k-1`);
   });
 
   it("fetchBlocksLanguageModules queries by projectKey", async () => {
     vi.mocked(http.get).mockResolvedValue([]);
     await languageManagerService.fetchBlocksLanguageModules("pk");
-    expect(http.get).toHaveBeenCalledWith(
-      `${LANGUAGE_MODULE_ENDPOINTS.GETS}?projectKey=pk`,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${LANGUAGE_MODULE_ENDPOINTS.GETS}?projectKey=pk`);
   });
 
   it("fetchBlocksLanguages queries the logic base url with an absolute url", async () => {
@@ -162,11 +158,13 @@ describe("LanguageManagerService", () => {
   });
 
   describe("simple POST wrappers", () => {
-    const post = <T,>(fn: () => Promise<T>, endpoint: string) => async () => {
-      vi.mocked(http.post).mockResolvedValue({ isSuccess: true } as never);
-      await fn();
-      expect(http.post).toHaveBeenCalledWith(endpoint, expect.anything());
-    };
+    const post =
+      <T>(fn: () => Promise<T>, endpoint: string) =>
+      async () => {
+        vi.mocked(http.post).mockResolvedValue({ isSuccess: true } as never);
+        await fn();
+        expect(http.post).toHaveBeenCalledWith(endpoint, expect.anything());
+      };
 
     it(
       "saveLanguageModule",

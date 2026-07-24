@@ -1,8 +1,6 @@
-import type { IRole } from "@blocks-idp/iam/models/role"
+import type { IRole } from "@blocks-idp/iam/models/role";
 
-export const createRoleStub = (
-  partial: Pick<IRole, "slug"> & Partial<IRole>,
-): IRole => ({
+export const createRoleStub = (partial: Pick<IRole, "slug"> & Partial<IRole>): IRole => ({
   itemId: partial.itemId ?? partial.slug,
   name: partial.name ?? partial.slug,
   description: partial.description ?? "",
@@ -20,7 +18,7 @@ export const createRoleStub = (
   organizationId: partial.organizationId ?? "default",
   tags: partial.tags ?? [],
   ...(partial.projectKey !== undefined ? { projectKey: partial.projectKey } : {}),
-})
+});
 
 export const toRoleStubs = (slugs: string[]): IRole[] =>
-  slugs.map((slug) => createRoleStub({ slug }))
+  slugs.map((slug) => createRoleStub({ slug }));

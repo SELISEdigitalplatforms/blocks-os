@@ -1,6 +1,6 @@
-import { PeopleBasicInfo } from "./people-basic-info"
-import { User } from "@blocks-idp/iam/models/user"
-import { UserIcon } from "lucide-react"
+import { PeopleBasicInfo } from "./people-basic-info";
+import { User } from "@blocks-idp/iam/models/user";
+import { UserIcon } from "lucide-react";
 
 export const PeopleDetailsTab = ({ user }: { user?: User }) => {
   return (
@@ -24,5 +24,5 @@ export const PeopleDetailsTab = ({ user }: { user?: User }) => {
         <PeopleBasicInfo user={user} />
       </div>
     </div>
-  )
-}
+  );
+};

@@ -49,10 +49,7 @@ import {
 
 const makeFile = (name: string) => new File(["content"], name, { type: "image/png" });
 
-const renderUploader = (
-  value: File[],
-  onValueChange: (v: File[] | null) => void,
-) =>
+const renderUploader = (value: File[], onValueChange: (v: File[] | null) => void) =>
   render(
     <FileUploader value={value} onValueChange={onValueChange} dropzoneOptions={{ maxFiles: 3 }}>
       <FileInput>

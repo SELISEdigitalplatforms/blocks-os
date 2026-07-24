@@ -20,11 +20,7 @@ describe("authenticationService", () => {
   it("configuration.getConfig delegates to http.get with absolute url", async () => {
     vi.mocked(http.get).mockResolvedValue({} as never);
     await authenticationService.configuration.getConfig();
-    expect(http.get).toHaveBeenCalledWith(
-      AUTH_CONFIG_ENDPOINTS.GET_CONFIG,
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith(AUTH_CONFIG_ENDPOINTS.GET_CONFIG, undefined, ABS);
   });
 
   it("configuration.getConfig appends the project key when provided", async () => {

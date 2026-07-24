@@ -124,11 +124,7 @@ describe("PeopleTable", () => {
     renderTable({ people: [makePerson()], isLoading: false });
     const row = screen.getByText("Ada Lovelace").closest("tr") as HTMLElement;
     await user.click(within(row).getByText("Ada Lovelace"));
-    await waitFor(() =>
-      expect(h.navigate).toHaveBeenCalledWith(
-        "/app/project/grp-1/people/u-1",
-      ),
-    );
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith("/app/project/grp-1/people/u-1"));
   });
 
   it("shows the row action menu only for owners", () => {

@@ -53,11 +53,14 @@ describe("ConfigurationService", () => {
 
       const result = await service.saveIamConfiguration(mockSaveIamConfigPayload);
 
-      expect(http.post).toHaveBeenCalledWith(IAM_CONFIGURATION_ENDPOINTS.SAVE, {
-        ...mockSaveIamConfigPayload,
-      },
+      expect(http.post).toHaveBeenCalledWith(
+        IAM_CONFIGURATION_ENDPOINTS.SAVE,
+        {
+          ...mockSaveIamConfigPayload,
+        },
         undefined,
-        { absoluteUrl: true },);
+        { absoluteUrl: true },
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 

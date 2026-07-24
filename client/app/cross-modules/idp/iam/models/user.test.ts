@@ -3,11 +3,7 @@ import { status } from "./user";
 
 describe("user status options", () => {
   it("exposes the account status choices", () => {
-    expect(status.map((s) => s.value)).toEqual([
-      "Active",
-      "Inactive",
-      "Verified",
-    ]);
+    expect(status.map((s) => s.value)).toEqual(["Active", "Inactive", "Verified"]);
   });
 
   it("uses the value as the display label", () => {

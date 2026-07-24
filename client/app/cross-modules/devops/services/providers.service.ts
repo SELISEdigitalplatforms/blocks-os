@@ -8,7 +8,7 @@ const generateRandomState = () => {
 
 export const authenticateWithGithub = (extraState?: string, projectKey?: string) => {
   const randomState = generateRandomState();
-  
+
   // Define scopes for personal repository access
   const scopes = ["repo", "user:email", "read:user", "read:repo_hook"].join(" ");
 
@@ -25,7 +25,7 @@ export const authenticateWithGithub = (extraState?: string, projectKey?: string)
   if (projectKey) {
     localStorage.setItem("github_auth_project_key", projectKey);
   }
-  
+
   // Open GitHub OAuth in new tab
   window.open(authUrl.toString(), "_blank", "noopener,noreferrer");
 };

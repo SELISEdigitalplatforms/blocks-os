@@ -27,9 +27,7 @@ export type FlowState = {
  */
 export function resolveProjectName(): string {
   const configured = process.env.E2E_PROJECT_NAME?.trim();
-  return configured && configured.length > 0
-    ? configured
-    : `e2e-${randomToken(6)}`;
+  return configured && configured.length > 0 ? configured : `e2e-${randomToken(6)}`;
 }
 
 /** Project + tenantGroupId recorded by step 01, or a clear failure message. */

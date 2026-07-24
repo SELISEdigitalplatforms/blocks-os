@@ -1,20 +1,20 @@
-import { Logo } from "@/components/logo"
-import { Button } from "@/components/ui-kits/button/button"
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui-kits/button/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui-kits/card/card"
-import { Link } from "react-router-dom"
+} from "@/components/ui-kits/card/card";
+import { Link } from "react-router-dom";
 
 type PeopleInvitationResultProps = {
-  success: string
-  old: string
-  error: string
-  code: string
-}
+  success: string;
+  old: string;
+  error: string;
+  code: string;
+};
 
 const InvitationResultShell = ({
   title,
@@ -22,10 +22,10 @@ const InvitationResultShell = ({
   buttonText,
   buttonTo,
 }: {
-  title: string
-  message: string
-  buttonText: string
-  buttonTo: string
+  title: string;
+  message: string;
+  buttonText: string;
+  buttonTo: string;
 }) => (
   <div className="flex min-h-screen flex-col items-center bg-background">
     <div className="mb-4 mt-[136px] p-4">
@@ -46,7 +46,7 @@ const InvitationResultShell = ({
       </CardContent>
     </Card>
   </div>
-)
+);
 
 export const PeopleInvitationResult = ({
   success,
@@ -58,7 +58,7 @@ export const PeopleInvitationResult = ({
     const errorMessage =
       error === "expired"
         ? "The invitation link has expired."
-        : "An error occurred during invitation confirmation."
+        : "An error occurred during invitation confirmation.";
 
     return (
       <InvitationResultShell
@@ -67,14 +67,14 @@ export const PeopleInvitationResult = ({
         buttonText="Go back"
         buttonTo="/login"
       />
-    )
+    );
   }
 
   if (old === "0") {
     const activateParams = new URLSearchParams({
       code,
       lang: "en-US",
-    })
+    });
     return (
       <InvitationResultShell
         title="Invitation Accepted!"
@@ -82,7 +82,7 @@ export const PeopleInvitationResult = ({
         buttonText="Activate"
         buttonTo={`/activate?${activateParams.toString()}`}
       />
-    )
+    );
   }
 
   return (
@@ -92,5 +92,5 @@ export const PeopleInvitationResult = ({
       buttonText="Go to Console"
       buttonTo="/login"
     />
-  )
-}
+  );
+};

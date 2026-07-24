@@ -2,11 +2,7 @@ import React from "react";
 import { Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
 import { Calendar } from "@/components/ui-kits/calendar/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui-kits/popover/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { formatDate } from "@/lib/utils";
@@ -45,10 +41,7 @@ export function DateRangeFilter<TData, TValue>({
             </div>
             {date?.from && (
               <>
-                <Separator
-                  orientation="vertical"
-                  className="hidden h-4 sm:mx-2 sm:block"
-                />
+                <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
                 {formatDate(date.from, true)}
                 {date.to && (
                   <>

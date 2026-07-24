@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card"
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
+import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 
 export function MagicUrlDetailsSkeleton() {
   return (
@@ -48,5 +48,5 @@ export function MagicUrlDetailsSkeleton() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

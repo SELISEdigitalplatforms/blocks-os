@@ -168,8 +168,7 @@ export const useLogs = ({
         const payload = generateFetchLogsPayload();
         payload.filter.endDate = lastDate;
         const res = await lmtService.log.getLogsByDate(payload);
-        if (res.totalCount && res.totalCount <= page * pageSize)
-          setHasTopMore(false);
+        if (res.totalCount && res.totalCount <= page * pageSize) setHasTopMore(false);
         setPage((currentPage) => currentPage + 1);
         if (!res.data.length) return [];
         return res.data.reverse();

@@ -1,14 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest";
 import {
   buildInviteEnvironmentDetail,
   buildInvitePeoplePayload,
   DEFAULT_INVITE_ROLES,
-} from "./invite-people-utils"
+} from "./invite-people-utils";
 
 describe("invite-people-utils", () => {
   afterEach(() => {
-    localStorage.clear()
-  })
+    localStorage.clear();
+  });
 
   it("builds invite payload with tenantId and roles objects", () => {
     localStorage.setItem(
@@ -17,7 +17,7 @@ describe("invite-people-utils", () => {
         state: { user: { roles: { default: ["user"] } } },
         version: 0,
       }),
-    )
+    );
 
     expect(
       buildInvitePeoplePayload(
@@ -33,15 +33,15 @@ describe("invite-people-utils", () => {
         ],
       },
       groupId: "dff08647ad46474da39aadf0088b228e",
-    })
-  })
+    });
+  });
 
   it("falls back to default invite roles when auth-storage is missing", () => {
     expect(buildInviteEnvironmentDetail("tenant-1")).toEqual({
       tenantId: "tenant-1",
       roles: [...DEFAULT_INVITE_ROLES],
-    })
-  })
+    });
+  });
 
   it("deduplicates tenant ids per email", () => {
     expect(
@@ -57,6 +57,6 @@ describe("invite-people-utils", () => {
         ],
       },
       groupId: "group-1",
-    })
-  })
-})
+    });
+  });
+});

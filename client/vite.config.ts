@@ -2,7 +2,7 @@
 import fs from "fs";
 import path from "path";
 import react from "@vitejs/plugin-react";
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv } from "vite";
 import { getRuntimeEnv } from "./app/lib/runtime-env";
 
 function resolveDevHttps(): { cert: Buffer; key: Buffer } | undefined {
@@ -10,9 +10,7 @@ function resolveDevHttps(): { cert: Buffer; key: Buffer } | undefined {
   const keyPath = process.env.OS_SSL_KEY;
 
   if (!certPath || !keyPath) {
-    console.warn(
-      "[dev-https] OS_SSL_CERT / OS_SSL_KEY not set — serving HTTP.",
-    );
+    console.warn("[dev-https] OS_SSL_CERT / OS_SSL_KEY not set — serving HTTP.");
     return undefined;
   }
   if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
@@ -25,47 +23,31 @@ function resolveDevHttps(): { cert: Buffer; key: Buffer } | undefined {
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, __dirname, 'BLOCKS_')
+  const env = loadEnv(mode, __dirname, "BLOCKS_");
 
-  const apiProxyTarget = getRuntimeEnv('BLOCKS_OS_BASE_URL', env)
+  const apiProxyTarget = getRuntimeEnv("BLOCKS_OS_BASE_URL", env);
   const iamProxyTarget =
-    getRuntimeEnv('BLOCKS_IAM_BASE_URL') ||
-    'https://dev-iam.blocksdevelopers.com'
-  const httpsConfig = resolveDevHttps()
+    getRuntimeEnv("BLOCKS_IAM_BASE_URL") || "https://dev-iam.blocksdevelopers.com";
+  const httpsConfig = resolveDevHttps();
 
   return {
-    envPrefix: ['BLOCKS_'],
+    envPrefix: ["BLOCKS_"],
     plugins: [react()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './app'),
-        '@blocks-idp': path.resolve(__dirname, './app/cross-modules/idp'),
-        '@blocks-lmt': path.resolve(__dirname, './app/cross-modules/lmt'),
-        '@blocks-storage': path.resolve(
-          __dirname,
-          './app/cross-modules/storage',
-        ),
-        '@blocks-communication': path.resolve(
-          __dirname,
-          './app/cross-modules/communication',
-        ),
-        '@blocks-identifier': path.resolve(
-          __dirname,
-          './app/cross-modules/identifier',
-        ),
-        '@blocks-localization': path.resolve(
-          __dirname,
-          './app/cross-modules/localization',
-        ),
-        '@blocks-utilities': path.resolve(
-          __dirname,
-          './app/cross-modules/utilities',
-        ),
-        '@blocks-ai': path.resolve(__dirname, './app/cross-modules/ai'),
+        "@": path.resolve(__dirname, "./app"),
+        "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
+        "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
+        "@blocks-storage": path.resolve(__dirname, "./app/cross-modules/storage"),
+        "@blocks-communication": path.resolve(__dirname, "./app/cross-modules/communication"),
+        "@blocks-identifier": path.resolve(__dirname, "./app/cross-modules/identifier"),
+        "@blocks-localization": path.resolve(__dirname, "./app/cross-modules/localization"),
+        "@blocks-utilities": path.resolve(__dirname, "./app/cross-modules/utilities"),
+        "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
       },
     },
     build: {
-      outDir: '../server/Api/wwwroot',
+      outDir: "../server/Api/wwwroot",
       emptyOutDir: true,
     },
     server: {
@@ -74,75 +56,75 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       https: httpsConfig,
       allowedHosts: [
-        'dev-cloud.seliseblocks.com',
-        'localhost',
-        '.seliseblocks.com',
-        '.blocksdevelopers.com',
+        "dev-cloud.seliseblocks.com",
+        "localhost",
+        ".seliseblocks.com",
+        ".blocksdevelopers.com",
       ],
       proxy: {
-        '/dev-iam-proxy': {
+        "/dev-iam-proxy": {
           target: iamProxyTarget,
           changeOrigin: true,
           secure: true,
-          rewrite: (path) => path.replace(/^\/dev-iam-proxy/, ''),
+          rewrite: (path) => path.replace(/^\/dev-iam-proxy/, ""),
         },
-        '/dev-idp-proxy': {
+        "/dev-idp-proxy": {
           target: iamProxyTarget,
           changeOrigin: true,
           secure: true,
-          rewrite: (path) => path.replace(/^\/dev-idp-proxy/, ''),
+          rewrite: (path) => path.replace(/^\/dev-idp-proxy/, ""),
         },
-        '/api': {
+        "/api": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/cloudbuild': {
+        "/cloudbuild": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/idp': {
+        "/idp": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/identifier': {
+        "/identifier": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/communication': {
+        "/communication": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/cloudconfiguration': {
+        "/cloudconfiguration": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/uilm': { target: apiProxyTarget, changeOrigin: true, secure: false },
-        '/utilities': {
+        "/uilm": { target: apiProxyTarget, changeOrigin: true, secure: false },
+        "/utilities": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/lmt': { target: apiProxyTarget, changeOrigin: true, secure: false },
-        '/mfa': { target: apiProxyTarget, changeOrigin: true, secure: false },
-        '/alert': { target: apiProxyTarget, changeOrigin: true, secure: false },
-        '/blocksai-api': {
+        "/lmt": { target: apiProxyTarget, changeOrigin: true, secure: false },
+        "/mfa": { target: apiProxyTarget, changeOrigin: true, secure: false },
+        "/alert": { target: apiProxyTarget, changeOrigin: true, secure: false },
+        "/blocksai-api": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/studio': {
+        "/studio": {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/uds': { target: apiProxyTarget, changeOrigin: true, secure: false },
+        "/uds": { target: apiProxyTarget, changeOrigin: true, secure: false },
       },
     },
-  }
-})
+  };
+});

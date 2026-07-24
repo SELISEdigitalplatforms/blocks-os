@@ -35,10 +35,7 @@ export const parseAsLogSource = createParser({
   },
 });
 export function LogsRoute() {
-  const [source] = useQueryState<LogSource>(
-    "source",
-    parseAsLogSource.withDefault("blocks"),
-  );
+  const [source] = useQueryState<LogSource>("source", parseAsLogSource.withDefault("blocks"));
   const { data, isLoading, isFetching } = useGetAllServices({
     page: 0,
     pageSize: 1000,
@@ -59,8 +56,7 @@ export function LogsRoute() {
 
   const services = source === "blocks" ? BLOCKS_SERVICES : managedServices;
   const isManagedLoading = source === "managed" && (isLoading || isFetching);
-  const predefinedQueries =
-    source === "blocks" ? Object.values(LOG_SERVICE_AI_QUERIES).flat() : [];
+  const predefinedQueries = source === "blocks" ? Object.values(LOG_SERVICE_AI_QUERIES).flat() : [];
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">

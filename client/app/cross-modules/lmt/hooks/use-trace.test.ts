@@ -32,9 +32,7 @@ describe("use-trace hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockResponse);
-      expect(lmtService.trace.getTraces).toHaveBeenCalledWith(
-        mockGetTracesPayload,
-      );
+      expect(lmtService.trace.getTraces).toHaveBeenCalledWith(mockGetTracesPayload);
     });
   });
 
@@ -46,22 +44,15 @@ describe("use-trace hooks", () => {
         errors: [],
         totalCount: 0,
       } as IAPIResponse<TraceTree>;
-      vi.mocked(lmtService.trace.getTraceByTraceId).mockResolvedValue(
-        mockResponse,
-      );
+      vi.mocked(lmtService.trace.getTraceByTraceId).mockResolvedValue(mockResponse);
 
-      const { result } = renderHook(
-        () => useGetTraceById(mockGetTraceByIdPayload),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useGetTraceById(mockGetTraceByIdPayload), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockResponse);
-      expect(lmtService.trace.getTraceByTraceId).toHaveBeenCalledWith(
-        mockGetTraceByIdPayload,
-      );
+      expect(lmtService.trace.getTraceByTraceId).toHaveBeenCalledWith(mockGetTraceByIdPayload);
     });
   });
 });

@@ -139,19 +139,12 @@ const mergeUsageMatrices = (items: UsageMatrix[]): UsageMatrix => {
 
   return {
     ...merged,
-    AverageDuration: merged.TotalRequests
-      ? merged.TotalDuration / merged.TotalRequests
-      : 0,
-    AverageThroughput: merged.TotalRequests
-      ? merged.AverageThroughput / items.length
-      : 0,
+    AverageDuration: merged.TotalRequests ? merged.TotalDuration / merged.TotalRequests : 0,
+    AverageThroughput: merged.TotalRequests ? merged.AverageThroughput / items.length : 0,
   };
 };
 
-const resolveMatrixByIds = (
-  ids: string[],
-  byId: Record<string, UsageMatrix>,
-): UsageMatrix => {
+const resolveMatrixByIds = (ids: string[], byId: Record<string, UsageMatrix>): UsageMatrix => {
   const matched = ids.map((id) => byId[id]).filter(Boolean);
   return mergeUsageMatrices(matched);
 };
