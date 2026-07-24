@@ -14,9 +14,7 @@ describe("lmt/utils index", () => {
 
   describe("getLogFormatTimestamp", () => {
     it("formats an ISO timestamp into 'YYYY-MM-DD HH:mm:ss'", () => {
-      expect(getLogFormatTimestamp("2026-01-15T10:30:45.123Z")).toBe(
-        "2026-01-15 10:30:45",
-      );
+      expect(getLogFormatTimestamp("2026-01-15T10:30:45.123Z")).toBe("2026-01-15 10:30:45");
     });
 
     it("returns the original string when it is not a valid date", () => {

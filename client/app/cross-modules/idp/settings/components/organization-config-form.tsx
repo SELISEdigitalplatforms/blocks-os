@@ -1,37 +1,31 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui-kits/form/form"
-import { Switch } from "@/components/ui-kits/switch/switch"
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast"
-import { isErrorWithErrors } from "@/lib/error"
-import { cn } from "@/lib/utils"
-import { EnableMultiOrgDialog } from "@blocks-idp/settings/components/enable-multi-org-dialog"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui-kits/form/form";
+import { Switch } from "@/components/ui-kits/switch/switch";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
+import { cn } from "@/lib/utils";
+import { EnableMultiOrgDialog } from "@blocks-idp/settings/components/enable-multi-org-dialog";
 import {
   SettingsFormTabButtons,
   SettingsTabActions,
-} from "@blocks-idp/settings/components/settings-tab-actions"
-import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
-import { useSaveSettingsOrganizationConfig } from "@blocks-idp/settings/hooks/use-settings-config"
-import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model"
+} from "@blocks-idp/settings/components/settings-tab-actions";
+import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card";
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import { useSaveSettingsOrganizationConfig } from "@blocks-idp/settings/hooks/use-settings-config";
+import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model";
 import {
   buildOrganizationConfigSavePayload,
   organizationConfigFormSchema,
   toOrganizationConfigFormValues,
   type OrganizationConfigFormValues,
-} from "@blocks-idp/settings/utils/organization-config-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useCallback, useId, useMemo, useState } from "react"
-import { useForm, useFormState } from "react-hook-form"
+} from "@blocks-idp/settings/utils/organization-config-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useId, useMemo, useState } from "react";
+import { useForm, useFormState } from "react-hook-form";
 
 type OrganizationConfigFormProps = {
-  config: ISettingsOrganizationConfig
-}
+  config: ISettingsOrganizationConfig;
+};
 
 const CREATION_WORKFLOWS = [
   {
@@ -49,15 +43,15 @@ const CREATION_WORKFLOWS = [
     label: "Allow Creation from Construct",
     description: "Manual provisioning via construct admin dashboard.",
   },
-]
+];
 
 type CreationWorkflowTileProps = {
-  label: string
-  description: string
-  checked: boolean
-  disabled?: boolean
-  onCheckedChange: (checked: boolean) => void
-}
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange: (checked: boolean) => void;
+};
 
 const CreationWorkflowTile = ({
   label,
@@ -66,7 +60,7 @@ const CreationWorkflowTile = ({
   disabled,
   onCheckedChange,
 }: CreationWorkflowTileProps) => {
-  const switchId = useId()
+  const switchId = useId();
 
   return (
     <FormItem className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 space-y-0 p-3 sm:p-4">
@@ -93,73 +87,68 @@ const CreationWorkflowTile = ({
           )}
         />
       </FormControl>
-      <p
-        className={cn(
-          SETTINGS_FORM_LAYOUT.toggleDescription,
-          "col-start-1 row-start-2 pr-2",
-        )}
-      >
+      <p className={cn(SETTINGS_FORM_LAYOUT.toggleDescription, "col-start-1 row-start-2 pr-2")}>
         {description}
       </p>
     </FormItem>
-  )
-}
+  );
+};
 
 export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) => {
-  const { mutateAsync, isPending } = useSaveSettingsOrganizationConfig()
-  const [enableDialogOpen, setEnableDialogOpen] = useState(false)
+  const { mutateAsync, isPending } = useSaveSettingsOrganizationConfig();
+  const [enableDialogOpen, setEnableDialogOpen] = useState(false);
 
-  const formValues = useMemo(() => toOrganizationConfigFormValues(config), [config])
+  const formValues = useMemo(() => toOrganizationConfigFormValues(config), [config]);
 
   const form = useForm<OrganizationConfigFormValues>({
     values: formValues,
     resolver: zodResolver(organizationConfigFormSchema),
-  })
+  });
 
-  const { isDirty } = useFormState({ control: form.control })
+  const { isDirty } = useFormState({ control: form.control });
 
   // Pending state: the toggle reflects the form, so enabling stays unsaved until
   // Save. Once persisted, multi-org can never be turned back off.
-  const isMultiOrgEnabled = form.watch("isMultiOrgEnabled")
-  const isMultiOrgLocked = config.isMultiOrgEnabled
+  const isMultiOrgEnabled = form.watch("isMultiOrgEnabled");
+  const isMultiOrgLocked = config.isMultiOrgEnabled;
 
   const handleReset = useCallback(() => {
-    form.reset(toOrganizationConfigFormValues(config))
-  }, [config, form])
+    form.reset(toOrganizationConfigFormValues(config));
+  }, [config, form]);
 
   const handleSubmit = useCallback(
     async (values: OrganizationConfigFormValues) => {
       try {
-        const res = await mutateAsync(buildOrganizationConfigSavePayload(config, values))
-        if (!res.isSuccess) return showErrorToast({ errors: res.errors })
-        showSuccessToast({ description: "Organization configuration updated successfully" })
+        const res = await mutateAsync(buildOrganizationConfigSavePayload(config, values));
+        if (!res.isSuccess) return showErrorToast({ errors: res.errors });
+        showSuccessToast({ description: "Organization configuration updated successfully" });
       } catch (error) {
-        if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors })
-        showErrorToast({ errors: "Something went wrong" })
+        if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
+        showErrorToast({ errors: "Something went wrong" });
       }
     },
     [config, mutateAsync],
-  )
+  );
 
   const handleMultiOrgToggle = useCallback(
     (checked: boolean) => {
-      if (isMultiOrgLocked) return
+      if (isMultiOrgLocked) return;
 
       if (!checked) {
         // Not saved yet, so the user can still take it back.
-        form.setValue("isMultiOrgEnabled", false, { shouldDirty: true })
-        return
+        form.setValue("isMultiOrgEnabled", false, { shouldDirty: true });
+        return;
       }
 
-      setEnableDialogOpen(true)
+      setEnableDialogOpen(true);
     },
     [form, isMultiOrgLocked],
-  )
+  );
 
   const handleConfirmEnable = useCallback(() => {
-    form.setValue("isMultiOrgEnabled", true, { shouldDirty: true })
-    setEnableDialogOpen(false)
-  }, [form])
+    form.setValue("isMultiOrgEnabled", true, { shouldDirty: true });
+    setEnableDialogOpen(false);
+  }, [form]);
 
   const tabActions = useMemo(
     () => (
@@ -171,7 +160,7 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
       />
     ),
     [form, handleReset, handleSubmit, isDirty, isPending],
-  )
+  );
 
   return (
     <div className={SETTINGS_FORM_LAYOUT.formRoot}>
@@ -225,5 +214,5 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
         onConfirm={handleConfirmEnable}
       />
     </div>
-  )
-}
+  );
+};

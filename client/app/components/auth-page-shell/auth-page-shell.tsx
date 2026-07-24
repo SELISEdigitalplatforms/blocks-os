@@ -57,9 +57,7 @@ export const AuthPageShell = ({
                     {title}
                   </h1>
                   {subtitle ? (
-                    <p className="mt-0.5 text-xs text-primary-foreground/70">
-                      {subtitle}
-                    </p>
+                    <p className="mt-0.5 text-xs text-primary-foreground/70">{subtitle}</p>
                   ) : null}
                 </div>
               </div>
@@ -84,8 +82,7 @@ export const AuthPageShell = ({
             </div>
 
             <p className="mt-4 text-center text-[11px] text-[hsl(var(--low-emphasis))]">
-              © {new Date().getFullYear()} SELISE Digital Platforms. All rights
-              reserved.
+              © {new Date().getFullYear()} SELISE Digital Platforms. All rights reserved.
             </p>
           </div>
         </div>

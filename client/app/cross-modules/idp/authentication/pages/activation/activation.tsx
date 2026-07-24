@@ -59,7 +59,11 @@ export const Activation = ({ code }: ActivationProps) => {
           // Valid, pending activation: show the activate account form.
           setActivationError(null);
           setActivationUserId(null);
-        } else if (res.status === "already_activated" || res.isAlreadyActive || isAlreadyActivatedSignal(res.errors)) {
+        } else if (
+          res.status === "already_activated" ||
+          res.isAlreadyActive ||
+          isAlreadyActivatedSignal(res.errors)
+        ) {
           setActivationError("already_activated");
           setActivationUserId(null);
         } else if (res.errors != null) {
@@ -116,7 +120,10 @@ export const Activation = ({ code }: ActivationProps) => {
   }
   return (
     <div className="flex min-h-screen flex-col items-center bg-background">
-      <Link to="/login" className="mb-4 mt-[30px] cursor-pointer p-4 hover:opacity-80 transition-opacity">
+      <Link
+        to="/login"
+        className="mb-4 mt-[30px] cursor-pointer p-4 hover:opacity-80 transition-opacity"
+      >
         <Logo src={"/Logo.svg"} width={128} height={54.931} />
       </Link>
       {activationError === null ? (

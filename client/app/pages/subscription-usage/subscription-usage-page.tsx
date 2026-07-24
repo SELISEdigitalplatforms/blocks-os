@@ -79,10 +79,10 @@ const MOCK_PLAN = {
 };
 
 const MOCK_STATS = [
-  { label: "Total Users",      value: "1,420",  trend: "+12%", icon: "users" },
-  { label: "Storage Used",     value: "847 GB", trend: "+8%",  icon: "hdd"   },
-  { label: "Active Workflows", value: "134",    trend: "+23%", icon: "share" },
-  { label: "AI Credits Used",  value: "8.2M",   trend: "+31%", icon: "bot"   },
+  { label: "Total Users", value: "1,420", trend: "+12%", icon: "users" },
+  { label: "Storage Used", value: "847 GB", trend: "+8%", icon: "hdd" },
+  { label: "Active Workflows", value: "134", trend: "+23%", icon: "share" },
+  { label: "AI Credits Used", value: "8.2M", trend: "+31%", icon: "bot" },
 ] as const;
 
 const MOCK_SERVICES: ServiceConfig[] = [
@@ -137,7 +137,15 @@ const MOCK_SERVICES: ServiceConfig[] = [
         label: "Documents",
         total: 24891,
         limit: 50000,
-        envData: { dev: 4978, staging: 3734, iat: 1867, uat: 2489, preprod: 1867, shadow: 1245, prod: 12445 },
+        envData: {
+          dev: 4978,
+          staging: 3734,
+          iat: 1867,
+          uat: 2489,
+          preprod: 1867,
+          shadow: 1245,
+          prod: 12445,
+        },
       },
       {
         id: "uds-storage",
@@ -168,7 +176,15 @@ const MOCK_SERVICES: ServiceConfig[] = [
         label: "Credits Used",
         total: 8200000,
         limit: 12000000,
-        envData: { dev: 1722000, staging: 1230000, iat: 820000, uat: 984000, preprod: 738000, shadow: 492000, prod: 4920000 },
+        envData: {
+          dev: 1722000,
+          staging: 1230000,
+          iat: 820000,
+          uat: 984000,
+          preprod: 738000,
+          shadow: 492000,
+          prod: 4920000,
+        },
       },
     ],
   },
@@ -216,7 +232,15 @@ const MOCK_SERVICES: ServiceConfig[] = [
         label: "Messages Sent",
         total: 14220,
         limit: 50000,
-        envData: { dev: 1422, staging: 1422, iat: 711, uat: 1422, preprod: 711, shadow: 0, prod: 8532 },
+        envData: {
+          dev: 1422,
+          staging: 1422,
+          iat: 711,
+          uat: 1422,
+          preprod: 711,
+          shadow: 0,
+          prod: 8532,
+        },
       },
     ],
   },
@@ -240,7 +264,15 @@ const MOCK_SERVICES: ServiceConfig[] = [
         label: "Workflow Runs",
         total: 2840,
         limit: 5000,
-        envData: { dev: 426, staging: 369, iat: 213, uat: 255, preprod: 170, shadow: 113, prod: 1420 },
+        envData: {
+          dev: 426,
+          staging: 369,
+          iat: 213,
+          uat: 255,
+          preprod: 170,
+          shadow: 113,
+          prod: 1420,
+        },
       },
     ],
   },
@@ -403,7 +435,7 @@ function StatCard({
 // Icon lookup used by MOCK_STATS
 function StatIcon({ icon }: { icon: string }) {
   if (icon === "users") return <Users className="h-5 w-5" strokeWidth={1.8} />;
-  if (icon === "hdd")   return <HardDrive className="h-5 w-5" strokeWidth={1.8} />;
+  if (icon === "hdd") return <HardDrive className="h-5 w-5" strokeWidth={1.8} />;
   if (icon === "share") return <Share2 className="h-5 w-5" strokeWidth={1.8} />;
   return <Bot className="h-5 w-5" strokeWidth={1.8} />;
 }
@@ -419,8 +451,8 @@ export function SubscriptionUsagePage() {
   // const services = data?.services ?? MOCK_SERVICES;
 
   // ── Using mock data for now ───────────────────────────────────────────────
-  const plan     = MOCK_PLAN;
-  const stats    = MOCK_STATS;
+  const plan = MOCK_PLAN;
+  const stats = MOCK_STATS;
   const services = MOCK_SERVICES;
 
   function toggleRow(id: string) {
@@ -474,7 +506,7 @@ export function SubscriptionUsagePage() {
               </p>
             </div>
           </div>
-          <Button  size="sm" className="shrink-0">
+          <Button size="sm" className="shrink-0">
             Manage Package
           </Button>
         </div>

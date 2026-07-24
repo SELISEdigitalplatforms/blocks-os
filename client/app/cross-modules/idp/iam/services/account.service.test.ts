@@ -84,7 +84,12 @@ describe("UserAccountService", () => {
 
       const result = await service.accountRecover(mockAccountRecoverPayload);
 
-      expect(http.post).toHaveBeenCalledWith(ACCOUNT_ENDPOINTS.RECOVER, mockAccountRecoverPayload, undefined, { absoluteUrl: true });
+      expect(http.post).toHaveBeenCalledWith(
+        ACCOUNT_ENDPOINTS.RECOVER,
+        mockAccountRecoverPayload,
+        undefined,
+        { absoluteUrl: true },
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 

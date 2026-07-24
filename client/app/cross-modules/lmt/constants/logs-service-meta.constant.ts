@@ -44,7 +44,7 @@ export const LOG_SERVICE_AI_QUERIES: Record<string, string[]> = {
     "Show recent warnings in blocks-agent",
     "Highlight unusual agent or tool-call activity",
   ],
-}
+};
 
 export const LOG_SERVICE_AI_DESCRIPTION =
-  "Hello! How can I assist you today? Here to answer questions and uncover insights."
+  "Hello! How can I assist you today? Here to answer questions and uncover insights.";

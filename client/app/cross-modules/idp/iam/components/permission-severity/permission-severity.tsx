@@ -1,7 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
-import { IGetPermissionsSeverityResponse, PERMISSION_SEVERITY_OPTIONS } from "@blocks-idp/iam/models/permission";
+import {
+  IGetPermissionsSeverityResponse,
+  PERMISSION_SEVERITY_OPTIONS,
+} from "@blocks-idp/iam/models/permission";
 import { useMemo } from "react";
 type PermissionSeverityProps = {
   data: IGetPermissionsSeverityResponse;
@@ -26,7 +29,10 @@ export const PermissionSeverity = ({ data, isLoading }: PermissionSeverityProps)
       <CardContent className="p-0">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {severityData.map((item) => (
-            <div key={item.value} className={cn("relative overflow-hidden px-4 py-3", item.className)}>
+            <div
+              key={item.value}
+              className={cn("relative overflow-hidden px-4 py-3", item.className)}
+            >
               <div className={cn(item.barClassName, "absolute left-0 top-0 h-full w-1.5")} />
               <div className="pl-2">
                 <p className={cn("text-sm font-semibold uppercase")}>{item.label} Risk</p>

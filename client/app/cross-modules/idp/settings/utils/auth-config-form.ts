@@ -1,10 +1,9 @@
-import { getRuntimeEnv } from "@/lib/runtime-env"
-import { z } from "zod"
+import { getRuntimeEnv } from "@/lib/runtime-env";
+import { z } from "zod";
 
-const trimTrailingSlash = (value: string) => value.replace(/\/$/, "")
+const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
-export const getBlocksIamBaseUrl = () =>
-  trimTrailingSlash(getRuntimeEnv("BLOCKS_IAM_BASE_URL"))
+export const getBlocksIamBaseUrl = () => trimTrailingSlash(getRuntimeEnv("BLOCKS_IAM_BASE_URL"));
 
 const positiveInt = z.coerce
   .number()
@@ -12,7 +11,7 @@ const positiveInt = z.coerce
   .min(0, { message: "Must be zero or greater." })
   .max(2147483647, {
     message: "Value exceeds the allowed limit (0 - 2,147,483,647).",
-  })
+  });
 
 export const authSettingsFormSchema = z.object({
   accessTokenValidForNumberMinutes: positiveInt,
@@ -22,15 +21,15 @@ export const authSettingsFormSchema = z.object({
   getNumberOfWrongAttemptsToLockTheAccount: positiveInt,
   accountLockDurationInMinutes: positiveInt,
   publicCertificatePath: z.string(),
-})
+});
 
 export const grantTypesFormSchema = z.object({
   allowedGrantTypes: z.array(z.string()).min(1, "Select at least one grant type."),
-})
+});
 
-export type GrantTypesFormValues = z.infer<typeof grantTypesFormSchema>
+export type GrantTypesFormValues = z.infer<typeof grantTypesFormSchema>;
 
-export type AuthSettingsFormValues = z.infer<typeof authSettingsFormSchema>
+export type AuthSettingsFormValues = z.infer<typeof authSettingsFormSchema>;
 
 export const iamConfigFormSchema = z
   .object({
@@ -46,32 +45,30 @@ export const iamConfigFormSchema = z
     passwordStrengthCheckerRegex: z.string(),
   })
   .superRefine((values, ctx) => {
-    if (values.isOidcEnabled || values.accountActionBaseUrl.trim()) return
+    if (values.isOidcEnabled || values.accountActionBaseUrl.trim()) return;
 
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["accountActionBaseUrl"],
       message: "Account action base URL is required.",
-    })
-  })
+    });
+  });
 
-export type IamConfigFormValues = z.infer<typeof iamConfigFormSchema>
+export type IamConfigFormValues = z.infer<typeof iamConfigFormSchema>;
 
 /** Matches server default in SaveIamConfigurationRequest */
 export const DEFAULT_PASSWORD_STRENGTH_REGEX_PLACEHOLDER =
-  "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_])[A-Za-z\\d\\W_]{8,30}$"
+  "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_])[A-Za-z\\d\\W_]{8,30}$";
 
-export const toAuthSettingsFormValues = (
-  config: {
-    accessTokenValidForNumberMinutes: number
-    refreshTokenValidForNumberMinutes: number
-    absoluteRefreshTokenValidForNumberMinutes: number
-    rememberMeRefreshTokenValidForNumberMinutes: number
-    getNumberOfWrongAttemptsToLockTheAccount: number
-    accountLockDurationInMinutes: number
-    publicCertificatePath: string
-  },
-): AuthSettingsFormValues => ({
+export const toAuthSettingsFormValues = (config: {
+  accessTokenValidForNumberMinutes: number;
+  refreshTokenValidForNumberMinutes: number;
+  absoluteRefreshTokenValidForNumberMinutes: number;
+  rememberMeRefreshTokenValidForNumberMinutes: number;
+  getNumberOfWrongAttemptsToLockTheAccount: number;
+  accountLockDurationInMinutes: number;
+  publicCertificatePath: string;
+}): AuthSettingsFormValues => ({
   accessTokenValidForNumberMinutes: config.accessTokenValidForNumberMinutes,
   refreshTokenValidForNumberMinutes: config.refreshTokenValidForNumberMinutes,
   absoluteRefreshTokenValidForNumberMinutes: config.absoluteRefreshTokenValidForNumberMinutes,
@@ -79,28 +76,24 @@ export const toAuthSettingsFormValues = (
   getNumberOfWrongAttemptsToLockTheAccount: config.getNumberOfWrongAttemptsToLockTheAccount,
   accountLockDurationInMinutes: config.accountLockDurationInMinutes,
   publicCertificatePath: config.publicCertificatePath,
-})
+});
 
-export const toIamConfigFormValues = (
-  config: {
-    accountActivationPath: string
-    accountVerificationPath: string
-    recoverAccountPath: string
-    accountActionBaseUrl: string
-    useAccountActionBaseUrlAsDefault: boolean
-    activationUrlLifetimeInMinutes: number
-    recoverAccountUrlLifetimeInMinutes: number
-    logoutOnPasswordChange: boolean
-    isOidcEnabled: boolean
-    passwordStrengthCheckerRegex: string
-  },
-): IamConfigFormValues => ({
+export const toIamConfigFormValues = (config: {
+  accountActivationPath: string;
+  accountVerificationPath: string;
+  recoverAccountPath: string;
+  accountActionBaseUrl: string;
+  useAccountActionBaseUrlAsDefault: boolean;
+  activationUrlLifetimeInMinutes: number;
+  recoverAccountUrlLifetimeInMinutes: number;
+  logoutOnPasswordChange: boolean;
+  isOidcEnabled: boolean;
+  passwordStrengthCheckerRegex: string;
+}): IamConfigFormValues => ({
   accountActivationPath: config.accountActivationPath,
   accountVerificationPath: config.accountVerificationPath,
   recoverAccountPath: config.recoverAccountPath,
-  accountActionBaseUrl: config.isOidcEnabled
-    ? getBlocksIamBaseUrl()
-    : config.accountActionBaseUrl,
+  accountActionBaseUrl: config.isOidcEnabled ? getBlocksIamBaseUrl() : config.accountActionBaseUrl,
   useAccountActionBaseUrlAsDefault: config.isOidcEnabled
     ? true
     : config.useAccountActionBaseUrlAsDefault,
@@ -109,63 +102,61 @@ export const toIamConfigFormValues = (
   logoutOnPasswordChange: config.logoutOnPasswordChange,
   isOidcEnabled: config.isOidcEnabled,
   passwordStrengthCheckerRegex: config.passwordStrengthCheckerRegex,
-})
+});
 
 /** Under OIDC the server builds action links from its own host, so the stored base URL is the
  * IAM host rather than whatever an app domain seeded at project creation. */
-export const applyOidcIamConfigOverrides = (
-  values: IamConfigFormValues,
-): IamConfigFormValues =>
+export const applyOidcIamConfigOverrides = (values: IamConfigFormValues): IamConfigFormValues =>
   values.isOidcEnabled
     ? {
         ...values,
         accountActionBaseUrl: getBlocksIamBaseUrl(),
         useAccountActionBaseUrlAsDefault: false,
       }
-    : values
+    : values;
 
 export const buildSavePayload = (
   config: {
-    itemId?: string
-    refreshTokenValidForNumberMinutes: number
-    absoluteRefreshTokenValidForNumberMinutes: number
-    accessTokenValidForNumberMinutes: number
-    rememberMeRefreshTokenValidForNumberMinutes: number
-    getNumberOfWrongAttemptsToLockTheAccount: number
-    accountLockDurationInMinutes: number
-    publicCertificatePath: string
-    accountActivationPath: string
-    accountVerificationPath: string
-    recoverAccountPath: string
-    isOidcEnabled: boolean
-    accountActionBaseUrl: string
-    useAccountActionBaseUrlAsDefault: boolean
-    activationUrlLifetimeInMinutes: number
-    recoverAccountUrlLifetimeInMinutes: number
-    logoutOnPasswordChange: boolean
-    passwordStrengthCheckerRegex: string
-    allowedGrantTypes: string[]
+    itemId?: string;
+    refreshTokenValidForNumberMinutes: number;
+    absoluteRefreshTokenValidForNumberMinutes: number;
+    accessTokenValidForNumberMinutes: number;
+    rememberMeRefreshTokenValidForNumberMinutes: number;
+    getNumberOfWrongAttemptsToLockTheAccount: number;
+    accountLockDurationInMinutes: number;
+    publicCertificatePath: string;
+    accountActivationPath: string;
+    accountVerificationPath: string;
+    recoverAccountPath: string;
+    isOidcEnabled: boolean;
+    accountActionBaseUrl: string;
+    useAccountActionBaseUrlAsDefault: boolean;
+    activationUrlLifetimeInMinutes: number;
+    recoverAccountUrlLifetimeInMinutes: number;
+    logoutOnPasswordChange: boolean;
+    passwordStrengthCheckerRegex: string;
+    allowedGrantTypes: string[];
   },
   overrides: Partial<{
-    itemId?: string
-    refreshTokenValidForNumberMinutes: number
-    absoluteRefreshTokenValidForNumberMinutes: number
-    accessTokenValidForNumberMinutes: number
-    rememberMeRefreshTokenValidForNumberMinutes: number
-    getNumberOfWrongAttemptsToLockTheAccount: number
-    accountLockDurationInMinutes: number
-    publicCertificatePath: string
-    accountActivationPath: string
-    accountVerificationPath: string
-    recoverAccountPath: string
-    isOidcEnabled: boolean
-    accountActionBaseUrl: string
-    useAccountActionBaseUrlAsDefault: boolean
-    activationUrlLifetimeInMinutes: number
-    recoverAccountUrlLifetimeInMinutes: number
-    logoutOnPasswordChange: boolean
-    passwordStrengthCheckerRegex: string
-    allowedGrantTypes: string[]
+    itemId?: string;
+    refreshTokenValidForNumberMinutes: number;
+    absoluteRefreshTokenValidForNumberMinutes: number;
+    accessTokenValidForNumberMinutes: number;
+    rememberMeRefreshTokenValidForNumberMinutes: number;
+    getNumberOfWrongAttemptsToLockTheAccount: number;
+    accountLockDurationInMinutes: number;
+    publicCertificatePath: string;
+    accountActivationPath: string;
+    accountVerificationPath: string;
+    recoverAccountPath: string;
+    isOidcEnabled: boolean;
+    accountActionBaseUrl: string;
+    useAccountActionBaseUrlAsDefault: boolean;
+    activationUrlLifetimeInMinutes: number;
+    recoverAccountUrlLifetimeInMinutes: number;
+    logoutOnPasswordChange: boolean;
+    passwordStrengthCheckerRegex: string;
+    allowedGrantTypes: string[];
   }>,
 ) => ({
   itemId: overrides.itemId ?? config.itemId ?? "",
@@ -200,4 +191,4 @@ export const buildSavePayload = (
   passwordStrengthCheckerRegex:
     overrides.passwordStrengthCheckerRegex ?? config.passwordStrengthCheckerRegex,
   allowedGrantTypes: overrides.allowedGrantTypes ?? config.allowedGrantTypes,
-})
+});

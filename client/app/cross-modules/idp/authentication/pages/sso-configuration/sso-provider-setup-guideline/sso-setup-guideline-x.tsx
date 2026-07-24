@@ -9,8 +9,9 @@ export const xStepupDocs = [
           To integrate this, you must create a project and app in the{" "}
           <Link to="https://developer.x.com/en/portal/dashboard" className="text-primary">
             X Developer Portal
-          </Link>, obtain your <b>Client ID</b> and <b>Client Secret</b>, and configure redirect
-          URIs correctly.
+          </Link>
+          , obtain your <b>Client ID</b> and <b>Client Secret</b>, and configure redirect URIs
+          correctly.
         </p>
       </div>
     ),
@@ -44,10 +45,14 @@ export const xStepupDocs = [
       <div>
         <h4 className="text-lg font-semibold text-high-emphasis">Obtain Client Credentials</h4>
         <ul className="mt-2 list-inside list-disc">
-          <li><b>Client ID</b></li>
-          <li><b>Client Secret</b></li>
+          <li>
+            <b>Client ID</b>
+          </li>
+          <li>
+            <b>Client Secret</b>
+          </li>
         </ul>
       </div>
     ),
-  }
+  },
 ];

@@ -3,12 +3,7 @@
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { PeopleDetailsTab } from "./people-details-tab";
 import { PeopleEnvironmentsTab } from "./people-environments-tab";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui-kits/tabs/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { useQueryState } from "nuqs";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
@@ -68,20 +63,17 @@ export const PersonDetailPage = () => {
     searchField: "email",
   });
 
-  const { data: environmentList, isLoading: isProjectLoading } = useGetProjects(
-    {
-      tenantGroupId: selectedTenantGroup ?? "",
-      enabled: !!selectedTenantGroup,
-    },
-  );
+  const { data: environmentList, isLoading: isProjectLoading } = useGetProjects({
+    tenantGroupId: selectedTenantGroup ?? "",
+    enabled: !!selectedTenantGroup,
+  });
 
   const sharedEnvironments = peopleData?.peoples?.[0]?.sharedEnviroments || [];
   const isPending =
     sharedEnvironments.some((env) => !env.isInvitationConfirmed) &&
     !sharedEnvironments.some((env) => env.isCreator);
 
-  const isLoading =
-    isUserLoading || (user && (isPeopleLoading || isProjectLoading));
+  const isLoading = isUserLoading || (user && (isPeopleLoading || isProjectLoading));
   // Devices tab temporarily disabled.
   // const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || ""
 
@@ -98,9 +90,8 @@ export const PersonDetailPage = () => {
               <BreadcrumbLink asChild>
                 <button
                   type="button"
-                  onClick={() =>
-                    navigate(`/app/project/${tenantGroupId}/people`)
-                  }>
+                  onClick={() => navigate(`/app/project/${tenantGroupId}/people`)}
+                >
                   People
                 </button>
               </BreadcrumbLink>
@@ -144,12 +135,14 @@ export const PersonDetailPage = () => {
       <Tabs
         value={currentTab ?? "details"}
         onValueChange={handleTabChange}
-        className="mt-[18px] flex w-full flex-col md:mt-[24px]">
+        className="mt-[18px] flex w-full flex-col md:mt-[24px]"
+      >
         <div className="mb-5 flex items-center justify-between text-base">
           <div className="md:hidden">
             <Select
               value={currentTab ?? "details"}
-              onValueChange={(value) => handleTabChange(value)}>
+              onValueChange={(value) => handleTabChange(value)}
+            >
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>

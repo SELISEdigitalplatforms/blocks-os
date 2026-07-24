@@ -171,11 +171,9 @@ describe("UserService", () => {
 
       const result = await service.getSignUpSetting(mockGetSignUpSettingPayload);
 
-      expect(http.get).toHaveBeenCalledWith(
-        USER_ENDPOINTS.GET_SIGNUP_SETTING,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(USER_ENDPOINTS.GET_SIGNUP_SETTING, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual({
         itemId: "signup-001",
         createdDate: "",

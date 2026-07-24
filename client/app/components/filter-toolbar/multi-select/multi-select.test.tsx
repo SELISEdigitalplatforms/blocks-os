@@ -36,7 +36,12 @@ const options = [
 describe("MultiSelect", () => {
   it("renders the label and shows badges for selected values", () => {
     render(
-      <MultiSelect label="Status" options={options} value={["active", "draft"]} onChange={vi.fn()} />,
+      <MultiSelect
+        label="Status"
+        options={options}
+        value={["active", "draft"]}
+        onChange={vi.fn()}
+      />,
     );
     const trigger = screen.getByRole("button");
     expect(within(trigger).getAllByText("Status").length).toBeGreaterThan(0);

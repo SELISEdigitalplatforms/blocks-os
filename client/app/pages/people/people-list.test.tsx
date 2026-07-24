@@ -76,10 +76,7 @@ describe("PeopleList", () => {
   });
 
   it("hides pagination while loading even if data exists", () => {
-    renderList(
-      { peoples: [{ id: "a" }], totalCount: 1, isOwner: false },
-      true,
-    );
+    renderList({ peoples: [{ id: "a" }], totalCount: 1, isOwner: false }, true);
     expect(screen.queryByTestId("pagination")).toBeNull();
   });
 });

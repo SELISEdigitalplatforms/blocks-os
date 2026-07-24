@@ -21,11 +21,7 @@ describe("IdentityProviderService", () => {
   it("getAll GETs the identity providers endpoint with absolute url", async () => {
     vi.mocked(http.get).mockResolvedValue({ data: [] } as never);
     await service.getAll();
-    expect(http.get).toHaveBeenCalledWith(
-      IDENTITY_PROVIDER_ENDPOINTS.GET_ALL,
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith(IDENTITY_PROVIDER_ENDPOINTS.GET_ALL, undefined, ABS);
   });
 
   it("getById appends the id to the path", async () => {

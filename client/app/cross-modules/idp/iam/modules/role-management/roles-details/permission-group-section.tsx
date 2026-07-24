@@ -1,6 +1,11 @@
 import { AccordionContent, AccordionItem } from "@/components/ui-kits/accordion/accordion";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { BadgeAlert } from "lucide-react";
 import { useMemo } from "react";
 import { PermissionSelectionRow } from "./permission-selection-row";
@@ -59,16 +64,16 @@ export const PermissionGroupSection = ({ group, onTrigger }: PermissionGroupSect
               <div className="flex items-center gap-1">
                 <h3 className="text-sm font-bold uppercase text-foreground">{group.name}</h3>
                 <TooltipProvider>
-                <Tooltip>
-                  {!isAllDependencyPermissionsChecked && (
-                    <TooltipTrigger>
-                      <BadgeAlert className="ml-1 h-3.5 w-3.5 text-yellow-600" />
-                    </TooltipTrigger>
-                  )}
-                  <TooltipContent side="right">
-                    One or more permissions have missing dependencies
-                  </TooltipContent>
-                </Tooltip>
+                  <Tooltip>
+                    {!isAllDependencyPermissionsChecked && (
+                      <TooltipTrigger>
+                        <BadgeAlert className="ml-1 h-3.5 w-3.5 text-yellow-600" />
+                      </TooltipTrigger>
+                    )}
+                    <TooltipContent side="right">
+                      One or more permissions have missing dependencies
+                    </TooltipContent>
+                  </Tooltip>
                 </TooltipProvider>
               </div>
               <span className="text-xs text-foreground/60">

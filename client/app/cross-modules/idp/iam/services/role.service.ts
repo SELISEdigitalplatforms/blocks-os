@@ -39,12 +39,9 @@ export class RoleService {
   }
 
   setRoles(addSetRolesPayload: SetRoles): Promise<SetRoles> {
-    return http.post<SetRoles>(
-      ROLE_ENDPOINTS.SET_ROLES,
-      { ...addSetRolesPayload },
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.post<SetRoles>(ROLE_ENDPOINTS.SET_ROLES, { ...addSetRolesPayload }, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 

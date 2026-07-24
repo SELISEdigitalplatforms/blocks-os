@@ -35,11 +35,9 @@ describe("AuthOidc", () => {
 
       const result = await service.getOidcCredentials(mockGetOidcPayload);
 
-      expect(http.get).toHaveBeenCalledWith(
-        AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockOidcCredentialsResponse);
     });
 
@@ -142,9 +140,9 @@ describe("AuthOidc", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.rotateOidcClientSecret(mockRotateOidcSecretPayload),
-      ).rejects.toThrow("Network error");
+      await expect(service.rotateOidcClientSecret(mockRotateOidcSecretPayload)).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 });

@@ -44,7 +44,8 @@ describe("LanguageManagerService (extra)", () => {
         lastUpdateDateRange: { startDate: "2026-01-01", endDate: "" },
       });
       const [, payload] = vi.mocked(http.post).mock.calls[0];
-      const range = (payload as { lastUpdateDateRange: Record<string, string> }).lastUpdateDateRange;
+      const range = (payload as { lastUpdateDateRange: Record<string, string> })
+        .lastUpdateDateRange;
       expect(range).not.toHaveProperty("endDate");
       expect(range.startDate).toBe("2026-01-01");
     });
@@ -53,9 +54,7 @@ describe("LanguageManagerService (extra)", () => {
   it("getLanguageModule queries with a capitalized ProjectKey", async () => {
     vi.mocked(http.get).mockResolvedValue([]);
     await languageManagerService.getLanguageModule("pk");
-    expect(http.get).toHaveBeenCalledWith(
-      `${LANGUAGE_MODULE_ENDPOINTS.GETS}?ProjectKey=pk`,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${LANGUAGE_MODULE_ENDPOINTS.GETS}?ProjectKey=pk`);
   });
 
   it("getKeysTimeline builds a paged query with the entity id", async () => {

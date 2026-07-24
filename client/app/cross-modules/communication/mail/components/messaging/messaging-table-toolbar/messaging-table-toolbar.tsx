@@ -3,10 +3,7 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
 import { Filter } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  configurations,
-  protocols,
-} from "@blocks-communication/mail/constants/messaging";
+import { configurations, protocols } from "@blocks-communication/mail/constants/messaging";
 import { DataTableFacetedFilter } from "@/components/data-table-faceted-filter/data-table-faceted-filter";
 import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
@@ -24,9 +21,7 @@ import useIsServiceBarOpenComm from "@blocks-communication/mail/hooks/use-is-ser
 interface MessagingTableToolbarProps<TData> {
   table: Table<TData>;
 }
-export function MessagingTableToolbar<TData>({
-  table,
-}: MessagingTableToolbarProps<TData>) {
+export function MessagingTableToolbar<TData>({ table }: MessagingTableToolbarProps<TData>) {
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenComm();
   const textSearchColumn = table.getColumn("name");
@@ -68,8 +63,7 @@ export function MessagingTableToolbar<TData>({
   );
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      <div
-        className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
+      <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter campaigns"
           onSearch={onSearchInputChange}
@@ -82,10 +76,7 @@ export function MessagingTableToolbar<TData>({
         {isServiceBarOpen && (
           <Sheet>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="relative h-8 w-8 p-0">
+              <Button variant="outline" size="sm" className="relative h-8 w-8 p-0">
                 <Filter className="h-4 w-4" />
                 {activeFiltersCount > 0 && (
                   <Badge className="absolute -right-2 -top-2 h-4 w-4 px-1 text-xs font-medium">
@@ -94,10 +85,7 @@ export function MessagingTableToolbar<TData>({
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-full"
-              aria-describedby="filter-description">
+            <SheetContent side="right" className="w-full" aria-describedby="filter-description">
               <SheetTitle className="mb-4">Filter</SheetTitle>
               <SheetDescription></SheetDescription>
               <div className="flex flex-col space-y-4">
@@ -108,10 +96,7 @@ export function MessagingTableToolbar<TData>({
                   </Button>
                 </SheetClose>
                 {isFiltered && (
-                  <Button
-                    variant="outline"
-                    onClick={resetFilters}
-                    className="h-8 px-2 lg:px-3">
+                  <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
                     Reset
                     <Cross2Icon className="ml-2 h-4 w-4" />
                   </Button>
@@ -121,8 +106,7 @@ export function MessagingTableToolbar<TData>({
           </Sheet>
         )}
       </div>
-      <div
-        className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
+      <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter campaigns"
           onSearch={onSearchInputChange}
@@ -133,10 +117,7 @@ export function MessagingTableToolbar<TData>({
         />
         <FilterContent />
         {isFiltered && (
-          <Button
-            variant="outline"
-            onClick={resetFilters}
-            className="h-8 px-2 lg:px-3">
+          <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
             Reset
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>

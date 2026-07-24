@@ -44,7 +44,8 @@ export const AuthenticationConfigLayout = () => {
           variant="outline"
           size="default"
           className="gap-1 text-sm font-medium"
-          onClick={() => setConfigureOpen(true)}>
+          onClick={() => setConfigureOpen(true)}
+        >
           <Settings className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only">Configure</span>
         </Button>
@@ -62,22 +63,16 @@ export const AuthenticationConfigLayout = () => {
                 <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
                   {currentItem.label}
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  {currentItem.desc}
-                </p>
+                <p className="text-sm text-muted-foreground">{currentItem.desc}</p>
               </div>
-              <div className="flex shrink-0 items-center justify-end gap-2">
-                {headerActions}
-              </div>
+              <div className="flex shrink-0 items-center justify-end gap-2">{headerActions}</div>
             </header>
           )}
           <Outlet />
         </div>
       </div>
 
-      <Dialog
-        open={configureOpen ?? false}
-        onOpenChange={(open) => setConfigureOpen(open)}>
+      <Dialog open={configureOpen ?? false} onOpenChange={(open) => setConfigureOpen(open)}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Email Configuration</DialogTitle>

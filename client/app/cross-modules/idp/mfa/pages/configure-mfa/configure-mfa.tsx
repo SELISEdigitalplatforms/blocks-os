@@ -1,10 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
 import { EllipsisVertical, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
@@ -46,8 +41,7 @@ const LoadingSkelton = () => {
 };
 export const ConfigureMFA = () => {
   const { isLoading, isFetching, data } = useGetMFAConfig();
-  const [openEnableDisableModal, setOpenEnableDisableModal] =
-    useState<boolean>(false);
+  const [openEnableDisableModal, setOpenEnableDisableModal] = useState<boolean>(false);
   const [methodInfo, setMethodInfo] = useState<MethodInfo>({
     enable: false,
     name: "",
@@ -70,15 +64,8 @@ export const ConfigureMFA = () => {
         header: "Status",
         cell: ({ row }) => (
           <div className="flex max-w-[200px]">
-            <Badge
-              variant={
-                data?.allowedMethods.includes(row.original.type)
-                  ? "success"
-                  : "error"
-              }>
-              {data?.allowedMethods.includes(row.original.type)
-                ? "Enabled"
-                : "Disabled"}
+            <Badge variant={data?.allowedMethods.includes(row.original.type) ? "success" : "error"}>
+              {data?.allowedMethods.includes(row.original.type) ? "Enabled" : "Disabled"}
             </Badge>
           </div>
         ),
@@ -103,10 +90,9 @@ export const ConfigureMFA = () => {
                       name: row.original.label,
                       type: row.original.type,
                     }));
-                  }}>
-                  {data?.allowedMethods.includes(row.original.type)
-                    ? "Disable"
-                    : "Enable"}
+                  }}
+                >
+                  {data?.allowedMethods.includes(row.original.type) ? "Disable" : "Enable"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -166,15 +152,10 @@ export const ConfigureMFA = () => {
               <Table className="text-sm md:table-fixed">
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow
-                      key={headerGroup.id}
-                      className="hover:bg-transparent">
+                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
                       {headerGroup.headers.map((header) => (
                         <TableHead key={header.id}>
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -185,10 +166,7 @@ export const ConfigureMFA = () => {
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -199,9 +177,7 @@ export const ConfigureMFA = () => {
           </Card>
         )}
       </div>
-      <Dialog
-        open={openEnableDisableModal}
-        onOpenChange={setOpenEnableDisableModal}>
+      <Dialog open={openEnableDisableModal} onOpenChange={setOpenEnableDisableModal}>
         <ConfirmationModal
           onCancel={() => {}}
           onConfirm={() => onSaveHandler(methodInfo)}

@@ -1,4 +1,3 @@
-
 import { useGetPermissionsGroupBySeverity } from "@blocks-idp/iam/hooks/use-permission";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 

@@ -8,10 +8,7 @@ import { Toaster } from "./components/ui-kits/toaster/toaster";
 import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
 import QueryProvider from "./providers/query-provider";
 import { router } from "./router";
-import {
-  BlocksAppLayout,
-  ThemeProvider,
-} from "@seliseblocks/blocks-kit/providers";
+import { BlocksAppLayout, ThemeProvider } from "@seliseblocks/blocks-kit/providers";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -26,7 +23,8 @@ createRoot(document.getElementById("root")!).render(
                   dark: "/blocks-logos/os_dark_mode.svg",
                   light: "/blocks-logos/os_light_mode.svg",
                 },
-              }}>
+              }}
+            >
               <RouterProvider router={router} />
             </BlocksAppLayout>
             <Toaster />

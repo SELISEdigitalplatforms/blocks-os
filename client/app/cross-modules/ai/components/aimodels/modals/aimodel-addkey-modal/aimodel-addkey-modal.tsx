@@ -51,7 +51,11 @@ export const ModelAddKeyModal = ({
 }: ModelAddKeyModalProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useCreateModel();
-  const { schema, defaultValues, fields } = resolveModelConfig(provider, servicePlatform, modelOptions);
+  const { schema, defaultValues, fields } = resolveModelConfig(
+    provider,
+    servicePlatform,
+    modelOptions,
+  );
   type AllFormValues = {
     url: string;
     model: string;
@@ -131,7 +135,9 @@ export const ModelAddKeyModal = ({
                     {modelOptions.map((opt, i) => (
                       <div key={opt.model}>
                         <DropdownMenuItem
-                          className={opt.model === form.watch("model") ? "font-normal" : "cursor-pointer"}
+                          className={
+                            opt.model === form.watch("model") ? "font-normal" : "cursor-pointer"
+                          }
                           onClick={() => form.setValue("model", opt.model)}
                         >
                           {opt.goodName}
@@ -148,7 +154,9 @@ export const ModelAddKeyModal = ({
                     name="model"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Model <span className="text-red-500">*</span></FormLabel>
+                        <FormLabel>
+                          Model <span className="text-red-500">*</span>
+                        </FormLabel>
                         <FormControl>
                           <Input placeholder="Enter model" {...field} />
                         </FormControl>
@@ -164,7 +172,9 @@ export const ModelAddKeyModal = ({
                   name="url"
                   render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>URL <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        URL <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl className="w-full">
                         <Input
                           className="flex w-full"
@@ -179,7 +189,9 @@ export const ModelAddKeyModal = ({
               )}
               {fields.includes("deploymentName") && (
                 <FormItem>
-                  <FormLabel>Deployment Name <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Deployment Name <span className="text-red-500">*</span>
+                  </FormLabel>
                   <Input value={selectedModel} disabled />
                 </FormItem>
               )}
@@ -189,7 +201,9 @@ export const ModelAddKeyModal = ({
                   name="apiKey"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>API Key <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        API Key <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter API key" {...field} />
                       </FormControl>

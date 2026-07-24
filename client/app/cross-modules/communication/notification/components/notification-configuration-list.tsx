@@ -16,10 +16,7 @@ import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Bell, EllipsisVertical, Pencil, Trash } from "lucide-react";
 import NewNotificationConfiguration from "../modals/new-notification-configuration";
-import {
-  channelsToNotify,
-  notificationTypes,
-} from "../constants/notification.constant";
+import { channelsToNotify, notificationTypes } from "../constants/notification.constant";
 import type { INotificationConfigRow } from "../models/notification-config.model";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
@@ -51,12 +48,13 @@ interface NotificationConfigurationListProps {
   configurationsLength?: number;
 }
 
-const NotificationConfigurationList: React.FC<
-  NotificationConfigurationListProps
-> = ({ addConfigOpen, onAddConfigOpenChange, isLoading: isLoadingProp }) => {
+const NotificationConfigurationList: React.FC<NotificationConfigurationListProps> = ({
+  addConfigOpen,
+  onAddConfigOpenChange,
+  isLoading: isLoadingProp,
+}) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  const { queryParams, setQueryParams } =
-    useNotificationConfigsFilterQueryParams();
+  const { queryParams, setQueryParams } = useNotificationConfigsFilterQueryParams();
   const { data, isLoading, isFetching } = useGetNotificationConfigs({
     projectKey: tenantId,
     page: queryParams.notificationPage,
@@ -67,8 +65,7 @@ const NotificationConfigurationList: React.FC<
 
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedConfigData, setSelectedConfigData] =
-    useState<INotificationConfigRow | null>(null);
+  const [selectedConfigData, setSelectedConfigData] = useState<INotificationConfigRow | null>(null);
   const internalOpen = addConfigOpen ?? false;
   const setOpen = onAddConfigOpenChange ?? (() => {});
 
@@ -127,7 +124,8 @@ const NotificationConfigurationList: React.FC<
             pageSizeOptions={[queryParams.notificationPageSize]}
             onChange={onPageChangeHandler}
           />
-        }>
+        }
+      >
         {loading ? (
           <Table>
             <TableHeader>
@@ -163,22 +161,12 @@ const NotificationConfigurationList: React.FC<
                 <TableRow key={config.itemId}>
                   <TableCell>{config.name}</TableCell>
                   <TableCell>
-                    {
-                      channelsToNotify.find(
-                        (x) => x.value === config.channelToNotify,
-                      )?.label
-                    }
+                    {channelsToNotify.find((x) => x.value === config.channelToNotify)?.label}
                   </TableCell>
                   <TableCell>
-                    {
-                      notificationTypes.find(
-                        (x) => x.value === config.notificationType,
-                      )?.label
-                    }
+                    {notificationTypes.find((x) => x.value === config.notificationType)?.label}
                   </TableCell>
-                  <TableCell>
-                    {config.enablePersistence ? "Yes" : "No"}
-                  </TableCell>
+                  <TableCell>{config.enablePersistence ? "Yes" : "No"}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -192,7 +180,8 @@ const NotificationConfigurationList: React.FC<
                           onClick={(e) => {
                             e.stopPropagation();
                             onEditNotificationConfig(config);
-                          }}>
+                          }}
+                        >
                           <Pencil className="mr-2 h-4 w-4" />
                           <span>Edit</span>
                         </DropdownMenuItem>
@@ -201,7 +190,8 @@ const NotificationConfigurationList: React.FC<
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteNotificationConfig(config);
-                          }}>
+                          }}
+                        >
                           <Trash className="mr-2 h-4 w-4" />
                           <span>Delete</span>
                         </DropdownMenuItem>

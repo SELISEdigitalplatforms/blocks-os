@@ -21,39 +21,28 @@ const toSaveApiPayload = (
   payload: IOrganizationConfigPayload,
 ): IOrganizationConfigSaveApiPayload => ({
   allowOrgCreationFromCloud:
-    payload.allowOrgCreationFromCloud ??
-    payload.allowCreationFromCloud ??
-    false,
+    payload.allowOrgCreationFromCloud ?? payload.allowCreationFromCloud ?? false,
   allowOrgCreationFromConstruct:
-    payload.allowOrgCreationFromConstruct ??
-    payload.allowCreationFromConstruct ??
-    false,
+    payload.allowOrgCreationFromConstruct ?? payload.allowCreationFromConstruct ?? false,
   allowOrgCreationFromSignup: payload.allowOrgCreationFromSignup ?? false,
   allowOrgCreationFromPortal: payload.allowOrgCreationFromPortal ?? false,
   isMultiOrgEnabled: payload.isMultiOrgEnabled,
   consentForMultiOrgEnable: payload.consentForMultiOrgEnable,
-  defaultRolesOnOrgCreation:
-    payload.defaultRolesOnOrgCreation ?? payload.roles ?? [],
-  defaultPermissionsOnOrgCreation:
-    payload.defaultPermissionsOnOrgCreation ?? [],
-  keepOrgRolesSameAsDefaultRoles:
-    payload.keepOrgRolesSameAsDefaultRoles ?? true,
+  defaultRolesOnOrgCreation: payload.defaultRolesOnOrgCreation ?? payload.roles ?? [],
+  defaultPermissionsOnOrgCreation: payload.defaultPermissionsOnOrgCreation ?? [],
+  keepOrgRolesSameAsDefaultRoles: payload.keepOrgRolesSameAsDefaultRoles ?? true,
   keepOrgPermissionsSameAsDefaultPermissions:
     payload.keepOrgPermissionsSameAsDefaultPermissions ?? true,
 });
 
 export class OrganizationService {
-  getOrganizations(
-    params: IGetOrganizationsParams,
-  ): Promise<IGetOrganizationsResponse> {
+  getOrganizations(params: IGetOrganizationsParams): Promise<IGetOrganizationsResponse> {
     let url = `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${params.projectKey}&page=${params.page}&pageSize=${params.pageSize}`;
     params.searchText ? (url += `&SearchText=${params.searchText}`) : null;
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  getOrganizationById(
-    params: IGetOrganizationByIdParams,
-  ): Promise<IGetOrganizationByIdResponse> {
+  getOrganizationById(params: IGetOrganizationByIdParams): Promise<IGetOrganizationByIdResponse> {
     return http.get(
       `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}?ProjectKey=${params.projectKey}&ItemId=${params.itemId}`,
       undefined,
@@ -64,24 +53,17 @@ export class OrganizationService {
   saveOrganization = (
     payload: ICreateOrUpdateOrganizationPayload,
   ): Promise<ICreateOrUpdateOrganizationResponse> => {
-    return http.post(
-      ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION,
-      payload,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION, payload, undefined, {
+      absoluteUrl: true,
+    });
   };
 
-  getOrganizationConfig(
-    _projectKey?: string,
-  ): Promise<IOrganizationConfigResponse | null> {
+  getOrganizationConfig(_projectKey?: string): Promise<IOrganizationConfigResponse | null> {
     return http
       .get(ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG, undefined, {
         absoluteUrl: true,
       })
-      .then((response) =>
-        mapOrganizationConfigFromApi(response as Record<string, unknown>),
-      );
+      .then((response) => mapOrganizationConfigFromApi(response as Record<string, unknown>));
   }
 
   saveOrganizationConfig = (

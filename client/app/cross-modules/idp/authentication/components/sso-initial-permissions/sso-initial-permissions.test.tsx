@@ -32,11 +32,7 @@ const NEW_PERMISSION = {
 } as IPermission;
 
 vi.mock("./add-sso-permission", () => ({
-  AddSSOPermission: ({
-    onAdd,
-  }: {
-    onAdd: (permissions: IPermission[]) => void;
-  }) => (
+  AddSSOPermission: ({ onAdd }: { onAdd: (permissions: IPermission[]) => void }) => (
     <button type="button" onClick={() => onAdd([NEW_PERMISSION])}>
       mock-add-permission
     </button>
@@ -53,11 +49,7 @@ vi.mock("./sso-permissions-list", () => ({
   }) => (
     <div data-testid="permissions-list">
       {permissions.map((permission) => (
-        <button
-          key={permission.resource}
-          type="button"
-          onClick={() => onDelete(permission)}
-        >
+        <button key={permission.resource} type="button" onClick={() => onDelete(permission)}>
           delete-{permission.resource}
         </button>
       ))}
@@ -100,9 +92,7 @@ describe("SSOInitialPermissions", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     const existing = makePermission("read");
-    render(
-      <SSOInitialPermissions permissions={[existing]} onChange={onChange} />,
-    );
+    render(<SSOInitialPermissions permissions={[existing]} onChange={onChange} />);
 
     await user.click(screen.getByText("mock-add-permission"));
 
@@ -114,12 +104,7 @@ describe("SSOInitialPermissions", () => {
     const onChange = vi.fn();
     const read = makePermission("read");
     const write = makePermission("write");
-    render(
-      <SSOInitialPermissions
-        permissions={[read, write]}
-        onChange={onChange}
-      />,
-    );
+    render(<SSOInitialPermissions permissions={[read, write]} onChange={onChange} />);
 
     await user.click(screen.getByText("delete-read"));
 

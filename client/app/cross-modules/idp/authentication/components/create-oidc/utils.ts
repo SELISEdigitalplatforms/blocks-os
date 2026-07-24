@@ -40,9 +40,7 @@ export const redirectUriSubmitSchema = z
   });
 
 export const createOidcSchema = z.object({
-  redirectUris: redirectUriEntry
-    .array()
-    .min(1, "At least one redirect URI is required"),
+  redirectUris: redirectUriEntry.array().min(1, "At least one redirect URI is required"),
   scope: z.string().trim(),
   clientBrandColor: z.string().optional(),
   clientDisplayName: z.string().trim().min(1, "Client display name is required"),

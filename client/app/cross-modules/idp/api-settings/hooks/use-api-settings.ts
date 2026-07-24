@@ -65,7 +65,8 @@ export const useRemoveApiEndpoints = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: [QUERY_KEY, "remove"],
-    mutationFn: (payload: IRemoveApiEndpointsPayload) => apiSettingsService.removeEndpoints(payload),
+    mutationFn: (payload: IRemoveApiEndpointsPayload) =>
+      apiSettingsService.removeEndpoints(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     },

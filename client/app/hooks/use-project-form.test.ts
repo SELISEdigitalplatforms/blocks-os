@@ -77,9 +77,7 @@ describe("useProjectForm", () => {
       tenantGroupId: "tg-1",
       errors: null,
     });
-    h.getProjects.mockResolvedValue([
-      { projects: [{ itemId: "p-1", name: "First" }] },
-    ]);
+    h.getProjects.mockResolvedValue([{ projects: [{ itemId: "p-1", name: "First" }] }]);
 
     const { result } = renderHook(() => useProjectForm(), {
       wrapper: createWrapper(),

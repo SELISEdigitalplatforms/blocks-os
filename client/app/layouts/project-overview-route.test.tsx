@@ -57,8 +57,7 @@ vi.mock("@seliseblocks/blocks-kit/store", () => {
   };
   return {
     useAuthStore: () => ({ user: { sub: "owner-1" } }),
-    useProjectStore: (selector?: (s: unknown) => unknown) =>
-      selector ? selector(state) : state,
+    useProjectStore: (selector?: (s: unknown) => unknown) => (selector ? selector(state) : state),
   };
 });
 

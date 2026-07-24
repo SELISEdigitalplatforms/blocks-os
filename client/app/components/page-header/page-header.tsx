@@ -1,13 +1,13 @@
-import { cn } from "@/lib/utils"
-import type { ReactNode } from "react"
+import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 type PageHeaderProps = {
-  title: string
-  description: string
-  className?: string
-  actions?: ReactNode
-  titleSuffix?: ReactNode
-}
+  title: string;
+  description: string;
+  className?: string;
+  actions?: ReactNode;
+  titleSuffix?: ReactNode;
+};
 
 export const PageHeader = ({
   title,
@@ -26,14 +26,10 @@ export const PageHeader = ({
       </div>
       <p className="text-sm text-muted-foreground">{description}</p>
     </>
-  )
+  );
 
   if (!actions) {
-    return (
-      <header className={cn("mb-4 space-y-1 sm:mb-6", className)}>
-        {heading}
-      </header>
-    )
+    return <header className={cn("mb-4 space-y-1 sm:mb-6", className)}>{heading}</header>;
   }
 
   return (
@@ -46,5 +42,5 @@ export const PageHeader = ({
       <div className="space-y-1">{heading}</div>
       <div className="flex shrink-0 items-center justify-end gap-2">{actions}</div>
     </header>
-  )
-}
+  );
+};

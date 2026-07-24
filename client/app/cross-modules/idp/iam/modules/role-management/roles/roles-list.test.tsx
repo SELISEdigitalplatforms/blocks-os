@@ -86,9 +86,7 @@ describe("RolesList", () => {
 
   it("shows the empty-state message for no roles", () => {
     render(<RolesList roles={[]} isLoading={false} />);
-    expect(
-      screen.getByText("No roles found. Please create new roles."),
-    ).toBeTruthy();
+    expect(screen.getByText("No roles found. Please create new roles.")).toBeTruthy();
   });
 
   it("renders role rows with name, slug, permission count and description", () => {

@@ -30,9 +30,7 @@ export const getEnvironmentOrder = (environment: string): number =>
   Number.MAX_SAFE_INTEGER;
 
 const getEnvironmentLabel = (environment: string): string =>
-  environmentOptions.find((option) => option.value === environment)?.label ||
-  environment ||
-  "-";
+  environmentOptions.find((option) => option.value === environment)?.label || environment || "-";
 
 const EnvironmentBadge = ({ environment }: { environment: string }) => (
   <Badge
@@ -41,7 +39,8 @@ const EnvironmentBadge = ({ environment }: { environment: string }) => (
       environment === "prod"
         ? "w-fit bg-primary/10 text-xs text-primary hover:bg-primary/10"
         : "w-fit text-xs"
-    }>
+    }
+  >
     {getEnvironmentLabel(environment)}
   </Badge>
 );
@@ -55,10 +54,9 @@ const EnvironmentDomain = ({ project }: { project: IProject }) => {
         href={primary.domain}
         target="_blank"
         rel="noreferrer"
-        className="flex max-w-[220px] items-center gap-1 truncate text-primary hover:underline">
-        <span className="truncate">
-          {primary.domain.replace(/^https?:\/\//, "")}
-        </span>
+        className="flex max-w-[220px] items-center gap-1 truncate text-primary hover:underline"
+      >
+        <span className="truncate">{primary.domain.replace(/^https?:\/\//, "")}</span>
         <ExternalLink className="h-3.5 w-3.5 shrink-0" />
       </a>
       {rest.length > 0 && (
@@ -91,10 +89,7 @@ type EnvironmentsCardProps = {
   isLoading?: boolean;
 };
 
-export const EnvironmentsCard = ({
-  environments,
-  isLoading = false,
-}: EnvironmentsCardProps) => {
+export const EnvironmentsCard = ({ environments, isLoading = false }: EnvironmentsCardProps) => {
   return (
     <Card>
       <CardHeader className="mb-4 flex flex-col gap-1">
@@ -120,7 +115,8 @@ export const EnvironmentsCard = ({
               <TableRow>
                 <TableCell
                   colSpan={COLUMN_COUNT}
-                  className="h-24 text-center text-sm text-muted-foreground">
+                  className="h-24 text-center text-sm text-muted-foreground"
+                >
                   No environments found for this project.
                 </TableCell>
               </TableRow>
@@ -146,9 +142,7 @@ export const EnvironmentsCard = ({
                     <EnvironmentDomain project={environment} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-medium-emphasis">
-                    {environment.createdDate
-                      ? formatDate(new Date(environment.createdDate))
-                      : "-"}
+                    {environment.createdDate ? formatDate(new Date(environment.createdDate)) : "-"}
                   </TableCell>
                 </TableRow>
               ))

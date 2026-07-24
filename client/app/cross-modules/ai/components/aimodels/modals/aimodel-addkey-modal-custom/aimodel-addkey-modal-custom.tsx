@@ -87,9 +87,7 @@ export const CustomModelAddKeyModal = ({
   const onSubmitHandler = async (data: FormSchema) => {
     try {
       const headersObject = Object.fromEntries(
-        (data.customHeaders || [])
-          .filter((h) => h.key && h.value)
-          .map((h) => [h.key!, h.value!]),
+        (data.customHeaders || []).filter((h) => h.key && h.value).map((h) => [h.key!, h.value!]),
       );
       const payload = transformToUniversal(provider.toLowerCase(), project_key, {
         ...data,
@@ -131,7 +129,9 @@ export const CustomModelAddKeyModal = ({
               name="model"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Model Name <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Model Name <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter model name" {...field} />
                   </FormControl>
@@ -147,7 +147,9 @@ export const CustomModelAddKeyModal = ({
               name="url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>API URL <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    API URL <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter API URL" {...field} />
                   </FormControl>
@@ -173,7 +175,9 @@ export const CustomModelAddKeyModal = ({
               name="apiVersion"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>API Version <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    API Version <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="API Version" {...field} />
                   </FormControl>
@@ -195,7 +199,8 @@ export const CustomModelAddKeyModal = ({
                             <Info className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            Lower values make LLM responses more accurate and stable, while higher values make them more random and creative.
+                            Lower values make LLM responses more accurate and stable, while higher
+                            values make them more random and creative.
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -211,7 +216,9 @@ export const CustomModelAddKeyModal = ({
                       className="flex-1"
                     />
                     <div className="flex min-w-[80px] items-center gap-1 rounded-lg border bg-background px-2 py-1">
-                      <span className="font-bold text-high-emphasis">{(field.value ?? 0.3).toFixed(2)}</span>
+                      <span className="font-bold text-high-emphasis">
+                        {(field.value ?? 0.3).toFixed(2)}
+                      </span>
                       <span className="text-medium-emphasis">/ 2</span>
                     </div>
                   </div>
@@ -233,7 +240,8 @@ export const CustomModelAddKeyModal = ({
                             <Info className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            Used to roughly control the maximum number of tokens in LLM responses (1 token ≈ 1 English short word).
+                            Used to roughly control the maximum number of tokens in LLM responses (1
+                            token ≈ 1 English short word).
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -268,7 +276,14 @@ export const CustomModelAddKeyModal = ({
                       render={({ field }) => (
                         <FormItem className="flex-1">
                           <FormControl>
-                            <Input placeholder="Header Key" value={field.value ?? ""} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} />
+                            <Input
+                              placeholder="Header Key"
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -280,25 +295,45 @@ export const CustomModelAddKeyModal = ({
                       render={({ field }) => (
                         <FormItem className="flex-1">
                           <FormControl>
-                            <Input placeholder="Enter value" value={field.value ?? ""} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} />
+                            <Input
+                              placeholder="Enter value"
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)} className="text-medium-emphasis hover:text-red-600">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(idx)}
+                      className="text-medium-emphasis hover:text-red-600"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={() => append({ key: "", value: "" })} className="mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => append({ key: "", value: "" })}
+                  className="mt-2"
+                >
                   + Add
                 </Button>
               </div>
             </div>
             <DialogFooter className="sticky bottom-0 left-0 right-0 mt-4 flex items-center justify-end gap-3 border-t bg-background py-4">
               <DialogClose asChild>
-                <Button variant="secondary" type="button" onClick={() => setAddKeyModalOpen(false)}>Cancel</Button>
+                <Button variant="secondary" type="button" onClick={() => setAddKeyModalOpen(false)}>
+                  Cancel
+                </Button>
               </DialogClose>
               <Button disabled={!form.formState.isValid || isPending} type="submit">
                 {isPending ? "Saving..." : "Save"}

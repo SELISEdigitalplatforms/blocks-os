@@ -1,7 +1,7 @@
-import { FilterControls } from "@/components/filter-toolbar"
-import { Button } from "@/components/ui-kits/button/button"
-import { Card, CardContent } from "@/components/ui-kits/card/card"
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox"
+import { FilterControls } from "@/components/filter-toolbar";
+import { Button } from "@/components/ui-kits/button/button";
+import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Dialog,
   DialogClose,
@@ -11,24 +11,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui-kits/dialog/dialog"
-import { Pagination } from "@/components/ui-kits/pagination/pagination"
-import { useProjectStore } from "@seliseblocks/blocks-kit"
-import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles"
-import type { IRole } from "@blocks-idp/iam/models/role"
-import { CirclePlus } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+} from "@/components/ui-kits/dialog/dialog";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import type { IRole } from "@blocks-idp/iam/models/role";
+import { CirclePlus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 type AssignSignupRolesDialogProps = {
-  roles: IRole[]
-  onAssign: (roles: IRole[]) => void
-}
+  roles: IRole[];
+  onAssign: (roles: IRole[]) => void;
+};
 
 export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDialogProps) => {
-  const tenantId = useProjectStore().selectedProject?.tenantId || ""
-  const [open, setOpen] = useState(false)
-  const [selectedRoles, setSelectedRoles] = useState<IRole[]>([])
-  const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" })
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const [open, setOpen] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
+  const [filter, setFilter] = useState({ page: 0, pageSize: 10, search: "" });
 
   const { data, isLoading } = useGetRoles(
     {
@@ -38,51 +38,51 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
       filter: { search: filter.search },
     },
     { enabled: open && Boolean(tenantId) },
-  )
+  );
 
   useEffect(() => {
     if (open) {
-      setSelectedRoles(roles)
+      setSelectedRoles(roles);
     }
-  }, [open, roles])
+  }, [open, roles]);
 
   const selectedRoleSlugs = useMemo(
     () => new Set(selectedRoles.map((role) => role.slug)),
     [selectedRoles],
-  )
+  );
 
   const handleCheckedChange = (checked: boolean, role: IRole) => {
     if (checked) {
       setSelectedRoles((current) =>
         current.some((item) => item.slug === role.slug) ? current : [...current, role],
-      )
-      return
+      );
+      return;
     }
 
-    setSelectedRoles((current) => current.filter((item) => item.slug !== role.slug))
-  }
+    setSelectedRoles((current) => current.filter((item) => item.slug !== role.slug));
+  };
 
   const handlePageChange = (page: number) => {
-    setFilter((current) => ({ ...current, page }))
-  }
+    setFilter((current) => ({ ...current, page }));
+  };
 
   const resetDialog = () => {
-    setSelectedRoles([])
-    setFilter({ page: 0, pageSize: 10, search: "" })
-  }
+    setSelectedRoles([]);
+    setFilter({ page: 0, pageSize: 10, search: "" });
+  };
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      resetDialog()
+      resetDialog();
     }
-    setOpen(nextOpen)
-  }
+    setOpen(nextOpen);
+  };
 
   const handleSet = () => {
-    onAssign(selectedRoles)
-    resetDialog()
-    setOpen(false)
-  }
+    onAssign(selectedRoles);
+    resetDialog();
+    setOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -165,5 +165,5 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};

@@ -1,39 +1,31 @@
-import { useMemo } from "react"
-import { Label } from "@/components/ui-kits/label/label"
-import { toPermissionStubs } from "@blocks-idp/authentication/components/identity-provider/identity-provider-form.util"
-import { SSOPermissionsList } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-permissions-list"
-import { IPermission } from "@blocks-idp/iam/models/permission"
-import { AddClientCredentialPermission } from "./add-client-credential-permission"
+import { useMemo } from "react";
+import { Label } from "@/components/ui-kits/label/label";
+import { toPermissionStubs } from "@blocks-idp/authentication/components/identity-provider/identity-provider-form.util";
+import { SSOPermissionsList } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-permissions-list";
+import { IPermission } from "@blocks-idp/iam/models/permission";
+import { AddClientCredentialPermission } from "./add-client-credential-permission";
 
 type ClientCredentialPermissionsSectionProps = {
-  selectedResources: string[]
-  onChange: (resources: string[]) => void
-  maxPermissions?: number
-}
+  selectedResources: string[];
+  onChange: (resources: string[]) => void;
+  maxPermissions?: number;
+};
 
 export const ClientCredentialPermissionsSection = ({
   selectedResources,
   onChange,
   maxPermissions = 10,
 }: ClientCredentialPermissionsSectionProps) => {
-  const permissions = useMemo(
-    () => toPermissionStubs(selectedResources),
-    [selectedResources],
-  )
+  const permissions = useMemo(() => toPermissionStubs(selectedResources), [selectedResources]);
 
   const handleAdd = (newResources: string[]) => {
-    const merged = [...new Set([...selectedResources, ...newResources])].slice(
-      0,
-      maxPermissions,
-    )
-    onChange(merged)
-  }
+    const merged = [...new Set([...selectedResources, ...newResources])].slice(0, maxPermissions);
+    onChange(merged);
+  };
 
   const handleRemove = (permission: IPermission) => {
-    onChange(
-      selectedResources.filter((resource) => resource !== permission.resource),
-    )
-  }
+    onChange(selectedResources.filter((resource) => resource !== permission.resource));
+  };
 
   return (
     <div className="space-y-3">
@@ -48,8 +40,7 @@ export const ClientCredentialPermissionsSection = ({
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Select permissions to include in the access token granted by this
-            client.
+            Select permissions to include in the access token granted by this client.
           </p>
         </div>
         <div className="shrink-0">
@@ -68,7 +59,8 @@ export const ClientCredentialPermissionsSection = ({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg">
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -77,27 +69,21 @@ export const ClientCredentialPermissionsSection = ({
               />
             </svg>
           </div>
-          <p className="mt-3 text-sm font-medium text-foreground">
-            No permissions added
-          </p>
+          <p className="mt-3 text-sm font-medium text-foreground">No permissions added</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Add permissions for this client credential
           </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border">
-          <SSOPermissionsList
-            permissions={permissions}
-            onDelete={handleRemove}
-          />
+          <SSOPermissionsList permissions={permissions} onDelete={handleRemove} />
         </div>
       )}
       {selectedResources.length >= maxPermissions && (
         <p className="text-xs text-muted-foreground">
-          Maximum of {maxPermissions} permissions reached. Remove one to add
-          another.
+          Maximum of {maxPermissions} permissions reached. Remove one to add another.
         </p>
       )}
     </div>
-  )
-}
+  );
+};
