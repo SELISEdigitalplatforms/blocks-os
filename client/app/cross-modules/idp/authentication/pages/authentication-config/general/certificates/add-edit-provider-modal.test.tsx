@@ -145,4 +145,187 @@ describe("AddEditProviderModal", () => {
       expect(showErrorToast).toHaveBeenCalledWith({ errors: "Please upload a certificate file" }),
     );
   });
+
+  it("shows an error toast when the save request throws", async () => {
+    savePublicCertificates.mockRejectedValue(new Error("network"));
+    const user = userEvent.setup();
+    render(<AddEditProviderModal />);
+    const dialog = await openDialog(user);
+    await user.type(dialog.getByPlaceholderText(/Enter JWKS/), "https://issuer/jwks");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
+  });
+
+  it("toggles the password field visibility for the Others provider", async () => {
+    const user = userEvent.setup();
+    render(<AddEditProviderModal />);
+    const dialog = await openDialog(user);
+    await user.click(dialog.getByRole("radio", { name: /Others/ }));
+    const password = dialog.getByLabelText("Password (Optional)") as HTMLInputElement;
+    expect(password.type).toBe("password");
+    // The eye toggle is the only ghost button next to the input.
+    const toggle = password.parentElement?.querySelector("button") as HTMLButtonElement;
+    await user.click(toggle);
+    expect(password.type).toBe("text");
+  });
+
+  describe("Others provider public-url save", () => {
+    const openOthers = async (user: ReturnType<typeof userEvent.setup>) => {
+      render(<AddEditProviderModal />);
+      const dialog = await openDialog(user);
+      await user.click(dialog.getByRole("radio", { name: /Others/ }));
+      return dialog;
+    };
+
+    it("stores the url as jwksUrl when it validates", async () => {
+      validateJwksUrl.mockResolvedValue({ isValid: true });
+      const user = userEvent.setup();
+      const dialog = await openOthers(user);
+      await user.type(dialog.getByPlaceholderText(/certificate url/i), "https://x/jwks");
+      await user.click(dialog.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(savePublicCertificates).toHaveBeenCalledWith(
+          expect.objectContaining({ jwksUrl: "https://x/jwks", publicCertificatePath: "" }),
+        ),
+      );
+    });
+
+    it("stores the url as a certificate path when validation reports invalid", async () => {
+      validateJwksUrl.mockResolvedValue({ isValid: false });
+      const user = userEvent.setup();
+      const dialog = await openOthers(user);
+      await user.type(dialog.getByPlaceholderText(/certificate url/i), "https://x/cert.pem");
+      await user.click(dialog.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(savePublicCertificates).toHaveBeenCalledWith(
+          expect.objectContaining({ jwksUrl: "", publicCertificatePath: "https://x/cert.pem" }),
+        ),
+      );
+    });
+
+    it("treats the url as a certificate path when validation throws", async () => {
+      validateJwksUrl.mockRejectedValue(new Error("boom"));
+      const user = userEvent.setup();
+      const dialog = await openOthers(user);
+      await user.type(dialog.getByPlaceholderText(/certificate url/i), "https://x/broken");
+      await user.click(dialog.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(savePublicCertificates).toHaveBeenCalledWith(
+          expect.objectContaining({ jwksUrl: "", publicCertificatePath: "https://x/broken" }),
+        ),
+      );
+    });
+  });
+
+  describe("Others provider upload-file save", () => {
+    const pfxFile = () =>
+      new File(["cert"], "cert.pfx", { type: "application/x-pkcs12" });
+
+    const getFileInput = () => document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const openUpload = async (user: ReturnType<typeof userEvent.setup>) => {
+      render(<AddEditProviderModal />);
+      const dialog = await openDialog(user);
+      await user.click(dialog.getByRole("radio", { name: /Others/ }));
+      await user.click(dialog.getByText("Upload file"));
+      // Uploading a file does not dirty react-hook-form, so type into a
+      // registered field to enable the Save button.
+      await user.type(dialog.getByPlaceholderText("Enter issuer"), "iss");
+      return dialog;
+    };
+
+    it("uploads the certificate and saves the returned download url", async () => {
+      uploadFileMutate.mockResolvedValue({ downloadUrl: "https://cdn/cert.pfx" });
+      const user = userEvent.setup();
+      const dialog = await openUpload(user);
+      await user.upload(getFileInput(), pfxFile());
+      expect(await dialog.findByText("cert.pfx")).toBeTruthy();
+      await user.click(dialog.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(uploadFileMutate).toHaveBeenCalledWith(
+          expect.objectContaining({ TenantId: "tenant-1" }),
+        ),
+      );
+      expect(savePublicCertificates).toHaveBeenCalledWith(
+        expect.objectContaining({ publicCertificatePath: "https://cdn/cert.pfx", jwksUrl: "" }),
+      );
+      expect(showSuccessToast).toHaveBeenCalled();
+    });
+
+    it("errors when the upload returns no download url", async () => {
+      uploadFileMutate.mockResolvedValue({});
+      const user = userEvent.setup();
+      const dialog = await openUpload(user);
+      await user.upload(getFileInput(), pfxFile());
+      expect(await dialog.findByText("cert.pfx")).toBeTruthy();
+      await user.click(dialog.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(showErrorToast).toHaveBeenCalledWith({ errors: "Failed to get upload URL" }),
+      );
+      expect(savePublicCertificates).not.toHaveBeenCalled();
+    });
+
+    it("errors when the upload request throws", async () => {
+      uploadFileMutate.mockRejectedValue(new Error("upload failed"));
+      const user = userEvent.setup();
+      const dialog = await openUpload(user);
+      await user.upload(getFileInput(), pfxFile());
+      expect(await dialog.findByText("cert.pfx")).toBeTruthy();
+      await user.click(dialog.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
+    });
+
+    it("rejects a file whose extension is not a certificate", async () => {
+      const user = userEvent.setup();
+      const dialog = await openUpload(user);
+      // MIME matches the accept map so dropzone keeps it, but the name fails the
+      // explicit extension guard in handleSubmit.
+      const badFile = new File(["x"], "cert.txt", { type: "application/x-pkcs12" });
+      await user.upload(getFileInput(), badFile);
+      expect(await dialog.findByText("cert.txt")).toBeTruthy();
+      await user.click(dialog.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(showErrorToast).toHaveBeenCalledWith({
+          errors: "Only certificate files are allowed (.crt, .pfx, .der, .p12)",
+        }),
+      );
+    });
+  });
+
+  describe("controlled edit mode", () => {
+    const existing = {
+      jwksUrl: "https://issuer/jwks",
+      publicCertificatePath: "",
+      issuer: "my-issuer",
+      audiences: ["aud-1", "aud-2"],
+      providerName: "Others",
+    } as unknown as Parameters<typeof AddEditProviderModal>[0]["existingData"];
+
+    it("prefills fields from existingData when opened externally", async () => {
+      const onOpenChange = vi.fn();
+      render(<AddEditProviderModal existingData={existing} open onOpenChange={onOpenChange} />);
+      const dialog = within(await screen.findByRole("dialog"));
+      expect(dialog.getByText("Edit provider")).toBeTruthy();
+      expect((dialog.getByLabelText("Issuer (Optional)") as HTMLInputElement).value).toBe(
+        "my-issuer",
+      );
+      expect(
+        (
+          dialog.getByPlaceholderText(
+            "Enter audience (comma-separated for multiple)",
+          ) as HTMLInputElement
+        ).value,
+      ).toBe("aud-1, aud-2");
+    });
+
+    it("resets the form and notifies the parent when closed via cancel", async () => {
+      const onOpenChange = vi.fn();
+      const user = userEvent.setup();
+      render(<AddEditProviderModal existingData={existing} open onOpenChange={onOpenChange} />);
+      await screen.findByRole("dialog");
+      // Closing via Escape runs handleOpenChange, which resets the form.
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    });
+  });
 });
