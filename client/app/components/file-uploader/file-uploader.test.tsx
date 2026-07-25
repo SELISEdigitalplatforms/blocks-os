@@ -1,6 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { DropzoneOptions } from "react-dropzone";
+
+type CapturedDropzoneOptions = {
+  onDrop: (accepted: File[] | null, rejected: unknown[]) => void;
+  onDropAccepted?: () => void;
+};
 
 vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false,
@@ -28,7 +34,7 @@ vi.stubGlobal(
 // asserted.
 const dz = vi.hoisted(() => {
   return {
-    captured: null as null | Record<string, any>,
+    captured: null as null | CapturedDropzoneOptions,
     ret: {
       getRootProps: () => ({ "data-testid": "dz-root" }),
       getInputProps: () => ({ "data-testid": "dz-input" }),
@@ -40,7 +46,7 @@ const dz = vi.hoisted(() => {
 });
 
 vi.mock("react-dropzone", () => ({
-  useDropzone: (opts: Record<string, any>) => {
+  useDropzone: (opts: CapturedDropzoneOptions) => {
     dz.captured = opts;
     return dz.ret;
   },
@@ -65,7 +71,7 @@ import { showErrorToast } from "@/hooks/use-toast";
 const makeFile = (name: string) => new File(["content"], name, { type: "image/png" });
 
 type UploaderOverrides = {
-  dropzoneOptions?: Record<string, any>;
+  dropzoneOptions?: DropzoneOptions;
   orientation?: "horizontal" | "vertical";
   dir?: "rtl" | "ltr";
   reSelect?: boolean;

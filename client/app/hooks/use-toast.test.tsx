@@ -9,13 +9,14 @@ import {
   showErrorToast,
 } from "./use-toast";
 
-type State = { toasts: any[] };
+type State = Parameters<typeof reducer>[0];
+type ToastItem = State["toasts"][number];
 
 describe("use-toast reducer", () => {
   it("adds a toast and enforces the toast limit of one", () => {
     let state: State = { toasts: [] };
-    state = reducer(state, { type: "ADD_TOAST", toast: { id: "1", open: true } as any });
-    state = reducer(state, { type: "ADD_TOAST", toast: { id: "2", open: true } as any });
+    state = reducer(state, { type: "ADD_TOAST", toast: { id: "1", open: true } as unknown as ToastItem });
+    state = reducer(state, { type: "ADD_TOAST", toast: { id: "2", open: true } as unknown as ToastItem });
     expect(state.toasts).toHaveLength(1);
     expect(state.toasts[0].id).toBe("2");
   });
@@ -72,7 +73,7 @@ describe("useToast hook", () => {
     act(() => {
       handle = result.current.toast({ title: "First" });
     });
-    act(() => handle!.update({ id: handle!.id, title: "Second" } as any));
+    act(() => handle!.update({ id: handle!.id, title: "Second" } as unknown as ToastItem));
     await waitFor(() => expect(result.current.toasts[0]?.title).toBe("Second"));
     act(() => handle!.dismiss());
     await waitFor(() => expect(result.current.toasts[0]?.open).toBe(false));

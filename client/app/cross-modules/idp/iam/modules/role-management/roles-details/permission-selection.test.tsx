@@ -57,7 +57,7 @@ const groupPerms = [
     resourceGroup: "Users",
     dependentPermissions: [],
   },
-] as any[];
+];
 
 const resourceGroups = [{ resourceGroup: "Users", count: 4 }];
 
@@ -96,7 +96,7 @@ describe("PermissionSelection", () => {
   });
 
   it("selecting an FE action selects its dependents and reports them via handleSave", async () => {
-    const ref = createRef<{ handleSave: () => { addedPermissions: any[]; removedPermissions: any[] } }>();
+    const ref = createRef<{ handleSave: () => { addedPermissions: { itemId: string }[]; removedPermissions: { itemId: string }[] } }>();
     const user = userEvent.setup();
     renderComponent(ref);
     await user.click(await screen.findByText("Users"));
@@ -104,7 +104,7 @@ describe("PermissionSelection", () => {
 
     await user.click(screen.getByLabelText("Manage Users"));
 
-    let result: { addedPermissions: any[]; removedPermissions: any[] };
+    let result: { addedPermissions: { itemId: string }[]; removedPermissions: { itemId: string }[] };
     act(() => {
       result = ref.current!.handleSave();
     });
@@ -113,7 +113,7 @@ describe("PermissionSelection", () => {
   });
 
   it("toggles the entire group with the group checkbox", async () => {
-    const ref = createRef<{ handleSave: () => { addedPermissions: any[] } }>();
+    const ref = createRef<{ handleSave: () => { addedPermissions: { itemId: string }[] } }>();
     const user = userEvent.setup();
     renderComponent(ref);
     const { container } = { container: document.body };
@@ -122,7 +122,7 @@ describe("PermissionSelection", () => {
 
     await user.click(container.querySelector("#group-Users") as HTMLElement);
 
-    let result: { addedPermissions: any[] };
+    let result: { addedPermissions: { itemId: string }[] };
     act(() => {
       result = ref.current!.handleSave();
     });
@@ -132,7 +132,7 @@ describe("PermissionSelection", () => {
   it("reports removed permissions when a pre-selected permission is unchecked", async () => {
     // role already grants ind1, so it starts selected
     getPermissions.mockResolvedValue({ data: [groupPerms[3]] });
-    const ref = createRef<{ handleSave: () => { removedPermissions: any[] } }>();
+    const ref = createRef<{ handleSave: () => { removedPermissions: { itemId: string }[] } }>();
     const user = userEvent.setup();
     renderComponent(ref);
     await user.click(await screen.findByText("Users"));
@@ -140,7 +140,7 @@ describe("PermissionSelection", () => {
 
     await user.click(screen.getByLabelText("Delete Users"));
 
-    let result: { removedPermissions: any[] };
+    let result: { removedPermissions: { itemId: string }[] };
     act(() => {
       result = ref.current!.handleSave();
     });

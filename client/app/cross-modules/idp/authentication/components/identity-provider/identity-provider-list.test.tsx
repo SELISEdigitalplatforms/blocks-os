@@ -35,6 +35,7 @@ vi.mock("./identity-provider-form-dialog", () => ({
 }));
 
 import { IdentityProviderList } from "./identity-provider-list";
+import type { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 
 const provider = {
   itemId: "idp-1",
@@ -49,7 +50,7 @@ const provider = {
   createdDate: "2024-03-01T00:00:00Z",
   initialRoles: ["user"],
   initialPermissions: [],
-} as any;
+} as unknown as IdentityProvider;
 
 describe("IdentityProviderList", () => {
   beforeEach(() => {
