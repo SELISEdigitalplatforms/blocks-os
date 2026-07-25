@@ -35,6 +35,7 @@ vi.mock("./client-credential-permissions-section", () => ({
 }));
 
 import { CreateClientCredential } from "./create-client-credential";
+import type { IClientCredentialsConfig } from "@blocks-idp/authentication/models/auth.oidc.model";
 
 describe("CreateClientCredential", () => {
   beforeEach(() => {
@@ -87,7 +88,7 @@ describe("CreateClientCredential", () => {
             isActive: false,
             roles: ["viewer"],
             permissions: [],
-          } as any
+          } as unknown as IClientCredentialsConfig
         }
       />,
     );

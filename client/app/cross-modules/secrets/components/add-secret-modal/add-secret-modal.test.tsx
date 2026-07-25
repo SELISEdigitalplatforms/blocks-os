@@ -12,6 +12,7 @@ vi.mock("../../hooks/use-secrets", () => ({
 }));
 
 import { AddSecretModal } from "./add-secret-modal";
+import type { SecretItem } from "../../constants/secret-key.enum";
 
 describe("AddSecretModal", () => {
   beforeEach(() => {
@@ -77,7 +78,7 @@ describe("AddSecretModal", () => {
         editItem={{
           itemId: "secret-1",
           keyValuePairs: { secretName: "api-keys", token: "abc" },
-        } as any}
+        } as unknown as SecretItem}
         open
         onOpenChange={onOpenChange}
         hideTrigger

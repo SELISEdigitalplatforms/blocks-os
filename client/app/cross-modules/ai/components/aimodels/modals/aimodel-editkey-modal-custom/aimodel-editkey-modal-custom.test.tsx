@@ -29,6 +29,7 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 import { CustomModelEditKeyModal } from "./aimodel-editkey-modal-custom";
+import type { IModelInfo } from "@blocks-ai/types/aimodel.service.type";
 
 const model = {
   _id: "model-1",
@@ -41,7 +42,7 @@ const model = {
   IsActive: true,
   CustomParameters: { DefaultTemp: 0.5, MaxTokens: 2048 },
   CustomHeaders: { "X-Org": "acme" },
-} as any;
+} as unknown as IModelInfo;
 
 const renderModal = (props = {}) =>
   render(

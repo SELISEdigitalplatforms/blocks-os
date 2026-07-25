@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import React from "react";
 
 const h = vi.hoisted(() => ({
   data: undefined as unknown,
@@ -26,7 +27,6 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 const { makeFormMock } = vi.hoisted(() => {
-  const React = require("react");
   return {
     makeFormMock: (label: string) => ({
       [`SSOProviderConfig${label}Form`]: (props: { save: (d: unknown) => void }) =>
