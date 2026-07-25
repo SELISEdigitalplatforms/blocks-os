@@ -174,7 +174,7 @@ export function AddSecretModal({
 
                 {fields.length === 0 && (
                   <p className="py-4 text-center text-sm text-muted-foreground">
-                    No properties yet. Click "Add Property" to add key-value pairs.
+                    No properties yet. Click &quot;Add Property&quot; to add key-value pairs.
                   </p>
                 )}
 

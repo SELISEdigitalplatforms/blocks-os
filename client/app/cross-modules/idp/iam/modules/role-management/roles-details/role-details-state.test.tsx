@@ -40,13 +40,15 @@ const permissions = [
 
 const makeWrapper = () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
-  return ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>
       <RoleDetailsProvider id="r1" projectKey="t1">
         {children}
       </RoleDetailsProvider>
     </QueryClientProvider>
   );
+  Wrapper.displayName = "RoleDetailsTestWrapper";
+  return Wrapper;
 };
 
 const renderStore = () =>

@@ -186,8 +186,8 @@ const SecretRow = ({
           <DialogHeader>
             <DialogTitle>Delete Secret</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "<strong>{secretName}</strong>"? This action cannot be
-              undone.
+              Are you sure you want to delete &quot;<strong>{secretName}</strong>&quot;? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">

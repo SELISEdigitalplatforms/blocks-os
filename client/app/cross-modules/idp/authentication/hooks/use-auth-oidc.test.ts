@@ -42,10 +42,11 @@ const makeClient = () =>
   });
 
 const WrapperWith = (client: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client }, children);
+  Wrapper.displayName = "WrapperWith";
+  return Wrapper;
 };
-WrapperWith.displayName = "WrapperWith";
 
 describe("use-auth-oidc hooks", () => {
   beforeEach(() => {
