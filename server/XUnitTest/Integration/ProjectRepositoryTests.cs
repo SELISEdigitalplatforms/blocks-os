@@ -445,5 +445,72 @@ namespace XUnitTest.Integration
             grouped.Should().Contain(g => g.TenantGroupId == group && !g.IsShared);
             grouped.First(g => g.TenantGroupId == group && !g.IsShared).Projects.Should().HaveCount(2);
         }
+
+        [Fact]
+        public async Task GetAllByLastModifiedDateAsync_IncludesSharedProjectsFromOtherOwners()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var user = UserOf(tenant);
+            var group = "shared-grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            // A project owned by someone else, that this user has a confirmed
+            // membership in, so it surfaces as a shared (not self) project.
+            await InsertProjectsAsync(new Project
+            {
+                ItemId = "sp-" + tenant,
+                CreatedBy = "another-owner",
+                IsDisabled = false,
+                TenantGroupId = group,
+                TenantId = "shared-tid-" + tenant
+            });
+            await repo.InsertPeopleAsync(new ProjectPeople
+            {
+                ItemId = "spp-" + tenant,
+                UserId = user,
+                TenantId = "shared-tid-" + tenant,
+                IsInvitationConfirmed = true
+            });
+
+            var grouped = await repo.GetAllByLastModifiedDateAsync(new GetProjectsRequest
+            {
+                TenantGroupId = group,
+                Page = 0,
+                PageSize = 10
+            });
+
+            grouped.Should().Contain(g => g.TenantGroupId == group && g.IsShared);
+        }
+
+        [Fact]
+        public async Task GetSharedProjectsAsync_ReturnsProjectsSharedWithCurrentUser()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var user = UserOf(tenant);
+            var group = "gs-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            await InsertProjectsAsync(new Project
+            {
+                ItemId = "gsp-" + tenant,
+                CreatedBy = "owner-else",
+                IsDisabled = false,
+                TenantGroupId = group,
+                TenantId = "gs-tid-" + tenant
+            });
+            await repo.InsertPeopleAsync(new ProjectPeople
+            {
+                ItemId = "gspp-" + tenant,
+                UserId = user,
+                TenantId = "gs-tid-" + tenant,
+                IsInvitationConfirmed = true
+            });
+
+            var shared = await repo.GetSharedProjectsAsync(group);
+
+            shared.Should().Contain(p => p.TenantId == "gs-tid-" + tenant);
+        }
     }
 }
