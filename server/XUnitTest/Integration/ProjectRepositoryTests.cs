@@ -302,6 +302,26 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task UpdateTenantAssetAsync_InsertsAsset()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "uta-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            await repo.UpdateTenantAssetAsync(new TenantAsset
+            {
+                ItemId = "asset-" + tenant,
+                TenantGroupId = group,
+                Resources = new List<Resource> { new() { ResourceId = "r1", Name = "Repo" } }
+            });
+
+            var stored = await _fixture.Collection<TenantAsset>("TenantAssets")
+                .Find(Builders<TenantAsset>.Filter.Eq(x => x.TenantGroupId, group)).ToListAsync();
+            stored.Should().ContainSingle();
+        }
+
+        [Fact]
         public async Task SaveTenantAssetAsync_UpsertsByGroup()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();
