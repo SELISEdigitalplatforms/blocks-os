@@ -17,7 +17,7 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import type { IRole } from "@blocks-idp/iam/models/role";
 import { CirclePlus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type AssignSignupRolesDialogProps = {
   roles: IRole[];
@@ -40,11 +40,15 @@ export const AssignSignupRolesDialog = ({ roles, onAssign }: AssignSignupRolesDi
     { enabled: open && Boolean(tenantId) },
   );
 
-  useEffect(() => {
+  const [prevSync, setPrevSync] = useState<{ open: boolean; roles: typeof roles } | undefined>(
+    undefined,
+  );
+  if (!prevSync || prevSync.open !== open || prevSync.roles !== roles) {
+    setPrevSync({ open, roles });
     if (open) {
       setSelectedRoles(roles);
     }
-  }, [open, roles]);
+  }
 
   const selectedRoleSlugs = useMemo(
     () => new Set(selectedRoles.map((role) => role.slug)),

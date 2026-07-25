@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ArrowLeft, Pencil, Send } from "lucide-react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
@@ -44,12 +44,15 @@ export function EmailCommunicationDetails({
   const sendTestEmailModalOpen = () => {
     setIsSendTestEmailModalOpen(true);
   };
-  useEffect(() => {
+  const [prevSync, setPrevSync] = useState<{ id: typeof id; data: typeof data } | undefined>(
+    undefined,
+  );
+  if (!prevSync || prevSync.id !== id || prevSync.data !== data) {
+    setPrevSync({ id, data });
     if (id) {
-      const email = data;
-      setEmailDetails(email || null);
+      setEmailDetails(data || null);
     }
-  }, [id, data]);
+  }
   if (!emailDetails || isLoading || isFetching || isConfigsLoading || isConfigsFetching) {
     return <EmailTemplateDetailsSkeleton />;
   }

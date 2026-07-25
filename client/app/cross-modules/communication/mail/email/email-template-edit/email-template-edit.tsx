@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
 // import BeePlugin from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useNavigate } from "react-router-dom";
@@ -26,12 +26,15 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   });
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  useEffect(() => {
+  const [prevSync, setPrevSync] = useState<{ id: typeof id; data: typeof data } | undefined>(
+    undefined,
+  );
+  if (!prevSync || prevSync.id !== id || prevSync.data !== data) {
+    setPrevSync({ id, data });
     if (id) {
-      const email = data;
-      setEmailDetails(email || null);
+      setEmailDetails(data || null);
     }
-  }, [id, data]);
+  }
   if (!emailDetails || isLoading || isFetching) {
     return (
       <div>
