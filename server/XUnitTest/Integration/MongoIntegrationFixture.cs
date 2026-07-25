@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using Blocks.Genesis;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -40,9 +44,16 @@ public sealed class MongoIntegrationFixture : IDisposable
                 exception);
         }
 
+        // Short unique tag for this run, used to name any derived databases so
+        // they stay under MongoDB's 63 character database name limit.
+        var runTag = Guid.NewGuid().ToString("N")[..10];
+
         Database = Client.GetDatabase(DatabaseName);
-        DbContextProvider = new SingleDatabaseContextProvider(Database);
+        _provider = new SingleDatabaseContextProvider(Client, DatabaseName, Database, runTag);
+        DbContextProvider = _provider;
     }
+
+    private readonly SingleDatabaseContextProvider _provider;
 
     public string DatabaseName { get; }
 
@@ -63,23 +74,67 @@ public sealed class MongoIntegrationFixture : IDisposable
     /// <summary>Generates a fresh tenant id so each test is isolated.</summary>
     public static string NewTenantId() => Guid.NewGuid().ToString("N");
 
-    public void Dispose() => Client.DropDatabase(DatabaseName);
+    public void Dispose()
+    {
+        // Drop the primary throwaway db plus every derived db the provider
+        // handed out during the run. Only databases this run created are touched.
+        Client.DropDatabase(DatabaseName);
+        foreach (var name in _provider.DerivedDatabaseNames)
+        {
+            Client.DropDatabase(name);
+        }
+    }
 
     private sealed class SingleDatabaseContextProvider : IDbContextProvider
     {
+        private readonly IMongoClient _client;
+        private readonly string _mainName;
         private readonly IMongoDatabase _database;
+        private readonly string _runTag;
+        private readonly ConcurrentDictionary<string, string> _derived = new();
 
-        public SingleDatabaseContextProvider(IMongoDatabase database) =>
+        public SingleDatabaseContextProvider(IMongoClient client, string mainName, IMongoDatabase database, string runTag)
+        {
+            _client = client;
+            _mainName = mainName;
             _database = database;
+            _runTag = runTag;
+        }
+
+        public IEnumerable<string> DerivedDatabaseNames => _derived.Values;
 
         public IMongoDatabase GetDatabase(string tenantId) => _database;
 
         public IMongoDatabase GetDatabase() => _database;
 
+        // The primary throwaway db stands in for the tenant/root databases the
+        // repositories ask for by name. Any other named database (for example a
+        // config-copy source or a per-project db) resolves to a distinct db,
+        // uniquely named for this run, so cross-database logic is exercised for
+        // real; all of them are tracked and dropped on Dispose.
         public IMongoDatabase GetDatabase(
             string connectionString,
             string databaseName,
-            bool isCacheRefreshed = false) => _database;
+            bool isCacheRefreshed = false)
+        {
+            if (databaseName == _mainName || databaseName == "BlocksRootDb")
+            {
+                return _database;
+            }
+
+            var derived = _derived.GetOrAdd(databaseName,
+                key => "os_it_" + _runTag + "_" + Sanitize(key));
+            return _client.GetDatabase(derived);
+        }
+
+        private static string Sanitize(string databaseName)
+        {
+            var chars = databaseName
+                .Select(c => char.IsLetterOrDigit(c) ? c : '_')
+                .Take(40)
+                .ToArray();
+            return new string(chars);
+        }
 
         public IMongoCollection<T> GetCollection<T>(string collectionName) =>
             _database.GetCollection<T>(collectionName);
