@@ -100,6 +100,37 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task GetProjectStatusAsync_UnfinishedTracer_ReturnsItsSuccessFlag()
+        {
+            _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1"))
+                 .ReturnsAsync(new ProjectStatusTracer { ProjectId = "p1", IsProjectCreationSuccess = true });
+
+            (await Service().GetProjectStatusAsync("p1")).Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task GetProjectStatusAsync_NoTracerButTenantExists_ReturnsFalse()
+        {
+            _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1")).ReturnsAsync((ProjectStatusTracer?)null);
+            _repo.Setup(r => r.GetByIdAsync("p1")).ReturnsAsync(new Tenant
+            {
+                DbConnectionString = "x",
+                JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "p" }
+            });
+
+            (await Service().GetProjectStatusAsync("p1")).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetProjectStatusAsync_NoTracerNoTenant_ReturnsTrue()
+        {
+            _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1")).ReturnsAsync((ProjectStatusTracer?)null);
+            _repo.Setup(r => r.GetByIdAsync("p1")).ReturnsAsync((Tenant?)null);
+
+            (await Service().GetProjectStatusAsync("p1")).Should().BeTrue();
+        }
+
+        [Fact]
         public async Task GetAllAsync_DelegatesToRepository()
         {
             var expected = new List<GroupedProjectsDto> { new() { TenantGroupId = "g1" } };
