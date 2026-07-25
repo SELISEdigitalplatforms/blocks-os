@@ -111,12 +111,32 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task RestoreProjectAsync_SendsMessageAndReturnsSuccess()
+        public async Task RestoreProjectAsync_ConfiguresProjectAndMarksSuccess()
         {
+            using var _ = new BlocksTestContext();
+            SetupCertificatePipeline();
+            _repo.Setup(r => r.GetByIdAsync("p1")).ReturnsAsync(NewTenantForConfigure());
+            _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1")).ReturnsAsync((ProjectStatusTracer?)null);
+
             var response = await Service().RestoreProjectAsync(new RestoreProjectRequest { ItemId = "p1" });
 
             response.IsSuccess.Should().BeTrue();
-            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<RestoreProjectRequest>>()), Times.Once);
+            _repo.Verify(r => r.SaveStatusTracerAsync(It.Is<ProjectStatusTracer>(t => t.IsProjectCreationSuccess)), Times.Once);
+        }
+
+        [Fact]
+        public async Task RestoreProjectAsync_WithExistingTracer_ReusesItAndMarksSuccess()
+        {
+            using var _ = new BlocksTestContext();
+            SetupCertificatePipeline();
+            var existing = new ProjectStatusTracer { ProjectId = "p1", InsertedIntoProjectPeople = true };
+            _repo.Setup(r => r.GetByIdAsync("p1")).ReturnsAsync(NewTenantForConfigure());
+            _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1")).ReturnsAsync(existing);
+
+            var response = await Service().RestoreProjectAsync(new RestoreProjectRequest { ItemId = "p1" });
+
+            response.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
         }
 
         [Fact]
