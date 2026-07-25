@@ -95,6 +95,25 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task ConfigureDomainAsync_UnverifiableDomain_ReturnsVerificationError()
+        {
+            using var _ = new BlocksTestContext(tenantId: "t1");
+            // No tenant/application on record, so provisioning is not skipped and
+            // the flow reaches DNS verification. A reserved .invalid host never
+            // resolves (and yields the same failure when DNS is unreachable), so
+            // verification deterministically fails before any SSH/nginx step.
+            _tenants.Setup(t => t.GetTenantByID(It.IsAny<string>())).Returns((Tenant?)null);
+
+            var response = await Service().ConfigureDomainAsync(new ConfigureDomainRequest
+            {
+                CookieDomain = "console.unresolvable-" + System.Guid.NewGuid().ToString("N") + ".invalid"
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("domain_verification_failed");
+        }
+
+        [Fact]
         public async Task DisableDomainBindingAsync_InvalidDomain_ReturnsFalse()
         {
             var (success, message) = await Service().DisableDomainBindingAsync(new DisableDomainBindingRequest
