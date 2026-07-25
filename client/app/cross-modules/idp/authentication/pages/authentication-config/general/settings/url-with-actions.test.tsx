@@ -65,4 +65,46 @@ describe("UrlWithActions", () => {
       expect(screen.getByLabelText("Copied")).toBeTruthy();
     });
   });
+
+  it("falls back to execCommand when not in a secure context", async () => {
+    Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
+    const execCommand = vi.fn();
+    Object.defineProperty(document, "execCommand", { value: execCommand, configurable: true });
+    const user = userEvent.setup();
+    render(<UrlWithActions url="https://certs.example.com/public.pem" />);
+    await user.click(screen.getByLabelText("Copy certificate URL"));
+    await waitFor(() => expect(execCommand).toHaveBeenCalledWith("copy"));
+  });
+
+  it("downloads the certificate through a temporary blob url", async () => {
+    const blob = new Blob(["data"]);
+    const fetchMock = vi.fn().mockResolvedValue({ blob: () => Promise.resolve(blob) });
+    vi.stubGlobal("fetch", fetchMock);
+    const createObjectURL = vi.fn().mockReturnValue("blob:1");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<UrlWithActions url="https://certs.example.com/public.pem" />);
+    await user.click(screen.getByLabelText("Download certificate"));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("https://certs.example.com/public.pem"),
+    );
+    expect(clickSpy).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:1");
+    clickSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it("logs an error when the download request fails", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
+    vi.stubGlobal("fetch", fetchMock);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<UrlWithActions url="https://certs.example.com/public.pem" />);
+    await user.click(screen.getByLabelText("Download certificate"));
+    await waitFor(() => expect(errorSpy).toHaveBeenCalled());
+    errorSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
 });
