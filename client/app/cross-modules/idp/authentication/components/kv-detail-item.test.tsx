@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -53,5 +53,41 @@ describe("KVDetailItem", () => {
     expect(screen.getByText("super-secret-value")).toBeTruthy();
     // Toggling exposes a hide affordance.
     expect(screen.getByLabelText("Hide value")).toBeTruthy();
+
+    // Toggling again re-masks the value.
+    await user.click(screen.getByLabelText("Hide value"));
+    expect(screen.queryByText("super-secret-value")).toBeNull();
+  });
+
+  it("renders a copyable value inside the hoverable copy control", () => {
+    render(<KVDetailItem label="Client ID" value="copy-me-123" copyable />);
+    expect(screen.getByText("copy-me-123")).toBeTruthy();
+  });
+
+  it("copies a sensitive value through the clipboard API", async () => {
+    const user = userEvent.setup();
+    // Override after setup so userEvent's own clipboard stub does not shadow ours.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+
+    render(<KVDetailItem label="Secret" value="clip-secret" sensitive />);
+    await user.click(screen.getByLabelText("Copy value"));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("clip-secret"));
+  });
+
+  it("falls back to execCommand when the clipboard API is unavailable", async () => {
+    const user = userEvent.setup();
+    // Remove the clipboard after setup to force the legacy execCommand path.
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
+    const exec = vi.fn();
+    (document as unknown as { execCommand: unknown }).execCommand = exec;
+
+    render(<KVDetailItem label="Secret" value="legacy-secret" sensitive />);
+    await user.click(screen.getByLabelText("Copy value"));
+
+    await waitFor(() => expect(exec).toHaveBeenCalledWith("copy"));
   });
 });
