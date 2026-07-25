@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useConfigureUserMFA } from "@blocks-idp/mfa/hooks/use-mfa-config";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { UserMFAMethodList } from "./user-mfa-methods-list";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { isErrorWithErrors } from "@/lib/error";
@@ -11,11 +11,14 @@ export const UserMFAConfigManage = () => {
   const [type, setType] = useState(0);
   const { isPending, mutateAsync } = useConfigureUserMFA({ id: userId, projectKey });
   const { data: userData, isLoading, isFetching } = useGetUserById({ id: userId, projectKey });
-  useEffect(() => {
-    if (userData && userData?.data.userMfaType) {
-      setType(userData?.data.userMfaType);
+  const mfaType = userData?.data.userMfaType;
+  const [prevMfaType, setPrevMfaType] = useState<typeof mfaType | undefined>(undefined);
+  if (prevMfaType !== mfaType) {
+    setPrevMfaType(mfaType);
+    if (userData && mfaType) {
+      setType(mfaType);
     }
-  }, [userData, userData?.data.userMfaType]);
+  }
   const onClickHandler = async () => {
     try {
       const res = await mutateAsync({
