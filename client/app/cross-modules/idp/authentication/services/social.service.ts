@@ -41,7 +41,7 @@ export class SSOService {
     return http.post(SSO_ENDPOINTS.UPDATE_STATUS, payload);
   }
 
-  saveBlocksSsoCredential(payload: any): Promise<ISaveSsoCredentialResponse> {
+  saveBlocksSsoCredential(payload: object): Promise<ISaveSsoCredentialResponse> {
     return http.post(AUTH_OIDC_ENDPOINTS.SAVE_OIDC_CLIENT, payload, undefined, {
       absoluteUrl: true,
     });

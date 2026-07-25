@@ -1,4 +1,4 @@
-import { FilterToolbar } from "@/components/filter-toolbar";
+import { FilterItem, FilterToolbar } from "@/components/filter-toolbar";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { MailStatus } from "@blocks-communication/mail/models/email";
 type EmailUsageFilter = {
@@ -41,7 +41,7 @@ export function EmailUsageFilterToolbar({ isInbound }: { isInbound: boolean }) {
     label: status,
     value: status,
   }));
-  const filters: any[] = [{ key: "search", type: "SearchInput", label: "" }];
+  const filters: FilterItem<EmailUsageFilter>[] = [{ key: "search", type: "SearchInput", label: "" }];
   if (!isInbound) {
     filters.push({
       key: "status",
