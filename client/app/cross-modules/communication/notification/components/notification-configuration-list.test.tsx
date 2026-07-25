@@ -38,6 +38,7 @@ vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
 import NotificationConfigurationList, {
   NotificationConfigurationListPage,
 } from "./notification-configuration-list";
+import type { INotificationConfigRow } from "../models/notification-config.model";
 
 const configurations = [
   {
@@ -54,7 +55,7 @@ const configurations = [
     notificationType: 2,
     enablePersistence: false,
   },
-] as any;
+] as unknown as INotificationConfigRow[];
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <NuqsTestingAdapter>{children}</NuqsTestingAdapter>

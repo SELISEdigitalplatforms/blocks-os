@@ -33,6 +33,7 @@ vi.mock("../remove-membership", () => ({
 }));
 
 import { EditMembership } from "./index";
+import type { IMembership } from "@blocks-idp/iam/models/user";
 
 const roles = [
   { slug: "admin", name: "Administrator" },
@@ -47,7 +48,7 @@ const permissions = [
 const membership = {
   roles: ["admin"],
   permissions: ["users:read"],
-} as any;
+} as unknown as IMembership;
 
 const baseProps = {
   open: true,

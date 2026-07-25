@@ -28,6 +28,7 @@ vi.mock(
 );
 
 import { AIModelsTable } from "./aimodel-table";
+import type { IModelInfo } from "@blocks-ai/types/aimodel.service.type";
 
 const models = [
   {
@@ -50,7 +51,7 @@ const models = [
     ApiKey: "key2",
     Status: "invalid",
   },
-] as any[];
+] as unknown as IModelInfo[];
 
 const findPlayButton = () =>
   Array.from(document.querySelectorAll("button")).find((b) => b.querySelector(".lucide-play"))!;

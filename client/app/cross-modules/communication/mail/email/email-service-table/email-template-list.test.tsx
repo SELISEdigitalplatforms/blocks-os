@@ -32,8 +32,9 @@ vi.mock("./template-filter-toolbar", () => ({
 }));
 
 import { EmailTemplateList } from "./email-template-list";
+import type { IEmailConfig, IEmailTemplate } from "@blocks-communication/mail/models/email";
 
-const emailConfigsData = [{ itemId: "cfg-1", name: "Primary SMTP" }] as any;
+const emailConfigsData = [{ itemId: "cfg-1", name: "Primary SMTP" }] as unknown as IEmailConfig[];
 
 const templates = [
   {
@@ -52,7 +53,7 @@ const templates = [
     lastUpdatedDate: "2024-05-02T10:00:00Z",
     generatedBy: "System",
   },
-] as any;
+] as unknown as IEmailTemplate[];
 
 const renderList = (overrides: Partial<React.ComponentProps<typeof EmailTemplateList>> = {}) => {
   const onRowClick = overrides.onRowClick ?? vi.fn();

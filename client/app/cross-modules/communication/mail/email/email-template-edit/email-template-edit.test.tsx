@@ -20,8 +20,8 @@ vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
   useSaveEmailTemplate: () => ({ saveEmailTemplate: h.saveEmailTemplate, isPending: h.isPending }),
 }));
 vi.mock("@/components/breadcrumb/breadcrumb", () => ({ default: () => <nav /> }));
-vi.mock("@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter", () => ({
-  default: React.forwardRef(
+vi.mock("@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter", () => {
+  const BeePluginStarterMock = React.forwardRef(
     (props: { onBeeSave: (d: { htmlFile: string; jsonFile: string }) => void }) => (
       <button
         data-testid="bee-save"
@@ -30,8 +30,10 @@ vi.mock("@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-sta
         bee save
       </button>
     ),
-  ),
-}));
+  );
+  BeePluginStarterMock.displayName = "BeePluginStarterMock";
+  return { default: BeePluginStarterMock };
+});
 
 import { EditEmailTemplate } from "./email-template-edit";
 

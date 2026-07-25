@@ -22,6 +22,7 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 import { ModelEditKeyModal } from "./aimodel-editkey-modal";
+import type { IModelInfo } from "@blocks-ai/types/aimodel.service.type";
 
 const modelOptions = [
   { model: "gpt-4o", goodName: "GPT-4o" },
@@ -40,7 +41,7 @@ const model = {
   IsActive: true,
   OpenAiOrganizationId: "org-1",
   OpenAiProjectId: "proj-1",
-} as any;
+} as unknown as IModelInfo;
 
 const renderModal = (props = {}) =>
   render(

@@ -34,11 +34,12 @@ vi.mock("../cname/dialog", () => ({
 }));
 
 import { DomainTable } from "./domain-table";
+import type { IDomain } from "@seliseblocks/blocks-kit/models";
 
 const domains = [
   { domain: "verified.com", isDomainVerified: true, cookieDomain: ".verified.com" },
   { domain: "pending.com", isDomainVerified: false, cookieDomain: ".pending.com" },
-] as any[];
+] as unknown as IDomain[];
 
 describe("DomainTable", () => {
   beforeEach(() => vi.clearAllMocks());
