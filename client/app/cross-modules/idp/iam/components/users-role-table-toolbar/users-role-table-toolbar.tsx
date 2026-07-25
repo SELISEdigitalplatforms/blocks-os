@@ -23,6 +23,36 @@ import useIsServiceBarOpenLocal from "@blocks-localization/hooks/use-is-service-
 interface UsersRoleTableToolbarProps<TData> {
   table: Table<TData>;
 }
+type UsersRoleFilterContentProps<TData> = {
+  table: Table<TData>;
+  dateRange: DateRange | undefined;
+  setDateRange: React.Dispatch<React.SetStateAction<DateRange | undefined>>;
+};
+function UsersRoleFilterContent<TData>({
+  table,
+  dateRange,
+  setDateRange,
+}: UsersRoleFilterContentProps<TData>) {
+  return (
+    <>
+      {table.getColumn("lastLogin") && (
+        <DateRangeFilter
+          column={table.getColumn("lastLogin")}
+          title="Date added"
+          date={dateRange}
+          onDateChange={setDateRange}
+        />
+      )}
+      {table.getColumn("lastLogin") && (
+        <DataTableFacetedFilter
+          column={table.getColumn("lastLogin")}
+          title="Last login"
+          options={translation}
+        />
+      )}
+    </>
+  );
+}
 export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarProps<TData>) {
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenLocal();
@@ -47,25 +77,6 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
     setDateRange(undefined);
     table.resetColumnFilters();
   }
-  const FilterContent = () => (
-    <>
-      {table.getColumn("lastLogin") && (
-        <DateRangeFilter
-          column={table.getColumn("lastLogin")}
-          title="Date added"
-          date={dateRange}
-          onDateChange={setDateRange}
-        />
-      )}
-      {table.getColumn("lastLogin") && (
-        <DataTableFacetedFilter
-          column={table.getColumn("lastLogin")}
-          title="Last login"
-          options={translation}
-        />
-      )}
-    </>
-  );
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
@@ -94,7 +105,7 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
               <SheetTitle className="mb-4">Filter</SheetTitle>
               <SheetDescription />
               <div className="flex flex-col space-y-4">
-                <FilterContent />
+                <UsersRoleFilterContent table={table} dateRange={dateRange} setDateRange={setDateRange} />
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
                     Show Results
@@ -120,7 +131,7 @@ export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarPro
           isVisible={isSearchVisible}
           setIsVisible={setIsSearchVisible}
         />
-        <FilterContent />
+        <UsersRoleFilterContent table={table} dateRange={dateRange} setDateRange={setDateRange} />
         {isFiltered && (
           <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
             Reset
