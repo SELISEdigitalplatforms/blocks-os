@@ -50,13 +50,16 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
 
   const credential = data?.oIDCClientCredential;
 
-  useEffect(() => {
-    if (!credential) return;
-    setBrandColor(credential.clientBrandColor || DEFAULT_BRAND_COLOR);
-    setLogoUrl(credential.clientLogoUrl ?? null);
-    setPreviewLogoUrl(credential.clientLogoUrl ?? null);
-    setPendingLogoFile(null);
-  }, [credential]);
+  const [prevCredential, setPrevCredential] = useState<typeof credential | undefined>(undefined);
+  if (prevCredential !== credential) {
+    setPrevCredential(credential);
+    if (credential) {
+      setBrandColor(credential.clientBrandColor || DEFAULT_BRAND_COLOR);
+      setLogoUrl(credential.clientLogoUrl ?? null);
+      setPreviewLogoUrl(credential.clientLogoUrl ?? null);
+      setPendingLogoFile(null);
+    }
+  }
 
   useEffect(() => {
     return () => {

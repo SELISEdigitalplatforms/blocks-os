@@ -26,7 +26,7 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const MAX_SIGNUP_PERMISSIONS = 5;
 
@@ -58,11 +58,15 @@ export const AssignSignupPermissionsDialog = ({
     { enabled: open && Boolean(tenantId) },
   );
 
-  useEffect(() => {
+  const [prevSync, setPrevSync] = useState<{ open: boolean; permissions: typeof permissions } | undefined>(
+    undefined,
+  );
+  if (!prevSync || prevSync.open !== open || prevSync.permissions !== permissions) {
+    setPrevSync({ open, permissions });
     if (open) {
       setSelectedPermissions(permissions);
     }
-  }, [open, permissions]);
+  }
 
   const selectedPermissionResources = useMemo(
     () => new Set(selectedPermissions.map((permission) => permission.resource)),

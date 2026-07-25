@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Filter } from "lucide-react";
 import { Table } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
@@ -29,9 +29,11 @@ export function EmailTableToolbar<TData>({ table }: EmailTableToolbarProps<TData
   const [isSearchVisible, setIsSearchVisible] = useState(!isMobile);
   const activeFiltersCount = useActiveFiltersCount(table, dateRange, "name");
   const isFiltered = activeFiltersCount > 0;
-  useEffect(() => {
+  const [prevIsMobile, setPrevIsMobile] = useState(isMobile);
+  if (prevIsMobile !== isMobile) {
+    setPrevIsMobile(isMobile);
     setIsSearchVisible(!isMobile);
-  }, [isMobile]);
+  }
   const onSearchInputChange = useCallback(
     (text: string) => {
       setSearchValue(text);
