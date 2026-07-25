@@ -142,3 +142,20 @@ if (typeof Element !== "undefined") {
     proto.releasePointerCapture = function releasePointerCapture(): void {};
   }
 }
+
+// jsdom does not implement hit testing, so `document.elementFromPoint` is
+// missing. Some Radix primitives call it asynchronously after interaction,
+// which surfaces as an uncaught error that fails an otherwise passing run.
+// Provide inert stubs only when they are absent.
+if (typeof document !== "undefined") {
+  const doc = document as unknown as {
+    elementFromPoint?: unknown;
+    elementsFromPoint?: unknown;
+  };
+  if (typeof doc.elementFromPoint !== "function") {
+    doc.elementFromPoint = (): Element | null => null;
+  }
+  if (typeof doc.elementsFromPoint !== "function") {
+    doc.elementsFromPoint = (): Element[] => [];
+  }
+}
