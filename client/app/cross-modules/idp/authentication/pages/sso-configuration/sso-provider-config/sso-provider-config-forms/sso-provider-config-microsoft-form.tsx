@@ -41,7 +41,9 @@ export const SSOProviderConfigMicrosoftForm: React.FC<SsoConfigForms> = ({
       initialRoles: [],
       initialPermissions: [],
       // Hardcoded default role for now; will use API response later
-      userRoles: [createRoleStub({ slug: "user", name: "user", description: "default role", itemId: "1234" })],
+      userRoles: [
+        createRoleStub({ slug: "user", name: "user", description: "default role", itemId: "1234" }),
+      ],
       userPermissions: [],
     },
     resolver: zodResolver(ssoOAuthProviderSchema),

@@ -20,25 +20,19 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
   columnHelper.accessor("repoName", {
     header: "Name",
     cell: (info) => (
-      <span className="text-sm font-medium text-high-emphasis">
-        {info.getValue()}
-      </span>
+      <span className="text-sm font-medium text-high-emphasis">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("defaultDeploymentUrl", {
     header: "Deployment Domain",
-    cell: (info) => (
-      <span className="text-sm text-medium-emphasis">{info.getValue()}</span>
-    ),
+    cell: (info) => <span className="text-sm text-medium-emphasis">{info.getValue()}</span>,
   }),
   columnHelper.accessor("customDeploymentUrl", {
     header: "Custom Domain",
     cell: ({ row }) => {
       const repo = row.original;
       return repo.customDeploymentUrl ? (
-        <span className="text-sm text-medium-emphasis">
-          {repo.customDeploymentUrl}
-        </span>
+        <span className="text-sm text-medium-emphasis">{repo.customDeploymentUrl}</span>
       ) : (
         <Button variant="outline" size="xxs" onClick={() => onSet(repo)}>
           <span className="px-2">Set</span>
@@ -74,7 +68,8 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
             size="icon"
             title="Edit custom domain"
             disabled={!hasCustomDomain}
-            onClick={() => onSet(repo)}>
+            onClick={() => onSet(repo)}
+          >
             <Pencil className="h-4 w-4 text-muted-foreground" />
           </Button>
         </div>
@@ -142,11 +137,9 @@ export const ProjectRepoTable = ({
                     className={cn(
                       "h-12 px-4 text-left text-xs font-semibold uppercase tracking-wide text-medium-emphasis",
                       header.id === "actions" && "w-32",
-                    )}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
                     )}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
@@ -157,21 +150,17 @@ export const ProjectRepoTable = ({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="py-10 text-center text-sm text-muted-foreground">
+                  className="py-10 text-center text-sm text-muted-foreground"
+                >
                   No repositories found for this project.
                 </td>
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/50">
+                <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-2 md:px-4 md:py-3">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
                 </tr>

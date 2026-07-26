@@ -3,7 +3,11 @@ using System.Threading.Tasks;
 using Blocks.Genesis;
 using BlocksOs.Api.Controllers;
 using Configuration.DomainService.Mail.Entities;
+using Configuration.DomainService.Mail.Mailbox;
+using Configuration.DomainService.Mail.Mailbox.Services;
 using Configuration.DomainService.Mail.RequestModel;
+using Configuration.DomainService.Mail.Template;
+using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
@@ -118,6 +122,164 @@ namespace XUnitTest.Controllers
             var result = await Controller().Duplicate(new DuplicateMailConfigurationRequest { ConfigurationId = "c1" });
 
             result.Should().BeOfType<OkObjectResult>();
+        }
+
+        private readonly Mock<IMailTemplateService> _templateService = new();
+        private readonly Mock<IMailboxService> _mailboxService = new();
+        private MailController FullController() =>
+            new(_service.Object, _templateService.Object, _mailboxService.Object);
+
+        [Fact]
+        public async Task SaveTemplate_Success_ReturnsOk()
+        {
+            _templateService.Setup(s => s.SaveTemplateAsync(It.IsAny<SaveMailTemplateRequest>()))
+                            .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
+
+            var result = await FullController().SaveTemplate(new SaveMailTemplateRequest { Name = "t" });
+
+            result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task SaveTemplate_Failure_ReturnsBadRequest()
+        {
+            _templateService.Setup(s => s.SaveTemplateAsync(It.IsAny<SaveMailTemplateRequest>()))
+                            .ReturnsAsync(new BaseMutationResponse { IsSuccess = false });
+
+            var result = await FullController().SaveTemplate(new SaveMailTemplateRequest());
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetTemplate_Found_ReturnsOk()
+        {
+            var template = new EmailTemplate { ItemId = "t1" };
+            _templateService.Setup(s => s.GetAsync(It.IsAny<GetMailTemplateRequest>())).ReturnsAsync(template);
+
+            var result = await FullController().GetTemplate(new GetMailTemplateRequest { ItemId = "t1" });
+
+            result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(template);
+        }
+
+        [Fact]
+        public async Task GetTemplate_NotFound_ReturnsNotFound()
+        {
+            _templateService.Setup(s => s.GetAsync(It.IsAny<GetMailTemplateRequest>()))
+                            .ReturnsAsync((EmailTemplate?)null);
+
+            var result = await FullController().GetTemplate(new GetMailTemplateRequest { ItemId = "missing" });
+
+            result.Should().BeOfType<NotFoundObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetTemplates_ReturnsResponse()
+        {
+            var response = new GetAllMailTemplatesResponse { TotalCount = 2 };
+            _templateService.Setup(s => s.GetAllTemplatesAsync(It.IsAny<GetAllMailTemplatesRequest>()))
+                            .ReturnsAsync(response);
+
+            var result = await FullController().GetTemplates(new GetAllMailTemplatesRequest());
+
+            result.Should().BeSameAs(response);
+        }
+
+        [Fact]
+        public async Task CloneTemplate_Success_ReturnsOk()
+        {
+            _templateService.Setup(s => s.CloneTemplateAsync(It.IsAny<CloneMailTemplateRequest>()))
+                            .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
+
+            var result = await FullController().CloneTemplate(new CloneMailTemplateRequest { ItemId = "t1" });
+
+            result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task CloneTemplate_Failure_ReturnsBadRequest()
+        {
+            _templateService.Setup(s => s.CloneTemplateAsync(It.IsAny<CloneMailTemplateRequest>()))
+                            .ReturnsAsync(new BaseMutationResponse { IsSuccess = false });
+
+            var result = await FullController().CloneTemplate(new CloneMailTemplateRequest { ItemId = "t1" });
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task DeleteTemplate_MissingId_ReturnsBadRequest()
+        {
+            var result = await FullController().DeleteTemplate(new DeleteMailTemplateRequest { ItemId = "" });
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+            _templateService.Verify(s => s.DeleteAsync(It.IsAny<DeleteMailTemplateRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeleteTemplate_Valid_ReturnsOk()
+        {
+            _templateService.Setup(s => s.DeleteAsync(It.IsAny<DeleteMailTemplateRequest>()))
+                            .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
+
+            var result = await FullController().DeleteTemplate(new DeleteMailTemplateRequest { ItemId = "t1" });
+
+            result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task DeleteTemplate_Failure_ReturnsBadRequest()
+        {
+            _templateService.Setup(s => s.DeleteAsync(It.IsAny<DeleteMailTemplateRequest>()))
+                            .ReturnsAsync(new BaseMutationResponse { IsSuccess = false });
+
+            var result = await FullController().DeleteTemplate(new DeleteMailTemplateRequest { ItemId = "t1" });
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetMailBoxMails_Success_ReturnsOk()
+        {
+            _mailboxService.Setup(s => s.GetMailBoxMailsAsync(It.IsAny<GetMailBoxMailsRequest>()))
+                           .ReturnsAsync(new GetMailBoxMailsResponse { IsSuccess = true });
+
+            var result = await FullController().GetMailBoxMails(new GetMailBoxMailsRequest());
+
+            result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetMailBoxMails_Failure_ReturnsBadRequest()
+        {
+            _mailboxService.Setup(s => s.GetMailBoxMailsAsync(It.IsAny<GetMailBoxMailsRequest>()))
+                           .ReturnsAsync(new GetMailBoxMailsResponse { IsSuccess = false });
+
+            var result = await FullController().GetMailBoxMails(new GetMailBoxMailsRequest());
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetMailBoxMail_Found_ReturnsOk()
+        {
+            _mailboxService.Setup(s => s.GetMailBoxMailAsync(It.IsAny<GetMailBoxMailRequest>()))
+                           .ReturnsAsync(new GetMailBoxMailResponse { IsSuccess = true });
+
+            var result = await FullController().GetMailBoxMail(new GetMailBoxMailRequest { MessageId = "m1" });
+
+            result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetMailBoxMail_NotFound_ReturnsNotFound()
+        {
+            _mailboxService.Setup(s => s.GetMailBoxMailAsync(It.IsAny<GetMailBoxMailRequest>()))
+                           .ReturnsAsync(new GetMailBoxMailResponse { IsSuccess = false });
+
+            var result = await FullController().GetMailBoxMail(new GetMailBoxMailRequest { MessageId = "missing" });
+
+            result.Should().BeOfType<NotFoundObjectResult>();
         }
     }
 

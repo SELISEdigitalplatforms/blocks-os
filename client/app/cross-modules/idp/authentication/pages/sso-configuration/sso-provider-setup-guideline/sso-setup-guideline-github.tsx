@@ -26,14 +26,13 @@ export const githubStepupDocs = [
           </li>
           <li>
             Go to{" "}
-            <Link
-              to="https://github.com/settings/developers"
-              className="text-primary"
-            >
+            <Link to="https://github.com/settings/developers" className="text-primary">
               GitHub Developer Settings
             </Link>
           </li>
-          <li>Ensure you have administrative access to the organization or repository (if required)</li>
+          <li>
+            Ensure you have administrative access to the organization or repository (if required)
+          </li>
         </ul>
       </div>
     ),
@@ -44,8 +43,8 @@ export const githubStepupDocs = [
       <div>
         <h4 className="text-lg font-semibold text-high-emphasis">Obtain Client Credentials</h4>
         <p>
-          After registering the app, GitHub will generate a <b>Client ID</b> and allow you to view or
-          generate a <b>Client Secret</b>.
+          After registering the app, GitHub will generate a <b>Client ID</b> and allow you to view
+          or generate a <b>Client Secret</b>.
         </p>
       </div>
     ),

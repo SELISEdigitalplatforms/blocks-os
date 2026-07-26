@@ -59,12 +59,9 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: vi.fn(),
 }));
 
-const { SignupSettingsForm } = await import(
-  "@blocks-idp/settings/components/signup-settings-form"
-);
-const { SettingsTabActionsProvider, SettingsTabActionsSlot } = await import(
-  "@blocks-idp/settings/components/settings-tab-actions"
-);
+const { SignupSettingsForm } = await import("@blocks-idp/settings/components/signup-settings-form");
+const { SettingsTabActionsProvider, SettingsTabActionsSlot } =
+  await import("@blocks-idp/settings/components/settings-tab-actions");
 
 const config: ISettingsSignupConfig = {
   isSignUpEnable: true,
@@ -82,8 +79,7 @@ const renderForm = () =>
     </SettingsTabActionsProvider>,
   );
 
-const saveButton = () =>
-  screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+const saveButton = () => screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
 
 describe("SignupSettingsForm", () => {
   beforeEach(() => {

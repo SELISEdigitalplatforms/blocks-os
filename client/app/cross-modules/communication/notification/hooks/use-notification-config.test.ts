@@ -27,10 +27,9 @@ describe("use-notification-config hooks", () => {
   });
 
   it("useGetNotificationConfigs is disabled without a project key", () => {
-    const { result } = renderHook(
-      () => useGetNotificationConfigs({ projectKey: "" } as never),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useGetNotificationConfigs({ projectKey: "" } as never), {
+      wrapper: createWrapper(),
+    });
     expect(result.current.fetchStatus).toBe("idle");
   });
 
@@ -59,8 +58,8 @@ describe("use-notification-config hooks", () => {
       wrapper: createWrapper(),
     });
     await result.current.mutateAsync("c-1");
-    expect(
-      vi.mocked(notificationConfigService.deleteNotificationConfig).mock.calls[0][0],
-    ).toBe("c-1");
+    expect(vi.mocked(notificationConfigService.deleteNotificationConfig).mock.calls[0][0]).toBe(
+      "c-1",
+    );
   });
 });

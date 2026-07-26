@@ -1,72 +1,72 @@
-import { useState } from "react"
-import { Button } from "@/components/ui-kits/button/button"
-import { cn } from "@/lib/utils"
-import { Check, Copy, Download } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui-kits/button/button";
+import { cn } from "@/lib/utils";
+import { Check, Copy, Download } from "lucide-react";
 
 interface UrlWithActionsProps {
-  url: string
-  className?: string
+  url: string;
+  className?: string;
 }
 
 const copyTextToClipboard = async (text: string) => {
   if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text)
-    return
+    await navigator.clipboard.writeText(text);
+    return;
   }
 
-  const textArea = document.createElement("textarea")
-  textArea.value = text
-  textArea.style.position = "fixed"
-  textArea.style.left = "-999999px"
-  textArea.style.top = "-999999px"
-  document.body.appendChild(textArea)
-  textArea.focus()
-  textArea.select()
-  document.execCommand("copy")
-  document.body.removeChild(textArea)
-}
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  textArea.style.left = "-999999px";
+  textArea.style.top = "-999999px";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textArea);
+};
 
 export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
-  const [isCopying, setIsCopying] = useState(false)
-  const certificatePath = url.trim()
+  const [isCopying, setIsCopying] = useState(false);
+  const certificatePath = url.trim();
 
   if (!certificatePath) {
-    return <span className="text-sm text-muted-foreground">No certificate configured</span>
+    return <span className="text-sm text-muted-foreground">No certificate configured</span>;
   }
 
   const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
     try {
-      event.preventDefault()
-      event.stopPropagation()
-      if (isCopying) return
-      setIsCopying(true)
-      await copyTextToClipboard(certificatePath)
+      event.preventDefault();
+      event.stopPropagation();
+      if (isCopying) return;
+      setIsCopying(true);
+      await copyTextToClipboard(certificatePath);
     } catch (err) {
-      console.error("Failed to copy:", err)
-      setIsCopying(false)
+      console.error("Failed to copy:", err);
+      setIsCopying(false);
     } finally {
       setTimeout(() => {
-        setIsCopying(false)
-      }, 1000)
+        setIsCopying(false);
+      }, 1000);
     }
-  }
+  };
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(certificatePath)
-      const blob = await response.blob()
-      const downloadUrl = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = downloadUrl
-      link.download = certificatePath.split("/").pop() || "certificate.pem"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(downloadUrl)
+      const response = await fetch(certificatePath);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = certificatePath.split("/").pop() || "certificate.pem";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
     } catch (err) {
-      console.error("Failed to download:", err)
+      console.error("Failed to download:", err);
     }
-  }
+  };
 
   return (
     <div className={cn("flex min-w-0 items-center gap-1", className)}>
@@ -106,5 +106,5 @@ export const UrlWithActions = ({ url, className }: UrlWithActionsProps) => {
         </Button>
       </div>
     </div>
-  )
-}
+  );
+};

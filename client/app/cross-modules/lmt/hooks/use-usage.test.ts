@@ -10,11 +10,7 @@ import {
   mockGetServiceAnalyticsPayload,
 } from "../test-utils/__mocks__";
 import { lmtService } from "../services/lmt.service";
-import {
-  useGetOperationalAnalytics,
-  useGetServiceAnalytics,
-  useUsagesMetrics,
-} from "./use-usage";
+import { useGetOperationalAnalytics, useGetServiceAnalytics, useUsagesMetrics } from "./use-usage";
 
 vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
@@ -47,16 +43,11 @@ describe("use-usage hooks", () => {
   // ─── useGetServiceAnalytics ───────────────────────────────────────────────
   describe("useGetServiceAnalytics", () => {
     it("should fetch service analytics successfully", async () => {
-      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(
-        mockUsageMatrixResponse,
-      );
+      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(mockUsageMatrixResponse);
 
-      const { result } = renderHook(
-        () => useGetServiceAnalytics(mockGetServiceAnalyticsPayload),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useGetServiceAnalytics(mockGetServiceAnalyticsPayload), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockUsageMatrixResponse);
@@ -69,38 +60,30 @@ describe("use-usage hooks", () => {
   // ─── useUsagesMetrics ─────────────────────────────────────────────────────
   describe("useUsagesMetrics", () => {
     it("should fetch metrics with 24h time range by default", async () => {
-      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(
-        mockUsageMatrixResponse,
-      );
+      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(mockUsageMatrixResponse);
 
       const { result } = renderHook(
-        () =>
-          useUsagesMetrics({ timeRange: "24h", projectKey: TEST_PROJECT_KEY }),
+        () => useUsagesMetrics({ timeRange: "24h", projectKey: TEST_PROJECT_KEY }),
         { wrapper: createWrapper() },
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(lmtService.usage.getServiceAnalytics).toHaveBeenCalled();
 
-      const callPayload = vi.mocked(lmtService.usage.getServiceAnalytics).mock
-        .calls[0][0];
+      const callPayload = vi.mocked(lmtService.usage.getServiceAnalytics).mock.calls[0][0];
       expect(callPayload.startTime).toBeDefined();
       expect(callPayload.endTime).toBeDefined();
       // 24h window: startTime should be ~24h before endTime.
       const windowMs =
-        new Date(callPayload.endTime).getTime() -
-        new Date(callPayload.startTime).getTime();
+        new Date(callPayload.endTime).getTime() - new Date(callPayload.startTime).getTime();
       expect(Math.round(windowMs / (60 * 60 * 1000))).toBe(24);
     });
 
     it("should handle 1h time range", async () => {
-      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(
-        mockUsageMatrixResponse,
-      );
+      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(mockUsageMatrixResponse);
 
       const { result } = renderHook(
-        () =>
-          useUsagesMetrics({ timeRange: "1h", projectKey: TEST_PROJECT_KEY }),
+        () => useUsagesMetrics({ timeRange: "1h", projectKey: TEST_PROJECT_KEY }),
         { wrapper: createWrapper() },
       );
 
@@ -109,13 +92,10 @@ describe("use-usage hooks", () => {
     });
 
     it("should handle 7d time range", async () => {
-      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(
-        mockUsageMatrixResponse,
-      );
+      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(mockUsageMatrixResponse);
 
       const { result } = renderHook(
-        () =>
-          useUsagesMetrics({ timeRange: "7d", projectKey: TEST_PROJECT_KEY }),
+        () => useUsagesMetrics({ timeRange: "7d", projectKey: TEST_PROJECT_KEY }),
         { wrapper: createWrapper() },
       );
 
@@ -124,13 +104,10 @@ describe("use-usage hooks", () => {
     });
 
     it("should handle 30d time range", async () => {
-      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(
-        mockUsageMatrixResponse,
-      );
+      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(mockUsageMatrixResponse);
 
       const { result } = renderHook(
-        () =>
-          useUsagesMetrics({ timeRange: "30d", projectKey: TEST_PROJECT_KEY }),
+        () => useUsagesMetrics({ timeRange: "30d", projectKey: TEST_PROJECT_KEY }),
         { wrapper: createWrapper() },
       );
 
@@ -139,9 +116,7 @@ describe("use-usage hooks", () => {
     });
 
     it("should default to 24h for unrecognized time range", async () => {
-      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(
-        mockUsageMatrixResponse,
-      );
+      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(mockUsageMatrixResponse);
 
       const { result } = renderHook(
         () =>
@@ -157,13 +132,10 @@ describe("use-usage hooks", () => {
     });
 
     it("should return normalized metrics data", async () => {
-      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(
-        mockUsageMatrixResponse,
-      );
+      vi.mocked(lmtService.usage.getServiceAnalytics).mockResolvedValue(mockUsageMatrixResponse);
 
       const { result } = renderHook(
-        () =>
-          useUsagesMetrics({ timeRange: "24h", projectKey: TEST_PROJECT_KEY }),
+        () => useUsagesMetrics({ timeRange: "24h", projectKey: TEST_PROJECT_KEY }),
         { wrapper: createWrapper() },
       );
 

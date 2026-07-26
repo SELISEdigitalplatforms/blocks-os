@@ -40,10 +40,9 @@ vi.mock("@/cross-modules/devops/models/github-info", () => ({
   iconMap: { github: "/assets/github-icon.svg" },
 }));
 
-vi.mock(
-  "@/cross-modules/devops/components/deployment-steps/render-repos/render-provider",
-  () => ({ default: () => <div>provider-buttons</div> }),
-);
+vi.mock("@/cross-modules/devops/components/deployment-steps/render-repos/render-provider", () => ({
+  default: () => <div>provider-buttons</div>,
+}));
 
 vi.mock("@/components/repository-selection-modal/repository-selection-modal", () => ({
   RepositorySelectionModal: ({ open }: { open: boolean }) =>

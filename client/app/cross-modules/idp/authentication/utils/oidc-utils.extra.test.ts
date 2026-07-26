@@ -54,8 +54,7 @@ describe("oidc-utils extra", () => {
     });
 
     it("recovers logoUrl from the URL fragment when it is not a query param", () => {
-      const href =
-        "http://localhost:3000/oidc/login#logoUrl=https://cdn.test.com/frag.png";
+      const href = "http://localhost:3000/oidc/login#logoUrl=https://cdn.test.com/frag.png";
       setLocation("", "#logoUrl=https://cdn.test.com/frag.png", href);
       const params = extractOIDCParams();
       expect(params.logoUrl).toBe("https://cdn.test.com/frag.png");

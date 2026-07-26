@@ -50,7 +50,9 @@ export const LMTQueryAgentChatInput = forwardRef<HTMLTextAreaElement, LMTQueryAg
                         rows={1}
                         placeholder="Type a message..."
                         className="max-h-[120px] min-h-fit w-full resize-none border-0 p-0 text-base text-medium-emphasis focus-visible:ring-0 focus-visible:ring-offset-0"
-                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+                        style={
+                          { scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties
+                        }
                         onKeyDown={onKeyDown}
                         disabled={isThinking}
                         aria-label="Message input"

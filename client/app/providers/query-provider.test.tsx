@@ -53,9 +53,7 @@ describe("QueryProvider", () => {
         <DataConsumer />
       </QueryProvider>,
     );
-    await waitFor(() =>
-      expect(screen.getByText("hello from query")).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText("hello from query")).toBeTruthy());
   });
 
   it("returns a stable singleton query client", () => {

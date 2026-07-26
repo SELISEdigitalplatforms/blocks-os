@@ -27,13 +27,10 @@ const mapOrganizationConfig = (
   defaultRolesOnOrgCreation: response.defaultRoleOnOrgCreation,
   defaultPermissionsOnOrgCreation: response.defaultPermissionOnOrgCreation,
   keepOrgRolesSameAsDefaultRoles: response.keepOrgRolesSameAsDefaultRoles,
-  keepOrgPermissionsSameAsDefaultPermissions:
-    response.keepOrgPermissionsSameAsDefaultPermissions,
+  keepOrgPermissionsSameAsDefaultPermissions: response.keepOrgPermissionsSameAsDefaultPermissions,
 });
 
-const mapSignupConfig = (
-  response: IGetSignUpSettingResponse,
-): ISettingsSignupConfig => ({
+const mapSignupConfig = (response: IGetSignUpSettingResponse): ISettingsSignupConfig => ({
   isSignUpEnable: response.isSignUpEnable,
   isEmailPasswordSignUpEnabled: response.isEmailPasswordSignUpEnabled,
   isSSoSignUpEnabled: response.isSSoSignUpEnabled,
@@ -48,9 +45,7 @@ export class SettingsConfigService {
       .then((response) => normalizeAuthConfigResponse(response));
   }
 
-  saveAuthConfig(
-    payload: ISettingsSaveAuthConfigPayload,
-  ): Promise<ISaveAuthConfigResponse> {
+  saveAuthConfig(payload: ISettingsSaveAuthConfigPayload): Promise<ISaveAuthConfigResponse> {
     return authenticationService.configuration.saveAuthConfig({
       ...payload,
       allowedGrantTypes: payload.allowedGrantTypes,

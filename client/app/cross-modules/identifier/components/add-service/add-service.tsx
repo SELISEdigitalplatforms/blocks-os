@@ -72,7 +72,9 @@ export const AddService = () => {
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4" />
-          <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">Register Service</span>
+          <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
+            Register Service
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="md:max-w-md">

@@ -31,7 +31,8 @@ export const EndpointRow = ({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1">
             <code className="break-all rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono font-medium leading-relaxed sm:text-xs">
-              /{endpoint.controller}/{endpoint.method.charAt(0).toUpperCase() + endpoint.method.slice(1)}
+              /{endpoint.controller}/
+              {endpoint.method.charAt(0).toUpperCase() + endpoint.method.slice(1)}
             </code>
             {isCritical && (
               <Badge
@@ -57,7 +58,9 @@ export const EndpointRow = ({
             onCheckedChange={(val) => onToggleMfa(endpoint, val)}
           />
           <span className="text-[11px] font-medium text-muted-foreground">MFA</span>
-          <Lock className={`h-3 w-3 transition-colors ${endpoint.isMFARequired ? "text-amber-500" : "text-border"}`} />
+          <Lock
+            className={`h-3 w-3 transition-colors ${endpoint.isMFARequired ? "text-amber-500" : "text-border"}`}
+          />
         </div>
         <div className="h-3.5 w-px bg-border" />
         <div className="flex items-center gap-1">

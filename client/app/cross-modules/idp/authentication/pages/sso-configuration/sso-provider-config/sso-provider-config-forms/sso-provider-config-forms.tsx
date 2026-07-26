@@ -24,10 +24,7 @@ export type SsoConfigForms = {
   configuration: ISsoProviderConfiguration | null;
   save: (data: unknown) => void;
 };
-export const SsoProviderConfigForms = ({
-  provider,
-  id,
-}: SsoConfigFormsProps) => {
+export const SsoProviderConfigForms = ({ provider, id }: SsoConfigFormsProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -43,24 +40,19 @@ export const SsoProviderConfigForms = ({
         audience: data.audience,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
-        initialPermissions:
-          data.userPermissions?.map((item) => item.resource) || [],
+        initialPermissions: data.userPermissions?.map((item) => item.resource) || [],
         initialRoles: data.userRoles.map((item) => item.slug) || [],
         provider: data.provider,
         redirectUrl: data.redirectUrl,
         projectKey: tenantId,
       });
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-      if (!id)
-        navigate(
-          scoped(`idp/sso-configuration?provider=${provider}&id=${res.itemId}`),
-        );
+      if (!id) navigate(scoped(`idp/sso-configuration?provider=${provider}&id=${res.itemId}`));
       showSuccessToast({
         description: `${provider} is configured successfully`,
       });
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };

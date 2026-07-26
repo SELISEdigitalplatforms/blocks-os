@@ -15,17 +15,9 @@ import { cn } from "@/lib/utils";
 const normalizeBreadcrumbHref = (href: string): string =>
   href.replace(/^\/app\/[^/]+(?=\/)/, "/app");
 
-const getBreadcrumbTitle = (
-  href: string,
-  defaultLabel: string,
-): string | null => {
+const getBreadcrumbTitle = (href: string, defaultLabel: string): string | null => {
   const normalizedHref = normalizeBreadcrumbHref(href);
-  if (
-    Object.prototype.hasOwnProperty.call(
-      BREADCRUMB_CUSTOM_TITLES,
-      normalizedHref,
-    )
-  ) {
+  if (Object.prototype.hasOwnProperty.call(BREADCRUMB_CUSTOM_TITLES, normalizedHref)) {
     return BREADCRUMB_CUSTOM_TITLES[normalizedHref];
   }
   if (Object.prototype.hasOwnProperty.call(BREADCRUMB_CUSTOM_TITLES, href)) {
@@ -58,33 +50,24 @@ const PageBreadcrumb: React.FC<{
   }
 
   breadcrumbs = breadcrumbs.filter(
-    (breadcrumb) =>
-      getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) !== null,
+    (breadcrumb) => getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) !== null,
   );
 
   return (
     <Breadcrumb className={cn("hidden md:flex", className)}>
-      <BreadcrumbList
-        className={cn("flex text-base sm:text-lg", listClassName)}>
+      <BreadcrumbList className={cn("flex text-base sm:text-lg", listClassName)}>
         {breadcrumbs.map((breadcrumb, index) => {
-          const title =
-            getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) ??
-            breadcrumb.label;
+          const title = getBreadcrumbTitle(breadcrumb.href, breadcrumb.label) ?? breadcrumb.label;
           const linkHref = getBreadcrumbLinkHref(breadcrumb.href);
 
           return (
             <React.Fragment key={breadcrumb.href}>
               <BreadcrumbItem>
-                {index === breadcrumbs.length - 1 ||
-                disabledHrefs.includes(breadcrumb.href) ? (
-                  <BreadcrumbPage className="text-low-emphasis">
-                    {title}
-                  </BreadcrumbPage>
+                {index === breadcrumbs.length - 1 || disabledHrefs.includes(breadcrumb.href) ? (
+                  <BreadcrumbPage className="text-low-emphasis">{title}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link
-                      to={linkHref}
-                      className="text-foreground hover:text-foreground">
+                    <Link to={linkHref} className="text-foreground hover:text-foreground">
                       {title}
                     </Link>
                   </BreadcrumbLink>

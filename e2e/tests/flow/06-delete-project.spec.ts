@@ -31,9 +31,7 @@ test("06 - delete the project created by this run", async ({ page }) => {
     if (/\/app\/console/.test(page.url())) break;
 
     const envCard = page
-      .getByText(
-        /^(Development|Testing|Staging|IAT|UAT|Prod Shadow|Pre-Prod|Production)$/,
-      )
+      .getByText(/^(Development|Testing|Staging|IAT|UAT|Prod Shadow|Pre-Prod|Production)$/)
       .first();
 
     if ((await envCard.count()) === 0) break;
@@ -44,10 +42,7 @@ test("06 - delete the project created by this run", async ({ page }) => {
 
     // Destructive trigger → confirm inside the dialog.
     await page.getByRole("button", { name: "Delete", exact: true }).click();
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Delete", exact: true })
-      .click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
 
     // On success the app toasts and routes back to the console.
     await page.waitForURL("**/app/console", { timeout: 45_000 });

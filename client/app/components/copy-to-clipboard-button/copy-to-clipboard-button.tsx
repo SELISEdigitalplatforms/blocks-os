@@ -46,9 +46,7 @@ export const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({
       {children}
       <div
         className={`${
-          isHoverable
-            ? "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-            : "opacity-100"
+          isHoverable ? "opacity-100 sm:opacity-0 sm:group-hover:opacity-100" : "opacity-100"
         } relative flex shrink-0 items-center gap-1 transition-opacity duration-200`}
       >
         <Button

@@ -103,27 +103,18 @@ export class UserService {
       profileImageId: payload.profileImageId,
       profileImageUrl: payload.profileImageUrl,
     };
-    return http.post(
-      `${USER_ENDPOINTS.GET_USERS}/${payload.itemId}`,
-      normalized,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.post(`${USER_ENDPOINTS.GET_USERS}/${payload.itemId}`, normalized, undefined, {
+      absoluteUrl: true,
+    });
   }
 
-  getSignUpSetting(
-    _payload?: IGetSignUpSettingPayload,
-  ): Promise<IGetSignUpSettingResponse> {
+  getSignUpSetting(_payload?: IGetSignUpSettingPayload): Promise<IGetSignUpSettingResponse> {
     return http
       .get(USER_ENDPOINTS.GET_SIGNUP_SETTING, undefined, { absoluteUrl: true })
-      .then((response) =>
-        mapSignUpSettingFromApi(response as Record<string, unknown>),
-      );
+      .then((response) => mapSignUpSettingFromApi(response as Record<string, unknown>));
   }
 
-  saveSignUpSetting(
-    payload: ISaveSignUpSettingPayload,
-  ): Promise<ISaveSignUpSettingResponse> {
+  saveSignUpSetting(payload: ISaveSignUpSettingPayload): Promise<ISaveSignUpSettingResponse> {
     return http.post(
       USER_ENDPOINTS.SAVE_SIGNUP_SETTING,
       toSignupSettingsSaveApiPayload(payload),
@@ -135,30 +126,21 @@ export class UserService {
   saveRolesAndPermissions(
     payload: ISaveRolesAndPermissionsPayload,
   ): Promise<ISaveRolesAndPermissionsResponse> {
-    return http.post(
-      USER_ENDPOINTS.SAVE_ROLES_AND_PERMISSIONS,
-      payload,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.post(USER_ENDPOINTS.SAVE_ROLES_AND_PERMISSIONS, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   getUserRoles(payload: IGetUserRolesPayload): Promise<IGetUserRolesResponse> {
-    return http.get(
-      `${USER_ENDPOINTS.GET_USER_ROLES}?Id=${payload.userId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(`${USER_ENDPOINTS.GET_USER_ROLES}?Id=${payload.userId}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
-  getUserPermissions(
-    payload: IGetUserPermissionsPayload,
-  ): Promise<IGetUserPermissionsResponse> {
-    return http.get(
-      `${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${payload.userId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+  getUserPermissions(payload: IGetUserPermissionsPayload): Promise<IGetUserPermissionsResponse> {
+    return http.get(`${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${payload.userId}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   accountDeactivate(
@@ -169,9 +151,7 @@ export class UserService {
     });
   }
 
-  async getSessions(
-    payload: IGetSessionPayload,
-  ): Promise<IDeviceSessionResponse> {
+  async getSessions(payload: IGetSessionPayload): Promise<IDeviceSessionResponse> {
     const res = await http.get<{
       data: string[];
       errors: unknown;
@@ -188,9 +168,7 @@ export class UserService {
     };
   }
 
-  async getHistories(
-    payload: IGetHistoriesPayload,
-  ): Promise<IHistoriesResponse> {
+  async getHistories(payload: IGetHistoriesPayload): Promise<IHistoriesResponse> {
     const res = await http.get<{
       data: string[];
       errors: unknown;

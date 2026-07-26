@@ -35,11 +35,8 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (path: string) => `/app/tenant-1/${path}`,
-}));
-
-vi.mock("@/hooks/use-theme", () => ({
   useTheme: () => ({ theme: "light" }),
 }));
 
@@ -51,8 +48,7 @@ vi.mock("../sso-provider-status-toggle", () => ({
   },
 }));
 
-const { SSOProviderCard, SSOProviderCardSkelton } =
-  await import("./sso-provider-card");
+const { SSOProviderCard, SSOProviderCardSkelton } = await import("./sso-provider-card");
 
 type Config = Parameters<typeof SSOProviderCard>[0]["configuration"];
 
@@ -117,18 +113,14 @@ describe("SSOProviderCard", () => {
     renderCard(makeConfig({ isDisabled: false }));
 
     // Initially the toggle dialog is closed.
-    expect(screen.getByTestId("status-toggle").getAttribute("data-open")).toBe(
-      "false",
-    );
+    expect(screen.getByTestId("status-toggle").getAttribute("data-open")).toBe("false");
 
     await user.click(screen.getByRole("button"));
     const disableItem = await screen.findByText("Disable");
     await user.click(disableItem);
 
     await waitFor(() => {
-      expect(
-        screen.getByTestId("status-toggle").getAttribute("data-open"),
-      ).toBe("true");
+      expect(screen.getByTestId("status-toggle").getAttribute("data-open")).toBe("true");
     });
   });
 });

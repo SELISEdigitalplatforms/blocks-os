@@ -67,10 +67,7 @@ export const PeopleManagement = () => {
       <div className="flex items-center justify-between">
         <h4 className="text-lg font-semibold md:text-xl">People</h4>
         <div className="ml-auto flex items-center gap-2">
-          <InvitePeople
-            existingEmails={existingEmails}
-            isViewerOwner={data?.isOwner ?? false}
-          />
+          <InvitePeople existingEmails={existingEmails} isViewerOwner={data?.isOwner ?? false} />
         </div>
       </div>
       <div className="mb-5 mt-4 flex w-full flex-col">
