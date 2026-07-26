@@ -6,8 +6,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui-kits/card/card";
-import { Link } from "react-router-dom";
+} from "@/components/ui-kits/card/card"
+import { Link } from "react-router-dom"
+import { getRuntimeEnv } from "@/lib/runtime-env"
 
 type PeopleInvitationResultProps = {
   success: string;
@@ -16,16 +17,43 @@ type PeopleInvitationResultProps = {
   code: string;
 };
 
+const trimTrailingSlash = (value: string) => value.replace(/\/$/, "")
+
+/**
+ * IAM's OIDC activation page, e.g.
+ * `https://iam.seliseblocks.com/oidc/activate/{tenantId}?code={key}&lang=en-US`.
+ * This mirrors the link IAM itself sends from "Resend Activation", so a freshly invited
+ * user completes account setup against IAM rather than the OS-hosted activation page.
+ *
+ * The tenant is the blocks-os IAM (root) tenant — `BLOCKS_X_BLOCKS_KEY` — because a
+ * project-people invitee's identity and its activation `UserKeyMap` are created there,
+ * NOT under the invited project's resource tenant. Validating against any other tenant
+ * misses the keymap and fails with `Invalid_ActivationCode`. This is the same tenant the
+ * People-list resend and the OS `/activate` page target.
+ * Returns null when the IAM base URL or the tenant key is unavailable.
+ */
+const buildIamActivationUrl = (code: string): string | null => {
+  const iamBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL")
+  const tenant = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY")
+  if (!iamBaseUrl || !tenant) return null
+
+  const params = new URLSearchParams({ code, lang: "en-US" })
+  return `${trimTrailingSlash(iamBaseUrl)}/oidc/activate/${tenant}?${params.toString()}`
+}
+
 const InvitationResultShell = ({
   title,
   message,
   buttonText,
   buttonTo,
+  external = false,
 }: {
-  title: string;
-  message: string;
-  buttonText: string;
-  buttonTo: string;
+  title: string
+  message: string
+  buttonText: string
+  buttonTo: string
+  /** When true, `buttonTo` is an absolute URL (e.g. IAM) reached via a full navigation, not client routing. */
+  external?: boolean
 }) => (
   <div className="flex min-h-screen flex-col items-center bg-background">
     <div className="mb-4 mt-[136px] p-4">
@@ -40,9 +68,15 @@ const InvitationResultShell = ({
       </CardHeader>
       <CardContent className="text-center">
         <p className="text-muted-foreground">{message}</p>
-        <Link to={buttonTo} className="mt-8 block">
-          <Button className="w-full">{buttonText}</Button>
-        </Link>
+        {external ? (
+          <a href={buttonTo} className="mt-8 block">
+            <Button className="w-full">{buttonText}</Button>
+          </a>
+        ) : (
+          <Link to={buttonTo} className="mt-8 block">
+            <Button className="w-full">{buttonText}</Button>
+          </Link>
+        )}
       </CardContent>
     </Card>
   </div>
@@ -71,6 +105,21 @@ export const PeopleInvitationResult = ({
   }
 
   if (old === "0") {
+    // Prefer IAM's OIDC activation page. Fall back to the OS-hosted activation page only
+    // when the IAM base URL / tenant key is unavailable.
+    const iamActivationUrl = buildIamActivationUrl(code)
+    if (iamActivationUrl) {
+      return (
+        <InvitationResultShell
+          title="Invitation Accepted!"
+          message="You have successfully accepted the invitation. The project has been shared with you. Please proceed to activate your account to get started."
+          buttonText="Activate"
+          buttonTo={iamActivationUrl}
+          external
+        />
+      )
+    }
+
     const activateParams = new URLSearchParams({
       code,
       lang: "en-US",
