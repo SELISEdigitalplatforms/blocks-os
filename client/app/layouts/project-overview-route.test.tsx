@@ -24,8 +24,11 @@ vi.stubGlobal(
 
 const h = vi.hoisted(() => ({
   params: { tenantGroupId: "grp-1" } as Record<string, string | undefined>,
+  user: { sub: "owner-1" } as { sub?: string } | null,
   projects: {
-    data: [{ projects: [{ itemId: "p-1", tenantGroupId: "grp-1" }] }] as unknown,
+    data: [
+      { projects: [{ itemId: "p-1", tenantGroupId: "grp-1", createdBy: "owner-1" }] },
+    ] as unknown,
     isLoading: false,
     isError: false,
   },
@@ -44,22 +47,16 @@ vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => h.projects,
 }));
 
-// Lightweight stand-in for the shared zustand store. The source calls
-// useProjectStore both bare (`const { selectedProject } = useProjectStore()`)
-// and with a selector (`useProjectStore((s) => s.setTenantGroup)`), so support
-// both forms. useAuthStore drives the ownership check; the current user owns the
-// selected project so the layout renders for a valid tenant group.
-vi.mock("@seliseblocks/blocks-kit/store", () => {
-  const state = {
-    selectedProject: { itemId: "p-1", createdBy: "owner-1" },
-    setTenantGroup: h.setTenantGroup,
-    setSelectedProject: h.setSelectedProject,
-  };
-  return {
-    useAuthStore: () => ({ user: { sub: "owner-1" } }),
-    useProjectStore: (selector?: (s: unknown) => unknown) => (selector ? selector(state) : state),
-  };
-});
+// Lightweight stand-in for the shared zustand store, supporting the selector
+// call form `useProjectStore((s) => s.setTenantGroup)` the source uses.
+vi.mock("@seliseblocks/blocks-kit/store", () => ({
+  useAuthStore: () => ({ user: h.user }),
+  useProjectStore: (selector: (s: unknown) => unknown) =>
+    selector({
+      setTenantGroup: h.setTenantGroup,
+      setSelectedProject: h.setSelectedProject,
+    }),
+}));
 
 vi.mock("@seliseblocks/blocks-kit/components", () => ({
   AppLoadingSpinner: () => <div>loading spinner</div>,
@@ -95,8 +92,11 @@ describe("ProjectOverviewRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.params = { tenantGroupId: "grp-1" };
+    h.user = { sub: "owner-1" };
     h.projects = {
-      data: [{ projects: [{ itemId: "p-1", tenantGroupId: "grp-1" }] }],
+      data: [
+        { projects: [{ itemId: "p-1", tenantGroupId: "grp-1", createdBy: "owner-1" }] },
+      ],
       isLoading: false,
       isError: false,
     };
@@ -126,7 +126,21 @@ describe("ProjectOverviewRoute", () => {
     expect(h.setSelectedProject).toHaveBeenCalledWith({
       itemId: "p-1",
       tenantGroupId: "grp-1",
+      createdBy: "owner-1",
     });
+  });
+
+  it("lets the owner in even when the store selection is empty (console navigation)", () => {
+    // The console resets the store selection and the Configure button never sets it,
+    // so ownership must be resolved from the URL-scoped project, not the store.
+    renderRoute();
+    expect(screen.getByText("overview layout")).toBeTruthy();
+  });
+
+  it("redirects to the console when the viewer is not the project owner", () => {
+    h.user = { sub: "someone-else" };
+    renderRoute();
+    expect(screen.getByText("console page")).toBeTruthy();
   });
 
   it("does not hydrate the store when the id resolves to no projects", () => {

@@ -56,7 +56,6 @@ export function ProjectOverviewRoute({
   const params = useParams();
   const tenantGroupId = params[paramName];
   const { user } = useAuthStore();
-  const { selectedProject } = useProjectStore();
 
   const { data, isLoading, isError } = useGetProjects({
     tenantGroupId: tenantGroupId,
@@ -84,7 +83,13 @@ export function ProjectOverviewRoute({
   const isValidTenantGroup = !isError && Array.isArray(data) && data.length > 0;
   if (!isValidTenantGroup) return <Navigate to={consolePath} replace />;
 
-  const isOwner = user?.sub === selectedProject?.createdBy;
+  // Ownership must be decided for the project in the URL, not the store's
+  // `selectedProject` — the console resets that to null and the Configure button
+  // never sets it, so reading the store here would reject the real owner. The
+  // fetched `data` is scoped to this `tenantGroupId`, so its project is the one
+  // being opened.
+  const resolvedProject = data[0]?.projects?.[0];
+  const isOwner = user?.sub === resolvedProject?.createdBy;
   if (!isOwner) return <Navigate to={consolePath} replace />;
 
   return (
