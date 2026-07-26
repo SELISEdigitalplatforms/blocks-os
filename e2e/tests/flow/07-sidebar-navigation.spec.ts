@@ -1,10 +1,5 @@
 import { test, expect } from "../../support/test-base";
-import {
-  loginFresh,
-  enterConsole,
-  enterProject,
-  openSidebarItem,
-} from "../../support/navigation";
+import { loginFresh, enterConsole, enterProject, openSidebarItem } from "../../support/navigation";
 
 // Navigation spec: confirms each top-level sidebar group opens from the
 // dashboard layout. The sidebar lives inside /app/:itemId/*, so we first
@@ -44,15 +39,10 @@ test("navigates from console to Secrets & Configs", async ({ page }) => {
   const itemId = await enterProject(page);
 
   await openSidebarItem(page, "Secrets & Configs");
-  await page.waitForURL(
-    new RegExp(`/app/${itemId}/secret-management`),
-    { timeout: 30_000 },
-  );
+  await page.waitForURL(new RegExp(`/app/${itemId}/secret-management`), { timeout: 30_000 });
 
   // My Services is the default landing page inside Secrets & Configs.
-  await expect(
-    page.getByRole("heading", { name: "My Services" }),
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "My Services" })).toBeVisible({ timeout: 30_000 });
 });
 
 test("navigates from console to LMT", async ({ page }) => {

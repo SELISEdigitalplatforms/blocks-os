@@ -23,9 +23,7 @@ export const OrganizationDetail = ({ id }: { id: string }) => {
           {isLoading ? (
             <Skeleton className="h-8 w-48" />
           ) : (
-            <h3 className="text-2xl font-bold tracking-tight">
-              {data?.organization?.name}
-            </h3>
+            <h3 className="text-2xl font-bold tracking-tight">{data?.organization?.name}</h3>
           )}
           <InviteOrganizationUser organizationId={id} />
         </div>

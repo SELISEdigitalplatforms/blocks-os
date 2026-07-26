@@ -63,9 +63,7 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
             </svg>
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">No roles added</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add roles for SSO users
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Add roles for SSO users</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -76,7 +74,8 @@ export const SSOInitialRoles = ({ roles, onChange }: SSOInitialRolesProps) => {
             <div className="flex items-center justify-between border-t pt-3">
               <p className="text-xs text-muted-foreground">
                 Showing {filter.page * filter.pageSize + 1} to{" "}
-                {Math.min((filter.page + 1) * filter.pageSize, roles.length)} of {roles.length} roles
+                {Math.min((filter.page + 1) * filter.pageSize, roles.length)} of {roles.length}{" "}
+                roles
               </p>
               <Pagination
                 page={filter.page}

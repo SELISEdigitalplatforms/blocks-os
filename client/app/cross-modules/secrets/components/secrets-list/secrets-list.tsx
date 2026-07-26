@@ -104,7 +104,13 @@ const KVRow = ({ keyName, value }: { keyName: string; value: string }) => {
 };
 
 // ─── Secret Row ───────────────────────────────────────────────────────────────
-const SecretRow = ({ item, defaultExpanded = false }: { item: SecretItem; defaultExpanded?: boolean }) => {
+const SecretRow = ({
+  item,
+  defaultExpanded = false,
+}: {
+  item: SecretItem;
+  defaultExpanded?: boolean;
+}) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -143,10 +149,7 @@ const SecretRow = ({ item, defaultExpanded = false }: { item: SecretItem; defaul
           </Badge>
         </TableCell>
         <TableCell className="py-3.5 text-sm text-muted-foreground">{createdAt}</TableCell>
-        <TableCell
-          className="py-3.5 pr-4 text-right"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <TableCell className="py-3.5 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
@@ -168,9 +171,7 @@ const SecretRow = ({ item, defaultExpanded = false }: { item: SecretItem; defaul
         </TableCell>
       </TableRow>
 
-      {expanded && otherPairs.map(([k, v]) => (
-        <KVRow key={k} keyName={k} value={v} />
-      ))}
+      {expanded && otherPairs.map(([k, v]) => <KVRow key={k} keyName={k} value={v} />)}
 
       <AddSecretModal
         mode="edit"
@@ -185,8 +186,8 @@ const SecretRow = ({ item, defaultExpanded = false }: { item: SecretItem; defaul
           <DialogHeader>
             <DialogTitle>Delete Secret</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "<strong>{secretName}</strong>"? This action cannot
-              be undone.
+              Are you sure you want to delete &quot;<strong>{secretName}</strong>&quot;? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">

@@ -37,10 +37,9 @@ describe("use-people hooks", () => {
       peoplesTotalCount: 1,
       isOwner: true,
     } as never);
-    const { result } = renderHook(
-      () => useGetPeople({ page: 0, pageSize: 10, filter: "" }),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useGetPeople({ page: 0, pageSize: 10, filter: "" }), {
+      wrapper: createWrapper(),
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(peopleService.getPeople).toHaveBeenCalledWith({
       page: 0,

@@ -1,10 +1,5 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { MaskedText } from "@/components/masked-text";
 import { ReactNode, useState } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
@@ -28,9 +23,7 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
   return (
     <div className="min-w-0">
       <p className="mb-2 text-sm font-medium text-low-emphasis">{label}</p>
-      <div className="min-w-0 text-base font-normal text-high-emphasis">
-        {children}
-      </div>
+      <div className="min-w-0 text-base font-normal text-high-emphasis">{children}</div>
     </div>
   );
 };
@@ -75,10 +68,7 @@ const getBackendErrorMap = (response: unknown) => {
     return typedResponse.errors as Record<string, string | string[]>;
   }
 
-  if (
-    typedResponse.error?.errors &&
-    typeof typedResponse.error.errors === "object"
-  ) {
+  if (typedResponse.error?.errors && typeof typedResponse.error.errors === "object") {
     return typedResponse.error.errors as Record<string, string | string[]>;
   }
 
@@ -108,7 +98,8 @@ const PermissionChips = ({ permissions }: { permissions: string[] }) => {
           key={permission}
           variant="secondary"
           className="max-w-full truncate text-xs"
-          title={permission}>
+          title={permission}
+        >
           {permission}
         </Badge>
       ))}
@@ -126,7 +117,8 @@ const PermissionChips = ({ permissions }: { permissions: string[] }) => {
                   key={permission}
                   variant="secondary"
                   className="max-w-full truncate text-xs"
-                  title={permission}>
+                  title={permission}
+                >
                   {permission}
                 </Badge>
               ))}
@@ -157,10 +149,7 @@ type ClientInfoCardProps = {
   onEdit?: (client: IClientCredentialsConfig) => void;
 };
 
-export const ClientCredentialsCard = ({
-  clientCredential,
-  onEdit,
-}: ClientInfoCardProps) => {
+export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCardProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useDeleteAuthClient({
@@ -180,8 +169,7 @@ export const ClientCredentialsCard = ({
       });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -189,15 +177,15 @@ export const ClientCredentialsCard = ({
     <div className="grid gap-4">
       <Card
         className="overflow-hidden rounded-sm border bg-card py-4 shadow-sm sm:py-6"
-        key={clientCredential.itemId}>
+        key={clientCredential.itemId}
+      >
         <CardHeader className="px-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
               <CardTitle className="text-lg font-semibold text-high-emphasis sm:text-xl">
                 {clientCredential.name}
               </CardTitle>
-              <Badge
-                variant={clientCredential.isActive ? "success" : "secondary"}>
+              <Badge variant={clientCredential.isActive ? "success" : "secondary"}>
                 {clientCredential.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
@@ -208,7 +196,8 @@ export const ClientCredentialsCard = ({
                   variant="outline"
                   size="sm"
                   className="w-full sm:w-auto"
-                  aria-label="Edit client credential">
+                  aria-label="Edit client credential"
+                >
                   <Pencil className="h-4 w-4" />
                   <span className="ml-2">Edit</span>
                 </Button>
@@ -219,7 +208,8 @@ export const ClientCredentialsCard = ({
                 }}
                 variant="outline"
                 size="sm"
-                className="w-full text-[#D92127] sm:w-auto">
+                className="w-full text-[#D92127] sm:w-auto"
+              >
                 Delete
               </Button>
             </div>
@@ -245,8 +235,7 @@ export const ClientCredentialsCard = ({
 
             <Column>
               <Item label="Client Secret">
-                <CopyToClipboardButton
-                  textToCopy={clientCredential.clientSecret}>
+                <CopyToClipboardButton textToCopy={clientCredential.clientSecret}>
                   <MaskedText
                     text={clientCredential.clientSecret}
                     length={30}
@@ -256,18 +245,14 @@ export const ClientCredentialsCard = ({
                 </CopyToClipboardButton>
               </Item>
               <Item label="Permission(s)">
-                <PermissionChips
-                  permissions={clientCredential.permissions ?? []}
-                />
+                <PermissionChips permissions={clientCredential.permissions ?? []} />
               </Item>
             </Column>
 
             <Column>
               <Item label="Token lifetime">
                 <span className="whitespace-nowrap">
-                  {formatLifetime(
-                    clientCredential.accessTokenValidForNumberMinutes,
-                  )}
+                  {formatLifetime(clientCredential.accessTokenValidForNumberMinutes)}
                 </span>
               </Item>
               <Item label="Created on">

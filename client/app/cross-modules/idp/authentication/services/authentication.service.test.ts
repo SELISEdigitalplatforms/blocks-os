@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { authenticationService } from "./authentication.service";
 import { AuthConfiguration } from "./auth-config.service";
 import { AUTH_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const ABS = { absoluteUrl: true };
 
@@ -20,11 +20,7 @@ describe("authenticationService", () => {
   it("configuration.getConfig delegates to http.get with absolute url", async () => {
     vi.mocked(http.get).mockResolvedValue({} as never);
     await authenticationService.configuration.getConfig();
-    expect(http.get).toHaveBeenCalledWith(
-      AUTH_CONFIG_ENDPOINTS.GET_CONFIG,
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith(AUTH_CONFIG_ENDPOINTS.GET_CONFIG, undefined, ABS);
   });
 
   it("configuration.getConfig appends the project key when provided", async () => {

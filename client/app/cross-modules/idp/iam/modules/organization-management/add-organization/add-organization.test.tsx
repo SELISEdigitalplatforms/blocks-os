@@ -50,9 +50,7 @@ import { AddOrganization } from "./add-organization";
 
 const openDialog = async () => {
   const user = userEvent.setup();
-  await user.click(
-    screen.getByRole("button", { name: /Add Organization/ }),
-  );
+  await user.click(screen.getByRole("button", { name: /Add Organization/ }));
   return user;
 };
 
@@ -63,21 +61,15 @@ describe("AddOrganization", () => {
 
   it("renders the trigger button and keeps the dialog closed initially", () => {
     render(<AddOrganization />);
-    expect(
-      screen.getByRole("button", { name: /Add Organization/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Add Organization/ })).toBeTruthy();
     expect(screen.queryByText("Enter organization name")).toBeNull();
   });
 
   it("opens the dialog with the form and a disabled Add button", async () => {
     render(<AddOrganization />);
     await openDialog();
-    expect(
-      screen.getByText("Please fill in the details to add a new organization."),
-    ).toBeTruthy();
-    expect(
-      screen.getByPlaceholderText("Enter organization name"),
-    ).toBeTruthy();
+    expect(screen.getByText("Please fill in the details to add a new organization.")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Enter organization name")).toBeTruthy();
     const add = screen.getByRole("button", { name: "Add" }) as HTMLButtonElement;
     expect(add.disabled).toBe(true);
   });
@@ -87,10 +79,7 @@ describe("AddOrganization", () => {
     render(<AddOrganization />);
     const user = await openDialog();
 
-    await user.type(
-      screen.getByPlaceholderText("Enter organization name"),
-      "New Org",
-    );
+    await user.type(screen.getByPlaceholderText("Enter organization name"), "New Org");
     const add = screen.getByRole("button", { name: "Add" }) as HTMLButtonElement;
     expect(add.disabled).toBe(false);
 
@@ -112,10 +101,7 @@ describe("AddOrganization", () => {
     const user = await openDialog();
 
     // Whitespace makes the form dirty (enabling Add) but fails zod's trim/min(1).
-    await user.type(
-      screen.getByPlaceholderText("Enter organization name"),
-      "   ",
-    );
+    await user.type(screen.getByPlaceholderText("Enter organization name"), "   ");
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     expect(await screen.findByText("Name is required")).toBeTruthy();

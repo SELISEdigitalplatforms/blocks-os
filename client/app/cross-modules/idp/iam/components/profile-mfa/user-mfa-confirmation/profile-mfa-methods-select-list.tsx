@@ -1,5 +1,5 @@
 import { profileMfaContext } from "../profile-mfa";
-import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { ReactNode, useContext, useMemo, useState } from "react";
 import { useGetProfileMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { useGetProfileUserById } from "@blocks-idp/iam/hooks/use-user";
 import { MFA_Provider_Data } from "@blocks-idp/mfa/utils/mfa-config";
@@ -59,15 +59,16 @@ export const ProfileMfaMethodSelectList = () => {
   const availableMFaMethod = useMemo(() => {
     if (!projectMfaEnabled) return [];
     if (!projectMfaConfig?.allowedMethods?.length) return [];
-    return MFA_Provider_Data.filter((item) =>
-      projectMfaConfig.allowedMethods.includes(item.type),
-    );
+    return MFA_Provider_Data.filter((item) => projectMfaConfig.allowedMethods.includes(item.type));
   }, [projectMfaEnabled, projectMfaConfig?.allowedMethods]);
-  useEffect(() => {
-    if (userData?.data?.userMfaType !== undefined) {
-      setType(userData.data.userMfaType.toString());
+  const mfaType = userData?.data?.userMfaType;
+  const [prevMfaType, setPrevMfaType] = useState<typeof mfaType | undefined>(undefined);
+  if (prevMfaType !== mfaType) {
+    setPrevMfaType(mfaType);
+    if (mfaType !== undefined) {
+      setType(mfaType.toString());
     }
-  }, [userData?.data?.userMfaType]);
+  }
   const saveHandler = (type: number) => {
     showVerifyModal(type);
   };

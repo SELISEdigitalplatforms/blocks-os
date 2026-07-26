@@ -44,7 +44,6 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
     });
   };
 
-
   const getExpirationLabel = (days: string): string => {
     const daysNum = parseInt(days);
     return `${days} days (${getExpirationDate(daysNum)})`;

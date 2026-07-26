@@ -1,19 +1,19 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest";
 
-const IAM_BASE_URL = "https://dev-iam.blocksdevelopers.com"
+const IAM_BASE_URL = "https://dev-iam.blocksdevelopers.com";
 
 vi.mock("@/lib/runtime-env", () => ({
   getRuntimeEnv: (key: string) => (key === "BLOCKS_IAM_BASE_URL" ? IAM_BASE_URL : ""),
-}))
+}));
 
 const {
   applyOidcIamConfigOverrides,
   buildSavePayload,
   iamConfigFormSchema,
   toIamConfigFormValues,
-} = await import("./auth-config-form")
+} = await import("./auth-config-form");
 
-type IamConfigFormValues = ReturnType<typeof toIamConfigFormValues>
+type IamConfigFormValues = ReturnType<typeof toIamConfigFormValues>;
 
 const iamConfigFormValues = (
   overrides: Partial<IamConfigFormValues> = {},
@@ -29,7 +29,7 @@ const iamConfigFormValues = (
   isOidcEnabled: false,
   passwordStrengthCheckerRegex: "",
   ...overrides,
-})
+});
 
 /** Mirrors a project seeded with the `https://example.com` domain at creation. */
 const savedConfig = {
@@ -52,70 +52,70 @@ const savedConfig = {
   logoutOnPasswordChange: true,
   passwordStrengthCheckerRegex: "",
   allowedGrantTypes: ["password"],
-}
+};
 
 describe("toIamConfigFormValues", () => {
   it("defaults the base URL to the IAM host when OIDC is enabled", () => {
-    expect(toIamConfigFormValues(savedConfig).accountActionBaseUrl).toBe(IAM_BASE_URL)
-  })
+    expect(toIamConfigFormValues(savedConfig).accountActionBaseUrl).toBe(IAM_BASE_URL);
+  });
 
   it("keeps the stored base URL when OIDC is disabled", () => {
-    const values = toIamConfigFormValues({ ...savedConfig, isOidcEnabled: false })
+    const values = toIamConfigFormValues({ ...savedConfig, isOidcEnabled: false });
 
-    expect(values.accountActionBaseUrl).toBe("https://example.com")
-  })
-})
+    expect(values.accountActionBaseUrl).toBe("https://example.com");
+  });
+});
 
 describe("applyOidcIamConfigOverrides", () => {
   it("sets the base URL to the IAM host when OIDC is enabled", () => {
     const result = applyOidcIamConfigOverrides(
       iamConfigFormValues({ isOidcEnabled: true, accountActionBaseUrl: "" }),
-    )
+    );
 
-    expect(result.accountActionBaseUrl).toBe(IAM_BASE_URL)
-    expect(result.useAccountActionBaseUrlAsDefault).toBe(false)
-  })
+    expect(result.accountActionBaseUrl).toBe(IAM_BASE_URL);
+    expect(result.useAccountActionBaseUrlAsDefault).toBe(false);
+  });
 
   it("leaves the base URL alone when OIDC is disabled", () => {
-    const values = iamConfigFormValues({ isOidcEnabled: false })
+    const values = iamConfigFormValues({ isOidcEnabled: false });
 
-    expect(applyOidcIamConfigOverrides(values)).toEqual(values)
-  })
+    expect(applyOidcIamConfigOverrides(values)).toEqual(values);
+  });
 
   it("sends the IAM host rather than the stale saved base URL", () => {
     const payload = buildSavePayload(
       savedConfig,
       applyOidcIamConfigOverrides(toIamConfigFormValues(savedConfig)),
-    )
+    );
 
-    expect(payload.accountActionBaseUrl).toBe(IAM_BASE_URL)
-    expect(payload.useAccountActionBaseUrlAsDefault).toBe(false)
-  })
-})
+    expect(payload.accountActionBaseUrl).toBe(IAM_BASE_URL);
+    expect(payload.useAccountActionBaseUrlAsDefault).toBe(false);
+  });
+});
 
 describe("iamConfigFormSchema", () => {
   it("requires a base URL when OIDC is disabled", () => {
     const result = iamConfigFormSchema.safeParse(
       iamConfigFormValues({ isOidcEnabled: false, accountActionBaseUrl: "" }),
-    )
+    );
 
-    expect(result.success).toBe(false)
-    expect(result.error?.issues[0]?.path).toEqual(["accountActionBaseUrl"])
-  })
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["accountActionBaseUrl"]);
+  });
 
   it("rejects a blank base URL when OIDC is disabled", () => {
     const result = iamConfigFormSchema.safeParse(
       iamConfigFormValues({ isOidcEnabled: false, accountActionBaseUrl: "   " }),
-    )
+    );
 
-    expect(result.success).toBe(false)
-  })
+    expect(result.success).toBe(false);
+  });
 
   it("allows an empty base URL when OIDC is enabled", () => {
     const result = iamConfigFormSchema.safeParse(
       iamConfigFormValues({ isOidcEnabled: true, accountActionBaseUrl: "" }),
-    )
+    );
 
-    expect(result.success).toBe(true)
-  })
-})
+    expect(result.success).toBe(true);
+  });
+});

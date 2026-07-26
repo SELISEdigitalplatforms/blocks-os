@@ -116,9 +116,7 @@ describe("lib/utils", () => {
     it("unwraps ISODate, ObjectId, $date and NumberLong tokens", () => {
       const input =
         'ObjectId("abc123") ISODate("2026-01-15") { "$date": "2026-02-01" } NumberLong(42)';
-      expect(parseMongoDBString(input)).toBe(
-        '"abc123" "2026-01-15" "2026-02-01" 42',
-      );
+      expect(parseMongoDBString(input)).toBe('"abc123" "2026-01-15" "2026-02-01" 42');
     });
   });
 

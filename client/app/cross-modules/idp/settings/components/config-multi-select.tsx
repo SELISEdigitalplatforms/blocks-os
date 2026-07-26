@@ -1,25 +1,25 @@
-import { Badge } from "@/components/ui-kits/badge/badge"
-import { Button } from "@/components/ui-kits/button/button"
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox"
-import { Input } from "@/components/ui-kits/input/input"
-import { cn } from "@/lib/utils"
-import { Search, X } from "lucide-react"
-import { useMemo, useState } from "react"
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { Button } from "@/components/ui-kits/button/button";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { Input } from "@/components/ui-kits/input/input";
+import { cn } from "@/lib/utils";
+import { Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
 
 type ConfigMultiSelectOption = {
-  label: string
-  value: string
-}
+  label: string;
+  value: string;
+};
 
 type ConfigMultiSelectProps = {
-  options: ConfigMultiSelectOption[]
-  selected: string[]
-  onChange: (values: string[]) => void
-  placeholder?: string
-  emptyMessage?: string
-  disabled?: boolean
-  isLoading?: boolean
-}
+  options: ConfigMultiSelectOption[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+  emptyMessage?: string;
+  disabled?: boolean;
+  isLoading?: boolean;
+};
 
 export const ConfigMultiSelect = ({
   options,
@@ -30,35 +30,34 @@ export const ConfigMultiSelect = ({
   disabled = false,
   isLoading = false,
 }: ConfigMultiSelectProps) => {
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState("");
 
   const filteredOptions = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return options
+    const query = search.trim().toLowerCase();
+    if (!query) return options;
     return options.filter(
       (option) =>
-        option.label.toLowerCase().includes(query) ||
-        option.value.toLowerCase().includes(query),
-    )
-  }, [options, search])
+        option.label.toLowerCase().includes(query) || option.value.toLowerCase().includes(query),
+    );
+  }, [options, search]);
 
   const handleToggle = (value: string) => {
-    if (disabled) return
-    const isSelected = selected.includes(value)
-    onChange(isSelected ? selected.filter((item) => item !== value) : [...selected, value])
-  }
+    if (disabled) return;
+    const isSelected = selected.includes(value);
+    onChange(isSelected ? selected.filter((item) => item !== value) : [...selected, value]);
+  };
 
   const handleClear = () => {
-    if (disabled) return
-    onChange([])
-  }
+    if (disabled) return;
+    onChange([]);
+  };
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>
+    return <div className="text-sm text-muted-foreground">Loading...</div>;
   }
 
   if (options.length === 0) {
-    return <div className="text-sm text-muted-foreground">{emptyMessage}</div>
+    return <div className="text-sm text-muted-foreground">{emptyMessage}</div>;
   }
 
   return (
@@ -66,7 +65,7 @@ export const ConfigMultiSelect = ({
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {selected.map((value) => {
-            const option = options.find((item) => item.value === value)
+            const option = options.find((item) => item.value === value);
             return (
               <Badge key={value} variant="secondary" className="gap-1 pr-1">
                 <span className="max-w-[12rem] truncate">{option?.label ?? value}</span>
@@ -80,7 +79,7 @@ export const ConfigMultiSelect = ({
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
-            )
+            );
           })}
           <Button
             type="button"
@@ -121,8 +120,8 @@ export const ConfigMultiSelect = ({
         ) : (
           <ul className="divide-y divide-border/60">
             {filteredOptions.map((option) => {
-              const isSelected = selected.includes(option.value)
-              const optionId = `config-multi-select-${option.value}`
+              const isSelected = selected.includes(option.value);
+              const optionId = `config-multi-select-${option.value}`;
 
               return (
                 <li key={option.value}>
@@ -144,7 +143,7 @@ export const ConfigMultiSelect = ({
                     <span className="min-w-0 flex-1 text-sm leading-snug">{option.label}</span>
                   </label>
                 </li>
-              )
+              );
             })}
           </ul>
         )}
@@ -154,5 +153,5 @@ export const ConfigMultiSelect = ({
         {selected.length} selected · {options.length} available
       </p>
     </div>
-  )
-}
+  );
+};

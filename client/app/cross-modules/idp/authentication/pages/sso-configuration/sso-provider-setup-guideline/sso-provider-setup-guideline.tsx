@@ -10,7 +10,11 @@ type SSoProviderSetupGuideLineProps = {
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-export const SSoProviderSetupGuideLine = ({ provider, open, onOpenChange }: SSoProviderSetupGuideLineProps) => {
+export const SSoProviderSetupGuideLine = ({
+  provider,
+  open,
+  onOpenChange,
+}: SSoProviderSetupGuideLineProps) => {
   const steps = SSOSetupGuideSteps[provider] || null;
   if (!steps) return;
   return (
@@ -26,7 +30,11 @@ export const SSoProviderSetupGuideLine = ({ provider, open, onOpenChange }: SSoP
           <div>
             <div className="flex items-center justify-between gap-2 p-4">
               <h2 className="text-lg font-semibold">Setup Guide</h2>
-              <Button variant="ghost" onClick={() => onOpenChange(false)} className="h-fit w-fit !p-2">
+              <Button
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="h-fit w-fit !p-2"
+              >
                 <X className="aspect-square w-4" />
               </Button>
             </div>

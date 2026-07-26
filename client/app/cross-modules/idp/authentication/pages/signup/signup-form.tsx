@@ -19,11 +19,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { signupFormDefaultValue, signupFormSchema } from "./utils";
 
-export const SignupForm = ({
-  emailSignUpEnabled,
-}: {
-  emailSignUpEnabled: boolean;
-}) => {
+export const SignupForm = ({ emailSignUpEnabled }: { emailSignUpEnabled: boolean }) => {
   const [isChecked, setIsChecked] = useState(false);
   const form = useForm({
     defaultValues: signupFormDefaultValue,
@@ -45,70 +41,70 @@ export const SignupForm = ({
   }, [captchaCode, isValid, resetCaptcha]);
   return (
     <>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmitHandler)}>
-            {emailSignUpEnabled && (
-              <div className="grid gap-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="Enter your email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmitHandler)}>
+          {emailSignUpEnabled && (
+            <div className="grid gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Enter your email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {isValid && <Captcha {...captcha} />}
+              <div className="mt-2 flex justify-start gap-2 text-sm text-foreground">
+                <Checkbox
+                  id="terms"
+                  checked={isChecked}
+                  onCheckedChange={(checked) => setIsChecked(!!checked)}
+                  className="mt-1 shrink-0"
                 />
-                {isValid && <Captcha {...captcha} />}
-                <div className="mt-2 flex justify-start gap-2 text-sm text-foreground">
-                  <Checkbox
-                    id="terms"
-                    checked={isChecked}
-                    onCheckedChange={(checked) => setIsChecked(!!checked)}
-                    className="mt-1 shrink-0"
-                  />
-                  <label
-                    htmlFor="terms"
-                    className="cursor-pointer text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    I agree to the{" "}
-                    <Link
-                      to="https://selisegroup.com/software-development-terms/"
-                      className="text-primary underline"
-                      target="_blank"
-                    >
-                      Terms of Services{" "}
-                    </Link>
-                    and acknowledge that I have read the{" "}
-                    <Link
-                      to="https://selisegroup.com/privacy-policy/"
-                      className="text-primary underline"
-                      target="_blank"
-                    >
-                      Privacy policy.
-                    </Link>
-                  </label>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full rounded"
-                  disabled={!isValid || !captchaCode || !isChecked}
+                <label
+                  htmlFor="terms"
+                  className="cursor-pointer text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Continue
-                </Button>
+                  I agree to the{" "}
+                  <Link
+                    to="https://selisegroup.com/software-development-terms/"
+                    className="text-primary underline"
+                    target="_blank"
+                  >
+                    Terms of Services{" "}
+                  </Link>
+                  and acknowledge that I have read the{" "}
+                  <Link
+                    to="https://selisegroup.com/privacy-policy/"
+                    className="text-primary underline"
+                    target="_blank"
+                  >
+                    Privacy policy.
+                  </Link>
+                </label>
               </div>
-            )}
-          </form>
-        </Form>
-        <div className="mt-4 text-center text-base text-foreground">
-          Already a member?{" "}
-          <Link to={"/login"} className="text-primary hover:underline">
-            Log in
-          </Link>
-        </div>
+              <Button
+                type="submit"
+                className="w-full rounded"
+                disabled={!isValid || !captchaCode || !isChecked}
+              >
+                Continue
+              </Button>
+            </div>
+          )}
+        </form>
+      </Form>
+      <div className="mt-4 text-center text-base text-foreground">
+        Already a member?{" "}
+        <Link to={"/login"} className="text-primary hover:underline">
+          Log in
+        </Link>
+      </div>
     </>
   );
 };

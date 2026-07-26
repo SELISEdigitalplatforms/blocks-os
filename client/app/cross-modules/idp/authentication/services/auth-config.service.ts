@@ -16,9 +16,7 @@ export class AuthConfiguration {
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  saveAuthConfig(
-    payload: ISaveAuthConfigPayload,
-  ): Promise<ISaveAuthConfigResponse> {
+  saveAuthConfig(payload: ISaveAuthConfigPayload): Promise<ISaveAuthConfigResponse> {
     return http.post(AUTH_CONFIG_ENDPOINTS.UPDATE_CONFIG, payload, undefined, {
       absoluteUrl: true,
     });

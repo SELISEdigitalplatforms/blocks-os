@@ -20,14 +20,12 @@ const PREVIEW_THEME_OPTIONS: Array<{
 ];
 
 const readDocumentTheme = (): PreviewTheme =>
-  typeof document !== "undefined" &&
-  document.documentElement.classList.contains("dark")
+  typeof document !== "undefined" && document.documentElement.classList.contains("dark")
     ? "dark"
     : "light";
 
 const getSystemTheme = (): PreviewTheme =>
-  typeof window !== "undefined" &&
-  window.matchMedia("(prefers-color-scheme: dark)").matches
+  typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
 
@@ -123,8 +121,7 @@ export const OidcLoginPreview = ({
     return () => mq.removeEventListener("change", handleChange);
   }, [previewMode]);
 
-  const previewTheme: PreviewTheme =
-    previewMode === "system" ? systemTheme : previewMode;
+  const previewTheme: PreviewTheme = previewMode === "system" ? systemTheme : previewMode;
 
   const brandVars = buildOidcBrandCssVars(clientBrandColor || DEFAULT_BRAND_COLOR);
 
@@ -147,9 +144,7 @@ export const OidcLoginPreview = ({
       />
 
       <div className="relative z-10 flex flex-1 items-stretch sm:items-center sm:justify-center sm:p-4">
-        <div
-          className="oidc-login-preview-card flex w-full min-h-0 flex-1 flex-col overflow-hidden rounded-none bg-[var(--surface)] shadow-none sm:max-w-[23rem] sm:min-h-[460px] sm:flex-none sm:rounded-[1.5rem] sm:shadow-xl md:max-w-[26rem]"
-        >
+        <div className="oidc-login-preview-card flex w-full min-h-0 flex-1 flex-col overflow-hidden rounded-none bg-[var(--surface)] shadow-none sm:max-w-[23rem] sm:min-h-[460px] sm:flex-none sm:rounded-[1.5rem] sm:shadow-xl md:max-w-[26rem]">
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-4 sm:pt-5">
             <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -168,18 +163,12 @@ export const OidcLoginPreview = ({
                 </span>
               </div>
               <div className="pointer-events-auto">
-                <OidcPreviewModeToggle
-                  mode={previewMode}
-                  onModeChange={setPreviewMode}
-                />
+                <OidcPreviewModeToggle mode={previewMode} onModeChange={setPreviewMode} />
               </div>
             </div>
 
             <div className="flex flex-1 flex-col justify-center">
-              <SectionHeading
-                text="Sign in to continue to your application"
-                dimFirst={3}
-              />
+              <SectionHeading text="Sign in to continue to your application" dimFirst={3} />
 
               <div className="flex w-full flex-col gap-4 sm:gap-5">
                 <div className="flex flex-col gap-2">

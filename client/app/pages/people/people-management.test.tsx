@@ -42,6 +42,15 @@ vi.mock("./people-list", () => ({
   PeopleList: () => <div>people list</div>,
 }));
 
+// The filter toolbar hook is backed by nuqs, which needs a framework adapter.
+// Stub it so the component can read stable query params without one.
+vi.mock("./people-filter-toolbar", () => ({
+  usePeopleFilterQueryParams: () => ({
+    queryParams: { page: 0, pageSize: 10, search: "", searchField: "email" },
+    setQueryParams: vi.fn(),
+  }),
+}));
+
 vi.mock("./invite-people", () => ({
   InvitePeople: ({
     existingEmails,

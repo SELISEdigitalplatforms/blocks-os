@@ -74,9 +74,7 @@ export const EditProjectForm = ({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-col gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="name"
@@ -102,9 +100,8 @@ export const EditProjectForm = ({
             size="sm"
             className="w-20"
             type="submit"
-            disabled={
-              !form.formState.isValid || isPending || !form.formState.isDirty
-            }>
+            disabled={!form.formState.isValid || isPending || !form.formState.isDirty}
+          >
             Save
           </Button>
         </DialogFooter>

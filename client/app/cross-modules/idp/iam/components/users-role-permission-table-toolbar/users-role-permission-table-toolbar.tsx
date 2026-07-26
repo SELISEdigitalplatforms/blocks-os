@@ -23,6 +23,26 @@ interface TableFilterData {
 interface UsersRolePermissionTableToolbarProps<TData> {
   table: Table<TData>;
 }
+function PermissionFilterContent<TData extends TableFilterData>({ table }: { table: Table<TData> }) {
+  return (
+    <>
+      {table.getRowModel() && (
+        <DataTableFacetedFilter
+          column={table.getColumn("resourceGroup")}
+          title="Group"
+          options={[
+            ...Array.from(
+              new Set(table.getRowModel().rows.map((row) => row.original.resourceGroup)),
+            ).map((group) => ({
+              label: group,
+              value: group,
+            })),
+          ]}
+        />
+      )}
+    </>
+  );
+}
 export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
   table,
 }: UsersRolePermissionTableToolbarProps<TData>) {
@@ -47,32 +67,9 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
     setSearchValue("");
     table.resetColumnFilters();
   }
-  const FilterContent = () => (
-    <>
-      {table.getRowModel() && (
-        <DataTableFacetedFilter
-          column={table.getColumn("resourceGroup")}
-          title="Group"
-          options={[
-            ...Array.from(
-              new Set(
-                table
-                  .getRowModel()
-                  .rows.map((row) => row.original.resourceGroup),
-              ),
-            ).map((group) => ({
-              label: group,
-              value: group,
-            })),
-          ]}
-        />
-      )}
-    </>
-  );
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      <div
-        className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
+      <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter permission"
           onSearch={onSearchInputChange}
@@ -85,10 +82,7 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
         {isServiceBarOpen && (
           <Sheet>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="relative h-8 w-8 p-0">
+              <Button variant="outline" size="sm" className="relative h-8 w-8 p-0">
                 <Filter className="h-4 w-4" />
                 {activeFiltersCount > 0 && (
                   <Badge className="absolute -right-2 -top-2 h-4 w-4 px-1 text-xs font-medium">
@@ -97,24 +91,18 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-full"
-              aria-describedby="filter-description">
+            <SheetContent side="right" className="w-full" aria-describedby="filter-description">
               <SheetTitle className="mb-4">Filter</SheetTitle>
               <SheetDescription />
               <div className="flex flex-col space-y-4">
-                <FilterContent />
+                <PermissionFilterContent table={table} />
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
                     Show Results
                   </Button>
                 </SheetClose>
                 {isFiltered && (
-                  <Button
-                    variant="outline"
-                    onClick={resetFilters}
-                    className="h-8 px-2 lg:px-3">
+                  <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
                     Reset
                     <Cross2Icon className="ml-2 h-4 w-4" />
                   </Button>
@@ -124,8 +112,7 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
           </Sheet>
         )}
       </div>
-      <div
-        className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
+      <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter users by name or email"
           onSearch={onSearchInputChange}
@@ -134,12 +121,9 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
           isVisible={isSearchVisible}
           setIsVisible={setIsSearchVisible}
         />
-        <FilterContent />
+        <PermissionFilterContent table={table} />
         {isFiltered && (
-          <Button
-            variant="outline"
-            onClick={resetFilters}
-            className="h-8 px-2 lg:px-3">
+          <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
             Reset
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>

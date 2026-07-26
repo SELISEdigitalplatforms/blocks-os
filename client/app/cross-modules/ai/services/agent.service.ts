@@ -4,9 +4,7 @@ import { AI_ENDPOINTS } from "@blocks-ai/constants/endpoint.constant";
 import { ILMTQueryAgentPayload } from "@blocks-ai/types/agent.service.type";
 
 class AgentService {
-  async lmtQuerySSE(
-    payload: ILMTQueryAgentPayload,
-  ): Promise<ReadableStream<Uint8Array>> {
+  async lmtQuerySSE(payload: ILMTQueryAgentPayload): Promise<ReadableStream<Uint8Array>> {
     const baseUrl = getRuntimeEnv("BLOCKS_AGENTS_BASE_URL");
 
     return await http.stream(

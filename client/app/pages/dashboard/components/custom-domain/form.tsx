@@ -58,7 +58,8 @@ export const SetCustomDomainForm = ({
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
-                disabled={verifiedDomains.length === 0}>
+                disabled={verifiedDomains.length === 0}
+              >
                 <FormControl>
                   <SelectTrigger className="[&>span]:truncate [&>span]:text-left">
                     <SelectValue
@@ -74,10 +75,7 @@ export const SetCustomDomainForm = ({
                     the dropdown stays usable on small screens */}
                 <SelectContent className="max-w-[calc(100vw-2rem)]">
                   {verifiedDomains.map((domain) => (
-                    <SelectItem
-                      key={domain}
-                      value={domain}
-                      className="break-all">
+                    <SelectItem key={domain} value={domain} className="break-all">
                       {domain}
                     </SelectItem>
                   ))}
