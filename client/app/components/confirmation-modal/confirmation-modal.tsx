@@ -41,10 +41,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           {data.cancelButton || "Cancel"}
         </Button>
       </DialogTrigger>
-      <Button
-        size="sm"
-        onClick={onConfirm}
-        disabled={buttonState?.confirm.disable}>
+      <Button size="sm" onClick={onConfirm} disabled={buttonState?.confirm.disable}>
         {data.confirmButton || "Yes"}
       </Button>
     </DialogFooter>

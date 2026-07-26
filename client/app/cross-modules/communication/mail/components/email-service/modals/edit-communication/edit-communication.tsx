@@ -69,7 +69,7 @@ const EditCommunication = (props: EditCommunicationProps) => {
       : undefined,
     resolver: zodResolver(schema),
   });
-  const formSubmitHandler = async (data: any) => {
+  const formSubmitHandler = async (data: IEmailTemplate) => {
     try {
       const payload = {
         ...data,

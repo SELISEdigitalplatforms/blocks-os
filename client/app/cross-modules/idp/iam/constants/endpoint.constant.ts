@@ -3,8 +3,6 @@ import { API_BASES } from "@/constants/endpoint.constant";
 // ─── Subpaths ─────────────────────────────────────────────────────────────────
 const IAM_SUBPATH = "/iam";
 
-
-
 // ─── User endpoints (user.service) ──────────────────────────────────────────
 
 export const USER_ENDPOINTS = {
@@ -32,7 +30,6 @@ export const USER_ENDPOINTS = {
   GET_HISTORIES: `${API_BASES.IAM}${IAM_SUBPATH}/history`,
   GET_USER_CODES: `${API_BASES.IAM}/auth/GetUserCodes`,
   GENERATE_USER_CODE: `${API_BASES.IAM}/auth/GenerateUserCode`,
-
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────

@@ -9,12 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { UpdateRole } from "../update-role/update-role";
@@ -58,9 +53,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
             onChange={sortHandler}
           />
         ),
-        cell: (roles) => (
-          <div className="w-[130px] truncate">{roles.row.original.name}</div>
-        ),
+        cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
       },
       {
         id: "slug",
@@ -92,9 +85,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
             onChange={sortHandler}
           />
         ),
-        cell: (roles) => (
-          <div className="w-[180px] truncate">{roles.row.original.count}</div>
-        ),
+        cell: (roles) => <div className="w-[180px] truncate">{roles.row.original.count}</div>,
       },
       {
         id: "description",
@@ -105,9 +96,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
           </div>
         ),
         cell: (roles) => (
-          <div className="w-[200px] truncate md:w-[260px]">
-            {roles.row.original.description}
-          </div>
+          <div className="w-[200px] truncate md:w-[260px]">{roles.row.original.description}</div>
         ),
       },
       {
@@ -122,7 +111,8 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
               onClick={(event) => {
                 event.stopPropagation();
                 setSelectedRole(row.original);
-              }}>
+              }}
+            >
               <Pencil className="h-4 w-4" />
             </Button>
           </div>
@@ -152,10 +142,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 )),
               )}
@@ -166,7 +153,8 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground">
+                className="h-24 text-center text-muted-foreground"
+              >
                 No roles found. Please create new roles.
               </TableCell>
             </TableRow>
@@ -175,7 +163,8 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
               <TableRow
                 key={row.id}
                 className="cursor-pointer"
-                onClick={() => onRowClickHandler(row.original.itemId)}>
+                onClick={() => onRowClickHandler(row.original.itemId)}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -191,7 +180,8 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
           open={!!selectedRole}
           onOpenChange={(value) => {
             if (!value) setSelectedRole(null);
-          }}>
+          }}
+        >
           <UpdateRole
             role={selectedRole}
             isOpen={!!selectedRole}

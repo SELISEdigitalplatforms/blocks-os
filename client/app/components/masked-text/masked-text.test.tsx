@@ -9,9 +9,7 @@ describe("MaskedText", () => {
   });
 
   it("reveals the first and last N characters", () => {
-    const { container } = render(
-      <MaskedText text="1234567890" showFirstN={2} showLastN={2} />,
-    );
+    const { container } = render(<MaskedText text="1234567890" showFirstN={2} showLastN={2} />);
     expect(container.textContent).toBe("12******90");
   });
 
@@ -26,9 +24,7 @@ describe("MaskedText", () => {
   });
 
   it("never produces a negative mask count", () => {
-    const { container } = render(
-      <MaskedText text="ab" showFirstN={5} showLastN={5} />,
-    );
+    const { container } = render(<MaskedText text="ab" showFirstN={5} showLastN={5} />);
     // firstVisible = "ab", lastVisible = "ab", masked count clamped to 0
     expect(container.textContent).toBe("abab");
   });

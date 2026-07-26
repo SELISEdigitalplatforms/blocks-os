@@ -18,15 +18,10 @@ export type FilterItem<T extends Record<string, unknown>> = {
     type: K;
     span?: number;
     label: string;
-    props?: Omit<
-      React.ComponentProps<(typeof FilterControls)[K]>,
-      "value" | "onChange" | "label"
-    >;
+    props?: Omit<React.ComponentProps<(typeof FilterControls)[K]>, "value" | "onChange" | "label">;
   };
 }[keyof typeof FilterControls];
-export type FilterChangeHandler<T extends Record<string, unknown>> = <
-  K extends keyof T,
->(
+export type FilterChangeHandler<T extends Record<string, unknown>> = <K extends keyof T>(
   key: K,
   value: T[K],
   values: T,
@@ -44,11 +39,7 @@ type ViewType = {
   onReset?: () => void;
   showReset: boolean;
 };
-const FilterToolbarDesktopView = ({
-  Components,
-  showReset,
-  onReset,
-}: ViewType) => {
+const FilterToolbarDesktopView = ({ Components, showReset, onReset }: ViewType) => {
   return (
     <div className="hidden flex-wrap items-center gap-4 md:flex">
       {Components.map((item) => item)}
@@ -62,21 +53,14 @@ const FilterToolbarDesktopView = ({
     </div>
   );
 };
-export const FilterToolBarMobileView = ({
-  Components,
-  showReset,
-  onReset,
-}: ViewType) => {
+export const FilterToolBarMobileView = ({ Components, showReset, onReset }: ViewType) => {
   return (
     <div className={"flex items-center justify-between gap-2 md:hidden"}>
       <div className="min-w-0 max-w-72 flex-1">{Components[0]}</div>
       {Components.length > 1 && (
         <Sheet>
           <SheetTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="relative h-8 w-8 p-0">
+            <Button variant="outline" size="sm" className="relative h-8 w-8 p-0">
               <Filter className="h-4 w-4" />
               {/* {activeFilter > 0 && (
               <Badge className="absolute -right-2 -top-2 h-4 w-4 px-1 text-xs font-medium">
@@ -85,10 +69,7 @@ export const FilterToolBarMobileView = ({
             )} */}
             </Button>
           </SheetTrigger>
-          <SheetContent
-            side="right"
-            className="w-full"
-            aria-describedby="filter-description">
+          <SheetContent side="right" className="w-full" aria-describedby="filter-description">
             <SheetTitle className="mb-4">Filter</SheetTitle>
             <SheetDescription></SheetDescription>
             <div className="flex flex-col space-y-4">
@@ -133,16 +114,13 @@ export const FilterToolbar = <T extends Record<string, unknown>>({
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         //@ts-expect-error
         value={values[item.key]}
-        onChange={(val: unknown) =>
-          changeHandler(item.key as keyof T, val as T[keyof T])
-        }
+        onChange={(val: unknown) => changeHandler(item.key as keyof T, val as T[keyof T])}
         {...item.props}
         key={String(item.key)}
       />
     );
   });
-  const showReset =
-    !hideGlobalResetButton && !deepEqual(initialValuesRef.current, values);
+  const showReset = !hideGlobalResetButton && !deepEqual(initialValuesRef.current, values);
   return (
     <>
       <FilterToolbarDesktopView

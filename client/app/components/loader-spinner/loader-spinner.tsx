@@ -11,7 +11,12 @@ const LogoLoadingSpinner = ({ size = 64 }: { size?: number }) => (
       }
     `}</style>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-      <img src="/Icon.svg" alt="Loading" className="animate-breathe" style={{ width: size, height: size }} />
+      <img
+        src="/Icon.svg"
+        alt="Loading"
+        className="animate-breathe"
+        style={{ width: size, height: size }}
+      />
     </div>
   </>
 );

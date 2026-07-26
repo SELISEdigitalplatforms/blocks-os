@@ -163,9 +163,9 @@ server/Api/wwwroot/**
 
 #graphify out
 
-client/graphify-out/
+# client/graphify-out/
 
-graphify-out/
+# graphify-out/
 
 server/**/launchSettings.json
 
@@ -184,6 +184,36 @@ docs/
 change.md
 
 .kilo
+# ai agent config (local to each machine; codex config is tracked deliberately)
+.claude/
+CLAUDE.md
+# build output (never commit)
+builds/
+.sonarqube/
+.scannerwork/
+*.trufflehog.json
+*-secrets.json
+*sbom*.json
+*.cdx.json
+zap-*.xml
+*-semgrep.sarif
+
+# ---------------------------------------------------------------------------
+# Markdown policy: no .md files in the repository except README.md (any
+# directory) and LICENSE.md. Docs/specs stay local, untracked.
+# Mirrored in .git/info/exclude and enforced by .git/hooks/pre-commit on the
+# deployment VM - keep the three in sync.
+*.md
+!README.md
+!LICENSE.md
+
+# --- markdown policy v2: only standard docs may be tracked ---
+*.md
+!README.md
+!LICENSE.md
+!CONTRIBUTING.md
+!SECURITY.md
+!CODE_OF_CONDUCT.md
 
 # --- AI assistant artifacts: never track ---
 .claude/
@@ -210,3 +240,4 @@ copilot-instructions.md
 !CONTRIBUTING.md
 !SECURITY.md
 !CODE_OF_CONDUCT.md
+scripts/scan.sh

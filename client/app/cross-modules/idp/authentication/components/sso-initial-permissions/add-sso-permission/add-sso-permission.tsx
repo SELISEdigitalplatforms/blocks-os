@@ -191,10 +191,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="h-24 text-center text-muted-foreground"
-                    >
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                       No permissions found
                     </TableCell>
                   </TableRow>

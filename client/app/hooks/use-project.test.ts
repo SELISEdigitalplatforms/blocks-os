@@ -73,17 +73,14 @@ describe("use-project hooks", () => {
         { projects: [{ itemId: "b" }] },
       ] as never);
 
-      const { result } = renderHook(() => useGetProjects("tg-1"), {
+      const { result } = renderHook(() => useGetProjects({ tenantGroupId: "tg-1" }), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(projectService.getProjects).toHaveBeenCalledWith(0, 100, "tg-1");
       await waitFor(() =>
-        expect(setProjects).toHaveBeenCalledWith([
-          { itemId: "a" },
-          { itemId: "b" },
-        ]),
+        expect(setProjects).toHaveBeenCalledWith([{ itemId: "a" }, { itemId: "b" }]),
       );
     });
   });
@@ -136,13 +133,13 @@ describe("use-project hooks", () => {
       expect(crossProjectService.getEnvRepositories).toHaveBeenCalledWith();
     });
 
-    it("useGetMigrationStatus fetches status", async () => {
+    it("useGetMigrationStatus stays disabled until the migration feature is ready", () => {
       vi.mocked(crossProjectService.getMigrationStatus).mockResolvedValue({} as never);
       const { result } = renderHook(() => useGetMigrationStatus("tg"), {
         wrapper: createWrapper(),
       });
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(crossProjectService.getMigrationStatus).toHaveBeenCalledWith("tg");
+      expect(result.current.fetchStatus).toBe("idle");
+      expect(crossProjectService.getMigrationStatus).not.toHaveBeenCalled();
     });
   });
 

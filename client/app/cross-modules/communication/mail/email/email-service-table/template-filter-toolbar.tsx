@@ -1,4 +1,8 @@
-import { FilterChangeHandler, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
+import {
+  FilterChangeHandler,
+  FilterToolbar,
+  useSortQueryParams,
+} from "@/components/filter-toolbar";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 export const useTemplatesFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
@@ -17,14 +21,19 @@ export function TemplateFilterToolbar({
   languageListData,
 }: {
   emailConfigsData: Array<{ itemId: string; name: string }>;
-  languageListData: Array<{ itemId: string; languageName: string; languageCode: string; isDefault?: boolean }>;
+  languageListData: Array<{
+    itemId: string;
+    languageName: string;
+    languageCode: string;
+    isDefault?: boolean;
+  }>;
 }) {
   const { queryParams, setQueryParams } = useTemplatesFilterQueryParams();
-  const onChange: FilterChangeHandler<{ search: string; language: string; mailConfigurationId: string }> = (
-    _key,
-    _value,
-    values
-  ) => {
+  const onChange: FilterChangeHandler<{
+    search: string;
+    language: string;
+    mailConfigurationId: string;
+  }> = (_key, _value, values) => {
     setQueryParams((prev) => ({
       ...prev,
       ...values,

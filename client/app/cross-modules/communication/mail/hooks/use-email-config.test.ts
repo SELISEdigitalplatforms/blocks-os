@@ -104,7 +104,10 @@ describe("Email Config Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.saveMailConfig).toHaveBeenCalledWith(mockSaveConfigPayload, expect.anything());
+      expect(emailService.saveMailConfig).toHaveBeenCalledWith(
+        mockSaveConfigPayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 
@@ -174,7 +177,10 @@ describe("Email Config Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.deleteMailConfig).toHaveBeenCalledWith(mockDeleteConfigPayload, expect.anything());
+      expect(emailService.deleteMailConfig).toHaveBeenCalledWith(
+        mockDeleteConfigPayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 

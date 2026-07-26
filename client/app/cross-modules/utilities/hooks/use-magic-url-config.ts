@@ -5,13 +5,14 @@ import {
   ISaveMagicUrlConfigPayload,
 } from "@blocks-utilities/models/magic-url-config.model";
 
-export const magicUrlConfigsQueryKey = (options: IGetMagicUrlConfigsPayload) => [
-  "magic-url-configs",
-  options.projectKey,
-  options.page,
-  options.pageSize,
-  options.searchText ?? "",
-] as const;
+export const magicUrlConfigsQueryKey = (options: IGetMagicUrlConfigsPayload) =>
+  [
+    "magic-url-configs",
+    options.projectKey,
+    options.page,
+    options.pageSize,
+    options.searchText ?? "",
+  ] as const;
 
 export const useGetMagicUrlConfigs = (
   options: IGetMagicUrlConfigsPayload,

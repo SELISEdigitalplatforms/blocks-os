@@ -8,9 +8,7 @@ import { STORAGE_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class StorageConfiguration {
   gets(): Promise<IStorageConfiguration[]> {
-    return http.get<IStorageConfiguration[]>(
-      STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS,
-    );
+    return http.get<IStorageConfiguration[]>(STORAGE_CONFIG_ENDPOINTS.GET_CONFIGS);
   }
 
   save(values: IStorageConfigurationSavePayload): Promise<{

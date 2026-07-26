@@ -1,7 +1,7 @@
-﻿using Blocks.Genesis;
-using CloudConfiguration.DomainService.Shared.Services;
-using CloudConfiguration.DomainService.Storage.Entities;
-using CloudConfiguration.DomainService.Storage.RequestModel;
+using Blocks.Genesis;
+using Configuration.DomainService.Shared.Services;
+using Configuration.DomainService.Storage.Entities;
+using Configuration.DomainService.Storage.RequestModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

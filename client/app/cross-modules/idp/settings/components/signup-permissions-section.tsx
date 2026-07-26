@@ -1,20 +1,20 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import { AssignSignupPermissionsDialog } from "@blocks-idp/settings/components/assign-signup-permissions-dialog"
-import { SettingsAssignmentChip } from "@blocks-idp/settings/components/settings-assignment-chip"
-import { SettingsUnsavedBadge } from "@blocks-idp/settings/components/settings-unsaved-badge"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
-import type { IPermission } from "@blocks-idp/iam/models/permission"
-import { useMemo } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { AssignSignupPermissionsDialog } from "@blocks-idp/settings/components/assign-signup-permissions-dialog";
+import { SettingsAssignmentChip } from "@blocks-idp/settings/components/settings-assignment-chip";
+import { SettingsUnsavedBadge } from "@blocks-idp/settings/components/settings-unsaved-badge";
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import type { IPermission } from "@blocks-idp/iam/models/permission";
+import { useMemo } from "react";
 
 type SignupPermissionsSectionProps = {
   /** Current selection — this is what gets saved, and what the dialog seeds from. */
-  permissions: IPermission[]
+  permissions: IPermission[];
   /** Saved in the DB but dropped from the selection; shown struck through until saved. */
-  removedPermissions: IPermission[]
+  removedPermissions: IPermission[];
   /** Permission names currently persisted in the DB, used to mark the rest as unsaved. */
-  savedNames: string[]
-  onChange: (permissions: IPermission[]) => void
-}
+  savedNames: string[];
+  onChange: (permissions: IPermission[]) => void;
+};
 
 export const SignupPermissionsSection = ({
   permissions,
@@ -22,11 +22,11 @@ export const SignupPermissionsSection = ({
   savedNames,
   onChange,
 }: SignupPermissionsSectionProps) => {
-  const savedNameSet = useMemo(() => new Set(savedNames), [savedNames])
+  const savedNameSet = useMemo(() => new Set(savedNames), [savedNames]);
 
   const hasUnsavedChanges =
     removedPermissions.length > 0 ||
-    permissions.some((permission) => !savedNameSet.has(permission.name))
+    permissions.some((permission) => !savedNameSet.has(permission.name));
 
   return (
     <Card>
@@ -70,5 +70,5 @@ export const SignupPermissionsSection = ({
         )}
       </CardContent>
     </Card>
-  )
-}
+  );
+};

@@ -52,9 +52,7 @@ export const useGetMe = (options?: { enabled?: boolean }) => {
   });
 };
 
-export const useGetUserById = (
-  options: IGetUserByIdPayload & { enabled?: boolean },
-) => {
+export const useGetUserById = (options: IGetUserByIdPayload & { enabled?: boolean }) => {
   const { enabled, ...payload } = options;
   return useQuery({
     queryKey: ["user-by-id", payload],
@@ -63,9 +61,7 @@ export const useGetUserById = (
   });
 };
 
-export const useGetProfileUserById = (
-  options: IGetUserByIdPayload & { enabled?: boolean },
-) => {
+export const useGetProfileUserById = (options: IGetUserByIdPayload & { enabled?: boolean }) => {
   const { enabled, id, projectKey } = options;
   return useQuery({
     queryKey: ["profile-user", { id, projectKey }],
@@ -86,11 +82,7 @@ export const useAddUser = () => {
   });
 };
 
-export const useUpdateUser = (options: {
-  id: string;
-  projectKey: string;
-  own?: boolean;
-}) => {
+export const useUpdateUser = (options: { id: string; projectKey: string; own?: boolean }) => {
   const queryClient = useQueryClient();
   const { own = false, ...rest } = options;
   return useMutation({
@@ -125,9 +117,7 @@ export const useSaveSignUpSetting = () => {
   });
 };
 
-export const useAddRolesAndPermissionToUser = (
-  type?: "role" | "permission",
-) => {
+export const useAddRolesAndPermissionToUser = (type?: "role" | "permission") => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["users", "add roles and permissions"],
@@ -156,11 +146,7 @@ export const useGetUserPermissions = (option: IGetUserRolesPayload) => {
 };
 
 export const useUserRoles = (option: { id: string; projectKey: string }) => {
-  const {
-    isLoading: isUserLoading,
-    isFetching,
-    data: userData,
-  } = useGetUserById(option);
+  const { isLoading: isUserLoading, isFetching, data: userData } = useGetUserById(option);
   const { isLoading: isRolesLoading, data: rolesData } = useGetUserRoles({
     userId: option.id,
   });
@@ -209,10 +195,7 @@ export const useUserRoles = (option: { id: string; projectKey: string }) => {
   };
 };
 
-export const useUserPermissions = (option: {
-  userId: string;
-  projectKey: string;
-}) => {
+export const useUserPermissions = (option: { userId: string; projectKey: string }) => {
   const {
     isLoading: isUserLoading,
     isFetching,
@@ -221,10 +204,9 @@ export const useUserPermissions = (option: {
     id: option.userId,
     projectKey: option.projectKey,
   });
-  const { isLoading: isPermissionsLoading, data: permissionsData } =
-    useGetUserPermissions({
-      userId: option.userId,
-    });
+  const { isLoading: isPermissionsLoading, data: permissionsData } = useGetUserPermissions({
+    userId: option.userId,
+  });
   const { isPending, mutateAsync } = useUpdateUser({
     id: option.userId,
     projectKey: option.projectKey,
@@ -251,9 +233,7 @@ export const useUserPermissions = (option: {
 
   const deletePermissions = useCallback(
     (deletedResources: string[]) => {
-      const restResources = resources.filter(
-        (item) => !deletedResources.includes(item),
-      );
+      const restResources = resources.filter((item) => !deletedResources.includes(item));
       return mutateAsync({
         ...userData?.data,
         itemId: option.userId,

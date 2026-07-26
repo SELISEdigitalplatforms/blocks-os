@@ -42,7 +42,9 @@ function getSecretName(kv: Record<string, string> | undefined): string {
   return kv["secretName"] ?? kv["SecretName"] ?? "";
 }
 
-function buildInitialPairs(kv: Record<string, string> | undefined): { key: string; value: string }[] {
+function buildInitialPairs(
+  kv: Record<string, string> | undefined,
+): { key: string; value: string }[] {
   if (!kv) return [];
   return Object.entries(kv)
     .filter(([k]) => k.toLowerCase() !== "secretname")
@@ -136,10 +138,7 @@ export function AddSecretModal({
           <DialogTitle>{isEditMode ? "Edit Secret" : "Add Secret"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex min-h-0 flex-1 flex-col"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
             <div className="flex-1 space-y-5 overflow-y-auto px-1 pb-1">
               {/* Secret Name */}
               <FormField
@@ -175,7 +174,7 @@ export function AddSecretModal({
 
                 {fields.length === 0 && (
                   <p className="py-4 text-center text-sm text-muted-foreground">
-                    No properties yet. Click "Add Property" to add key-value pairs.
+                    No properties yet. Click &quot;Add Property&quot; to add key-value pairs.
                   </p>
                 )}
 

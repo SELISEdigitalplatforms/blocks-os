@@ -18,9 +18,7 @@ export class MagicUrlService {
     return response.data;
   }
 
-  async getMagicUrls(
-    payload: IGetMagicUrlsPayload,
-  ): Promise<IGetMagicUrlsResponse> {
+  async getMagicUrls(payload: IGetMagicUrlsPayload): Promise<IGetMagicUrlsResponse> {
     const {
       page,
       pageSize,
@@ -43,8 +41,7 @@ export class MagicUrlService {
     if (type) params.append("Type", type);
     if (expiryDateRangeStartDate)
       params.append("ExpiryDateRange.StartDate", expiryDateRangeStartDate);
-    if (expiryDateRangeEndDate)
-      params.append("ExpiryDateRange.EndDate", expiryDateRangeEndDate);
+    if (expiryDateRangeEndDate) params.append("ExpiryDateRange.EndDate", expiryDateRangeEndDate);
 
     const response = await http.get<IAPIResponse<MagicUrl[]>>(
       `${MAGIC_URL_ENDPOINTS.GET}?secretKey=magic-url&${params.toString()}`,
@@ -58,17 +55,11 @@ export class MagicUrlService {
   }
 
   async createMagicUrl(payload: ICreateMagicUrlPayload): Promise<MagicUrl> {
-    const response = await http.post<MagicUrl>(
-      MAGIC_URL_ENDPOINTS.CREATE_LINK,
-      payload,
-    );
+    const response = await http.post<MagicUrl>(MAGIC_URL_ENDPOINTS.CREATE_LINK, payload);
     return response;
   }
 
-  async deactivateMagicLinks(payload: {
-    linkIds: string[];
-    projectKey: string;
-  }): Promise<void> {
+  async deactivateMagicLinks(payload: { linkIds: string[]; projectKey: string }): Promise<void> {
     await http.post(MAGIC_URL_ENDPOINTS.REMOVE_LINKS, payload);
   }
 }

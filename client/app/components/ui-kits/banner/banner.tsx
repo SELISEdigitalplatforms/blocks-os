@@ -7,8 +7,7 @@ type BannerVariant = "warning" | "info" | "destructive" | "success";
 const variantStyles: Record<BannerVariant, string> = {
   warning:
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-200",
-  info:
-    "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/30 dark:bg-blue-950/20 dark:text-blue-200",
+  info: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/30 dark:bg-blue-950/20 dark:text-blue-200",
   destructive:
     "border-red-200 bg-red-50 text-red-800 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-200",
   success:

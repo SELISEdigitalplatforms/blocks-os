@@ -10,17 +10,10 @@ import {
 } from "@/components/ui-kits/accordion/accordion";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { useMediaQuery } from "@/components/ui-kits/stepper/use-media-query";
 import { cn } from "@/lib/utils";
-import {
-  IEmailConfig,
-  MailServiceProvider,
-} from "@blocks-communication/mail/models/email";
+import { IEmailConfig, MailServiceProvider } from "@blocks-communication/mail/models/email";
 import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyState } from "@/components/ui-kits/empty-state";
@@ -40,40 +33,8 @@ export function EmailConfiguration({
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const isMediumScreen = useMediaQuery(`(max-width: 1180px)`);
   const isMobileScreen = useMediaQuery(`(max-width: 768px)`);
-  const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
   const { isLoading, data: secretData } = useGetEmailSecretConfigs();
   const data = secretData?.configurations || [];
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       // setLoading(true);
-  //       // setError(null);
-  //       // const response = await fetch(
-  //       //   `/cloudconfiguration/v1/Mail/Get?ProjectKey=${tenantId}&configurationName=Default`,
-  //       // );
-  //       // if (!response.ok) {
-  //       //   throw new Error(`HTTP error! status: ${response.status}`);
-  //       // }
-  //       // const result = await response.json();
-  //       // const configs = Array.isArray(result) ? result : [result];
-  //       // setData(configs);
-  //       const response = await getEmailConfigs();
-  //       setData(response);
-  //       console.log(data);
-  //     } catch (err) {
-  //       console.error("Fetch error:", err);
-  //       //setError(err instanceof Error ? err.message : "An error occurred while fetching data");
-  //     }
-  //     // finally {
-  //     //   setLoading(false);
-  //     // }
-  //   };
-  //   if (tenantId && tenantId !== "") {
-  //     fetchData();
-  //   }
-  // }, [tenantId]);
   if (isLoading) {
     return (
       <div className="grid gap-2">
@@ -103,16 +64,13 @@ export function EmailConfiguration({
         />
       </Dialog>
       {data && data.length > 0 ? (
-        <Accordion
-          type="single"
-          collapsible
-          className="mt-6"
-          defaultValue={data[0].itemId}>
+        <Accordion type="single" collapsible className="mt-6" defaultValue={data[0].itemId}>
           {data.map((config: IEmailConfig, index: number) => (
             <AccordionItem
               key={config.itemId}
               value={config.itemId}
-              className={`rounded-sm border bg-background px-4 ${index > 0 ? "mt-6" : ""}`}>
+              className={`rounded-sm border bg-background px-4 ${index > 0 ? "mt-6" : ""}`}
+            >
               <AccordionTrigger className="text-xl font-semibold hover:no-underline">
                 <div className="flex items-center justify-between w-full pr-8">
                   <span>{config.name}</span>
@@ -127,7 +85,8 @@ export function EmailConfiguration({
                                 variant="ghost"
                                 aria-label="Edit"
                                 className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                                onClick={(e) => e.stopPropagation()}>
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
                             </DialogTrigger>
@@ -143,9 +102,7 @@ export function EmailConfiguration({
                       </Dialog>
                     )}
                     {!config.isDefault && (
-                      <Dialog
-                        open={deleteModalOpen}
-                        onOpenChange={setDeleteModalOpen}>
+                      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <DialogTrigger asChild>
@@ -154,7 +111,8 @@ export function EmailConfiguration({
                                 variant="ghost"
                                 aria-label="Delete"
                                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                onClick={(e) => e.stopPropagation()}>
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Trash className="h-3.5 w-3.5" />
                               </Button>
                             </DialogTrigger>
@@ -176,7 +134,8 @@ export function EmailConfiguration({
                     "mt-5 grid grid-cols-3 space-y-2",
                     isMediumScreen && "gap-12",
                     isMobileScreen && "grid-cols-1 gap-6",
-                  )}>
+                  )}
+                >
                   <div>
                     <p className="text-sm text-muted-foreground">
                       {config.isInbound ? "Server Name" : "Host"}
@@ -190,9 +149,7 @@ export function EmailConfiguration({
                   <div>
                     <div className="mb-4">
                       <p className="text-sm text-muted-foreground">Type</p>
-                      <p className="text-base">
-                        {config.isInbound ? "Inbound" : "Outbound"}
-                      </p>
+                      <p className="text-base">{config.isInbound ? "Inbound" : "Outbound"}</p>
                     </div>
                   </div>
                 </div>
@@ -201,45 +158,34 @@ export function EmailConfiguration({
                     "mt-5 grid grid-cols-3 space-y-2",
                     isMediumScreen && "gap-12",
                     isMobileScreen && "grid-cols-1 gap-6",
-                  )}>
+                  )}
+                >
                   {config.isInbound ? (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Username
-                        </p>
+                        <p className="text-sm text-muted-foreground">Username</p>
                         <p className="text-base">{config.senderUserName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Account Password
-                        </p>
-                        <p className="trucate break-all text-base">
-                          *********************
-                        </p>
+                        <p className="text-sm text-muted-foreground">Account Password</p>
+                        <p className="trucate break-all text-base">*********************</p>
                       </div>
                     </>
                   ) : (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Sender name
-                        </p>
+                        <p className="text-sm text-muted-foreground">Sender name</p>
                         <p className="text-base">{config.senderName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Sender address
-                        </p>
+                        <p className="text-sm text-muted-foreground">Sender address</p>
                         <p className="text-base">{config.senderAddress}</p>
                       </div>
                     </>
                   )}
                   <div>
                     <p className="text-sm text-muted-foreground">Provider</p>
-                    <p className="text-base">
-                      {MailServiceProvider[config.provider]}
-                    </p>
+                    <p className="text-base">{MailServiceProvider[config.provider]}</p>
                   </div>
                 </div>
                 {!config.isInbound && (
@@ -248,20 +194,15 @@ export function EmailConfiguration({
                       "mt-5 grid grid-cols-3 space-y-2",
                       isMediumScreen && "gap-12",
                       isMobileScreen && "grid-cols-1 gap-6",
-                    )}>
+                    )}
+                  >
                     <div>
-                      <p className="text-sm text-muted-foreground">
-                        Sender username
-                      </p>
+                      <p className="text-sm text-muted-foreground">Sender username</p>
                       <p className="text-base">{config.senderUserName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">
-                        Account Password
-                      </p>
-                      <p className="trucate break-all text-base">
-                        *********************
-                      </p>
+                      <p className="text-sm text-muted-foreground">Account Password</p>
+                      <p className="trucate break-all text-base">*********************</p>
                     </div>
                   </div>
                 )}
@@ -281,14 +222,6 @@ export function EmailConfiguration({
 }
 
 export function EmailConfigurationPage() {
-  const [addOpen, setAddOpen] = useQueryState(
-    "emailConfig",
-    parseAsBoolean.withDefault(false),
-  );
-  return (
-    <EmailConfiguration
-      addConfigOpen={addOpen}
-      onAddConfigOpenChange={setAddOpen}
-    />
-  );
+  const [addOpen, setAddOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
+  return <EmailConfiguration addConfigOpen={addOpen} onAddConfigOpenChange={setAddOpen} />;
 }

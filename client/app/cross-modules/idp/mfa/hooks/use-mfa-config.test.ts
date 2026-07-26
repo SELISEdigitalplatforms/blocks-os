@@ -60,7 +60,10 @@ describe("use-mfa-config hooks", () => {
 
       result.current.mutate(mockSaveMfaConfigPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(mfaService.saveMFAConfiguration).toHaveBeenCalledWith(mockSaveMfaConfigPayload, expect.anything());
+      expect(mfaService.saveMFAConfiguration).toHaveBeenCalledWith(
+        mockSaveMfaConfigPayload,
+        expect.anything(),
+      );
     });
   });
 
@@ -75,7 +78,10 @@ describe("use-mfa-config hooks", () => {
 
       result.current.mutate(mockConfigureUserMfaPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(mfaService.configureUserMFA).toHaveBeenCalledWith(mockConfigureUserMfaPayload, expect.anything());
+      expect(mfaService.configureUserMFA).toHaveBeenCalledWith(
+        mockConfigureUserMfaPayload,
+        expect.anything(),
+      );
     });
   });
 
@@ -107,7 +113,10 @@ describe("use-mfa-config hooks", () => {
 
       result.current.mutate(mockGenerateOtpPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(mfaService.generateUserMfaOTP).toHaveBeenCalledWith(mockGenerateOtpPayload, expect.anything());
+      expect(mfaService.generateUserMfaOTP).toHaveBeenCalledWith(
+        mockGenerateOtpPayload,
+        expect.anything(),
+      );
     });
   });
 
