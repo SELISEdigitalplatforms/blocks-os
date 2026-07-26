@@ -1,32 +1,33 @@
-import { Logo } from "@/components/logo"
-import { Button } from "@/components/ui-kits/button/button"
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui-kits/button/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui-kits/card/card"
-import { usePeopleAcceptInvitation } from "@/hooks/use-people"
-import { hasErrorCode, isErrorWithErrors } from "@/lib/error"
-import { Link, useNavigate } from "react-router-dom"
-import { buildInvitationResultPath } from "./use-invitation-search-params"
+} from "@/components/ui-kits/card/card";
+import { usePeopleAcceptInvitation } from "@/hooks/use-people";
+import { hasErrorCode, isErrorWithErrors } from "@/lib/error";
+import { Link, useNavigate } from "react-router-dom";
+import { buildInvitationResultPath } from "./use-invitation-search-params";
 
 type PeopleInviteConfirmationProps = {
-  code: string
-}
+  code: string;
+};
 
 export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps) => {
-  const { mutateAsync, isPending } = usePeopleAcceptInvitation()
-  const navigate = useNavigate()
+  const { mutateAsync, isPending } = usePeopleAcceptInvitation();
+  const navigate = useNavigate();
 
   const handleAccept = async () => {
     try {
-      const res = await mutateAsync({ code })
+      const res = await mutateAsync({ code });
       if (!res.isSuccess) {
-        const errorType = res.errors && hasErrorCode(res.errors, "code_expire") ? "expired" : "unknown"
-        navigate(buildInvitationResultPath({ success: "0", error: errorType }), { replace: true })
-        return
+        const errorType =
+          res.errors && hasErrorCode(res.errors, "code_expire") ? "expired" : "unknown";
+        navigate(buildInvitationResultPath({ success: "0", error: errorType }), { replace: true });
+        return;
       }
       if (res.activationKey && res.activationKey.trim() !== "") {
         navigate(
@@ -36,16 +37,18 @@ export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps
             code: res.activationKey,
           }),
           { replace: true },
-        )
-        return
+        );
+        return;
       }
-      navigate(buildInvitationResultPath({ success: "1", old: "1" }), { replace: true })
+      navigate(buildInvitationResultPath({ success: "1", old: "1" }), { replace: true });
     } catch (error) {
       const errorType =
-        isErrorWithErrors(error) && hasErrorCode(error.errors, "code_expire") ? "expired" : "unknown"
-      navigate(buildInvitationResultPath({ success: "0", error: errorType }), { replace: true })
+        isErrorWithErrors(error) && hasErrorCode(error.errors, "code_expire")
+          ? "expired"
+          : "unknown";
+      navigate(buildInvitationResultPath({ success: "0", error: errorType }), { replace: true });
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-background">
@@ -77,5 +80,5 @@ export const PeopleInviteConfirmation = ({ code }: PeopleInviteConfirmationProps
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};

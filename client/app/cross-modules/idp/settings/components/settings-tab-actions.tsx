@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui-kits/button/button"
-import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model"
+import { Button } from "@/components/ui-kits/button/button";
+import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model";
 import {
   createContext,
   useCallback,
@@ -8,14 +8,14 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from "react"
+} from "react";
 
 type SettingsFormTabButtonsProps = {
-  onReset: () => void
-  onSave: () => void
-  resetDisabled?: boolean
-  saveDisabled?: boolean
-}
+  onReset: () => void;
+  onSave: () => void;
+  resetDisabled?: boolean;
+  saveDisabled?: boolean;
+};
 
 export const SettingsFormTabButtons = ({
   onReset,
@@ -38,91 +38,91 @@ export const SettingsFormTabButtons = ({
       Save
     </Button>
   </>
-)
+);
 
 type SettingsTabActionsContextValue = {
-  actionsByTab: Partial<Record<SettingsTabValue, ReactNode>>
-  registerActions: (tabId: SettingsTabValue, actions: ReactNode) => void
-  unregisterActions: (tabId: SettingsTabValue) => void
-}
+  actionsByTab: Partial<Record<SettingsTabValue, ReactNode>>;
+  registerActions: (tabId: SettingsTabValue, actions: ReactNode) => void;
+  unregisterActions: (tabId: SettingsTabValue) => void;
+};
 
-const SettingsTabActionsContext = createContext<SettingsTabActionsContextValue | null>(null)
+const SettingsTabActionsContext = createContext<SettingsTabActionsContextValue | null>(null);
 
 const useSettingsTabActionsContext = () => {
-  const context = useContext(SettingsTabActionsContext)
+  const context = useContext(SettingsTabActionsContext);
 
   if (!context) {
-    throw new Error("Settings tab actions must be used within SettingsTabActionsProvider")
+    throw new Error("Settings tab actions must be used within SettingsTabActionsProvider");
   }
 
-  return context
-}
+  return context;
+};
 
 export const SettingsTabActionsProvider = ({ children }: { children: ReactNode }) => {
-  const [actionsByTab, setActionsByTab] = useState<
-    Partial<Record<SettingsTabValue, ReactNode>>
-  >({})
+  const [actionsByTab, setActionsByTab] = useState<Partial<Record<SettingsTabValue, ReactNode>>>(
+    {},
+  );
 
   const registerActions = useCallback((tabId: SettingsTabValue, actions: ReactNode) => {
-    setActionsByTab((current) => ({ ...current, [tabId]: actions }))
-  }, [])
+    setActionsByTab((current) => ({ ...current, [tabId]: actions }));
+  }, []);
 
   const unregisterActions = useCallback((tabId: SettingsTabValue) => {
     setActionsByTab((current) => {
       if (!(tabId in current)) {
-        return current
+        return current;
       }
 
-      const next = { ...current }
-      delete next[tabId]
-      return next
-    })
-  }, [])
+      const next = { ...current };
+      delete next[tabId];
+      return next;
+    });
+  }, []);
 
   const value = useMemo(
     () => ({ actionsByTab, registerActions, unregisterActions }),
     [actionsByTab, registerActions, unregisterActions],
-  )
+  );
 
   return (
-    <SettingsTabActionsContext.Provider value={value}>{children}</SettingsTabActionsContext.Provider>
-  )
-}
+    <SettingsTabActionsContext.Provider value={value}>
+      {children}
+    </SettingsTabActionsContext.Provider>
+  );
+};
 
 type SettingsTabActionsSlotProps = {
-  activeTab: SettingsTabValue
-}
+  activeTab: SettingsTabValue;
+};
 
 export const SettingsTabActionsSlot = ({ activeTab }: SettingsTabActionsSlotProps) => {
-  const { actionsByTab } = useSettingsTabActionsContext()
-  const actions = actionsByTab[activeTab]
+  const { actionsByTab } = useSettingsTabActionsContext();
+  const actions = actionsByTab[activeTab];
 
   if (!actions) {
-    return null
+    return null;
   }
 
   return (
-    <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
-      {actions}
-    </div>
-  )
-}
+    <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">{actions}</div>
+  );
+};
 
 type SettingsTabActionsProps = {
-  tabId: SettingsTabValue
-  children: ReactNode
-}
+  tabId: SettingsTabValue;
+  children: ReactNode;
+};
 
 export const SettingsTabActions = ({ tabId, children }: SettingsTabActionsProps) => {
-  const { registerActions, unregisterActions } = useSettingsTabActionsContext()
+  const { registerActions, unregisterActions } = useSettingsTabActionsContext();
 
   useEffect(() => {
-    registerActions(tabId, children)
+    registerActions(tabId, children);
 
     return () => {
-      unregisterActions(tabId)
-    }
-  }, [tabId, children, registerActions, unregisterActions])
+      unregisterActions(tabId);
+    };
+  }, [tabId, children, registerActions, unregisterActions]);
 
-  return null
-}
+  return null;
+};

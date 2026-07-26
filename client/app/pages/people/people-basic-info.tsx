@@ -1,13 +1,13 @@
-import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
-import { checkValidDate, formatFullDate } from "@/lib/utils"
-import { User } from "@blocks-idp/iam/models/user"
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { checkValidDate, formatFullDate } from "@/lib/utils";
+import { User } from "@blocks-idp/iam/models/user";
 
 interface ItemProps {
-  label: string
-  children?: React.ReactNode
-  isLoading?: boolean
+  label: string;
+  children?: React.ReactNode;
+  isLoading?: boolean;
 }
 
 const Item = ({ label, children, isLoading = false }: ItemProps) => (
@@ -19,14 +19,14 @@ const Item = ({ label, children, isLoading = false }: ItemProps) => (
       <div className="text-base font-medium">{children}</div>
     )}
   </div>
-)
+);
 
 export const PeopleBasicInfo = ({
   className,
   user: initialUser,
 }: {
-  className?: string
-  user?: User
+  className?: string;
+  user?: User;
 }) => {
   return (
     <Card className={className}>
@@ -50,9 +50,7 @@ export const PeopleBasicInfo = ({
             </div>
           </Item>
           <Item label="Role">
-            {initialUser?.roles
-              ? Object.values(initialUser.roles).flat().join(", ") || "-"
-              : "-"}
+            {initialUser?.roles ? Object.values(initialUser.roles).flat().join(", ") || "-" : "-"}
           </Item>
           <Item label="Latest Login">
             {initialUser?.lastLoggedInTime && checkValidDate(initialUser.lastLoggedInTime)
@@ -68,5 +66,5 @@ export const PeopleBasicInfo = ({
         </div>
       </CardContent>
     </Card>
-  )
-}
+  );
+};

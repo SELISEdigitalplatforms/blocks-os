@@ -360,6 +360,55 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task SendProjectInvitationToNewUser_NullEvent_ReturnsFalse()
+        {
+            var result = await Service().SendProjectInvitationToNewUser(null!);
+
+            result.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task SendProjectInvitationToNewUser_UnrelatedEventType_ReturnsFalse()
+        {
+            var result = await Service().SendProjectInvitationToNewUser(new CreateUserByEmailPostEvent
+            {
+                UserId = "u1",
+                TenantId = "t1",
+                EventType = "some-other-purpose"
+            });
+
+            result.Should().BeFalse();
+            _peopleRepo.Verify(r => r.GetProjectByIdAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SendProjectInvitationToNewUser_AllEnvironmentsAlreadyPresent_SkipsAndReturnsTrue()
+        {
+            using var _ = new BlocksTestContext();
+            _peopleRepo.Setup(r => r.GetProjectByIdAsync("t1")).ReturnsAsync(NewTenant());
+            _peopleRepo.Setup(r => r.GetUserByIdAsync("u1")).ReturnsAsync(new User { ItemId = "u1", Email = "u@x.com" });
+            // The person already has a confirmed row for the only requested tenant,
+            // and this is a redelivery (no ForceInvitation), so nothing is created.
+            _peopleRepo.Setup(r => r.GetProjectPeoplesAsync("u1", It.IsAny<List<string>>()))
+                       .ReturnsAsync(new List<ProjectPeople>
+                       {
+                           new() { ItemId = "pp1", TenantId = "t1", UserId = "u1", IsInvitationConfirmed = true }
+                       });
+
+            var result = await Service().SendProjectInvitationToNewUser(new CreateUserByEmailPostEvent
+            {
+                UserId = "u1",
+                TenantId = "t1",
+                Key = "k1",
+                EventType = DomainService.Shared.IdentifierConstants.ProjectPeopleInvitationMailPurpose,
+                ForceInvitation = false
+            });
+
+            result.Should().BeTrue();
+            _peopleRepo.Verify(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>()), Times.Never);
+        }
+
+        [Fact]
         public async Task SendProjectInvitationToNewUser_IamReportedFailure_ReturnsFalseAndDoesNotInsert()
         {
             var result = await Service().SendProjectInvitationToNewUser(new CreateUserByEmailPostEvent

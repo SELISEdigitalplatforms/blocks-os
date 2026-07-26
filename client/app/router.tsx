@@ -1,23 +1,18 @@
-import {
-  AuthResolver,
-  ProtectedGuard,
-  PublicGuard,
-} from "@seliseblocks/blocks-kit/guards";
-import {
-  ConsoleLayout,
-  DashboardRoute,
-} from "@seliseblocks/blocks-kit/layouts";
-import {
-  CallbackPage,
-  ConsolePage,
-  LoginPage,
-  ProfilePage,
-} from "@seliseblocks/blocks-kit/pages";
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/blocks-kit/guards";
+import { ConsoleLayout, DashboardRoute } from "@seliseblocks/blocks-kit/layouts";
+import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/blocks-kit/pages";
+import { createBrowserRouter, Navigate, Outlet, useParams } from "react-router-dom";
 import { navigationMenus } from "./constants/navigation-menus";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
-import { EmailConfigurationPage } from "./cross-modules/communication/mail";
+import {
+  EmailConfigurationPage,
+  EmailCommunicationDetails,
+  EmailServiceTable,
+  NewCommunication,
+} from "./cross-modules/communication/mail";
+import { EditEmailTemplate } from "./cross-modules/communication/mail/email/email-template-edit/email-template-edit";
+import { EmailUsageDetails } from "./cross-modules/communication/mail/email/email-usage/email-usage-details";
 import { NotificationConfigurationListPage } from "./cross-modules/communication/notification/components/notification-configuration-list";
 // Temporarily disabled
 // import { SecretsList } from "./cross-modules/secrets/components/secrets-list/secrets-list";
@@ -36,10 +31,7 @@ import { Roles } from "@blocks-idp/iam/modules/role-management";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { IdpSettingsPage } from "@blocks-idp/settings/pages/settings-page";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
-import {
-  EnvironmentMigrationPage,
-  EnvironmentsPage,
-} from "./pages/environments/environments";
+import { EnvironmentMigrationPage, EnvironmentsPage } from "./pages/environments/environments";
 import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
 import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
 import { LogsRoute } from "./pages/lmt/logs";
@@ -78,6 +70,46 @@ const redirectPaths: Record<string, string> = {
   "/app/idp/organization-detail/*": "/app/idp/organizations",
   "/app/idp/permission-detail/*": "/app/idp/permissions",
 };
+
+const emailPageShellClassName = "flex flex-col gap-6 p-6";
+
+function EmailPage() {
+  return (
+    <div className={emailPageShellClassName}>
+      <EmailServiceTable />
+    </div>
+  );
+}
+
+function EmailCommunicationDetailsPage() {
+  const { id } = useParams<{ id: string }>();
+
+  return (
+    <div className={emailPageShellClassName}>
+      <EmailCommunicationDetails params={{ id: id || "" }} />
+    </div>
+  );
+}
+
+function EmailTemplateEditPage() {
+  const { id } = useParams<{ id: string }>();
+
+  return (
+    <div className={emailPageShellClassName}>
+      <EditEmailTemplate params={{ id: id || "" }} />
+    </div>
+  );
+}
+
+function EmailUsageDetailsPage() {
+  const { id } = useParams<{ id: string }>();
+
+  return (
+    <div className={emailPageShellClassName}>
+      <EmailUsageDetails id={id || ""} />
+    </div>
+  );
+}
 
 export const router = createBrowserRouter([
   // ── Public invitation accept flow (no auth guard) ──
@@ -195,10 +227,7 @@ export const router = createBrowserRouter([
               {
                 path: ":itemId",
                 element: (
-                  <DashboardRoute
-                    redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}
-                  />
+                  <DashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
                 ),
                 children: [
                   {
@@ -229,12 +258,7 @@ export const router = createBrowserRouter([
                       // Redirect from the retired "managed-services" path
                       {
                         path: "managed-services",
-                        element: (
-                          <Navigate
-                            to="/app/secret-management/my-services"
-                            replace
-                          />
-                        ),
+                        element: <Navigate to="/app/secret-management/my-services" replace />,
                       },
                       {
                         path: "oidc",
@@ -370,6 +394,31 @@ export const router = createBrowserRouter([
                   {
                     path: "api-settings",
                     element: <ApiSettingsPage />,
+                  },
+                  {
+                    path: "email-management",
+                    children: [
+                      {
+                        index: true,
+                        element: <EmailPage />,
+                      },
+                      {
+                        path: "new-communication",
+                        element: <NewCommunication />,
+                      },
+                      {
+                        path: "communications/:id",
+                        element: <EmailCommunicationDetailsPage />,
+                      },
+                      {
+                        path: "communications/:id/edit",
+                        element: <EmailTemplateEditPage />,
+                      },
+                      {
+                        path: "usage/:id",
+                        element: <EmailUsageDetailsPage />,
+                      },
+                    ],
                   },
                   {
                     path: "lmt",

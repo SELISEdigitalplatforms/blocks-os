@@ -33,20 +33,18 @@ describe("use-aimodel hooks", () => {
 
   it("useGetModels fetches models", async () => {
     vi.mocked(modelService.getModels).mockResolvedValue({} as never);
-    const { result } = renderHook(
-      () => useGetModels({ provider: "openai" } as never, "pk"),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useGetModels({ provider: "openai" } as never, "pk"), {
+      wrapper: createWrapper(),
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(modelService.getModels).toHaveBeenCalledWith({ provider: "openai" }, "pk");
   });
 
   it("useGetAllModels fetches all models", async () => {
     vi.mocked(modelService.getAllModels).mockResolvedValue({} as never);
-    const { result } = renderHook(
-      () => useGetAllModels({} as never, "pk"),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useGetAllModels({} as never, "pk"), {
+      wrapper: createWrapper(),
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(modelService.getAllModels).toHaveBeenCalled();
   });

@@ -49,6 +49,4 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export const ALL_AUTHENTICATION_NAV_ITEMS = AUTHENTICATION_NAV_GROUPS.flatMap(
-  (g) => g.items,
-);
+export const ALL_AUTHENTICATION_NAV_ITEMS = AUTHENTICATION_NAV_GROUPS.flatMap((g) => g.items);

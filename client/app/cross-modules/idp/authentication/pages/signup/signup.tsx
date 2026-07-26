@@ -1,12 +1,14 @@
-import { Loader } from "lucide-react"
-import { AuthPageShell } from "@/components/auth-page-shell/auth-page-shell"
-import { getRuntimeEnv } from "@/lib/runtime-env"
-import { useGetSignUpSetting } from "@blocks-idp/iam/hooks/use-user"
-import { SignupForm } from "./signup-form"
+import { Loader } from "lucide-react";
+import { AuthPageShell } from "@/components/auth-page-shell/auth-page-shell";
+import { getRuntimeEnv } from "@/lib/runtime-env";
+import { useGetSignUpSetting } from "@blocks-idp/iam/hooks/use-user";
+import { SignupForm } from "./signup-form";
 
 export const Signup = () => {
-  const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || ""
-  const { data: signUpSetting, isLoading: isSignUpSettingLoading } = useGetSignUpSetting({ projectKey })
+  const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "";
+  const { data: signUpSetting, isLoading: isSignUpSettingLoading } = useGetSignUpSetting({
+    projectKey,
+  });
 
   return (
     <AuthPageShell badge="Sign Up" title="Blocks Cloud">
@@ -18,5 +20,5 @@ export const Signup = () => {
         <SignupForm emailSignUpEnabled={signUpSetting?.isEmailPasswordSignUpEnabled || false} />
       )}
     </AuthPageShell>
-  )
-}
+  );
+};

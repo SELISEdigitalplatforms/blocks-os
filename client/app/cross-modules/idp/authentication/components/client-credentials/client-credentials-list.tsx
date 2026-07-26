@@ -6,18 +6,12 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { KeyRound } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
-const SkeletonField = ({
-  labelWidth,
-  children,
-}: {
-  labelWidth: string
-  children: ReactNode
-}) => (
+const SkeletonField = ({ labelWidth, children }: { labelWidth: string; children: ReactNode }) => (
   <div className="min-w-0">
     <Skeleton className={`mb-2 h-4 rounded ${labelWidth}`} />
     {children}
   </div>
-)
+);
 
 const CardSkeleton = () => (
   <Card className="overflow-hidden rounded-sm border bg-card py-4 shadow-sm sm:py-6">
@@ -73,7 +67,7 @@ const CardSkeleton = () => (
       </div>
     </CardContent>
   </Card>
-)
+);
 
 const LoadingSkeleton = () => (
   <div className="grid gap-4">
@@ -110,11 +104,7 @@ export const ClientCredentialList = ({ data, isLoading, onEdit }: ClientCredenti
   return (
     <div className="grid gap-4">
       {sortedClientsData?.map((item) => (
-        <ClientCredentialsCard
-          key={item.itemId}
-          clientCredential={item}
-          onEdit={onEdit}
-        />
+        <ClientCredentialsCard key={item.itemId} clientCredential={item} onEdit={onEdit} />
       ))}
     </div>
   );

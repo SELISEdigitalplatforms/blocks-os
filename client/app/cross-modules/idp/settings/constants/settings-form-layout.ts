@@ -24,6 +24,6 @@ export const SETTINGS_FORM_LAYOUT = {
   overviewMetaLabel: "text-xs font-medium uppercase tracking-wide text-muted-foreground",
   chipTitleBadge: "text-sm font-medium",
   chipSubtitleBadge: "text-xs text-muted-foreground",
-} as const
+} as const;
 
-export type SettingsFormLayoutKey = keyof typeof SETTINGS_FORM_LAYOUT
+export type SettingsFormLayoutKey = keyof typeof SETTINGS_FORM_LAYOUT;

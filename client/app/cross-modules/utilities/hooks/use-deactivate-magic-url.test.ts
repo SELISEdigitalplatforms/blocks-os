@@ -42,9 +42,7 @@ describe("useDeactivateMagicUrl", () => {
     result.current.deactivateMagicUrl("m-1", "pk");
 
     await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "destructive" }),
-      ),
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
     );
   });
 });

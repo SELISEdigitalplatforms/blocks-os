@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { UserAccountService } from "./account.service";
 import { ACCOUNT_ENDPOINTS } from "../constants/endpoint.constant";
 import {
@@ -13,7 +13,7 @@ import {
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("UserAccountService", () => {
   let service: UserAccountService;
@@ -84,7 +84,12 @@ describe("UserAccountService", () => {
 
       const result = await service.accountRecover(mockAccountRecoverPayload);
 
-      expect(http.post).toHaveBeenCalledWith(ACCOUNT_ENDPOINTS.RECOVER, mockAccountRecoverPayload, undefined, { absoluteUrl: true });
+      expect(http.post).toHaveBeenCalledWith(
+        ACCOUNT_ENDPOINTS.RECOVER,
+        mockAccountRecoverPayload,
+        undefined,
+        { absoluteUrl: true },
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 

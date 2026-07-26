@@ -75,9 +75,7 @@ describe("OrganizationsList", () => {
   });
 
   it("renders loading skeletons and no table while loading", () => {
-    const { container } = render(
-      <OrganizationsList organizations={[]} isLoading />,
-    );
+    const { container } = render(<OrganizationsList organizations={[]} isLoading />);
     expect(container.querySelector("table")).toBeNull();
   });
 
@@ -87,12 +85,7 @@ describe("OrganizationsList", () => {
   });
 
   it("renders active and disabled status badges", () => {
-    render(
-      <OrganizationsList
-        organizations={[enabledOrg, defaultOrg]}
-        isLoading={false}
-      />,
-    );
+    render(<OrganizationsList organizations={[enabledOrg, defaultOrg]} isLoading={false} />);
     expect(screen.getByText("Acme")).toBeTruthy();
     expect(screen.getByText("Default Org")).toBeTruthy();
     expect(screen.getByText("Active")).toBeTruthy();
@@ -100,24 +93,15 @@ describe("OrganizationsList", () => {
   });
 
   it("hides the actions menu for the default organization only", () => {
-    render(
-      <OrganizationsList
-        organizations={[enabledOrg, defaultOrg]}
-        isLoading={false}
-      />,
-    );
+    render(<OrganizationsList organizations={[enabledOrg, defaultOrg]} isLoading={false} />);
     // Only the non-default org exposes an actions (dropdown) trigger button.
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
   it("navigates to the organization detail page when a row is clicked", async () => {
     const user = userEvent.setup();
-    render(
-      <OrganizationsList organizations={[enabledOrg]} isLoading={false} />,
-    );
+    render(<OrganizationsList organizations={[enabledOrg]} isLoading={false} />);
     await user.click(screen.getByText("Acme"));
-    expect(navigate).toHaveBeenCalledWith(
-      "/services/iam/organization-detail/org-1",
-    );
+    expect(navigate).toHaveBeenCalledWith("/services/iam/organization-detail/org-1");
   });
 });

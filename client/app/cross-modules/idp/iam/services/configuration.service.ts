@@ -15,12 +15,9 @@ export class ConfigurationService {
   }
 
   saveIamConfiguration(payload: IIAMConfigurationSavePayload) {
-    return http.post<[]>(
-      IAM_CONFIGURATION_ENDPOINTS.SAVE,
-      { ...payload },
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.post<[]>(IAM_CONFIGURATION_ENDPOINTS.SAVE, { ...payload }, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 

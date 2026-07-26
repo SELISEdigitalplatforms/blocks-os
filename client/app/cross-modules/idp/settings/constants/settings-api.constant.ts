@@ -1,8 +1,11 @@
-import { AUTH_CONFIG_ENDPOINTS } from "@blocks-idp/authentication/constants/endpoint.constant"
-import { ORGANIZATION_ENDPOINTS, USER_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant"
+import { AUTH_CONFIG_ENDPOINTS } from "@blocks-idp/authentication/constants/endpoint.constant";
+import {
+  ORGANIZATION_ENDPOINTS,
+  USER_ENDPOINTS,
+} from "@blocks-idp/iam/constants/endpoint.constant";
 
 export const SETTINGS_API_ENDPOINTS = {
   AUTH_CONFIG: AUTH_CONFIG_ENDPOINTS.GET_CONFIG,
   ORGANIZATION_CONFIG: ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG,
   SIGNUP_SETTINGS: USER_ENDPOINTS.GET_SIGNUP_SETTING,
-} as const
+} as const;

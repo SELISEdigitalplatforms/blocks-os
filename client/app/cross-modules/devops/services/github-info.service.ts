@@ -67,10 +67,7 @@ export class GithubInfoService {
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  async getGithubBranches(
-    repo: string,
-    projectKey: string,
-  ): Promise<IBranch[]> {
+  async getGithubBranches(repo: string, projectKey: string): Promise<IBranch[]> {
     const url = `${CLOUD_BUILD_ENDPOINTS.GITHUB_BRANCHES}?repo=${encodeURIComponent(repo)}&ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get(url, undefined, { absoluteUrl: true });
   }
@@ -85,17 +82,17 @@ export class GithubInfoService {
 
   async cloneGithubRepo(payload: ICloneRepo) {
     const url = CLOUD_BUILD_ENDPOINTS.BUILD_BUILD;
-    return http.post<any>(url, payload);
+    return http.post(url, payload);
   }
 
-  async repoInitialDeploy(payload: any) {
+  async repoInitialDeploy(payload: object) {
     const url = CLOUD_BUILD_ENDPOINTS.RUN_BUILD;
-    return http.post<any>(url, payload);
+    return http.post(url, payload);
   }
 
   async manualDeploy(payload: IManualDeploymentPayload) {
     const url = CLOUD_BUILD_ENDPOINTS.MANUAL;
-    return http.post<any>(url, payload);
+    return http.post(url, payload);
   }
 
   async getSpecs() {
@@ -103,32 +100,27 @@ export class GithubInfoService {
     return http.get(url);
   }
 
-  async getAllRepos(
-    projectKey: string,
-  ): Promise<CardRepoAndBranchesResponse[]> {
+  async getAllRepos(projectKey: string): Promise<CardRepoAndBranchesResponse[]> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPOS}?ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get(url);
   }
 
-  async getAllRepoBuilds(projectKey: string): Promise<any> {
+  async getAllRepoBuilds(projectKey: string): Promise<unknown> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPOS}?ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get(url);
   }
 
-  async getAllProjects(projectKey: string): Promise<any> {
+  async getAllProjects(projectKey: string): Promise<unknown> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  async getRepoDetails(projectKey: string, repoId: string): Promise<any> {
+  async getRepoDetails(projectKey: string, repoId: string): Promise<unknown> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPO_DETAILS}?ProjectKey=${encodeURIComponent(projectKey)}&RepoId=${encodeURIComponent(repoId)}`;
     return http.get(url, undefined, { absoluteUrl: true });
   }
 
-  async getCardRepoAndBranches(
-    buildId: string,
-    projectKey: string,
-  ): Promise<IBuildApiResponse> {
+  async getCardRepoAndBranches(buildId: string, projectKey: string): Promise<IBuildApiResponse> {
     const url = `${CLOUD_BUILD_ENDPOINTS.BUILD}?buildId=${encodeURIComponent(buildId)}&ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get(url);
   }
@@ -148,17 +140,12 @@ export class GithubInfoService {
     return http.put(url, payload);
   }
 
-  async getBuildLogs(
-    repoId: string,
-    projectKey: string,
-  ): Promise<IBuildApiResponse> {
+  async getBuildLogs(repoId: string, projectKey: string): Promise<IBuildApiResponse> {
     const url = `${CLOUD_BUILD_ENDPOINTS.RUN_BUILD}?repoId=${repoId}&ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get(url);
   }
 
-  async getRepoCardsAndBranches(
-    projectKey: string,
-  ): Promise<CardRepoAndBranchesResponse> {
+  async getRepoCardsAndBranches(projectKey: string): Promise<CardRepoAndBranchesResponse> {
     const url = `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get(url, undefined, { absoluteUrl: true });
   }

@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui-kits/button/button";
 // import BeePlugin from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import {
   useGetEmailTemplate,
   useSaveEmailTemplate,
@@ -15,17 +16,25 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
   const { saveEmailTemplate, isPending } = useSaveEmailTemplate();
-  const beeRef = useRef<{ submit: () => void; preview: () => void; reset: () => void }>();
+  const beeRef = useRef<{
+    submit: () => void;
+    preview: () => void;
+    reset: () => void;
+  }>();
   const [, setTemplateData] = useState<IEmailTemplate>({
     itemId: "",
   });
   const navigate = useNavigate();
-  useEffect(() => {
+  const scoped = useScopedPath();
+  const [prevSync, setPrevSync] = useState<{ id: typeof id; data: typeof data } | undefined>(
+    undefined,
+  );
+  if (!prevSync || prevSync.id !== id || prevSync.data !== data) {
+    setPrevSync({ id, data });
     if (id) {
-      const email = data;
-      setEmailDetails(email || null);
+      setEmailDetails(data || null);
     }
-  }, [id, data]);
+  }
   if (!emailDetails || isLoading || isFetching) {
     return (
       <div>
@@ -49,8 +58,6 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     );
   }
   const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
-    console.log("newsletter-template.html", data.htmlFile);
-    console.log("newsletter-template.json", data.jsonFile);
     const currentData: IEmailTemplate = {
       itemId: emailDetails?.itemId || "",
       templateBody: data.htmlFile,
@@ -58,7 +65,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     };
     await saveEmailTemplate(currentData);
     setTemplateData(currentData);
-    navigate(`/utilities/email/communications/${emailDetails.itemId}`);
+    navigate(scoped(`email-management/communications/${emailDetails.itemId}`));
   };
   return (
     <div>

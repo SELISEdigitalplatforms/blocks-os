@@ -14,12 +14,8 @@ export function LmtServiceLogTraceRoute() {
 
   // Try to find the base service (removing -api/-worker suffix if present)
   const service = useMemo(() => {
-    const baseServiceName = serviceName
-      ?.replace(/-api$/, "")
-      .replace(/-worker$/, "");
-    return SERVICES.find(
-      (item) => item.name === baseServiceName && item.showInLogs,
-    );
+    const baseServiceName = serviceName?.replace(/-api$/, "").replace(/-worker$/, "");
+    return SERVICES.find((item) => item.name === baseServiceName && item.showInLogs);
   }, [serviceName]);
 
   const id = traceId ?? "";
@@ -28,8 +24,7 @@ export function LmtServiceLogTraceRoute() {
   if (serviceName) {
     BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}`] =
       service?.label ?? serviceName;
-    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}/trace`] =
-      "Trace";
+    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}/trace`] = "Trace";
   }
 
   return (
@@ -38,9 +33,7 @@ export function LmtServiceLogTraceRoute() {
         id={id}
         breadcrumbIndex={4}
         logsTraceBreadcrumbHref={
-          serviceName && id
-            ? `${LMT_BASE_PATH}/logs/${serviceName}/trace/${id}`
-            : undefined
+          serviceName && id ? `${LMT_BASE_PATH}/logs/${serviceName}/trace/${id}` : undefined
         }
       />
     </div>

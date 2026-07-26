@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { AuthClientsService } from "./auth-clients.service";
 import { AUTH_CLIENT_ENDPOINTS } from "../constants/endpoint.constant";
 import {
@@ -11,7 +11,7 @@ import {
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("AuthClientsService", () => {
   let service: AuthClientsService;
@@ -32,11 +32,9 @@ describe("AuthClientsService", () => {
 
       const result = await service.list(mockGetClientsPayload);
 
-      expect(http.get).toHaveBeenCalledWith(
-        AUTH_CLIENT_ENDPOINTS.LIST,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(AUTH_CLIENT_ENDPOINTS.LIST, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockClientCredentialsResponse);
     });
 
@@ -88,9 +86,9 @@ describe("AuthClientsService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.delete).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.delete({ itemId: mockDeleteClientPayload.itemId }),
-      ).rejects.toThrow("Network error");
+      await expect(service.delete({ itemId: mockDeleteClientPayload.itemId })).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 });

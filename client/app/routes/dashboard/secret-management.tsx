@@ -13,10 +13,7 @@ import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
 import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
-import {
-  CAPTCHA_PROVIDERS,
-  CAPTCHA_PROVIDERS_KEY,
-} from "@blocks-idp/captcha/models/captcha";
+import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
 import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
 import {
   OidcBrandingHeaderProvider,
@@ -61,12 +58,7 @@ function SecretManagementHeaderActions({
     const { onSave, onUndo, isBusy } = brandingHeader.actions;
     return (
       <>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onUndo}
-          disabled={isBusy}>
+        <Button type="button" variant="outline" size="sm" onClick={onUndo} disabled={isBusy}>
           Undo
         </Button>
         <Button type="button" size="sm" onClick={onSave} disabled={isBusy}>
@@ -128,10 +120,7 @@ function SecretManagementHeaderActions({
       )}
       {currentPath === "my-services" && (
         <>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsManagedServicesGuideOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => setIsManagedServicesGuideOpen(true)}>
             <Notebook className="aspect-square w-4" />
             <span className="sr-only sm:not-sr-only sm:ml-2 sm:text-sm sm:whitespace-nowrap">
               Setup Guide
@@ -161,10 +150,7 @@ function SecretManagementHeaderActions({
         <>
           {externalIdpConfigured ? (
             <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsJwtClaimOpen(true)}>
+              <Button size="sm" variant="outline" onClick={() => setIsJwtClaimOpen(true)}>
                 <Waypoints className="h-5 w-5" />
                 <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                   Map JWT Claim
@@ -216,14 +202,8 @@ export default function SecretManagementLayout() {
   );
 
   // Shared via URL so child routes can read/close the same modal
-  const [, setIsAddIdpOpen] = useQueryState(
-    "addIdp",
-    parseAsBoolean.withDefault(false),
-  );
-  const [, setIsEmailConfigOpen] = useQueryState(
-    "emailConfig",
-    parseAsBoolean.withDefault(false),
-  );
+  const [, setIsAddIdpOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
+  const [, setIsEmailConfigOpen] = useQueryState("emailConfig", parseAsBoolean.withDefault(false));
   const [, setIsNotificationConfigOpen] = useQueryState(
     "notificationConfig",
     parseAsBoolean.withDefault(false),
@@ -232,10 +212,7 @@ export default function SecretManagementLayout() {
     "guideOpen",
     parseAsBoolean.withDefault(false),
   );
-  const [, setIsJwtClaimOpen] = useQueryState(
-    "jwtClaim",
-    parseAsBoolean.withDefault(false),
-  );
+  const [, setIsJwtClaimOpen] = useQueryState("jwtClaim", parseAsBoolean.withDefault(false));
   const [, setIsEditExternalIdpOpen] = useQueryState(
     "editExternalIdp",
     parseAsBoolean.withDefault(false),
@@ -251,11 +228,8 @@ export default function SecretManagementLayout() {
 
   if (isOidcBranding && oidcClientId) {
     BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc`] = "OIDC";
-    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc/${oidcClientId}`] =
-      null;
-    BREADCRUMB_CUSTOM_TITLES[
-      `${secretManagementBase}/oidc/${oidcClientId}/branding`
-    ] = "Template";
+    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc/${oidcClientId}`] = null;
+    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc/${oidcClientId}/branding`] = "Template";
   }
 
   const currentItem = isOidcBranding
@@ -266,13 +240,9 @@ export default function SecretManagementLayout() {
 
   const areAllProvidersConfigured = useMemo(() => {
     if (!captchaData?.configurations) return false;
-    const allProviderKeys = Object.keys(
-      CAPTCHA_PROVIDERS,
-    ) as CAPTCHA_PROVIDERS_KEY[];
+    const allProviderKeys = Object.keys(CAPTCHA_PROVIDERS) as CAPTCHA_PROVIDERS_KEY[];
     const configuredProviders = new Set(
-      captchaData.configurations.map(
-        (config: { provider: string }) => config.provider,
-      ),
+      captchaData.configurations.map((config: { provider: string }) => config.provider),
     );
     return allProviderKeys.every((key) => configuredProviders.has(key));
   }, [captchaData]);
@@ -315,9 +285,7 @@ export default function SecretManagementLayout() {
                 listClassName="text-base sm:text-lg"
                 className="flex"
               />
-              <div className="flex shrink-0 items-center gap-2">
-                {headerActions}
-              </div>
+              <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
             </header>
           ) : currentItem ? (
             <PageHeader
@@ -333,9 +301,7 @@ export default function SecretManagementLayout() {
         <CreateClientCredential
           editClient={
             clientCredentialItemId
-              ? ((clientsData ?? []).find(
-                  (c) => c.itemId === clientCredentialItemId,
-                ) ?? null)
+              ? ((clientsData ?? []).find((c) => c.itemId === clientCredentialItemId) ?? null)
               : null
           }
           open={isClientCredentialOpen}

@@ -1,8 +1,8 @@
-import { z } from "zod"
+import { z } from "zod";
 import type {
   ISettingsOrganizationConfig,
   ISettingsSaveOrganizationConfigPayload,
-} from "@blocks-idp/settings/models/settings.model"
+} from "@blocks-idp/settings/models/settings.model";
 
 export const organizationConfigFormSchema = z.object({
   allowOrgCreationFromCloud: z.boolean(),
@@ -10,9 +10,9 @@ export const organizationConfigFormSchema = z.object({
   allowOrgCreationFromSignup: z.boolean(),
   allowOrgCreationFromPortal: z.boolean(),
   isMultiOrgEnabled: z.boolean(),
-})
+});
 
-export type OrganizationConfigFormValues = z.infer<typeof organizationConfigFormSchema>
+export type OrganizationConfigFormValues = z.infer<typeof organizationConfigFormSchema>;
 
 export const toOrganizationConfigFormValues = (
   config: ISettingsOrganizationConfig,
@@ -22,7 +22,7 @@ export const toOrganizationConfigFormValues = (
   allowOrgCreationFromSignup: config.allowOrgCreationFromSignup,
   allowOrgCreationFromPortal: config.allowOrgCreationFromPortal,
   isMultiOrgEnabled: config.isMultiOrgEnabled,
-})
+});
 
 export const buildOrganizationConfigSavePayload = (
   config: ISettingsOrganizationConfig,
@@ -39,4 +39,4 @@ export const buildOrganizationConfigSavePayload = (
   defaultPermissionsOnOrgCreation: config.defaultPermissionsOnOrgCreation,
   keepOrgRolesSameAsDefaultRoles: config.keepOrgRolesSameAsDefaultRoles,
   keepOrgPermissionsSameAsDefaultPermissions: config.keepOrgPermissionsSameAsDefaultPermissions,
-})
+});

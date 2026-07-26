@@ -32,12 +32,7 @@ export const BulkActionBar = ({
           </span>
         </div>
         <div className="mx-1 h-5 w-px bg-border sm:mx-2" />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 px-2 sm:px-3"
-          onClick={onEnableMfa}
-        >
+        <Button variant="ghost" size="sm" className="gap-1.5 px-2 sm:px-3" onClick={onEnableMfa}>
           <ShieldCheck className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Enable MFA</span>
         </Button>

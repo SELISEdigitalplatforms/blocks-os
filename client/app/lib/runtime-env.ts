@@ -49,10 +49,7 @@ const isPlaceholder = (value?: string) =>
  * @param loadEnvMap When set (e.g. Vite `loadEnv` in `vite.config.ts`), used first so Node-side
  *   tooling matches `.env` / mode files before `window` / `import.meta.env`.
  */
-export const getRuntimeEnv = (
-  key: RuntimeKey,
-  loadEnvMap?: Record<string, string>,
-): string => {
+export const getRuntimeEnv = (key: RuntimeKey, loadEnvMap?: Record<string, string>): string => {
   if (loadEnvMap) {
     const fromLoadEnv = loadEnvMap[key];
     if (fromLoadEnv && !isPlaceholder(fromLoadEnv)) {

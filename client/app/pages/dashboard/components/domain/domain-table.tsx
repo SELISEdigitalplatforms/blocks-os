@@ -11,10 +11,7 @@ import { Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainAction } from "./domain.constant";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
 import { CnameValidatorDialog } from "../cname/dialog";
 import {
   Button,
@@ -41,19 +38,11 @@ const StatusBadge = ({ verified }: { verified: boolean }) =>
 
 const columnHelper = createColumnHelper<IDomain>();
 
-const CopyableDomainValue = ({
-  value,
-  muted = false,
-}: {
-  value: string;
-  muted?: boolean;
-}) => (
+const CopyableDomainValue = ({ value, muted = false }: { value: string; muted?: boolean }) => (
   <CopyToClipboardButton textToCopy={value} isHoverable className="min-w-0">
     <span
-      className={cn(
-        "break-all text-sm",
-        muted ? "text-muted-foreground" : "text-high-emphasis",
-      )}>
+      className={cn("break-all text-sm", muted ? "text-muted-foreground" : "text-high-emphasis")}
+    >
       {value}
     </span>
   </CopyToClipboardButton>
@@ -88,7 +77,8 @@ const buildColumns = (
             size="icon"
             title="Delete domain"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => onDeleteRequest(domain)}>
+            onClick={() => onDeleteRequest(domain)}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
 
@@ -98,14 +88,16 @@ const buildColumns = (
               variant="ghost"
               size="icon"
               title="Configure domain"
-              onClick={() => onEdit(domain)}>
+              onClick={() => onEdit(domain)}
+            >
               <Settings className="h-4 w-4 text-muted-foreground" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               title="Validate CNAME"
-              onClick={() => onCname(domain)}>
+              onClick={() => onCname(domain)}
+            >
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
             </Button>
           </RenderConditionally>
@@ -200,10 +192,8 @@ export const DomainTable = ({ data }: DomainTableProps) => {
             dialogSubtitle: (
               <>
                 Are you sure you want to delete{" "}
-                <span className="break-all font-semibold">
-                  {deleteTarget?.domain}
-                </span>
-                ? This action cannot be undone.
+                <span className="break-all font-semibold">{deleteTarget?.domain}</span>? This action
+                cannot be undone.
               </>
             ),
             confirmButton: "Delete",
@@ -220,10 +210,7 @@ export const DomainTable = ({ data }: DomainTableProps) => {
           refetched verification status instead of a stale click-time snapshot */}
       <CnameValidatorDialog
         open={cnameDialogOpen}
-        domain={
-          (cnameTarget && data.find((d) => d.domain === cnameTarget.domain)) ||
-          cnameTarget
-        }
+        domain={(cnameTarget && data.find((d) => d.domain === cnameTarget.domain)) || cnameTarget}
         onOpenChange={(open) => {
           setCnameDialogOpen(open);
           if (!open) setCnameTarget(null);
@@ -243,11 +230,9 @@ export const DomainTable = ({ data }: DomainTableProps) => {
                     className={cn(
                       "h-12 px-4 text-left text-xs font-semibold uppercase tracking-wide text-medium-emphasis",
                       header.id === "actions" && "w-32",
-                    )}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
                     )}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
@@ -258,21 +243,17 @@ export const DomainTable = ({ data }: DomainTableProps) => {
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="py-10 text-center text-sm text-muted-foreground">
+                  className="py-10 text-center text-sm text-muted-foreground"
+                >
                   No domains configured yet.
                 </td>
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/50">
+                <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-2 md:px-4 md:py-3">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
                 </tr>
