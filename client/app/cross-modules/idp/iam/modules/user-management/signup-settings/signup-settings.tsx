@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui-kits/button/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogClose
+  DialogClose,
 } from "@/components/ui-kits/dialog/dialog";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Wrench } from "lucide-react";
@@ -21,11 +21,14 @@ export const SignupSettings = () => {
   const [sso, setSso] = useState(false);
   const initializedRef = useRef(false);
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { data: signUpSettingData } = useGetSignUpSetting({
-    projectKey: tenantId
-  }, {
-    enabled: !!tenantId,
-  });
+  const { data: signUpSettingData } = useGetSignUpSetting(
+    {
+      projectKey: tenantId,
+    },
+    {
+      enabled: !!tenantId,
+    },
+  );
   const { mutateAsync: saveSignUpSetting, isPending } = useSaveSignUpSetting();
   useEffect(() => {
     if (signUpSettingData && !initializedRef.current) {
@@ -35,7 +38,7 @@ export const SignupSettings = () => {
       setSso(signUpSettingData.isSSoSignUpEnabled);
     }
   }, [signUpSettingData]);
-  const isSaveDisabled = isPending
+  const isSaveDisabled = isPending;
   const submitHandler = async () => {
     await saveSignUpSetting({
       isSignUpEnable: allowSignup,
@@ -52,23 +55,21 @@ export const SignupSettings = () => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">
-            <Wrench className="mr-2 aspect-square w-4" />
-            <span>Signup Settings</span>
+          <Wrench className="mr-2 aspect-square w-4" />
+          <span>Signup Settings</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Signup Settings</DialogTitle>
-          <DialogDescription>
-            Configure signup settings for users.
-          </DialogDescription>
+          <DialogDescription>Configure signup settings for users.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="allow-signup" 
-              checked={allowSignup} 
-              onCheckedChange={(checked) => setAllowSignup(!!checked)} 
+            <Checkbox
+              id="allow-signup"
+              checked={allowSignup}
+              onCheckedChange={(checked) => setAllowSignup(!!checked)}
             />
             <label
               htmlFor="allow-signup"
@@ -77,34 +78,27 @@ export const SignupSettings = () => {
               Allow signup
             </label>
           </div>
-            <div className="ml-6 flex flex-col gap-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="email-password" 
-                  checked={emailPassword} 
-                  onCheckedChange={(checked) => setEmailPassword(!!checked)} 
-                />
-                <label
-                  htmlFor="email-password"
-                  className="text-sm font-medium leading-none cursor-pointer"
-                >
-                  Email and password
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="sso" 
-                  checked={sso} 
-                  onCheckedChange={(checked) => setSso(!!checked)} 
-                />
-                <label
-                  htmlFor="sso"
-                  className="text-sm font-medium leading-none cursor-pointer"
-                >
-                  SSO
-                </label>
-              </div>
+          <div className="ml-6 flex flex-col gap-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="email-password"
+                checked={emailPassword}
+                onCheckedChange={(checked) => setEmailPassword(!!checked)}
+              />
+              <label
+                htmlFor="email-password"
+                className="text-sm font-medium leading-none cursor-pointer"
+              >
+                Email and password
+              </label>
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="sso" checked={sso} onCheckedChange={(checked) => setSso(!!checked)} />
+              <label htmlFor="sso" className="text-sm font-medium leading-none cursor-pointer">
+                SSO
+              </label>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>

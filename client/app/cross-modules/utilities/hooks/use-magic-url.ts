@@ -9,7 +9,18 @@ import {
 import { magicUrlService } from "@blocks-utilities/services/magic-url.service";
 export const useGetMagicUrls = (option: IGetMagicUrlsPayload) => {
   return useQuery({
-    queryKey: ["magic-urls", option.projectKey, option.page, option.pageSize, option.searchText, option.status, option.requestMethod, option.type, option.expiryDateRangeStartDate, option.expiryDateRangeEndDate],
+    queryKey: [
+      "magic-urls",
+      option.projectKey,
+      option.page,
+      option.pageSize,
+      option.searchText,
+      option.status,
+      option.requestMethod,
+      option.type,
+      option.expiryDateRangeStartDate,
+      option.expiryDateRangeEndDate,
+    ],
     queryFn: async (): Promise<IGetMagicUrlsResponse> => {
       return await magicUrlService.getMagicUrls(option);
     },

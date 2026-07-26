@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { MagicUrlService } from "./magic-url.service";
 import { MAGIC_URL_ENDPOINTS } from "@blocks-utilities/constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("MagicUrlService", () => {
   let service: MagicUrlService;
@@ -18,9 +18,7 @@ describe("MagicUrlService", () => {
   it("getMagicUrl unwraps the API response data", async () => {
     vi.mocked(http.get).mockResolvedValue({ data: { itemId: "m-1" } });
     const result = await service.getMagicUrl({ ItemId: "m-1" } as never);
-    expect(http.get).toHaveBeenCalledWith(
-      `${MAGIC_URL_ENDPOINTS.GET_LINK}?ItemId=m-1`,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${MAGIC_URL_ENDPOINTS.GET_LINK}?ItemId=m-1`);
     expect(result).toEqual({ itemId: "m-1" });
   });
 

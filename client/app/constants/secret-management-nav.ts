@@ -151,5 +151,4 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export const ALL_SECRET_MANAGEMENT_NAV_ITEMS =
-  SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items);
+export const ALL_SECRET_MANAGEMENT_NAV_ITEMS = SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items);

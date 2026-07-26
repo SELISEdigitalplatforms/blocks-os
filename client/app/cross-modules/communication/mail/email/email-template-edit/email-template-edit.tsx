@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
 // import BeePlugin from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useNavigate } from "react-router-dom";
@@ -26,12 +26,15 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   });
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  useEffect(() => {
+  const [prevSync, setPrevSync] = useState<{ id: typeof id; data: typeof data } | undefined>(
+    undefined,
+  );
+  if (!prevSync || prevSync.id !== id || prevSync.data !== data) {
+    setPrevSync({ id, data });
     if (id) {
-      const email = data;
-      setEmailDetails(email || null);
+      setEmailDetails(data || null);
     }
-  }, [id, data]);
+  }
   if (!emailDetails || isLoading || isFetching) {
     return (
       <div>
@@ -54,10 +57,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
       </div>
     );
   }
-  const handleBeePluginData = async (data: {
-    htmlFile: string;
-    jsonFile: string;
-  }) => {
+  const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
     const currentData: IEmailTemplate = {
       itemId: emailDetails?.itemId || "",
       templateBody: data.htmlFile,
@@ -74,16 +74,15 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
       </div>
       <div>
         <div className="mb-[20px] mt-[16px] flex items-center justify-between">
-          <h3 className="text-3xl font-semibold tracking-tight">
-            {emailDetails.name}
-          </h3>
+          <h3 className="text-3xl font-semibold tracking-tight">{emailDetails.name}</h3>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="lg"
               className="gap-1 text-sm font-medium"
               disabled={isLoading || isFetching}
-              onClick={() => beeRef?.current?.reset()}>
+              onClick={() => beeRef?.current?.reset()}
+            >
               <span className="sr-only sm:not-sr-only">Reset</span>
             </Button>
             <Button
@@ -91,7 +90,8 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
               size="lg"
               className="gap-1 text-sm font-medium"
               disabled={isLoading || isFetching}
-              onClick={() => beeRef?.current?.preview()}>
+              onClick={() => beeRef?.current?.preview()}
+            >
               <span className="sr-only sm:not-sr-only">Preview</span>
             </Button>
             <Button
@@ -99,7 +99,8 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
               size="lg"
               onClick={() => {
                 beeRef?.current?.submit();
-              }}>
+              }}
+            >
               Save
             </Button>
           </div>
@@ -116,11 +117,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
           <BeePluginStarter
             onBeeSave={handleBeePluginData}
             ref={beeRef}
-            jsonFile={
-              emailDetails.jsonContent
-                ? JSON.parse(emailDetails.jsonContent)
-                : undefined
-            }
+            jsonFile={emailDetails.jsonContent ? JSON.parse(emailDetails.jsonContent) : undefined}
           />
         </div>
         <div className="mb-4"></div>

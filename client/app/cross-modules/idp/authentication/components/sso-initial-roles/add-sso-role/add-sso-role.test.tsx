@@ -48,10 +48,7 @@ vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
 
 vi.mock("@/components/filter-toolbar", () => ({
   FilterControls: {
-    SearchInput: (props: {
-      value: string;
-      onChange: (value: string) => void;
-    }) => (
+    SearchInput: (props: { value: string; onChange: (value: string) => void }) => (
       <input
         aria-label="search-roles"
         value={props.value}

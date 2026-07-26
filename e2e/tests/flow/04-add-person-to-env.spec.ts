@@ -22,10 +22,7 @@ test("04 - grant the invited person access to Testing", async ({ page }) => {
   await page.getByRole("button", { name: "Grant access to Testing" }).click();
 
   // Confirm in the modal.
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Grant", exact: true })
-    .click();
+  await page.getByRole("dialog").getByRole("button", { name: "Grant", exact: true }).click();
 
   await expect(page.getByText(/Access granted to Testing/i)).toBeVisible({
     timeout: 30_000,

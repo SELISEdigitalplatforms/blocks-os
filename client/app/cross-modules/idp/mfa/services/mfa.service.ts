@@ -24,9 +24,7 @@ import {
 } from "../constants/endpoint.constant";
 
 export class MFAService {
-  getConfigurations(
-    _payload?: IGetConfigurationPayload,
-  ): Promise<IGetConfigurationResponse> {
+  getConfigurations(_payload?: IGetConfigurationPayload): Promise<IGetConfigurationResponse> {
     return http
       .get<MfaConfigControllerResponse>(MFA_CONFIG_ENDPOINTS.GET, undefined, {
         absoluteUrl: true,
@@ -84,29 +82,21 @@ export class MFAService {
       });
   }
 
-  generateUserMfaOTP(
-    payload: IGenerateUserMFA_OtpPayload,
-  ): Promise<IGenerateUserMFA_OtpResponse> {
+  generateUserMfaOTP(payload: IGenerateUserMFA_OtpPayload): Promise<IGenerateUserMFA_OtpResponse> {
     return http.post(MFA_ENDPOINTS.GENERATE_OTP, payload, undefined, {
       absoluteUrl: true,
     });
   }
 
-  configureUserMFA(
-    payload: IConfigureUserMFAPayload,
-  ): Promise<IConfigureUserMFAResponse> {
+  configureUserMFA(payload: IConfigureUserMFAPayload): Promise<IConfigureUserMFAResponse> {
     return http.post(MFA_ENDPOINTS.CONFIGURE_USER_MFA, payload, undefined, {
       absoluteUrl: true,
     });
   }
-  setupUserTotp(
-    payload: ISetupUserTotpPayload,
-  ): Promise<ISetupUserTotpResponse> {
-    return http.get(
-      `${MFA_ENDPOINTS.SETUP_TOTP}?UserId=${payload.id}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+  setupUserTotp(payload: ISetupUserTotpPayload): Promise<ISetupUserTotpResponse> {
+    return http.get(`${MFA_ENDPOINTS.SETUP_TOTP}?UserId=${payload.id}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   verifyOtp(payload: IVerifyMfaOtpPayload): Promise<IVerifyMfaOtpResponse> {

@@ -1,24 +1,7 @@
-import {
-  AuthResolver,
-  ProtectedGuard,
-  PublicGuard,
-} from "@seliseblocks/blocks-kit/guards";
-import {
-  ConsoleLayout,
-  DashboardRoute,
-} from "@seliseblocks/blocks-kit/layouts";
-import {
-  CallbackPage,
-  ConsolePage,
-  LoginPage,
-  ProfilePage,
-} from "@seliseblocks/blocks-kit/pages";
-import {
-  createBrowserRouter,
-  Navigate,
-  Outlet,
-  useParams,
-} from "react-router-dom";
+import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/blocks-kit/guards";
+import { ConsoleLayout, DashboardRoute } from "@seliseblocks/blocks-kit/layouts";
+import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/blocks-kit/pages";
+import { createBrowserRouter, Navigate, Outlet, useParams } from "react-router-dom";
 import { navigationMenus } from "./constants/navigation-menus";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
@@ -48,10 +31,7 @@ import { Roles } from "@blocks-idp/iam/modules/role-management";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { IdpSettingsPage } from "@blocks-idp/settings/pages/settings-page";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
-import {
-  EnvironmentMigrationPage,
-  EnvironmentsPage,
-} from "./pages/environments/environments";
+import { EnvironmentMigrationPage, EnvironmentsPage } from "./pages/environments/environments";
 import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
 import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
 import { LogsRoute } from "./pages/lmt/logs";
@@ -247,10 +227,7 @@ export const router = createBrowserRouter([
               {
                 path: ":itemId",
                 element: (
-                  <DashboardRoute
-                    redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}
-                  />
+                  <DashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
                 ),
                 children: [
                   {
@@ -281,12 +258,7 @@ export const router = createBrowserRouter([
                       // Redirect from the retired "managed-services" path
                       {
                         path: "managed-services",
-                        element: (
-                          <Navigate
-                            to="/app/secret-management/my-services"
-                            replace
-                          />
-                        ),
+                        element: <Navigate to="/app/secret-management/my-services" replace />,
                       },
                       {
                         path: "oidc",

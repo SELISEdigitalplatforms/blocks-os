@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 export type OidcBrandingHeaderActions = {
   onSave: () => void;
@@ -18,9 +11,7 @@ type OidcBrandingHeaderContextValue = {
   setActions: (actions: OidcBrandingHeaderActions | null) => void;
 };
 
-const OidcBrandingHeaderContext = createContext<OidcBrandingHeaderContextValue | null>(
-  null,
-);
+const OidcBrandingHeaderContext = createContext<OidcBrandingHeaderContextValue | null>(null);
 
 export const OidcBrandingHeaderProvider = ({ children }: { children: ReactNode }) => {
   const [actions, setActionsState] = useState<OidcBrandingHeaderActions | null>(null);

@@ -14,13 +14,19 @@ import { PERMISSION_SEVERITY_OPTIONS, ResourceType } from "@blocks-idp/iam/model
 import { useMemo } from "react";
 import { PermissionDialogProps } from "./permission-selection-utils";
 import { useRoleDetailsStore } from "./role-details-state";
-export const AffectedPermissionsDialog = ({ permission, onOpenChange, open }: PermissionDialogProps) => {
+export const AffectedPermissionsDialog = ({
+  permission,
+  onOpenChange,
+  open,
+}: PermissionDialogProps) => {
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
   const title = `Review Permission Changes`;
   const description = `The following permissions depend on this permission. Changing it may impact their functionality. Please review carefully`;
   const permissionSeverity = useMemo(() => {
-    return PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === permission.permissionSeverity);
+    return PERMISSION_SEVERITY_OPTIONS.find(
+      (option) => option.value === permission.permissionSeverity,
+    );
   }, [permission.permissionSeverity]);
   const onSaveClick = () => {
     changePermissionSelection([{ permissionResource: permission.resource, isChecked: false }]);
@@ -28,7 +34,7 @@ export const AffectedPermissionsDialog = ({ permission, onOpenChange, open }: Pe
   };
   const parentPermissions = useMemo(
     () => permission.parents.map((parent) => permissionMap.get(parent)) || [],
-    [permission.parents, permissionMap]
+    [permission.parents, permissionMap],
   );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,11 +49,13 @@ export const AffectedPermissionsDialog = ({ permission, onOpenChange, open }: Pe
               <div
                 key={`parent-${parent?.itemId}`}
                 className={cn(
-                  "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer [&_*]:cursor-[inherit]"
+                  "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer [&_*]:cursor-[inherit]",
                 )}
               >
                 <label
-                  className={cn("w-full h-full font-medium text-foreground flex flex-1 flex-col md:flex-row gap-2")}
+                  className={cn(
+                    "w-full h-full font-medium text-foreground flex flex-1 flex-col md:flex-row gap-2",
+                  )}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1">
@@ -62,7 +70,7 @@ export const AffectedPermissionsDialog = ({ permission, onOpenChange, open }: Pe
                       className={cn(
                         "rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                         permissionSeverity?.className,
-                        permissionSeverity?.bg
+                        permissionSeverity?.bg,
                       )}
                     >
                       {permissionSeverity?.label}

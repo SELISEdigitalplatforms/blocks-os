@@ -22,10 +22,7 @@ type UseCaptchaReturn = {
   };
 };
 
-export const useCaptcha = ({
-  siteKey,
-  type,
-}: UseCaptchaProps): UseCaptchaReturn => {
+export const useCaptcha = ({ siteKey, type }: UseCaptchaProps): UseCaptchaReturn => {
   const [code, setCode] = useState("");
   const { theme } = useTheme();
   const ref = useRef<CaptchaRef>(null);

@@ -19,12 +19,7 @@ export const BlockInfo = () => {
         <div className="flex items-center gap-4">
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full">
-              <img
-                src="/assets/images/react-icon.png"
-                width={20}
-                height={20}
-                alt="Reactjs Logo"
-              />
+              <img src="/assets/images/react-icon.png" width={20} height={20} alt="Reactjs Logo" />
             </Button>
             <div className="flex items-center gap-2 text-blue-700 md:justify-between">
               <Link
@@ -70,12 +65,7 @@ export const BlockInfo = () => {
         <div className="flex items-center gap-4">
           <div className="flex w-[50%] flex-col gap-2">
             <Button variant="outline" className="w-full">
-              <img
-                src="/assets/images/dotnet-icon.png"
-                width={20}
-                height={20}
-                alt="DotNet Logo"
-              />
+              <img src="/assets/images/dotnet-icon.png" width={20} height={20} alt="DotNet Logo" />
             </Button>
             <div className="flex items-center gap-1 text-blue-700 md:justify-between">
               <Link

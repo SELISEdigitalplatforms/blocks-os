@@ -8,13 +8,8 @@ import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 import { ILog } from "../../models/log.model";
 
 export const LogItem = ({ log }: { log: ILog }) => {
-  const {
-    logsRouteServiceName,
-    selectedService,
-    useGenericTraceLinks,
-    isSourceBlocks,
-    services,
-  } = useContext(LogsViewerContext);
+  const { logsRouteServiceName, selectedService, useGenericTraceLinks, isSourceBlocks, services } =
+    useContext(LogsViewerContext);
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") ?? selectedService?.serviceName;
   const LMT_BASE_PATH = useLmtBasePath();
@@ -48,14 +43,9 @@ export const LogItem = ({ log }: { log: ILog }) => {
     <div className="flex flex-col">
       <div className="flex flex-col md:flex-row md:items-center gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-high-emphasis">
-            {getLogFormatTimestamp(log.timestamp)}
-          </span>
-          {serviceBadgeText && (
-            <Badge variant="secondary">{serviceBadgeText}</Badge>
-          )}
-          <span
-            className={`text-sm uppercase ${getLogLevelClassName(log.level)}`}>
+          <span className="text-high-emphasis">{getLogFormatTimestamp(log.timestamp)}</span>
+          {serviceBadgeText && <Badge variant="secondary">{serviceBadgeText}</Badge>}
+          <span className={`text-sm uppercase ${getLogLevelClassName(log.level)}`}>
             {log.level}
           </span>
         </div>
@@ -65,7 +55,8 @@ export const LogItem = ({ log }: { log: ILog }) => {
               <Link
                 to={traceHref}
                 className="text-warning-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`View trace details for ${log.traceId}`}>
+                aria-label={`View trace details for ${log.traceId}`}
+              >
                 [{log.traceId}]
               </Link>
             </CopyToClipboardButton>
@@ -78,7 +69,8 @@ export const LogItem = ({ log }: { log: ILog }) => {
       </div>
       <div
         className="whitespace-pre-wrap break-words text-left text-sm text-medium-emphasis"
-        style={{ width: "calc(80vw - 120px)" }}>
+        style={{ width: "calc(80vw - 120px)" }}
+      >
         {log.message}
       </div>
     </div>

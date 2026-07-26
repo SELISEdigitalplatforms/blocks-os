@@ -52,7 +52,14 @@ export function MobileMenuItem({ menu, onClick }: { menu: MenuItemType; onClick?
           isActiveMenu && "!text-primary",
         )}
       >
-        <Link to={menu.path} className={cn("flex items-center gap-3", menu.disabled && "pointer-events-none opacity-50")} onClick={onClick}>
+        <Link
+          to={menu.path}
+          className={cn(
+            "flex items-center gap-3",
+            menu.disabled && "pointer-events-none opacity-50",
+          )}
+          onClick={onClick}
+        >
           {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
           <span className="relative">
             {menu.name}
@@ -96,7 +103,9 @@ export function MobileMenuItem({ menu, onClick }: { menu: MenuItemType; onClick?
         <div className="mt-4 px-4">
           {menu.children
             ?.filter((item): item is MenuItemType => item.type === "menu" && !item.disabled)
-            .map((child) => <ChildMenuItem key={child.id} menu={child} onClick={onClick} />)}
+            .map((child) => (
+              <ChildMenuItem key={child.id} menu={child} onClick={onClick} />
+            ))}
         </div>
       </SheetContent>
     </Sheet>

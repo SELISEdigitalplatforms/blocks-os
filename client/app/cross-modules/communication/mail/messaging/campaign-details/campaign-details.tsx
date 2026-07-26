@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
@@ -12,13 +12,15 @@ import { messagingServiceData } from "@blocks-communication/mail/constants/messa
 export function CampaignDetails({ params }: { params: { id: string } }) {
   const { id } = params;
   const [messageDetails, setMessageDetails] = useState<IMessagingServiceData | null>(null);
-  useEffect(() => {
+  const [prevId, setPrevId] = useState<typeof id | undefined>(undefined);
+  if (prevId !== id) {
+    setPrevId(id);
     if (id) {
       const messageId = Array.isArray(id) ? id[0] : id;
-      const message = messagingServiceData.find((message) => message.id === messageId);
+      const message = messagingServiceData.find((item) => item.id === messageId);
       setMessageDetails(message || null);
     }
-  }, [id]);
+  }
   if (!messageDetails) {
     return <div>Loading...</div>;
   }

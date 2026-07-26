@@ -32,8 +32,7 @@ export const SSoProviderStatusToggle = ({
       });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };

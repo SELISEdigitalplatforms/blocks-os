@@ -187,7 +187,7 @@ export interface GetPermission {
  */
 export enum ResourceType {
   /** Permission guards a server-side API endpoint. */
-  "Endpoint" = 1,
+  Endpoint = 1,
   /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
   /** Permission guards access to a specific data record or data class. */
@@ -240,7 +240,9 @@ export const normalizePermissionSeverity = (
       return numericValue as PermissionSeverityLevel;
     }
     const matchedOption = PERMISSION_SEVERITY_OPTIONS.find(
-      (option) => option.id.toLowerCase() === value.toLowerCase() || option.label.toLowerCase() === value.toLowerCase(),
+      (option) =>
+        option.id.toLowerCase() === value.toLowerCase() ||
+        option.label.toLowerCase() === value.toLowerCase(),
     );
     return matchedOption?.value;
   }

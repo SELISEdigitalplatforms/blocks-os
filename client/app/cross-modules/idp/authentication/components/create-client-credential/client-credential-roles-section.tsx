@@ -1,36 +1,36 @@
-import { useMemo, useState } from "react"
-import { Label } from "@/components/ui-kits/label/label"
-import { Pagination } from "@/components/ui-kits/pagination/pagination"
-import { SSORolesList } from "@blocks-idp/authentication/components/sso-initial-roles/sso-roles-list"
-import { toRoleStubs } from "@blocks-idp/iam/utils/role-stub"
-import { IRole } from "@blocks-idp/iam/models/role"
-import { AddClientCredentialRole } from "./add-client-credential-role"
+import { useMemo, useState } from "react";
+import { Label } from "@/components/ui-kits/label/label";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { SSORolesList } from "@blocks-idp/authentication/components/sso-initial-roles/sso-roles-list";
+import { toRoleStubs } from "@blocks-idp/iam/utils/role-stub";
+import { IRole } from "@blocks-idp/iam/models/role";
+import { AddClientCredentialRole } from "./add-client-credential-role";
 
 type ClientCredentialRolesSectionProps = {
-  selectedSlugs: string[]
-  onChange: (slugs: string[]) => void
-}
+  selectedSlugs: string[];
+  onChange: (slugs: string[]) => void;
+};
 
 export const ClientCredentialRolesSection = ({
   selectedSlugs,
   onChange,
 }: ClientCredentialRolesSectionProps) => {
-  const [filter, setFilter] = useState({ page: 0, pageSize: 5 })
-  const roles = useMemo(() => toRoleStubs(selectedSlugs), [selectedSlugs])
+  const [filter, setFilter] = useState({ page: 0, pageSize: 5 });
+  const roles = useMemo(() => toRoleStubs(selectedSlugs), [selectedSlugs]);
 
   const slicedRoles = roles.slice(
     filter.page * filter.pageSize,
     filter.page * filter.pageSize + filter.pageSize,
-  )
+  );
 
   const handleAdd = (newSlugs: string[]) => {
-    const merged = [...new Set([...selectedSlugs, ...newSlugs])]
-    onChange(merged)
-  }
+    const merged = [...new Set([...selectedSlugs, ...newSlugs])];
+    onChange(merged);
+  };
 
   const handleRemove = (role: IRole) => {
-    onChange(selectedSlugs.filter((slug) => slug !== role.slug))
-  }
+    onChange(selectedSlugs.filter((slug) => slug !== role.slug));
+  };
 
   return (
     <div className="space-y-3">
@@ -49,10 +49,7 @@ export const ClientCredentialRolesSection = ({
           </p>
         </div>
         <div className="shrink-0">
-          <AddClientCredentialRole
-            selectedSlugs={selectedSlugs}
-            onAdd={handleAdd}
-          />
+          <AddClientCredentialRole selectedSlugs={selectedSlugs} onAdd={handleAdd} />
         </div>
       </div>
       {roles.length === 0 ? (
@@ -63,7 +60,8 @@ export const ClientCredentialRolesSection = ({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg">
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -73,9 +71,7 @@ export const ClientCredentialRolesSection = ({
             </svg>
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">No roles added</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add roles for this client credential
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Add roles for this client credential</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -86,8 +82,8 @@ export const ClientCredentialRolesSection = ({
             <div className="flex items-center justify-between border-t pt-3">
               <p className="text-xs text-muted-foreground">
                 Showing {filter.page * filter.pageSize + 1} to{" "}
-                {Math.min((filter.page + 1) * filter.pageSize, roles.length)} of{" "}
-                {roles.length} roles
+                {Math.min((filter.page + 1) * filter.pageSize, roles.length)} of {roles.length}{" "}
+                roles
               </p>
               <Pagination
                 page={filter.page}
@@ -101,5 +97,5 @@ export const ClientCredentialRolesSection = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

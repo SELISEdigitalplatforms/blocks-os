@@ -28,7 +28,7 @@ export function Pagination({
     onChange(page);
   };
   const canGoPreviousPage = !!page;
-  const totalPage = Math.max(1, Math.ceil(totalCount / pageSize) || 0)
+  const totalPage = Math.max(1, Math.ceil(totalCount / pageSize) || 0);
   const canGoNextPage = page < totalPage - 1;
   const onPageSizeChangeHandler = (value: string) => {
     if (onPageSizeChange) onPageSizeChange(+value);

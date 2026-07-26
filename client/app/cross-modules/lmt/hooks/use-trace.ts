@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { lmtService } from "../services/lmt.service";
-import {
-  IGetTraceByTraceIdPayload,
-  IGetTracesPayload,
-} from "../models/trace.model";
+import { IGetTraceByTraceIdPayload, IGetTracesPayload } from "../models/trace.model";
 
 export const useGetTraces = (option: IGetTracesPayload) => {
   return useQuery({

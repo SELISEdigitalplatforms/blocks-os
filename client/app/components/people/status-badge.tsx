@@ -1,25 +1,25 @@
-import { Badge } from "@/components/ui-kits/badge/badge"
-import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
-  status: string
-  className?: string
+  status: string;
+  className?: string;
 }
 
 export const PeopleStatusBadge = ({ status, className }: StatusBadgeProps) => {
   const getVariant = (value: string) => {
     switch (value.toLowerCase()) {
       case "active":
-        return "success"
+        return "success";
       case "pending":
       case "pending invite":
-        return "secondary"
+        return "secondary";
       case "inactive":
-        return "error"
+        return "error";
       default:
-        return "secondary"
+        return "secondary";
     }
-  }
+  };
 
   return (
     <Badge
@@ -28,5 +28,5 @@ export const PeopleStatusBadge = ({ status, className }: StatusBadgeProps) => {
     >
       {status}
     </Badge>
-  )
-}
+  );
+};
