@@ -9,11 +9,7 @@ type DeleteModelProps = {
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-export const DeleteModel = ({
-  modelId,
-  open,
-  onOpenChange,
-}: DeleteModelProps) => {
+export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync } = useDeleteModel();
   const confirmHandler = async () => {
@@ -44,7 +40,8 @@ export const DeleteModel = ({
       open={open}
       onOpenChange={(value) => {
         if (!value) onOpenChange(false);
-      }}>
+      }}
+    >
       <ConfirmationModal
         data={{
           dialogTitle: "Delete Model",

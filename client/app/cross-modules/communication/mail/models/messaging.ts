@@ -1,5 +1,5 @@
 export interface IMessagingServiceData {
-  id?: number | any;
+  id?: number | string;
   name: string;
   configuration: string;
   protocol: string;

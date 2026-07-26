@@ -34,11 +34,7 @@ import {
 } from "@blocks-idp/authentication/models/jwt.claim.model";
 
 export class ProjectService {
-  getProjects(
-    page: number,
-    pageSize: number,
-    tenantGroupId: string,
-  ): Promise<IProjectGroup[]> {
+  getProjects(page: number, pageSize: number, tenantGroupId: string): Promise<IProjectGroup[]> {
     const url = `${PROJECT_ENDPOINTS.GETS}?page=${page}&pageSize=${pageSize}&tenantGroupId=${tenantGroupId}`;
     return http.get(url);
   }
@@ -109,33 +105,23 @@ export class ProjectService {
     return http.post(DOMAIN_ENDPOINTS.CONFIGURE, payload);
   }
 
-  updateProject(
-    payload: IUpdateProjectPayload,
-  ): Promise<IUpdateProjectResponse> {
+  updateProject(payload: IUpdateProjectPayload): Promise<IUpdateProjectResponse> {
     return http.post(PROJECT_ENDPOINTS.UPDATE_PROJECT, payload);
   }
 
-  updateTenantGroup(
-    payload: IUpdateTenantGroupPayload,
-  ): Promise<IUpdateProjectResponse> {
+  updateTenantGroup(payload: IUpdateTenantGroupPayload): Promise<IUpdateProjectResponse> {
     return http.post(PROJECT_ENDPOINTS.UPDATE_PROJECT_GROUP, payload);
   }
-  disableProject(
-    payload: IDisableProjectPayload,
-  ): Promise<IDisableProjectResponse> {
+  disableProject(payload: IDisableProjectPayload): Promise<IDisableProjectResponse> {
     return http.post(PROJECT_ENDPOINTS.DISABLE, payload);
   }
 
   // Data Migration Methods
-  initiateMigration(
-    payload: IMigrationRequest,
-  ): Promise<IMigrationInitiateResponse> {
+  initiateMigration(payload: IMigrationRequest): Promise<IMigrationInitiateResponse> {
     return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload);
   }
 
-  verifyMigration(
-    payload: IVerifyMigrationRequest,
-  ): Promise<IMigrationVerificationResponse> {
+  verifyMigration(payload: IVerifyMigrationRequest): Promise<IMigrationVerificationResponse> {
     return http.post(MIGRATION_ENDPOINTS.VERIFY, payload);
   }
 
@@ -144,9 +130,7 @@ export class ProjectService {
     return http.get(url);
   }
 
-  savePublicCertificate(
-    payload: ISavePublicCertificatePayload,
-  ): Promise<IUpdateProjectResponse> {
+  savePublicCertificate(payload: ISavePublicCertificatePayload): Promise<IUpdateProjectResponse> {
     return http.post(PROJECT_ENDPOINTS.UPDATE_TOKEN_VALIDATION, payload);
   }
 
@@ -222,9 +206,7 @@ export class ProjectService {
     return http.post(PROJECT_ENDPOINTS.SAVE_JWT_CLAIMS, payload);
   }
 
-  getSubscriptionUsage(
-    projectKey: string,
-  ): Promise<IGetSubscriptionUsageResponse> {
+  getSubscriptionUsage(projectKey: string): Promise<IGetSubscriptionUsageResponse> {
     return http.get(`${SUBSCRIPTION_ENDPOINTS.GETS}?projectKey=${projectKey}`);
   }
 }

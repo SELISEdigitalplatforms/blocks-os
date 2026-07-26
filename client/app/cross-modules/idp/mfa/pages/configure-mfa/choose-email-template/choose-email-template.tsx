@@ -34,7 +34,15 @@ const LoadingSkelton = () => {
 export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps) => {
   const { data: mfaConfigData } = useGetMFAConfig();
   const [filter, setFilter] = useState({ page: 0, pageSize: 10 });
-  const { data, isLoading, isFetching } = useGetEmailTemplates(filter.page, filter.pageSize, "", "Name", false, "", "");
+  const { data, isLoading, isFetching } = useGetEmailTemplates(
+    filter.page,
+    filter.pageSize,
+    "",
+    "Name",
+    false,
+    "",
+    "",
+  );
   const { isPending, mutateAsync } = useSaveMFAConfig();
   const [seletedTemplate, setSelectedTemplate] = useState<IEmailTemplate | null>(null);
   const onSaveHandler = async () => {
@@ -104,7 +112,11 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
                 <div className="mt-2 flex items-center justify-between text-sm">Default</div>
               </div>
               {data?.templates?.map((template) => (
-                <div className={`w-[150px]`} key={template.itemId} onClick={() => setSelectedTemplate(template)}>
+                <div
+                  className={`w-[150px]`}
+                  key={template.itemId}
+                  onClick={() => setSelectedTemplate(template)}
+                >
                   <div
                     className={`relative h-[200px] w-full border ${seletedTemplate?.itemId === template.itemId ? "border border-primary" : " "}`}
                   >
@@ -113,7 +125,9 @@ export const ChooseEmailTemplate = ({ open, setOpen }: ChooseEmailTemplateProps)
                       alt="email-template"
                     />
                   </div>
-                  <div className="mt-2 flex items-center justify-between text-sm">{template.name}</div>
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    {template.name}
+                  </div>
                 </div>
               ))}
             </>

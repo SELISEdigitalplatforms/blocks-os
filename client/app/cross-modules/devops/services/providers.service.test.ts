@@ -68,7 +68,7 @@ describe("providers.service", () => {
 
   describe("unimplemented providers", () => {
     it("do not throw", () => {
-      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       expect(() => authenticateWithGitlab()).not.toThrow();
       expect(() => authenticateWithBitbucket()).not.toThrow();
       expect(() => authenticateWithAzure()).not.toThrow();

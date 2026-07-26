@@ -1,11 +1,11 @@
 export interface IInviteEnvironmentDetail {
-  tenantId: string
-  roles: string[]
+  tenantId: string;
+  roles: string[];
 }
 
 export interface IInvitePeoplePayload {
-  invitations: Record<string, IInviteEnvironmentDetail[]>
-  groupId: string
+  invitations: Record<string, IInviteEnvironmentDetail[]>;
+  groupId: string;
 }
 
 /** What the server actually did with each address, keyed by the normalized (lowercased) email. */

@@ -10,12 +10,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { IPATResponse } from "@blocks-idp/iam/models/user";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
 import { useMemo, useState } from "react";
 import { GenerateTokenModal } from "./generate-pat-modal";
@@ -74,22 +69,19 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
                     "block truncate lg:overflow-visible lg:text-clip lg:whitespace-normal",
                     isMobile && "transition-all group-hover:blur-sm",
                   )}
-                  title={row.original.code}>
+                  title={row.original.code}
+                >
                   {isMobile ? (
                     row.original.code
                   ) : (
-                    <CopyToClipboardButton
-                      textToCopy={row.original.code}
-                      isHoverable={true}>
+                    <CopyToClipboardButton textToCopy={row.original.code} isHoverable={true}>
                       {row.original.code}
                     </CopyToClipboardButton>
                   )}
                 </span>
                 {isMobile && (
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
-                    <CopyToClipboardButton
-                      textToCopy={row.original.code}
-                      isHoverable={false}>
+                    <CopyToClipboardButton textToCopy={row.original.code} isHoverable={false}>
                       Copy
                     </CopyToClipboardButton>
                   </div>
@@ -108,10 +100,7 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
         ),
         cell: ({ row }) => (
           <div className="flex w-[180px] items-center">
-            {format(
-              new Date(row.original.expiryDate),
-              "MMM d, yyyy 'at' HH:mm",
-            )}
+            {format(new Date(row.original.expiryDate), "MMM d, yyyy 'at' HH:mm")}
           </div>
         ),
       },
@@ -124,9 +113,7 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
         ),
         cell: ({ row }) => (
           <div className="flex w-[180px] items-center">
-            {new Date(row.original.expiryDate).getTime() -
-              new Date().getTime() >
-            0 ? (
+            {new Date(row.original.expiryDate).getTime() - new Date().getTime() > 0 ? (
               <Badge variant="success">active</Badge>
             ) : (
               <Badge variant="error">expired</Badge>
@@ -172,19 +159,12 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
       <Table className="text-sm">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow
-              key={headerGroup.id}
-              className="px-4 py-3 hover:bg-transparent">
+            <TableRow key={headerGroup.id} className="px-4 py-3 hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className="font-bold text-medium-emphasis">
+                <TableHead key={header.id} className="font-bold text-medium-emphasis">
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -196,7 +176,8 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="font-normal text-medium-emphasis">
+                className="font-normal text-medium-emphasis"
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -208,7 +189,8 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground">
+                className="h-24 text-center text-muted-foreground"
+              >
                 No results.
               </TableCell>
             </TableRow>
@@ -216,11 +198,7 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
         </TableBody>
       </Table>
 
-      <GenerateTokenModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        id={id}
-      />
+      <GenerateTokenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} id={id} />
     </>
   );
 };

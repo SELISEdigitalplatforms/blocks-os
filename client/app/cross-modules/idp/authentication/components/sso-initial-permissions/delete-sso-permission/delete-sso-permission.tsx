@@ -7,10 +7,7 @@ type DeleteUserPermissionProps = {
   permission: IPermission;
   onDelete: (data: IPermission) => void;
 };
-export const DeleteSSOPermission = ({
-  permission,
-  onDelete,
-}: DeleteUserPermissionProps) => {
+export const DeleteSSOPermission = ({ permission, onDelete }: DeleteUserPermissionProps) => {
   const [open, setOpen] = useState<boolean>(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { UserPermissionsList } from "./user-permissions-list";
 import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
@@ -15,10 +15,12 @@ export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
   const [localPermissions, setLocalPermissions] = useState<IPermission[]>([]);
   const [removedResources, setRemovedResources] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  useEffect(() => {
+  const [prevPermissions, setPrevPermissions] = useState<typeof permissions | undefined>(undefined);
+  if (prevPermissions !== permissions) {
+    setPrevPermissions(permissions);
     setLocalPermissions(permissions);
     setRemovedResources([]);
-  }, [permissions]);
+  }
   const onRemovePermission = (resource: string) => {
     setLocalPermissions((prev) => prev.filter((perm) => perm.resource !== resource));
     setRemovedResources((prev) => [...prev, resource]);
@@ -42,7 +44,7 @@ export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: res.errors as string || "Something went wrong",
+          description: (res.errors as string) || "Something went wrong",
         });
       }
     } catch (error) {
@@ -64,10 +66,21 @@ export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
             <div className="flex gap-2">
               {!!removedResources.length && (
                 <>
-                  <Button variant="outline" onClick={onReset} disabled={isSaving || (!removedResources.length && localPermissions.length === permissions.length)}>
+                  <Button
+                    variant="outline"
+                    onClick={onReset}
+                    disabled={
+                      isSaving ||
+                      (!removedResources.length && localPermissions.length === permissions.length)
+                    }
+                  >
                     Reset
                   </Button>
-                  <Button variant="outline" onClick={onSave} disabled={isSaving || !removedResources.length}>
+                  <Button
+                    variant="outline"
+                    onClick={onSave}
+                    disabled={isSaving || !removedResources.length}
+                  >
                     {isSaving ? "Saving..." : "Save"}
                   </Button>
                 </>

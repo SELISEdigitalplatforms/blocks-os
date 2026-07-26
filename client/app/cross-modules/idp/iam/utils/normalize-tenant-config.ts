@@ -1,15 +1,15 @@
-import type { IOrganizationConfigResponse } from "@blocks-idp/iam/models/organization-config.model"
-import type { IGetSignUpSettingResponse } from "@blocks-idp/iam/models/user"
+import type { IOrganizationConfigResponse } from "@blocks-idp/iam/models/organization-config.model";
+import type { IGetSignUpSettingResponse } from "@blocks-idp/iam/models/user";
 
-type TenantConfigApiDict = Record<string, unknown>
+type TenantConfigApiDict = Record<string, unknown>;
 
 const readBool = (raw: TenantConfigApiDict, ...keys: string[]): boolean => {
   for (const key of keys) {
-    const value = raw[key]
-    if (typeof value === "boolean") return value
+    const value = raw[key];
+    if (typeof value === "boolean") return value;
   }
-  return false
-}
+  return false;
+};
 
 const readBoolWithDefault = (
   raw: TenantConfigApiDict,
@@ -17,28 +17,28 @@ const readBoolWithDefault = (
   ...keys: string[]
 ): boolean => {
   for (const key of keys) {
-    const value = raw[key]
-    if (typeof value === "boolean") return value
+    const value = raw[key];
+    if (typeof value === "boolean") return value;
   }
-  return defaultValue
-}
+  return defaultValue;
+};
 
 const readString = (raw: TenantConfigApiDict, ...keys: string[]): string => {
   for (const key of keys) {
-    const value = raw[key]
-    if (typeof value === "string") return value
+    const value = raw[key];
+    if (typeof value === "string") return value;
   }
-  return ""
-}
+  return "";
+};
 
 const readStringArray = (raw: TenantConfigApiDict, ...keys: string[]): string[] => {
   for (const key of keys) {
-    const value = raw[key]
-    if (!Array.isArray(value)) continue
-    return value.filter((item): item is string => typeof item === "string")
+    const value = raw[key];
+    if (!Array.isArray(value)) continue;
+    return value.filter((item): item is string => typeof item === "string");
   }
-  return []
-}
+  return [];
+};
 
 export const mapOrganizationConfigFromApi = (
   raw: TenantConfigApiDict,
@@ -64,11 +64,7 @@ export const mapOrganizationConfigFromApi = (
     "allowCreationFromConstruct",
   ),
   isMultiOrgEnabled: readBool(raw, "IsMultiOrgEnabled", "isMultiOrgEnabled"),
-  consentForMultiOrgEnable: readBool(
-    raw,
-    "ConsentForMultiOrgEnable",
-    "consentForMultiOrgEnable",
-  ),
+  consentForMultiOrgEnable: readBool(raw, "ConsentForMultiOrgEnable", "consentForMultiOrgEnable"),
   allowOrgCreationFromSignup: readBool(
     raw,
     "AllowOrgCreationFromSignup",
@@ -105,20 +101,19 @@ export const mapOrganizationConfigFromApi = (
     "KeepOrgPermissionsSameAsDefaultPermissions",
     "keepOrgPermissionsSameAsDefaultPermissions",
   ),
-})
+});
 
-export const mapSignUpSettingFromApi = (
-  raw: TenantConfigApiDict,
-): IGetSignUpSettingResponse => {
+export const mapSignUpSettingFromApi = (raw: TenantConfigApiDict): IGetSignUpSettingResponse => {
   const isEmailPasswordSignUpEnabled = readBool(
     raw,
     "IsEmailPasswordSignUpEnabled",
     "isEmailPasswordSignUpEnabled",
-  )
-  const isSSoSignUpEnabled = readBool(raw, "IsSSoSignUpEnabled", "isSSoSignUpEnabled")
-  const isSignUpEnable = readBool(raw, "IsSignUpEnable", "isSignUpEnable")
-    || isEmailPasswordSignUpEnabled
-    || isSSoSignUpEnabled
+  );
+  const isSSoSignUpEnabled = readBool(raw, "IsSSoSignUpEnabled", "isSSoSignUpEnabled");
+  const isSignUpEnable =
+    readBool(raw, "IsSignUpEnable", "isSignUpEnable") ||
+    isEmailPasswordSignUpEnabled ||
+    isSSoSignUpEnabled;
 
   return {
     itemId: readString(raw, "ItemId", "itemId"),
@@ -142,5 +137,5 @@ export const mapSignUpSettingFromApi = (
       "DefaultPermissionsForNewUser",
       "defaultPermissionsForNewUser",
     ),
-  }
-}
+  };
+};

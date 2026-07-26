@@ -27,15 +27,9 @@ vi.stubGlobal(
 // touches process.env at module load; a passthrough keeps the tree renderable.
 vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-  TooltipContent: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("./remove-membership", () => ({
@@ -69,34 +63,18 @@ describe("UserMembershipsList", () => {
   });
 
   it("renders loading skeletons and no table while loading", () => {
-    const { container } = render(
-      <UserMembershipsList memberships={[]} isLoading {...baseProps} />,
-    );
+    const { container } = render(<UserMembershipsList memberships={[]} isLoading {...baseProps} />);
     expect(container.querySelector("table")).toBeNull();
     expect(screen.queryByText("No organization memberships found")).toBeNull();
   });
 
   it("shows the empty-state message when there are no memberships", () => {
-    render(
-      <UserMembershipsList
-        memberships={[]}
-        isLoading={false}
-        {...baseProps}
-      />,
-    );
-    expect(
-      screen.getByText("No organization memberships found"),
-    ).toBeTruthy();
+    render(<UserMembershipsList memberships={[]} isLoading={false} {...baseProps} />);
+    expect(screen.getByText("No organization memberships found")).toBeTruthy();
   });
 
   it("resolves the org name, joins roles and truncates permission badges", () => {
-    render(
-      <UserMembershipsList
-        memberships={[membership]}
-        isLoading={false}
-        {...baseProps}
-      />,
-    );
+    render(<UserMembershipsList memberships={[membership]} isLoading={false} {...baseProps} />);
     // Org name resolved via the map
     expect(screen.getByText("Acme")).toBeTruthy();
     // Roles joined
@@ -124,13 +102,7 @@ describe("UserMembershipsList", () => {
 
   it("opens the actions menu with Configure and Unassign options", async () => {
     const user = userEvent.setup();
-    render(
-      <UserMembershipsList
-        memberships={[membership]}
-        isLoading={false}
-        {...baseProps}
-      />,
-    );
+    render(<UserMembershipsList memberships={[membership]} isLoading={false} {...baseProps} />);
     await user.click(screen.getByRole("button"));
     expect(screen.getByText("Configure")).toBeTruthy();
     expect(screen.getByText("Unassign User")).toBeTruthy();

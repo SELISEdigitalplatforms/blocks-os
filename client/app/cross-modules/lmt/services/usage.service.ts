@@ -7,14 +7,10 @@ import {
 import { TRACE_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class UsageService {
-  getOperationalAnalytics(
-    payload: IGetOperationalAnalyticsPayload,
-  ): Promise<UsageMatrix[]> {
+  getOperationalAnalytics(payload: IGetOperationalAnalyticsPayload): Promise<UsageMatrix[]> {
     return http.post(TRACE_ENDPOINTS.GET_OPERATIONAL_ANALYTICS, payload);
   }
-  getServiceAnalytics(
-    payload: IGetServiceAnalyticsPayload,
-  ): Promise<UsageMatrix[]> {
+  getServiceAnalytics(payload: IGetServiceAnalyticsPayload): Promise<UsageMatrix[]> {
     return http.post(TRACE_ENDPOINTS.GET_SERVICE_ANALYTICS, payload);
   }
 }

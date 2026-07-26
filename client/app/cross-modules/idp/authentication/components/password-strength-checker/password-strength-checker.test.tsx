@@ -32,19 +32,11 @@ describe("PasswordStrengthChecker", () => {
   });
 
   it("renders the requirement list", () => {
-    render(
-      <PasswordStrengthChecker
-        password=""
-        confirmPassword=""
-        onRequirementsMet={vi.fn()}
-      />,
-    );
+    render(<PasswordStrengthChecker password="" confirmPassword="" onRequirementsMet={vi.fn()} />);
 
     expect(screen.getByText("Password Requirements")).toBeTruthy();
     expect(screen.getByText("Between 8 and 30 characters")).toBeTruthy();
-    expect(
-      screen.getByText("At least 1 uppercase and 1 lowercase letter"),
-    ).toBeTruthy();
+    expect(screen.getByText("At least 1 uppercase and 1 lowercase letter")).toBeTruthy();
     expect(screen.getByText("At least 1 digit")).toBeTruthy();
     expect(screen.getByText("At least 1 special character")).toBeTruthy();
     expect(screen.getByText("Passwords match")).toBeTruthy();
@@ -92,9 +84,7 @@ describe("PasswordStrengthChecker", () => {
       />,
     );
 
-    expect(
-      screen.getByText("New password must differ from current"),
-    ).toBeTruthy();
+    expect(screen.getByText("New password must differ from current")).toBeTruthy();
     await waitFor(() => {
       expect(onRequirementsMet).toHaveBeenLastCalledWith(false);
     });

@@ -23,9 +23,37 @@ import useIsServiceBarOpenLocal from "@blocks-localization/hooks/use-is-service-
 interface UsersRoleTableToolbarProps<TData> {
   table: Table<TData>;
 }
-export function UsersRoleTableToolbar<TData>({
+type UsersRoleFilterContentProps<TData> = {
+  table: Table<TData>;
+  dateRange: DateRange | undefined;
+  setDateRange: React.Dispatch<React.SetStateAction<DateRange | undefined>>;
+};
+function UsersRoleFilterContent<TData>({
   table,
-}: UsersRoleTableToolbarProps<TData>) {
+  dateRange,
+  setDateRange,
+}: UsersRoleFilterContentProps<TData>) {
+  return (
+    <>
+      {table.getColumn("lastLogin") && (
+        <DateRangeFilter
+          column={table.getColumn("lastLogin")}
+          title="Date added"
+          date={dateRange}
+          onDateChange={setDateRange}
+        />
+      )}
+      {table.getColumn("lastLogin") && (
+        <DataTableFacetedFilter
+          column={table.getColumn("lastLogin")}
+          title="Last login"
+          options={translation}
+        />
+      )}
+    </>
+  );
+}
+export function UsersRoleTableToolbar<TData>({ table }: UsersRoleTableToolbarProps<TData>) {
   const isMobile = useIsMobile();
   const isServiceBarOpen = useIsServiceBarOpenLocal();
   const textSearchColumn = table.getColumn("name");
@@ -49,29 +77,9 @@ export function UsersRoleTableToolbar<TData>({
     setDateRange(undefined);
     table.resetColumnFilters();
   }
-  const FilterContent = () => (
-    <>
-      {table.getColumn("lastLogin") && (
-        <DateRangeFilter
-          column={table.getColumn("lastLogin")}
-          title="Date added"
-          date={dateRange}
-          onDateChange={setDateRange}
-        />
-      )}
-      {table.getColumn("lastLogin") && (
-        <DataTableFacetedFilter
-          column={table.getColumn("lastLogin")}
-          title="Last login"
-          options={translation}
-        />
-      )}
-    </>
-  );
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
-      <div
-        className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
+      <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter users by name or email"
           onSearch={onSearchInputChange}
@@ -84,10 +92,7 @@ export function UsersRoleTableToolbar<TData>({
         {isServiceBarOpen && (
           <Sheet>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="relative h-8 w-8 p-0">
+              <Button variant="outline" size="sm" className="relative h-8 w-8 p-0">
                 <Filter className="h-4 w-4" />
                 {activeFiltersCount > 0 && (
                   <Badge className="absolute -right-2 -top-2 h-4 w-4 px-1 text-xs font-medium">
@@ -96,24 +101,18 @@ export function UsersRoleTableToolbar<TData>({
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-full"
-              aria-describedby="filter-description">
+            <SheetContent side="right" className="w-full" aria-describedby="filter-description">
               <SheetTitle className="mb-4">Filter</SheetTitle>
               <SheetDescription />
               <div className="flex flex-col space-y-4">
-                <FilterContent />
+                <UsersRoleFilterContent table={table} dateRange={dateRange} setDateRange={setDateRange} />
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
                     Show Results
                   </Button>
                 </SheetClose>
                 {isFiltered && (
-                  <Button
-                    variant="outline"
-                    onClick={resetFilters}
-                    className="h-8 px-2 lg:px-3">
+                  <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
                     Reset
                     <Cross2Icon className="ml-2 h-4 w-4" />
                   </Button>
@@ -123,8 +122,7 @@ export function UsersRoleTableToolbar<TData>({
           </Sheet>
         )}
       </div>
-      <div
-        className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
+      <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter users by name or email"
           onSearch={onSearchInputChange}
@@ -133,12 +131,9 @@ export function UsersRoleTableToolbar<TData>({
           isVisible={isSearchVisible}
           setIsVisible={setIsSearchVisible}
         />
-        <FilterContent />
+        <UsersRoleFilterContent table={table} dateRange={dateRange} setDateRange={setDateRange} />
         {isFiltered && (
-          <Button
-            variant="outline"
-            onClick={resetFilters}
-            className="h-8 px-2 lg:px-3">
+          <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
             Reset
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>

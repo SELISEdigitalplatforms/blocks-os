@@ -8,9 +8,7 @@ export const resolveEnv = () => {
   if (typeof window === "undefined") return;
 
   // Same wider cast here for the same reason
-  const blocksEnv = window.__BLOCKS_ENV__ as
-    | Record<string, string | undefined>
-    | undefined;
+  const blocksEnv = window.__BLOCKS_ENV__ as Record<string, string | undefined> | undefined;
 
   if (!blocksEnv) return;
 

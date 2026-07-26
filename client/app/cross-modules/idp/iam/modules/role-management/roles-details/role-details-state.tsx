@@ -25,7 +25,9 @@ interface RoleDetailsState {
   isInitialized: boolean;
   isEditMode: boolean;
   initializeStore: (permissions: IPermission[]) => void;
-  changePermissionSelection: (changes: { permissionResource: string; isChecked: boolean }[]) => void;
+  changePermissionSelection: (
+    changes: { permissionResource: string; isChecked: boolean }[],
+  ) => void;
   changePermissionGroupSelection: (permissions: PermissionState[], isChecked: boolean) => void;
   changeEditMode: (isEditMode: boolean) => void;
   discardChanges: () => void;
@@ -87,7 +89,9 @@ const createRoleDetailsStore = () => {
     changePermissionGroupSelection(permissions: PermissionState[], isChecked: boolean) {
       if (!get().isEditMode) return;
       const { changePermissionSelection } = get();
-      changePermissionSelection(permissions.map((p) => ({ permissionResource: p.resource, isChecked })));
+      changePermissionSelection(
+        permissions.map((p) => ({ permissionResource: p.resource, isChecked })),
+      );
     },
     changeEditMode: (isEditMode: boolean) => {
       set({ isEditMode });

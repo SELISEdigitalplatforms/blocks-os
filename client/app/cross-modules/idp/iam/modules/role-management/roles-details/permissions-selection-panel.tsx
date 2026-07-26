@@ -24,9 +24,18 @@ export const PermissionsSelectionPanel = () => {
   return (
     <Card>
       <CardContent>
-        <Accordion type="single" collapsible value={accordionValue} onValueChange={setAccordionValue}>
+        <Accordion
+          type="single"
+          collapsible
+          value={accordionValue}
+          onValueChange={setAccordionValue}
+        >
           {groupedPermissions.map((group) => (
-            <PermissionGroupSection key={group.name} group={group} onTrigger={() => onTriggerHandler(group.name)} />
+            <PermissionGroupSection
+              key={group.name}
+              group={group}
+              onTrigger={() => onTriggerHandler(group.name)}
+            />
           ))}
         </Accordion>
       </CardContent>

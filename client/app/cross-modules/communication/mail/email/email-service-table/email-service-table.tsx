@@ -11,16 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui-kits/tabs/tabs";
-import {
-  EMAIL_TABS,
-  type EmailTabKey,
-} from "@blocks-communication/mail/constants/email-tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
+import { EMAIL_TABS, type EmailTabKey } from "@blocks-communication/mail/constants/email-tabs";
 import { EmailTemplateList } from "@blocks-communication/mail/email/email-service-table/email-template-list";
 import { EmailUsageList } from "@blocks-communication/mail/email/email-usage/email-usage-list";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
@@ -44,10 +36,7 @@ const EMAIL_MANAGEMENT_TABS: { value: EmailTabKey; label: string }[] = [
   { value: "Outgoingmails", label: EMAIL_TABS.Outgoingmails.label },
 ];
 
-const EMAIL_MANAGEMENT_TAB_META: Record<
-  EmailTabKey,
-  { title: string; description: string }
-> = {
+const EMAIL_MANAGEMENT_TAB_META: Record<EmailTabKey, { title: string; description: string }> = {
   Emailstemplates: {
     title: "Email Templates",
     description:
@@ -55,13 +44,11 @@ const EMAIL_MANAGEMENT_TAB_META: Record<
   },
   Inbox: {
     title: "Incoming Mails",
-    description:
-      "Review received email activity, delivery details, and message history.",
+    description: "Review received email activity, delivery details, and message history.",
   },
   Outgoingmails: {
     title: "Outgoing Mails",
-    description:
-      "Monitor sent email activity, delivery status, and failure details.",
+    description: "Monitor sent email activity, delivery status, and failure details.",
   },
 };
 
@@ -94,20 +81,15 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
     queryParams.language ?? "",
     queryParams.mailConfigurationId ?? "",
   );
-  const { isLoading: isConfigsLoading, data: emailConfigsData } =
-    useGetEmailConfigs(0, 100);
-  const { isLoading: isLanguageListLoading, data: languageListData } =
-    useGetLanguages();
+  const { isLoading: isConfigsLoading, data: emailConfigsData } = useGetEmailConfigs(0, 100);
+  const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  const { setQueryParams: setEmailUsageQueryParams } =
-    useEmailUsageFilterQueryParams();
+  const { setQueryParams: setEmailUsageQueryParams } = useEmailUsageFilterQueryParams();
   const [emailTab, setEmailTab] = useQueryState("emailTab", {
     defaultValue: DEFAULT_EMAIL_TAB,
   });
-  const activeTab: EmailTabKey = isEmailTabKey(emailTab)
-    ? emailTab
-    : DEFAULT_EMAIL_TAB;
+  const activeTab: EmailTabKey = isEmailTabKey(emailTab) ? emailTab : DEFAULT_EMAIL_TAB;
   const activeTabMeta = EMAIL_MANAGEMENT_TAB_META[activeTab];
 
   const handleTabChange = (value: string) => {
@@ -136,29 +118,17 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
   return (
     <main className="flex flex-col">
       <div className="flex w-full flex-col">
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="flex w-full flex-col"
-        >
-          <PageHeader
-            title={activeTabMeta.title}
-            description={activeTabMeta.description}
-          />
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex w-full flex-col">
+          <PageHeader title={activeTabMeta.title} description={activeTabMeta.description} />
 
           <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-3">
             <div className="flex min-w-0 items-center gap-4">
               <div className="md:hidden">
                 <Select
                   value={activeTab}
-                  onValueChange={(value) =>
-                    handleTabChange(value as EmailTabKey)
-                  }
+                  onValueChange={(value) => handleTabChange(value as EmailTabKey)}
                 >
-                  <SelectTrigger
-                    className="w-56"
-                    aria-label="Email management section"
-                  >
+                  <SelectTrigger className="w-56" aria-label="Email management section">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -174,11 +144,7 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
               <div className="hidden items-center md:flex">
                 <TabsList className="h-[42px] bg-blocks-primary-shades-300">
                   {EMAIL_MANAGEMENT_TABS.map(({ value, label }) => (
-                    <TabsTrigger
-                      key={value}
-                      value={value}
-                      className="h-8 px-4 text-sm"
-                    >
+                    <TabsTrigger key={value} value={value} className="h-8 px-4 text-sm">
                       {label}
                     </TabsTrigger>
                   ))}
@@ -192,9 +158,7 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                   size="default"
                   variant="default"
                   className="bg-primary text-primary-foreground shadow-none"
-                  onClick={() =>
-                    navigate(scoped("email-management/new-communication"))
-                  }
+                  onClick={() => navigate(scoped("email-management/new-communication"))}
                 >
                   <CirclePlus className="h-5 w-5 lg:mr-2" />
                   <span className="sr-only lg:not-sr-only">Add Template</span>
@@ -209,12 +173,8 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                   <Skeleton className="h-12 w-full rounded" />
                 ) : (
                   <TemplateFilterToolbar
-                    emailConfigsData={
-                      Array.isArray(emailConfigsData) ? emailConfigsData : []
-                    }
-                    languageListData={
-                      Array.isArray(languageListData) ? languageListData : []
-                    }
+                    emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
+                    languageListData={Array.isArray(languageListData) ? languageListData : []}
                   />
                 )}
               </CardContent>
@@ -226,9 +186,7 @@ export function EmailServiceTable({ onRowClick }: EmailServiceTableProps = {}) {
                     <EmailTemplateList
                       templates={tableData}
                       isLoading={isLoading}
-                      emailConfigsData={
-                        Array.isArray(emailConfigsData) ? emailConfigsData : []
-                      }
+                      emailConfigsData={Array.isArray(emailConfigsData) ? emailConfigsData : []}
                       onRowClick={handleRowClick}
                     />
                   )}

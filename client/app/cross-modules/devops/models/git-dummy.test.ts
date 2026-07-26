@@ -3,13 +3,7 @@ import { providers } from "./git-dummy";
 
 describe("git-dummy providers", () => {
   it("lists the known git providers", () => {
-    expect(providers.map((p) => p.id)).toEqual([
-      "github",
-      "gitlab",
-      "bitbucket",
-      "azure",
-      "aws",
-    ]);
+    expect(providers.map((p) => p.id)).toEqual(["github", "gitlab", "bitbucket", "azure", "aws"]);
   });
 
   it("marks only GitHub as active", () => {

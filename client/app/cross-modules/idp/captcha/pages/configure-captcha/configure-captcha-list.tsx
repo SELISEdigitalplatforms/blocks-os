@@ -11,11 +11,7 @@ import { MaskedText } from "@/components/masked-text";
 import { ReactNode } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { ToggleCaptchaStatusModal } from "@blocks-idp/captcha/modals/toggle-captcha-status-modal";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 
 const LoadingSkelton = () => (
   <div className="grid gap-4">
@@ -67,11 +63,7 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
 };
 
 const CaptchaSwitcher = ({ enabled }: { enabled: boolean }) =>
-  enabled ? (
-    <Power className="h-3.5 w-3.5" />
-  ) : (
-    <PowerOff className="h-3.5 w-3.5" />
-  );
+  enabled ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />;
 
 type ConfigureCaptchaListProps = {
   isLoading: boolean;
@@ -89,10 +81,7 @@ export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCap
         return (
           <Card
             key={configuration.itemId}
-            className={cn(
-              "transition-colors",
-              enabled ? "border-border" : "border-border",
-            )}
+            className={cn("transition-colors", enabled ? "border-border" : "border-border")}
           >
             <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
               <div className="flex min-w-0 items-center gap-3">

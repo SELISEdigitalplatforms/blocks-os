@@ -170,7 +170,10 @@ describe("Storage File Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(storageService.uploadFileToLocalStorage).toHaveBeenCalledWith(payload, expect.anything());
+      expect(storageService.uploadFileToLocalStorage).toHaveBeenCalledWith(
+        payload,
+        expect.anything(),
+      );
     });
 
     it("should handle errors", async () => {
@@ -275,7 +278,10 @@ describe("Storage File Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(storageService.file.deleteFileByFileId).toHaveBeenCalledWith(mockDeleteFilePayload, expect.anything());
+      expect(storageService.file.deleteFileByFileId).toHaveBeenCalledWith(
+        mockDeleteFilePayload,
+        expect.anything(),
+      );
     });
 
     it("should invalidate getFilesInfo query on success", async () => {
@@ -413,10 +419,13 @@ describe("Storage File Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(storageService.uploadPublicCertificateFile).toHaveBeenCalledWith({
-        TenantId: "tenant-1",
-        file,
-      }, expect.anything());
+      expect(storageService.uploadPublicCertificateFile).toHaveBeenCalledWith(
+        {
+          TenantId: "tenant-1",
+          file,
+        },
+        expect.anything(),
+      );
     });
 
     it("should handle errors", async () => {

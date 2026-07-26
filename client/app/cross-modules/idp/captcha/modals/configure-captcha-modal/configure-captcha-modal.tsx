@@ -117,7 +117,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 name="provider"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Captcha Provider <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel>
+                      Captcha Provider <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Select
                         onValueChange={field.onChange}
