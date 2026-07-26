@@ -298,7 +298,10 @@ export function MessagingServiceTable() {
                             key={row.id}
                             data-state={row.getIsSelected() && "selected"}
                             className="cursor-pointer font-normal text-medium-emphasis"
-                            onClick={() => handleRowClick(row.original.id)}
+                            onClick={() => {
+                              const { id } = row.original;
+                              if (id !== undefined) handleRowClick(id);
+                            }}
                           >
                             {row.getVisibleCells().map((cell) => (
                               <TableCell key={cell.id}>
