@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { FilterChangeHandler, FilterToolbar } from "@/components/filter-toolbar"
-import { Mail, User } from "lucide-react"
-import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs"
+import { FilterChangeHandler, FilterToolbar } from "@/components/filter-toolbar";
+import { Mail, User } from "lucide-react";
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 
-export type PeopleSearchField = "name" | "email"
+export type PeopleSearchField = "name" | "email";
 
 export const usePeopleFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
@@ -14,33 +14,33 @@ export const usePeopleFilterQueryParams = () => {
     searchField: parseAsString.withDefault("name"),
     environments: parseAsArrayOf(parseAsString).withDefault([]),
     status: parseAsArrayOf(parseAsString).withDefault([]),
-  })
-  return { queryParams, setQueryParams }
-}
+  });
+  return { queryParams, setQueryParams };
+};
 
 export const PeopleFilterToolbar = () => {
-  const { queryParams, setQueryParams } = usePeopleFilterQueryParams()
+  const { queryParams, setQueryParams } = usePeopleFilterQueryParams();
 
   type PeopleFilter = {
-    search: { selected: PeopleSearchField; value: string }
-  }
+    search: { selected: PeopleSearchField; value: string };
+  };
 
   const onChange: FilterChangeHandler<PeopleFilter> = (key, value) => {
     if (key === "search") {
-      const val = value as { selected: PeopleSearchField; value: string }
+      const val = value as { selected: PeopleSearchField; value: string };
       setQueryParams((prev) => ({
         ...prev,
         searchField: val.selected,
         search: val.value,
         page: 0,
-      }))
-      return
+      }));
+      return;
     }
-  }
+  };
 
   const onReset = () => {
-    setQueryParams(null)
-  }
+    setQueryParams(null);
+  };
 
   return (
     <FilterToolbar<PeopleFilter>
@@ -86,5 +86,5 @@ export const PeopleFilterToolbar = () => {
       onChange={onChange}
       onReset={onReset}
     />
-  )
-}
+  );
+};

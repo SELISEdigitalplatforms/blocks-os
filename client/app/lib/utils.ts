@@ -18,8 +18,18 @@ export const formatDate = (date: Date, withoutTime?: boolean): string => {
 
 export const formatFullDate = (date: Date, withoutTime?: boolean): string => {
   const monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const dateStr = `${monthNames[date.getMonth()]} ${pad(date.getDate())}, ${date.getFullYear()}`;
   const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -138,7 +148,11 @@ export function formatSize(
   decimals: number = 2,
 ): string {
   const UNIT_MAP: Record<"B" | "KB" | "MB" | "GB" | "TB", number> = {
-    B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4,
+    B: 1,
+    KB: 1024,
+    MB: 1024 ** 2,
+    GB: 1024 ** 3,
+    TB: 1024 ** 4,
   };
 
   let bytes = value * UNIT_MAP[inputUnit];

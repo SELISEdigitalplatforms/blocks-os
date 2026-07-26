@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { NotificationConfigService } from "./notification-config.service";
 
-vi.mock("@/lib/http-client", () => ({
+vi.mock("@/lib/http/http-client", () => ({
   http: {
     get: vi.fn(),
     post: vi.fn(),
@@ -129,9 +129,7 @@ describe("NotificationConfigService", () => {
 
       const result = await service.getNotificationConfig("cfg-1");
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${NOTIFICATION_GET_ENDPOINT}?itemId=cfg-1`,
-      );
+      expect(http.get).toHaveBeenCalledWith(`${NOTIFICATION_GET_ENDPOINT}?itemId=cfg-1`);
       expect(result.itemId).toBe("cfg-1");
     });
   });
@@ -142,9 +140,7 @@ describe("NotificationConfigService", () => {
 
       await service.deleteNotificationConfig("cfg-1");
 
-      expect(http.delete).toHaveBeenCalledWith(
-        `${NOTIFICATION_DELETE_ENDPOINT}?itemId=cfg-1`,
-      );
+      expect(http.delete).toHaveBeenCalledWith(`${NOTIFICATION_DELETE_ENDPOINT}?itemId=cfg-1`);
     });
   });
 });

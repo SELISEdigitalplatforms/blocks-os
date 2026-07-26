@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui-kits/card/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui-kits/card/card";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { InfoIcon } from "lucide-react";
 
@@ -19,8 +14,7 @@ export const CNameInstruction = ({
   const customDomainHost = customDomain?.replace(/^https?:\/\//, "");
   // Environment-specific CNAME target (dev-blocksapi…, stg-blocksapi…, …);
   // falls back to the production host when the runtime key isn't configured
-  const cnameTarget =
-    getRuntimeEnv("BLOCKS_CNAME_BASE_URL") || "blocksapi.seliseblocks.com";
+  const cnameTarget = getRuntimeEnv("BLOCKS_CNAME_BASE_URL") || "blocksapi.seliseblocks.com";
   return (
     <Card className="max-h-60 min-w-0 overflow-y-auto overflow-x-hidden rounded-sm px-4 py-3 text-base font-normal text-high-emphasis shadow-none">
       {/* plain p-0 (not the v4 `p-0!` syntax) — this repo is on Tailwind v3,
@@ -35,16 +29,15 @@ export const CNameInstruction = ({
         <div>
           <h4>
             Please add the following
-            {cookieDomainName ? " two CNAME records" : " CNAME record"} to your
-            DNS configuration to complete domain validation:
+            {cookieDomainName ? " two CNAME records" : " CNAME record"} to your DNS configuration to
+            complete domain validation:
           </h4>
           {cookieDomainName && (
             <>
               <p className="mt-3 font-semibold">CNAME configuration 1</p>
               <ul className="mt-2 list-disc break-all pl-5">
                 <li>
-                  Host:{" "}
-                  <span className="font-semibold">{customDomainHost}</span>
+                  Host: <span className="font-semibold">{customDomainHost}</span>
                 </li>
                 <li className="my-2">Type: CNAME</li>
                 <li>

@@ -35,11 +35,7 @@ import {
 import { Input } from "@/components/ui-kits/input/input";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors } from "@/lib/error";
 
 type CreateOIDCProps = {
@@ -47,19 +43,15 @@ type CreateOIDCProps = {
   triggerVariant?: "default" | "ghost" | "outline";
 };
 
-export const CreateOIDC = ({
-  itemId,
-  triggerVariant = "default",
-}: CreateOIDCProps) => {
+export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [clientLogoUrl] = useState<string>("");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveAuthOidc();
-  const { data: existingOidc, isLoading: _isLoadingOidc } =
-    useGetAuthOidcCredential(
-      { projectKey: tenantId, clientId: itemId! },
-      open && !!itemId,
-    );
+  const { data: existingOidc, isLoading: _isLoadingOidc } = useGetAuthOidcCredential(
+    { projectKey: tenantId, clientId: itemId! },
+    open && !!itemId,
+  );
 
   const form = useForm<CreateOIDCFormValues>({
     resolver: zodResolver(createOidcSchema),
@@ -103,8 +95,7 @@ export const CreateOIDC = ({
         requirePkce: credential.requirePkce ?? true,
         registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
         allowedResponseTypes:
-          credential.allowedResponseTypes &&
-          credential.allowedResponseTypes.length
+          credential.allowedResponseTypes && credential.allowedResponseTypes.length
             ? credential.allowedResponseTypes
             : ["code"],
       });
@@ -131,9 +122,7 @@ export const CreateOIDC = ({
     }
     try {
       const payload: ISaveOidcCredentialPayload = {
-        redirectUris: data.redirectUris
-          .map((entry) => entry.value.trim())
-          .filter(Boolean),
+        redirectUris: data.redirectUris.map((entry) => entry.value.trim()).filter(Boolean),
         scope: data.scope,
         isAutoRedirect: data.isAutoRedirect,
         isActive: data.isActive,
@@ -153,8 +142,7 @@ export const CreateOIDC = ({
       showSuccessToast({ description: message });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
     } finally {
       form.reset();
@@ -171,7 +159,8 @@ export const CreateOIDC = ({
                 variant={triggerVariant}
                 size="sm"
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                aria-label="Edit">
+                aria-label="Edit"
+              >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             </DialogTrigger>
@@ -193,10 +182,7 @@ export const CreateOIDC = ({
         </DialogHeader>
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
-            <form
-              id="oidc-form"
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-5 px-1">
+            <form id="oidc-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 px-1">
               <FormField
                 control={form.control}
                 name="clientDisplayName"
@@ -226,10 +212,7 @@ export const CreateOIDC = ({
                         {...register(`redirectUris.${idx}.value` as const)}
                       />
                       <FormMessage>
-                        {
-                          form.formState.errors.redirectUris?.[idx]?.value
-                            ?.message as string
-                        }
+                        {form.formState.errors.redirectUris?.[idx]?.value?.message as string}
                       </FormMessage>
                     </div>
                     {fields.length > 1 && (
@@ -238,7 +221,8 @@ export const CreateOIDC = ({
                         variant="ghost"
                         size="icon"
                         className="mt-0 h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => remove(idx)}>
+                        onClick={() => remove(idx)}
+                      >
                         <X className="h-4 w-4" />
                       </Button>
                     )}
@@ -249,7 +233,8 @@ export const CreateOIDC = ({
                   variant="outline"
                   size="sm"
                   className="mt-1 h-7 gap-1 px-2 text-xs"
-                  onClick={() => append({ value: "" })}>
+                  onClick={() => append({ value: "" })}
+                >
                   <Plus className="h-3 w-3" />
                   Add Redirect URI
                 </Button>
@@ -277,7 +262,8 @@ export const CreateOIDC = ({
                         />
                         <label
                           htmlFor="isActive"
-                          className="cursor-pointer text-sm text-high-emphasis">
+                          className="cursor-pointer text-sm text-high-emphasis"
+                        >
                           Active
                         </label>
                       </div>
@@ -297,7 +283,8 @@ export const CreateOIDC = ({
                           <Checkbox id="scope-openid" checked disabled />
                           <label
                             htmlFor="scope-openid"
-                            className="cursor-not-allowed text-sm text-muted-foreground">
+                            className="cursor-not-allowed text-sm text-muted-foreground"
+                          >
                             openid
                           </label>
                         </div>
@@ -321,7 +308,8 @@ export const CreateOIDC = ({
                         />
                         <label
                           htmlFor="requirePkce"
-                          className="cursor-pointer text-sm text-high-emphasis">
+                          className="cursor-pointer text-sm text-high-emphasis"
+                        >
                           Enabled
                         </label>
                       </div>
@@ -346,7 +334,8 @@ export const CreateOIDC = ({
                       />
                       <label
                         htmlFor="isAutoRedirect"
-                        className="cursor-pointer text-sm text-high-emphasis">
+                        className="cursor-pointer text-sm text-high-emphasis"
+                      >
                         Redirect automatically after authentication
                       </label>
                     </div>
@@ -372,7 +361,8 @@ export const CreateOIDC = ({
                       />
                       <label
                         htmlFor="registerAsIdentityProvider"
-                        className="cursor-pointer text-sm text-high-emphasis">
+                        className="cursor-pointer text-sm text-high-emphasis"
+                      >
                         Register as a Blocks OIDC identity provider
                       </label>
                       <Tooltip>
@@ -380,19 +370,18 @@ export const CreateOIDC = ({
                           <button
                             type="button"
                             aria-label="More about Blocks OIDC identity providers"
-                            className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                            className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
                             <Info className="h-4 w-4" />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
                           <p className="text-xs leading-relaxed">
-                            Adds a matching{" "}
-                            <span className="font-medium">Blocks OIDC</span>{" "}
-                            entry under Identity Provider, so other Blocks
-                            projects can offer this project as a sign-in option
-                            and federate their users to it. Uncheck if this
-                            client is only used by your own app to sign users in
-                            — you can always add the provider later.
+                            Adds a matching <span className="font-medium">Blocks OIDC</span> entry
+                            under Identity Provider, so other Blocks projects can offer this project
+                            as a sign-in option and federate their users to it. Uncheck if this
+                            client is only used by your own app to sign users in — you can always
+                            add the provider later.
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -409,14 +398,16 @@ export const CreateOIDC = ({
             onClick={() => setOpen(false)}
             type="button"
             variant="outline"
-            className="w-full sm:w-auto">
+            className="w-full sm:w-auto"
+          >
             Cancel
           </Button>
           <Button
             form="oidc-form"
             type="submit"
             disabled={!isValid || isPending}
-            className="w-full sm:w-auto">
+            className="w-full sm:w-auto"
+          >
             {isEditMode ? "Update" : "Add"}
           </Button>
         </DialogFooter>

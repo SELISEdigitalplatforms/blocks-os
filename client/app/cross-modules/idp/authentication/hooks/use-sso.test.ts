@@ -82,7 +82,10 @@ describe("use-sso hooks", () => {
 
       result.current.mutate(mockSaveSsoPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(ssoService.saveSsoCredential).toHaveBeenCalledWith(mockSaveSsoPayload, expect.anything());
+      expect(ssoService.saveSsoCredential).toHaveBeenCalledWith(
+        mockSaveSsoPayload,
+        expect.anything(),
+      );
     });
   });
 
@@ -96,7 +99,10 @@ describe("use-sso hooks", () => {
 
       result.current.mutate(mockDeleteSsoPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(ssoService.deleteSsoCredential).toHaveBeenCalledWith(mockDeleteSsoPayload, expect.anything());
+      expect(ssoService.deleteSsoCredential).toHaveBeenCalledWith(
+        mockDeleteSsoPayload,
+        expect.anything(),
+      );
     });
   });
 
@@ -110,7 +116,10 @@ describe("use-sso hooks", () => {
 
       result.current.mutate(mockUpdateSsoStatusPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(ssoService.updateSsoCredentialStatus).toHaveBeenCalledWith(mockUpdateSsoStatusPayload, expect.anything());
+      expect(ssoService.updateSsoCredentialStatus).toHaveBeenCalledWith(
+        mockUpdateSsoStatusPayload,
+        expect.anything(),
+      );
     });
   });
 
@@ -125,7 +134,10 @@ describe("use-sso hooks", () => {
 
       result.current.mutate(mockPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(ssoService.saveBlocksSsoCredential).toHaveBeenCalledWith(mockPayload, expect.anything());
+      expect(ssoService.saveBlocksSsoCredential).toHaveBeenCalledWith(
+        mockPayload,
+        expect.anything(),
+      );
     });
   });
 

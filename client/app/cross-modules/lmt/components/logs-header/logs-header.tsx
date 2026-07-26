@@ -5,8 +5,7 @@ import { useContext } from "react";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 
 export const LogsListHeader = () => {
-  const { predefinedQueries, agentName, askAiDescription } =
-    useContext(LogsViewerContext);
+  const { predefinedQueries, agentName, askAiDescription } = useContext(LogsViewerContext);
   const [source, setSource] = useQueryState("source", {
     defaultValue: "blocks",
   });

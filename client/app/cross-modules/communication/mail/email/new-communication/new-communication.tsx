@@ -2,12 +2,7 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Step,
-  Stepper,
-  useStepper,
-  type StepItem,
-} from "@/components/ui-kits/stepper";
+import { Step, Stepper, useStepper, type StepItem } from "@/components/ui-kits/stepper";
 import { toast } from "@/hooks/use-toast";
 import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
@@ -20,10 +15,7 @@ import { FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const EMAIL_TEMPLATE_STEPS: StepItem[] = [
-  { id: "basic-information" },
-  { id: "template" },
-];
+const EMAIL_TEMPLATE_STEPS: StepItem[] = [{ id: "basic-information" }, { id: "template" }];
 
 const basicInformationLabel = (
   <span className="flex flex-wrap items-center gap-2">
@@ -107,10 +99,7 @@ type TemplateDesignStepProps = {
   setTemplateData: (data: IEmailTemplate) => void;
 };
 
-const TemplateDesignStep = ({
-  templateData,
-  setTemplateData,
-}: TemplateDesignStepProps) => {
+const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignStepProps) => {
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
   const beeRef = useRef<{ submit: () => void; preview: () => void }>();
   const navigate = useNavigate();
@@ -118,10 +107,7 @@ const TemplateDesignStep = ({
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const emailBasePath = scoped("email-management");
 
-  const handleBeePluginData = async (data: {
-    htmlFile: string;
-    jsonFile: string;
-  }) => {
+  const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
     const currentData: IEmailTemplate = {
       itemId: templateData?.itemId || "",
       templateBody: data.htmlFile,
@@ -179,11 +165,7 @@ const TemplateDesignStep = ({
         </Button>
       </div>
       <div className="flex min-h-[480px] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-none">
-        <BeePluginStarter
-          onBeeSave={handleBeePluginData}
-          ref={beeRef}
-          jsonFile={blankTemplate}
-        />
+        <BeePluginStarter onBeeSave={handleBeePluginData} ref={beeRef} jsonFile={blankTemplate} />
       </div>
     </div>
   );
@@ -208,52 +190,48 @@ function EmailTemplateStepper() {
 
   return (
     <Stepper
-        initialStep={0}
-        steps={EMAIL_TEMPLATE_STEPS}
-        responsive
-        state={isPending ? "loading" : undefined}
-        onClickStep={handleClickStep}
-        styles={{
-          "main-container":
-            "w-full justify-start gap-y-4 rounded-lg border border-border bg-card px-4 py-4 sm:px-6 sm:py-5 md:gap-y-0",
-          "horizontal-step":
-            "flex-none shrink-0 [&:not(:last-child)]:flex-none [&:not(:last-child)]:after:flex-none [&:not(:last-child)]:after:w-8 sm:[&:not(:last-child)]:after:w-12 lg:[&:not(:last-child)]:after:w-16",
-          "horizontal-step-container": "min-w-0",
-          "step-label-container": "min-w-0",
-          "step-label": "font-medium",
-          "step-description": "max-w-[12rem] sm:max-w-none",
-        }}
+      initialStep={0}
+      steps={EMAIL_TEMPLATE_STEPS}
+      responsive
+      state={isPending ? "loading" : undefined}
+      onClickStep={handleClickStep}
+      styles={{
+        "main-container":
+          "w-full justify-start gap-y-4 rounded-lg border border-border bg-card px-4 py-4 sm:px-6 sm:py-5 md:gap-y-0",
+        "horizontal-step":
+          "flex-none shrink-0 [&:not(:last-child)]:flex-none [&:not(:last-child)]:after:flex-none [&:not(:last-child)]:after:w-8 sm:[&:not(:last-child)]:after:w-12 lg:[&:not(:last-child)]:after:w-16",
+        "horizontal-step-container": "min-w-0",
+        "step-label-container": "min-w-0",
+        "step-label": "font-medium",
+        "step-description": "max-w-[12rem] sm:max-w-none",
+      }}
+    >
+      <Step
+        icon={FileText}
+        label={basicInformationLabel}
+        description="Name, mail configuration, and subject line"
       >
-        <Step
-          icon={FileText}
-          label={basicInformationLabel}
-          description="Name, mail configuration, and subject line"
-        >
-          <BasicInformationStep
-            templateData={templateData}
-            setTemplateData={setTemplateData}
-            onStepComplete={handleStepComplete}
-          />
-        </Step>
+        <BasicInformationStep
+          templateData={templateData}
+          setTemplateData={setTemplateData}
+          onStepComplete={handleStepComplete}
+        />
+      </Step>
 
-        <Step
-          icon={LayoutTemplate}
-          label={templateLabel}
-          description="Build and preview your email body"
-        >
-          <TemplateDesignStep
-            templateData={templateData}
-            setTemplateData={setTemplateData}
-          />
-        </Step>
-      </Stepper>
+      <Step
+        icon={LayoutTemplate}
+        label={templateLabel}
+        description="Build and preview your email body"
+      >
+        <TemplateDesignStep templateData={templateData} setTemplateData={setTemplateData} />
+      </Step>
+    </Stepper>
   );
 }
 
 export default function NewCommunication() {
   BREADCRUMB_CUSTOM_TITLES["/email-management"] = "Email Management";
-  BREADCRUMB_CUSTOM_TITLES["/email-management/new-communication"] =
-    "New Template";
+  BREADCRUMB_CUSTOM_TITLES["/email-management/new-communication"] = "New Template";
 
   return (
     <main className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">

@@ -1,10 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ArrowLeft, Pencil, Send } from "lucide-react";
-import {
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
@@ -44,31 +40,25 @@ export function EmailCommunicationDetails({
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isSendTestEmailModalOpen, setIsSendTestEmailModalOpen] =
-    useState(false);
+  const [isSendTestEmailModalOpen, setIsSendTestEmailModalOpen] = useState(false);
   const sendTestEmailModalOpen = () => {
     setIsSendTestEmailModalOpen(true);
   };
-  useEffect(() => {
+  const [prevSync, setPrevSync] = useState<{ id: typeof id; data: typeof data } | undefined>(
+    undefined,
+  );
+  if (!prevSync || prevSync.id !== id || prevSync.data !== data) {
+    setPrevSync({ id, data });
     if (id) {
-      const email = data;
-      setEmailDetails(email || null);
+      setEmailDetails(data || null);
     }
-  }, [id, data]);
-  if (
-    !emailDetails ||
-    isLoading ||
-    isFetching ||
-    isConfigsLoading ||
-    isConfigsFetching
-  ) {
+  }
+  if (!emailDetails || isLoading || isFetching || isConfigsLoading || isConfigsFetching) {
     return <EmailTemplateDetailsSkeleton />;
   }
-  BREADCRUMB_CUSTOM_TITLES["/email-management/communications"] =
-    "Email Templates";
-  BREADCRUMB_CUSTOM_TITLES[
-    "/email-management/communications/" + emailDetails?.itemId
-  ] = emailDetails?.name ? emailDetails.name : "";
+  BREADCRUMB_CUSTOM_TITLES["/email-management/communications"] = "Email Templates";
+  BREADCRUMB_CUSTOM_TITLES["/email-management/communications/" + emailDetails?.itemId] =
+    emailDetails?.name ? emailDetails.name : "";
   const confirmationModalData = {
     dialogTitle: "Send test email",
     dialogSubtitle: "Are you sure you want to send a test email?",
@@ -137,12 +127,11 @@ export function EmailCommunicationDetails({
             size="icon"
             variant="ghost"
             className="h-8 w-8"
-            onClick={() => (onBack ? onBack() : navigate(-1))}>
+            onClick={() => (onBack ? onBack() : navigate(-1))}
+          >
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg font-semibold md:text-2xl">
-            {emailDetails.name}
-          </h1>
+          <h1 className="text-lg font-semibold md:text-2xl">{emailDetails.name}</h1>
         </div>
         <div className="flex gap-4">
           <div>
@@ -151,15 +140,12 @@ export function EmailCommunicationDetails({
               variant="outline"
               className="gap-2 shadow-none hover:bg-white"
               disabled={isPending}
-              onClick={sendTestEmailModalOpen}>
+              onClick={sendTestEmailModalOpen}
+            >
               <Send className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Send test Email
-              </span>
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Send test Email</span>
             </Button>
-            <Dialog
-              open={isSendTestEmailModalOpen}
-              onOpenChange={setIsSendTestEmailModalOpen}>
+            <Dialog open={isSendTestEmailModalOpen} onOpenChange={setIsSendTestEmailModalOpen}>
               <ConfirmationModal
                 onCancel={() => {
                   setIsSendTestEmailModalOpen(false);
@@ -182,14 +168,11 @@ export function EmailCommunicationDetails({
                 variant="outline"
                 className="gap-2 shadow-none hover:bg-white"
                 onClick={() =>
-                  navigate(
-                    scoped(`email-management/communications/${emailDetails.itemId}/edit`),
-                  )
-                }>
+                  navigate(scoped(`email-management/communications/${emailDetails.itemId}/edit`))
+                }
+              >
                 <Pencil className="h-5 w-5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  Edit
-                </span>
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
               </Button>
             </div>
           </CardHeader>
@@ -206,19 +189,16 @@ export function EmailCommunicationDetails({
           <CardHeader>
             <div className="flex w-full items-center justify-between px-4 pt-4">
               <CardTitle className="text-xl">Details</CardTitle>
-              <Dialog
-                open={isEditDialogOpen}
-                onOpenChange={setIsEditDialogOpen}>
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
                     size="default"
                     variant="outline"
                     className="gap-2 shadow-none hover:bg-white"
-                    onClick={() => setIsEditDialogOpen(true)}>
+                    onClick={() => setIsEditDialogOpen(true)}
+                  >
                     <Pencil className="h-5 w-5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                      Edit
-                    </span>
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
                   </Button>
                 </DialogTrigger>
                 <EditCommunication
@@ -234,9 +214,7 @@ export function EmailCommunicationDetails({
           <CardContent>
             <div className="border-t px-4 pt-4">
               <div className="mb-10">
-                <h3 className="text-sm font-medium text-low-emphasis">
-                  Subject
-                </h3>
+                <h3 className="text-sm font-medium text-low-emphasis">Subject</h3>
                 <p className="text-base font-normal text-high-emphasis">
                   {emailDetails.templateSubject}
                 </p>
@@ -245,61 +223,47 @@ export function EmailCommunicationDetails({
             <div className="grid grid-cols-2 gap-4 px-4">
               <div className="grid gap-10">
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">
-                    Language
-                  </h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">Language</h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {
                       langConfigureData.find(
                         (lang) =>
-                          lang.itemId.split("-")[0] ===
-                          (emailDetails.language ?? "").split("-")[0],
+                          lang.itemId.split("-")[0] === (emailDetails.language ?? "").split("-")[0],
                       )?.languageName
                     }
                   </p>
                 </div>
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">
-                    Created on
-                  </h3>
+                  <h3 className="text-sm font-medium text-low-emphasis">Created on</h3>
                   <p className="text-base font-normal text-high-emphasis">
                     {!emailDetails ||
                     !emailDetails.createdDate ||
                     !checkValidDate(emailDetails.createdDate)
                       ? "-"
-                      : formatFullDate(
-                          parseDateString(emailDetails.createdDate),
-                        )}
+                      : formatFullDate(parseDateString(emailDetails.createdDate))}
                   </p>
                 </div>
               </div>
               <div>
                 <div className="grid gap-10">
                   <div className="grid gap-1">
-                    <h3 className="text-sm font-medium text-low-emphasis">
-                      Configuration
-                    </h3>
+                    <h3 className="text-sm font-medium text-low-emphasis">Configuration</h3>
                     <p className="text-base font-normal text-high-emphasis">
                       {
                         emailConfigsData?.find(
-                          (config) =>
-                            config.itemId === emailDetails.mailConfigurationId,
+                          (config) => config.itemId === emailDetails.mailConfigurationId,
                         )?.name
                       }
                     </p>
                   </div>
                   <div className="grid gap-1">
-                    <h3 className="text-sm font-medium text-low-emphasis">
-                      Last modified
-                    </h3>
+                    <h3 className="text-sm font-medium text-low-emphasis">Last modified</h3>
                     <p className="text-base font-normal text-high-emphasis">
                       {!emailDetails ||
                       !emailDetails.lastUpdatedDate ||
                       !checkValidDate(emailDetails.lastUpdatedDate)
                         ? "-"
-                        : formatFullDate(
-                            parseDateString(emailDetails.lastUpdatedDate),
-                          )}
+                        : formatFullDate(parseDateString(emailDetails.lastUpdatedDate))}
                     </p>
                   </div>
                 </div>

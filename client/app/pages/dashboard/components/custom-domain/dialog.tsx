@@ -7,10 +7,7 @@ import {
 } from "@/components/ui-kits/dialog/dialog";
 import { useUpdateRepositories } from "@/hooks/use-project";
 import type { IDomain, IEnvRepository } from "@seliseblocks/blocks-kit/models";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
 import { useMemo } from "react";
 import { SetCustomDomainForm } from "./form";
 
@@ -46,10 +43,7 @@ export const SetCustomDomainDialog = ({
   // contain the same domain several times — duplicate Radix Select values
   // cause SelectValue to concatenate every matching item's text.
   const verifiedDomains = useMemo(
-    () =>
-      Array.from(
-        new Set(domains.filter((d) => d.isDomainVerified).map((d) => d.domain)),
-      ),
+    () => Array.from(new Set(domains.filter((d) => d.isDomainVerified).map((d) => d.domain))),
     [domains],
   );
 
@@ -58,9 +52,7 @@ export const SetCustomDomainDialog = ({
   const defaultDomain = useMemo(() => {
     const current = repo?.customDeploymentUrl ?? "";
     if (!current) return "";
-    return (
-      verifiedDomains.find((d) => normalize(d) === normalize(current)) ?? ""
-    );
+    return verifiedDomains.find((d) => normalize(d) === normalize(current)) ?? "";
   }, [repo, verifiedDomains]);
 
   const handleSubmit = async (domain: string) => {

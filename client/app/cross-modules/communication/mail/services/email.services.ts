@@ -27,10 +27,7 @@ export interface ISaveMailConfigPayload {
 }
 
 class EmailService {
-  fetchEmailConfigs = (
-    pageNumber: number,
-    pageSize: number,
-  ): Promise<IEmailConfig[]> => {
+  fetchEmailConfigs = (pageNumber: number, pageSize: number): Promise<IEmailConfig[]> => {
     return http.get(
       `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=${pageNumber + 1}&pageSize=${pageSize}`,
       undefined,
@@ -43,22 +40,20 @@ class EmailService {
     pageSize: number = 10,
   ): Promise<{ configurations: IEmailConfig[] }> => {
     const url = `${MAIL_CONFIG_ENDPOINTS.GET_CONFIGS}?pageNumber=${pageNumber + 1}&pageSize=${pageSize}`;
-    return http
-      .get<IEmailConfig[]>(url, undefined, { absoluteUrl: true })
-      .then((response) => {
-        const list = Array.isArray(response)
-          ? response
-          : Array.isArray((response as { data?: IEmailConfig[] })?.data)
-            ? ((response as { data: IEmailConfig[] }).data as IEmailConfig[])
-            : [];
-        const configurations = list.map((config) => ({
-          ...config,
-          configurationId: config.itemId,
-          configurationName: config.name ?? config.configurationName,
-          name: config.name ?? config.configurationName,
-        }));
-        return { configurations };
-      });
+    return http.get<IEmailConfig[]>(url, undefined, { absoluteUrl: true }).then((response) => {
+      const list = Array.isArray(response)
+        ? response
+        : Array.isArray((response as { data?: IEmailConfig[] })?.data)
+          ? ((response as { data: IEmailConfig[] }).data as IEmailConfig[])
+          : [];
+      const configurations = list.map((config) => ({
+        ...config,
+        configurationId: config.itemId,
+        configurationName: config.name ?? config.configurationName,
+        name: config.name ?? config.configurationName,
+      }));
+      return { configurations };
+    });
   };
 
   fetchEmailTemplates = (
@@ -75,11 +70,9 @@ class EmailService {
   };
 
   fetchEmailTemplate = (itemId: string): Promise<IEmailTemplate> => {
-    return http.get(
-      `${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=${itemId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(`${EMAIL_TEMPLATE_ENDPOINTS.GET_TEMPLATE}?itemId=${itemId}`, undefined, {
+      absoluteUrl: true,
+    });
   };
 
   getMailBoxMails = (
@@ -110,19 +103,15 @@ class EmailService {
       params.append("SendDateRange.EndDate", endDate);
     }
 
-    return http.get(
-      `${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, {
+      absoluteUrl: true,
+    });
   };
 
   getMailBoxMail = (messageId: string): Promise<IGetMailBoxMailResponse> => {
-    return http.get(
-      `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=${messageId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=${messageId}`, undefined, {
+      absoluteUrl: true,
+    });
   };
 
   saveMailConfig = (
@@ -220,11 +209,9 @@ class EmailService {
       .delete<{
         errors: unknown;
         isSuccess: boolean;
-      }>(
-        `${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=${payload.itemId}`,
-        undefined,
-        { absoluteUrl: true },
-      )
+      }>(`${EMAIL_TEMPLATE_ENDPOINTS.DELETE_TEMPLATE}?itemId=${payload.itemId}`, undefined, {
+        absoluteUrl: true,
+      })
       .then((response) => response);
   }
 
@@ -236,7 +223,11 @@ class EmailService {
       .delete<{
         errors: unknown;
         isSuccess: boolean;
-      }>(`${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${encodeURIComponent(payload.configurationId)}`, undefined, { absoluteUrl: true })
+      }>(
+        `${MAIL_CONFIG_ENDPOINTS.DELETE_CONFIG}?configurationId=${encodeURIComponent(payload.configurationId)}`,
+        undefined,
+        { absoluteUrl: true },
+      )
       .then((response) => ({
         isSuccess: !!response?.isSuccess,
         errors: response?.errors ?? null,

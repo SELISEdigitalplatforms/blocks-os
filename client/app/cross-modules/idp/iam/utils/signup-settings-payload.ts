@@ -1,4 +1,4 @@
-import type { ISaveSignUpSettingPayload } from "@blocks-idp/iam/models/user"
+import type { ISaveSignUpSettingPayload } from "@blocks-idp/iam/models/user";
 
 export const toSignupSettingsSaveApiPayload = (
   payload: ISaveSignUpSettingPayload,
@@ -8,4 +8,4 @@ export const toSignupSettingsSaveApiPayload = (
   isSSoSignUpEnabled: payload.isSSoSignUpEnabled,
   defaultRolesForNewUserOnSignUp: payload.defaultRolesForNewUserOnSignUp ?? [],
   defaultPermissionsForNewUserOnSignUp: payload.defaultPermissionsForNewUserOnSignUp ?? [],
-})
+});

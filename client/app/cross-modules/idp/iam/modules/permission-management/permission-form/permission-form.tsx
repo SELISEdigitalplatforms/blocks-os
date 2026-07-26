@@ -1,12 +1,31 @@
 import { ChipsInput, ChipsInputField, ChipsInputList } from "@/components/chip-input/chips-input";
 import { Button } from "@/components/ui-kits/button/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { PERMISSION_SEVERITY_OPTIONS, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { permissionFormDefaultValue, permissionFormSchema, permissionFormSchemaType, BUILTIN_PERMISSION_READONLY_MESSAGE, isPermissionFormReadOnly } from "./utils";
+import {
+  permissionFormDefaultValue,
+  permissionFormSchema,
+  permissionFormSchemaType,
+  BUILTIN_PERMISSION_READONLY_MESSAGE,
+  isPermissionFormReadOnly,
+} from "./utils";
 import { Card, CardContent, CardFooter } from "@/components/ui-kits/card/card";
 import { DependentPermissions } from "../dependent-permissions";
 import { PermissionGroupCombobox } from "@blocks-idp/iam/components/permission-group-combobox/permission-group-combobox";
@@ -39,12 +58,7 @@ export const PermissionForm = ({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-4">
         {isReadOnly ? (
-          <Banner
-            variant="warning"
-            title="Read-only permission"
-            className="mb-0"
-            compact={false}
-          >
+          <Banner variant="warning" title="Read-only permission" className="mb-0" compact={false}>
             {BUILTIN_PERMISSION_READONLY_MESSAGE}
           </Banner>
         ) : null}
@@ -55,7 +69,9 @@ export const PermissionForm = ({
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Name <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="Enter name" disabled={isReadOnly} />
                   </FormControl>
@@ -68,7 +84,9 @@ export const PermissionForm = ({
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Type <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Type <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Select
                       value={field.value > 0 ? field.value.toString() : undefined}
@@ -96,11 +114,15 @@ export const PermissionForm = ({
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Resource <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Resource <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder={resourceType === 1 ? "Enter service::controller::name" : "Enter resource"}
+                      placeholder={
+                        resourceType === 1 ? "Enter service::controller::name" : "Enter resource"
+                      }
                       disabled={isReadOnly}
                     />
                   </FormControl>
@@ -113,7 +135,9 @@ export const PermissionForm = ({
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Group <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Group <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <PermissionGroupCombobox
                       value={field.value}
@@ -132,7 +156,9 @@ export const PermissionForm = ({
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Severity <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Severity <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Select
                       value={
@@ -160,24 +186,24 @@ export const PermissionForm = ({
               )}
             />
             {showTags ? (
-            <FormField
-              name="tags"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tags</FormLabel>
-                  <FormControl>
-                    <div className={isReadOnly ? "pointer-events-none opacity-60" : undefined}>
-                      <ChipsInput {...field}>
-                        <ChipsInputList />
-                        <ChipsInputField />
-                      </ChipsInput>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                name="tags"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <div className={isReadOnly ? "pointer-events-none opacity-60" : undefined}>
+                        <ChipsInput {...field}>
+                          <ChipsInputList />
+                          <ChipsInputField />
+                        </ChipsInput>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             ) : null}
             <FormField
               name="description"

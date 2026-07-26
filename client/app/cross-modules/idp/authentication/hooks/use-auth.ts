@@ -7,4 +7,3 @@ export const useLogout = () => {
     mutationFn: authService.logout,
   });
 };
-

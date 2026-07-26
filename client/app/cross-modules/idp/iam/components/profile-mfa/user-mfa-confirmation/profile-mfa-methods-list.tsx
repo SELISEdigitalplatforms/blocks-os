@@ -19,9 +19,7 @@ export const ProfileMFAMethodList = ({ selected, setSelected }: UserMFAMethodLis
   const availableMFaMethod = useMemo(() => {
     if (!projectMfaEnabled) return [];
     if (!projectMfaConfig?.allowedMethods?.length) return [];
-    return MFA_Provider_Data.filter((item) =>
-      projectMfaConfig.allowedMethods.includes(item.type),
-    );
+    return MFA_Provider_Data.filter((item) => projectMfaConfig.allowedMethods.includes(item.type));
   }, [projectMfaEnabled, projectMfaConfig?.allowedMethods]);
   const isProjectMfaLoading = isLoading || isFetching;
   return (

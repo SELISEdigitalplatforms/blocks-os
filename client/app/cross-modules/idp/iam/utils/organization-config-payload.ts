@@ -1,4 +1,4 @@
-import type { IOrganizationConfigSaveApiPayload } from "@blocks-idp/iam/models/organization-config.model"
+import type { IOrganizationConfigSaveApiPayload } from "@blocks-idp/iam/models/organization-config.model";
 
 export const toOrganizationConfigSaveApiPayload = (
   payload: IOrganizationConfigSaveApiPayload,
@@ -15,4 +15,4 @@ export const toOrganizationConfigSaveApiPayload = (
   defaultPermissionsOnOrgCreation: payload.defaultPermissionsOnOrgCreation ?? [],
   keepOrgRolesSameAsDefaultRoles: payload.keepOrgRolesSameAsDefaultRoles,
   keepOrgPermissionsSameAsDefaultPermissions: payload.keepOrgPermissionsSameAsDefaultPermissions,
-})
+});

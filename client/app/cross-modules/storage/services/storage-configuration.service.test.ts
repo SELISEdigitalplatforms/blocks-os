@@ -10,12 +10,12 @@ import {
   mockSaveS3CompatibleConfigPayload,
   mockDeleteConfigPayload,
 } from "../test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { StorageConfiguration } from "./storage-configuration.service";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import { STORAGE_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("StorageConfiguration", () => {
   let service: StorageConfiguration;

@@ -8,7 +8,7 @@ const generateRandomState = () => {
 
 export const authenticateWithGithub = (extraState?: string, projectKey?: string) => {
   const randomState = generateRandomState();
-  
+
   // Define scopes for personal repository access
   const scopes = ["repo", "user:email", "read:user", "read:repo_hook"].join(" ");
 
@@ -25,7 +25,7 @@ export const authenticateWithGithub = (extraState?: string, projectKey?: string)
   if (projectKey) {
     localStorage.setItem("github_auth_project_key", projectKey);
   }
-  
+
   // Open GitHub OAuth in new tab
   window.open(authUrl.toString(), "_blank", "noopener,noreferrer");
 };
@@ -37,21 +37,21 @@ export const verifyOAuthState = (receivedState: string | null) => {
 };
 
 export const authenticateWithGitlab = () => {
-  console.log("GitLab authentication not yet implemented");
+  console.error("GitLab authentication not yet implemented");
   // Placeholder for GitLab OAuth
 };
 
 export const authenticateWithBitbucket = () => {
-  console.log("Bitbucket authentication not yet implemented");
+  console.error("Bitbucket authentication not yet implemented");
   // Placeholder for Bitbucket OAuth
 };
 
 export const authenticateWithAzure = () => {
-  console.log("Azure DevOps authentication not yet implemented");
+  console.error("Azure DevOps authentication not yet implemented");
   // Placeholder for Azure OAuth
 };
 
 export const authenticateWithAws = () => {
-  console.log("AWS CodeCommit authentication not yet implemented");
+  console.error("AWS CodeCommit authentication not yet implemented");
   // Placeholder for AWS authentication
 };

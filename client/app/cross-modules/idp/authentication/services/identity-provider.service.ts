@@ -16,13 +16,9 @@ export class IdentityProviderService {
   }
 
   getById(id: string): Promise<IdentityProviderResponse> {
-    return http.get(
-      `${IDENTITY_PROVIDER_ENDPOINTS.GET_BY_ID}/${id}`,
-      undefined,
-      {
-        absoluteUrl: true,
-      },
-    );
+    return http.get(`${IDENTITY_PROVIDER_ENDPOINTS.GET_BY_ID}/${id}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   create(provider: IdentityProvider): Promise<IdentityProviderResponse> {
@@ -35,10 +31,7 @@ export class IdentityProviderService {
     );
   }
 
-  update(
-    id: string,
-    provider: IdentityProvider,
-  ): Promise<IdentityProviderResponse> {
+  update(id: string, provider: IdentityProvider): Promise<IdentityProviderResponse> {
     // protocol is a fixed wire-only field with no form representation.
     return http.put(
       `${IDENTITY_PROVIDER_ENDPOINTS.UPDATE}/${id}`,
@@ -48,10 +41,7 @@ export class IdentityProviderService {
     );
   }
 
-  updateStatus(
-    id: string,
-    request: UpdateStatusRequest,
-  ): Promise<IdentityProviderResponse> {
+  updateStatus(id: string, request: UpdateStatusRequest): Promise<IdentityProviderResponse> {
     return http.patch(
       `${IDENTITY_PROVIDER_ENDPOINTS.UPDATE_STATUS}/${id}/status`,
       request,
@@ -61,13 +51,9 @@ export class IdentityProviderService {
   }
 
   delete(id: string): Promise<DeleteIdentityProviderResponse> {
-    return http.delete(
-      `${IDENTITY_PROVIDER_ENDPOINTS.DELETE}/${id}`,
-      undefined,
-      {
-        absoluteUrl: true,
-      },
-    );
+    return http.delete(`${IDENTITY_PROVIDER_ENDPOINTS.DELETE}/${id}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 

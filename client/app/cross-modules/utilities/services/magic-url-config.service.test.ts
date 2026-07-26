@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { secretsService } from "@/services/secrets.service";
 import { SECRETS_ENDPOINTS } from "@/services/secrets.service";
 import { MagicUrlConfigService } from "./magic-url-config.service";
 import { MAGIC_URL_CONFIG_SECRET_KEY } from "@blocks-utilities/models/magic-url-config.model";
 
-vi.mock("@/lib/http-client", () => ({
+vi.mock("@/lib/http/http-client", () => ({
   http: {
     get: vi.fn(),
     post: vi.fn(),

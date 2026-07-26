@@ -23,9 +23,7 @@ test("secrets&config-myservice", async ({ page }) => {
   await page.goto("/app/secret-management/my-services");
 
   // Header on the desktop sidebar carries the page title.
-  await expect(
-    page.getByRole("heading", { name: "My Services" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My Services" })).toBeVisible();
 
   // Open the Register Service dialog.
   await page.getByRole("button", { name: "Register Service" }).click();
@@ -33,9 +31,7 @@ test("secrets&config-myservice", async ({ page }) => {
 
   // Service Name — the field is labelled "Service Name *" (the * is part of the
   // label text rendered by the FormLabel).
-  await dialog
-    .getByLabel(/^Service Name/)
-    .fill("Test Service");
+  await dialog.getByLabel(/^Service Name/).fill("Test Service");
 
   // Tags — the chip input shows the placeholder "Type and press enter".
   await dialog.getByPlaceholder("Type and press enter").click();
@@ -52,16 +48,12 @@ test("myservice-setupguide", async ({ page }) => {
   await page.goto("/app/secret-management/my-services");
 
   // The Setup Guide button only renders while the current path is "my-services".
-  await expect(
-    page.getByRole("heading", { name: "My Services" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My Services" })).toBeVisible();
 
   await page.getByRole("button", { name: "Setup Guide" }).click();
 
   // The guide opens as a dialog. Assert it rendered — its body starts with the
   // "My Services Overview" heading (guideline-docs.tsx).
   const guide = page.getByRole("dialog");
-  await expect(
-    guide.getByRole("heading", { name: "My Services Overview" }),
-  ).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "My Services Overview" })).toBeVisible();
 });

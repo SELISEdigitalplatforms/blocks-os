@@ -5,13 +5,15 @@ export const myServicesGuidelineSteps = [
       <div className="text-sm text-medium-emphasis">
         <h4 className="mb-2 text-lg font-semibold text-high-emphasis">My Services Overview</h4>
         <p>
-          My Services lets you register your applications and automatically collect logs and
-          traces using our official NuGet package. Once integrated, all telemetry is securely
-          ingested, stored, and visualized in real time through the platform dashboard. This guide
-          will explain in detail the following step:
+          My Services lets you register your applications and automatically collect logs and traces
+          using our official NuGet package. Once integrated, all telemetry is securely ingested,
+          stored, and visualized in real time through the platform dashboard. This guide will
+          explain in detail the following step:
         </p>
         <ul className="ml-4 mt-2 list-inside list-disc text-sm">
-          <li>Register your service in the cloud to obtain credentials and configuration details.</li>
+          <li>
+            Register your service in the cloud to obtain credentials and configuration details.
+          </li>
           <li>Install the NuGet package- SeliseBlocks.LMT.Client.</li>
         </ul>
         <p className="mt-2 text-high-emphasis">

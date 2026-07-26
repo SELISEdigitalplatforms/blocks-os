@@ -1,10 +1,6 @@
 import { useGetProject } from "@/hooks/use-project";
 import { DomainsSection } from "./components/domain";
-import {
-  ProjectActions,
-  ProjectOverview,
-  ProjectRepoList,
-} from "./components/project";
+import { ProjectActions, ProjectOverview, ProjectRepoList } from "./components/project";
 
 export const DashboardOverview = () => {
   const { data, isFetching } = useGetProject();

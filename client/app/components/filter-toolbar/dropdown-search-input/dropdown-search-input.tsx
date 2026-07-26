@@ -39,10 +39,12 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   keepValueOnTypeChange = false,
 }) => {
   const [state, setState] = useState<ValueType>(value);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState<ValueType>(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setState(value);
-  }, [value]);
+  }
+  const inputRef = useRef<HTMLInputElement>(null);
   const debounced = useRef(
     debounce((val: ValueType) => {
       onChange(val);

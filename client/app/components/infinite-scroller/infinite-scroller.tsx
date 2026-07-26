@@ -78,8 +78,7 @@ export const InfiniteScroll = <T,>({
       }
       if (
         scrollContainer &&
-        scrollContainer.scrollTop + scrollContainer.clientHeight >=
-          scrollContainer?.scrollHeight
+        scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer?.scrollHeight
       ) {
         setNewDataAvailable(false);
       }
