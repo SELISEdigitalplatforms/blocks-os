@@ -1,9 +1,6 @@
 import { LoadingButton } from "@seliseblocks/blocks-kit/components";
 import { useValidateCNameProject } from "@/hooks/use-project";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
 
 interface CnameValidatorProjectProps {
   isDomainVerified: boolean;
@@ -40,7 +37,8 @@ export const CnameValidatorProject = ({
     <LoadingButton
       onClick={handleValidate}
       disabled={isPending || isDomainVerified}
-      isLoading={isPending}>
+      isLoading={isPending}
+    >
       CNAME Lookup
     </LoadingButton>
   );

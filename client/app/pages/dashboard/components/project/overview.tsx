@@ -1,9 +1,6 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import {
-  CopyToClipboardButton,
-  MaskedText,
-} from "@seliseblocks/blocks-kit/components";
+import { CopyToClipboardButton, MaskedText } from "@seliseblocks/blocks-kit/components";
 
 type ProjectOverviewProps = {
   name: string;
@@ -24,9 +21,7 @@ export const ProjectOverview: React.FC<ProjectOverviewProps> = ({
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="min-w-0 wrap-break-word text-xl font-semibold md:text-2xl">
-          {name}
-        </h1>
+        <h1 className="min-w-0 wrap-break-word text-xl font-semibold md:text-2xl">{name}</h1>
         <Badge className="shrink-0">{environment}</Badge>
       </div>
       <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
@@ -34,13 +29,9 @@ export const ProjectOverview: React.FC<ProjectOverviewProps> = ({
         <CopyToClipboardButton
           className="text-high-emphasis rounded-lg items-center"
           textToCopy={tenantId || ""}
-          isHoverable>
-          <MaskedText
-            text={tenantId || ""}
-            showFirstN={3}
-            showLastN={3}
-            length={20}
-          />
+          isHoverable
+        >
+          <MaskedText text={tenantId || ""} showFirstN={3} showLastN={3} length={20} />
         </CopyToClipboardButton>
       </div>
     </div>

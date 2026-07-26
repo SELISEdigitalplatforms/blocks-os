@@ -23,12 +23,12 @@ export const SSOSetupGuideSteps: Record<SSO_PROVIDERS, Step[]> = {
       description: (
         <div>
           <p>
-            Coming soon: The OwnSSO social connection allows users to log in to your application using their OwnSSO
-            account profile.
+            Coming soon: The OwnSSO social connection allows users to log in to your application
+            using their OwnSSO account profile.
           </p>
           <p className="mt-2">
-            Coming soon: The OwnSSO social connection allows users to log in to your application using their OwnSSO
-            account profile.
+            Coming soon: The OwnSSO social connection allows users to log in to your application
+            using their OwnSSO account profile.
           </p>
         </div>
       ),

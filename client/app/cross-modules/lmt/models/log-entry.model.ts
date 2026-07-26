@@ -1,4 +1,4 @@
-export type LogServiceStatus = "running"
+export type LogServiceStatus = "running";
 
 export type LogServiceIconKey =
   | "iam"
@@ -10,13 +10,13 @@ export type LogServiceIconKey =
   | "release"
   | "utilities"
   | "studio"
-  | "agent"
+  | "agent";
 
 export type LogServiceRow = {
-  id: string
-  name: string
-  routeSlug: string
-  description: string
-  icon: LogServiceIconKey
-  status: LogServiceStatus
-}
+  id: string;
+  name: string;
+  routeSlug: string;
+  description: string;
+  icon: LogServiceIconKey;
+  status: LogServiceStatus;
+};

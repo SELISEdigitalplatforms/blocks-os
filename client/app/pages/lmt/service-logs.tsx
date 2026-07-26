@@ -26,8 +26,9 @@ export function LmtServiceLogsRoute() {
       return [];
     }
 
-    const { api: apiServiceName, worker: workerServiceName } =
-      getLmtLogCollections(service.serviceName);
+    const { api: apiServiceName, worker: workerServiceName } = getLmtLogCollections(
+      service.serviceName,
+    );
 
     return [
       {
@@ -52,10 +53,7 @@ export function LmtServiceLogsRoute() {
   if (!service) {
     return (
       <div className="flex flex-col gap-5 sm:gap-4">
-        <PageBreadcrumb
-          breadcrumbIndex={4}
-          listClassName="text-base sm:text-lg"
-        />
+        <PageBreadcrumb breadcrumbIndex={4} listClassName="text-base sm:text-lg" />
         <Card>
           <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             Logs are not configured for this service.
@@ -67,10 +65,7 @@ export function LmtServiceLogsRoute() {
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
-      <PageBreadcrumb
-        breadcrumbIndex={4}
-        listClassName="text-base sm:text-lg"
-      />
+      <PageBreadcrumb breadcrumbIndex={4} listClassName="text-base sm:text-lg" />
       <LogsViewer
         key={serviceName}
         logsRouteServiceName={serviceName}

@@ -16,11 +16,7 @@ export const ProfileMfaVerifyGuideLineTotp = () => {
       </div>
       <div className="flex flex-col items-center gap-4">
         <div className="relative aspect-square w-40 rounded-sm border p-2">
-          {data?.qrImageUrl ? (
-            <img alt="qr_code" src={data?.qrImageUrl} />
-          ) : (
-            <Skeleton />
-          )}
+          {data?.qrImageUrl ? <img alt="qr_code" src={data?.qrImageUrl} /> : <Skeleton />}
         </div>
         <div className="text-center">
           <p className="text-medium-emphasis">Or enter this code manually in your app:</p>

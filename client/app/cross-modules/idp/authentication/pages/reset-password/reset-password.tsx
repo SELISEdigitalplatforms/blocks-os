@@ -1,12 +1,12 @@
-import { AlertTriangle } from "lucide-react"
-import { AuthPageShell } from "@/components/auth-page-shell/auth-page-shell"
-import { Button } from "@/components/ui-kits/button/button"
-import { ResetPasswordForm } from "./reset-password-form"
+import { AlertTriangle } from "lucide-react";
+import { AuthPageShell } from "@/components/auth-page-shell/auth-page-shell";
+import { Button } from "@/components/ui-kits/button/button";
+import { ResetPasswordForm } from "./reset-password-form";
 
 type ResetPasswordProps = {
-  code?: string
-  lang?: string
-}
+  code?: string;
+  lang?: string;
+};
 
 export const ResetPassword = ({ code }: ResetPasswordProps) => {
   if (!code) {
@@ -23,7 +23,7 @@ export const ResetPassword = ({ code }: ResetPasswordProps) => {
           </Button>
         </div>
       </AuthPageShell>
-    )
+    );
   }
 
   return (
@@ -34,5 +34,5 @@ export const ResetPassword = ({ code }: ResetPasswordProps) => {
     >
       <ResetPasswordForm code={code} />
     </AuthPageShell>
-  )
-}
+  );
+};

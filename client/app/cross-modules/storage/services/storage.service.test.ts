@@ -8,13 +8,13 @@ import {
   mockUploadDmsFilePayload,
   mockCreateDmsFolderPayload,
 } from "../test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { StorageService } from "./storage.service";
 import { StorageConfiguration } from "./storage-configuration.service";
 import { StorageFile } from "./storage-file.service";
 import { STORAGE_FILE_ENDPOINTS } from "../constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("StorageService", () => {
   let service: StorageService;

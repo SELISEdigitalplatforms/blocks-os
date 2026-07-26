@@ -1,5 +1,9 @@
 import { toast } from "@/hooks/use-toast";
-import { IGeneratePATPayload, IGetHistoriesPayload, IGetSessionPayload } from "@blocks-idp/iam/models/user";
+import {
+  IGeneratePATPayload,
+  IGetHistoriesPayload,
+  IGetSessionPayload,
+} from "@blocks-idp/iam/models/user";
 import { userService } from "@blocks-idp/iam/services/user.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -29,12 +33,12 @@ export const useGetPats = () => {
         const dateB = new Date(b.createdDate || b.createdDate || 0).getTime();
         return dateB - dateA;
       });
-    }
+    },
   });
 };
 
 export const useGeneratePats = () => {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: IGeneratePATPayload) => userService.generatePats(payload),

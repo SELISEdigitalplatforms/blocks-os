@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Table } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
 
-export const useActiveFiltersCount = <TData,>(
+export const useActiveFiltersCount = <TData>(
   table: Table<TData>,
   dateRange: DateRange | undefined,
   searchColumnId: string | undefined,

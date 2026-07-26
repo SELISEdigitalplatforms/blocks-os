@@ -46,7 +46,10 @@ describe("use-captcha-config hooks", () => {
 
       result.current.mutate(mockSaveCaptchaPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(captchaService.saveCaptcha).toHaveBeenCalledWith(mockSaveCaptchaPayload, expect.anything());
+      expect(captchaService.saveCaptcha).toHaveBeenCalledWith(
+        mockSaveCaptchaPayload,
+        expect.anything(),
+      );
     });
   });
 

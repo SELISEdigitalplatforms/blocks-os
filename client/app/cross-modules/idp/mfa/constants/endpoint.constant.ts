@@ -5,12 +5,12 @@ import { API_BASES } from "@/constants/endpoint.constant";
 export const MFA_CONFIG_ENDPOINTS = {
   GET: `${API_BASES.IAM}/Mfa/Config`,
   SAVE: `${API_BASES.IAM}/Mfa/Config`,
-} as const
+} as const;
 
 /** Profile page MFA gate — Logic cloud config (not secrets). */
 export const PROFILE_MFA_CONFIG_ENDPOINTS = {
   GET: `${API_BASES.LOGIC}/MFA/Get`,
-} as const
+} as const;
 
 // ─── MFA endpoints (mfa.service — IDP & MFA bases) ─────────────────────────
 

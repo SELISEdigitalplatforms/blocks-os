@@ -93,6 +93,58 @@ describe("oidc-utils", () => {
       const params = extractOIDCParams();
       expect(params.clientId).toBe("from-query");
     });
+
+    it("falls back to the brandColor found in the full URL", () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          search: "?brandColor=",
+          hash: "",
+          href: "http://localhost:3000/oidc/login?brandColor=aa1122&other=1",
+        },
+        writable: true,
+        configurable: true,
+      });
+      expect(extractOIDCParams().themeColor).toBe("#aa1122");
+    });
+
+    it("recognizes a hash color even when the remainder is not ampersand separated", () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          search: "",
+          hash: "#aabbccclientId=z",
+          href: "http://localhost:3000/oidc/login#aabbccclientId=z",
+        },
+        writable: true,
+        configurable: true,
+      });
+      expect(extractOIDCParams().themeColor).toBe("#aabbcc");
+    });
+
+    it("recovers a logoUrl found only in the full URL", () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          search: "",
+          hash: "",
+          href: "http://localhost:3000/oidc/login?x=1&logoUrl=https%3A%2F%2Fcdn%2Ff.png",
+        },
+        writable: true,
+        configurable: true,
+      });
+      expect(extractOIDCParams().logoUrl).toBe("https://cdn/f.png");
+    });
+
+    it("fully decodes a multiply-encoded logoUrl", () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          search: "?logoUrl=https%253A%252F%252Fcdn%252Fl.png",
+          hash: "",
+          href: "http://localhost:3000/oidc/login?logoUrl=https%253A%252F%252Fcdn%252Fl.png",
+        },
+        writable: true,
+        configurable: true,
+      });
+      expect(extractOIDCParams().logoUrl).toBe("https://cdn/l.png");
+    });
   });
 
   // ─── buildOIDCNavigationUrl ─────────────────────────────────────────────────

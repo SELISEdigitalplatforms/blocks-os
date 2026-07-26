@@ -7,11 +7,11 @@ import {
   mockPeopleAcceptInvitationResponse,
   mockConfirmInvitationResponse,
 } from "../test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { PEOPLE_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
 import { PeopleService } from "./people.service";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("PeopleService", () => {
   let service: PeopleService;
@@ -139,7 +139,11 @@ describe("PeopleService", () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Remove access failed"));
 
       await expect(
-        service.removeAccess({ email: "user@example.com", tenantIds: ["tenant-1"], groupId: "group-1" }),
+        service.removeAccess({
+          email: "user@example.com",
+          tenantIds: ["tenant-1"],
+          groupId: "group-1",
+        }),
       ).rejects.toThrow("Remove access failed");
     });
   });

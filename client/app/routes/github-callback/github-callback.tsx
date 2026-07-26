@@ -8,13 +8,10 @@ export default function GitHubCallbackPage() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const [projectKey] = useState(
-    () => localStorage.getItem("github_auth_project_key") || "",
-  );
+  const [projectKey] = useState(() => localStorage.getItem("github_auth_project_key") || "");
   const { isLoading, isSuccess } = useQuery({
     queryKey: ["github-verification", code, projectKey],
-    queryFn: () =>
-      githubInfoService.verifyAuthorization(code || "", projectKey),
+    queryFn: () => githubInfoService.verifyAuthorization(code || "", projectKey),
     enabled: !!code,
     retry: false,
   });

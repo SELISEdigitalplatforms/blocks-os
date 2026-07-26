@@ -1,5 +1,10 @@
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { cn } from "@/lib/utils";
 import { PERMISSION_SEVERITY_OPTIONS, ResourceType } from "@blocks-idp/iam/models/permission";
 import { BadgeAlert, BadgeCheck } from "lucide-react";
@@ -23,13 +28,15 @@ export const PermissionToggleCard = ({
 }: PermissionToggleCardProps) => {
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
   const permissionSeverity = useMemo(() => {
-    return PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === permission.permissionSeverity);
+    return PERMISSION_SEVERITY_OPTIONS.find(
+      (option) => option.value === permission.permissionSeverity,
+    );
   }, [permission.permissionSeverity]);
   return (
     <div
       className={cn(
         "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer [&_*]:cursor-[inherit]",
-        !isEditMode && "cursor-not-allowed"
+        !isEditMode && "cursor-not-allowed",
       )}
     >
       <Checkbox
@@ -51,21 +58,21 @@ export const PermissionToggleCard = ({
             <h5>{permission.name}</h5>
             {hasDependentPermissions && (
               <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger>
-                  {isAllDependentPermissionsChecked ? (
-                    <BadgeCheck className="text-green-600 h-3.5 w-3.5" />
-                  ) : (
-                    <BadgeAlert className="text-yellow-600 h-3.5 w-3.5" />
-                  )}
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {isAllDependentPermissionsChecked
-                    ? "All dependent permissions are selected"
-                    : "One or more dependent permissions are missing"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    {isAllDependentPermissionsChecked ? (
+                      <BadgeCheck className="text-green-600 h-3.5 w-3.5" />
+                    ) : (
+                      <BadgeAlert className="text-yellow-600 h-3.5 w-3.5" />
+                    )}
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {isAllDependentPermissionsChecked
+                      ? "All dependent permissions are selected"
+                      : "One or more dependent permissions are missing"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -77,7 +84,7 @@ export const PermissionToggleCard = ({
             className={cn(
               "rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
               permissionSeverity?.className,
-              permissionSeverity?.bg
+              permissionSeverity?.bg,
             )}
           >
             {permissionSeverity?.label}

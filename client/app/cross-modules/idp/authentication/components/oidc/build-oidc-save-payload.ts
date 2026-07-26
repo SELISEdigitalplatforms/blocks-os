@@ -28,9 +28,7 @@ export const buildOidcSavePayload = (
     // A branding-only save must not silently unregister the identity provider.
     registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
     allowedResponseTypes:
-      credential.allowedResponseTypes?.length > 0
-        ? credential.allowedResponseTypes
-        : ["code"],
+      credential.allowedResponseTypes?.length > 0 ? credential.allowedResponseTypes : ["code"],
     itemId: credential.itemId,
     clientDisplayName: credential.clientDisplayName,
     clientLogoUrl: overrides.clientLogoUrl,

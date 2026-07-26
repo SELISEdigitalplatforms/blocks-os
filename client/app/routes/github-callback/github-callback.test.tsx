@@ -29,7 +29,7 @@ vi.mock("@/cross-modules/devops/services/github-info.service", () => ({
 }));
 const verifyAuthorization = h.verifyAuthorization;
 
-import CallbackPage from "./callback";
+import CallbackPage from "./github-callback";
 
 const renderAt = (search: string) =>
   render(
@@ -64,9 +64,7 @@ describe("CallbackPage (devops github callback)", () => {
 
     renderAt("?code=gh-code&state=st");
 
-    await waitFor(() =>
-      expect(verifyAuthorization).toHaveBeenCalledWith("gh-code", "proj-1"),
-    );
+    await waitFor(() => expect(verifyAuthorization).toHaveBeenCalledWith("gh-code", "proj-1"));
     await waitFor(() => expect(window.close).toHaveBeenCalled());
 
     expect(localStorage.getItem("isReload")).not.toBeNull();

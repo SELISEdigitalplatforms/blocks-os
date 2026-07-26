@@ -19,10 +19,7 @@ import {
   type DomainFormSchema,
 } from "./domain-form.schema";
 import { DomainAction } from "./domain.constant";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
 
 const getCookieDomain = (domain: string) => {
   try {
@@ -99,17 +96,13 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-col gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="domain"
           render={({ field }) => (
             <FormItem className="space-y-1.5">
-              <FormLabel className="text-sm font-medium text-medium-emphasis">
-                Domain
-              </FormLabel>
+              <FormLabel className="text-sm font-medium text-medium-emphasis">Domain</FormLabel>
               <FormControl>
                 <div className="flex items-center rounded-md border border-input bg-background px-3 py-2">
                   <span className="text-muted-foreground">https://</span>
@@ -124,14 +117,10 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
                         // cookieDomain never re-validates, leaving isValid
                         // false (Add button disabled) even though both
                         // fields visibly hold valid values
-                        form.setValue(
-                          "cookieDomain",
-                          getCookieDomain(e.target.value),
-                          {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          },
-                        );
+                        form.setValue("cookieDomain", getCookieDomain(e.target.value), {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
                       }
                     }}
                   />
@@ -162,11 +151,7 @@ export const DomainForm = ({ application, onAfterSubmit }: DomainFormProps) => {
               Cancel
             </Button>
           </DialogClose>
-          <Button
-            size="sm"
-            className="w-20"
-            type="submit"
-            disabled={!isFormValid || isPending}>
+          <Button size="sm" className="w-20" type="submit" disabled={!isFormValid || isPending}>
             {isEditMode ? "Update" : "Add"}
           </Button>
         </DialogFooter>

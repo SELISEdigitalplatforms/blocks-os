@@ -36,7 +36,9 @@ const ActivityLogsContent = ({ trace }: { trace: TraceTree }) => {
       </div>
       {trace?.subEntries?.length ? (
         <div className="ml-6">
-          {trace?.subEntries.map((item) => <TraceListItem key={item.spanId} trace={item} />)}
+          {trace?.subEntries.map((item) => (
+            <TraceListItem key={item.spanId} trace={item} />
+          ))}
         </div>
       ) : null}
     </>

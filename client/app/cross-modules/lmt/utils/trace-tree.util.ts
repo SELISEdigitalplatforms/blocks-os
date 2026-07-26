@@ -9,9 +9,7 @@ import type {
 
 const ZERO_PARENT_SPAN_ID = "0000000000000000";
 
-export const isRootSpan = (
-  item: Pick<Trace, "parentId" | "parentSpanId">,
-): boolean => {
+export const isRootSpan = (item: Pick<Trace, "parentId" | "parentSpanId">): boolean => {
   const parentSpanId = item.parentSpanId?.trim() ?? "";
   if (!parentSpanId || parentSpanId === ZERO_PARENT_SPAN_ID) {
     return true;
@@ -20,9 +18,7 @@ export const isRootSpan = (
   return !item.parentId?.trim();
 };
 
-export const getParentSpanKey = (
-  item: Pick<Trace, "parentId" | "parentSpanId">,
-): string | null => {
+export const getParentSpanKey = (item: Pick<Trace, "parentId" | "parentSpanId">): string | null => {
   if (isRootSpan(item)) return null;
 
   const parentSpanId = item.parentSpanId?.trim() ?? "";
@@ -107,8 +103,7 @@ export const buildTraceTreeFromSpans = (spans: Trace[]): TraceTree | null => {
   if (parsedData) {
     parsedData.calculatedStartTime = time.start;
     parsedData.calculatedEndTime = time.end;
-    parsedData.calculatedDuration =
-      Number(new Date(time.end)) - Number(new Date(time.start));
+    parsedData.calculatedDuration = Number(new Date(time.end)) - Number(new Date(time.start));
   }
 
   return parsedData;

@@ -37,7 +37,8 @@ export const ProjectRepoList = ({
     <DashboardSectionCard
       title="Repositories"
       description="Repositories deployed for this project"
-      contentClassName="p-0">
+      contentClassName="p-0"
+    >
       <ProjectRepoTable
         data={envRepositoriesResponse?.data ?? []}
         domains={applications}

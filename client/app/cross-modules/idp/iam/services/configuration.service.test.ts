@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { ConfigurationService } from "./configuration.service";
 import { IAM_CONFIGURATION_ENDPOINTS } from "../constants/endpoint.constant";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
@@ -10,7 +10,7 @@ import {
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("ConfigurationService", () => {
   let service: ConfigurationService;
@@ -53,11 +53,14 @@ describe("ConfigurationService", () => {
 
       const result = await service.saveIamConfiguration(mockSaveIamConfigPayload);
 
-      expect(http.post).toHaveBeenCalledWith(IAM_CONFIGURATION_ENDPOINTS.SAVE, {
-        ...mockSaveIamConfigPayload,
-      },
+      expect(http.post).toHaveBeenCalledWith(
+        IAM_CONFIGURATION_ENDPOINTS.SAVE,
+        {
+          ...mockSaveIamConfigPayload,
+        },
         undefined,
-        { absoluteUrl: true },);
+        { absoluteUrl: true },
+      );
       expect(result).toEqual(mockSuccessResponse);
     });
 

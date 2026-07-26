@@ -41,26 +41,25 @@ export const SettingsDismissibleChip = ({
           ? "relative inline-flex min-h-10 w-full max-w-full flex-col items-start justify-center rounded-xl border bg-muted/40 px-3 py-1.5 pr-8 sm:w-auto"
           : "relative rounded-lg border bg-card p-4 pr-10 shadow-sm",
         className,
-      )}>
+      )}
+    >
       <p
         className={cn(
           "truncate text-foreground",
-          variant === "badge"
-            ? SETTINGS_FORM_LAYOUT.chipTitleBadge
-            : "text-sm font-semibold",
+          variant === "badge" ? SETTINGS_FORM_LAYOUT.chipTitleBadge : "text-sm font-semibold",
         )}
-        title={title}>
+        title={title}
+      >
         {title}
       </p>
       {subtitle ? (
         <p
           className={cn(
             "truncate text-muted-foreground",
-            variant === "badge"
-              ? SETTINGS_FORM_LAYOUT.chipSubtitleBadge
-              : "mt-1 text-xs",
+            variant === "badge" ? SETTINGS_FORM_LAYOUT.chipSubtitleBadge : "mt-1 text-xs",
           )}
-          title={subtitle}>
+          title={subtitle}
+        >
           {subtitle}
         </p>
       ) : null}
@@ -73,14 +72,11 @@ export const SettingsDismissibleChip = ({
               size="icon"
               className={cn(
                 "absolute rounded-full text-muted-foreground hover:text-foreground",
-                variant === "badge"
-                  ? "right-1 top-1 h-5 w-5"
-                  : "right-1.5 top-1.5 h-7 w-7",
+                variant === "badge" ? "right-1 top-1 h-5 w-5" : "right-1.5 top-1.5 h-7 w-7",
               )}
-              aria-label={`Remove ${title}`}>
-              <X
-                className={cn(variant === "badge" ? "h-3 w-3" : "h-3.5 w-3.5")}
-              />
+              aria-label={`Remove ${title}`}
+            >
+              <X className={cn(variant === "badge" ? "h-3 w-3" : "h-3.5 w-3.5")} />
             </Button>
           </DialogTrigger>
           <ConfirmationModal
