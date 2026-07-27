@@ -402,13 +402,6 @@ namespace DomainService.Projects
                return statusTracer.IsProjectCreationSuccess;
             }
 
-            var tenant = await _projectRepository.GetByIdAsync(itemId);
-
-            if (tenant is not null)
-            {
-              return false;
-            }
-
             return true;
         }
 
