@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   navigate: vi.fn(),
   setSelectedProject: vi.fn(),
   startImpersonation: vi.fn(),
+  restoreProject: vi.fn(),
   projectStatus: undefined as boolean | undefined,
 }));
 
@@ -18,6 +19,7 @@ vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
 }));
 vi.mock("@/hooks/use-project", () => ({
   useGetProjectStatus: () => ({ data: h.projectStatus }),
+  useRestoreProject: () => ({ mutateAsync: h.restoreProject, isPending: false }),
 }));
 // The tooltip ui-kit re-exports blocks-kit, which touches process.env via
 // motion-utils at module load; a passthrough keeps the tree renderable.
@@ -42,6 +44,7 @@ describe("EnvironmentCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.startImpersonation.mockResolvedValue(undefined);
+    h.restoreProject.mockResolvedValue({ isSuccess: true });
     h.projectStatus = undefined;
   });
 
@@ -52,20 +55,23 @@ describe("EnvironmentCard", () => {
     expect(screen.getByText("X-Blocks-Key:")).toBeTruthy();
   });
 
-  it("does not show a setup badge while the status is unknown or complete", () => {
+  it("does not show a setup indicator while the status is unknown or complete", () => {
     h.projectStatus = undefined;
     const { rerender } = render(<EnvironmentCard project={project} />);
-    expect(screen.queryByText("Setup pending")).toBeNull();
+    expect(screen.queryByLabelText("Setup pending")).toBeNull();
+    expect(screen.queryByLabelText("Restore environment")).toBeNull();
 
     h.projectStatus = true;
     rerender(<EnvironmentCard project={project} />);
-    expect(screen.queryByText("Setup pending")).toBeNull();
+    expect(screen.queryByLabelText("Setup pending")).toBeNull();
+    expect(screen.queryByLabelText("Restore environment")).toBeNull();
   });
 
-  it("shows a setup pending badge when the environment status is false", () => {
+  it("shows a compact setup indicator and restore action when setup is pending", () => {
     h.projectStatus = false;
     render(<EnvironmentCard project={project} />);
-    expect(screen.getByText("Setup pending")).toBeTruthy();
+    expect(screen.getByLabelText("Setup pending")).toBeTruthy();
+    expect(screen.getByLabelText("Restore environment")).toBeTruthy();
   });
 
   it("impersonates, selects the project and navigates on click when no migration", async () => {
