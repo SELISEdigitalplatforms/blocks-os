@@ -1,5 +1,13 @@
-import React, { forwardRef, useImperativeHandle, useState, type ReactNode } from "react";
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useState,
+  type ReactNode,
+} from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { showErrorToast } from "@/hooks/use-toast";
+import { isErrorWithErrors } from "@/lib/error";
 import { Input } from "@/components/ui-kits/input/input";
 import {
   Select,
@@ -13,7 +21,9 @@ import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
+import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
+import { useProjectStore } from "@seliseblocks/blocks-kit";
 import {
   Form,
   FormControl,
@@ -25,10 +35,10 @@ import {
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 
 interface IBasicInformationProps {
-  // eslint-disable-next-line no-unused-vars
-  onSubmit(data: unknown): void;
   templateData: IEmailTemplate;
+  onSaveSuccess?: (data: IEmailTemplate) => void;
   onValidityChange?: (isValid: boolean) => void;
+  onPendingChange?: (isPending: boolean) => void;
   actions?: ReactNode;
 }
 
@@ -55,6 +65,26 @@ const RequiredMark = () => (
   </span>
 );
 
+type LanguageOption = {
+  itemId?: string;
+  languageCode: string;
+  languageName: string;
+  isDefault?: boolean;
+};
+
+const getUniqueLanguages = (languages: LanguageOption[] = []): LanguageOption[] => {
+  const uniqueByCode = new Map<string, LanguageOption>();
+
+  for (const language of languages) {
+    const existing = uniqueByCode.get(language.languageCode);
+    if (!existing || (!existing.isDefault && language.isDefault)) {
+      uniqueByCode.set(language.languageCode, language);
+    }
+  }
+
+  return Array.from(uniqueByCode.values());
+};
+
 const BasicInformationSkeleton = () => (
   <Card className="w-full rounded-sm shadow-none" aria-busy="true" aria-label="Loading form">
     <CardHeader className="space-y-2 px-6 py-5">
@@ -78,12 +108,15 @@ const BasicInformationSkeleton = () => (
 );
 
 const BasicInformation = forwardRef(function Inner(
-  { onSubmit, templateData, onValidityChange, actions }: IBasicInformationProps,
+  { onSaveSuccess, templateData, onValidityChange, onPendingChange, actions }: IBasicInformationProps,
   ref,
 ) {
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
   const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
+  const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
+  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  const uniqueLanguages = getUniqueLanguages(languageListData ?? []);
   const form = useForm<IEmailTemplate>({
     defaultValues: {
       itemId: templateData.itemId,
@@ -102,15 +135,49 @@ const BasicInformation = forwardRef(function Inner(
     onValidityChange?.(form.formState.isValid);
   }, [form.formState.isValid, onValidityChange]);
 
+  React.useEffect(() => {
+    onPendingChange?.(isPending);
+  }, [isPending, onPendingChange]);
+
+  const handleFormSubmit = useCallback(
+    async (data: IEmailTemplate) => {
+      try {
+        const payload = {
+          ...data,
+          itemId: templateData?.itemId || "",
+          projectKey: tenantId,
+        };
+        const res = await saveTemplate(payload);
+
+        if (res?.isSuccess) {
+          onSaveSuccess?.({
+            ...data,
+            itemId: res.itemId ?? data.itemId,
+          });
+          return;
+        }
+
+        showErrorToast({ errors: res.errors });
+      } catch (error) {
+        if (isErrorWithErrors(error)) {
+          showErrorToast({ errors: error.errors });
+        } else {
+          showErrorToast({ errors: "Something went wrong" });
+        }
+      }
+    },
+    [onSaveSuccess, saveTemplate, templateData?.itemId, tenantId],
+  );
+
   useImperativeHandle(
     ref,
     () => ({
       submit() {
-        form.handleSubmit(onSubmit)();
+        form.handleSubmit(handleFormSubmit)();
       },
       isValid: form.formState.isValid,
     }),
-    [form.formState.isValid, form, onSubmit],
+    [form.formState.isValid, form, handleFormSubmit],
   );
 
   if (isLoading || isLanguageListLoading || !data) {
@@ -209,7 +276,7 @@ const BasicInformation = forwardRef(function Inner(
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(languageListData ?? []).map((language) => (
+                        {uniqueLanguages.map((language) => (
                           <SelectItem key={language.languageCode} value={language.languageCode}>
                             {language.languageName}
                           </SelectItem>
