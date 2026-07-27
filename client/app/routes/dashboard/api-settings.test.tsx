@@ -31,7 +31,7 @@ const h = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "t-1" } }),
 }));
 

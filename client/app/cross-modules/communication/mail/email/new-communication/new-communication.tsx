@@ -10,8 +10,8 @@ import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-s
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";

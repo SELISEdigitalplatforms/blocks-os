@@ -3,7 +3,7 @@ import { ConfigsTableShell } from "@/components/configs-table-shell/configs-tabl
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { useMagicUrlsFilterQueryParams, MagicUrlsFilterToolBar } from "./magic-urls-filter-toolbar";
 import { MagicUrlsList } from "./magic-urls-list";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetMagicUrlConfigs } from "@blocks-utilities/hooks/use-magic-url-config";
 import { Link2 } from "lucide-react";
 

@@ -15,7 +15,7 @@ import { Trash } from "lucide-react";
 import { useMemo, useState } from "react";
 import { GenerateTokenModal } from "./generate-pat-modal";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 

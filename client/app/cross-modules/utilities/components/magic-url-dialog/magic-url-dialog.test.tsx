@@ -7,11 +7,11 @@ const { createMagicUrl, toast } = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ user: { sub: "user-9" } }),
 }));
 

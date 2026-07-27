@@ -17,7 +17,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Info, Plus, Pencil, X } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";

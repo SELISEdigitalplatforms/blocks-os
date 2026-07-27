@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui-kits/form/form";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSaveOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import {

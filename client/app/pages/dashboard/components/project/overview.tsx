@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { CopyToClipboardButton, MaskedText } from "@seliseblocks/blocks-kit/components";
+import { CopyToClipboardButton, MaskedText } from "@seliseblocks/genesis-os/components";
 
 type ProjectOverviewProps = {
   name: string;

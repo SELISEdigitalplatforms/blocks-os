@@ -12,10 +12,10 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ setSelectedProject: h.setSelectedProject }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useStartImpersonation: () => ({ mutateAsync: h.startImpersonation }),
 }));
 vi.mock("@/hooks/use-project", () => ({

@@ -27,7 +27,7 @@ import {
   useEmailUsageFilterQueryParams,
 } from "@blocks-communication/mail/email/email-usage/email-usage-filter-toolbar";
 import { Link } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 5 }).map((_, index) => (

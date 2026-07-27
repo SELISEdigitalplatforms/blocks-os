@@ -18,7 +18,7 @@ import {
 } from "./use-storage-configuration";
 
 vi.mock("@blocks-storage/services/storage.service", () => mockStorageServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("Storage Configuration Hooks", () => {
   beforeEach(() => {
@@ -54,7 +54,7 @@ describe("Storage Configuration Hooks", () => {
     });
 
     it("should still query configurations when no project is selected", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: undefined,
       });

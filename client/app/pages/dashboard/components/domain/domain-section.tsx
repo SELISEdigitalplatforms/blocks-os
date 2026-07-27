@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { DashboardSectionCard } from "@seliseblocks/blocks-kit/components";
+import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainTable } from "./domain-table";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 
 interface DomainsSectionProps {
   applications: IDomain[];
