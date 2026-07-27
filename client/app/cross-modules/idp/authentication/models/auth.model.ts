@@ -11,7 +11,7 @@ export interface ISignupByEmailResponse {
 export interface ISigninByEmailPayload {
   username: string;
   password: string;
-   clientId?: string;
+  clientId?: string;
   state?: string;
   nonce?: string;
   scope?: string;

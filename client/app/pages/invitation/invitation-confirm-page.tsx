@@ -1,15 +1,15 @@
-import { Link } from "react-router-dom"
-import { useInvitationConfirmCode } from "./use-invitation-search-params"
-import { Logo } from "@/components/logo"
-import { Button } from "@/components/ui-kits/button/button"
+import { Link } from "react-router-dom";
+import { useInvitationConfirmCode } from "./use-invitation-search-params";
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui-kits/button/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui-kits/card/card"
-import { PeopleInviteConfirmation } from "./people-invite-confirmation"
+} from "@/components/ui-kits/card/card";
+import { PeopleInviteConfirmation } from "./people-invite-confirmation";
 
 const InvitationMissingCode = () => (
   <div className="flex min-h-screen flex-col items-center bg-background">
@@ -34,14 +34,14 @@ const InvitationMissingCode = () => (
       </CardContent>
     </Card>
   </div>
-)
+);
 
 export const InvitationConfirmPage = () => {
-  const { code, isValid } = useInvitationConfirmCode()
+  const { code, isValid } = useInvitationConfirmCode();
 
   if (!isValid) {
-    return <InvitationMissingCode />
+    return <InvitationMissingCode />;
   }
 
-  return <PeopleInviteConfirmation code={code} />
-}
+  return <PeopleInviteConfirmation code={code} />;
+};

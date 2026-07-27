@@ -6,9 +6,7 @@ import {
 } from "../models/usage.model";
 import { getNormalizeUsageMetricsData } from "../utils/usage.util";
 
-export const useGetOperationalAnalytics = (
-  option: IGetOperationalAnalyticsPayload,
-) => {
+export const useGetOperationalAnalytics = (option: IGetOperationalAnalyticsPayload) => {
   return useQuery({
     queryKey: ["usage-operation", option],
     queryFn: () => lmtService.usage.getOperationalAnalytics(option),

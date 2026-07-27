@@ -11,10 +11,7 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
   return (
     <div className="space-y-4">
       <IdentityProviderList />
-      <IdentityProviderFormDialog
-        open={addOpen}
-        onOpenChange={onAddOpenChange}
-      />
+      <IdentityProviderFormDialog open={addOpen} onOpenChange={onAddOpenChange} />
     </div>
   );
 }
@@ -22,9 +19,6 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
 export { IdentityProviderFormDialog };
 
 export function IdentityProviderPage() {
-  const [addOpen, setAddOpen] = useQueryState(
-    "addIdp",
-    parseAsBoolean.withDefault(false),
-  );
+  const [addOpen, setAddOpen] = useQueryState("addIdp", parseAsBoolean.withDefault(false));
   return <IdentityProviders addOpen={addOpen} onAddOpenChange={setAddOpen} />;
 }

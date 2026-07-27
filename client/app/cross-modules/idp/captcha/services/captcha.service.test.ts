@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { secretsService } from "@/services/secrets.service";
 import { CaptchaService } from "./captcha.service";
 import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
@@ -11,7 +11,7 @@ import {
   MOCK_CAPTCHA_ITEM_ID,
 } from "../../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 vi.mock("@/services/secrets.service", () => ({
   secretsService: { save: vi.fn() },
 }));

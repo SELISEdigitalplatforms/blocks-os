@@ -82,18 +82,14 @@ describe("ToggleOrganizationStatus", () => {
   it("renders the disable confirmation for an enabled organization", () => {
     renderDialog(makeOrg({ isEnable: true }));
     expect(screen.getByText("Disable Organization")).toBeTruthy();
-    expect(
-      screen.getByText(/Are you sure you want to disable the organization/),
-    ).toBeTruthy();
+    expect(screen.getByText(/Are you sure you want to disable the organization/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Disable" })).toBeTruthy();
   });
 
   it("renders the enable confirmation for a disabled organization", () => {
     renderDialog(makeOrg({ isEnable: false }));
     expect(screen.getByText("Enable Organization")).toBeTruthy();
-    expect(
-      screen.getByText(/Are you sure you want to enable the organization/),
-    ).toBeTruthy();
+    expect(screen.getByText(/Are you sure you want to enable the organization/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Enable" })).toBeTruthy();
   });
 

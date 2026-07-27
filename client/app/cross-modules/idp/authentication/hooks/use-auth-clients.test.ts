@@ -27,9 +27,7 @@ describe("use-auth-clients hooks", () => {
 
   describe("useListAuthClientCredentials", () => {
     it("should fetch client credentials successfully", async () => {
-      vi.mocked(authClientService.clients.list).mockResolvedValue(
-        mockClientCredentialsResponse,
-      );
+      vi.mocked(authClientService.clients.list).mockResolvedValue(mockClientCredentialsResponse);
 
       const { result } = renderHook(
         () => useListAuthClientCredentials({ projectKey: TEST_PROJECT_KEY }),
@@ -46,9 +44,7 @@ describe("use-auth-clients hooks", () => {
 
   describe("useGetAuthClientCredentials", () => {
     it("aliases useListAuthClientCredentials", async () => {
-      vi.mocked(authClientService.clients.list).mockResolvedValue(
-        mockClientCredentialsResponse,
-      );
+      vi.mocked(authClientService.clients.list).mockResolvedValue(mockClientCredentialsResponse);
 
       const { result } = renderHook(
         () => useGetAuthClientCredentials({ projectKey: TEST_PROJECT_KEY }),

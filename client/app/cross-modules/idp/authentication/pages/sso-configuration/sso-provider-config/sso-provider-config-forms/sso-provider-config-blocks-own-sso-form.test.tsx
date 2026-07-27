@@ -40,9 +40,7 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: (...args: unknown[]) => showSuccessToast(...args),
 }));
 
-const { SSOProviderConfigOwnSSOForm } = await import(
-  "./sso-provider-config-blocks-own-sso-form"
-);
+const { SSOProviderConfigOwnSSOForm } = await import("./sso-provider-config-blocks-own-sso-form");
 
 const validConfiguration = {
   provider: "ownsso",
@@ -120,9 +118,7 @@ describe("SSOProviderConfigOwnSSOForm", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Well known URL must be a valid URL."),
-      ).toBeTruthy();
+      expect(screen.getByText("Well known URL must be a valid URL.")).toBeTruthy();
     });
     expect(mutateAsync).not.toHaveBeenCalled();
   });

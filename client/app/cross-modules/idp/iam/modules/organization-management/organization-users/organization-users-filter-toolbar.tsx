@@ -2,7 +2,7 @@ import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { Mail, User } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 type OrganizationUsersFilter = {
-  search: {};
+  search: unknown;
 };
 export const useOrganizationUsersFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({

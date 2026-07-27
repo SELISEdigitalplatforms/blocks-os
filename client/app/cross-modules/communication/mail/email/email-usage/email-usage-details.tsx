@@ -19,9 +19,9 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
         <EmailUsageDetailsBreadcrumb id={details.messageId || id} isInbound={details.isInbound} />
       </div>
       <div className="mt-5 flex items-center gap-2">
-        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(-1)}>
+        {/* <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-6 w-6" />
-        </Button>
+        </Button> */}
         <h1 className="text-lg font-semibold md:text-2xl">Email Details</h1>
       </div>
       <Card>

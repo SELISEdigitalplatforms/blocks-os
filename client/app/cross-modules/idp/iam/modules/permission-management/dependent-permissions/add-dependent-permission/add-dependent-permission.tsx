@@ -13,7 +13,14 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui-kits/table/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui-kits/table/table";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
@@ -26,7 +33,10 @@ type AddDependentPermissionProps = {
   onChange: (data: string[]) => void;
 };
 
-export const AddDependentPermission = ({ onChange, permissionsResource }: AddDependentPermissionProps) => {
+export const AddDependentPermission = ({
+  onChange,
+  permissionsResource,
+}: AddDependentPermissionProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
   const [workingSet, setWorkingSet] = useState<string[]>([]);
@@ -115,7 +125,10 @@ export const AddDependentPermission = ({ onChange, permissionsResource }: AddDep
         <DialogHeader>
           <div className="flex items-center justify-between gap-2 pr-6">
             <DialogTitle className="text-left">Assign Permissions</DialogTitle>
-            <Badge variant="secondary" aria-label={`${workingSet.length} of ${MAX_DEPENDENT_PERMISSIONS} permissions selected`}>
+            <Badge
+              variant="secondary"
+              aria-label={`${workingSet.length} of ${MAX_DEPENDENT_PERMISSIONS} permissions selected`}
+            >
               {workingSet.length}/{MAX_DEPENDENT_PERMISSIONS} selected
             </Badge>
           </div>
@@ -157,7 +170,10 @@ export const AddDependentPermission = ({ onChange, permissionsResource }: AddDep
                       </Badge>
                     </TableCell>
                     <TableCell className="w-[100px]">
-                      {RESOURCE_TYPE.find((resoruce) => resoruce.value === item.type.toString())?.label}
+                      {
+                        RESOURCE_TYPE.find((resoruce) => resoruce.value === item.type.toString())
+                          ?.label
+                      }
                     </TableCell>
                   </TableRow>
                 ))}
