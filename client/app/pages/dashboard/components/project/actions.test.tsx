@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ user: { sub: "user-1" } as { sub: string } | undefined }));
 
 vi.mock("./archive", () => ({ ArchiveProject: () => <div data-testid="archive" /> }));
+vi.mock("./restore", () => ({ RestoreProject: () => <div data-testid="restore" /> }));
 vi.mock("@seliseblocks/blocks-kit/components", () => ({
   RenderConditionally: ({ condition, children }: { condition: boolean; children: React.ReactNode }) =>
     condition ? <>{children}</> : null,
@@ -18,23 +19,28 @@ describe("ProjectActions", () => {
     h.user = { sub: "user-1" };
   });
 
-  it("renders the archive action for the owner when the project is enabled", () => {
-    render(<ProjectActions isDisabled={false} createdBy="user-1" />);
+  it("renders the archive and restore actions for the owner when the project is enabled", () => {
+    render(<ProjectActions itemId="item-1" isDisabled={false} createdBy="user-1" />);
     expect(screen.getByTestId("archive")).toBeTruthy();
+    expect(screen.getByTestId("restore")).toBeTruthy();
   });
 
   it("hides the actions for a non-owner", () => {
-    render(<ProjectActions isDisabled={false} createdBy="someone-else" />);
+    render(<ProjectActions itemId="item-1" isDisabled={false} createdBy="someone-else" />);
     expect(screen.queryByTestId("archive")).toBeNull();
+    expect(screen.queryByTestId("restore")).toBeNull();
   });
 
   it("hides the actions when the project is disabled", () => {
-    render(<ProjectActions isDisabled createdBy="user-1" />);
+    render(<ProjectActions itemId="item-1" isDisabled createdBy="user-1" />);
     expect(screen.queryByTestId("archive")).toBeNull();
+    expect(screen.queryByTestId("restore")).toBeNull();
   });
 
   it("renders a skeleton while fetching", () => {
-    const { container } = render(<ProjectActions isDisabled={false} createdBy="user-1" isFetching />);
+    const { container } = render(
+      <ProjectActions itemId="item-1" isDisabled={false} createdBy="user-1" isFetching />,
+    );
     expect(container.querySelector("[class*='rounded']")).toBeTruthy();
     expect(screen.queryByTestId("archive")).toBeNull();
   });

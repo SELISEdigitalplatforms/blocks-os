@@ -1,6 +1,11 @@
 import { http } from "@/lib/http/http-client";
 import { PROJECT_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
-import { IGetProjectResponse, IProjectGroup } from "@/models/project.model";
+import {
+  IGetProjectResponse,
+  IProjectGroup,
+  IRestoreProjectPayload,
+  IRestoreProjectResponse,
+} from "@/models/project.model";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export class ProjectService {
@@ -14,6 +19,19 @@ export class ProjectService {
   getProject(): Promise<IGetProjectResponse> {
     const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.GET}`;
     return http.get(url, undefined, { absoluteUrl: true });
+  }
+
+  // Endpoint responds text/plain with the literal string "true"/"false" —
+  // coerce here so callers only ever see a boolean.
+  async getProjectStatus(itemId: string): Promise<boolean> {
+    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.GET_PROJECT_STATUS}?ItemId=${itemId}`;
+    const res = await http.get<string | boolean>(url, undefined, { absoluteUrl: true });
+    return res === true || res === "true";
+  }
+
+  restoreProject(payload: IRestoreProjectPayload): Promise<IRestoreProjectResponse> {
+    const url = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}${PROJECT_ENDPOINTS.RESTORE}`;
+    return http.post(url, payload, undefined, { absoluteUrl: true });
   }
 }
 

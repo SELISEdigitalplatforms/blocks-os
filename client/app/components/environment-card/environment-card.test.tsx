@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   navigate: vi.fn(),
   setSelectedProject: vi.fn(),
   startImpersonation: vi.fn(),
+  projectStatus: undefined as boolean | undefined,
 }));
 
 vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
@@ -14,6 +15,9 @@ vi.mock("@seliseblocks/blocks-kit", () => ({
 }));
 vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useStartImpersonation: () => ({ mutateAsync: h.startImpersonation }),
+}));
+vi.mock("@/hooks/use-project", () => ({
+  useGetProjectStatus: () => ({ data: h.projectStatus }),
 }));
 // The tooltip ui-kit re-exports blocks-kit, which touches process.env via
 // motion-utils at module load; a passthrough keeps the tree renderable.
@@ -38,6 +42,7 @@ describe("EnvironmentCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.startImpersonation.mockResolvedValue(undefined);
+    h.projectStatus = undefined;
   });
 
   it("renders the environment label and the tenant id", () => {
@@ -45,6 +50,22 @@ describe("EnvironmentCard", () => {
     expect(screen.getByText("Development")).toBeTruthy();
     expect(screen.getByText("tenant-abc")).toBeTruthy();
     expect(screen.getByText("X-Blocks-Key:")).toBeTruthy();
+  });
+
+  it("does not show a setup badge while the status is unknown or complete", () => {
+    h.projectStatus = undefined;
+    const { rerender } = render(<EnvironmentCard project={project} />);
+    expect(screen.queryByText("Setup pending")).toBeNull();
+
+    h.projectStatus = true;
+    rerender(<EnvironmentCard project={project} />);
+    expect(screen.queryByText("Setup pending")).toBeNull();
+  });
+
+  it("shows a setup pending badge when the environment status is false", () => {
+    h.projectStatus = false;
+    render(<EnvironmentCard project={project} />);
+    expect(screen.getByText("Setup pending")).toBeTruthy();
   });
 
   it("impersonates, selects the project and navigates on click when no migration", async () => {

@@ -17,6 +17,7 @@ export const DashboardOverview = () => {
           isFetching={isFetching}
         />
         <ProjectActions
+          itemId={data?.data?.itemId || ""}
           isDisabled={!!data?.data?.isDisabled}
           createdBy={data?.data?.createdBy || ""}
           isFetching={isFetching}
