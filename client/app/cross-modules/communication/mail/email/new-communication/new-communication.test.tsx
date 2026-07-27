@@ -34,9 +34,11 @@ vi.mock(
     default: ({
       onSubmit,
       onValidityChange,
+      actions,
     }: {
       onSubmit: (data: { name: string }) => void;
       onValidityChange: (valid: boolean) => void;
+      actions?: React.ReactNode;
     }) => (
       <div>
         <button type="button" onClick={() => onValidityChange(true)}>
@@ -45,6 +47,7 @@ vi.mock(
         <button type="button" onClick={() => onSubmit({ name: "Welcome" })}>
           submit-basic
         </button>
+        {actions}
       </div>
     ),
   }),

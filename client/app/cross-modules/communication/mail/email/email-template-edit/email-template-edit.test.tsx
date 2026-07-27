@@ -54,11 +54,12 @@ describe("EditEmailTemplate", () => {
     expect(screen.queryByTestId("bee-save")).toBeNull();
   });
 
-  it("renders the template name, action buttons and editor", () => {
+  it("renders the action buttons and editor without a page title", () => {
     render(<EditEmailTemplate params={{ id: "t1" }} />);
-    expect(screen.getByText("Welcome Email")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Welcome Email" })).toBeNull();
     expect(screen.getByRole("button", { name: /Reset/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Preview/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Save/ })).toBeTruthy();
     expect(screen.getByTestId("bee-save")).toBeTruthy();
   });
 

@@ -57,6 +57,7 @@ describe("BasicInformation", () => {
     h.configs = { isLoading: true, data: undefined };
     render(<BasicInformation onSubmit={vi.fn()} templateData={template()} />);
     expect(screen.queryByText("About the Template")).toBeNull();
+    expect(screen.getByLabelText("Loading form")).toBeTruthy();
   });
 
   it("reports validity to the parent for a valid template", async () => {

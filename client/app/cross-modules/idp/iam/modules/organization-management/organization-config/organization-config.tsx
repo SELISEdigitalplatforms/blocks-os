@@ -169,7 +169,7 @@ export const OrganizationConfig = ({ configData, isLoading }: OrganizationConfig
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <FormLabel className="!mt-0">Allow Creation From Cloud</FormLabel>
+                        <FormLabel className="!mt-0">Allow Creation From OS</FormLabel>
                       </FormItem>
                     )}
                   />
