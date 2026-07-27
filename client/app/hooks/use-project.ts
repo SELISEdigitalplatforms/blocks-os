@@ -1,7 +1,11 @@
 import { shortGuidGenerator, useCreateProjectFormState } from "@/components/create-project/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { IUpdateProjectPayload, IValidateCnameProjectPayload } from "@/models/project.model";
+import {
+  IRestoreProjectPayload,
+  IUpdateProjectPayload,
+  IValidateCnameProjectPayload,
+} from "@/models/project.model";
 import { projectService } from "@/services/project.service";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
 import { useImpersonateStore, useProjectStore } from "@seliseblocks/blocks-kit";
@@ -145,6 +149,28 @@ export const useDisableProject = (options: { projectKey: string }) => {
         queryKey: ["identifier", "project", options],
       });
       queryClient.invalidateQueries({ queryKey: ["identifier", "projects"] });
+    },
+  });
+};
+
+export const useGetProjectStatus = (itemId?: string) => {
+  return useQuery({
+    queryKey: ["identifier", "project-status", itemId],
+    queryFn: () => projectService.getProjectStatus(itemId as string),
+    enabled: Boolean(itemId),
+  });
+};
+
+export const useRestoreProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["identifier", "project", "restore"],
+    mutationFn: (payload: IRestoreProjectPayload) => projectService.restoreProject(payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["identifier", "project-status", variables.itemId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
     },
   });
 };
