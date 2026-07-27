@@ -22,7 +22,7 @@ vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: (...args: unknown[]) => showSuccessToast(...args),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 

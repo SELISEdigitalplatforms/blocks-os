@@ -12,7 +12,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useNavigate } from "react-router";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { IProviderDestination } from "@/cross-modules/devops/models/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 interface ProviderButtonsProps extends IProviderDestination {
   onClose?: (verifyAuth?: boolean) => void | Promise<void>;
   extraState?: string;

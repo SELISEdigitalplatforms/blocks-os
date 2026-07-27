@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 
 const h = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
@@ -12,7 +12,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-project", () => ({
   useUpdateProject: () => ({ mutateAsync: h.mutateAsync, isPending: false }),
 }));
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
   showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
   showErrorToast: (...a: unknown[]) => h.showErrorToast(...a),
 }));

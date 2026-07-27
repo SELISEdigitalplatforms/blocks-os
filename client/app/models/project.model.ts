@@ -1,5 +1,5 @@
 import { DomainAction } from "@/pages/dashboard/components/domain";
-import { IProject, IDomain } from "@seliseblocks/blocks-kit/models";
+import { IProject, IDomain } from "@seliseblocks/genesis-os/models";
 
 export interface IProjectGroup {
   tenantGroupId: string;

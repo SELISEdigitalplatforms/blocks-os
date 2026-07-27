@@ -10,7 +10,7 @@ const { mutateAsync, showErrorToast, showSuccessToast } = vi.hoisted(() => ({
 
 if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false;
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-auth-clients", () => ({

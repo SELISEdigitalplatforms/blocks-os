@@ -10,7 +10,7 @@ import {
 } from "@blocks-idp/api-settings/hooks/use-api-settings";
 import { IApiEndpoint } from "@blocks-idp/api-settings/models/api-endpoint.model";
 import { getServiceSwaggerUrl } from "@blocks-idp/api-settings/utils/service-swagger";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { BookOpen, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /** ─── Loading skeleton ──────────────────────────────────────────────────────── */

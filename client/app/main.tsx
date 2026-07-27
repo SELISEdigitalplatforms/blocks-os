@@ -1,4 +1,4 @@
-import "@seliseblocks/blocks-kit/lib";
+import "@seliseblocks/genesis-os/lib";
 import "@/styles/globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -8,7 +8,7 @@ import { Toaster } from "./components/ui-kits/toaster/toaster";
 import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
 import QueryProvider from "./providers/query-provider";
 import { router } from "./router";
-import { BlocksAppLayout, ThemeProvider } from "@seliseblocks/blocks-kit/providers";
+import { BlocksAppLayout, ThemeProvider } from "@seliseblocks/genesis-os/providers";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

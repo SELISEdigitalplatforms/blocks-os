@@ -5,7 +5,7 @@ import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { useGetTraceById } from "@blocks-lmt/hooks/use-trace";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { TracingListBreadCrumb } from "./tracing-list-breadcrum/tracing-list-breadcrum";

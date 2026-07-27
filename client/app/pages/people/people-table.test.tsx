@@ -52,7 +52,7 @@ vi.mock("@blocks-idp/iam/hooks/use-account", () => ({
   useAccountResendActivation: () => ({ mutateAsync: h.resendActivation }),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => {
+vi.mock("@seliseblocks/genesis-os", () => {
   const store = () => ({ selectedTenantGroup: "grp-1" });
   (store as unknown as { getState: () => unknown }).getState = () => ({
     selectedTenantGroup: "grp-1",

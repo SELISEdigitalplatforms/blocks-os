@@ -29,7 +29,7 @@ vi.mock("@/components/create-project/utils", () => ({
   shortGuidGenerator: () => "abcde",
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({
     setTenantGroup: h.setTenantGroup,
     setSelectedProject: h.setSelectedProject,

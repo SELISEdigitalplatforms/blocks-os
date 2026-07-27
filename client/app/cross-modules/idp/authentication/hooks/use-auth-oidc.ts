@@ -1,7 +1,7 @@
 import { authOidc } from "@blocks-idp/authentication/services/auth-clients-oidc.service";
 import { ISaveOidcCredentialPayload } from "@blocks-idp/authentication/models/auth.oidc.model";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const useGetAuthOidcCredentials = (options: { projectKey: string }) => {

@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ user: { sub: "user-1" } as { sub: string } | undefined }));
 
 vi.mock("./archive", () => ({ ArchiveProject: () => <div data-testid="archive" /> }));
-vi.mock("@seliseblocks/blocks-kit/components", () => ({
+vi.mock("@seliseblocks/genesis-os/components", () => ({
   RenderConditionally: ({ condition, children }: { condition: boolean; children: React.ReactNode }) =>
     condition ? <>{children}</> : null,
 }));
-vi.mock("@seliseblocks/blocks-kit/store", () => ({ useAuthStore: () => ({ user: h.user }) }));
+vi.mock("@seliseblocks/genesis-os/store", () => ({ useAuthStore: () => ({ user: h.user }) }));
 
 import { ProjectActions } from "./actions";
 

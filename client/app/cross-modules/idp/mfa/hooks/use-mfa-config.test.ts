@@ -29,7 +29,7 @@ import {
 } from "./use-mfa-config";
 
 vi.mock("@blocks-idp/mfa/services/mfa.service", () => mockMfaServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("use-mfa-config hooks", () => {
   beforeEach(() => {

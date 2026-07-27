@@ -1,7 +1,7 @@
 import { ArchiveProject } from "./archive";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { RenderConditionally } from "@seliseblocks/blocks-kit/components";
-import { useAuthStore } from "@seliseblocks/blocks-kit/store";
+import { RenderConditionally } from "@seliseblocks/genesis-os/components";
+import { useAuthStore } from "@seliseblocks/genesis-os/store";
 
 type ProjectActionsProps = {
   itemId: string;

@@ -15,10 +15,10 @@ vi.mock("react-router", () => ({
   useLocation: () => ({ pathname: h.pathname }),
   Outlet: () => <div data-testid="outlet" />,
 }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
 vi.mock("@blocks-idp/captcha/hooks/use-captcha-config", () => ({

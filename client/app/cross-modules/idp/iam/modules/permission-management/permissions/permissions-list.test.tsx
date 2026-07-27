@@ -34,7 +34,7 @@ vi.mock("react-router", () => ({
   ),
 }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (path: string) => `/scoped/${path}`,
 }));
 
