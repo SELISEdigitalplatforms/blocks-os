@@ -41,7 +41,7 @@ export const RestoreProject = ({ itemId }: RestoreProjectProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm" className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" className="flex h-9 items-center gap-2 bg-secondary">
           <RotateCcw className="h-4 w-4" />
           <span className="sr-only sm:not-sr-only">Restore</span>
         </Button>
