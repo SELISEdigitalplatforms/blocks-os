@@ -12,7 +12,7 @@ interface DateRangeFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title: string;
   date: DateRange | undefined;
-  // eslint-disable-next-line no-unused-vars
+   
   onDateChange: (date: DateRange | undefined) => void;
 }
 export function DateRangeFilter<TData, TValue>({
