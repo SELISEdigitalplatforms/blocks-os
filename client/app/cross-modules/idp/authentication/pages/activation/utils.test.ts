@@ -8,7 +8,9 @@ describe("isAlreadyActivatedSignal", () => {
   });
 
   it("returns false for an unrelated invalid-code error", () => {
-    expect(isAlreadyActivatedSignal({ Invalid_ActivationCode: "The activation code is invalid" })).toBe(false);
+    expect(
+      isAlreadyActivatedSignal({ Invalid_ActivationCode: "The activation code is invalid" }),
+    ).toBe(false);
     expect(isAlreadyActivatedSignal("Invalid activation code")).toBe(false);
   });
 

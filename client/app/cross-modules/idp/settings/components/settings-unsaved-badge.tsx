@@ -4,4 +4,4 @@ export const SettingsUnsavedBadge = () => (
     <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-amber-500" />
     Unsaved
   </span>
-)
+);

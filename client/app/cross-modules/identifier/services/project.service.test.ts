@@ -1,5 +1,5 @@
-import { http } from "@/lib/http-client";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
+import { http } from "@/lib/http/http-client";
 import {
   CLOUD_BUILD_ENDPOINTS,
   DOMAIN_ENDPOINTS,
@@ -27,7 +27,7 @@ import {
 } from "../test-utils/__mocks__";
 import { ProjectService } from "./project.service";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("ProjectService", () => {
   let service: ProjectService;
@@ -61,13 +61,9 @@ describe("ProjectService", () => {
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(
-        new Error("Failed to fetch projects"),
-      );
+      vi.mocked(http.get).mockRejectedValue(new Error("Failed to fetch projects"));
 
-      await expect(service.getProjects(1, 10, "group")).rejects.toThrow(
-        "Failed to fetch projects",
-      );
+      await expect(service.getProjects(1, 10, "group")).rejects.toThrow("Failed to fetch projects");
     });
   });
 
@@ -86,13 +82,9 @@ describe("ProjectService", () => {
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(
-        new Error("Failed to fetch assets"),
-      );
+      vi.mocked(http.get).mockRejectedValue(new Error("Failed to fetch assets"));
 
-      await expect(service.getAssets("group")).rejects.toThrow(
-        "Failed to fetch assets",
-      );
+      await expect(service.getAssets("group")).rejects.toThrow("Failed to fetch assets");
     });
   });
 
@@ -105,10 +97,7 @@ describe("ProjectService", () => {
       const payload = { tenantGroupId: "group-1", resource: mockResource };
       const result = await service.addAssets(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        PROJECT_ENDPOINTS.ADD_ASSET,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.ADD_ASSET, payload);
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -129,22 +118,16 @@ describe("ProjectService", () => {
 
       const result = await service.getEnvRepositories();
 
-      expect(http.get).toHaveBeenCalledWith(
-        CLOUD_BUILD_ENDPOINTS.REPOS_LIST,
-        undefined,
-        {
-          absoluteUrl: true,
-        },
-      );
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPOS_LIST, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockGetEnvRepositoriesResponse);
     });
 
     it("should handle API errors", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Failed to fetch repos"));
 
-      await expect(service.getEnvRepositories()).rejects.toThrow(
-        "Failed to fetch repos",
-      );
+      await expect(service.getEnvRepositories()).rejects.toThrow("Failed to fetch repos");
     });
   });
 
@@ -167,10 +150,7 @@ describe("ProjectService", () => {
       };
       const result = await service.repoUpdate(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        CLOUD_BUILD_ENDPOINTS.REPO_UPDATE,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPO_UPDATE, payload);
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -251,17 +231,12 @@ describe("ProjectService", () => {
       const payload = { projectKey: "proj-key", cookieDomain: "test.com" };
       const result = await service.validateCNameProject(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        DOMAIN_ENDPOINTS.CONFIGURE,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(DOMAIN_ENDPOINTS.CONFIGURE, payload);
       expect(result).toEqual(mockValidateCNameResponse);
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.post).mockRejectedValue(
-        new Error("CNAME validation failed"),
-      );
+      vi.mocked(http.post).mockRejectedValue(new Error("CNAME validation failed"));
 
       await expect(
         service.validateCNameProject({
@@ -285,10 +260,7 @@ describe("ProjectService", () => {
       };
       const result = await service.updateProject(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        PROJECT_ENDPOINTS.UPDATE_PROJECT,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.UPDATE_PROJECT, payload);
       expect(result).toEqual(mockUpdateProjectResponse);
     });
 
@@ -314,19 +286,14 @@ describe("ProjectService", () => {
       const payload = { projectKey: "proj-key" };
       const result = await service.disableProject(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        PROJECT_ENDPOINTS.DISABLE,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.DISABLE, payload);
       expect(result).toEqual(mockDisableProjectResponse);
     });
 
     it("should handle API errors", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Disable failed"));
 
-      await expect(
-        service.disableProject({ projectKey: "key" }),
-      ).rejects.toThrow("Disable failed");
+      await expect(service.disableProject({ projectKey: "key" })).rejects.toThrow("Disable failed");
     });
   });
 
@@ -344,10 +311,7 @@ describe("ProjectService", () => {
       };
       const result = await service.initiateMigration(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        MIGRATION_ENDPOINTS.MIGRATE,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(MIGRATION_ENDPOINTS.MIGRATE, payload);
       expect(result).toEqual(mockMigrationInitiateResponse);
     });
 
@@ -377,10 +341,7 @@ describe("ProjectService", () => {
       };
       const result = await service.verifyMigration(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        MIGRATION_ENDPOINTS.VERIFY,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(MIGRATION_ENDPOINTS.VERIFY, payload);
       expect(result).toEqual(mockMigrationVerifyResponse);
     });
 
@@ -411,13 +372,9 @@ describe("ProjectService", () => {
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(
-        new Error("Migration status failed"),
-      );
+      vi.mocked(http.get).mockRejectedValue(new Error("Migration status failed"));
 
-      await expect(service.getMigrationStatus("group")).rejects.toThrow(
-        "Migration status failed",
-      );
+      await expect(service.getMigrationStatus("group")).rejects.toThrow("Migration status failed");
     });
   });
 
@@ -438,17 +395,12 @@ describe("ProjectService", () => {
       };
       const result = await service.savePublicCertificate(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        PROJECT_ENDPOINTS.UPDATE_TOKEN_VALIDATION,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.UPDATE_TOKEN_VALIDATION, payload);
       expect(result).toEqual(mockUpdateProjectResponse);
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.post).mockRejectedValue(
-        new Error("Save certificate failed"),
-      );
+      vi.mocked(http.post).mockRejectedValue(new Error("Save certificate failed"));
 
       await expect(
         service.savePublicCertificate({
@@ -470,8 +422,7 @@ describe("ProjectService", () => {
     it("should call correct endpoint with projectKey", async () => {
       vi.mocked(http.get).mockResolvedValue(mockPublicCertificateResponse);
 
-      const result =
-        await service.getPublicCertificateInformation("proj-key-1");
+      const result = await service.getPublicCertificateInformation("proj-key-1");
 
       expect(http.get).toHaveBeenCalledWith(
         `${PROJECT_ENDPOINTS.GET_TOKEN_VALIDATION}?ProjectKey=proj-key-1`,
@@ -488,13 +439,11 @@ describe("ProjectService", () => {
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(
-        new Error("Certificate fetch failed"),
-      );
+      vi.mocked(http.get).mockRejectedValue(new Error("Certificate fetch failed"));
 
-      await expect(
-        service.getPublicCertificateInformation("key"),
-      ).rejects.toThrow("Certificate fetch failed");
+      await expect(service.getPublicCertificateInformation("key")).rejects.toThrow(
+        "Certificate fetch failed",
+      );
     });
   });
 
@@ -548,9 +497,7 @@ describe("ProjectService", () => {
         json: () => Promise.resolve({}),
       } as Response);
 
-      const result = await service.validateJwksUrl(
-        "https://example.com/not-json",
-      );
+      const result = await service.validateJwksUrl("https://example.com/not-json");
 
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("Invalid");
@@ -563,9 +510,7 @@ describe("ProjectService", () => {
         json: () => Promise.resolve({ notKeys: [] }),
       } as Response);
 
-      const result = await service.validateJwksUrl(
-        "https://example.com/bad-jwks",
-      );
+      const result = await service.validateJwksUrl("https://example.com/bad-jwks");
 
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("Invalid");
@@ -578,9 +523,7 @@ describe("ProjectService", () => {
         json: () => Promise.resolve({ keys: [] }),
       } as Response);
 
-      const result = await service.validateJwksUrl(
-        "https://example.com/empty-keys",
-      );
+      const result = await service.validateJwksUrl("https://example.com/empty-keys");
 
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("Invalid");
@@ -589,9 +532,7 @@ describe("ProjectService", () => {
     it("should return isValid false on network error", async () => {
       vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
 
-      const result = await service.validateJwksUrl(
-        "https://unreachable.com/jwks",
-      );
+      const result = await service.validateJwksUrl("https://unreachable.com/jwks");
 
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("Invalid");
@@ -612,13 +553,9 @@ describe("ProjectService", () => {
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(
-        new Error("JWT claim fetch failed"),
-      );
+      vi.mocked(http.get).mockRejectedValue(new Error("JWT claim fetch failed"));
 
-      await expect(service.getJwtClaim()).rejects.toThrow(
-        "JWT claim fetch failed",
-      );
+      await expect(service.getJwtClaim()).rejects.toThrow("JWT claim fetch failed");
     });
   });
 
@@ -637,17 +574,12 @@ describe("ProjectService", () => {
       };
       const result = await service.addJwtClaim(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
-        PROJECT_ENDPOINTS.SAVE_JWT_CLAIMS,
-        payload,
-      );
+      expect(http.post).toHaveBeenCalledWith(PROJECT_ENDPOINTS.SAVE_JWT_CLAIMS, payload);
       expect(result).toEqual(mockSuccessResponse);
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.post).mockRejectedValue(
-        new Error("JWT claim save failed"),
-      );
+      vi.mocked(http.post).mockRejectedValue(new Error("JWT claim save failed"));
 
       await expect(
         service.addJwtClaim({
@@ -669,16 +601,12 @@ describe("ProjectService", () => {
 
       const result = await service.getSubscriptionUsage("proj-key-1");
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${SUBSCRIPTION_ENDPOINTS.GETS}?projectKey=proj-key-1`,
-      );
+      expect(http.get).toHaveBeenCalledWith(`${SUBSCRIPTION_ENDPOINTS.GETS}?projectKey=proj-key-1`);
       expect(result).toEqual(mockGetSubscriptionUsageResponse);
     });
 
     it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(
-        new Error("Subscription usage failed"),
-      );
+      vi.mocked(http.get).mockRejectedValue(new Error("Subscription usage failed"));
 
       await expect(service.getSubscriptionUsage("key")).rejects.toThrow(
         "Subscription usage failed",

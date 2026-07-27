@@ -299,7 +299,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                       <FormItem>
                         <FormLabel className="text-left font-medium text-high-emphasis">
                           {" "}
-                          {isInbound ? "Server Name" : "Host"} <span className="text-destructive">*</span>
+                          {isInbound ? "Server Name" : "Host"}{" "}
+                          <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -391,7 +392,8 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                         <FormItem>
                           <FormLabel className="text-left font-medium text-high-emphasis">
                             {" "}
-                            {isInbound ? "Username" : "Sender Username"} <span className="text-destructive">*</span>
+                            {isInbound ? "Username" : "Sender Username"}{" "}
+                            <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input

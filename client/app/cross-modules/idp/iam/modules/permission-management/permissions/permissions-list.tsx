@@ -1,10 +1,7 @@
 import { FilterControls } from "@/components/filter-toolbar";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  ScrollArea,
-  ScrollBar,
-} from "@/components/ui-kits/scroll-area/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
@@ -22,12 +19,7 @@ import {
   PermissionSeverityLevel,
   ResourceType,
 } from "@blocks-idp/iam/models/permission";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -43,14 +35,8 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-export const PermissionSeverityBadge = ({
-  severity,
-}: {
-  severity: PermissionSeverityLevel;
-}) => {
-  const config = PERMISSION_SEVERITY_OPTIONS.find(
-    (option) => option.value === severity,
-  );
+export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeverityLevel }) => {
+  const config = PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === severity);
   if (!config) return null;
   return (
     <Badge variant={config.variant} className={cn(config.className, config.bg)}>
@@ -58,12 +44,8 @@ export const PermissionSeverityBadge = ({
     </Badge>
   );
 };
-export const PermissionsList = ({
-  permissions,
-  isLoading,
-}: PermissionTableProps) => {
-  const { sortQueryParams, setSortQueryParams } =
-    usePermissionsSortQuaryParams();
+export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps) => {
+  const { sortQueryParams, setSortQueryParams } = usePermissionsSortQuaryParams();
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const columns = useMemo<ColumnDef<IPermission>[]>(
@@ -82,7 +64,8 @@ export const PermissionsList = ({
         cell: (permission) => (
           <div
             className="flex w-[200px] items-center break-all"
-            title={permission.row.original.name}>
+            title={permission.row.original.name}
+          >
             <span>{permission.row.original.name}</span>
           </div>
         ),
@@ -121,7 +104,8 @@ export const PermissionsList = ({
                 permission.row.original.isBuiltIn
                   ? "!bg-gray-300 !text-gray-800"
                   : "!bg-purple-100 !text-purple-700",
-              )}>
+              )}
+            >
               {permission.row.original.isBuiltIn ? "Built In" : "Custom"}
             </Badge>
           </div>
@@ -161,9 +145,7 @@ export const PermissionsList = ({
         cell: (permission) => {
           return (
             <div className="flex w-[70px] items-center justify-center">
-              <PermissionSeverityBadge
-                severity={permission.row.original.permissionSeverity}
-              />
+              <PermissionSeverityBadge severity={permission.row.original.permissionSeverity} />
             </div>
           );
         },
@@ -174,9 +156,7 @@ export const PermissionsList = ({
         header: () => {
           return (
             <div className="flex items-center">
-              <span className="font-bold text-medium-emphasis">
-                No of Roles
-              </span>
+              <span className="font-bold text-medium-emphasis">No of Roles</span>
             </div>
           );
         },
@@ -263,19 +243,12 @@ export const PermissionsList = ({
       <Table className="text-sm ">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow
-              key={headerGroup.id}
-              className="px-4 py-3 hover:bg-transparent">
+            <TableRow key={headerGroup.id} className="px-4 py-3 hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className="font-bold text-medium-emphasis">
+                <TableHead key={header.id} className="font-bold text-medium-emphasis">
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -288,11 +261,10 @@ export const PermissionsList = ({
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 onClick={() => {
-                  navigate(
-                    scoped(`idp/permission-detail/${row.original.itemId}`),
-                  );
+                  navigate(scoped(`idp/permission-detail/${row.original.itemId}`));
                 }}
-                isHoverable>
+                isHoverable
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -304,7 +276,8 @@ export const PermissionsList = ({
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground">
+                className="h-24 text-center text-muted-foreground"
+              >
                 No permission found. Please create new permission.
               </TableCell>
             </TableRow>

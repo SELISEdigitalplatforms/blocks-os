@@ -22,17 +22,16 @@ describe("use-magic-url-config hooks", () => {
 
   describe("magicUrlConfigsQueryKey", () => {
     it("builds a stable key with a default empty search text", () => {
-      expect(
-        magicUrlConfigsQueryKey({ projectKey: "pk", page: 1, pageSize: 10 } as never),
-      ).toEqual(["magic-url-configs", "pk", 1, 10, ""]);
+      expect(magicUrlConfigsQueryKey({ projectKey: "pk", page: 1, pageSize: 10 } as never)).toEqual(
+        ["magic-url-configs", "pk", 1, 10, ""],
+      );
     });
   });
 
   it("useGetMagicUrlConfigs is disabled without a project key", () => {
-    const { result } = renderHook(
-      () => useGetMagicUrlConfigs({ projectKey: "" } as never),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useGetMagicUrlConfigs({ projectKey: "" } as never), {
+      wrapper: createWrapper(),
+    });
     expect(result.current.fetchStatus).toBe("idle");
   });
 
@@ -69,8 +68,6 @@ describe("use-magic-url-config hooks", () => {
       wrapper: createWrapper(),
     });
     await result.current.mutateAsync("c-1");
-    expect(vi.mocked(magicUrlConfigService.deleteMagicUrlConfig).mock.calls[0][0]).toBe(
-      "c-1",
-    );
+    expect(vi.mocked(magicUrlConfigService.deleteMagicUrlConfig).mock.calls[0][0]).toBe("c-1");
   });
 });

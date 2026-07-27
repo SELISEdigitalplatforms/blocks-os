@@ -1,9 +1,5 @@
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui-kits/popover/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { Shield, ShieldCheck } from "lucide-react";
 type SecurityPresetsPopoverProps = {
   onEnableAllMfa: () => void;
@@ -16,11 +12,7 @@ export const SecurityPresetsPopover = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 px-2 sm:px-3 font-medium"
-        >
+        <Button variant="outline" size="sm" className="gap-1.5 px-2 sm:px-3 font-medium">
           <Shield className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden lg:inline">Security Presets</span>
         </Button>

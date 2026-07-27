@@ -20,9 +20,7 @@ export const EmailUsageDetailsBreadcrumb = ({
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const backLink = scoped(
-    isInbound
-      ? "email-management?emailTab=Inbox"
-      : "email-management?emailTab=Outgoingmails",
+    isInbound ? "email-management?emailTab=Inbox" : "email-management?emailTab=Outgoingmails",
   );
   return (
     <Breadcrumb>

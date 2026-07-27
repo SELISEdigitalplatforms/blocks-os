@@ -31,18 +31,12 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return { ...actual, useNavigate: () => navigate };
 });
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (path: string) => `/app/tenant-1/${path}`,
 }));
 
 vi.mock("./delete-sso-role", () => ({
-  DeleteSSORole: ({
-    role,
-    onDelete,
-  }: {
-    role: IRole;
-    onDelete: (role: IRole) => void;
-  }) => (
+  DeleteSSORole: ({ role, onDelete }: { role: IRole; onDelete: (role: IRole) => void }) => (
     <button type="button" onClick={() => onDelete(role)}>
       delete-{role.slug}
     </button>

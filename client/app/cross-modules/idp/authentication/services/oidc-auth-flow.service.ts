@@ -3,10 +3,7 @@ import { showErrorToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { AUTH_OIDC_ENDPOINTS, OIDC_FLOW_ENDPOINTS } from "../constants/endpoint.constant";
 import { ACCOUNT_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
-export {
-  redirectToLogin,
-  buildNavigationUrl,
-} from "../utils/oidc-navigation.util";
+export { redirectToLogin, buildNavigationUrl } from "../utils/oidc-navigation.util";
 
 interface IGetOidcPayload {
   projectKey: string;
@@ -51,9 +48,7 @@ interface IAccountRecoverResponse {
   [key: string]: any;
 }
 
-export const refreshAccessToken = async (
-  projectKey: string,
-): Promise<string | null> => {
+export const refreshAccessToken = async (projectKey: string): Promise<string | null> => {
   try {
     const oidcAuthStorage = localStorage.getItem("oidc-auth-storage");
     if (!oidcAuthStorage) {

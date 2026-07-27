@@ -1,8 +1,8 @@
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 
 type ConfigLoadingStateProps = {
-  fieldCount?: number
-}
+  fieldCount?: number;
+};
 
 export const ConfigLoadingState = ({ fieldCount = 6 }: ConfigLoadingStateProps) => (
   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-y-8 lg:grid-cols-3">
@@ -13,4 +13,4 @@ export const ConfigLoadingState = ({ fieldCount = 6 }: ConfigLoadingStateProps) 
       </div>
     ))}
   </div>
-)
+);

@@ -23,7 +23,7 @@ vi.stubGlobal(
 );
 
 const h = vi.hoisted(() => ({ setAuthenticated: vi.fn() }));
-vi.mock("@/store/useAuthStore", () => ({
+vi.mock("@seliseblocks/blocks-kit/store", () => ({
   useAuthStore: () => ({ setAuthenticated: h.setAuthenticated }),
 }));
 const setAuthenticated = h.setAuthenticated;
@@ -87,9 +87,7 @@ describe("SsoCallbackPage (auth/sso-callback)", () => {
     fetchMock.mockResolvedValue({ ok: false });
     renderAt("?code=abc&state=xyz");
 
-    await waitFor(() =>
-      expect(window.location.href).toBe("/login?error=callback_failed"),
-    );
+    await waitFor(() => expect(window.location.href).toBe("/login?error=callback_failed"));
     expect(setAuthenticated).not.toHaveBeenCalled();
   });
 
@@ -97,8 +95,6 @@ describe("SsoCallbackPage (auth/sso-callback)", () => {
     fetchMock.mockRejectedValue(new Error("boom"));
     renderAt("?code=abc&state=xyz");
 
-    await waitFor(() =>
-      expect(window.location.href).toBe("/login?error=callback_error"),
-    );
+    await waitFor(() => expect(window.location.href).toBe("/login?error=callback_error"));
   });
 });

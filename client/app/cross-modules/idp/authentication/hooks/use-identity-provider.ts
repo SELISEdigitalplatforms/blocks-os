@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { identityProviderService } from "@blocks-idp/authentication/services/identity-provider.service";
-import { IdentityProvider, UpdateStatusRequest } from "@blocks-idp/authentication/models/identity-provider.model";
+import {
+  IdentityProvider,
+  UpdateStatusRequest,
+} from "@blocks-idp/authentication/models/identity-provider.model";
 
 const QUERY_KEY = ["identity-providers"] as const;
 

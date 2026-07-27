@@ -26,4 +26,12 @@ export interface IValidateCnameProjectPayload {
   cookieDomain: string;
 }
 
+export interface IRestoreProjectPayload {
+  itemId: string;
+}
+export interface IRestoreProjectResponse {
+  errors: unknown | null;
+  isSuccess: boolean;
+}
+
 export type { IProject };

@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
@@ -17,12 +12,7 @@ import {
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import { useGetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -61,9 +51,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
             <span className="font-bold text-medium-emphasis">Name</span>
           </div>
         ),
-        cell: (roles) => (
-          <div className="w-[130px] truncate">{roles.row.original.name}</div>
-        ),
+        cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
       },
       {
         id: "slug",
@@ -90,9 +78,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
           </div>
         ),
         cell: (roles) => (
-          <div className="w-[200px] truncate md:w-[260px]">
-            {roles.row.original.description}
-          </div>
+          <div className="w-[200px] truncate md:w-[260px]">{roles.row.original.description}</div>
         ),
       },
     ],
@@ -135,10 +121,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
                       <TableHead key={header.id}>
                         {header.isPlaceholder
                           ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
+                          : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     )),
                   )}
@@ -149,7 +132,8 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
                 <TableRow>
                   <TableCell
                     colSpan={columns.length}
-                    className="h-24 text-center text-muted-foreground">
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     No roles found. Please create new roles.
                   </TableCell>
                 </TableRow>
@@ -158,13 +142,11 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
                   <TableRow
                     key={row.id}
                     className="cursor-pointer"
-                    onClick={() => onRowClickHandler(row.original.itemId)}>
+                    onClick={() => onRowClickHandler(row.original.itemId)}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>

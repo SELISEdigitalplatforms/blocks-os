@@ -40,7 +40,7 @@ vi.mock("@blocks-idp/iam/services/user.service", () => {
 });
 
 const mockSetUser = vi.fn();
-vi.mock("@/store/useAuthStore", () => ({
+vi.mock("@seliseblocks/blocks-kit/store", () => ({
   useAuthStore: vi.fn(() => ({ setUser: mockSetUser, user: undefined })),
 }));
 

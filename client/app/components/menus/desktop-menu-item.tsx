@@ -1,22 +1,22 @@
-import { useMemo } from "react"
-import { Link, useLocation } from "react-router-dom"
-import { ChevronRight } from "lucide-react"
-import { Badge } from "@/components/ui-kits/badge/badge"
-import { SidebarCollapsedTooltip } from "@/components/menus/sidebar-collapsed-tooltip"
-import { cn } from "@/lib/utils"
-import { Menu } from "@/models/menu-models"
+import { useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { SidebarCollapsedTooltip } from "@/components/menus/sidebar-collapsed-tooltip";
+import { cn } from "@/lib/utils";
+import { Menu } from "@/models/menu-models";
 
-type MenuItemType = Extract<Menu, { type: "menu" }>
+type MenuItemType = Extract<Menu, { type: "menu" }>;
 
 type ChildMenuItemProps = {
-  menu: MenuItemType
-}
+  menu: MenuItemType;
+};
 
 const ChildMenuItem = ({ menu }: ChildMenuItemProps) => {
-  const { pathname } = useLocation()
+  const { pathname } = useLocation();
   const isActiveMenu =
     pathname.startsWith(menu.path) ||
-    (menu.path === "/app/idp/roles" && pathname.startsWith("/app/idp/role-detail"))
+    (menu.path === "/app/idp/roles" && pathname.startsWith("/app/idp/role-detail"));
 
   return (
     <Link
@@ -30,37 +30,45 @@ const ChildMenuItem = ({ menu }: ChildMenuItemProps) => {
       {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
       <span>{menu.name}</span>
     </Link>
-  )
-}
+  );
+};
 
-export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; isSidebarOpen: boolean }) {
-  const { pathname } = useLocation()
+export function DesktopMenuItem({
+  menu,
+  isSidebarOpen,
+}: {
+  menu: MenuItemType;
+  isSidebarOpen: boolean;
+}) {
+  const { pathname } = useLocation();
 
   const isActiveMenu = useMemo(() => {
-    const allPaths = [menu.path]
+    const allPaths = [menu.path];
     if (menu.children) {
       menu.children.forEach((child) => {
         if (child.type === "menu") {
-          allPaths.push(child.path)
+          allPaths.push(child.path);
         }
-      })
+      });
     }
-    return allPaths.some((item) => pathname.startsWith(item)) ||
+    return (
+      allPaths.some((item) => pathname.startsWith(item)) ||
       (pathname.startsWith("/app/idp/role-detail") &&
         menu.children?.some((child) => child.type === "menu" && child.path === "/app/idp/roles"))
-  }, [menu.children, menu.path, pathname])
+    );
+  }, [menu.children, menu.path, pathname]);
 
-  const hasChildren = Boolean(menu.children?.length)
+  const hasChildren = Boolean(menu.children?.length);
 
   if (menu.type !== "menu") {
-    return null
+    return null;
   }
 
   const baseClasses = cn(
     "relative flex h-10 w-full cursor-pointer items-center gap-3 p-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
     isSidebarOpen ? "px-4" : "justify-center px-0",
     isActiveMenu && "!text-primary",
-  )
+  );
 
   if (!hasChildren) {
     return (
@@ -89,10 +97,12 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
               </span>
             ) : null}
           </Link>
-          {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+          {isActiveMenu ? (
+            <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
+          ) : null}
         </div>
       </SidebarCollapsedTooltip>
-    )
+    );
   }
 
   return (
@@ -114,11 +124,15 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
         ) : null}
       </div>
       {isSidebarOpen ? <ChevronRight className="ml-auto h-4 w-4" /> : null}
-      {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+      {isActiveMenu ? (
+        <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
+      ) : null}
 
       <div className="absolute left-full top-0 z-10 hidden w-64 min-w-64 flex-col rounded-sm border border-border bg-background py-2 text-[hsl(var(--low-emphasis))] group-hover:flex">
         {menu.children
-          ?.filter((subMenu): subMenu is MenuItemType => subMenu.type === "menu" && !subMenu.disabled)
+          ?.filter(
+            (subMenu): subMenu is MenuItemType => subMenu.type === "menu" && !subMenu.disabled,
+          )
           .map((subMenu) => (
             <ChildMenuItem key={subMenu.id} menu={subMenu} />
           ))}
@@ -126,5 +140,5 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
 
       <div className="absolute left-full top-0 hidden h-full w-1 bg-transparent group-hover:block" />
     </div>
-  )
+  );
 }

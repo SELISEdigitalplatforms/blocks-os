@@ -1,8 +1,5 @@
 import React, { useMemo } from "react";
-import {
-  ScrollArea,
-  ScrollBar,
-} from "@/components/ui-kits/scroll-area/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 import {
   Table,
   TableBody,
@@ -11,12 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { formatDate, parseDateString } from "@/lib/utils";
 import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
@@ -48,17 +40,11 @@ type MagicUrlsListProps = {
   isLoading: boolean;
 };
 
-export function MagicUrlsList({
-  configurations,
-  isLoading,
-}: MagicUrlsListProps) {
-  const { mutateAsync: deleteConfig, isPending: isDeleting } =
-    useDeleteMagicUrlConfig();
-  const [itemToDelete, setItemToDelete] =
-    React.useState<IMagicUrlConfig | null>(null);
+export function MagicUrlsList({ configurations, isLoading }: MagicUrlsListProps) {
+  const { mutateAsync: deleteConfig, isPending: isDeleting } = useDeleteMagicUrlConfig();
+  const [itemToDelete, setItemToDelete] = React.useState<IMagicUrlConfig | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
-  const [selectedConfig, setSelectedConfig] =
-    React.useState<IMagicUrlConfig | null>(null);
+  const [selectedConfig, setSelectedConfig] = React.useState<IMagicUrlConfig | null>(null);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
 
   const handleEditConfig = (config: IMagicUrlConfig) => {
@@ -93,12 +79,8 @@ export function MagicUrlsList({
         accessorKey: "shortUrlBase",
         header: "Short URL Base",
         cell: ({ row }) => (
-          <CopyToClipboardButton
-            textToCopy={row.original.shortUrlBase}
-            isHoverable>
-            <span className="truncate font-medium">
-              {row.original.shortUrlBase || "-"}
-            </span>
+          <CopyToClipboardButton textToCopy={row.original.shortUrlBase} isHoverable>
+            <span className="truncate font-medium">{row.original.shortUrlBase || "-"}</span>
           </CopyToClipboardButton>
         ),
       },
@@ -106,8 +88,7 @@ export function MagicUrlsList({
         accessorKey: "lastUpdatedDate",
         header: "Last Updated",
         cell: ({ row }) => {
-          const dateStr =
-            row.original.lastUpdatedDate || row.original.createdDate;
+          const dateStr = row.original.lastUpdatedDate || row.original.createdDate;
           if (!dateStr) return <span>-</span>;
           return <span>{formatDate(parseDateString(dateStr))}</span>;
         },
@@ -130,7 +111,8 @@ export function MagicUrlsList({
                   onClick={(e) => {
                     e.stopPropagation();
                     handleEditConfig(row.original);
-                  }}>
+                  }}
+                >
                   <Pencil className="mr-2 h-4 w-4" />
                   <span>Edit</span>
                 </DropdownMenuItem>
@@ -141,7 +123,8 @@ export function MagicUrlsList({
                     e.stopPropagation();
                     setItemToDelete(row.original);
                     setIsDeleteModalOpen(true);
-                  }}>
+                  }}
+                >
                   <Trash className="mr-2 h-4 w-4" />
                   <span>Delete</span>
                 </DropdownMenuItem>
@@ -168,19 +151,12 @@ export function MagicUrlsList({
         <Table className="text-sm">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-                className="px-4 py-2 hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="px-4 py-2 hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className="font-bold text-medium-emphasis">
+                  <TableHead key={header.id} className="font-bold text-medium-emphasis">
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -192,7 +168,8 @@ export function MagicUrlsList({
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 className="text-medium-emphasis"
-                isHoverable>
+                isHoverable
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

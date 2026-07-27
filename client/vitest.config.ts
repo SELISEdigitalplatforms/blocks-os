@@ -11,22 +11,10 @@ export default defineConfig({
       "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
       "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
       "@blocks-storage": path.resolve(__dirname, "./app/cross-modules/storage"),
-      "@blocks-communication": path.resolve(
-        __dirname,
-        "./app/cross-modules/communication",
-      ),
-      "@blocks-identifier": path.resolve(
-        __dirname,
-        "./app/cross-modules/identifier",
-      ),
-      "@blocks-localization": path.resolve(
-        __dirname,
-        "./app/cross-modules/localization",
-      ),
-      "@blocks-utilities": path.resolve(
-        __dirname,
-        "./app/cross-modules/utilities",
-      ),
+      "@blocks-communication": path.resolve(__dirname, "./app/cross-modules/communication"),
+      "@blocks-identifier": path.resolve(__dirname, "./app/cross-modules/identifier"),
+      "@blocks-localization": path.resolve(__dirname, "./app/cross-modules/localization"),
+      "@blocks-utilities": path.resolve(__dirname, "./app/cross-modules/utilities"),
       "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
     },
   },
@@ -34,6 +22,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
+    // jsdom test files accumulate memory within a worker as more files run in
+    // it; recycle the worker once it grows past this instead of running it
+    // until it hits Node's default heap ceiling and crashes mid-suite.
+    vmMemoryLimit: "1GB",
     coverage: {
       provider: "v8",
       include: ["app/**/*.{ts,tsx}"],

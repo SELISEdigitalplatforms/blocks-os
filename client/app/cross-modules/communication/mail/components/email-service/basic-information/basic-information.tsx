@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useState } from "react";
+import React, { forwardRef, useImperativeHandle, useState, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Input } from "@/components/ui-kits/input/input";
 import {
@@ -22,12 +22,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+
 interface IBasicInformationProps {
   // eslint-disable-next-line no-unused-vars
   onSubmit(data: unknown): void;
   templateData: IEmailTemplate;
   onValidityChange?: (isValid: boolean) => void;
+  actions?: ReactNode;
 }
+
 const schema = z.object({
   mailConfigurationId: z.string().min(1, { message: "MailConfiguration is required" }),
   language: z.string().min(1, { message: "Language is required" }),
@@ -44,15 +48,42 @@ const schema = z.object({
       message: "Subject cannot contain only whitespace",
     }),
 });
+
+const RequiredMark = () => (
+  <span className="text-destructive" aria-hidden="true">
+    *
+  </span>
+);
+
+const BasicInformationSkeleton = () => (
+  <Card className="w-full rounded-sm shadow-none" aria-busy="true" aria-label="Loading form">
+    <CardHeader className="space-y-2 px-6 py-5">
+      <div className="flex items-start justify-between gap-4">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-10 w-36 shrink-0" />
+      </div>
+      <Skeleton className="h-4 w-80 max-w-full" />
+    </CardHeader>
+    <CardContent className="px-6 pb-6 pt-0">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="grid gap-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
 const BasicInformation = forwardRef(function Inner(
-  { onSubmit, templateData, onValidityChange }: IBasicInformationProps,
+  { onSubmit, templateData, onValidityChange, actions }: IBasicInformationProps,
   ref,
 ) {
   const { isLoading: isLanguageListLoading, data: languageListData } = useGetLanguages();
   const [filterData] = useState({ pageNumber: 0, pageSize: 10 });
   const { isLoading, data } = useGetEmailConfigs(filterData.pageNumber, filterData.pageSize);
-  // const { getEmailConfigs, isPending } = useGetEmailConfigs();
-  // const [mailConfigs, setData] = useState<IEmailConfig[]>([]);
   const form = useForm<IEmailTemplate>({
     defaultValues: {
       itemId: templateData.itemId,
@@ -66,216 +97,160 @@ const BasicInformation = forwardRef(function Inner(
     mode: "onChange",
     reValidateMode: "onChange",
   });
-  // Notify parent of form validity changes
+
   React.useEffect(() => {
     onValidityChange?.(form.formState.isValid);
   }, [form.formState.isValid, onValidityChange]);
-  useImperativeHandle(ref, () => {
-    return {
+
+  useImperativeHandle(
+    ref,
+    () => ({
       submit() {
-        // console.log("submit");
         form.handleSubmit(onSubmit)();
       },
       isValid: form.formState.isValid,
-    };
-  }, [form.formState.isValid]);
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const response = await getEmailConfigs();
-  //       setData(response);
-  //       console.log(mailConfigs);
-  //     }
-  //     catch (err) {
-  //       console.error("Fetch error:", err);
-  //       //setError(err instanceof Error ? err.message : "An error occurred while fetching data");
-  //     }
-  //     // finally {
-  //     //   setLoading(false);
-  //     // }
-  //   };
-  //   if (tenantId && tenantId !== "") {
-  //     fetchData();
-  //   }
-  // }, [tenantId]);
+    }),
+    [form.formState.isValid, form, onSubmit],
+  );
+
+  if (isLoading || isLanguageListLoading || !data) {
+    return <BasicInformationSkeleton />;
+  }
+
   return (
-    <div className="w-full max-w-4xl text-left">
-      {data && !isLoading && !isLanguageListLoading && (
-        <Card className="rounded-sm shadow-none">
-          <Form {...form}>
-            {" "}
-            <form>
-              <CardHeader>
-                <CardTitle className="text-lg">About the Template</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FormField
-                      name="name"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            {" "}
-                            Name *
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Enter name"
-                              className="border-default col-span-3 mt-1 border shadow-none"
-                              {...field}
-                              onKeyDown={(e) => {
-                                if (e.key === " " || e.key === "_") {
-                                  e.preventDefault();
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    {/* <Label htmlFor="id" className="text-left font-medium text-high-emphasis">
-                    Email Configuration
-                  </Label>
-                  <Input
-                    id="emailConfig"
-                    placeholder="Select configuration"
-                    className="border-default col-span-3 border shadow-none"
-                  /> */}
-                    <FormField
-                      control={form.control}
-                      name="mailConfigurationId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            Email Configuration *
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue placeholder="Select Configuration" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {data
-                                .filter((config) => !config.isInbound)
-                                .map((config) => (
-                                  <SelectItem key={config.itemId} value={config.itemId}>
-                                    {config.name}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    {/* <Label htmlFor="language" className="text-left font-medium text-high-emphasis">
-                    Language
-                  </Label>
-                  <Select>
-                    <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="english">English</SelectItem>
-                      <SelectItem value="spanish">Spanish</SelectItem>
-                      <SelectItem value="french">French</SelectItem>
-                      <SelectItem value="german">German</SelectItem>
-                    </SelectContent>
-                  </Select> */}
-                    <FormField
-                      control={form.control}
-                      name="language"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-left font-medium text-high-emphasis">
-                            Language *
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                <SelectValue placeholder="Select language" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {(languageListData ?? []).map((language) => (
-                                <SelectItem
-                                  key={language.languageCode}
-                                  value={language.languageCode}
-                                >
-                                  {language.languageName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-2">
-                  {/* <Label htmlFor="subject">Subject</Label>
-                <Input id="subject" placeholder="Enter subject" /> */}
-                  <FormField
-                    name="templateSubject"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left font-medium text-high-emphasis">
-                          {" "}
-                          Subject *
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter subject"
-                            className="border-default col-span-3 mt-1 border shadow-none"
-                            {...field}
-                            onBlur={(e) => {
-                              field.onChange(e.target.value.trim());
-                              field.onBlur();
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </CardContent>
-              {/* <CardHeader className="mt-[-30px]">
-              <CardTitle className="text-lg">Content</CardTitle>
-            </CardHeader>
-            <div
-              className={`3xl:grid-cols-5 mx-6 mb-5 grid grid-cols-2 gap-8 text-center sm:gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3 lg:gap-0 xl:grid-cols-5 xl:gap-40 2xl:grid-cols-7 2xl:gap-20`}
-            >
-              <Card className="w-30 h-30 rounded-sm shadow-none lg:h-40 lg:w-40">
-                <div className="mt-4 flex flex-col items-center justify-center text-primary sm:mt-6">
-                  <Plus size={useIsMobile() ? 32 : 64} strokeWidth={0.8} />
-                  <h3 className="mt-4 text-sm sm:mt-6 sm:text-base">New Template</h3>
-                </div>
-              </Card>
-              <Card className="w-30 h-30 rounded-sm shadow-none sm:ml-4 md:ml-0 lg:h-40 lg:w-40">
-                <div className="mt-4 flex flex-col items-center justify-center text-primary sm:mt-6">
-                  <LayoutTemplate size={useIsMobile() ? 32 : 64} strokeWidth={0.8} />
-                  <h3 className="my-4 text-sm sm:mt-6 sm:text-base">Browse Templates</h3>
-                </div>
-              </Card>
-            </div> */}
-            </form>
-          </Form>
-        </Card>
-      )}
-    </div>
+    <Card className="w-full rounded-sm shadow-none">
+      <Form {...form}>
+        <form className="flex h-full flex-col">
+          <CardHeader className="space-y-1 px-6 pb-4 pt-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-lg">About the Template</CardTitle>
+              {actions ? <div className="flex shrink-0">{actions}</div> : null}
+            </div>
+            <p className="text-sm font-normal text-low-emphasis">
+              Set the template identity, delivery configuration, and subject line before designing
+              the email body.
+            </p>
+          </CardHeader>
+          <CardContent className="flex-1 px-6 pb-6 pt-0">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+              <FormField
+                name="name"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium text-high-emphasis">
+                      Name <RequiredMark />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter name"
+                        className="border-default shadow-none"
+                        aria-required="true"
+                        {...field}
+                        onKeyDown={(e) => {
+                          if (e.key === " " || e.key === "_") {
+                            e.preventDefault();
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="mailConfigurationId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium text-high-emphasis">
+                      Email Configuration <RequiredMark />
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger
+                          className="border-default h-10 shadow-none"
+                          aria-required="true"
+                        >
+                          <SelectValue placeholder="Select Configuration" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {data
+                          .filter((config) => !config.isInbound)
+                          .map((config) => (
+                            <SelectItem key={config.itemId} value={config.itemId}>
+                              {config.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="language"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium text-high-emphasis">
+                      Language <RequiredMark />
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger
+                          className="border-default h-10 shadow-none"
+                          aria-required="true"
+                        >
+                          <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(languageListData ?? []).map((language) => (
+                          <SelectItem key={language.languageCode} value={language.languageCode}>
+                            {language.languageName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                name="templateSubject"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2 xl:col-span-3">
+                    <FormLabel className="font-medium text-high-emphasis">
+                      Subject <RequiredMark />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter subject"
+                        className="border-default shadow-none"
+                        aria-required="true"
+                        {...field}
+                        onBlur={(e) => {
+                          field.onChange(e.target.value.trim());
+                          field.onBlur();
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </form>
+      </Form>
+    </Card>
   );
 });
+
 export default BasicInformation;

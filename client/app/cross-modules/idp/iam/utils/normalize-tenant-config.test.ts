@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 import {
   mapOrganizationConfigFromApi,
   mapSignUpSettingFromApi,
-} from "@blocks-idp/iam/utils/normalize-tenant-config"
+} from "@blocks-idp/iam/utils/normalize-tenant-config";
 
 describe("normalize-tenant-config", () => {
   it("maps organization config from PascalCase API keys", () => {
@@ -28,8 +28,8 @@ describe("normalize-tenant-config", () => {
       consentForMultiOrgEnable: true,
       defaultRoleOnOrgCreation: ["member"],
       defaultPermissionOnOrgCreation: ["read"],
-    })
-  })
+    });
+  });
 
   it("maps organization config from camelCase API keys with plural role fields", () => {
     expect(
@@ -57,8 +57,8 @@ describe("normalize-tenant-config", () => {
       defaultPermissionOnOrgCreation: ["read"],
       keepOrgRolesSameAsDefaultRoles: false,
       keepOrgPermissionsSameAsDefaultPermissions: true,
-    })
-  })
+    });
+  });
 
   it("does not infer consent from isMultiOrgEnabled when consent is false", () => {
     expect(
@@ -75,8 +75,8 @@ describe("normalize-tenant-config", () => {
       itemId: "6daed74c-976c-460e-8ec4-a34186f58452",
       isMultiOrgEnabled: true,
       consentForMultiOrgEnable: false,
-    })
-  })
+    });
+  });
 
   it("maps signup settings from camelCase API keys", () => {
     expect(
@@ -94,8 +94,8 @@ describe("normalize-tenant-config", () => {
       isSSoSignUpEnabled: false,
       defaultRolesForNewUser: ["user"],
       defaultPermissionsForNewUser: ["view"],
-    })
-  })
+    });
+  });
 
   it("computes isSignUpEnable when omitted from API response", () => {
     expect(
@@ -105,6 +105,6 @@ describe("normalize-tenant-config", () => {
         defaultRolesForNewUser: [],
         defaultPermissionsForNewUser: [],
       }).isSignUpEnable,
-    ).toBe(true)
-  })
-})
+    ).toBe(true);
+  });
+});

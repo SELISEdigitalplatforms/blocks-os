@@ -49,7 +49,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
     if (!requirementsMet && captchaCode) resetCaptcha();
   }, [captchaCode, requirementsMet, resetCaptcha]);
   useEffect(() => {
-    if (!code) return navigate("/login");
+    if (!code) {
+      navigate("/login");
+    }
   }, [code, navigate]);
   const onSubmitHandler = async (values: z.infer<typeof activationFormSchema>) => {
     try {

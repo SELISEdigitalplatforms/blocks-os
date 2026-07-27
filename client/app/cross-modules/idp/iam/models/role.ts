@@ -101,7 +101,7 @@ export interface GroupsData {
  */
 export enum ResourceType {
   /** Permission guards a server-side API endpoint. */
-  "Endpoint" = 1,
+  Endpoint = 1,
   /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
   /** Permission guards access to a specific data record or data class. */

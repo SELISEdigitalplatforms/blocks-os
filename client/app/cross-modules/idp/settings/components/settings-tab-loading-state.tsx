@@ -1,20 +1,20 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   SettingsFormTabButtons,
   SettingsTabActions,
-} from "@blocks-idp/settings/components/settings-tab-actions"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
-import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model"
-import { cn } from "@/lib/utils"
-import type { ReactNode } from "react"
+} from "@blocks-idp/settings/components/settings-tab-actions";
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import type { SettingsTabValue } from "@blocks-idp/settings/models/settings.model";
+import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 type SettingsTabLoadingShellProps = {
-  tabId: SettingsTabValue
-  label: string
-  children: ReactNode
-  className?: string
-}
+  tabId: SettingsTabValue;
+  label: string;
+  children: ReactNode;
+  className?: string;
+};
 
 const SettingsTabLoadingShell = ({
   tabId,
@@ -22,7 +22,12 @@ const SettingsTabLoadingShell = ({
   children,
   className,
 }: SettingsTabLoadingShellProps) => (
-  <div className={cn(SETTINGS_FORM_LAYOUT.formRoot, className)} aria-busy="true" aria-live="polite" aria-label={label}>
+  <div
+    className={cn(SETTINGS_FORM_LAYOUT.formRoot, className)}
+    aria-busy="true"
+    aria-live="polite"
+    aria-label={label}
+  >
     <SettingsTabActions tabId={tabId}>
       <SettingsFormTabButtons
         onReset={() => undefined}
@@ -33,7 +38,7 @@ const SettingsTabLoadingShell = ({
     </SettingsTabActions>
     <div className={SETTINGS_FORM_LAYOUT.formStack}>{children}</div>
   </div>
-)
+);
 
 const ToggleCardSkeleton = () => (
   <Card>
@@ -48,16 +53,16 @@ const ToggleCardSkeleton = () => (
       </div>
     </div>
   </Card>
-)
+);
 
 const SectionCardSkeleton = ({
   fieldCount = 4,
   stacked = false,
   withTrackBar = false,
 }: {
-  fieldCount?: number
-  stacked?: boolean
-  withTrackBar?: boolean
+  fieldCount?: number;
+  stacked?: boolean;
+  withTrackBar?: boolean;
 }) => (
   <Card>
     <CardHeader className={SETTINGS_FORM_LAYOUT.sectionHeader}>
@@ -100,7 +105,7 @@ const SectionCardSkeleton = ({
       )}
     </CardContent>
   </Card>
-)
+);
 
 const BadgeSectionSkeleton = ({ titleWidth = "w-24" }: { titleWidth?: string }) => (
   <Card>
@@ -118,22 +123,26 @@ const BadgeSectionSkeleton = ({ titleWidth = "w-24" }: { titleWidth?: string }) 
       </div>
     </CardContent>
   </Card>
-)
+);
 
 type SettingsTabLoadingStateProps = {
-  tabId: SettingsTabValue
-  includeToggle?: boolean
-  sectionCount?: number
-  className?: string
-}
+  tabId: SettingsTabValue;
+  includeToggle?: boolean;
+  sectionCount?: number;
+  className?: string;
+};
 
 export const AuthTabLoadingState = ({ className }: { className?: string }) => (
-  <SettingsTabLoadingShell tabId="auth-config" label="Loading authentication settings" className={className}>
+  <SettingsTabLoadingShell
+    tabId="auth-config"
+    label="Loading authentication settings"
+    className={className}
+  >
     <SectionCardSkeleton fieldCount={4} />
     <SectionCardSkeleton fieldCount={2} />
     <SectionCardSkeleton fieldCount={1} stacked />
   </SettingsTabLoadingShell>
-)
+);
 
 export const IamTabLoadingState = ({ className }: { className?: string }) => (
   <SettingsTabLoadingShell tabId="iam-config" label="Loading IAM settings" className={className}>
@@ -142,7 +151,7 @@ export const IamTabLoadingState = ({ className }: { className?: string }) => (
     <SectionCardSkeleton fieldCount={2} />
     <SectionCardSkeleton fieldCount={2} stacked />
   </SettingsTabLoadingShell>
-)
+);
 
 export const SettingsTabLoadingState = ({
   tabId,
@@ -156,14 +165,14 @@ export const SettingsTabLoadingState = ({
       <SectionCardSkeleton key={index} />
     ))}
   </SettingsTabLoadingShell>
-)
+);
 
 export const OrganizationTabLoadingState = () => (
   <SettingsTabLoadingShell tabId="organization-config" label="Loading organization settings">
     <ToggleCardSkeleton />
     <SectionCardSkeleton withTrackBar />
   </SettingsTabLoadingShell>
-)
+);
 
 export const SignupTabLoadingState = () => (
   <SettingsTabLoadingShell tabId="signup-settings" label="Loading signup settings">
@@ -171,4 +180,4 @@ export const SignupTabLoadingState = () => (
     <BadgeSectionSkeleton titleWidth="w-16" />
     <BadgeSectionSkeleton titleWidth="w-28" />
   </SettingsTabLoadingShell>
-)
+);

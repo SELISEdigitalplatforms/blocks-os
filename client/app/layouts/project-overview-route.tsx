@@ -22,11 +22,7 @@ export type ProjectOverviewRouteProps = LayoutProps & {
  * the id-scoped routes. Menus outside the project-overview subtree are left
  * untouched.
  */
-const withTenantGroup = (
-  menus: Menu[],
-  tenantGroupId: string,
-  basePath: string,
-): Menu[] => {
+const withTenantGroup = (menus: Menu[], tenantGroupId: string, basePath: string): Menu[] => {
   const prefix = `${basePath}/`;
   return menus.map((menu) => {
     if (menu.type === "menu" && menu.path.startsWith(prefix)) {
@@ -65,9 +61,7 @@ export function ProjectOverviewRoute({
     tenantGroupId: tenantGroupId,
   });
   const setTenantGroup = useProjectStore((state) => state.setTenantGroup);
-  const setSelectedProject = useProjectStore(
-    (state) => state.setSelectedProject,
-  );
+  const setSelectedProject = useProjectStore((state) => state.setSelectedProject);
 
   // Make the URL the source of truth for the selected project: once the id
   // resolves to a real group, push it into the shared store so the sub-pages
@@ -101,12 +95,9 @@ export function ProjectOverviewRoute({
   return (
     <ProjectOverviewLayout
       redirectPaths={redirectPaths}
-      navigationMenus={withTenantGroup(
-        navigationMenus,
-        tenantGroupId,
-        basePath,
-      )}
-      forwardedTo={forwardedTo}>
+      navigationMenus={withTenantGroup(navigationMenus, tenantGroupId, basePath)}
+      forwardedTo={forwardedTo}
+    >
       <Outlet />
     </ProjectOverviewLayout>
   );

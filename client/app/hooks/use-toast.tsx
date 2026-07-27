@@ -65,9 +65,7 @@ export const reducer = (state: State, action: Action): State => {
     case "UPDATE_TOAST":
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t,
-        ),
+        toasts: state.toasts.map((t) => (t.id === action.toast.id ? { ...t, ...action.toast } : t)),
       };
     case "DISMISS_TOAST": {
       const { toastId } = action;
@@ -164,11 +162,7 @@ export const showInfoToast = ({ title = "Info", description }: InfoToastOptions)
     description,
   });
 };
-export const showErrorToast = ({
-  title = "Failed",
-  errors,
-  customMessages,
-}: ErrorToastOptions) => {
+export const showErrorToast = ({ title = "Failed", errors, customMessages }: ErrorToastOptions) => {
   const message = handleErrorMessages(errors, customMessages);
   toast({
     variant: "destructive",

@@ -1,5 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IGetOrganizationByIdParams, IOrganizationFilter } from "@blocks-idp/iam/models/organization";
+import {
+  IGetOrganizationByIdParams,
+  IOrganizationFilter,
+} from "@blocks-idp/iam/models/organization";
 import { IOrganizationConfigPayload } from "@blocks-idp/iam/models/organization-config.model";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 

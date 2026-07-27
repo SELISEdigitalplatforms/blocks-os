@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { ModelService } from "./aimodel.service";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 type BlocksWindow = Window & { __BLOCKS_ENV__?: Record<string, string | undefined> };
 
@@ -33,10 +33,7 @@ describe("ModelService", () => {
 
   it("getModels builds a query string with all list params", async () => {
     vi.mocked(http.get).mockResolvedValue({} as never);
-    await service.getModels(
-      { provider: "openai", page: 1, page_size: 20 } as never,
-      "pk-1",
-    );
+    await service.getModels({ provider: "openai", page: 1, page_size: 20 } as never, "pk-1");
     expect(http.get).toHaveBeenCalledWith(
       "/api/models/?provider=openai&search=&page=1&page_size=20&project_key=pk-1",
       undefined,
@@ -46,10 +43,7 @@ describe("ModelService", () => {
 
   it("getAllModels only appends provided filters", async () => {
     vi.mocked(http.get).mockResolvedValue({} as never);
-    await service.getAllModels(
-      { provider: "azure", is_active: true } as never,
-      "pk-2",
-    );
+    await service.getAllModels({ provider: "azure", is_active: true } as never, "pk-2");
     const url = vi.mocked(http.get).mock.calls[0][0] as string;
     expect(url).toContain("provider=azure");
     expect(url).toContain("is_active=true");
@@ -60,21 +54,13 @@ describe("ModelService", () => {
   it("getModelById injects the model id and project key", async () => {
     vi.mocked(http.get).mockResolvedValue({} as never);
     await service.getModelById("m-1", "pk");
-    expect(http.get).toHaveBeenCalledWith(
-      "/api/models/m-1?project_key=pk",
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith("/api/models/m-1?project_key=pk", undefined, ABS);
   });
 
   it("deleteModel uses http.delete with the model id", async () => {
     vi.mocked(http.delete).mockResolvedValue({} as never);
     await service.deleteModel("m-1", "pk");
-    expect(http.delete).toHaveBeenCalledWith(
-      "/api/models/m-1?project_key=pk",
-      undefined,
-      ABS,
-    );
+    expect(http.delete).toHaveBeenCalledWith("/api/models/m-1?project_key=pk", undefined, ABS);
   });
 
   it("validateModel POSTs an empty body to the validate endpoint", async () => {
@@ -91,21 +77,13 @@ describe("ModelService", () => {
   it("getSeedProviders GETs the seed providers endpoint", async () => {
     vi.mocked(http.get).mockResolvedValue([]);
     await service.getSeedProviders();
-    expect(http.get).toHaveBeenCalledWith(
-      "/api/models/seed/providers",
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith("/api/models/seed/providers", undefined, ABS);
   });
 
   it("getSeedModelsByProvider injects the provider", async () => {
     vi.mocked(http.get).mockResolvedValue([]);
     await service.getSeedModelsByProvider("openai");
-    expect(http.get).toHaveBeenCalledWith(
-      "/api/models/seed/providers/openai",
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith("/api/models/seed/providers/openai", undefined, ABS);
   });
 
   it("propagates errors", async () => {
