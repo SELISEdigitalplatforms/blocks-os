@@ -22,6 +22,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
+    // jsdom test files accumulate memory within a worker as more files run in
+    // it; recycle the worker once it grows past this instead of running it
+    // until it hits Node's default heap ceiling and crashes mid-suite.
+    vmMemoryLimit: "1GB",
     coverage: {
       provider: "v8",
       include: ["app/**/*.{ts,tsx}"],
