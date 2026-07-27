@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
   isConfigsFetching: false,
   sendTestMail: vi.fn(),
   isSending: false,
-  user: { data: { email: "me@acme.io" } },
+  userDetails: { email: "me@acme.io" } as { email: string } | null,
   navigate: vi.fn(),
   toast: vi.fn(),
   showErrorToast: vi.fn(),
@@ -35,8 +35,9 @@ vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
     data: h.configs,
   }),
 }));
-vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUser: () => ({ data: h.user }),
+vi.mock("@seliseblocks/blocks-kit/store", () => ({
+  useUserStore: (selector: (state: { userDetails: { email: string } | null }) => unknown) =>
+    selector({ userDetails: h.userDetails }),
 }));
 vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
   useGetLanguages: () => ({ isLoading: false, data: { data: [] } }),
@@ -89,7 +90,7 @@ describe("EmailCommunicationDetails", () => {
     h.isConfigsLoading = false;
     h.isConfigsFetching = false;
     h.isSending = false;
-    h.user = { data: { email: "me@acme.io" } };
+    h.userDetails = { email: "me@acme.io" };
     h.sendTestMail.mockResolvedValue({ isSuccess: true });
   });
 
