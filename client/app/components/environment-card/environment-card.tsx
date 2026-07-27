@@ -1,6 +1,6 @@
+import { useNavigate } from "react-router";
 import { useState, type MouseEvent } from "react";
 import { ChevronRight, Hourglass, Wrench, AlertTriangle, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";

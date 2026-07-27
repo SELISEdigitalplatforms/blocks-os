@@ -13,7 +13,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useCaptcha } from "@blocks-idp/captcha/hooks/use-captcha";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";

@@ -15,7 +15,7 @@ const h = vi.hoisted(() => ({
   queryParams: { pageNumber: 0, pageSize: 10, search: "", language: "", mailConfigurationId: "" },
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useScopedPath: () => (p: string) => `/s/${p}` }));
 vi.mock("nuqs", async () => {
   const React = await import("react");
