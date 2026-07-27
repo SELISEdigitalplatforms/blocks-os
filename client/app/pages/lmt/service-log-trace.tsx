@@ -3,7 +3,7 @@ import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { TraceDetails } from "@blocks-lmt/components/trace-details";
 import { SERVICES } from "@blocks-lmt/constants/services.constant";
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 
 export function LmtServiceLogTraceRoute() {
   const { serviceName, traceId } = useParams<{

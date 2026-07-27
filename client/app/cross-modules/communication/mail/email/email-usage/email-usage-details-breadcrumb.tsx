@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import {
   Breadcrumb,

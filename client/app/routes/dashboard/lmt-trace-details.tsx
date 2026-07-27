@@ -1,5 +1,5 @@
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router";
 
 export default function LmtTraceDetailsRedirect() {
   const { traceId } = useParams<{ traceId: string }>();

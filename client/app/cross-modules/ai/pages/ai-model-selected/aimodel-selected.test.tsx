@@ -15,7 +15,7 @@ const h = vi.hoisted(() => ({
   customModalProps: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));

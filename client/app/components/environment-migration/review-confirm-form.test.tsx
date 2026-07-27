@@ -15,7 +15,7 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {

@@ -1,7 +1,7 @@
 import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/blocks-kit/guards";
 import { ConsoleLayout, DashboardRoute } from "@seliseblocks/blocks-kit/layouts";
 import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/blocks-kit/pages";
-import { createBrowserRouter, Navigate, Outlet, useParams } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, useParams } from "react-router";
 import { navigationMenus } from "./constants/navigation-menus";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";

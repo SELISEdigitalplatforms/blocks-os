@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronRight, Clock, Hourglass } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";

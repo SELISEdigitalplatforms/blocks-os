@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   mfa_type: 2,
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit/store", () => ({
   useAuthStore: () => ({ setAuthenticated: h.setAuthenticated }),
 }));

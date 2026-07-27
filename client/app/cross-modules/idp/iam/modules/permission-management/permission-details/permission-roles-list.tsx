@@ -15,7 +15,7 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 type RolesTableProps = {
   slugs: string[];
 };

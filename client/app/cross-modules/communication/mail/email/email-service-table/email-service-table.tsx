@@ -19,7 +19,7 @@ import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-c
 import { useGetEmailTemplates } from "@blocks-communication/mail/hooks/use-email-template";
 import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager";
 import { CirclePlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useMemo } from "react";
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import { useEmailUsageFilterQueryParams } from "../email-usage/email-usage-filter-toolbar";

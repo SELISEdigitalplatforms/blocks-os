@@ -14,7 +14,7 @@ import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { RefreshCcw } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router";
 
 export default function LmtLayout() {
   const { pathname } = useLocation();

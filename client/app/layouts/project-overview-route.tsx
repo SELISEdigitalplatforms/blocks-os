@@ -2,7 +2,7 @@ import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
 import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
 import type { Menu } from "@seliseblocks/blocks-kit/types";
 import { useEffect } from "react";
-import { Navigate, Outlet, useParams } from "react-router-dom";
+import { Navigate, Outlet, useParams } from "react-router";
 import { ProjectOverviewLayout } from "./project-overview-layout";
 import { useGetProjects } from "@/hooks/use-project";
 import { useAuthStore, useProjectStore } from "@seliseblocks/blocks-kit/store";
