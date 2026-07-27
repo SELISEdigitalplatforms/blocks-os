@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { ChevronRight, Hourglass, RotateCcw, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -49,7 +49,10 @@ export const EnvironmentCard = ({
       console.error("Failed to switch environment", err);
     }
   };
-  const handleCardClick = (): void => {
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>): void => {
+    if (event.target instanceof Element && event.target.closest("[role='dialog']")) {
+      return;
+    }
     if (isMigrationOngoing) {
       setIsConfirmationOpen(true);
       return;
