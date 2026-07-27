@@ -172,7 +172,9 @@ export const EnvironmentCard = ({
                 />
               </Dialog>
             )}
-            <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            {!setupPending && (
+              <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            )}
           </div>
         </CardHeader>
         <div className="mt-2">
