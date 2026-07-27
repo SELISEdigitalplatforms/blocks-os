@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
   formProps: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));

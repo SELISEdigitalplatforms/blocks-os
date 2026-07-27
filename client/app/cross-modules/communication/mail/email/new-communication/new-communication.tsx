@@ -14,7 +14,7 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import { FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 const EMAIL_TEMPLATE_STEPS: StepItem[] = [{ id: "basic-information" }, { id: "template" }];
 
@@ -54,7 +54,7 @@ const BasicInformationStep = ({
   onStepComplete,
 }: BasicInformationStepProps) => {
   const { nextStep } = useStepper();
-  const ref = useRef<{ submit: () => void; isValid: boolean }>();
+  const ref = useRef<{ submit: () => void; isValid: boolean } | undefined>(undefined);
   const [isFormValid, setIsFormValid] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -95,7 +95,7 @@ type TemplateDesignStepProps = {
 
 const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignStepProps) => {
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
-  const beeRef = useRef<{ submit: () => void; preview: () => void }>();
+  const beeRef = useRef<{ submit: () => void; preview: () => void } | undefined>(undefined);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";

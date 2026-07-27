@@ -24,7 +24,7 @@ import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { EllipsisVertical, Pencil, Power, PowerOff } from "lucide-react";
 import { UpdateOrganization } from "../update-organization";
 import { ToggleOrganizationStatus } from "../toggle-organization-status";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 type OrganizationTableProps = {
   organizations: IOrganization[];
   isLoading: boolean;

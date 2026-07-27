@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useLocation: () => ({ pathname: h.pathname }),
   Outlet: () => <div data-testid="outlet" />,
 }));

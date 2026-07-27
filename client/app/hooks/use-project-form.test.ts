@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
   formData: undefined as unknown,
 }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => h.navigate,
 }));
 

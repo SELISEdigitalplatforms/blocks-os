@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   projectStatus: undefined as boolean | undefined,
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit", () => ({
   useProjectStore: () => ({ setSelectedProject: h.setSelectedProject }),
 }));
