@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { ChevronRight, Clock, Hourglass } from "lucide-react";
 import { useNavigate } from "react-router";
+import { ChevronRight, Hourglass, RotateCcw, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { Badge } from "@/components/ui-kits/badge/badge";
-import { Dialog } from "@/components/ui-kits/dialog/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IProject } from "@/models/project.model";
-import { useGetProjectStatus } from "@/hooks/use-project";
+import { useGetProjectStatus, useRestoreProject } from "@/hooks/use-project";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useStartImpersonation } from "@seliseblocks/blocks-kit/hooks";
 import {
@@ -15,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
+import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
 import { environmentOptions } from "@/constants/environment-options";
 type EnvironmentCardProps = {
   project: IProject;
@@ -30,7 +30,9 @@ export const EnvironmentCard = ({
   const { setSelectedProject } = useProjectStore();
   const { mutateAsync: startImpersonation } = useStartImpersonation();
   const { data: isSetupComplete } = useGetProjectStatus(project.itemId);
+  const { mutateAsync: restoreProject, isPending: isRestoring } = useRestoreProject();
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [isRestoreOpen, setIsRestoreOpen] = useState(false);
 
   const onClickHandler = async (): Promise<void> => {
     try {
@@ -58,6 +60,25 @@ export const EnvironmentCard = ({
     setIsConfirmationOpen(false);
     onClickHandler();
   };
+  const handleRestoreConfirm = async (): Promise<void> => {
+    try {
+      const res = await restoreProject({ itemId: project.itemId });
+      if (res.isSuccess) {
+        showSuccessToast({
+          title: "Environment restore",
+          description: "Setup has been re-triggered for this environment.",
+        });
+        setIsRestoreOpen(false);
+      } else {
+        showErrorToast({ errors: res.errors });
+      }
+    } catch (error) {
+      if (isErrorWithErrors(error)) {
+        showErrorToast({ errors: error.errors });
+      }
+    }
+  };
+  const setupPending = isSetupComplete === false;
   return (
     <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
       <Card
@@ -84,24 +105,53 @@ export const EnvironmentCard = ({
               )}
             </div>
           </CardTitle>
-          <div className="flex items-center gap-2">
-            {isSetupComplete === false && (
+          <div className="flex items-center gap-1">
+            {setupPending && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge
-                      variant="warning"
-                      className="gap-1 rounded-full border-0 px-2.5 py-0.5 font-medium"
+                    <span
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-warning-100 text-warning-700"
+                      aria-label="Setup pending"
                     >
-                      <Clock className="h-3 w-3" />
-                      Setup pending
-                    </Badge>
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
-                    Environment seeding hasn&apos;t completed — restore it from the dashboard.
+                    Setup pending — click restore to re-run seeding.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+            )}
+            {setupPending && (
+              <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex h-6 items-center gap-1 rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
+                    aria-label="Restore environment"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Restore</span>
+                  </button>
+                </DialogTrigger>
+                <ConfirmationModal
+                  onCancel={() => setIsRestoreOpen(false)}
+                  onConfirm={handleRestoreConfirm}
+                  data={{
+                    dialogTitle: "Restore this environment?",
+                    dialogSubtitle: (
+                      <>
+                        <p>Setup hasn&apos;t completed for this environment.</p>
+                        <p>This will re-run the setup for this environment.</p>
+                      </>
+                    ),
+                    confirmButton: "Restore",
+                  }}
+                  buttonState={{ confirm: { disable: isRestoring } }}
+                />
+              </Dialog>
             )}
             <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
           </div>
