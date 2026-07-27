@@ -12,11 +12,11 @@ const { mutateAsync, showErrorToast, showSuccessToast, useGetProjects } = vi.hoi
 if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false;
 if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedTenantGroup: "group-1" }),
 }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   usePopoverWidth: () => [{ current: null }, 200],
   useIsMobile: () => false,
 }));

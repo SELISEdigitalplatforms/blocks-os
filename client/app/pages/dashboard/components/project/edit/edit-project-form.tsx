@@ -21,7 +21,7 @@ import {
   showErrorToast,
   showSuccessToast,
   isErrorWithErrors,
-} from "@seliseblocks/blocks-kit/utils";
+} from "@seliseblocks/genesis-os/utils";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface EditProjectFormProps {

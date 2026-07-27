@@ -27,7 +27,7 @@ const mutateAsync = vi.fn();
 const showErrorToast = vi.fn();
 const showSuccessToast = vi.fn();
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 

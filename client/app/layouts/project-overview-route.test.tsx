@@ -49,7 +49,7 @@ vi.mock("@/hooks/use-project", () => ({
 
 // Lightweight stand-in for the shared zustand store, supporting the selector
 // call form `useProjectStore((s) => s.setTenantGroup)` the source uses.
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ user: h.user }),
   useProjectStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -58,7 +58,7 @@ vi.mock("@seliseblocks/blocks-kit/store", () => ({
     }),
 }));
 
-vi.mock("@seliseblocks/blocks-kit/components", () => ({
+vi.mock("@seliseblocks/genesis-os/components", () => ({
   AppLoadingSpinner: () => <div>loading spinner</div>,
 }));
 

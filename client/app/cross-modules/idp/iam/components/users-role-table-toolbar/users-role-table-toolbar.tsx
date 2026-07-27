@@ -6,7 +6,7 @@ import { DataTableFacetedFilter } from "@/components/data-table-faceted-filter/d
 import { DateRangeFilter } from "@/components/date-range-filter/date-range-filter";
 import { translation } from "@blocks-localization/models/language";
 import { DateRange } from "react-day-picker";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import {
   Sheet,
   SheetClose,

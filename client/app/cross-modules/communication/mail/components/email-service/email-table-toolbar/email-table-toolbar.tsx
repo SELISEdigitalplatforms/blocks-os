@@ -4,7 +4,7 @@ import { Table } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui-kits/button/button";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import {
   Sheet,

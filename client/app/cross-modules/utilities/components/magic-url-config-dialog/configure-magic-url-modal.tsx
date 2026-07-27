@@ -13,7 +13,7 @@ import { Label } from "@/components/ui-kits/label/label";
 import { useSaveMagicUrlConfig } from "@blocks-utilities/hooks/use-magic-url-config";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { getDefaultShortUrlBase, isValidUrl } from "@blocks-utilities/utils/url.util";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { IMagicUrlConfig } from "@blocks-utilities/models/magic-url-config.model";
 import { v4 as uuidv4 } from "uuid";
 

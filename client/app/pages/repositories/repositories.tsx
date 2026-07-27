@@ -1,4 +1,4 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetAssets, useAddAssets } from "@/hooks/use-project";
 import { Plus, Github, FolderGit2 } from "lucide-react";
 import { EmptyState } from "@/components/ui-kits/empty-state";
@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Input } from "@/components/ui-kits/input/input";
 import { IResource } from "@blocks-identifier/models/project.model";
 import { IRepository } from "@/cross-modules/devops/models/github-info";
-import { useDebounce } from "@seliseblocks/blocks-kit/hooks";
+import { useDebounce } from "@seliseblocks/genesis-os/hooks";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { RepositorySelectionModal } from "@/components/repository-selection-modal/repository-selection-modal";
 import ProviderButtons from "@/cross-modules/devops/components/deployment-steps/render-repos/render-provider";

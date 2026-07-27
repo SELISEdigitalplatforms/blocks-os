@@ -37,7 +37,7 @@ import {
   toRoleStubs,
   buildIdentityProviderPayload,
 } from "./identity-provider-form.util";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";

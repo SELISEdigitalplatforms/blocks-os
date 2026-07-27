@@ -33,7 +33,7 @@ import {
 vi.mock("@blocks-idp/iam/services/user.service", () => mockUserServiceFactory());
 
 const mockSetUser = vi.fn();
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: vi.fn(() => ({ setUser: mockSetUser })),
 }));
 

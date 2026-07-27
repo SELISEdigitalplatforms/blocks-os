@@ -5,7 +5,7 @@ import { SSOProviderConfigLinkedINForm } from "./sso-provider-config-linkedin-fo
 import { SSO_PROVIDERS } from "@blocks-idp/authentication/constants/sso-providers.constant";
 import { SSOProviderConfigMicrosoftForm } from "./sso-provider-config-microsoft-form";
 import { SSOProviderConfigXForm } from "./sso-provider-config-x-form";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   useGetSsoCredentialById,
   useSaveSsoCredential,
@@ -14,7 +14,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { ISsoProviderConfiguration } from "@blocks-idp/authentication/models/sso.model";
 import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { SSOProviderConfigOwnSSOForm } from "./sso-provider-config-blocks-own-sso-form";
 export type SsoConfigFormsProps = {
   provider: SSO_PROVIDERS;

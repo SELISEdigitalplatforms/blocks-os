@@ -27,10 +27,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { useCountDown } from "@seliseblocks/blocks-kit/hooks";
+import { useCountDown } from "@seliseblocks/genesis-os/hooks";
 import { useInitiateMigration, useVerifyMigration } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useDataMigrationFormState } from "./migration-form-state";
 import { MIGRATION_SERVICE_NAME_TO_ID, migrationVerificationSchema } from "./migration-form-schema";
 

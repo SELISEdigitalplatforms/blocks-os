@@ -8,7 +8,7 @@ vi.mock("react-router", () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
   Outlet: () => <div data-testid="outlet" />,
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useScopedPath: () => (p: string) => `/scoped/${p}` }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useScopedPath: () => (p: string) => `/scoped/${p}` }));
 vi.mock("@blocks-communication/mail/email/email-configure/email-configure", () => ({
   EmailConfiguration: () => <div data-testid="email-config" />,
 }));

@@ -12,7 +12,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-project", () => ({
   useUpdateRepositories: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
   showErrorToast: (...a: unknown[]) => h.showErrorToast(...a),
   showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
 }));

@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useAddUser: () => ({ isPending: false, mutateAsync: h.mutateAsync }),
 }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@/hooks/use-toast", () => ({

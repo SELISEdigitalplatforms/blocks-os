@@ -6,7 +6,7 @@ const h = vi.hoisted(() => ({
   useGetPermissions: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({

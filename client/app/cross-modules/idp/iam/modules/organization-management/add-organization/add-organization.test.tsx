@@ -29,7 +29,7 @@ const { mutateAsync, showErrorToast, showSuccessToast } = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({
     selectedProject: { itemId: "p1", tenantId: "t1" },
   }),

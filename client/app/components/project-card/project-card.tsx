@@ -9,7 +9,7 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { environmentOptions } from "@/constants/environment-options";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { ChevronRight, Settings2 } from "lucide-react";
 import { IProject } from "@/models/project.model";
 

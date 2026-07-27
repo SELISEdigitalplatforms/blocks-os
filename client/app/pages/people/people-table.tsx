@@ -37,7 +37,7 @@ import { useRemoveAccess, useResendInvitation, useTransferOwnership } from "@/ho
 import { useAccountResendActivation } from "@blocks-idp/iam/hooks/use-account";
 import { useNavigate, useParams } from "react-router";
 import { PeopleGroupedByEnvironments } from "@/models/people";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { environmentOptions } from "@/constants/environment-options";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { PeopleStatusBadge } from "@/components/people/status-badge";

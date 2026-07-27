@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { MaskedText } from "@/components/masked-text";
-import { useCopyToClipboard } from "@seliseblocks/blocks-kit/hooks";
+import { useCopyToClipboard } from "@seliseblocks/genesis-os/hooks";
 import { showSuccessToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { AccordionTrigger } from "@/components/ui-kits/accordion/accordion";

@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IEnvRepository } from "@seliseblocks/blocks-kit/models";
+import type { IEnvRepository } from "@seliseblocks/genesis-os/models";
 
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
   formatFullDate: () => "FMT-DATE",
 }));
 

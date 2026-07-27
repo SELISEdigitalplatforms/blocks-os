@@ -9,7 +9,7 @@ import {
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteSSORole } from "./delete-sso-role";
