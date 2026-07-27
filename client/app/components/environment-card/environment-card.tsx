@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ChevronRight, Hourglass } from "lucide-react";
+import { ChevronRight, Clock, Hourglass } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IProject } from "@/models/project.model";
+import { useGetProjectStatus } from "@/hooks/use-project";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { useStartImpersonation } from "@seliseblocks/blocks-kit/hooks";
 import {
@@ -27,6 +29,7 @@ export const EnvironmentCard = ({
   const navigate = useNavigate();
   const { setSelectedProject } = useProjectStore();
   const { mutateAsync: startImpersonation } = useStartImpersonation();
+  const { data: isSetupComplete } = useGetProjectStatus(project.itemId);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
   const onClickHandler = async (): Promise<void> => {
@@ -81,7 +84,27 @@ export const EnvironmentCard = ({
               )}
             </div>
           </CardTitle>
-          <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+          <div className="flex items-center gap-2">
+            {isSetupComplete === false && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="warning"
+                      className="gap-1 rounded-full border-0 px-2.5 py-0.5 font-medium"
+                    >
+                      <Clock className="h-3 w-3" />
+                      Setup pending
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
+                    Environment seeding hasn&apos;t completed — restore it from the dashboard.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+          </div>
         </CardHeader>
         <div className="mt-2">
           <div className="flex flex-wrap items-center gap-1.5 py-0.5 text-xs sm:py-1 md:py-1.5">
