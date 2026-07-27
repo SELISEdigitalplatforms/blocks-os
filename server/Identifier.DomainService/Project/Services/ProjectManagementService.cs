@@ -377,8 +377,12 @@ namespace DomainService.Projects
               projectStatusTracer = new ProjectStatusTracer { ProjectId = restoreProjectRequest.ItemId };
            }
 
-           if (project is not null)
-           await ConfigureProjectAsync(project, projectStatusTracer);
+           if (project is not null && !projectStatusTracer.IsProjectCreationSuccess)
+           {
+              projectStatusTracer.ErrorMessage = string.Empty;
+              await ConfigureProjectAsync(project, projectStatusTracer);        
+           }
+           
 
            if (string.IsNullOrWhiteSpace(projectStatusTracer.ErrorMessage))
            {
