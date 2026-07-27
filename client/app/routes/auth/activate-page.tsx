@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { Activation } from "@blocks-idp/authentication/pages/activation/activation";
 import { getOptionalSearchParam } from "@/lib/search-params";
 

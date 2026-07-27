@@ -10,7 +10,7 @@ import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import EditCommunication from "@blocks-communication/mail/components/email-service/modals/edit-communication/edit-communication";
 import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 import { useUserStore } from "@seliseblocks/blocks-kit/store";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";

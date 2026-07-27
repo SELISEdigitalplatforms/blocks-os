@@ -16,7 +16,7 @@ vi.mock("@seliseblocks/blocks-kit", () => ({
 vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@blocks-idp/authentication/hooks/use-sso", () => ({
   useGetSsoCredentialById: () => ({ data: h.data }),
   useSaveSsoCredential: () => ({ mutateAsync: h.mutateAsync }),

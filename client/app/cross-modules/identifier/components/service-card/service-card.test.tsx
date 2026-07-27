@@ -7,7 +7,7 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => "/app/proj-1/lmt" }));
 vi.mock("@/lib/runtime-env", () => ({ getRuntimeEnv: () => "https://os.example.com" }));
 vi.mock("@seliseblocks/blocks-kit/hooks", () => ({

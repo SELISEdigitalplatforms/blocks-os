@@ -14,9 +14,7 @@ ApplicationConfigurations.ConfigureApiEnv(builder, args);
 
 var serviceName = "blocks-os";
 var vaultType = ApplicationConfigurations.ResolveVaultType();
-Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
-Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString}");
 
 ApplicationConfigurations.ConfigureServices(builder.Services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
