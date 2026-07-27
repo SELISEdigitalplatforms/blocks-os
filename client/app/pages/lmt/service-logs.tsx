@@ -10,7 +10,7 @@ import { getLmtLogCollections } from "@blocks-lmt/constants/logs-service-names.c
 import { SERVICES } from "@blocks-lmt/constants/services.constant";
 import { LogsViewer } from "@blocks-lmt/components";
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 
 export function LmtServiceLogsRoute() {
   const { serviceName } = useParams<{ serviceName: string }>();

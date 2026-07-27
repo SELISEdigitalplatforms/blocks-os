@@ -28,7 +28,7 @@ import {
   useCloneTemplate,
   useDeleteEmailTemplate,
 } from "@blocks-communication/mail/hooks/use-email-template";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];

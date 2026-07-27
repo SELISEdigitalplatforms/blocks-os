@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { RegisteredService } from "@blocks-identifier/models/service.model";
 import { Button } from "@/components/ui-kits/button/button";
 import { Activity, BookOpen, Braces, Copy, EllipsisVertical, FileText } from "lucide-react";

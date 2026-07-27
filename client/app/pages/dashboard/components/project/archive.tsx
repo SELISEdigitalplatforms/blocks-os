@@ -4,7 +4,7 @@ import { isErrorWithErrors } from "@seliseblocks/blocks-kit/utils";
 import { useProjectStore } from "@seliseblocks/blocks-kit/store";
 import { Archive } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
 import { Button } from "@/components/ui-kits/button/button";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";

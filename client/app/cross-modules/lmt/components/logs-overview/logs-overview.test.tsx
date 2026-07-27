@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ navigate: vi.fn(), basePath: "/app/lmt" }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => h.basePath }));
 
 import { LogsOverview } from "./logs-overview";
