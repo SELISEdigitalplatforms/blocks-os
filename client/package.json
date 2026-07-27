@@ -82,6 +82,7 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.0.0",
@@ -93,10 +94,11 @@
     "@vitejs/plugin-react": "^4.3.0",
     "@vitest/coverage-v8": "^4.1.5",
     "autoprefixer": "^10.4.19",
-    "eslint": "^8.57.0",
+    "eslint": "^9.39.5",
     "eslint-config-prettier": "^9",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^16.5.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.8",
