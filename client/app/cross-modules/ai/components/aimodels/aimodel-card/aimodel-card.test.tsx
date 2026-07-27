@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ navigate: vi.fn(), scoped: (p: string) => `/scoped/${p}` }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useScopedPath: () => h.scoped }));
 
 import { ProviderCard } from "./aimodel-card";

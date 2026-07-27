@@ -25,7 +25,7 @@ import {
 import { useMemo } from "react";
 import { useOrganizationUsersSortQueryParams } from "./organization-users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 type OrganizationUsersTableProps = {
   users: User[];
   isLoading: boolean;

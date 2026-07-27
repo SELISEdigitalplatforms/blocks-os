@@ -1,6 +1,6 @@
 import { getTrimmedSearchParam } from "@/lib/search-params";
 import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 export type InvitationResultSearchParams = {
   success: string;

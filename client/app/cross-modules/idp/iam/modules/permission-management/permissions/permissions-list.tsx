@@ -22,7 +22,7 @@ import {
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
 type PermissionTableProps = {
   permissions: IPermission[];

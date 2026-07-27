@@ -34,7 +34,7 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { Archive, BookOpenText, Flame, Snowflake } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { serviceRegistryService } from "@/cross-modules/identifier/services/service-registry.service";
 type TracesOverviewProps = {
   projectKey: string;

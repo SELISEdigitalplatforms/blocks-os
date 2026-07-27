@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   isFetching: false,
 }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useLocation: () => ({ pathname: h.pathname }),
   Outlet: () => <div data-testid="outlet" />,
 }));

@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
   navigate: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));

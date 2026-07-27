@@ -24,7 +24,7 @@ import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { Pencil, Plus, Loader2, Notebook, Waypoints } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router";
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
 
 function SecretManagementHeaderActions({

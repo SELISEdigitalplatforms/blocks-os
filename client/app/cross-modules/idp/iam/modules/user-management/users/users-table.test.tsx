@@ -8,7 +8,7 @@ const h = vi.hoisted(() => ({
   setSortQueryParams: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("./users-filter-toolbar", () => ({
   useUsersSortQueryParams: () => ({
     sortQueryParams: { property: "FirstName", isDescending: false },

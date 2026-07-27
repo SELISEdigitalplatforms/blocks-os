@@ -5,7 +5,7 @@ import { PeopleDetailsTab } from "./people-details-tab";
 import { PeopleEnvironmentsTab } from "./people-environments-tab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { useQueryState } from "nuqs";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
 import {

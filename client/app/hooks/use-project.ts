@@ -11,7 +11,7 @@ import { projectService as crossProjectService } from "@blocks-identifier/servic
 import { useImpersonateStore, useProjectStore } from "@seliseblocks/blocks-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 export const useGetProjects = ({
   tenantGroupId,
