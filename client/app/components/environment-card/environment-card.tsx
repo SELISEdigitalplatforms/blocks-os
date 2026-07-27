@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Hourglass } from "lucide-react";
+import { ChevronRight, Clock, Hourglass } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -89,7 +89,13 @@ export const EnvironmentCard = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="error">Setup pending</Badge>
+                    <Badge
+                      variant="warning"
+                      className="gap-1 rounded-full border-0 px-2.5 py-0.5 font-medium"
+                    >
+                      <Clock className="h-3 w-3" />
+                      Setup pending
+                    </Badge>
                   </TooltipTrigger>
                   <TooltipContent className="border-none bg-neutral-500 text-white shadow-none">
                     Environment seeding hasn&apos;t completed — restore it from the dashboard.

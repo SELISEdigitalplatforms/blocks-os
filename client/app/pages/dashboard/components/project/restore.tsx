@@ -41,7 +41,7 @@ export const RestoreProject = ({ itemId }: RestoreProjectProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" className="flex items-center gap-2">
           <RotateCcw className="h-4 w-4" />
           <span className="sr-only sm:not-sr-only">Restore</span>
         </Button>
@@ -53,7 +53,7 @@ export const RestoreProject = ({ itemId }: RestoreProjectProps) => {
           dialogTitle: "Restore this environment?",
           dialogSubtitle: (
             <>
-              <p>Setup (including seeding) hasn&apos;t completed for this environment.</p>
+              <p>Setup hasn&apos;t completed for this environment.</p>
               <p>This will re-run the setup for this environment.</p>
             </>
           ),
