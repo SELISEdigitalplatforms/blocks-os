@@ -10,9 +10,9 @@ import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import EditCommunication from "@blocks-communication/mail/components/email-service/modals/edit-communication/edit-communication";
 import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useUserStore } from "@seliseblocks/blocks-kit/store";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { langConfigureData } from "@blocks-localization/constants/language-dummy-data";
 import {
@@ -29,7 +29,7 @@ export function EmailCommunicationDetails({
 }) {
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
-  const { data: loggedInUser } = useGetUser();
+  const userDetails = useUserStore((state) => state.userDetails);
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
   const {
     isLoading: isConfigsLoading,
@@ -89,7 +89,7 @@ export function EmailCommunicationDetails({
   const sendTestEmail = async () => {
     try {
       const payload = {
-        to: loggedInUser?.data?.email || "",
+        to: userDetails?.email || "",
         purpose: emailDetails.name || "",
         language: emailDetails.language || "",
       };
