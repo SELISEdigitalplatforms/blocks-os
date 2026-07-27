@@ -35,14 +35,14 @@ vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
     data: h.configs,
   }),
 }));
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useUserStore: (selector: (state: { userDetails: { email: string } | null }) => unknown) =>
     selector({ userDetails: h.userDetails }),
 }));
 vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
   useGetLanguages: () => ({ isLoading: false, data: { data: [] } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
   usePathSegments: () => [],
 }));

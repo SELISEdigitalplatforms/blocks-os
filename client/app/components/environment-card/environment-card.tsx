@@ -6,15 +6,15 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IProject } from "@/models/project.model";
 import { useGetProjectStatus, useRestoreProject } from "@/hooks/use-project";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useStartImpersonation } from "@seliseblocks/blocks-kit/hooks";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useStartImpersonation } from "@seliseblocks/genesis-os/hooks";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
+import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { environmentOptions } from "@/constants/environment-options";
 type EnvironmentCardProps = {
   project: IProject;

@@ -11,8 +11,8 @@ import EditCommunication from "@blocks-communication/mail/components/email-servi
 import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
-import { useUserStore } from "@seliseblocks/blocks-kit/store";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useUserStore } from "@seliseblocks/genesis-os/store";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { langConfigureData } from "@blocks-localization/constants/language-dummy-data";
 import {

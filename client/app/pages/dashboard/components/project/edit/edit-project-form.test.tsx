@@ -14,7 +14,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-project", () => ({
   useUpdateTenantGroup: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
   showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
   showErrorToast: (...a: unknown[]) => h.showErrorToast(...a),
   isErrorWithErrors: (e: unknown) => typeof e === "object" && e !== null && "errors" in e,

@@ -10,7 +10,7 @@ import { EmailConfiguration } from "@blocks-communication/mail/email/email-confi
 import { Settings } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { Link, Outlet, useLocation } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { AddRole } from "@blocks-idp/iam/modules/role-management";
 

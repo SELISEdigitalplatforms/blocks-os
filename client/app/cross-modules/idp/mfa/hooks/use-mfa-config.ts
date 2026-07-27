@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { mfaService } from "../services/mfa.service";
 import { IGetUserByIdPayload } from "@blocks-idp/iam/models/user";
 

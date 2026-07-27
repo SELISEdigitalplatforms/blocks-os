@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: h.tenantId } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({

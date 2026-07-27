@@ -14,7 +14,7 @@ import { Pencil } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { UpdateRole } from "../update-role/update-role";
 import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { FilterControls, SortValue } from "@/components/filter-toolbar";
 import { useRolesSortQueryParams } from "./roles-filter-toolbar";

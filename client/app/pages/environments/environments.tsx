@@ -21,7 +21,7 @@ import { useNotificationListener } from "@/cross-modules/communication/hooks/use
 import { useGetPeople } from "@/hooks/use-people";
 import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CircleHelp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 

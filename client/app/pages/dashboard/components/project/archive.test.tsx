@@ -16,10 +16,10 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-project", () => ({
   useDisableProject: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
   showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
   showErrorToast: (...a: unknown[]) => h.showErrorToast(...a),
   isErrorWithErrors: (e: unknown) => h.isErrorWithErrors(e),

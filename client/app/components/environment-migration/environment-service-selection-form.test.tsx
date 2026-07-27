@@ -8,7 +8,7 @@ const h = vi.hoisted(() => ({
   selectedTenantGroup: "group-1" as string | undefined,
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => {
+vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
     useProjectStore: () => ({ selectedTenantGroup: h.selectedTenantGroup }),

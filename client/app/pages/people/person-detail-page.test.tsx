@@ -19,7 +19,7 @@ vi.mock("react-router", async () => {
   const actual = await vi.importActual<typeof import("react-router")>("react-router");
   return { ...actual, useNavigate: () => h.navigate, useParams: () => h.params };
 });
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedTenantGroup: "tg-1" }),
 }));
 vi.mock("nuqs", () => {

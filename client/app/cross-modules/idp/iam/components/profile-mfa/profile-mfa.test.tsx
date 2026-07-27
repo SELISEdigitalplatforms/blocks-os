@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@blocks-idp/mfa/hooks/use-mfa-config", () => ({
   useGetProfileMFAConfig: () => ({ data: h.data, isLoading: h.isLoading }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
 vi.mock("./profile-mfa-detail", () => ({ ProfileMFADetails: () => <div data-testid="details" /> }));

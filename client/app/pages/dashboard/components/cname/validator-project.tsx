@@ -1,6 +1,6 @@
-import { LoadingButton } from "@seliseblocks/blocks-kit/components";
+import { LoadingButton } from "@seliseblocks/genesis-os/components";
 import { useValidateCNameProject } from "@/hooks/use-project";
-import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 
 interface CnameValidatorProjectProps {
   isDomainVerified: boolean;

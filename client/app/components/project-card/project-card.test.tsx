@@ -34,7 +34,7 @@ vi.mock("react-router", async (importOriginal) => {
   return { ...actual, useNavigate: () => h.navigate };
 });
 
-vi.mock("@seliseblocks/blocks-kit", async () => {
+vi.mock("@seliseblocks/genesis-os", async () => {
   const React = await import("react");
   const Pass = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);

@@ -4,7 +4,7 @@ import {
   useGetOrganizations,
   useGetOrganizationConfig,
 } from "@blocks-idp/iam/hooks/use-organization";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { OrganizationsList } from "./organizations-list";
 import { AddOrganization } from "../add-organization/add-organization";
 import {

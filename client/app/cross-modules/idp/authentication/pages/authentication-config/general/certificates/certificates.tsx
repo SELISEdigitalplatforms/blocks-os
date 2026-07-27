@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Banner } from "@/components/ui-kits/banner/banner";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyConfiguration } from "./empty-configuration";

@@ -5,7 +5,7 @@ import { Filter } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { configurations, protocols } from "@blocks-communication/mail/constants/messaging";
 import { DataTableFacetedFilter } from "@/components/data-table-faceted-filter/data-table-faceted-filter";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import {
   Sheet,

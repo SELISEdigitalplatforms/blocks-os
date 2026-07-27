@@ -3,7 +3,7 @@ import { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { DataTableFacetedFilter } from "@/components/data-table-faceted-filter/data-table-faceted-filter";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import {
   Sheet,
   SheetClose,

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
