@@ -155,23 +155,32 @@ jobs:
             $FORMULATION_FLAG \
             .
 
-      # cdxgen emits dependency-graph nodes for the solution's own projects
-      # (pkg:nuget/Api@latest, pkg:nuget/Worker@latest, ...) without declaring
-      # matching components. Dependency-Track requires every dependencies[].ref
-      # to resolve to a declared bom-ref and rejects the whole BOM with HTTP 400
-      # when one does not. The CycloneDX JSON schema cannot express that
-      # constraint, so the BOM is schema-valid but semantically broken.
-      - name: Drop orphan dependency references
+      # Two things Dependency-Track rejects that cdxgen emits for .NET:
+      #
+      # 1. services[].endpoints entries are ASP.NET route templates such as
+      #    "[controller]/[action]". Square brackets are reserved in RFC 3987, so
+      #    DT's iri-reference format check fails and the whole BOM is refused
+      #    with HTTP 400. The services block is API-surface data from dosai and
+      #    contributes nothing to dependency vulnerability matching, so it is
+      #    dropped rather than rewritten.
+      # 2. dependencies[].ref nodes for the solution's own projects
+      #    (pkg:nuget/Api@latest, pkg:nuget/Worker@latest, ...) are emitted
+      #    without matching component declarations. CycloneDX requires a ref to
+      #    resolve to a declared bom-ref, so these are pruned too.
+      - name: Sanitize SBOM for Dependency-Track
         run: |
           BOM="${{ inputs.SBOM_FILENAME }}"
 
+          SVC_BEFORE=$(jq '.services // [] | length' "$BOM")
+          DEP_BEFORE=$(jq '.dependencies // [] | length' "$BOM")
+
           jq '
-            (
-              [ .components[]?["bom-ref"] ]
-              + [ .services[]?["bom-ref"] ]
-              + [ .metadata?.component?["bom-ref"] ]
-              | map(select(. != null)) | unique
-            ) as $defined
+            del(.services)
+            | (
+                [ .components[]?["bom-ref"] ]
+                + [ .metadata?.component?["bom-ref"] ]
+                | map(select(. != null)) | unique
+              ) as $defined
             | .dependencies = (
                 (.dependencies // [])
                 | map(select(.ref as $r | $defined | index($r)))
@@ -179,14 +188,14 @@ jobs:
               )
           ' "$BOM" > "$BOM.clean"
 
-          BEFORE=$(jq '.dependencies | length' "$BOM")
-          AFTER=$(jq '.dependencies | length' "$BOM.clean")
+          DEP_AFTER=$(jq '.dependencies | length' "$BOM.clean")
           mv "$BOM.clean" "$BOM"
 
           {
             echo "### 🧹 SBOM sanitized"
             echo ""
-            echo "- Dependency entries: $BEFORE → $AFTER (dropped $((BEFORE - AFTER)) orphan refs)"
+            echo "- Services dropped: $SVC_BEFORE"
+            echo "- Dependency entries: $DEP_BEFORE → $DEP_AFTER"
           } >> $GITHUB_STEP_SUMMARY
 
       - name: Validate SBOM
@@ -198,12 +207,13 @@ jobs:
           DANGLING=$(jq '
             (
               [ .components[]?["bom-ref"] ]
-              + [ .services[]?["bom-ref"] ]
               + [ .metadata?.component?["bom-ref"] ]
               | map(select(. != null)) | unique
             ) as $defined
             | [ .dependencies[]? | select(.ref as $r | ($defined | index($r)) == null) ] | length
           ' "$BOM")
+
+          BADEP=$(jq '[ .services[]?.endpoints[]? | select(test("[][]")) ] | length' "$BOM")
 
           {
             echo "### 📦 SBOM (Server)"
@@ -213,12 +223,14 @@ jobs:
             echo "| Spec version | $(jq -r '.specVersion' "$BOM") |"
             echo "| Components | $(jq -r '.components | length' "$BOM") |"
             echo "| Services | $(jq -r '.services // [] | length' "$BOM") |"
+            echo "| Non-IRI endpoints | $BADEP |"
             echo "| Dependencies | $(jq -r '.dependencies | length' "$BOM") |"
             echo "| Orphan refs | $DANGLING |"
             echo "| Size | $(du -h "$BOM" | cut -f1) |"
           } >> $GITHUB_STEP_SUMMARY
 
           [ "$DANGLING" -ne 0 ] && echo "❌ SBOM still has $DANGLING orphan dependency refs" && exit 1
+          [ "$BADEP" -ne 0 ] && echo "❌ SBOM still has $BADEP non-IRI service endpoints" && exit 1
           exit 0
 
       - name: Upload SBOM artifact
