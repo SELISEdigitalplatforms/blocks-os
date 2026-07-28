@@ -22,8 +22,9 @@ import { useGetPeople } from "@/hooks/use-people";
 import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { CircleHelp, Plus } from "lucide-react";
+import { ArrowRightLeft, CircleHelp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
+import { useNavigate } from "react-router";
 
 const isRecentMigrationForTarget = (
   data: IMigrationStatusResponse[number],
@@ -72,6 +73,7 @@ export const EnvironmentsPage = () => {
   });
   const isViewerOwner = peopleData?.isOwner ?? false;
   const [addEnvModalOpen, setAddEnvModalOpen] = useState(false);
+  const navigate = useNavigate();
   const { data: migrationStatus, refetch: refetchMigrationStatus } =
     useGetMigrationStatus(groupId as string);
   const handleMigrationNotification = useCallback(
@@ -105,14 +107,14 @@ export const EnvironmentsPage = () => {
         <div className="mb-6 flex flex-row justify-between">
           <h4 className="text-lg font-semibold md:text-xl">Environments</h4>
           <div className="flex gap-2 sm:gap-4">
-            {/* <Button
+            <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate("/data-migration")}
+              onClick={() => navigate("/app/data-migration")}
               className="h-10 whitespace-nowrap text-sm">
               <ArrowRightLeft className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Start Migration</span>
-            </Button> */}
+            </Button>
             {canAddEnvironment && (
               <Button
                 variant="default"
