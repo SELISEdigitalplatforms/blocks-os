@@ -12,7 +12,8 @@ const {
   runGit,
 } = require("./lib/common");
 
-const allowedBaselineStatuses = new Set(["backlog", "needs-e2e", "no-e2e-needed", "covered-by-parent"]);
+const allowedBaselineStatuses = new Set(["backlog", "needs-e2e", "needs-flow", "no-e2e-needed", "covered-by-parent"]);
+const navigationActionTypes = new Set(["navigate", "open", "redirect", "smoke", "login"]);
 
 function isStepsFile(file) {
   return file.startsWith("e2e/support/steps/") && file.endsWith(".steps.ts");
@@ -20,6 +21,10 @@ function isStepsFile(file) {
 
 function isJourneyFile(file) {
   return file.startsWith("e2e/tests/journeys/") && file.endsWith(".spec.ts");
+}
+
+function isJourneyOnlyEdge(edge) {
+  return Array.isArray(edge.coveredBy) && edge.coveredBy.length > 0 && edge.coveredBy.every(isJourneyFile);
 }
 
 function validateGraphShape(graph, failures) {
@@ -30,15 +35,56 @@ function validateGraphShape(graph, failures) {
   if (graph.metadata?.contentHash !== graphHash(graph)) failures.push("flow-graph metadata.contentHash mismatch");
 }
 
-function coveredNodeIds(graph) {
+function primaryCoveredNodeIds(graph) {
   const covered = new Set();
   for (const edge of graph.edges || []) {
-    if (Array.isArray(edge.coveredBy) && edge.coveredBy.length > 0) {
+    if (Array.isArray(edge.coveredBy) && edge.coveredBy.length > 0 && !isJourneyOnlyEdge(edge)) {
       covered.add(edge.from);
       covered.add(edge.to);
     }
   }
   return covered;
+}
+
+function smokeCoveredNodeIds(graph) {
+  const covered = new Set();
+  for (const edge of graph.edges || []) {
+    if (isJourneyOnlyEdge(edge)) {
+      covered.add(edge.from);
+      covered.add(edge.to);
+    }
+  }
+  return covered;
+}
+
+function hasDynamicRouteSegment(route) {
+  return typeof route === "string" && route.split("/").some((segment) => segment.startsWith(":"));
+}
+
+function hasRouteEvidence(edge) {
+  const evidence = edge.evidence;
+  return (
+    evidence &&
+    typeof evidence.urlPattern === "string" &&
+    evidence.urlPattern.trim().length > 0 &&
+    Array.isArray(evidence.assertions) &&
+    evidence.assertions.some((assertion) => typeof assertion === "string" && assertion.trim().length > 0)
+  );
+}
+
+function hasResultEvidence(edge) {
+  const resultEvidence = edge.evidence?.result;
+  return (
+    typeof resultEvidence === "string" && resultEvidence.trim().length > 0
+  );
+}
+
+function isNavigationOnlyEdge(edge) {
+  if (typeof edge.actionType === "string") {
+    return navigationActionTypes.has(edge.actionType);
+  }
+
+  return /^(nav|navigate|open|login)\b/i.test(edge.id || "") || /^(navigate|open|login)\b/i.test(edge.action || "");
 }
 
 function checkDirtyLegacyPaths(warnings) {
@@ -106,12 +152,23 @@ try {
       for (const file of edge.coveredBy || []) {
         if (!isJourneyFile(file)) failures.push(`steps edge ${edge.id} coveredBy must be under e2e/tests/journeys/: ${file}`);
       }
+      if (edge.coverageLevel !== "smoke") warnings.push(`journey edge should be marked coverageLevel=smoke: ${edge.id}`);
     } else {
       failures.push(`edge ${edge.id} has invalid convention ${edge.convention}`);
     }
+
+    const targetRoute = graphRoutes.get(edge.to);
+    if (hasDynamicRouteSegment(targetRoute) && !hasRouteEvidence(edge)) {
+      warnings.push(`dynamic route edge missing route evidence: ${edge.id}`);
+    }
+
+    if (!isNavigationOnlyEdge(edge) && !hasResultEvidence(edge)) {
+      warnings.push(`action edge missing result evidence: ${edge.id}`);
+    }
   }
 
-  const covered = coveredNodeIds(graph);
+  const covered = primaryCoveredNodeIds(graph);
+  const smokeCovered = smokeCoveredNodeIds(graph);
   const baselineEntries = Array.isArray(baseline.entries) ? baseline.entries : [];
   if (!Array.isArray(baseline.entries)) failures.push("uncovered-baseline.json entries must be an array");
 
@@ -123,6 +180,9 @@ try {
     if (!allowedBaselineStatuses.has(entry.status)) failures.push(`baseline entry ${entry.nodeId} has invalid status ${entry.status}`);
     if (!nodeIds.has(entry.nodeId)) failures.push(`orphaned baseline entry ${entry.nodeId}`);
     if (covered.has(entry.nodeId)) failures.push(`baseline entry already covered: ${entry.nodeId}`);
+    if (entry.status === "covered-by-parent" && hasDynamicRouteSegment(graphRoutes.get(entry.nodeId))) {
+      warnings.push(`dynamic route marked covered-by-parent without direct edge: ${entry.nodeId}`);
+    }
   }
 
   const baselineNodeIds = new Set(baselineEntries.map((entry) => entry.nodeId));
@@ -133,6 +193,14 @@ try {
 
   const needsE2e = baselineEntries.filter((entry) => entry.status === "needs-e2e").map((entry) => entry.nodeId);
   if (needsE2e.length > 0) warnings.push(`nodes marked needs-e2e: ${needsE2e.join(", ")}`);
+
+  const needsFlow = baselineEntries.filter((entry) => entry.status === "needs-flow").map((entry) => entry.nodeId);
+  if (needsFlow.length > 0) warnings.push(`nodes marked needs-flow: ${needsFlow.join(", ")}`);
+
+  const smokeOnlyUnclassified = [...smokeCovered].filter((id) => graphNodeIds.has(id) && !covered.has(id) && !baselineNodeIds.has(id));
+  if (smokeOnlyUnclassified.length > 0) {
+    warnings.push(`journey/smoke-only nodes missing needs-flow baseline: ${smokeOnlyUnclassified.join(", ")}`);
+  }
 
   const undiscovered = inventory.nodes.filter((node) => !graphNodeIds.has(node.id));
   if (undiscovered.length > 0) {

@@ -1,9 +1,9 @@
 {
   "metadata": {
     "schemaVersion": 1,
-    "lastUpdatedAt": "2026-07-28T12:50:37.993Z",
+    "lastUpdatedAt": "2026-07-28T20:14:05.820Z",
     "lastUpdatedBy": "graph-update.js",
-    "contentHash": "sha256:1e34212e8bbe8b49fb785ae43094692b094a21abeeffdeeab0a50facba6abc30"
+    "contentHash": "sha256:95026fcb21e0d53bd5e32fe811176093eedf4da22d706d250d2c68cb706585ed"
   },
   "nodes": [
     {
@@ -719,7 +719,15 @@
       },
       "coveredBy": [
         "e2e/tests/flow/05-add-domain.spec.ts"
-      ]
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/dashboard",
+        "assertions": [
+          "Application added successfully"
+        ],
+        "result": "A generated application domain is submitted and the success toast is visible."
+      }
     },
     {
       "id": "add-environment",
@@ -732,7 +740,15 @@
       },
       "coveredBy": [
         "e2e/tests/flow/02-add-environment.spec.ts"
-      ]
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/project/.+/environments",
+        "assertions": [
+          "Staging"
+        ],
+        "result": "The Staging environment is added and appears on the project environments page."
+      }
     },
     {
       "id": "create-project",
@@ -745,7 +761,15 @@
       },
       "coveredBy": [
         "e2e/tests/flow/01-create-project.spec.ts"
-      ]
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/project/.+/environments",
+        "assertions": [
+          "Your project has been created."
+        ],
+        "result": "A project is created, the browser lands on its environments route, and tenantGroupId is captured from the URL."
+      }
     },
     {
       "id": "delete-project",
@@ -754,11 +778,924 @@
       "action": "delete the project created by this run",
       "convention": "legacy",
       "via": {
-        "file": "e2e/tests/flow/06-delete-project.spec.ts"
+        "file": "e2e/tests/flow/99-delete-project.spec.ts"
       },
       "coveredBy": [
-        "e2e/tests/flow/06-delete-project.spec.ts"
-      ]
+        "e2e/tests/flow/99-delete-project.spec.ts"
+      ],
+      "actionType": "delete",
+      "evidence": {
+        "urlPattern": "/app/console",
+        "assertions": [
+          "project name is absent"
+        ],
+        "result": "Each environment is deleted and the created project name is absent from the console."
+      }
+    },
+    {
+      "id": "flow-open-activation-invalid",
+      "from": "root",
+      "to": "activate",
+      "action": "open invalid activation route in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/activate",
+        "assertions": [
+          "Invalid Activation Link",
+          "Go to sign in"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-data-migration",
+      "from": "app-console",
+      "to": "app-data-migration",
+      "action": "open data migration route in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/14-data-migration-route.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/14-data-migration-route.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/data-migration",
+        "assertions": [
+          "Environment migration",
+          "Select environments & services"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-email-communication-detail",
+      "from": "app-itemId-email-management",
+      "to": "app-itemId-email-management-communications-id",
+      "action": "open first email communication detail in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/10-email-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management/communications/.+",
+        "assertions": [
+          "Template",
+          "Details"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-email-communication-edit",
+      "from": "app-itemId-email-management-communications-id",
+      "to": "app-itemId-email-management-communications-id-edit",
+      "action": "open first email communication edit in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/10-email-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management/communications/.+/edit",
+        "assertions": [
+          "Save",
+          "Preview"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-email-management",
+      "from": "app-console",
+      "to": "app-itemId-email-management",
+      "action": "open Email Management in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/10-email-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management",
+        "assertions": [
+          "Email Templates",
+          "Create, review, and manage reusable email templates for application communication."
+        ]
+      }
+    },
+    {
+      "id": "flow-open-email-new-communication",
+      "from": "app-itemId-email-management",
+      "to": "app-itemId-email-management-new-communication",
+      "action": "open new email communication in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/10-email-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management/new-communication",
+        "assertions": [
+          "Basic information",
+          "Name, mail configuration, and subject line"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-email-usage-detail",
+      "from": "app-itemId-email-management",
+      "to": "app-itemId-email-management-usage-id",
+      "action": "open first email usage detail in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/10-email-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management/usage/.+",
+        "assertions": [
+          "Subject"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-new-permission",
+      "from": "app-itemId-idp-permissions",
+      "to": "app-itemId-idp-permission-detail-new",
+      "action": "open new IDP permission form in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/permission-detail/new",
+        "assertions": [
+          "New Permission"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-oidc-template",
+      "from": "app-itemId-idp",
+      "to": "app-itemId-idp-oidc-template",
+      "action": "open IDP OIDC template in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/oidc-template",
+        "assertions": [
+          "OIDC template",
+          "Configure your OIDC template settings"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-permission-alias",
+      "from": "app-itemId-idp",
+      "to": "app-itemId-idp-permission",
+      "action": "open IDP permission alias redirect in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/permissions",
+        "assertions": [
+          "Permissions"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-permission-detail",
+      "from": "app-itemId-idp-permissions",
+      "to": "app-itemId-idp-permission-detail-id",
+      "action": "open first IDP permission detail in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/permission-detail/.+",
+        "assertions": [
+          "Built In or Custom",
+          "Save or Update"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-permission-detail-alias",
+      "from": "app-itemId-idp",
+      "to": "app-itemId-idp-permission-detail",
+      "action": "open IDP permission-detail alias redirect in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/permissions",
+        "assertions": [
+          "Permissions"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-role-alias",
+      "from": "app-itemId-idp",
+      "to": "app-itemId-idp-role",
+      "action": "open IDP role alias redirect in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/roles",
+        "assertions": [
+          "Roles"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-role-detail",
+      "from": "app-itemId-idp-roles",
+      "to": "app-itemId-idp-role-detail-id",
+      "action": "open first IDP role detail in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/role-detail/.+",
+        "assertions": [
+          "Edit Permissions"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-role-detail-alias",
+      "from": "app-itemId-idp",
+      "to": "app-itemId-idp-role-detail",
+      "action": "open IDP role-detail alias redirect in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/roles",
+        "assertions": [
+          "Roles"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-idp-settings",
+      "from": "app-itemId-idp",
+      "to": "app-itemId-idp-settings",
+      "action": "open IDP settings in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/11-idp-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/11-idp-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/settings",
+        "assertions": [
+          "Auth Configuration",
+          "Configure authentication policies, token validity, account lockout rules, and certificate settings."
+        ]
+      }
+    },
+    {
+      "id": "flow-open-invitation-invalid",
+      "from": "root",
+      "to": "invitation",
+      "action": "open invalid invitation route in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/invitation",
+        "assertions": [
+          "Invalid invitation link",
+          "missing a confirmation code"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-invitation-result",
+      "from": "invitation",
+      "to": "invitation-result",
+      "action": "open invitation result route in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/invitation/result",
+        "assertions": [
+          "invitation or sign-in result content"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-lmt-logs",
+      "from": "app-itemId-lmt",
+      "to": "app-itemId-lmt-logs",
+      "action": "open LMT logs in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/13-lmt-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/logs",
+        "assertions": [
+          "Logs",
+          "Search and view application logs across your services"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-lmt-service-log-trace",
+      "from": "app-itemId-lmt-logs-serviceName",
+      "to": "app-itemId-lmt-logs-serviceName-trace-traceId",
+      "action": "open service log trace route in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/13-lmt-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/logs/.+/trace/.+",
+        "assertions": [
+          "Trace or Duration or Timeline or Span or not found"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-lmt-service-logs",
+      "from": "app-itemId-lmt-logs",
+      "to": "app-itemId-lmt-logs-serviceName",
+      "action": "open service logs route in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/13-lmt-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/logs/.+",
+        "assertions": [
+          "Logs are not configured for this service."
+        ]
+      }
+    },
+    {
+      "id": "flow-open-lmt-trace-detail",
+      "from": "app-itemId-lmt-tracing-timeline-traceId",
+      "to": "app-itemId-lmt-tracing-traceId",
+      "action": "open LMT trace detail in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/13-lmt-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/tracing/.+",
+        "assertions": [
+          "Trace or Duration or Timeline or Span or not found"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-lmt-tracing",
+      "from": "app-itemId-lmt",
+      "to": "app-itemId-lmt-tracing",
+      "action": "open LMT tracing in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/13-lmt-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/tracing",
+        "assertions": [
+          "Tracing",
+          "Trace requests across services"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-lmt-tracing-timeline-redirect",
+      "from": "app-itemId-lmt-tracing",
+      "to": "app-itemId-lmt-tracing-timeline-traceId",
+      "action": "open LMT timeline redirect in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/13-lmt-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/tracing/timeline/.+",
+        "assertions": [
+          "redirects to trace detail"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-lmt-usage",
+      "from": "app-itemId-lmt",
+      "to": "app-itemId-lmt-usage",
+      "action": "open LMT usage in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/13-lmt-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/usage",
+        "assertions": [
+          "Global overview",
+          "Total API calls"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-profile",
+      "from": "app-console",
+      "to": "app-profile",
+      "action": "open authenticated profile in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/profile",
+        "assertions": [
+          "main profile content"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-project-index-redirect",
+      "from": "app-console",
+      "to": "app-project-tenantGroupId",
+      "action": "open project overview index redirect",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/project/.+",
+        "assertions": [
+          "Environments"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-project-repositories",
+      "from": "app-project-tenantGroupId",
+      "to": "app-project-tenantGroupId-repositories",
+      "action": "open project repositories in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/project/.+/repositories",
+        "assertions": [
+          "Repositories"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-project-settings",
+      "from": "app-project-tenantGroupId",
+      "to": "app-project-tenantGroupId-settings",
+      "action": "open project settings in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/project/.+/settings",
+        "assertions": [
+          "Project Settings",
+          "General Information"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-project-subscription-usage",
+      "from": "app-project-tenantGroupId",
+      "to": "app-project-tenantGroupId-subscription-usage",
+      "action": "open project subscription usage in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/08-project-overview-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/project/.+/subscription-usage",
+        "assertions": [
+          "Subscription Usage",
+          "Track platform consumption across all services"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-scoped-index-redirect",
+      "from": "app-console",
+      "to": "app-itemId",
+      "action": "open scoped app index redirect in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/.+/dashboard",
+        "assertions": [
+          "dashboard route"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-captcha",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-captcha",
+      "action": "open secret-management captcha in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/captcha",
+        "assertions": [
+          "Captcha",
+          "Bot protection configuration"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-client-credentials",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-client-credentials",
+      "action": "open secret-management client-credentials in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/client-credentials",
+        "assertions": [
+          "Client Credentials",
+          "OAuth client credentials for service-to-service access"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-email",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-email",
+      "action": "open secret-management email in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/email",
+        "assertions": [
+          "Email",
+          "Email provider configuration"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-external-idp",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-external-idp",
+      "action": "open secret-management external-idp in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/external-idp",
+        "assertions": [
+          "External IdP",
+          "External identity providers & certificates"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-identity-providers",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-identity-providers",
+      "action": "open secret-management identity-providers in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/identity-providers",
+        "assertions": [
+          "Identity Provider",
+          "Federated external identity providers"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-managed-services-redirect",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-managed-services",
+      "action": "open retired managed-services redirect in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/managed-services",
+        "assertions": [
+          "My Services"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-mfa",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-mfa",
+      "action": "open secret-management mfa in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/mfa",
+        "assertions": [
+          "MFA",
+          "Multi-factor authentication settings"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-notification",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-notification",
+      "action": "open secret-management notification in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/notification",
+        "assertions": [
+          "Notification",
+          "Push & notification settings"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-oidc",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-oidc",
+      "action": "open secret-management oidc in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/oidc",
+        "assertions": [
+          "OIDC",
+          "OpenID Connect configuration"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-oidc-branding",
+      "from": "app-itemId-secret-management-oidc",
+      "to": "app-itemId-secret-management-oidc-clientId-branding",
+      "action": "open first OIDC branding route in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/oidc/.+/branding",
+        "assertions": [
+          "Template or Branding or Login preview"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-sso",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-sso",
+      "action": "open secret-management sso in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/sso",
+        "assertions": [
+          "SSO",
+          "Single sign-on providers"
+        ]
+      }
+    },
+    {
+      "id": "flow-open-secret-storage",
+      "from": "app-itemId-secret-management",
+      "to": "app-itemId-secret-management-storage",
+      "action": "open secret-management storage in flow",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/12-secret-management-routes.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/storage",
+        "assertions": [
+          "Storage",
+          "File and object storage"
+        ]
+      }
+    },
+    {
+      "id": "flow-root-redirect",
+      "from": "root",
+      "to": "app-console",
+      "action": "open root and land on console",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/09-account-and-public-routes.spec.ts"
+      ],
+      "actionType": "redirect",
+      "evidence": {
+        "urlPattern": "/app/console",
+        "assertions": [
+          "console route"
+        ]
+      }
     },
     {
       "id": "grant-person-environment-access",
@@ -771,7 +1708,15 @@
       },
       "coveredBy": [
         "e2e/tests/flow/04-add-person-to-env.spec.ts"
-      ]
+      ],
+      "actionType": "grant",
+      "evidence": {
+        "urlPattern": "/app/project/.+/people/.+",
+        "assertions": [
+          "Access granted to Testing"
+        ],
+        "result": "The invited person is opened, Testing access is granted, and the success message is visible."
+      }
     },
     {
       "id": "invite-person",
@@ -784,7 +1729,15 @@
       },
       "coveredBy": [
         "e2e/tests/flow/03-invite-people.spec.ts"
-      ]
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/project/.+/people",
+        "assertions": [
+          "invited email is visible"
+        ],
+        "result": "A generated email is invited to Development and the email appears in the people list."
+      }
     },
     {
       "id": "login",
@@ -797,7 +1750,15 @@
       },
       "coveredBy": [
         "e2e/tests/auth/login.spec.ts"
-      ]
+      ],
+      "actionType": "login",
+      "evidence": {
+        "urlPattern": "/app/console",
+        "assertions": [
+          "Your Blocks Projects",
+          "Welcome to SELISE Blocks"
+        ]
+      }
     },
     {
       "id": "nav-to-api-settings",
@@ -810,7 +1771,14 @@
       },
       "coveredBy": [
         "e2e/tests/flow/07-sidebar-navigation.spec.ts"
-      ]
+      ],
+      "actionType": "navigate",
+      "evidence": {
+        "urlPattern": "/app/.+/api-settings",
+        "assertions": [
+          "API Settings route URL"
+        ]
+      }
     },
     {
       "id": "nav-to-idp",
@@ -823,7 +1791,14 @@
       },
       "coveredBy": [
         "e2e/tests/flow/07-sidebar-navigation.spec.ts"
-      ]
+      ],
+      "actionType": "navigate",
+      "evidence": {
+        "urlPattern": "/app/.+/idp",
+        "assertions": [
+          "IDP route URL"
+        ]
+      }
     },
     {
       "id": "nav-to-lmt",
@@ -836,7 +1811,14 @@
       },
       "coveredBy": [
         "e2e/tests/flow/07-sidebar-navigation.spec.ts"
-      ]
+      ],
+      "actionType": "navigate",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt",
+        "assertions": [
+          "Logs and Traces route URL"
+        ]
+      }
     },
     {
       "id": "nav-to-secret-management",
@@ -849,7 +1831,14 @@
       },
       "coveredBy": [
         "e2e/tests/flow/07-sidebar-navigation.spec.ts"
-      ]
+      ],
+      "actionType": "navigate",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management",
+        "assertions": [
+          "My Services"
+        ]
+      }
     },
     {
       "id": "open-data-migration",
@@ -862,7 +1851,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/data-migration.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/data-migration",
+        "assertions": [
+          "Environment migration",
+          "Select environments & services"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-email-management",
@@ -875,7 +1873,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/email-management.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management",
+        "assertions": [
+          "Email Templates",
+          "Create, review, and manage reusable email templates for application communication."
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-email-management-new-communication",
@@ -888,7 +1895,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/email-management-new-communication.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management/new-communication",
+        "assertions": [
+          "Basic information",
+          "Name, mail configuration, and subject line"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-idp-new-permission",
@@ -901,7 +1917,15 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/idp-new-permission.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/permission-detail/new",
+        "assertions": [
+          "New Permission"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-idp-oidc-template",
@@ -914,7 +1938,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/idp-oidc-template.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/oidc-template",
+        "assertions": [
+          "OIDC Template",
+          "Configure OIDC template"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-idp-permissions",
@@ -927,7 +1960,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/idp-permissions.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/permissions",
+        "assertions": [
+          "Permissions",
+          "Define and manage granular permissions for access control"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-idp-roles",
@@ -940,7 +1982,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/idp-roles.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/roles",
+        "assertions": [
+          "Roles",
+          "Create and manage roles that group permissions for users"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-idp-settings",
@@ -953,7 +2004,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/idp-settings.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/settings",
+        "assertions": [
+          "Auth Configuration",
+          "Configure authentication policies, token validity, account lockout rules, and certificate settings."
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-invalid-activation-link",
@@ -966,7 +2026,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/activation-invalid-link.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/activate",
+        "assertions": [
+          "Invalid Activation Link",
+          "Go to sign in"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-invalid-invitation-link",
@@ -979,7 +2048,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/invitation-invalid-link.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/invitation",
+        "assertions": [
+          "Invalid invitation link",
+          "missing a confirmation code"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-lmt-logs",
@@ -992,7 +2070,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/lmt-logs.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/logs",
+        "assertions": [
+          "Logs",
+          "Search and view application logs across your services"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-lmt-tracing",
@@ -1005,7 +2092,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/lmt-tracing.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/tracing",
+        "assertions": [
+          "Tracing",
+          "Trace requests across services"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-lmt-usage",
@@ -1018,7 +2114,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/lmt-usage.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/lmt/usage",
+        "assertions": [
+          "Global overview",
+          "Total API calls"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-own-profile",
@@ -1031,7 +2136,15 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/profile.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/profile",
+        "assertions": [
+          "profile or account content"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-project-repositories",
@@ -1044,7 +2157,15 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/project-repositories.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/project/.+/repositories",
+        "assertions": [
+          "Repositories"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-project-settings",
@@ -1057,7 +2178,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/project-settings.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/project/.+/settings",
+        "assertions": [
+          "Project Settings",
+          "General Information"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-project-subscription-usage",
@@ -1070,7 +2200,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/project-subscription-usage.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/project/.+/subscription-usage",
+        "assertions": [
+          "Subscription Usage",
+          "Track platform consumption across all services"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-captcha",
@@ -1083,7 +2222,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-captcha.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/captcha",
+        "assertions": [
+          "Captcha",
+          "Bot protection configuration"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-client-credentials",
@@ -1096,7 +2244,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-client-credentials.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/client-credentials",
+        "assertions": [
+          "Client Credentials",
+          "OAuth client credentials for service-to-service access"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-email",
@@ -1109,7 +2266,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-email.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/email",
+        "assertions": [
+          "Email",
+          "Email provider configuration"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-external-idp",
@@ -1122,7 +2288,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-external-idp.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/external-idp",
+        "assertions": [
+          "External IdP",
+          "External identity providers & certificates"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-identity-providers",
@@ -1135,7 +2310,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-identity-providers.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/identity-providers",
+        "assertions": [
+          "Identity Provider",
+          "Federated external identity providers"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-mfa",
@@ -1148,7 +2332,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-mfa.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/mfa",
+        "assertions": [
+          "MFA",
+          "Multi-factor authentication settings"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-notification",
@@ -1161,7 +2354,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-notification.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/notification",
+        "assertions": [
+          "Notification",
+          "Push & notification settings"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-oidc",
@@ -1174,7 +2376,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-oidc.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/oidc",
+        "assertions": [
+          "OIDC",
+          "OpenID Connect configuration"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-sso",
@@ -1187,7 +2398,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-sso.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/sso",
+        "assertions": [
+          "SSO",
+          "Single sign-on providers"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-secret-management-storage",
@@ -1200,7 +2420,16 @@
       },
       "coveredBy": [
         "e2e/tests/journeys/secret-management-storage.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/storage",
+        "assertions": [
+          "Storage",
+          "File and object storage"
+        ]
+      },
+      "coverageLevel": "smoke"
     },
     {
       "id": "open-setup-guide",
@@ -1213,7 +2442,15 @@
       },
       "coveredBy": [
         "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
-      ]
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/my-services",
+        "assertions": [
+          "My Services",
+          "My Services Overview"
+        ]
+      }
     },
     {
       "id": "register-service",
@@ -1226,7 +2463,16 @@
       },
       "coveredBy": [
         "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
-      ]
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/my-services",
+        "assertions": [
+          "Test Service",
+          "Logs"
+        ],
+        "result": "A service named Test Service is saved and its service card with a Logs link is visible."
+      }
     }
   ]
 }

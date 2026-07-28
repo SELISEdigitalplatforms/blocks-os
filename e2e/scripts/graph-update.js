@@ -14,6 +14,44 @@ const {
   writeJson,
 } = require("./lib/common");
 
+const navigationActionTypes = new Set(["navigate", "open", "redirect", "smoke", "login"]);
+
+function hasDynamicRouteSegment(route) {
+  return typeof route === "string" && route.split("/").some((segment) => segment.startsWith(":"));
+}
+
+function hasRouteEvidence(edge) {
+  const evidence = edge.evidence;
+  return (
+    evidence &&
+    typeof evidence.urlPattern === "string" &&
+    evidence.urlPattern.trim().length > 0 &&
+    Array.isArray(evidence.assertions) &&
+    evidence.assertions.some((assertion) => typeof assertion === "string" && assertion.trim().length > 0)
+  );
+}
+
+function hasResultEvidence(edge) {
+  const resultEvidence = edge.evidence?.result;
+  return typeof resultEvidence === "string" && resultEvidence.trim().length > 0;
+}
+
+function isNavigationOnlyEdge(edge) {
+  if (typeof edge.actionType === "string") {
+    return navigationActionTypes.has(edge.actionType);
+  }
+
+  return /^(nav|navigate|open|login)\b/i.test(edge.id || "") || /^(navigate|open|login)\b/i.test(edge.action || "");
+}
+
+function isJourneyFile(file) {
+  return file.startsWith("e2e/tests/journeys/") && file.endsWith(".spec.ts");
+}
+
+function isJourneyOnlyEdge(edge) {
+  return Array.isArray(edge.coveredBy) && edge.coveredBy.length > 0 && edge.coveredBy.every(isJourneyFile);
+}
+
 function parsePatchPath() {
   const index = process.argv.indexOf("--patch");
   return index >= 0 ? process.argv[index + 1] : patchPath;
@@ -27,11 +65,15 @@ function validatePatch(graph, patch) {
   const failures = [];
   const nodeIds = new Set((graph.nodes || []).map((node) => node.id));
   const edgeIds = new Set((graph.edges || []).map((edge) => edge.id));
+  const nodeRoutes = new Map(
+    (graph.nodes || []).filter((node) => node.canonicalRoute).map((node) => [node.id, node.canonicalRoute]),
+  );
 
   for (const node of patch.nodes || []) {
     if (!node.id) failures.push("patch node missing id");
     if (nodeIds.has(node.id)) failures.push(`patch node id already exists: ${node.id}`);
     nodeIds.add(node.id);
+    if (node.canonicalRoute) nodeRoutes.set(node.id, node.canonicalRoute);
   }
 
   for (const edge of patch.edges || []) {
@@ -59,12 +101,21 @@ function validatePatch(graph, patch) {
         failures.push(`patch edge ${edge.id} via.file must be under e2e/support/steps/`);
       }
       for (const file of edge.coveredBy || []) {
-        if (!file.startsWith("e2e/tests/journeys/") || !file.endsWith(".spec.ts")) {
+        if (!isJourneyFile(file)) {
           failures.push(`patch edge ${edge.id} coveredBy must be under e2e/tests/journeys/: ${file}`);
         }
       }
+      if (edge.coverageLevel !== "smoke") failures.push(`patch edge ${edge.id} uses a journey spec and must set coverageLevel to smoke`);
     } else {
       failures.push(`patch edge ${edge.id} has invalid convention ${edge.convention}`);
+    }
+
+    if (hasDynamicRouteSegment(nodeRoutes.get(edge.to)) && !hasRouteEvidence(edge)) {
+      failures.push(`patch edge ${edge.id} targets a dynamic route and must include evidence.urlPattern and evidence.assertions`);
+    }
+
+    if (!isNavigationOnlyEdge(edge) && !hasResultEvidence(edge)) {
+      failures.push(`patch edge ${edge.id} performs a non-navigation action and must include evidence.result`);
     }
   }
 
@@ -90,7 +141,7 @@ try {
 
   const newlyCovered = new Set();
   for (const edge of patch.edges || []) {
-    if (Array.isArray(edge.coveredBy) && edge.coveredBy.length > 0) {
+    if (Array.isArray(edge.coveredBy) && edge.coveredBy.length > 0 && !isJourneyOnlyEdge(edge)) {
       newlyCovered.add(edge.from);
       newlyCovered.add(edge.to);
     }
