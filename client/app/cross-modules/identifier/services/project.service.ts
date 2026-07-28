@@ -151,9 +151,9 @@ export class ProjectService {
   }
 
   getPublicCertificateInformation(
-    projectKey: string,
+
   ): Promise<IGetPublicCertificateResponse | null> {
-    const url = `${PROJECT_ENDPOINTS.GET_TOKEN_VALIDATION}?ProjectKey=${projectKey}`;
+    const url = `${PROJECT_ENDPOINTS.GET_TOKEN_VALIDATION}`;
     return http.get<IGetPublicCertificateResponse | null>(url);
   }
 
