@@ -2,6 +2,45 @@
 
 ASP.NET Core + React (Vite, TypeScript) application: **Genesis-backed API**, **background worker**, and a **SPA** built into `server/Api/wwwroot` so Kestrel can serve the UI and backend from one host. Node/npm are used for the client toolchain (install, dev server, production build).
 
+## Frontend E2E impact for humans and AI
+
+This section is part of the normal development protocol for both humans and AI agents. For any task that changes files under `client/app/**`, run the lightweight E2E impact check from `e2e/` before finishing:
+
+```bash
+npm run graph:impact
+```
+
+All E2E graph scripts and agent summaries use this format:
+
+```text
+verdict: <none|possible|likely|definite|unknown|pass|warning|fail|approval-required>
+reason: <short concrete reason>
+next: <next action or "none">
+```
+
+Follow the returned `verdict/reason/next`. If E2E is required, follow the E2E graph rules in `e2e/README.md`, then run:
+
+```bash
+npm run graph:check
+```
+
+Full E2E graph audits are manual or user-requested only:
+
+```bash
+npm run graph:inventory
+npm run graph:check
+```
+
+Legacy E2E should remain as-is unless the user explicitly approves a change. If a required fix appears to need modifying legacy E2E, ask first:
+
+```text
+verdict: approval-required
+reason: required change touches protected legacy E2E
+next: ask user whether to modify legacy E2E or keep it as-is
+```
+
+When AI writes or updates E2E coverage, it must use the graph workflow in `e2e/README.md`. New AI-authored E2E belongs in graph-approved step and journey files, not in the existing legacy E2E paths unless the user approves that legacy change.
+
 ## Project structure
 
 ```

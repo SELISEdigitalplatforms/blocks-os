@@ -10,6 +10,11 @@
     "test:debug": "playwright test --debug",
     "report": "playwright show-report",
     "codegen": "playwright codegen",
+    "graph:impact": "node scripts/graph-impact.js",
+    "graph:inventory": "node scripts/graph-inventory.js",
+    "graph:check": "node scripts/graph-check.js",
+    "graph:render": "node scripts/graph-render.js",
+    "graph:update": "node scripts/graph-update.js",
     "lint": "eslint \"**/*.ts\"",
     "lint:fix": "eslint \"**/*.ts\" --fix",
     "format": "prettier --write .",
@@ -22,6 +27,7 @@
     "eslint": "^8.57.0",
     "@typescript-eslint/eslint-plugin": "^8.62.0",
     "@typescript-eslint/parser": "^8.62.0",
+    "typescript": "^5.0.0",
     "prettier": "^3",
     "eslint-config-prettier": "^9"
   }

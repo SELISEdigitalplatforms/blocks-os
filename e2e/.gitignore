@@ -4,6 +4,9 @@ node_modules/
 /blob-report/
 /.playwright/
 /fixtures/*.json
+/graph/flow-graph.md
+/graph/selector-index.json
+/graph/patch.json
 
 # Local secrets — never commit real credentials
 .env.e2e

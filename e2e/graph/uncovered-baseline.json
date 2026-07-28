@@ -1,0 +1,254 @@
+{
+  "entries": [
+    {
+      "nodeId": "activate",
+      "status": "backlog",
+      "reason": "Public activation flow is user-facing but not prioritized for generated E2E yet."
+    },
+    {
+      "nodeId": "app",
+      "status": "covered-by-parent",
+      "reason": "Index redirect to console is indirectly exercised by authenticated navigation."
+    },
+    {
+      "nodeId": "app-callback",
+      "status": "no-e2e-needed",
+      "reason": "GitHub callback route is integration callback plumbing, not a stable browser journey target."
+    },
+    {
+      "nodeId": "app-create-project",
+      "status": "covered-by-parent",
+      "reason": "Create-project route is exercised by the legacy create-project flow."
+    },
+    {
+      "nodeId": "app-data-migration",
+      "status": "backlog",
+      "reason": "Data migration page is user-facing but not prioritized for generated E2E yet."
+    },
+    {
+      "nodeId": "app-itemId",
+      "status": "covered-by-parent",
+      "reason": "Scoped dashboard redirect is indirectly exercised when entering a project environment."
+    },
+    {
+      "nodeId": "app-itemId-email-management",
+      "status": "backlog",
+      "reason": "Email Management list is a user-facing module that should receive generated coverage later."
+    },
+    {
+      "nodeId": "app-itemId-email-management-communications-id",
+      "status": "covered-by-parent",
+      "reason": "Communication detail route should be covered through an Email Management journey."
+    },
+    {
+      "nodeId": "app-itemId-email-management-communications-id-edit",
+      "status": "covered-by-parent",
+      "reason": "Communication edit route should be covered through an Email Management journey."
+    },
+    {
+      "nodeId": "app-itemId-email-management-new-communication",
+      "status": "backlog",
+      "reason": "New communication flow is a user-facing create journey."
+    },
+    {
+      "nodeId": "app-itemId-email-management-usage-id",
+      "status": "covered-by-parent",
+      "reason": "Usage detail route should be covered through an Email Management journey."
+    },
+    {
+      "nodeId": "app-itemId-idp-oidc-template",
+      "status": "backlog",
+      "reason": "OIDC template route is user-facing but not prioritized for generated E2E yet."
+    },
+    {
+      "nodeId": "app-itemId-idp-permission",
+      "status": "covered-by-parent",
+      "reason": "Redirect alias for permissions list."
+    },
+    {
+      "nodeId": "app-itemId-idp-permission-detail",
+      "status": "covered-by-parent",
+      "reason": "Redirect alias for permissions list."
+    },
+    {
+      "nodeId": "app-itemId-idp-permission-detail-id",
+      "status": "covered-by-parent",
+      "reason": "Permission detail should be covered through the permissions management journey."
+    },
+    {
+      "nodeId": "app-itemId-idp-permission-detail-new",
+      "status": "backlog",
+      "reason": "Create permission is a user-facing IDP management journey."
+    },
+    {
+      "nodeId": "app-itemId-idp-permissions",
+      "status": "backlog",
+      "reason": "Permissions list is a user-facing IDP management surface."
+    },
+    {
+      "nodeId": "app-itemId-idp-role",
+      "status": "covered-by-parent",
+      "reason": "Redirect alias for roles list."
+    },
+    {
+      "nodeId": "app-itemId-idp-role-detail",
+      "status": "covered-by-parent",
+      "reason": "Redirect alias for roles list."
+    },
+    {
+      "nodeId": "app-itemId-idp-role-detail-id",
+      "status": "covered-by-parent",
+      "reason": "Role detail should be covered through the roles management journey."
+    },
+    {
+      "nodeId": "app-itemId-idp-roles",
+      "status": "backlog",
+      "reason": "Roles list is a user-facing IDP management surface."
+    },
+    {
+      "nodeId": "app-itemId-idp-settings",
+      "status": "backlog",
+      "reason": "IDP settings is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-lmt-logs",
+      "status": "backlog",
+      "reason": "Logs list is a user-facing observability surface."
+    },
+    {
+      "nodeId": "app-itemId-lmt-logs-serviceName",
+      "status": "covered-by-parent",
+      "reason": "Service logs detail should be covered through the Logs journey."
+    },
+    {
+      "nodeId": "app-itemId-lmt-logs-serviceName-trace-traceId",
+      "status": "covered-by-parent",
+      "reason": "Service trace detail should be covered through a broader Logs or Tracing journey."
+    },
+    {
+      "nodeId": "app-itemId-lmt-tracing",
+      "status": "backlog",
+      "reason": "Tracing list is a user-facing observability surface."
+    },
+    {
+      "nodeId": "app-itemId-lmt-tracing-timeline-traceId",
+      "status": "covered-by-parent",
+      "reason": "Timeline redirect/detail should be covered through a broader Tracing journey."
+    },
+    {
+      "nodeId": "app-itemId-lmt-tracing-traceId",
+      "status": "covered-by-parent",
+      "reason": "Trace detail should be covered through a broader Tracing journey."
+    },
+    {
+      "nodeId": "app-itemId-lmt-usage",
+      "status": "backlog",
+      "reason": "Usage page is a user-facing observability surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-captcha",
+      "status": "backlog",
+      "reason": "Captcha configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-client-credentials",
+      "status": "backlog",
+      "reason": "Client Credentials is a user-facing secrets and auth configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-email",
+      "status": "backlog",
+      "reason": "Email configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-external-idp",
+      "status": "backlog",
+      "reason": "External IdP certificate configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-identity-providers",
+      "status": "backlog",
+      "reason": "Identity Provider configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-managed-services",
+      "status": "covered-by-parent",
+      "reason": "Retired managed-services redirect is covered by the My Services surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-mfa",
+      "status": "backlog",
+      "reason": "MFA configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-notification",
+      "status": "backlog",
+      "reason": "Notification configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-oidc",
+      "status": "backlog",
+      "reason": "OIDC configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-oidc-clientId-branding",
+      "status": "covered-by-parent",
+      "reason": "OIDC branding detail should be covered through the OIDC configuration journey."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-sso",
+      "status": "backlog",
+      "reason": "SSO route exists without sidebar entry and should be triaged for generated coverage."
+    },
+    {
+      "nodeId": "app-itemId-secret-management-storage",
+      "status": "backlog",
+      "reason": "Storage configuration is a user-facing configuration surface."
+    },
+    {
+      "nodeId": "app-profile",
+      "status": "backlog",
+      "reason": "Profile route is a user-facing account surface."
+    },
+    {
+      "nodeId": "app-project-tenantGroupId",
+      "status": "covered-by-parent",
+      "reason": "Project overview redirect is indirectly exercised by project navigation."
+    },
+    {
+      "nodeId": "app-project-tenantGroupId-repositories",
+      "status": "backlog",
+      "reason": "Repositories page is a user-facing project management surface."
+    },
+    {
+      "nodeId": "app-project-tenantGroupId-settings",
+      "status": "backlog",
+      "reason": "Project Settings is a user-facing project management surface."
+    },
+    {
+      "nodeId": "app-project-tenantGroupId-subscription-usage",
+      "status": "backlog",
+      "reason": "Subscription Usage is a user-facing project management surface."
+    },
+    {
+      "nodeId": "invitation",
+      "status": "backlog",
+      "reason": "Invitation acceptance flow is user-facing but depends on invite token setup."
+    },
+    {
+      "nodeId": "invitation-result",
+      "status": "covered-by-parent",
+      "reason": "Invitation result should be covered through the invitation acceptance journey."
+    },
+    {
+      "nodeId": "login-callback",
+      "status": "no-e2e-needed",
+      "reason": "Login callback is handled by auth provider plumbing rather than direct app E2E."
+    },
+    {
+      "nodeId": "root",
+      "status": "covered-by-parent",
+      "reason": "Catch-all redirect to console is indirectly exercised by authenticated navigation."
+    }
+  ]
+}

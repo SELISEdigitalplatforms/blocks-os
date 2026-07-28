@@ -1,0 +1,881 @@
+{
+  "metadata": {
+    "schemaVersion": 1,
+    "lastUpdatedAt": "2026-07-28T11:48:40.264Z",
+    "lastUpdatedBy": "graph-update.js",
+    "contentHash": "sha256:94fd2a5baa4b4efc04eea90c1175357ea29cad83cbd115a15b1044ad56ebf12c"
+  },
+  "nodes": [
+    {
+      "id": "activate",
+      "label": "/activate",
+      "kind": "route",
+      "canonicalRoute": "/activate",
+      "source": "router.tsx"
+    },
+    {
+      "id": "app",
+      "label": "/app redirect",
+      "kind": "redirect",
+      "canonicalRoute": "/app",
+      "source": "router.tsx",
+      "redirectsTo": "app-console"
+    },
+    {
+      "id": "app-callback",
+      "label": "/app/callback",
+      "kind": "route",
+      "canonicalRoute": "/app/callback",
+      "source": "router.tsx"
+    },
+    {
+      "id": "app-console",
+      "label": "/app/console",
+      "kind": "route",
+      "canonicalRoute": "/app/console",
+      "source": "router.tsx"
+    },
+    {
+      "id": "app-create-project",
+      "label": "/app/create-project",
+      "kind": "route",
+      "canonicalRoute": "/app/create-project",
+      "source": "router.tsx"
+    },
+    {
+      "id": "app-data-migration",
+      "label": "/app/data-migration",
+      "kind": "route",
+      "canonicalRoute": "/app/data-migration",
+      "source": "router.tsx"
+    },
+    {
+      "id": "app-itemId",
+      "label": "/app/:itemId redirect",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-dashboard"
+    },
+    {
+      "id": "app-itemId-api-settings",
+      "label": "API Settings",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/api-settings",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__api-settings",
+        "path": "/app/api-settings",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-dashboard",
+      "label": "Overview",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/dashboard",
+      "source": "router.tsx",
+      "menu": {
+        "id": "overview-project",
+        "path": "/app/dashboard",
+        "sidebarVisible": true
+      },
+      "description": "Project overview and insights"
+    },
+    {
+      "id": "app-itemId-email-management",
+      "label": "Email Management",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/email-management",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__email-management",
+        "path": "/app/email-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage email templates and mailbox activity"
+    },
+    {
+      "id": "app-itemId-email-management-communications-id",
+      "label": "Email Management",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/email-management/communications/:id",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__email-management",
+        "path": "/app/email-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage email templates and mailbox activity"
+    },
+    {
+      "id": "app-itemId-email-management-communications-id-edit",
+      "label": "Email Management",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/email-management/communications/:id/edit",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__email-management",
+        "path": "/app/email-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage email templates and mailbox activity"
+    },
+    {
+      "id": "app-itemId-email-management-new-communication",
+      "label": "Email Management",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/email-management/new-communication",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__email-management",
+        "path": "/app/email-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage email templates and mailbox activity"
+    },
+    {
+      "id": "app-itemId-email-management-usage-id",
+      "label": "Email Management",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/email-management/usage/:id",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__email-management",
+        "path": "/app/email-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage email templates and mailbox activity"
+    },
+    {
+      "id": "app-itemId-idp",
+      "label": "IDP",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/idp",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-idp-settings",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-oidc-template",
+      "label": "IDP",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/idp/oidc-template",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-permission",
+      "label": "IDP",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/idp/permission",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-idp-permissions",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-permission-detail",
+      "label": "IDP",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/idp/permission-detail",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-idp-permissions",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-permission-detail-id",
+      "label": "IDP",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/idp/permission-detail/:id",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-permission-detail-new",
+      "label": "IDP",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/idp/permission-detail/new",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-permissions",
+      "label": "IDP",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/idp/permissions",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-role",
+      "label": "IDP",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/idp/role",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-idp-roles",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-role-detail",
+      "label": "IDP",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/idp/role-detail",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-idp-roles",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-role-detail-id",
+      "label": "IDP",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/idp/role-detail/:id",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-roles",
+      "label": "IDP",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/idp/roles",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-idp-settings",
+      "label": "IDP",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/idp/settings",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__authentication",
+        "path": "/app/idp",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt",
+      "label": "Logs & Traces",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/lmt",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-lmt-usage",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt-logs",
+      "label": "Logs & Traces",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/lmt/logs",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt-logs-serviceName",
+      "label": "Logs & Traces",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/lmt/logs/:serviceName",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt-logs-serviceName-trace-traceId",
+      "label": "Logs & Traces",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/lmt/logs/:serviceName/trace/:traceId",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt-tracing",
+      "label": "Logs & Traces",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/lmt/tracing",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt-tracing-timeline-traceId",
+      "label": "Logs & Traces",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/lmt/tracing/timeline/:traceId",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt-tracing-traceId",
+      "label": "Logs & Traces",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/lmt/tracing/:traceId",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-lmt-usage",
+      "label": "Logs & Traces",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/lmt/usage",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__lmt",
+        "path": "/app/lmt",
+        "sidebarVisible": true
+      }
+    },
+    {
+      "id": "app-itemId-secret-management",
+      "label": "Secrets & Configs",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/secret-management",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-secret-management-my-services",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-captcha",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/captcha",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-client-credentials",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/client-credentials",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-email",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/email",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-external-idp",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/external-idp",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-identity-providers",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/identity-providers",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-managed-services",
+      "label": "Secrets & Configs",
+      "kind": "redirect",
+      "canonicalRoute": "/app/:itemId/secret-management/managed-services",
+      "source": "router.tsx",
+      "redirectsTo": "app-itemId-secret-management-my-services",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-mfa",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/mfa",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-my-services",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/my-services",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-notification",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/notification",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-oidc",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/oidc",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-oidc-clientId-branding",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/oidc/:clientId/branding",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-sso",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/sso",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-itemId-secret-management-storage",
+      "label": "Secrets & Configs",
+      "kind": "route",
+      "canonicalRoute": "/app/:itemId/secret-management/storage",
+      "source": "router.tsx",
+      "menu": {
+        "id": "service-identity__secret-management",
+        "path": "/app/secret-management",
+        "sidebarVisible": true
+      },
+      "description": "Manage secrets, configs, and credentials"
+    },
+    {
+      "id": "app-profile",
+      "label": "/app/profile",
+      "kind": "route",
+      "canonicalRoute": "/app/profile",
+      "source": "router.tsx"
+    },
+    {
+      "id": "app-project-tenantGroupId",
+      "label": "/app/project/:tenantGroupId redirect",
+      "kind": "redirect",
+      "canonicalRoute": "/app/project/:tenantGroupId",
+      "source": "router.tsx",
+      "redirectsTo": "app-project-tenantGroupId-environments"
+    },
+    {
+      "id": "app-project-tenantGroupId-environments",
+      "label": "Environments",
+      "kind": "route",
+      "canonicalRoute": "/app/project/:tenantGroupId/environments",
+      "source": "router.tsx",
+      "menu": {
+        "id": "environments",
+        "path": "/app/project/environments",
+        "sidebarVisible": true
+      },
+      "description": "Manage project environments and configurations"
+    },
+    {
+      "id": "app-project-tenantGroupId-people",
+      "label": "People",
+      "kind": "route",
+      "canonicalRoute": "/app/project/:tenantGroupId/people",
+      "source": "router.tsx",
+      "menu": {
+        "id": "people",
+        "path": "/app/project/people",
+        "sidebarVisible": true
+      },
+      "description": "Manage project members and permissions"
+    },
+    {
+      "id": "app-project-tenantGroupId-people-id",
+      "label": "People",
+      "kind": "route",
+      "canonicalRoute": "/app/project/:tenantGroupId/people/:id",
+      "source": "router.tsx",
+      "menu": {
+        "id": "people",
+        "path": "/app/project/people",
+        "sidebarVisible": true
+      },
+      "description": "Manage project members and permissions"
+    },
+    {
+      "id": "app-project-tenantGroupId-repositories",
+      "label": "Repositories",
+      "kind": "route",
+      "canonicalRoute": "/app/project/:tenantGroupId/repositories",
+      "source": "router.tsx",
+      "menu": {
+        "id": "repositories",
+        "path": "/app/project/repositories",
+        "sidebarVisible": true
+      },
+      "description": "Manage code repositories and integrations"
+    },
+    {
+      "id": "app-project-tenantGroupId-settings",
+      "label": "Project Settings",
+      "kind": "route",
+      "canonicalRoute": "/app/project/:tenantGroupId/settings",
+      "source": "router.tsx",
+      "menu": {
+        "id": "settings",
+        "path": "/app/project/settings",
+        "sidebarVisible": true
+      },
+      "description": "Configure project details and preferences"
+    },
+    {
+      "id": "app-project-tenantGroupId-subscription-usage",
+      "label": "Subscription Usage",
+      "kind": "route",
+      "canonicalRoute": "/app/project/:tenantGroupId/subscription-usage",
+      "source": "router.tsx",
+      "menu": {
+        "id": "subscription-usage",
+        "path": "/app/project/subscription-usage",
+        "sidebarVisible": true
+      },
+      "description": "View subscription details and usage metrics"
+    },
+    {
+      "id": "invitation",
+      "label": "/invitation",
+      "kind": "route",
+      "canonicalRoute": "/invitation",
+      "source": "router.tsx"
+    },
+    {
+      "id": "invitation-result",
+      "label": "/invitation/result",
+      "kind": "route",
+      "canonicalRoute": "/invitation/result",
+      "source": "router.tsx"
+    },
+    {
+      "id": "login",
+      "label": "/login",
+      "kind": "route",
+      "canonicalRoute": "/login",
+      "source": "router.tsx"
+    },
+    {
+      "id": "login-callback",
+      "label": "/login/callback",
+      "kind": "route",
+      "canonicalRoute": "/login/callback",
+      "source": "router.tsx"
+    },
+    {
+      "id": "root",
+      "label": "/* redirect",
+      "kind": "redirect",
+      "canonicalRoute": "/*",
+      "source": "router.tsx",
+      "redirectsTo": "app-console"
+    }
+  ],
+  "edges": [
+    {
+      "id": "add-application-domain",
+      "from": "app-project-tenantGroupId-environments",
+      "to": "app-itemId-dashboard",
+      "action": "add application domain in an environment",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/05-add-domain.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/05-add-domain.spec.ts"
+      ]
+    },
+    {
+      "id": "add-environment",
+      "from": "app-project-tenantGroupId-environments",
+      "to": "app-project-tenantGroupId-environments",
+      "action": "add another environment",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/02-add-environment.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/02-add-environment.spec.ts"
+      ]
+    },
+    {
+      "id": "create-project",
+      "from": "app-console",
+      "to": "app-project-tenantGroupId-environments",
+      "action": "create project with two environments",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/01-create-project.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/01-create-project.spec.ts"
+      ]
+    },
+    {
+      "id": "delete-project",
+      "from": "app-project-tenantGroupId-environments",
+      "to": "app-console",
+      "action": "delete the project created by this run",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/06-delete-project.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/06-delete-project.spec.ts"
+      ]
+    },
+    {
+      "id": "grant-person-environment-access",
+      "from": "app-project-tenantGroupId-people",
+      "to": "app-project-tenantGroupId-people-id",
+      "action": "grant invited person access to testing",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/04-add-person-to-env.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/04-add-person-to-env.spec.ts"
+      ]
+    },
+    {
+      "id": "invite-person",
+      "from": "app-project-tenantGroupId-people",
+      "to": "app-project-tenantGroupId-people",
+      "action": "invite a person to development",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/03-invite-people.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/03-invite-people.spec.ts"
+      ]
+    },
+    {
+      "id": "login",
+      "from": "login",
+      "to": "app-console",
+      "action": "login through dev IAM",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/auth/login.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/auth/login.spec.ts"
+      ]
+    },
+    {
+      "id": "nav-to-api-settings",
+      "from": "app-console",
+      "to": "app-itemId-api-settings",
+      "action": "navigate from console to API Settings",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      ]
+    },
+    {
+      "id": "nav-to-idp",
+      "from": "app-console",
+      "to": "app-itemId-idp",
+      "action": "navigate from console to IDP",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      ]
+    },
+    {
+      "id": "nav-to-lmt",
+      "from": "app-console",
+      "to": "app-itemId-lmt",
+      "action": "navigate from console to Logs and Traces",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      ]
+    },
+    {
+      "id": "nav-to-secret-management",
+      "from": "app-console",
+      "to": "app-itemId-secret-management",
+      "action": "navigate from console to Secrets and Configs",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      ]
+    },
+    {
+      "id": "open-setup-guide",
+      "from": "app-itemId-secret-management-my-services",
+      "to": "app-itemId-secret-management-my-services",
+      "action": "open My Services setup guide",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
+      ]
+    },
+    {
+      "id": "register-service",
+      "from": "app-itemId-secret-management-my-services",
+      "to": "app-itemId-secret-management-my-services",
+      "action": "register a service in My Services",
+      "convention": "legacy",
+      "via": {
+        "file": "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
+      ]
+    }
+  ]
+}
