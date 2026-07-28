@@ -5,7 +5,7 @@ import type { IPATResponse } from "@blocks-idp/iam/models/user";
 
 const h = vi.hoisted(() => ({ isMobile: false }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useIsMobile: () => h.isMobile }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useIsMobile: () => h.isMobile }));
 vi.mock("./generate-pat-modal", () => ({
   GenerateTokenModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="generate-modal" /> : null,

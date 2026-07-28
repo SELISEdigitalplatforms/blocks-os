@@ -17,7 +17,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
 import { zodResolver } from "@hookform/resolvers/zod";

@@ -1,6 +1,6 @@
 import { useUpdateProject } from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 import {
   createColumnHelper,
   flexRender,
@@ -11,13 +11,13 @@ import { Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainAction } from "./domain.constant";
-import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { CnameValidatorDialog } from "../cname/dialog";
 import {
   Button,
   CopyToClipboardButton,
   RenderConditionally,
-} from "@seliseblocks/blocks-kit/components";
+} from "@seliseblocks/genesis-os/components";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 

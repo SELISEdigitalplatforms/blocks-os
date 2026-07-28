@@ -1,6 +1,6 @@
 import { useGetAuthOidcCredentials } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import { useMemo } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";

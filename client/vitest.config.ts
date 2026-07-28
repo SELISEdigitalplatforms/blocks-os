@@ -28,6 +28,7 @@ export default defineConfig({
     vmMemoryLimit: "1GB",
     coverage: {
       provider: "v8",
+      reporter: ["text", "lcov"],
       include: ["app/**/*.{ts,tsx}"],
       exclude: [
         "app/**/*.test.*",

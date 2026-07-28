@@ -14,7 +14,7 @@ import { useGetEmailUsage, useGetEmailUsageById } from "./use-email-usage";
 import { act } from "react";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("Email Usage Hooks", () => {
   beforeEach(() => {
@@ -115,7 +115,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should be disabled when tenantId is empty", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
@@ -132,7 +132,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should return empty data when tenantId is empty but query runs", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
@@ -227,7 +227,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should be disabled when tenantId is empty", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
@@ -256,7 +256,7 @@ describe("Email Usage Hooks", () => {
     });
 
     it("should return null when tenantId is empty but query runs", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });

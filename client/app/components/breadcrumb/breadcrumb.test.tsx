@@ -12,7 +12,7 @@ vi.mock("react-router", async (importOriginal) => {
   return { ...actual, useLocation: () => ({ pathname: h.pathname }) };
 });
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   usePathSegments: () => h.segments,
 }));
 

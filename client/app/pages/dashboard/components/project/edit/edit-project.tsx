@@ -3,7 +3,7 @@ import { Edit } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { EditProjectDialog } from "./edit-project-dialog";
 import { useState } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit/store";
+import { useProjectStore } from "@seliseblocks/genesis-os/store";
 
 export function EditProject() {
   const [openEditDialog, setOpenEditDialog] = useState(false);

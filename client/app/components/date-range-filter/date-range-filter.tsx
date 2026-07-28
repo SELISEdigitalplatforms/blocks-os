@@ -7,7 +7,7 @@ import { CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { formatDate } from "@/lib/utils";
 import { Separator } from "../ui-kits/separator/separator";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 interface DateRangeFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title: string;

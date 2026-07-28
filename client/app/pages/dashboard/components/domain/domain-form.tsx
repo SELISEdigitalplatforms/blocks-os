@@ -10,7 +10,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogClose, DialogFooter } from "@/components/ui-kits/dialog/dialog";
 import { useUpdateProject } from "@/hooks/use-project";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -19,7 +19,7 @@ import {
   type DomainFormSchema,
 } from "./domain-form.schema";
 import { DomainAction } from "./domain.constant";
-import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 
 const getCookieDomain = (domain: string) => {
   try {

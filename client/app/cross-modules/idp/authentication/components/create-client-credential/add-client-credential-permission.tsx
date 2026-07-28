@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus } from "lucide-react";

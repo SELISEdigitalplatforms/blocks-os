@@ -35,7 +35,7 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (path: string) => `/app/tenant-1/${path}`,
   useTheme: () => ({ theme: "light" }),
 }));

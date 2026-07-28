@@ -1,5 +1,5 @@
 import { CaptchaProps, CaptchaRef } from "@/components/captcha/index.type";
-import { useTheme } from "@seliseblocks/blocks-kit/hooks";
+import { useTheme } from "@seliseblocks/genesis-os/hooks";
 import { useCallback, useRef, useState } from "react";
 
 type UseCaptchaProps = {

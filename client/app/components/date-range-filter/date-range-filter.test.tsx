@@ -5,7 +5,7 @@ import type { DateRange } from "react-day-picker";
 
 const h = vi.hoisted(() => ({ onSelect: undefined as ((d: DateRange | undefined) => void) | undefined }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useIsMobile: () => false }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useIsMobile: () => false }));
 vi.mock("@/components/ui-kits/calendar/calendar", () => ({
   Calendar: ({ onSelect }: { onSelect: (d: DateRange | undefined) => void }) => {
     h.onSelect = onSelect;

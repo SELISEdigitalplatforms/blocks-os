@@ -12,7 +12,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({

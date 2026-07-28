@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
 vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => "/app/proj-1/lmt" }));
 vi.mock("@/lib/runtime-env", () => ({ getRuntimeEnv: () => "https://os.example.com" }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useCopyToClipboard: () => ({ copy: h.copy }),
 }));
 vi.mock("@/hooks/use-toast", () => ({

@@ -29,7 +29,7 @@ import {
   useDeleteEmailTemplate,
 } from "@blocks-communication/mail/hooks/use-email-template";
 import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 type EmailTemplateListProps = {
   templates: IEmailTemplate[];
   isLoading: boolean;

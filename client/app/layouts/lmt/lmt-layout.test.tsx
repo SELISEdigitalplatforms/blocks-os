@@ -15,7 +15,7 @@ vi.mock("react-router", () => ({
   Outlet: () => <div data-testid="outlet" />,
 }));
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => h.basePath }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-lmt/hooks/use-usage", () => ({

@@ -13,7 +13,7 @@ import { emailService } from "@blocks-communication/mail/services/email.services
 import { useGetEmailConfigs, useSaveEmailConfig, useDeleteEmailConfig } from "./use-email-config";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("Email Config Hooks", () => {
   beforeEach(() => {
@@ -63,7 +63,7 @@ describe("Email Config Hooks", () => {
     });
 
     it("should handle empty tenantId", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });

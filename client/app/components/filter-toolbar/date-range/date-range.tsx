@@ -3,7 +3,7 @@ import { Calendar } from "@/components/ui-kits/calendar/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { CalendarIcon } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { MouseEvent, useEffect, useState } from "react";
 type DateRangeType = { from?: Date; to?: Date } | null;

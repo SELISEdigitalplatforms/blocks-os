@@ -26,7 +26,7 @@ import { resolveModelConfig } from "@blocks-ai/utils/aimodel-form.utils";
 import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.service.type";
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 interface ModelEditKeyModalProps {
   modelOptions: { model: string; goodName: string }[];
   editKeyModalOpen: boolean;
