@@ -111,12 +111,15 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task RestoreProjectAsync_SendsMessageAndReturnsSuccess()
+        public async Task RestoreProjectAsync_ReturnsSuccess()
         {
+            _repo.Setup(r => r.GetByIdAsync("p1")).ReturnsAsync((Tenant?)null);
+            _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1")).ReturnsAsync(new ProjectStatusTracer { ProjectId = "p1" });
+
             var response = await Service().RestoreProjectAsync(new RestoreProjectRequest { ItemId = "p1" });
 
             response.IsSuccess.Should().BeTrue();
-            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<RestoreProjectRequest>>()), Times.Once);
+            _repo.Verify(r => r.SaveStatusTracerAsync(It.IsAny<ProjectStatusTracer>()), Times.Once);
         }
 
         [Fact]

@@ -130,18 +130,18 @@ export class ProjectService {
   initiateMigration(
     payload: IMigrationRequest,
   ): Promise<IMigrationInitiateResponse> {
-    return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload);
+    return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload, undefined, { absoluteUrl: true });
   }
 
   verifyMigration(
     payload: IVerifyMigrationRequest,
   ): Promise<IMigrationVerificationResponse> {
-    return http.post(MIGRATION_ENDPOINTS.VERIFY, payload);
+    return http.post(MIGRATION_ENDPOINTS.VERIFY, payload, undefined, { absoluteUrl: true });
   }
 
   getMigrationStatus(tenantGroupId: string): Promise<IMigrationStatusResponse> {
     const url = `${MIGRATION_ENDPOINTS.GET_STATUS}?tenantGroupId=${tenantGroupId}`;
-    return http.get(url);
+    return http.get(url, undefined, { absoluteUrl: true });
   }
 
   savePublicCertificate(
