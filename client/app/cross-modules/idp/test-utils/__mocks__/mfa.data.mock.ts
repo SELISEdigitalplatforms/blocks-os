@@ -7,7 +7,6 @@ import type {
   IConfigureUserMFAPayload,
   ISetupUserTotpPayload,
   IVerifyMfaOtpPayload,
-  IResendOtpPayload,
   IDisableMFAPayload,
 } from "../../mfa/models/mfa.model";
 

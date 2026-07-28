@@ -7,7 +7,6 @@ import LogoLoadingSpinner from "@/components/loader-spinner/loader-spinner";
 export default function GitHubCallbackPage() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
-  const state = searchParams.get("state");
   const [projectKey] = useState(() => localStorage.getItem("github_auth_project_key") || "");
   const { isLoading, isSuccess } = useQuery({
     queryKey: ["github-verification", code, projectKey],

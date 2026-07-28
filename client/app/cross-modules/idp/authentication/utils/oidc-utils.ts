@@ -8,7 +8,7 @@ interface OIDCParams {
   nonce?: string;
   scope?: string;
   redirectUri?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   [key: string]: string | undefined;
 }
 

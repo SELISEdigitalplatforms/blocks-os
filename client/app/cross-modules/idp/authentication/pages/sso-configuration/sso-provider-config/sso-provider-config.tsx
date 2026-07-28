@@ -4,7 +4,6 @@ import { SsoProviderConfigForms } from "./sso-provider-config-forms/sso-provider
 import { SSoProviderSetupGuideLine } from "../sso-provider-setup-guideline";
 import { SSO_PROVIDERS } from "@blocks-idp/authentication/constants/sso-providers.constant";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { useState } from "react";
 type SSOProviderConfigProps = {
   provider: SSO_PROVIDERS;
@@ -13,12 +12,14 @@ type SSOProviderConfigProps = {
 export const SSOProviderConfig = ({ provider, id = "" }: SSOProviderConfigProps) => {
   const [open, setOpen] = useState<boolean>(false);
   if (!provider) return null;
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/sso"] = "Authentication";
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/sso-configuration"] = provider;
+  const breadcrumbTitles = {
+    "/app/idp/sso": "Authentication",
+    "/app/idp/sso-configuration": provider,
+  };
   return (
     <div className="flex flex-col">
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={2} />
+        <PageBreadcrumb breadcrumbIndex={2} customTitles={breadcrumbTitles} />
       </div>
       <div className="mb-5 flex items-center justify-between rounded text-base">
         <h3 className="text-2xl font-bold tracking-tight">{provider.toUpperCase()}</h3>

@@ -1,6 +1,5 @@
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import {
   LOG_SERVICE_AI_DESCRIPTION,
@@ -44,16 +43,21 @@ export function LmtServiceLogsRoute() {
     ];
   }, [service]);
 
-  BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs`] = "Logs";
-  if (serviceName) {
-    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}`] =
-      service?.label ?? serviceName;
-  }
+  const breadcrumbTitles = {
+    [`${LMT_BASE_PATH}/logs`]: "Logs",
+    ...(serviceName
+      ? { [`${LMT_BASE_PATH}/logs/${serviceName}`]: service?.label ?? serviceName }
+      : {}),
+  };
 
   if (!service) {
     return (
       <div className="flex flex-col gap-5 sm:gap-4">
-        <PageBreadcrumb breadcrumbIndex={4} listClassName="text-base sm:text-lg" />
+        <PageBreadcrumb
+          breadcrumbIndex={4}
+          listClassName="text-base sm:text-lg"
+          customTitles={breadcrumbTitles}
+        />
         <Card>
           <CardContent className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             Logs are not configured for this service.
@@ -65,7 +69,11 @@ export function LmtServiceLogsRoute() {
 
   return (
     <div className="flex flex-col gap-5 sm:gap-4">
-      <PageBreadcrumb breadcrumbIndex={4} listClassName="text-base sm:text-lg" />
+      <PageBreadcrumb
+        breadcrumbIndex={4}
+        listClassName="text-base sm:text-lg"
+        customTitles={breadcrumbTitles}
+      />
       <LogsViewer
         key={serviceName}
         logsRouteServiceName={serviceName}

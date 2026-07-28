@@ -51,7 +51,7 @@ describe("CaptchaService", () => {
     it("should GET the captcha secrets and map them into configurations", async () => {
       vi.mocked(http.get).mockResolvedValue([mockCaptchaSecret]);
 
-      const result = await service.getCaptchaConfigs(mockGetCaptchaConfigsPayload);
+      const result = await service.getCaptchaConfigs();
 
       expect(http.get).toHaveBeenCalledWith(
         `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`,
@@ -79,7 +79,7 @@ describe("CaptchaService", () => {
     it("should unwrap an IAPIResponse-wrapped secrets list", async () => {
       vi.mocked(http.get).mockResolvedValue({ data: [mockCaptchaSecret] });
 
-      const result = await service.getCaptchaConfigs(mockGetCaptchaConfigsPayload);
+      const result = await service.getCaptchaConfigs();
 
       expect(result.configurations).toHaveLength(1);
       expect(result.configurations[0].isEnable).toBe(true);
@@ -88,7 +88,7 @@ describe("CaptchaService", () => {
     it("should return an empty configurations list when there are no secrets", async () => {
       vi.mocked(http.get).mockResolvedValue([]);
 
-      const result = await service.getCaptchaConfigs(mockGetCaptchaConfigsPayload);
+      const result = await service.getCaptchaConfigs();
 
       expect(result).toEqual({ configurations: [] });
     });
@@ -96,7 +96,7 @@ describe("CaptchaService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getCaptchaConfigs(mockGetCaptchaConfigsPayload)).rejects.toThrow(
+      await expect(service.getCaptchaConfigs()).rejects.toThrow(
         "Network error",
       );
     });
