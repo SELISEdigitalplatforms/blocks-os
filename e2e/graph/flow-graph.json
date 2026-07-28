@@ -1,9 +1,9 @@
 {
   "metadata": {
     "schemaVersion": 1,
-    "lastUpdatedAt": "2026-07-28T11:48:40.264Z",
+    "lastUpdatedAt": "2026-07-28T12:50:37.993Z",
     "lastUpdatedBy": "graph-update.js",
-    "contentHash": "sha256:94fd2a5baa4b4efc04eea90c1175357ea29cad83cbd115a15b1044ad56ebf12c"
+    "contentHash": "sha256:1e34212e8bbe8b49fb785ae43094692b094a21abeeffdeeab0a50facba6abc30"
   },
   "nodes": [
     {
@@ -849,6 +849,357 @@
       },
       "coveredBy": [
         "e2e/tests/flow/07-sidebar-navigation.spec.ts"
+      ]
+    },
+    {
+      "id": "open-data-migration",
+      "from": "app-console",
+      "to": "app-data-migration",
+      "action": "open the data migration wizard",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/account.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/data-migration.spec.ts"
+      ]
+    },
+    {
+      "id": "open-email-management",
+      "from": "app-console",
+      "to": "app-itemId-email-management",
+      "action": "open Email Management",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/email-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/email-management.spec.ts"
+      ]
+    },
+    {
+      "id": "open-email-management-new-communication",
+      "from": "app-itemId-email-management",
+      "to": "app-itemId-email-management-new-communication",
+      "action": "open new email template wizard",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/email-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/email-management-new-communication.spec.ts"
+      ]
+    },
+    {
+      "id": "open-idp-new-permission",
+      "from": "app-itemId-idp-permissions",
+      "to": "app-itemId-idp-permission-detail-new",
+      "action": "open new permission form",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/idp.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/idp-new-permission.spec.ts"
+      ]
+    },
+    {
+      "id": "open-idp-oidc-template",
+      "from": "app-console",
+      "to": "app-itemId-idp-oidc-template",
+      "action": "open IDP OIDC template",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/idp.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/idp-oidc-template.spec.ts"
+      ]
+    },
+    {
+      "id": "open-idp-permissions",
+      "from": "app-console",
+      "to": "app-itemId-idp-permissions",
+      "action": "open IDP permissions",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/idp.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/idp-permissions.spec.ts"
+      ]
+    },
+    {
+      "id": "open-idp-roles",
+      "from": "app-console",
+      "to": "app-itemId-idp-roles",
+      "action": "open IDP roles",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/idp.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/idp-roles.spec.ts"
+      ]
+    },
+    {
+      "id": "open-idp-settings",
+      "from": "app-console",
+      "to": "app-itemId-idp-settings",
+      "action": "open IDP settings",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/idp.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/idp-settings.spec.ts"
+      ]
+    },
+    {
+      "id": "open-invalid-activation-link",
+      "from": "root",
+      "to": "activate",
+      "action": "open activation without code",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/public-flows.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/activation-invalid-link.spec.ts"
+      ]
+    },
+    {
+      "id": "open-invalid-invitation-link",
+      "from": "root",
+      "to": "invitation",
+      "action": "open invitation without confirmation code",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/public-flows.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/invitation-invalid-link.spec.ts"
+      ]
+    },
+    {
+      "id": "open-lmt-logs",
+      "from": "app-console",
+      "to": "app-itemId-lmt-logs",
+      "action": "open Logs and Traces logs",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/lmt.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/lmt-logs.spec.ts"
+      ]
+    },
+    {
+      "id": "open-lmt-tracing",
+      "from": "app-console",
+      "to": "app-itemId-lmt-tracing",
+      "action": "open Logs and Traces tracing",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/lmt.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/lmt-tracing.spec.ts"
+      ]
+    },
+    {
+      "id": "open-lmt-usage",
+      "from": "app-console",
+      "to": "app-itemId-lmt-usage",
+      "action": "open Logs and Traces usage metrics",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/lmt.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/lmt-usage.spec.ts"
+      ]
+    },
+    {
+      "id": "open-own-profile",
+      "from": "app-console",
+      "to": "app-profile",
+      "action": "open the authenticated user's profile",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/account.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/profile.spec.ts"
+      ]
+    },
+    {
+      "id": "open-project-repositories",
+      "from": "app-console",
+      "to": "app-project-tenantGroupId-repositories",
+      "action": "open project repositories",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/project-overview.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/project-repositories.spec.ts"
+      ]
+    },
+    {
+      "id": "open-project-settings",
+      "from": "app-console",
+      "to": "app-project-tenantGroupId-settings",
+      "action": "open project settings",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/project-overview.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/project-settings.spec.ts"
+      ]
+    },
+    {
+      "id": "open-project-subscription-usage",
+      "from": "app-console",
+      "to": "app-project-tenantGroupId-subscription-usage",
+      "action": "open project subscription usage",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/project-overview.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/project-subscription-usage.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-captcha",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-captcha",
+      "action": "open Captcha configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-captcha.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-client-credentials",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-client-credentials",
+      "action": "open Client Credentials configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-client-credentials.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-email",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-email",
+      "action": "open Email configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-email.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-external-idp",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-external-idp",
+      "action": "open External IdP configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-external-idp.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-identity-providers",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-identity-providers",
+      "action": "open Identity Provider configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-identity-providers.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-mfa",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-mfa",
+      "action": "open MFA configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-mfa.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-notification",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-notification",
+      "action": "open Notification configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-notification.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-oidc",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-oidc",
+      "action": "open OIDC configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-oidc.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-sso",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-sso",
+      "action": "open SSO configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-sso.spec.ts"
+      ]
+    },
+    {
+      "id": "open-secret-management-storage",
+      "from": "app-console",
+      "to": "app-itemId-secret-management-storage",
+      "action": "open Storage configuration",
+      "convention": "steps",
+      "via": {
+        "file": "e2e/support/steps/secret-management.steps.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/journeys/secret-management-storage.spec.ts"
       ]
     },
     {
