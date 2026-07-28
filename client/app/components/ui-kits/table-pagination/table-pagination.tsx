@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 interface TablePaginationProps<TData> {
   table: Table<TData>;
-  // eslint-disable-next-line no-unused-vars
+   
   onPageChange?: (pageIndex: number) => void;
   totalCount?: number;
 }

@@ -16,11 +16,14 @@ export const ProfileMFAMethodList = ({ selected, setSelected }: UserMFAMethodLis
   const { isLoading, isFetching, data: projectMfaConfig } = useGetProfileMFAConfig();
   const { data: userData } = useGetProfileUserById({ id: userId, projectKey });
   const projectMfaEnabled = projectMfaConfig?.enabled === true;
+  // Read allowedMethods into a local so the compiler infers this exact dependency rather than
+  // the whole projectMfaConfig object; keeps the memo recomputing exactly as often as before.
+  const allowedMethods = projectMfaConfig?.allowedMethods;
   const availableMFaMethod = useMemo(() => {
     if (!projectMfaEnabled) return [];
-    if (!projectMfaConfig?.allowedMethods?.length) return [];
-    return MFA_Provider_Data.filter((item) => projectMfaConfig.allowedMethods.includes(item.type));
-  }, [projectMfaEnabled, projectMfaConfig?.allowedMethods]);
+    if (!allowedMethods?.length) return [];
+    return MFA_Provider_Data.filter((item) => allowedMethods.includes(item.type));
+  }, [projectMfaEnabled, allowedMethods]);
   const isProjectMfaLoading = isLoading || isFetching;
   return (
     <>

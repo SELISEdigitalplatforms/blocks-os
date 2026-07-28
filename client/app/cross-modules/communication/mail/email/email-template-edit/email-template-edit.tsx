@@ -2,7 +2,6 @@ import { Button } from "@/components/ui-kits/button/button";
 import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
 import { useState, useRef } from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
@@ -53,11 +52,12 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   }
 
   const emailBasePath = scoped("email-management");
-  BREADCRUMB_CUSTOM_TITLES[emailBasePath] = "Email Management";
-  BREADCRUMB_CUSTOM_TITLES[`${emailBasePath}/communications`] = null;
-  BREADCRUMB_CUSTOM_TITLES[`${emailBasePath}/communications/${emailDetails.itemId}`] =
-    emailDetails.name ?? "";
-  BREADCRUMB_CUSTOM_TITLES[`${emailBasePath}/communications/${emailDetails.itemId}/edit`] = "Edit";
+  const breadcrumbTitles = {
+    [emailBasePath]: "Email Management",
+    [`${emailBasePath}/communications`]: null,
+    [`${emailBasePath}/communications/${emailDetails.itemId}`]: emailDetails.name ?? "",
+    [`${emailBasePath}/communications/${emailDetails.itemId}/edit`]: "Edit",
+  };
 
   const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
     const currentData: IEmailTemplate = {
@@ -77,6 +77,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
           breadcrumbIndex={3}
           className="flex min-w-0"
           listClassName="text-base sm:text-lg"
+          customTitles={breadcrumbTitles}
         />
         <div className="flex shrink-0 gap-2">
           <Button
