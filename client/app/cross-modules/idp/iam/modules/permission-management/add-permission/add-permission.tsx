@@ -6,8 +6,8 @@ import { PermissionForm } from "../permission-form";
 import { permissionFormSchemaType } from "../permission-form/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useNavigate } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 export const AddPermission = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();

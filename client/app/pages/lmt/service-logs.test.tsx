@@ -5,7 +5,7 @@ const h = vi.hoisted(() => ({ serviceName: "iam", viewerProps: undefined as Reco
 
 vi.mock("@/components/breadcrumb/breadcrumb", () => ({ default: () => <div data-testid="crumb" /> }));
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => "/app/lmt" }));
-vi.mock("react-router-dom", () => ({ useParams: () => ({ serviceName: h.serviceName }) }));
+vi.mock("react-router", () => ({ useParams: () => ({ serviceName: h.serviceName }) }));
 vi.mock("@blocks-lmt/constants/services.constant", () => ({
   SERVICES: [{ name: "iam", serviceName: "blocks-iam", label: "IAM", showInLogs: true }],
 }));

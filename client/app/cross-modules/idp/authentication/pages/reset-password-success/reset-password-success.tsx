@@ -1,6 +1,6 @@
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui-kits/button/button";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 export const ResetPasswordSuccess = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background md:justify-start">

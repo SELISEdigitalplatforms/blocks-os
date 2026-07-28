@@ -11,10 +11,10 @@ import { LMT_NAV_GROUPS } from "@/constants/lmt-nav";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { cn } from "@/lib/utils";
 import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { RefreshCcw } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router";
 
 export default function LmtLayout() {
   const { pathname } = useLocation();

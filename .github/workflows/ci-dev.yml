@@ -57,7 +57,8 @@ jobs:
       service_name: ${{ steps.config.outputs.service_name }} # e.g., your service name
       service_type: ${{ steps.config.outputs.service_type }} # e.g., webclient, webservice, winservice
       sonarqube_host: ${{ steps.config.outputs.sonarqube_host }} # e.g., https://code.selise.biz
-      sonar_project_key: ${{ steps.config.outputs.sonar_project_key }} # e.g., your SonarQube project key
+      sonar_project_key_server: ${{ steps.config.outputs.sonar_project_key_server }}
+      sonar_project_key_client: ${{ steps.config.outputs.sonar_project_key_client }}
       sonar_organization: ${{ steps.config.outputs.sonar_organization }} # e.g., your SonarQube org
       solution_name: ${{ steps.config.outputs.solution_name }} # e.g., YourSolution.sln for .NET
       tag_strategy: ${{ steps.config.outputs.tag_strategy }} # e.g., commit, semantic
@@ -108,7 +109,8 @@ jobs:
           echo "dependency_track_frontend_url=${DEPENDENCY_TRACK_FRONTEND_URL:-sca.seliseblocks.com}" >> $GITHUB_OUTPUT
 
           # SonarQube specific configurations (map from vars.env names)
-          echo "sonar_project_key=${SONAR_KEY:-}" >> $GITHUB_OUTPUT
+          echo "sonar_project_key_server=${SONAR_KEY_SERVER:-blocks-os-server}" >> $GITHUB_OUTPUT
+          echo "sonar_project_key_client=${SONAR_KEY_CLIENT:-blocks-os-client}" >> $GITHUB_OUTPUT
           echo "sonar_organization=${AUTHOR:-}" >> $GITHUB_OUTPUT
           echo "solution_name=${SOLUTION_NAME:-YourSolution.sln}" >> $GITHUB_OUTPUT
           echo "working_directory=${WORKING_DIRECTORY:-./server}" >> $GITHUB_OUTPUT
@@ -179,8 +181,7 @@ jobs:
         working-directory: client
         run: npx vitest run
 
-  # Run SonarQube analysis on both push and pull_request
-  sonarqube:
+  sonarqube_server:
     # if: github.event_name == 'pull_request' && needs.initialization.outputs.run_sonarqube == 'true'
     if: needs.initialization.outputs.run_sonarqube == 'true'
     needs: [initialization]
@@ -188,7 +189,7 @@ jobs:
     with:
       SOLUTION_NAME: ${{ needs.initialization.outputs.solution_name }}
       SONARQUBE_HOST: ${{ needs.initialization.outputs.sonarqube_host }}
-      SONAR_PROJECT_KEY: ${{ needs.initialization.outputs.sonar_project_key }}
+      SONAR_PROJECT_KEY: ${{ needs.initialization.outputs.sonar_project_key_server }}
       SONAR_ORGANIZATION: ${{ needs.initialization.outputs.sonar_organization }}
       WORKING_DIRECTORY: ${{ needs.initialization.outputs.working_directory }}
 
@@ -203,6 +204,23 @@ jobs:
       # Optional: Custom NuGet sources (defaults to NuGet.org + nuget.selise.biz)
       # Only specify if you need additional sources (comma-separated)
       # NUGET_SOURCES: "https://api.nuget.org/v3/index.json,https://nuget.selise.biz/nuget,https://custom-feed.com"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_GLOBAL }}
+      SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
+
+  sonarqube_client:
+    if: needs.initialization.outputs.run_sonarqube == 'true'
+    needs: [initialization]
+    uses: ./.github/workflows/sonarqube-client.yml
+    with:
+      WORKING_DIRECTORY: "client"
+      SONARQUBE_HOST: ${{ needs.initialization.outputs.sonarqube_host }}
+      SONAR_PROJECT_KEY: ${{ needs.initialization.outputs.sonar_project_key_client }}
+      SONAR_ORGANIZATION: ${{ needs.initialization.outputs.sonar_organization }}
+      NODE_VERSION: "22"
+      JAVA_VERSION: "17"
+      HAS_SUBMODULES: ${{ needs.initialization.outputs.has_submodules == 'true' }}
+      SKIP_QUALITY_GATE: false
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_GLOBAL }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
@@ -250,14 +268,15 @@ jobs:
 
   # Build and push image
   build-client:
-    # needs: [initialization, sonarqube, sca-scan-dotnet]
-    needs: [initialization, sonarqube]
-    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube.result == 'skipped' ) && (success() || needs.sca-scan-dotnet.result == 'skipped' ) }}
+    # needs: [initialization, sonarqube_server, sonarqube_client, sca-scan-dotnet]
+    needs: [initialization, sonarqube_server, sonarqube_client]
+    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube_server.result == 'skipped' ) && (success() || needs.sca-scan-dotnet.result == 'skipped' ) }}
     if: |
       github.event_name == 'push' &&
       always() &&
       needs.initialization.result == 'success' &&
-      (needs.sonarqube.result == 'success' || needs.sonarqube.result == 'skipped')
+      (needs.sonarqube_server.result == 'success' || needs.sonarqube_server.result == 'skipped') &&
+      (needs.sonarqube_client.result == 'success' || needs.sonarqube_client.result == 'skipped')
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/build-push.yml@main
     with:
       SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}
@@ -303,14 +322,15 @@ jobs:
 
   # Build and push image
   build-worker:
-    # needs: [initialization, sonarqube, sca-scan-dotnet]
-    needs: [initialization, sonarqube]
-    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube.result == 'skipped' ) && (success() || needs.sca-scan-dotnet.result == 'skipped' ) }}
+    # needs: [initialization, sonarqube_server, sonarqube_client, sca-scan-dotnet]
+    needs: [initialization, sonarqube_server, sonarqube_client]
+    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube_server.result == 'skipped' ) && (success() || needs.sca-scan-dotnet.result == 'skipped' ) }}
     if: |
       github.event_name == 'push' &&
       always() &&
       needs.initialization.result == 'success' &&
-      (needs.sonarqube.result == 'success' || needs.sonarqube.result == 'skipped')
+      (needs.sonarqube_server.result == 'success' || needs.sonarqube_server.result == 'skipped') &&
+      (needs.sonarqube_client.result == 'success' || needs.sonarqube_client.result == 'skipped')
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/build-push.yml@main
     with:
       SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}

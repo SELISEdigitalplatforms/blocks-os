@@ -2,7 +2,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useDeleteModel } from "@blocks-ai/hooks/use-aimodel";
 type DeleteModelProps = {
   modelId: string;

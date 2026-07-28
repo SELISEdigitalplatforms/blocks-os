@@ -22,7 +22,7 @@ import {
 } from "@/components/ui-kits/table/table";
 import { Tabs, TabsContent } from "@/components/ui-kits/tabs/tabs";
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { formatDate, parseDateString } from "@/lib/utils";
 import { TraceProviderSetupGuideLine } from "@blocks-lmt/components/trace-guideline/trace-provider-guideline";
@@ -34,7 +34,7 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { Archive, BookOpenText, Flame, Snowflake } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { serviceRegistryService } from "@/cross-modules/identifier/services/service-registry.service";
 type TracesOverviewProps = {
   projectKey: string;

@@ -1,4 +1,4 @@
-import { useCountDown } from "@seliseblocks/blocks-kit/hooks";
+import { useCountDown } from "@seliseblocks/genesis-os/hooks";
 import { useResendMfaOTP } from "./use-mfa-config";
 import { useCallback } from "react";
 

@@ -11,8 +11,8 @@ const { mutateAsync, showErrorToast, showSuccessToast } = vi.hoisted(() => ({
 vi.mock("@/hooks/use-project", () => ({
   useUpdateProject: () => ({ mutateAsync, isPending: false }),
 }));
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({ showErrorToast, showSuccessToast }));
-vi.mock("@seliseblocks/blocks-kit/components", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({ showErrorToast, showSuccessToast }));
+vi.mock("@seliseblocks/genesis-os/components", () => ({
   Button: ({ children, ...props }: React.ComponentProps<"button">) => (
     <button type="button" {...props}>
       {children}
@@ -34,7 +34,7 @@ vi.mock("../cname/dialog", () => ({
 }));
 
 import { DomainTable } from "./domain-table";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 
 const domains = [
   { domain: "verified.com", isDomainVerified: true, cookieDomain: ".verified.com" },

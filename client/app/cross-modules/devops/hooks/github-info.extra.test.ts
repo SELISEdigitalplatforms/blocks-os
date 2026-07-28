@@ -13,7 +13,7 @@ import {
   useChangeRepoSpecs,
 } from "./github-info";
 
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 vi.mock("../services/github-info.service", () => ({
   githubInfoService: {
     revokeAccess: vi.fn(),

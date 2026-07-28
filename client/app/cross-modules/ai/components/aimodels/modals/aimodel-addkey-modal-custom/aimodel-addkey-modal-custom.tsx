@@ -29,7 +29,7 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { Info, Trash2 } from "lucide-react";
 import { transformToUniversal } from "@blocks-ai/utils/aimodel-form.utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useCreateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 const CustomAddKeyFormSchema = z.object({

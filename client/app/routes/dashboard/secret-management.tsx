@@ -20,12 +20,12 @@ import {
   useOidcBrandingHeaderOptional,
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { Pencil, Plus, Loader2, Notebook, Waypoints } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { MouseEvent, useMemo } from "react";
-import { Outlet, useLocation } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { Outlet, useLocation } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 
 function SecretManagementHeaderActions({
   isOidcBranding,

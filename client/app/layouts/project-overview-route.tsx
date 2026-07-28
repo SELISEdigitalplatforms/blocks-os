@@ -1,11 +1,11 @@
-import { AppLoadingSpinner } from "@seliseblocks/blocks-kit/components";
-import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
-import type { Menu } from "@seliseblocks/blocks-kit/types";
+import { AppLoadingSpinner } from "@seliseblocks/genesis-os/components";
+import type { LayoutProps } from "@seliseblocks/genesis-os/layouts";
+import type { Menu } from "@seliseblocks/genesis-os/types";
 import { useEffect } from "react";
-import { Navigate, Outlet, useParams } from "react-router-dom";
+import { Navigate, Outlet, useParams } from "react-router";
 import { ProjectOverviewLayout } from "./project-overview-layout";
 import { useGetProjects } from "@/hooks/use-project";
-import { useAuthStore, useProjectStore } from "@seliseblocks/blocks-kit/store";
+import { useAuthStore, useProjectStore } from "@seliseblocks/genesis-os/store";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */

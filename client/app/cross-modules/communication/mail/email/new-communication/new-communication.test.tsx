@@ -9,13 +9,13 @@ const h = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => h.navigate,
 }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
@@ -26,17 +26,16 @@ vi.mock("@/components/breadcrumb/breadcrumb", () => ({
   default: () => <nav data-testid="breadcrumb" />,
 }));
 
-// The basic-information child owns its own form; expose a button that fires the
-// submit callback with a representative payload so the stepper flow is exercised.
+// The basic-information child owns save + validation; expose buttons that drive the stepper flow.
 vi.mock(
   "@blocks-communication/mail/components/email-service/basic-information/basic-information",
   () => ({
     default: ({
-      onSubmit,
+      onSaveSuccess,
       onValidityChange,
       actions,
     }: {
-      onSubmit: (data: { name: string }) => void;
+      onSaveSuccess?: (data: { name: string; itemId: string }) => void;
       onValidityChange: (valid: boolean) => void;
       actions?: React.ReactNode;
     }) => (
@@ -44,7 +43,10 @@ vi.mock(
         <button type="button" onClick={() => onValidityChange(true)}>
           make-valid
         </button>
-        <button type="button" onClick={() => onSubmit({ name: "Welcome" })}>
+        <button
+          type="button"
+          onClick={() => onSaveSuccess?.({ name: "Welcome", itemId: "tpl-1" })}
+        >
           submit-basic
         </button>
         {actions}
@@ -83,18 +85,14 @@ describe("NewCommunication", () => {
     expect(save.disabled).toBe(false);
   });
 
-  it("saves the basic information and advances to the template step", async () => {
+  it("advances to the template step after basic information is saved", async () => {
     const user = userEvent.setup();
     render(<NewCommunication />);
 
     await user.click(screen.getByRole("button", { name: "submit-basic" }));
 
-    await waitFor(() => expect(h.saveTemplate).toHaveBeenCalledTimes(1));
-    expect(h.saveTemplate.mock.calls[0][0]).toMatchObject({
-      name: "Welcome",
-      projectKey: "tenant-1",
-    });
     expect(await screen.findByRole("button", { name: "Save template" })).toBeTruthy();
+    expect(h.saveTemplate).not.toHaveBeenCalled();
   });
 
   it("saves the designed template and navigates to the new communication", async () => {
