@@ -21,7 +21,7 @@ import { useGetLanguages } from "@blocks-localization/hooks/use-language-manager
 import { CirclePlus } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useMemo } from "react";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { useEmailUsageFilterQueryParams } from "../email-usage/email-usage-filter-toolbar";
 import { useQueryState } from "nuqs";
 import {

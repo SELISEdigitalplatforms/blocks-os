@@ -32,7 +32,7 @@ import { UserAccountService } from "./account.service";
 import { USER_ENDPOINTS } from "../constants/endpoint.constant";
 import { mapSignUpSettingFromApi } from "../utils/normalize-tenant-config";
 import { toSignupSettingsSaveApiPayload } from "../utils/signup-settings-payload";
-import { UserDetails } from "@seliseblocks/blocks-kit";
+import { UserDetails } from "@seliseblocks/genesis-os";
 
 export class UserService {
   constructor(public account: UserAccountService) {}

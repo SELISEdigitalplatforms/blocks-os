@@ -13,7 +13,7 @@ import {
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Wrench } from "lucide-react";
 import { useGetSignUpSetting, useSaveSignUpSetting } from "@blocks-idp/iam/hooks/use-user";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 export const SignupSettings = () => {
   const [open, setOpen] = useState(false);
   const [allowSignup, setAllowSignup] = useState(false);

@@ -14,7 +14,7 @@ import {
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
 import { storageService } from "@blocks-storage/services/storage.service";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useOidcBrandingHeader } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { OidcLoginPreview } from "./oidc-login-preview";
 import { buildOidcSavePayload } from "./build-oidc-save-payload";

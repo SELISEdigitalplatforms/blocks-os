@@ -12,10 +12,10 @@ const h = vi.hoisted(() => ({
 vi.mock("react-router", () => ({
   useNavigate: () => h.navigate,
 }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));

@@ -18,11 +18,11 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-lmt-base-path", () => ({
   useLmtBasePath: () => "/app/lmt",
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useIsMobile: () => h.isMobile,
   usePathSegments: () => [],
 }));
-vi.mock("@seliseblocks/blocks-kit", async () => {
+vi.mock("@seliseblocks/genesis-os", async () => {
   const React = await import("react");
   const Pass = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);

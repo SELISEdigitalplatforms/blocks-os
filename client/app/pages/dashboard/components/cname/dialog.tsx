@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 import { CheckCircle2 } from "lucide-react";
 import { CNameInstruction } from "./instructions";
 import { CnameValidatorProject } from "./validator-project";

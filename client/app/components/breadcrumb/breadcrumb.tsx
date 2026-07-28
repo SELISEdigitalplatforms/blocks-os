@@ -8,7 +8,7 @@ import {
   BreadcrumbSeparator,
 } from "../ui-kits/breadcrumb/breadcrumb";
 import { Link, useLocation } from "react-router";
-import { usePathSegments } from "@seliseblocks/blocks-kit/hooks";
+import { usePathSegments } from "@seliseblocks/genesis-os/hooks";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { cn } from "@/lib/utils";
 

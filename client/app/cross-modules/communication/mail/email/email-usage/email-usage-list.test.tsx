@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   queryParams: { page: 0, pageSize: 10, search: "", status: "", startDate: "", endDate: "" },
 }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useScopedPath: () => (p: string) => `/s/${p}` }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useScopedPath: () => (p: string) => `/s/${p}` }));
 vi.mock("@blocks-communication/mail/hooks/use-email-usage", () => ({
   useGetEmailUsage: () => ({ data: h.data, isLoading: h.isLoading }),
 }));

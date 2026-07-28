@@ -32,6 +32,12 @@ export default [
       "react-hooks": reactHooks,
     },
     rules: {
+      // Disables the core ESLint rules that TypeScript already enforces
+      // (no-undef, no-redeclare, no-dupe-keys, ...). The eslintrc preset
+      // "plugin:@typescript-eslint/recommended" pulled these in implicitly;
+      // in flat config they have to be spread explicitly, and omitting them
+      // makes no-undef fire on every type-only identifier.
+      ...tsPlugin.configs["eslint-recommended"].overrides[0].rules,
       ...tsPlugin.configs.recommended.rules,
       ...react.configs.flat.recommended.rules,
       ...reactHooks.configs.recommended.rules,

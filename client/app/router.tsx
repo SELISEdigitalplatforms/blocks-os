@@ -1,6 +1,6 @@
-import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/blocks-kit/guards";
-import { ConsoleLayout, DashboardRoute } from "@seliseblocks/blocks-kit/layouts";
-import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/blocks-kit/pages";
+import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/genesis-os/guards";
+import { ConsoleLayout, DashboardRoute } from "@seliseblocks/genesis-os/layouts";
+import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/genesis-os/pages";
 import { createBrowserRouter, Navigate, Outlet, useParams } from "react-router";
 import { navigationMenus } from "./constants/navigation-menus";
 // Temporarily disabled

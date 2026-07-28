@@ -7,11 +7,11 @@ const h = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false, ok: vi.fn(
 vi.mock("@/hooks/use-project", () => ({
   useValidateCNameProject: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
   showSuccessToast: (...a: unknown[]) => h.ok(...a),
   showErrorToast: (...a: unknown[]) => h.err(...a),
 }));
-vi.mock("@seliseblocks/blocks-kit/components", () => ({
+vi.mock("@seliseblocks/genesis-os/components", () => ({
   LoadingButton: ({
     children,
     onClick,
