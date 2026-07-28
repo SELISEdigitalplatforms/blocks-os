@@ -49,7 +49,8 @@ jobs:
       cluster_name: ${{ steps.config.outputs.cluster_name }}
       environment: ${{ steps.config.outputs.environment }}
       load_custom_vars: ${{ steps.config.outputs.load_custom_vars }}
-      project_name: ${{ steps.config.outputs.project_name }}
+      sca_project_server: ${{ steps.config.outputs.sca_project_server }}
+      sca_project_client: ${{ steps.config.outputs.sca_project_client }}
       project_version: ${{ steps.config.outputs.project_version }}
       run_tests: ${{ steps.config.outputs.run_tests }}
       run_sonarqube: ${{ steps.config.outputs.run_sonarqube }}
@@ -103,7 +104,8 @@ jobs:
           echo "has_submodules=${HAS_SUBMODULES:-true}" >> $GITHUB_OUTPUT
           echo "dotnet_version=${DOTNET_VERSION:-10.0.x}" >> $GITHUB_OUTPUT
           # SCA Scan Configuration
-          echo "project_name=${PROJECT_NAME:-${{ github.repository }}}" >> $GITHUB_OUTPUT
+          echo "sca_project_server=${SCA_PROJECT_SERVER:-blocks-os-server}" >> $GITHUB_OUTPUT
+          echo "sca_project_client=${SCA_PROJECT_CLIENT:-blocks-os-client}" >> $GITHUB_OUTPUT
           echo "project_version=${PROJECT_VERSION:-${{ github.ref_name }}}" >> $GITHUB_OUTPUT
           echo "dependency_track_host=${DEPENDENCY_TRACK_HOST:-api-dt.seliseblocks.com}" >> $GITHUB_OUTPUT
           echo "dependency_track_frontend_url=${DEPENDENCY_TRACK_FRONTEND_URL:-sca.seliseblocks.com}" >> $GITHUB_OUTPUT
@@ -234,7 +236,7 @@ jobs:
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/sca-scan-dotnet.yml@main
     with:
       # Project Configuration
-      PROJECT_NAME: ${{ needs.initialization.outputs.project_name }}
+      PROJECT_NAME: ${{ needs.initialization.outputs.sca_project_server }}
       PROJECT_VERSION: ${{ needs.initialization.outputs.project_version }}
 
       # .NET Configuration
@@ -251,7 +253,7 @@ jobs:
       # SBOM_TOOL: "cdxgen" # Options: "cdxgen" (recommended), "cyclonedx-dotnet"
       USE_DOCKER: false # Value 'true' is Recommended for .NET (make false to use native installation)
       # DOCKER_DOTNET_VERSION: "dotnet9" # Match your .NET version: dotnet6, dotnet7, dotnet8, dotnet9
-      INCLUDE_FORMULATION: true
+      INCLUDE_FORMULATION: false
 
       # Dependency-Track Configuration
       DEPENDENCY_TRACK_HOST: ${{ needs.initialization.outputs.dependency_track_host }}
@@ -262,6 +264,26 @@ jobs:
       # Optional Features
       HAS_SUBMODULES: ${{ needs.initialization.outputs.has_submodules == 'true' }}
 
+    secrets:
+      DEPENDENCY_TRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+      SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
+
+  sca_client:
+    if: needs.initialization.outputs.run_sca_scan == 'true'
+    needs: [initialization]
+    uses: ./.github/workflows/sca-client.yml
+    with:
+      WORKING_DIRECTORY: "client"
+      PROJECT_NAME: ${{ needs.initialization.outputs.sca_project_client }}
+      PROJECT_VERSION: ${{ needs.initialization.outputs.project_version }}
+      NODE_VERSION: "22"
+      SPEC_VERSION: "1.6"
+      INCLUDE_FORMULATION: false
+      DEPENDENCY_TRACK_HOST: ${{ needs.initialization.outputs.dependency_track_host }}
+      DEPENDENCY_TRACK_FRONTEND_URL: ${{ needs.initialization.outputs.dependency_track_frontend_url }}
+      AUTO_CREATE_PROJECT: true
+      ARTIFACT_RETENTION_DAYS: 2
+      HAS_SUBMODULES: ${{ needs.initialization.outputs.has_submodules == 'true' }}
     secrets:
       DEPENDENCY_TRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
