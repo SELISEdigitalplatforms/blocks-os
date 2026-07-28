@@ -19,7 +19,7 @@ export const useSavePublicCertificates = () => {
 export const useGetSavedPublicCertificates = (projectKey: string) => {
   return useQuery<IGetPublicCertificateResponse | null>({
     queryKey: ["identifier", "public-certificate-url", "get", projectKey],
-    queryFn: () => projectService.getPublicCertificateInformation(projectKey),
+    queryFn: () => projectService.getPublicCertificateInformation(),
     enabled: !!projectKey,
   });
 };

@@ -192,8 +192,7 @@ export const useGetMigrationStatus = (tenantGroupId: string) => {
   return useQuery({
     queryKey: ["identifier", "migration-status", tenantGroupId],
     queryFn: () => crossProjectService.getMigrationStatus(tenantGroupId),
-    //TODO: Enable this query when the migration feature is ready to be used
-    enabled: false,
+    enabled: !!tenantGroupId,
   });
 };
 
