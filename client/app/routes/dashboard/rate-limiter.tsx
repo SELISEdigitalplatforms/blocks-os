@@ -1,9 +1,7 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui-kits/card/card";
 export default function RateLimiterPage() {
   return (

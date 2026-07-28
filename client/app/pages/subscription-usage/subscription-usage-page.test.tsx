@@ -46,7 +46,6 @@ describe("SubscriptionUsagePage", () => {
   });
 
   it("formats large numbers into a millions suffix", async () => {
-    const user = userEvent.setup();
     render(<SubscriptionUsagePage />);
     // Credits Used has a 12M limit which fmt renders as "12M".
     const creditsRow = screen.getByText("Credits Used").closest("div")?.parentElement as HTMLElement;

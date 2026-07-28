@@ -66,7 +66,7 @@ describe("LanguageManagerService", () => {
 
   it("fetchBlocksLanguages queries the logic base url with an absolute url", async () => {
     vi.mocked(http.get).mockResolvedValue([]);
-    await languageManagerService.fetchBlocksLanguages("pk");
+    await languageManagerService.fetchBlocksLanguages();
     expect(http.get).toHaveBeenCalledWith(
       `https://logic.test${LANGUAGE_ENDPOINTS.GETS}`,
       undefined,

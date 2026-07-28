@@ -74,7 +74,9 @@ class LanguageManagerService {
     return http.get(`${LANGUAGE_MODULE_ENDPOINTS.GETS}?projectKey=${projectKey}`);
   };
 
-  fetchBlocksLanguages = (projectKey: string): Promise<ILanguageConfig[]> => {
+  // Returns the platform-wide language list; the endpoint is not project-scoped, so it takes
+  // no arguments (the server's Gets action ignores its request object entirely).
+  fetchBlocksLanguages = (): Promise<ILanguageConfig[]> => {
     return http.get(
       `${getRuntimeEnv("BLOCKS_LOGIC_BASE_URL")}${LANGUAGE_ENDPOINTS.GETS}`,
       undefined,

@@ -56,11 +56,13 @@ export const ProfileMfaMethodSelectList = () => {
   const { data: userData } = useGetProfileUserById({ id: userId, projectKey });
   const [type, setType] = useState<string>("");
   const projectMfaEnabled = projectMfaConfig?.enabled === true;
+  // See profile-mfa-methods-list.tsx: hoisted so the inferred dependency matches the declared one.
+  const allowedMethods = projectMfaConfig?.allowedMethods;
   const availableMFaMethod = useMemo(() => {
     if (!projectMfaEnabled) return [];
-    if (!projectMfaConfig?.allowedMethods?.length) return [];
-    return MFA_Provider_Data.filter((item) => projectMfaConfig.allowedMethods.includes(item.type));
-  }, [projectMfaEnabled, projectMfaConfig?.allowedMethods]);
+    if (!allowedMethods?.length) return [];
+    return MFA_Provider_Data.filter((item) => allowedMethods.includes(item.type));
+  }, [projectMfaEnabled, allowedMethods]);
   const mfaType = userData?.data?.userMfaType;
   const [prevMfaType, setPrevMfaType] = useState<typeof mfaType | undefined>(undefined);
   if (prevMfaType !== mfaType) {

@@ -120,7 +120,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
 }) => {
   // const { saveEmailConfig, isPending } = useSaveEmailConfig();
   const { isPending, mutateAsync } = useSaveEmailConfig();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+   
   const form = useForm<IEmailConfig>({
     defaultValues:
       isEdit && previousData && previousData.itemId !== ""

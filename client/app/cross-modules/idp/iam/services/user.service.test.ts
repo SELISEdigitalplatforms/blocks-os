@@ -12,7 +12,6 @@ import {
   mockCreateUserPayload,
   mockUpdateUserPayload,
   mockGetSignUpSettingPayload,
-  mockSignUpSettingResponse,
   mockSaveSignUpSettingPayload,
   mockSaveRolesAndPermissionsPayload,
   mockGetSessionsPayload,
