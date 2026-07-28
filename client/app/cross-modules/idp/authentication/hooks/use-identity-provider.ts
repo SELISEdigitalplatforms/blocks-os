@@ -4,13 +4,16 @@ import {
   IdentityProvider,
   UpdateStatusRequest,
 } from "@blocks-idp/authentication/models/identity-provider.model";
+import type { Id } from "@seliseblocks/genesis-os/types";
 
 const QUERY_KEY = ["identity-providers"] as const;
 
-export const useGetIdentityProviders = () => {
+
+export const useGetIdentityProviders = ({ projectId }: {projectId:Id}) => {
   return useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: () => identityProviderService.getAll(),
+   queryKey: [QUERY_KEY, projectId],
+   queryFn: () => identityProviderService.getAll(),
+   enabled: !!projectId
   });
 };
 
