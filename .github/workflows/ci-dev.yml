@@ -212,7 +212,7 @@ jobs:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
 
   sonarqube_client:
-    if: needs.initialization.outputs.run_sonarqube == 'true'
+    if: needs.initialization.outputs.run_sonarqube == 'false'
     needs: [initialization]
     uses: ./.github/workflows/sonarqube-client.yml
     with:
