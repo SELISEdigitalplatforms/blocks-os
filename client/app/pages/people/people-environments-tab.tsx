@@ -11,7 +11,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { PeopleGroupedByEnvironments } from "@/models/people";
 import { IProjectGroup } from "@/models/project.model";
 import { environmentOptions } from "@/constants/environment-options";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { buildInvitePeoplePayload } from "./invite-people-utils";
 
 interface PeopleEnvironmentsTabProps {

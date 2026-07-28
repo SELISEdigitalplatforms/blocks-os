@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useAuthStore } from "@seliseblocks/blocks-kit/store";
+import { useSearchParams } from "react-router";
+import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import LogoLoadingSpinner from "@/components/loader-spinner/loader-spinner";
 

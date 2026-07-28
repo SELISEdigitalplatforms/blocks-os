@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { Link } from "react-router";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { X } from "lucide-react";
 import StepVerticalTrackBar from "@/components/stepper/vertical-track-bar";
 import StepHorizontalTrackBar from "@/components/stepper/horizontal-track-bar";

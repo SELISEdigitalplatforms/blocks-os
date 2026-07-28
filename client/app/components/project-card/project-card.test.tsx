@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IProject } from "@/models/project.model";
 
@@ -29,12 +29,12 @@ const h = vi.hoisted(() => ({
   setSelectedProject: vi.fn(),
 }));
 
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router-dom")>();
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
   return { ...actual, useNavigate: () => h.navigate };
 });
 
-vi.mock("@seliseblocks/blocks-kit", async () => {
+vi.mock("@seliseblocks/genesis-os", async () => {
   const React = await import("react");
   const Pass = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);

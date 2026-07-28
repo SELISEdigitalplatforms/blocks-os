@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui-kits/button/button";

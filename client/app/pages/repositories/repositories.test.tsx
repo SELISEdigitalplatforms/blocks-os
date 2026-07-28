@@ -11,10 +11,10 @@ const h = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedTenantGroup: h.selectedTenantGroup }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useDebounce: (value: unknown) => value,
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));

@@ -4,8 +4,8 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { useGetMFAConfig } from "@blocks-idp/mfa/hooks/use-mfa-config";
 import { createContext, useContext, useState } from "react";
-import { Link } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { Link } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { UserMFAConfirmationDisable } from "./user-mfa-confirmation/user-mfa-confirmation-disable";
 import { UserMFADetails } from "./user-mfa-detail";
 type UserMFAProps = {

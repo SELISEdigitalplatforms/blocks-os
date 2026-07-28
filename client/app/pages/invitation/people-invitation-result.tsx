@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui-kits/card/card"
-import { Link } from "react-router-dom"
+import { Link } from "react-router"
 import { getRuntimeEnv } from "@/lib/runtime-env"
 
 type PeopleInvitationResultProps = {

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { KeyRound, Lock, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/logo";
-import { ThemeSwitcher } from "@seliseblocks/blocks-kit";
+import { ThemeSwitcher } from "@seliseblocks/genesis-os";
 
 export interface AuthPageShellProps {
   badge: string;

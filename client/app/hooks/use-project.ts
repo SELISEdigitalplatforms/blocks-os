@@ -8,10 +8,10 @@ import {
 } from "@/models/project.model";
 import { projectService } from "@/services/project.service";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
-import { useImpersonateStore, useProjectStore } from "@seliseblocks/blocks-kit";
+import { useImpersonateStore, useProjectStore } from "@seliseblocks/genesis-os";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 export const useGetProjects = ({
   tenantGroupId,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { AIModelsTable } from "@blocks-ai/components/aimodels/aimodel-table/aimodel-table";
@@ -19,8 +19,8 @@ import {
   useSeedModelsByProvider,
   useSeedProviders,
 } from "@blocks-ai/hooks/use-aimodel";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Plus, ArrowLeft } from "lucide-react";
 const PROVIDER_PNG_MAP: Record<string, string> = {

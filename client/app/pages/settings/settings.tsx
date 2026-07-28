@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { formatDate } from "@/lib/utils";
 import { EnvironmentsCard, getEnvironmentOrder } from "./environments-card";
 const SettingsLoading = () => (

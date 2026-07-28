@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({
   isJwtClaimLoading: false,
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-identifier", () => ({

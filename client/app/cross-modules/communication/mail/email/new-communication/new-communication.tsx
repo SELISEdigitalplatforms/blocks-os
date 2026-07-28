@@ -10,11 +10,11 @@ import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-s
 import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { FileText, LayoutTemplate } from "lucide-react";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 const EMAIL_TEMPLATE_STEPS: StepItem[] = [{ id: "basic-information" }, { id: "template" }];
 
@@ -54,19 +54,11 @@ const BasicInformationStep = ({
   onStepComplete,
 }: BasicInformationStepProps) => {
   const { nextStep } = useStepper();
-  const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
-  const ref = useRef<{ submit: () => void; isValid: boolean }>();
+  const ref = useRef<{ submit: () => void; isValid: boolean } | undefined>(undefined);
   const [isFormValid, setIsFormValid] = useState(false);
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+  const [isSaving, setIsSaving] = useState(false);
 
-  const formSubmitHandler = async (data: IEmailTemplate) => {
-    data.itemId = templateData?.itemId || "";
-    const payload = {
-      ...data,
-      projectKey: tenantId,
-    };
-    const response = await saveTemplate(payload);
-    data.itemId = response.itemId;
+  const handleSaveSuccess = (data: IEmailTemplate) => {
     setTemplateData(data);
     onStepComplete();
     nextStep();
@@ -75,9 +67,10 @@ const BasicInformationStep = ({
   return (
     <div className="mt-6 w-full">
       <BasicInformation
-        onSubmit={formSubmitHandler}
+        onSaveSuccess={handleSaveSuccess}
         templateData={templateData}
         onValidityChange={setIsFormValid}
+        onPendingChange={setIsSaving}
         ref={ref}
         actions={
           <Button
@@ -85,7 +78,7 @@ const BasicInformationStep = ({
             size="default"
             className="w-full sm:w-auto"
             onClick={() => ref?.current?.submit()}
-            disabled={isPending || !isFormValid}
+            disabled={isSaving || !isFormValid}
           >
             Save &amp; continue
           </Button>
@@ -102,7 +95,7 @@ type TemplateDesignStepProps = {
 
 const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignStepProps) => {
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
-  const beeRef = useRef<{ submit: () => void; preview: () => void }>();
+  const beeRef = useRef<{ submit: () => void; preview: () => void } | undefined>(undefined);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";

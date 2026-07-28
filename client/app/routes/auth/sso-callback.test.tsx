@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.stubGlobal("matchMedia", (query: string) => ({
@@ -23,7 +23,7 @@ vi.stubGlobal(
 );
 
 const h = vi.hoisted(() => ({ setAuthenticated: vi.fn() }));
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ setAuthenticated: h.setAuthenticated }),
 }));
 const setAuthenticated = h.setAuthenticated;

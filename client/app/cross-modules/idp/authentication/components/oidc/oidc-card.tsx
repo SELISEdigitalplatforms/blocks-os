@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useNavigate } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { format } from "date-fns";
 import { ChevronRight, LayoutTemplate, RotateCw, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
@@ -26,7 +26,7 @@ import {
   IDeleteOidcClientPayload,
   IOidcConfig,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";

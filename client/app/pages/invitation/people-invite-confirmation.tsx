@@ -9,7 +9,7 @@ import {
 } from "@/components/ui-kits/card/card";
 import { usePeopleAcceptInvitation } from "@/hooks/use-people";
 import { hasErrorCode, isErrorWithErrors } from "@/lib/error";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { buildInvitationResultPath } from "./use-invitation-search-params";
 
 type PeopleInviteConfirmationProps = {

@@ -1,8 +1,7 @@
 import { ArchiveProject } from "./archive";
-import { RestoreProject } from "./restore";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { RenderConditionally } from "@seliseblocks/blocks-kit/components";
-import { useAuthStore } from "@seliseblocks/blocks-kit/store";
+import { RenderConditionally } from "@seliseblocks/genesis-os/components";
+import { useAuthStore } from "@seliseblocks/genesis-os/store";
 
 type ProjectActionsProps = {
   itemId: string;
@@ -12,7 +11,6 @@ type ProjectActionsProps = {
 };
 
 export const ProjectActions = ({
-  itemId,
   isDisabled,
   createdBy,
   isFetching = false,
@@ -28,7 +26,6 @@ export const ProjectActions = ({
     <RenderConditionally condition={isOwner && !isDisabled}>
       <div className="flex items-center gap-2">
         {/* <EditProject /> */}
-        <RestoreProject itemId={itemId} />
         <ArchiveProject />
       </div>
     </RenderConditionally>

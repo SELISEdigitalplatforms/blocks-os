@@ -27,7 +27,7 @@ vi.mock("@blocks-idp/authentication/services/auth-clients-oidc.service", () =>
   mockAuthOidcServiceFactory(),
 );
 
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 type BlocksWindow = Window & {
   __BLOCKS_ENV__?: Record<string, string | undefined>;

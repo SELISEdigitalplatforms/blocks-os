@@ -1,20 +1,20 @@
-import { useState } from "react";
-import { ChevronRight, Hourglass, RotateCcw, AlertTriangle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
+import { useState, type MouseEvent } from "react";
+import { ChevronRight, Hourglass, Wrench, AlertTriangle, Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IProject } from "@/models/project.model";
 import { useGetProjectStatus, useRestoreProject } from "@/hooks/use-project";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
-import { useStartImpersonation } from "@seliseblocks/blocks-kit/hooks";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useStartImpersonation } from "@seliseblocks/genesis-os/hooks";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
+import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { environmentOptions } from "@/constants/environment-options";
 type EnvironmentCardProps = {
   project: IProject;
@@ -33,6 +33,7 @@ export const EnvironmentCard = ({
   const { mutateAsync: restoreProject, isPending: isRestoring } = useRestoreProject();
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
+  const setupPending = isSetupComplete === false;
 
   const onClickHandler = async (): Promise<void> => {
     try {
@@ -49,7 +50,13 @@ export const EnvironmentCard = ({
       console.error("Failed to switch environment", err);
     }
   };
-  const handleCardClick = (): void => {
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>): void => {
+    if (event.target instanceof Element && event.target.closest("[role='dialog']")) {
+      return;
+    }
+    if (setupPending) {
+      return;
+    }
     if (isMigrationOngoing) {
       setIsConfirmationOpen(true);
       return;
@@ -65,7 +72,7 @@ export const EnvironmentCard = ({
       const res = await restoreProject({ itemId: project.itemId });
       if (res.isSuccess) {
         showSuccessToast({
-          title: "Environment restore",
+          title: "Environment repair",
           description: "Setup has been re-triggered for this environment.",
         });
         setIsRestoreOpen(false);
@@ -78,7 +85,6 @@ export const EnvironmentCard = ({
       }
     }
   };
-  const setupPending = isSetupComplete === false;
   return (
     <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
       <Card
@@ -129,31 +135,46 @@ export const EnvironmentCard = ({
                   <button
                     type="button"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex h-6 items-center gap-1 rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
-                    aria-label="Restore environment"
+                    disabled={isRestoring}
+                    className="inline-flex h-6 items-center gap-1 rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-70"
+                    aria-label="Repair environment"
                   >
-                    <RotateCcw className="h-3 w-3" />
-                    <span>Restore</span>
+                    {isRestoring ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Wrench className="h-3 w-3" />
+                    )}
+                    <span>{isRestoring ? "Repairing…" : "Repair"}</span>
+                    {isRestoring && (
+                      <span
+                        className="ml-0.5 h-1 w-8 overflow-hidden rounded-full bg-secondary-foreground/20"
+                        aria-hidden="true"
+                      >
+                        <span className="block h-full w-1/3 animate-pulse rounded-full bg-secondary-foreground/70" />
+                      </span>
+                    )}
                   </button>
                 </DialogTrigger>
                 <ConfirmationModal
                   onCancel={() => setIsRestoreOpen(false)}
                   onConfirm={handleRestoreConfirm}
                   data={{
-                    dialogTitle: "Restore this environment?",
+                    dialogTitle: "Repair this environment?",
                     dialogSubtitle: (
                       <>
                         <p>Setup hasn&apos;t completed for this environment.</p>
                         <p>This will re-run the setup for this environment.</p>
                       </>
                     ),
-                    confirmButton: "Restore",
+                    confirmButton: "Repair",
                   }}
                   buttonState={{ confirm: { disable: isRestoring } }}
                 />
               </Dialog>
             )}
-            <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            {!setupPending && (
+              <ChevronRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            )}
           </div>
         </CardHeader>
         <div className="mt-2">
