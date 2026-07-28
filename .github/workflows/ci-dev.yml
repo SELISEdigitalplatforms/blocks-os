@@ -185,7 +185,7 @@ jobs:
 
   sonarqube_server:
     # if: github.event_name == 'pull_request' && needs.initialization.outputs.run_sonarqube == 'true'
-    if: needs.initialization.outputs.run_sonarqube == 'true'
+    if: needs.initialization.outputs.run_sonarqube == 'false'
     needs: [initialization]
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/sonarqube-dotnet.yml@main
     with:
