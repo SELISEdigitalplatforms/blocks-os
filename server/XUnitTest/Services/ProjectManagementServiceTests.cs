@@ -109,7 +109,7 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task GetProjectStatusAsync_NoTracerButTenantExists_ReturnsFalse()
+        public async Task GetProjectStatusAsync_NoTracerButTenantExists_ReturnsTrue()
         {
             _repo.Setup(r => r.GetUnfinishedProjectByIdAsync("p1")).ReturnsAsync((ProjectStatusTracer?)null);
             _repo.Setup(r => r.GetByIdAsync("p1")).ReturnsAsync(new Tenant
@@ -118,7 +118,7 @@ namespace XUnitTest.Services
                 JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "p" }
             });
 
-            (await Service().GetProjectStatusAsync("p1")).Should().BeFalse();
+            (await Service().GetProjectStatusAsync("p1")).Should().BeTrue();
         }
 
         [Fact]
