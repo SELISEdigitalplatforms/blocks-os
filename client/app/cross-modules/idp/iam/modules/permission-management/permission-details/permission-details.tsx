@@ -2,7 +2,6 @@ import { useGetPermissionById, useUpdatePermission } from "@blocks-idp/iam/hooks
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useMemo } from "react";
 import { mapPermissionToFormValues, permissionFormSchemaType } from "../permission-form/utils";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { PermissionForm } from "../permission-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
@@ -68,7 +67,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
     return <PermissionDetailsPageSkeleton />;
   }
 
-  BREADCRUMB_CUSTOM_TITLES[`/app/idp/permission-detail/${id}`] = permission.name;
+  const breadcrumbTitles = { [`/app/idp/permission-detail/${id}`]: permission.name };
 
   return (
     <div>
@@ -77,6 +76,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
           breadcrumbIndex={4}
           className="flex min-w-0"
           listClassName="text-base sm:text-lg"
+          customTitles={breadcrumbTitles}
         />
         <Badge
           className={cn(

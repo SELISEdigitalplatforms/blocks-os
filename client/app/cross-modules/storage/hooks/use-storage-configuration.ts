@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { storageService } from "../services/storage.service";
-import { useProjectStore } from "@seliseblocks/genesis-os";
 
 export const useGetStorageConfigurations = () => {
   return useQuery({

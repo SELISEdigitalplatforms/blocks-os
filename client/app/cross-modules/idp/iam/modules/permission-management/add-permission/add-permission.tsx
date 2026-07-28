@@ -1,13 +1,17 @@
 import { CreatePermissionPayload } from "@blocks-idp/iam/models/permission";
 import { useAddPermission } from "@blocks-idp/iam/hooks/use-permission";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { PermissionForm } from "../permission-form";
 import { permissionFormSchemaType } from "../permission-form/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+
+const BREADCRUMB_TITLES = {
+  "/app/idp/permission-detail/new": "New",
+};
+
 export const AddPermission = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -35,11 +39,10 @@ export const AddPermission = () => {
       showErrorToast({ errors: "Something went wrong" });
     }
   };
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/permission-detail/new"] = "New";
   return (
     <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={4} />
+        <PageBreadcrumb breadcrumbIndex={4} customTitles={BREADCRUMB_TITLES} />
       </div>
       <div className="mt-4 text-xl font-semibold">New Permission</div>
       <div className="mt-4">

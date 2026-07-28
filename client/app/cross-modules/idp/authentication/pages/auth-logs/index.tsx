@@ -1,13 +1,16 @@
 import React from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { LogsViewer } from "@blocks-lmt/components";
+
+const BREADCRUMB_TITLES = {
+  "/app/idp": "Authentication",
+  "/app/idp/logs": "Logs",
+};
+
 export function AuthLogs() {
-  BREADCRUMB_CUSTOM_TITLES["/app/idp"] = "Authentication";
-  BREADCRUMB_CUSTOM_TITLES["/app/idp/logs"] = "Logs";
   return (
     <div>
-      <PageBreadcrumb breadcrumbIndex={2} />
+      <PageBreadcrumb breadcrumbIndex={2} customTitles={BREADCRUMB_TITLES} />
       <LogsViewer
         services={[
           {

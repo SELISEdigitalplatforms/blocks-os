@@ -28,8 +28,6 @@ const LoadingSkelton = () => (
 export const UserRolesList = ({
   roles,
   isLoading,
-  userId,
-  projectKey,
   onRemoveRole,
 }: UserRolesListProps) => {
   if (isLoading) return <LoadingSkelton />;
