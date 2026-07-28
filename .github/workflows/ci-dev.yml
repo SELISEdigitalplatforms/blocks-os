@@ -230,15 +230,14 @@ jobs:
   sca_server:
     if: needs.initialization.outputs.run_sca_scan == 'true'
     needs: [initialization]
-    uses: ./.github/workflows/sca-server.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/sca-scan-dotnet.yml@main
     with:
-      WORKING_DIRECTORY: ${{ needs.initialization.outputs.working_directory }}
-      SOLUTION_NAME: ${{ needs.initialization.outputs.solution_name }}
       PROJECT_NAME: ${{ needs.initialization.outputs.sca_project_server }}
       PROJECT_VERSION: ${{ needs.initialization.outputs.project_version }}
       DOTNET_VERSION: ${{ needs.initialization.outputs.dotnet_version }}
-      NODE_VERSION: "22"
-      SPEC_VERSION: "1.6"
+      WORKING_DIRECTORY: ${{ needs.initialization.outputs.working_directory }}
+      SOLUTION_NAME: ${{ needs.initialization.outputs.solution_name }}
+      USE_DOCKER: false
       INCLUDE_FORMULATION: false
       DEPENDENCY_TRACK_HOST: ${{ needs.initialization.outputs.dependency_track_host }}
       DEPENDENCY_TRACK_FRONTEND_URL: ${{ needs.initialization.outputs.dependency_track_frontend_url }}
