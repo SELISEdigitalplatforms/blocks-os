@@ -27,7 +27,6 @@ const LoadingSkelton = () => (
 export const UserPermissionsList = ({
   permissions,
   isLoading,
-  userId,
   onRemovePermission,
 }: UserPermissionsListProps) => {
   if (isLoading) {

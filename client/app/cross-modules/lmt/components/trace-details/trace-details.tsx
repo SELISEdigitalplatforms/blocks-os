@@ -1,6 +1,5 @@
 import React, { createContext, useEffect, useState } from "react";
-import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
+import PageBreadcrumb, { BreadcrumbTitles } from "@/components/breadcrumb/breadcrumb";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
@@ -78,10 +77,13 @@ export const TraceDetails = ({
   id,
   breadcrumbIndex = 2,
   logsTraceBreadcrumbHref,
+  breadcrumbTitles,
 }: {
   id: string;
   breadcrumbIndex?: number;
   logsTraceBreadcrumbHref?: string;
+  /** Titles for ancestor segments owned by the routing page (e.g. the logs crumbs). */
+  breadcrumbTitles?: BreadcrumbTitles;
 }) => {
   const lmtBase = useLmtBasePath();
   const isMobile = useIsMobile();
@@ -131,23 +133,13 @@ export const TraceDetails = ({
   const isEmpty = !isPending && !hasTrace;
   const showTimelineLoading = isPending || (hasTrace && traceHistory.length === 0);
   const entryPoint = data?.data?.entryPoint;
-  BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing`] = "Tracing";
-  if (id) {
-    BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing/${id}`] = getTraceBreadcrumbLabel(
-      id,
-      hasTrace,
-      entryPoint,
-      true,
-    );
-  }
-  if (logsTraceBreadcrumbHref) {
-    BREADCRUMB_CUSTOM_TITLES[logsTraceBreadcrumbHref] = getTraceBreadcrumbLabel(
-      id,
-      hasTrace,
-      entryPoint,
-      true,
-    );
-  }
+  const traceLabel = getTraceBreadcrumbLabel(id, hasTrace, entryPoint, true);
+  const resolvedBreadcrumbTitles: BreadcrumbTitles = {
+    ...breadcrumbTitles,
+    [`${lmtBase}/tracing`]: "Tracing",
+    ...(id ? { [`${lmtBase}/tracing/${id}`]: traceLabel } : {}),
+    ...(logsTraceBreadcrumbHref ? { [logsTraceBreadcrumbHref]: traceLabel } : {}),
+  };
   const selectedTraceHistory = traceHistory[traceHistory?.length - 1];
   return (
     <timelineContext.Provider
@@ -171,6 +163,7 @@ export const TraceDetails = ({
             <PageBreadcrumb
               breadcrumbIndex={breadcrumbIndex}
               listClassName="text-base sm:text-lg"
+              customTitles={resolvedBreadcrumbTitles}
             />
             {hasTrace ? (
               <Button

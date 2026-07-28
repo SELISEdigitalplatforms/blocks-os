@@ -36,7 +36,7 @@ const permissions = [
     dependentPermissions: [],
     roles: [],
   },
-] as any[];
+];
 
 const makeWrapper = () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });

@@ -1,4 +1,3 @@
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { useGetOrganizationById } from "@blocks-idp/iam/hooks/use-organization";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -10,13 +9,14 @@ import {
 export const OrganizationDetail = ({ id }: { id: string }) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data, isLoading } = useGetOrganizationById({ itemId: id, projectKey: tenantId });
-  BREADCRUMB_CUSTOM_TITLES["/services/iam/organization-detail"] = "Organizations";
-  BREADCRUMB_CUSTOM_TITLES[`/services/iam/organization-detail/${id}`] =
-    data?.organization?.name ?? null;
+  const breadcrumbTitles = {
+    "/services/iam/organization-detail": "Organizations",
+    [`/services/iam/organization-detail/${id}`]: data?.organization?.name ?? null,
+  };
   return (
     <main className="flex flex-col">
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={3} customTitles={breadcrumbTitles} />
       </div>
       <div className="flex w-full flex-col">
         <div className="flex items-center justify-between text-base text-high-emphasis md:mt-5">
