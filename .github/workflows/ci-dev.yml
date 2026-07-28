@@ -227,43 +227,24 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_GLOBAL }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
 
-  # ==============================================
-  # SCA Scan for .NET - Dependency Analysis
-  # ==============================================
-  sca-scan-dotnet:
+  sca_server:
     if: needs.initialization.outputs.run_sca_scan == 'true'
     needs: [initialization]
-    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/sca-scan-dotnet.yml@main
+    uses: ./.github/workflows/sca-server.yml
     with:
-      # Project Configuration
-      PROJECT_NAME: ${{ needs.initialization.outputs.sca_project_server }}
-      PROJECT_VERSION: ${{ needs.initialization.outputs.project_version }}
-
-      # .NET Configuration
-      DOTNET_VERSION: ${{ needs.initialization.outputs.dotnet_version }}
-
-      # Solution Configuration
       WORKING_DIRECTORY: ${{ needs.initialization.outputs.working_directory }}
       SOLUTION_NAME: ${{ needs.initialization.outputs.solution_name }}
-
-      # NuGet Configuration (uses defaults: public NuGet + nuget.selise.biz)
-      # NUGET_SOURCES: "https://api.nuget.org/v3/index.json https://nuget.selise.biz/nuget"
-
-      # SBOM Tool Configuration
-      # SBOM_TOOL: "cdxgen" # Options: "cdxgen" (recommended), "cyclonedx-dotnet"
-      USE_DOCKER: false # Value 'true' is Recommended for .NET (make false to use native installation)
-      # DOCKER_DOTNET_VERSION: "dotnet9" # Match your .NET version: dotnet6, dotnet7, dotnet8, dotnet9
+      PROJECT_NAME: ${{ needs.initialization.outputs.sca_project_server }}
+      PROJECT_VERSION: ${{ needs.initialization.outputs.project_version }}
+      DOTNET_VERSION: ${{ needs.initialization.outputs.dotnet_version }}
+      NODE_VERSION: "22"
+      SPEC_VERSION: "1.6"
       INCLUDE_FORMULATION: false
-
-      # Dependency-Track Configuration
       DEPENDENCY_TRACK_HOST: ${{ needs.initialization.outputs.dependency_track_host }}
       DEPENDENCY_TRACK_FRONTEND_URL: ${{ needs.initialization.outputs.dependency_track_frontend_url }}
       AUTO_CREATE_PROJECT: true
       ARTIFACT_RETENTION_DAYS: 2
-
-      # Optional Features
       HAS_SUBMODULES: ${{ needs.initialization.outputs.has_submodules == 'true' }}
-
     secrets:
       DEPENDENCY_TRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
@@ -290,9 +271,9 @@ jobs:
 
   # Build and push image
   build-client:
-    # needs: [initialization, sonarqube_server, sonarqube_client, sca-scan-dotnet]
+    # needs: [initialization, sonarqube_server, sonarqube_client, sca_server, sca_client]
     needs: [initialization, sonarqube_server, sonarqube_client]
-    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube_server.result == 'skipped' ) && (success() || needs.sca-scan-dotnet.result == 'skipped' ) }}
+    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube_server.result == 'skipped' ) && (success() || needs.sca_server.result == 'skipped' ) }}
     if: |
       github.event_name == 'push' &&
       always() &&
@@ -344,9 +325,9 @@ jobs:
 
   # Build and push image
   build-worker:
-    # needs: [initialization, sonarqube_server, sonarqube_client, sca-scan-dotnet]
+    # needs: [initialization, sonarqube_server, sonarqube_client, sca_server, sca_client]
     needs: [initialization, sonarqube_server, sonarqube_client]
-    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube_server.result == 'skipped' ) && (success() || needs.sca-scan-dotnet.result == 'skipped' ) }}
+    # if: ${{ github.event_name == 'push' && (success() || needs.sonarqube_server.result == 'skipped' ) && (success() || needs.sca_server.result == 'skipped' ) }}
     if: |
       github.event_name == 'push' &&
       always() &&

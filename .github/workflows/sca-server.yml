@@ -1,0 +1,267 @@
+name: Reusable - SCA Scan Server (.NET)
+
+on:
+  workflow_call:
+    inputs:
+      WORKING_DIRECTORY:
+        description: "Directory containing the solution"
+        required: false
+        type: string
+        default: "./server"
+
+      SOLUTION_NAME:
+        description: "Solution file name"
+        required: false
+        type: string
+        default: "BlocksOS.sln"
+
+      PROJECT_NAME:
+        description: "Dependency-Track project name"
+        required: true
+        type: string
+
+      PROJECT_VERSION:
+        description: "Dependency-Track project version"
+        required: false
+        type: string
+        default: ""
+
+      DOTNET_VERSION:
+        description: ".NET SDK version to use"
+        required: false
+        type: string
+        default: "10.0.x"
+
+      NODE_VERSION:
+        description: "Node.js version used to run cdxgen"
+        required: false
+        type: string
+        default: "22"
+
+      CDXGEN_VERSION:
+        description: "cdxgen version to install"
+        required: false
+        type: string
+        default: "latest"
+
+      SPEC_VERSION:
+        description: "CycloneDX spec version to emit"
+        required: false
+        type: string
+        default: "1.6"
+
+      INCLUDE_FORMULATION:
+        description: "Include build/CI provenance in the SBOM"
+        required: false
+        type: boolean
+        default: false
+
+      NUGET_SOURCES:
+        description: "Space-separated list of NuGet sources"
+        required: false
+        type: string
+        default: "https://api.nuget.org/v3/index.json https://nuget.selise.biz/nuget"
+
+      SBOM_FILENAME:
+        description: "SBOM filename to generate"
+        required: false
+        type: string
+        default: "bom.json"
+
+      DEPENDENCY_TRACK_HOST:
+        description: "Dependency-Track API hostname"
+        required: false
+        type: string
+        default: "api-dt.seliseblocks.com"
+
+      DEPENDENCY_TRACK_FRONTEND_URL:
+        description: "Dependency-Track frontend URL for dashboard links"
+        required: false
+        type: string
+        default: "sca.seliseblocks.com"
+
+      AUTO_CREATE_PROJECT:
+        description: "Auto-create the project in Dependency-Track if missing"
+        required: false
+        type: boolean
+        default: true
+
+      ARTIFACT_RETENTION_DAYS:
+        description: "Days to retain the SBOM artifact"
+        required: false
+        type: number
+        default: 2
+
+      HAS_SUBMODULES:
+        description: "Set to true if the repository uses Git submodules"
+        required: false
+        type: boolean
+        default: false
+
+    secrets:
+      DEPENDENCY_TRACK_API_KEY:
+        required: true
+        description: "Dependency-Track API key"
+      SELISE_GITHUB_PAT:
+        required: false
+        description: "GitHub PAT for private repositories and submodules"
+
+jobs:
+  sca-scan:
+    name: SCA Scan & SBOM Upload (Server)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: ${{ inputs.HAS_SUBMODULES && 'recursive' || 'false' }}
+          token: ${{ secrets.SELISE_GITHUB_PAT || github.token }}
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+
+      - name: Restore NuGet packages
+        working-directory: ${{ inputs.WORKING_DIRECTORY }}
+        run: |
+          SOURCES=""
+          for SOURCE in ${{ inputs.NUGET_SOURCES }}; do
+            SOURCES="$SOURCES -s $SOURCE"
+          done
+          dotnet restore "${{ inputs.SOLUTION_NAME }}" $SOURCES
+
+      - name: Generate SBOM with cdxgen
+        run: |
+          npm install -g @cyclonedx/cdxgen@${{ inputs.CDXGEN_VERSION }}
+
+          FORMULATION_FLAG=""
+          [ "${{ inputs.INCLUDE_FORMULATION }}" = "true" ] && FORMULATION_FLAG="--include-formulation"
+
+          cdxgen \
+            -t dotnet \
+            -o ${{ inputs.SBOM_FILENAME }} \
+            --spec-version ${{ inputs.SPEC_VERSION }} \
+            --deep \
+            $FORMULATION_FLAG \
+            .
+
+      # cdxgen emits dependency-graph nodes for the solution's own projects
+      # (pkg:nuget/Api@latest, pkg:nuget/Worker@latest, ...) without declaring
+      # matching components. Dependency-Track requires every dependencies[].ref
+      # to resolve to a declared bom-ref and rejects the whole BOM with HTTP 400
+      # when one does not. The CycloneDX JSON schema cannot express that
+      # constraint, so the BOM is schema-valid but semantically broken.
+      - name: Drop orphan dependency references
+        run: |
+          BOM="${{ inputs.SBOM_FILENAME }}"
+
+          jq '
+            (
+              [ .components[]?["bom-ref"] ]
+              + [ .services[]?["bom-ref"] ]
+              + [ .metadata?.component?["bom-ref"] ]
+              | map(select(. != null)) | unique
+            ) as $defined
+            | .dependencies = (
+                (.dependencies // [])
+                | map(select(.ref as $r | $defined | index($r)))
+                | map(.dependsOn = ((.dependsOn // []) | map(select(. as $d | $defined | index($d)))))
+              )
+          ' "$BOM" > "$BOM.clean"
+
+          BEFORE=$(jq '.dependencies | length' "$BOM")
+          AFTER=$(jq '.dependencies | length' "$BOM.clean")
+          mv "$BOM.clean" "$BOM"
+
+          {
+            echo "### 🧹 SBOM sanitized"
+            echo ""
+            echo "- Dependency entries: $BEFORE → $AFTER (dropped $((BEFORE - AFTER)) orphan refs)"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Validate SBOM
+        run: |
+          BOM="${{ inputs.SBOM_FILENAME }}"
+          [ ! -s "$BOM" ] && echo "❌ SBOM missing or empty" && exit 1
+          jq empty "$BOM" || { echo "❌ SBOM is not valid JSON"; exit 1; }
+
+          DANGLING=$(jq '
+            (
+              [ .components[]?["bom-ref"] ]
+              + [ .services[]?["bom-ref"] ]
+              + [ .metadata?.component?["bom-ref"] ]
+              | map(select(. != null)) | unique
+            ) as $defined
+            | [ .dependencies[]? | select(.ref as $r | ($defined | index($r)) == null) ] | length
+          ' "$BOM")
+
+          {
+            echo "### 📦 SBOM (Server)"
+            echo ""
+            echo "| Item | Value |"
+            echo "|---|---|"
+            echo "| Spec version | $(jq -r '.specVersion' "$BOM") |"
+            echo "| Components | $(jq -r '.components | length' "$BOM") |"
+            echo "| Services | $(jq -r '.services // [] | length' "$BOM") |"
+            echo "| Dependencies | $(jq -r '.dependencies | length' "$BOM") |"
+            echo "| Orphan refs | $DANGLING |"
+            echo "| Size | $(du -h "$BOM" | cut -f1) |"
+          } >> $GITHUB_STEP_SUMMARY
+
+          [ "$DANGLING" -ne 0 ] && echo "❌ SBOM still has $DANGLING orphan dependency refs" && exit 1
+          exit 0
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-server
+          path: ${{ inputs.SBOM_FILENAME }}
+          retention-days: ${{ inputs.ARTIFACT_RETENTION_DAYS }}
+          if-no-files-found: error
+
+      - name: Upload to Dependency-Track
+        env:
+          DT_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+        run: |
+          VERSION="${{ inputs.PROJECT_VERSION }}"
+          [ -z "$VERSION" ] && VERSION="${GITHUB_REF_NAME}"
+
+          BODY=$(mktemp)
+          CODE=$(curl -sS -o "$BODY" -w '%{http_code}' \
+            -X POST "https://${{ inputs.DEPENDENCY_TRACK_HOST }}/api/v1/bom" \
+            -H "X-Api-Key: $DT_API_KEY" \
+            -F "autoCreate=${{ inputs.AUTO_CREATE_PROJECT }}" \
+            -F "projectName=${{ inputs.PROJECT_NAME }}" \
+            -F "projectVersion=$VERSION" \
+            -F "bom=@${{ inputs.SBOM_FILENAME }}")
+
+          echo "HTTP $CODE"
+          cat "$BODY"
+
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            {
+              echo "### ❌ Dependency-Track upload failed (HTTP $CODE)"
+              echo ""
+              echo '```'
+              head -c 2000 "$BODY"
+              echo '```'
+            } >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          {
+            echo "### ✅ Uploaded to Dependency-Track"
+            echo ""
+            echo "- Project: \`${{ inputs.PROJECT_NAME }}\` @ \`$VERSION\`"
+            echo "- Dashboard: https://${{ inputs.DEPENDENCY_TRACK_FRONTEND_URL }}/projects"
+          } >> $GITHUB_STEP_SUMMARY
