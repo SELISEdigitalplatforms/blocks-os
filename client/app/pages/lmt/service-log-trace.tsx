@@ -1,4 +1,3 @@
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { TraceDetails } from "@blocks-lmt/components/trace-details";
 import { SERVICES } from "@blocks-lmt/constants/services.constant";
@@ -20,12 +19,15 @@ export function LmtServiceLogTraceRoute() {
 
   const id = traceId ?? "";
 
-  BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs`] = "Logs";
-  if (serviceName) {
-    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}`] =
-      service?.label ?? serviceName;
-    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}/trace`] = "Trace";
-  }
+  const breadcrumbTitles = {
+    [`${LMT_BASE_PATH}/logs`]: "Logs",
+    ...(serviceName
+      ? {
+          [`${LMT_BASE_PATH}/logs/${serviceName}`]: service?.label ?? serviceName,
+          [`${LMT_BASE_PATH}/logs/${serviceName}/trace`]: "Trace",
+        }
+      : {}),
+  };
 
   return (
     <div className="flex flex-col">
@@ -35,6 +37,7 @@ export function LmtServiceLogTraceRoute() {
         logsTraceBreadcrumbHref={
           serviceName && id ? `${LMT_BASE_PATH}/logs/${serviceName}/trace/${id}` : undefined
         }
+        breadcrumbTitles={breadcrumbTitles}
       />
     </div>
   );

@@ -19,7 +19,7 @@ const StepperContext = React.createContext<
     nextStep: () => void;
     prevStep: () => void;
     resetSteps: () => void;
-    // eslint-disable-next-line
+     
     setStep: (step: number) => void;
   }
 >({

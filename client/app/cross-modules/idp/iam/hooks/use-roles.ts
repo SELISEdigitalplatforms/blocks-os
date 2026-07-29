@@ -42,7 +42,9 @@ export const useUpdateRole = () => {
   });
 };
 
-export const useSetRoles = (slug: string) => {
+// The role slug travels to the server in the mutation payload (SetRoles.slug), not as a hook
+// argument, and the mutationKey below is never read back, so this takes no parameters.
+export const useSetRoles = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["permissions", "set roles"],

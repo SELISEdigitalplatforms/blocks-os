@@ -84,7 +84,7 @@ export const useGetLanguages = () => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
     queryKey: ["get-languages", tenantId],
-    queryFn: () => languageManagerService.fetchBlocksLanguages(tenantId),
+    queryFn: () => languageManagerService.fetchBlocksLanguages(),
   });
 };
 

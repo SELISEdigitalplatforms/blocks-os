@@ -37,8 +37,10 @@ const toSaveApiPayload = (
 
 export class OrganizationService {
   getOrganizations(params: IGetOrganizationsParams): Promise<IGetOrganizationsResponse> {
-    let url = `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${params.projectKey}&page=${params.page}&pageSize=${params.pageSize}`;
-    params.searchText ? (url += `&SearchText=${params.searchText}`) : null;
+    const url =
+      `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${params.projectKey}` +
+      `&page=${params.page}&pageSize=${params.pageSize}` +
+      (params.searchText ? `&SearchText=${encodeURIComponent(params.searchText)}` : "");
     return http.get(url, undefined, { absoluteUrl: true });
   }
 

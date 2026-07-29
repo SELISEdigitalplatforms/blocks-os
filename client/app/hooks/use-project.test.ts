@@ -157,11 +157,15 @@ describe("use-project hooks", () => {
       },
       {
         name: "useValidateCNameProject",
+        // These arrows are the callback renderHook mounts as a component, so the hook call is
+        // legal. The rule can only see a lowercase-named function and assumes otherwise.
+        // eslint-disable-next-line react-hooks/rules-of-hooks
         hook: () => useValidateCNameProject({ projectKey: "pk" }),
         fn: vi.mocked(crossProjectService.validateCNameProject),
       },
       {
         name: "useDisableProject",
+        // eslint-disable-next-line react-hooks/rules-of-hooks
         hook: () => useDisableProject({ projectKey: "pk" }),
         fn: vi.mocked(crossProjectService.disableProject),
       },
