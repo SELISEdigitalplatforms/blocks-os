@@ -150,7 +150,7 @@ jobs:
           echo "- **SCA Scan Enabled**: ${{ env.RUN_SCA_SCAN }}" >> $GITHUB_STEP_SUMMARY
 
   # # Run the backend test suite on PRs only, gated by the RUN_TESTS flag.
-  # # Uses the shared reusable workflow so private NuGet (SeliseBlocks.Genesis) auth is handled.
+  # # Uses the shared reusable workflow so private NuGet (SeliseBlocks.Genesis.OS) auth is handled.
   # pr-checks:
   #   if: github.event_name == 'pull_request' && needs.initialization.outputs.run_tests == 'true'
   #   needs: [initialization]
