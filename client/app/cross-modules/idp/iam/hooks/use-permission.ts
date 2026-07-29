@@ -84,7 +84,7 @@ export const useGetPermissionsGroupBySeverity = (
 ) => {
   return useQuery({
     queryKey: ["permissions-group-by-severity", options],
-    queryFn: () => iamService.permission.getPermissionsSeverity(options),
+    queryFn: () => iamService.permission.getPermissionsSeverity(),
     enabled: !!options.projectKey,
   });
 };

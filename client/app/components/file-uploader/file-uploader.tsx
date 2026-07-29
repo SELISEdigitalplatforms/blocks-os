@@ -20,7 +20,7 @@ type FileUploaderContextType = {
   dropzoneState: DropzoneState;
   isLOF: boolean;
   isFileTooBig: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   removeFileFromSet: (index: number) => void;
   activeIndex: number;
   setActiveIndex: Dispatch<SetStateAction<number>>;
@@ -38,14 +38,14 @@ export const useFileUpload = () => {
 type FileUploaderProps = {
   value: File[] | null;
   reSelect?: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   onValueChange: (value: File[] | null) => void;
   dropzoneOptions: DropzoneOptions;
   orientation?: "horizontal" | "vertical";
 };
 export const FileUploader = forwardRef<
   HTMLDivElement,
-  // eslint-disable-next-line no-undef
+   
   FileUploaderProps & React.HTMLAttributes<HTMLDivElement>
 >(
   (
@@ -89,7 +89,7 @@ export const FileUploader = forwardRef<
       }
     }, [isFileTooBig]);
     const handleKeyDown = useCallback(
-      // eslint-disable-next-line no-undef
+       
       (e: React.KeyboardEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -226,7 +226,7 @@ export const FileUploader = forwardRef<
   },
 );
 FileUploader.displayName = "FileUploader";
-// eslint-disable-next-line no-undef
+ 
 export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ children, className, ...props }, ref) => {
     const { orientation } = useFileUpload();
@@ -251,7 +251,7 @@ export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttribut
 FileUploaderContent.displayName = "FileUploaderContent";
 export const FileUploaderItem = forwardRef<
   HTMLDivElement,
-  // eslint-disable-next-line no-undef
+   
   { index: number } & React.HTMLAttributes<HTMLDivElement>
 >(({ className, index, children, ...props }, ref) => {
   const { removeFileFromSet, activeIndex, direction } = useFileUpload();
@@ -282,7 +282,7 @@ export const FileUploaderItem = forwardRef<
   );
 });
 FileUploaderItem.displayName = "FileUploaderItem";
-// eslint-disable-next-line no-undef
+ 
 export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => {
     const { dropzoneState, isFileTooBig, isLOF } = useFileUpload();

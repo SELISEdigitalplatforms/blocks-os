@@ -78,9 +78,9 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
     });
     setSelectedPermissions([]);
   };
-  const permissionsResource = useMemo(() => {
-    return permissions.map((item) => item.resource) || [];
-  }, [permissions]);
+  // Plain derivation: the compiler declines to memoize this mapping, and nothing observes the
+  // array's identity (it is only read inside this component), so the useMemo bought nothing.
+  const permissionsResource = permissions.map((item) => item.resource);
   const selectedPermissionsResource = useMemo(() => {
     return selectedPermission.map((item) => item.resource) || [];
   }, [selectedPermission]);

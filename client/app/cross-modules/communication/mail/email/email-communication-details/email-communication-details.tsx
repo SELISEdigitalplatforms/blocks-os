@@ -6,7 +6,6 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import EditCommunication from "@blocks-communication/mail/components/email-service/modals/edit-communication/edit-communication";
 import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -57,10 +56,11 @@ export function EmailCommunicationDetails({
     return <EmailTemplateDetailsSkeleton />;
   }
   const emailBasePath = scoped("email-management");
-  BREADCRUMB_CUSTOM_TITLES[emailBasePath] = "Email Management";
-  BREADCRUMB_CUSTOM_TITLES[`${emailBasePath}/communications`] = null;
-  BREADCRUMB_CUSTOM_TITLES[`${emailBasePath}/communications/${emailDetails.itemId}`] =
-    emailDetails.name ?? "";
+  const breadcrumbTitles = {
+    [emailBasePath]: "Email Management",
+    [`${emailBasePath}/communications`]: null,
+    [`${emailBasePath}/communications/${emailDetails.itemId}`]: emailDetails.name ?? "",
+  };
   const confirmationModalData = {
     dialogTitle: "Send test email",
     dialogSubtitle: "Are you sure you want to send a test email?",
@@ -135,6 +135,7 @@ export function EmailCommunicationDetails({
             breadcrumbIndex={3}
             className="flex min-w-0"
             listClassName="text-base sm:text-lg"
+            customTitles={breadcrumbTitles}
           />
           <h1 className="truncate text-lg font-semibold md:sr-only">{emailDetails.name}</h1>
         </div>

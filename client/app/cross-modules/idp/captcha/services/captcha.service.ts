@@ -5,7 +5,6 @@ import {
   ICaptchaSecretResponse,
   IEnableCaptchaConfigsStatusPayload,
   IEnableCaptchaConfigsStatusResponse,
-  IGetCaptchaConfigsPayload,
   IGetCaptchaConfigsResponse,
   ISaveCaptchaConfigsPayload,
   ISaveCaptchaConfigsResponse,
@@ -13,7 +12,10 @@ import {
 import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class CaptchaService {
-  getCaptchaConfigs(payload: IGetCaptchaConfigsPayload): Promise<IGetCaptchaConfigsResponse> {
+  // The captcha secrets are fetched with a fixed query (secretKey=captcha, first page); nothing
+  // from the caller is sent, so this takes no arguments. Project scoping happens via the
+  // X-Blocks-Key header, and the hook gates the request on a selected project.
+  getCaptchaConfigs(): Promise<IGetCaptchaConfigsResponse> {
     return http
       .get<ICaptchaSecretResponse[] | IAPIResponse<ICaptchaSecretResponse[]>>(
         `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`,
