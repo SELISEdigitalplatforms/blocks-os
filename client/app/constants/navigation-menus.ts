@@ -197,13 +197,13 @@ export const navigationMenus: Menu[] = [
       // },
     ],
   },
-  {
-    id: "service-identity__api-settings",
-    type: "menu",
-    name: "API Settings",
-    path: "/app/api-settings",
-    icon: Settings,
-  },
+  // {
+  //   id: "service-identity__api-settings",
+  //   type: "menu",
+  //   name: "API Settings",
+  //   path: "/app/api-settings",
+  //   icon: Settings,
+  // },
   {
     id: "service-identity__email-management",
     type: "menu",
