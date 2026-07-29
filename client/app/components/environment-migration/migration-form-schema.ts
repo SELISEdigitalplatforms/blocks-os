@@ -21,7 +21,7 @@ export const environmentServiceSelectionFormDefaultValue = {
     { name: "DataGateway", label: "Data Gateway", selected: false, overrideData: false },
     { name: "Notifications", label: "Notifications", selected: false, overrideData: false },
     { name: "Storage", label: "Storage", selected: false, overrideData: false },
-    { name: "Localization", label: "Localization", selected: false, overrideData: false },
+    { name: "Language", label: "Localization", selected: false, overrideData: false },
   ] as MigrationServiceOption[],
 };
 
@@ -64,7 +64,7 @@ export const MIGRATION_SERVICE_NAME_TO_ID: Record<string, number> = {
   DataGateway: 5,
   Notifications: 6,
   Storage: 7,
-  Localization: 8,
+  Language: 8,
 };
 
 /** Matches blocks-app-next data-migration availability rules. */
@@ -82,5 +82,5 @@ export const MIGRATION_SERVICE_UI_CATALOG = [
   },
   { id: "Notifications", name: "Notifications", chips: ["Key", "Module"], available: false },
   { id: "Storage", name: "Storage", chips: ["Key", "Module"], available: false },
-  { id: "Localization", name: "Localization", chips: ["Key", "Module"], available: true },
+  { id: "Language", name: "Localization", chips: ["Key", "Module"], available: true },
 ] as const;
