@@ -10,7 +10,8 @@ interface IBeePluginProps {
   onBeeSave(data: { htmlFile: string; jsonFile: string }): void;
   onPreviewModeChange?: (isPreviewOn: boolean) => void;
   onBeeTemplateLoad?: (isLoaded: boolean) => void;
-  jsonFile?: any;
+  /** Bee template JSON — an opaque blob handed straight to the Bee SDK. */
+  jsonFile?: Record<string, unknown>;
 }
 const BeePlugin = forwardRef(function Inner(
   {

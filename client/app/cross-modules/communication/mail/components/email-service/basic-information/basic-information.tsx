@@ -139,12 +139,15 @@ const BasicInformation = forwardRef(function Inner(
     onPendingChange?.(isPending);
   }, [isPending, onPendingChange]);
 
+  // Read itemId into a local so the compiler infers this exact dependency rather than the whole
+  // templateData object; the callback keeps its current identity lifetime.
+  const templateItemId = templateData?.itemId;
   const handleFormSubmit = useCallback(
     async (data: IEmailTemplate) => {
       try {
         const payload = {
           ...data,
-          itemId: templateData?.itemId || "",
+          itemId: templateItemId || "",
           projectKey: tenantId,
         };
         const res = await saveTemplate(payload);
@@ -166,7 +169,7 @@ const BasicInformation = forwardRef(function Inner(
         }
       }
     },
-    [onSaveSuccess, saveTemplate, templateData?.itemId, tenantId],
+    [onSaveSuccess, saveTemplate, templateItemId, tenantId],
   );
 
   useImperativeHandle(

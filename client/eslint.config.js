@@ -42,6 +42,13 @@ export default [
       ...react.configs.flat.recommended.rules,
       ...reactHooks.configs.recommended.rules,
 
+      // react-hooks/incompatible-library reports that the React Compiler declined to optimize a
+      // component, not a defect in our code. Every occurrence comes from TanStack Table's
+      // useReactTable() or React Hook Form's watch(), both of which return functions the compiler
+      // cannot memoize safely. There is no code change that resolves it short of dropping those
+      // libraries, so the diagnostic is noise on almost every table and form file.
+      "react-hooks/incompatible-library": "off",
+
       // Confirmed false positives, disabled with justification (see CONTRIBUTING.md):
       // - react/prop-types is redundant in this TypeScript codebase; props are
       //   type-checked by the compiler, so the rule only fires on typed components.

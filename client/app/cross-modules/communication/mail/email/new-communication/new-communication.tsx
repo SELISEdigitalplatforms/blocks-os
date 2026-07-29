@@ -1,6 +1,4 @@
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { PageHeader } from "@/components/page-header/page-header";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Step, Stepper, useStepper, type StepItem } from "@/components/ui-kits/stepper";
@@ -234,8 +232,10 @@ function EmailTemplateStepper() {
 export default function NewCommunication() {
   const scoped = useScopedPath();
   const emailBasePath = scoped("email-management");
-  BREADCRUMB_CUSTOM_TITLES[emailBasePath] = "Email Management";
-  BREADCRUMB_CUSTOM_TITLES[`${emailBasePath}/new-communication`] = "New Template";
+  const breadcrumbTitles = {
+    [emailBasePath]: "Email Management",
+    [`${emailBasePath}/new-communication`]: "New Template",
+  };
 
   return (
     <main className="flex min-h-0 w-full flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">
@@ -244,6 +244,7 @@ export default function NewCommunication() {
           breadcrumbIndex={3}
           listClassName="text-sm sm:text-base md:text-lg"
           className="flex"
+          customTitles={breadcrumbTitles}
         />
       </header>
 
