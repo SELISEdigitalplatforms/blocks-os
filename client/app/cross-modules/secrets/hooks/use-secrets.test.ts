@@ -6,7 +6,7 @@ import { secretsService } from "@/services/secrets.service";
 import { showSuccessToast, showErrorToast } from "@/hooks/use-toast";
 import { useGetSecrets, useGetSecret, useSaveSecret, useDeleteSecret } from "./use-secrets";
 
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 vi.mock("@/services/secrets.service", () => ({
   secretsService: {
     gets: vi.fn(),

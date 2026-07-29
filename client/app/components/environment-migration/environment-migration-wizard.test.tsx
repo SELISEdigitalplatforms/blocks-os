@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ resetFormData: vi.fn(), selectedTenantGroup: "grp-1" }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: (selector: (s: { selectedTenantGroup: string }) => unknown) =>
     selector({ selectedTenantGroup: h.selectedTenantGroup }),
 }));

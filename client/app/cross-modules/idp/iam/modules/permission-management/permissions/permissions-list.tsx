@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { cn } from "@/lib/utils";
 import {
   IPermission,
@@ -22,7 +22,7 @@ import {
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
 type PermissionTableProps = {
   permissions: IPermission[];

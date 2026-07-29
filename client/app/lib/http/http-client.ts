@@ -1,5 +1,5 @@
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { HttpClient } from "@seliseblocks/blocks-kit/lib";
+import { HttpClient } from "@seliseblocks/genesis-os/lib";
 
 export const http = new HttpClient({
   baseURL: getRuntimeEnv("BLOCKS_OS_BASE_URL") || "",

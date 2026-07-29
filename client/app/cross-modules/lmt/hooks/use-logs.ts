@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { IAPIResponse } from "@/models/api-response";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import type { ILog } from "../models/log.model";
 import { lmtService } from "../services/lmt.service";
 

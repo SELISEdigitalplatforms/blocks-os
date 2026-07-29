@@ -1,7 +1,7 @@
 import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { cn } from "@/lib/utils";
-import { usePopoverWidth } from "@seliseblocks/blocks-kit/hooks";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { usePopoverWidth } from "@seliseblocks/genesis-os/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { Button } from "@/components/ui-kits/button/button";
 import { Separator } from "@/components/ui-kits/separator/separator";

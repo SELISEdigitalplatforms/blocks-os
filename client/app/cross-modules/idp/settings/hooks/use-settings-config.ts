@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { settingsConfigService } from "@blocks-idp/settings/services/settings-config.service";
 import type {
   ISettingsSaveAuthConfigPayload,

@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
   showErrorToast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
 vi.mock("@blocks-idp/iam/hooks/use-account", () => ({
   useAccountActivation: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));

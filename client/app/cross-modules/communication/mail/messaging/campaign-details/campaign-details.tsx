@@ -7,7 +7,6 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import CampaignCreation from "@blocks-communication/mail/components/messaging/campaign-creation/campaign-creation";
 import { formatDate } from "@/lib/utils";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { messagingServiceData } from "@blocks-communication/mail/constants/messaging";
 export function CampaignDetails({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -24,13 +23,14 @@ export function CampaignDetails({ params }: { params: { id: string } }) {
   if (!messageDetails) {
     return <div>Loading...</div>;
   }
-  BREADCRUMB_CUSTOM_TITLES["/utilities/messaging/campaigns"] = "Messaging Messages";
-  BREADCRUMB_CUSTOM_TITLES["/utilities/messaging/campaigns/" + messageDetails?.id] =
-    messageDetails.name;
+  const breadcrumbTitles = {
+    "/utilities/messaging/campaigns": "Messaging Messages",
+    ["/utilities/messaging/campaigns/" + messageDetails?.id]: messageDetails.name,
+  };
   return (
     <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={3} customTitles={breadcrumbTitles} />
       </div>
       <div className="mt-5 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{messageDetails.name}</h1>

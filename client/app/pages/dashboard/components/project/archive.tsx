@@ -1,11 +1,11 @@
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { useDisableProject } from "@/hooks/use-project";
-import { isErrorWithErrors } from "@seliseblocks/blocks-kit/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit/store";
+import { isErrorWithErrors } from "@seliseblocks/genesis-os/utils";
+import { useProjectStore } from "@seliseblocks/genesis-os/store";
 import { Archive } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
+import { useNavigate } from "react-router";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { Button } from "@/components/ui-kits/button/button";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 

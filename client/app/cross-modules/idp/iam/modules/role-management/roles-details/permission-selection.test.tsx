@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ const { getPermissions, useGetPermissions } = vi.hoisted(() => ({
 if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false;
 if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 

@@ -30,8 +30,8 @@ type OrganizationConfigFormProps = {
 const CREATION_WORKFLOWS = [
   {
     name: "allowOrgCreationFromCloud" as const,
-    label: "Allow Creation from Cloud",
-    description: "Automated provisioning via Global Cloud API.",
+    label: "Allow Creation from OS",
+    description: "Automated provisioning via Organization Portal API.",
   },
   {
     name: "allowOrgCreationFromSignup" as const,

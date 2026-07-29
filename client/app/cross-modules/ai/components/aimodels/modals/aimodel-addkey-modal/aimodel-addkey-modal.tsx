@@ -32,7 +32,7 @@ import { getProviderDisplayName, ServicePlatform } from "@blocks-ai/utils/aimode
 import { resolveModelConfig, transformToUniversal } from "@blocks-ai/utils/aimodel-form.utils";
 import { useCreateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 interface ModelAddKeyModalProps {
   provider: string;
   baseUrl: string;

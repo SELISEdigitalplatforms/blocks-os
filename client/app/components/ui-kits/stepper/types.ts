@@ -17,7 +17,7 @@ interface StepOptions {
   responsive?: boolean;
   checkIcon?: IconType;
   errorIcon?: IconType;
-  // eslint-disable-next-line
+   
   onClickStep?: (step: number, setStep: (step: number) => void) => void;
   mobileBreakpoint?: string;
   variant?: "circle" | "circle-alt" | "line";
@@ -68,7 +68,7 @@ interface StepProps extends React.HTMLAttributes<HTMLLIElement> {
   errorIcon?: IconType;
   isCompletedStep?: boolean;
   isKeepError?: boolean;
-  // eslint-disable-next-line
+   
   onClickStep?: (step: number, setStep: (step: number) => void) => void;
 }
 

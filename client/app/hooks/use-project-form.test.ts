@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
   formData: undefined as unknown,
 }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => h.navigate,
 }));
 
@@ -29,7 +29,7 @@ vi.mock("@/components/create-project/utils", () => ({
   shortGuidGenerator: () => "abcde",
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({
     setTenantGroup: h.setTenantGroup,
     setSelectedProject: h.setSelectedProject,

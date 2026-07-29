@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { DashboardSectionCard } from "@seliseblocks/blocks-kit/components";
+import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { useGetEnvRepositories } from "@/hooks/use-project";
-import type { IProject } from "@seliseblocks/blocks-kit/models";
+import type { IProject } from "@seliseblocks/genesis-os/models";
 import { ProjectRepoTable } from "./repo-table";
 
 export const ProjectRepoList = ({

@@ -1,5 +1,5 @@
 import { ConfigureCaptchaList } from "./configure-captcha-list";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetCaptchaConfigs } from "../../hooks/use-captcha-config";
 export const ConfigureCaptcha = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";

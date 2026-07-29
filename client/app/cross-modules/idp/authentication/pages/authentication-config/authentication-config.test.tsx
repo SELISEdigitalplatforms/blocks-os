@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ pathname: "/app/auth/config", setConfigureOpen: vi.fn(), open: false }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useLocation: () => ({ pathname: h.pathname }),
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
   Outlet: () => <div data-testid="outlet" />,
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useScopedPath: () => (p: string) => `/scoped/${p}` }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useScopedPath: () => (p: string) => `/scoped/${p}` }));
 vi.mock("@blocks-communication/mail/email/email-configure/email-configure", () => ({
   EmailConfiguration: () => <div data-testid="email-config" />,
 }));

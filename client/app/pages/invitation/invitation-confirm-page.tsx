@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useInvitationConfirmCode } from "./use-invitation-search-params";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui-kits/button/button";

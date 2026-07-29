@@ -11,10 +11,10 @@ const h = vi.hoisted(() => ({
   isDeletePending: false,
 }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => h.navigate,
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));

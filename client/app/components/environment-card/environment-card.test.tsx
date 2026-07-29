@@ -6,14 +6,21 @@ const h = vi.hoisted(() => ({
   navigate: vi.fn(),
   setSelectedProject: vi.fn(),
   startImpersonation: vi.fn(),
+  restoreProject: vi.fn(),
+  projectStatus: undefined as boolean | undefined,
+  isRestoring: false,
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ setSelectedProject: h.setSelectedProject }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useStartImpersonation: () => ({ mutateAsync: h.startImpersonation }),
+}));
+vi.mock("@/hooks/use-project", () => ({
+  useGetProjectStatus: () => ({ data: h.projectStatus }),
+  useRestoreProject: () => ({ mutateAsync: h.restoreProject, isPending: h.isRestoring }),
 }));
 // The tooltip ui-kit re-exports blocks-kit, which touches process.env via
 // motion-utils at module load; a passthrough keeps the tree renderable.
@@ -38,6 +45,9 @@ describe("EnvironmentCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.startImpersonation.mockResolvedValue(undefined);
+    h.restoreProject.mockResolvedValue({ isSuccess: true });
+    h.projectStatus = undefined;
+    h.isRestoring = false;
   });
 
   it("renders the environment label and the tenant id", () => {
@@ -45,6 +55,34 @@ describe("EnvironmentCard", () => {
     expect(screen.getByText("Development")).toBeTruthy();
     expect(screen.getByText("tenant-abc")).toBeTruthy();
     expect(screen.getByText("X-Blocks-Key:")).toBeTruthy();
+  });
+
+  it("does not show a setup indicator while the status is unknown or complete", () => {
+    h.projectStatus = undefined;
+    const { rerender } = render(<EnvironmentCard project={project} />);
+    expect(screen.queryByLabelText("Setup pending")).toBeNull();
+    expect(screen.queryByLabelText("Repair environment")).toBeNull();
+
+    h.projectStatus = true;
+    rerender(<EnvironmentCard project={project} />);
+    expect(screen.queryByLabelText("Setup pending")).toBeNull();
+    expect(screen.queryByLabelText("Repair environment")).toBeNull();
+  });
+
+  it("shows a compact setup indicator and repair action when setup is pending", () => {
+    h.projectStatus = false;
+    render(<EnvironmentCard project={project} />);
+    expect(screen.getByLabelText("Setup pending")).toBeTruthy();
+    expect(screen.getByLabelText("Repair environment")).toBeTruthy();
+    expect(screen.getByText("Repair")).toBeTruthy();
+  });
+
+  it("does not navigate to the dashboard while setup is pending", () => {
+    h.projectStatus = false;
+    render(<EnvironmentCard project={project} />);
+    fireEvent.click(screen.getByText("Development"));
+    expect(h.startImpersonation).not.toHaveBeenCalled();
+    expect(h.navigate).not.toHaveBeenCalled();
   });
 
   it("impersonates, selects the project and navigates on click when no migration", async () => {

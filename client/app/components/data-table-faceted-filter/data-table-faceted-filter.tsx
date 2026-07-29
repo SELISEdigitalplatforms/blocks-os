@@ -15,8 +15,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "../ui-kits/popover/popover";
 import { Separator } from "../ui-kits/separator/separator";
 import { Badge } from "../ui-kits/badge/badge";
-import { usePopoverWidth } from "@seliseblocks/blocks-kit/hooks";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { usePopoverWidth } from "@seliseblocks/genesis-os/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title?: string;
