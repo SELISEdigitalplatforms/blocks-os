@@ -13,7 +13,7 @@ const selectorIndexPath = path.join(graphDir, "selector-index.json");
 const uncoveredBaselinePath = path.join(graphDir, "uncovered-baseline.json");
 const patchPath = path.join(graphDir, "patch.json");
 
-const protectedLegacyPaths = [
+const protectedFlowPaths = [
   "e2e/tests/flow/",
   "e2e/tests/auth/",
   "e2e/tests/secrets-and-configs/",
@@ -129,9 +129,9 @@ function pathExistsFromRepo(relativePath) {
   return fs.existsSync(path.join(repoRoot, relativePath));
 }
 
-function isProtectedLegacyPath(relativePath) {
+function isProtectedFlowPath(relativePath) {
   const normalized = toPosix(relativePath);
-  return protectedLegacyPaths.some((protectedPath) =>
+  return protectedFlowPaths.some((protectedPath) =>
     protectedPath.endsWith("/") ? normalized.startsWith(protectedPath) : normalized === protectedPath,
   );
 }
@@ -145,7 +145,7 @@ module.exports = {
   selectorIndexPath,
   uncoveredBaselinePath,
   patchPath,
-  protectedLegacyPaths,
+  protectedFlowPaths,
   toPosix,
   repoRelative,
   e2eRelative,
@@ -157,5 +157,5 @@ module.exports = {
   printVerdict,
   runGit,
   pathExistsFromRepo,
-  isProtectedLegacyPath,
+  isProtectedFlowPath,
 };

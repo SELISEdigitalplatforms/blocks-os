@@ -1,11 +1,13 @@
 #!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
 const { discoverAppSurface } = require("./lib/discover-app-surface");
 const {
+  e2eRoot,
   flowGraphPath,
   uncoveredBaselinePath,
-  protectedLegacyPaths,
   graphHash,
-  isProtectedLegacyPath,
+  isProtectedFlowPath,
   pathExistsFromRepo,
   printVerdict,
   readJson,
@@ -15,7 +17,7 @@ const {
 const allowedBaselineStatuses = new Set(["backlog", "needs-e2e", "needs-flow", "no-e2e-needed", "covered-by-parent"]);
 const navigationActionTypes = new Set(["navigate", "open", "redirect", "smoke", "login"]);
 
-function isStepsFile(file) {
+function isJourneySupportFile(file) {
   return file.startsWith("e2e/support/steps/") && file.endsWith(".steps.ts");
 }
 
@@ -25,6 +27,34 @@ function isJourneyFile(file) {
 
 function isJourneyOnlyEdge(edge) {
   return Array.isArray(edge.coveredBy) && edge.coveredBy.length > 0 && edge.coveredBy.every(isJourneyFile);
+}
+
+function listTsFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...listTsFiles(fullPath));
+    else if (entry.isFile() && entry.name.endsWith(".ts")) out.push(fullPath);
+  }
+  return out;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function directRouteEvidenceFiles(route) {
+  if (!route || hasDynamicRouteSegment(route) || route.includes("*")) return [];
+  const files = [
+    ...listTsFiles(path.join(e2eRoot, "tests")),
+    ...listTsFiles(path.join(e2eRoot, "support")),
+  ];
+  const routePattern = new RegExp(`${escapeRegExp(route)}(?:[?#]|$|["'\`)])`);
+
+  return files
+    .filter((file) => routePattern.test(fs.readFileSync(file, "utf8")))
+    .map((file) => `e2e/${path.relative(e2eRoot, file).replace(/\\/g, "/")}`);
 }
 
 function validateGraphShape(graph, failures) {
@@ -87,11 +117,11 @@ function isNavigationOnlyEdge(edge) {
   return /^(nav|navigate|open|login)\b/i.test(edge.id || "") || /^(navigate|open|login)\b/i.test(edge.action || "");
 }
 
-function checkDirtyLegacyPaths(warnings) {
+function checkDirtyFlowPaths(warnings) {
   const diff = runGit(["diff", "--name-only", "HEAD"]);
   const status = runGit(["status", "--porcelain"]);
   if (!diff.ok || !status.ok) {
-    warnings.push("could not inspect protected legacy path dirty state because git status/diff failed");
+    warnings.push("could not inspect protected flow path dirty state because git status/diff failed");
     return;
   }
 
@@ -101,8 +131,8 @@ function checkDirtyLegacyPaths(warnings) {
     const file = line.slice(3).trim();
     if (file) paths.add(file);
   }
-  const touched = [...paths].filter(isProtectedLegacyPath);
-  if (touched.length > 0) warnings.push(`protected legacy E2E paths have working-tree changes: ${touched.join(", ")}`);
+  const touched = [...paths].filter(isProtectedFlowPath);
+  if (touched.length > 0) warnings.push(`protected flow E2E paths have working-tree changes: ${touched.join(", ")}`);
 }
 
 try {
@@ -142,19 +172,19 @@ try {
     for (const file of edge.coveredBy || []) {
       if (!pathExistsFromRepo(file)) failures.push(`edge ${edge.id} coveredBy file missing: ${file}`);
     }
-    if (edge.convention === "legacy") {
-      if (!isProtectedLegacyPath(edge.via?.file || "")) failures.push(`legacy edge ${edge.id} via.file must be protected legacy E2E`);
+    if (edge.convention === "flow") {
+      if (!isProtectedFlowPath(edge.via?.file || "")) failures.push(`flow edge ${edge.id} via.file must be protected flow E2E`);
       for (const file of edge.coveredBy || []) {
-        if (!isProtectedLegacyPath(file)) failures.push(`legacy edge ${edge.id} coveredBy must be protected legacy E2E: ${file}`);
+        if (!isProtectedFlowPath(file)) failures.push(`flow edge ${edge.id} coveredBy must be protected flow E2E: ${file}`);
       }
-    } else if (edge.convention === "steps") {
-      if (!isStepsFile(edge.via?.file || "")) failures.push(`steps edge ${edge.id} via.file must be under e2e/support/steps/`);
+    } else if (edge.convention === "journey") {
+      if (!isJourneySupportFile(edge.via?.file || "")) failures.push(`journey edge ${edge.id} via.file must be under e2e/support/steps/`);
       for (const file of edge.coveredBy || []) {
-        if (!isJourneyFile(file)) failures.push(`steps edge ${edge.id} coveredBy must be under e2e/tests/journeys/: ${file}`);
+        if (!isJourneyFile(file)) failures.push(`journey edge ${edge.id} coveredBy must be under e2e/tests/journeys/: ${file}`);
       }
       if (edge.coverageLevel !== "smoke") warnings.push(`journey edge should be marked coverageLevel=smoke: ${edge.id}`);
     } else {
-      failures.push(`edge ${edge.id} has invalid convention ${edge.convention}`);
+      failures.push(`edge ${edge.id} has invalid convention ${edge.convention}; expected flow or journey`);
     }
 
     const targetRoute = graphRoutes.get(edge.to);
@@ -183,6 +213,14 @@ try {
     if (entry.status === "covered-by-parent" && hasDynamicRouteSegment(graphRoutes.get(entry.nodeId))) {
       warnings.push(`dynamic route marked covered-by-parent without direct edge: ${entry.nodeId}`);
     }
+    if (entry.status === "covered-by-parent") {
+      const directEvidence = directRouteEvidenceFiles(graphRoutes.get(entry.nodeId));
+      if (directEvidence.length > 0) {
+        failures.push(
+          `baseline entry marked covered-by-parent but direct route evidence exists: ${entry.nodeId} (${directEvidence.join(", ")})`,
+        );
+      }
+    }
   }
 
   const baselineNodeIds = new Set(baselineEntries.map((entry) => entry.nodeId));
@@ -207,7 +245,7 @@ try {
     warnings.push(`discovered app nodes missing from graph: ${undiscovered.map((node) => node.id).join(", ")}`);
   }
 
-  checkDirtyLegacyPaths(warnings);
+  checkDirtyFlowPaths(warnings);
 
   details.push(`nodes: ${(graph.nodes || []).length}`);
   details.push(`edges: ${(graph.edges || []).length}`);

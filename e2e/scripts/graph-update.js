@@ -6,7 +6,7 @@ const {
   flowGraphPath,
   patchPath,
   uncoveredBaselinePath,
-  isProtectedLegacyPath,
+  isProtectedFlowPath,
   pathExistsFromRepo,
   printVerdict,
   readJson,
@@ -57,8 +57,8 @@ function parsePatchPath() {
   return index >= 0 ? process.argv[index + 1] : patchPath;
 }
 
-function allowLegacyPatch() {
-  return process.argv.includes("--allow-legacy");
+function allowFlowPatch() {
+  return process.argv.includes("--allow-flow");
 }
 
 function validatePatch(graph, patch) {
@@ -86,28 +86,28 @@ function validatePatch(graph, patch) {
     for (const file of edge.coveredBy || []) {
       if (!pathExistsFromRepo(file)) failures.push(`patch edge ${edge.id} coveredBy file missing: ${file}`);
     }
-    if (edge.convention === "legacy") {
-      if (!allowLegacyPatch()) {
-        failures.push(`patch edge ${edge.id} requires user-approved legacy E2E modification; rerun with --allow-legacy only after approval`);
+    if (edge.convention === "flow") {
+      if (!allowFlowPatch()) {
+        failures.push(`patch edge ${edge.id} requires user-approved flow E2E modification; rerun with --allow-flow only after approval`);
       }
-      if (!isProtectedLegacyPath(edge.via.file)) {
-        failures.push(`patch edge ${edge.id} legacy via.file must stay under protected legacy paths`);
+      if (!isProtectedFlowPath(edge.via.file)) {
+        failures.push(`patch edge ${edge.id} flow via.file must stay under protected flow paths`);
       }
       for (const file of edge.coveredBy || []) {
-        if (!isProtectedLegacyPath(file)) failures.push(`patch edge ${edge.id} legacy coveredBy must stay under protected legacy paths: ${file}`);
+        if (!isProtectedFlowPath(file)) failures.push(`patch edge ${edge.id} flow coveredBy must stay under protected flow paths: ${file}`);
       }
-    } else if (edge.convention === "steps") {
+    } else if (edge.convention === "journey") {
       if (!edge.via.file.startsWith("e2e/support/steps/") || !edge.via.file.endsWith(".steps.ts")) {
-        failures.push(`patch edge ${edge.id} via.file must be under e2e/support/steps/`);
+        failures.push(`patch edge ${edge.id} journey via.file must be under e2e/support/steps/`);
       }
       for (const file of edge.coveredBy || []) {
         if (!isJourneyFile(file)) {
-          failures.push(`patch edge ${edge.id} coveredBy must be under e2e/tests/journeys/: ${file}`);
+          failures.push(`patch edge ${edge.id} journey coveredBy must be under e2e/tests/journeys/: ${file}`);
         }
       }
       if (edge.coverageLevel !== "smoke") failures.push(`patch edge ${edge.id} uses a journey spec and must set coverageLevel to smoke`);
     } else {
-      failures.push(`patch edge ${edge.id} has invalid convention ${edge.convention}`);
+      failures.push(`patch edge ${edge.id} has invalid convention ${edge.convention}; expected flow or journey`);
     }
 
     if (hasDynamicRouteSegment(nodeRoutes.get(edge.to)) && !hasRouteEvidence(edge)) {

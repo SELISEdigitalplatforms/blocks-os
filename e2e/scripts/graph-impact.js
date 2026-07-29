@@ -179,7 +179,7 @@ try {
   }
 
   if (clientFiles.some((file) => file === "client/app/router.tsx" || file === "client/app/constants/navigation-menus.ts")) {
-    printVerdict("definite", "router.tsx or navigation-menus.ts changed", "read e2e/graph/CONSTITUTION.md and update graph/tests if behavior is user-reachable");
+    printVerdict("definite", "router.tsx or navigation-menus.ts changed", "update flow E2E and graph if behavior is user-reachable");
     process.exit(0);
   }
 
@@ -206,7 +206,7 @@ try {
   for (const file of clientFiles) {
     const changedSelectorLine = lineHasSelectorChange(fileDiff(file, baseRef), selectorIndex.selectors || []);
     if (changedSelectorLine) {
-      printVerdict("definite", `diff removes/alters selector-index string in ${file}`, "read e2e/graph/CONSTITUTION.md and update graph/tests if behavior is user-reachable");
+      printVerdict("definite", `diff removes/alters selector-index string in ${file}`, "update flow E2E and graph if behavior is user-reachable");
       process.exit(0);
     }
   }

@@ -1,9 +1,9 @@
 {
   "metadata": {
     "schemaVersion": 1,
-    "lastUpdatedAt": "2026-07-28T20:14:05.820Z",
+    "lastUpdatedAt": "2026-07-28T20:58:13.173Z",
     "lastUpdatedBy": "graph-update.js",
-    "contentHash": "sha256:95026fcb21e0d53bd5e32fe811176093eedf4da22d706d250d2c68cb706585ed"
+    "contentHash": "sha256:0befb6f069f0b1cb8123a287d8543441554a1bee1cf7662287f01a887a980e7a"
   },
   "nodes": [
     {
@@ -713,7 +713,7 @@
       "from": "app-project-tenantGroupId-environments",
       "to": "app-itemId-dashboard",
       "action": "add application domain in an environment",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/05-add-domain.spec.ts"
       },
@@ -734,7 +734,7 @@
       "from": "app-project-tenantGroupId-environments",
       "to": "app-project-tenantGroupId-environments",
       "action": "add another environment",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/02-add-environment.spec.ts"
       },
@@ -752,10 +752,10 @@
     },
     {
       "id": "create-project",
-      "from": "app-console",
+      "from": "app-create-project",
       "to": "app-project-tenantGroupId-environments",
       "action": "create project with two environments",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/01-create-project.spec.ts"
       },
@@ -768,7 +768,7 @@
         "assertions": [
           "Your project has been created."
         ],
-        "result": "A project is created, the browser lands on its environments route, and tenantGroupId is captured from the URL."
+        "result": "The create-project wizard is submitted, the browser lands on its environments route, and tenantGroupId is captured from the URL."
       }
     },
     {
@@ -776,7 +776,7 @@
       "from": "app-project-tenantGroupId-environments",
       "to": "app-console",
       "action": "delete the project created by this run",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/99-delete-project.spec.ts"
       },
@@ -797,7 +797,7 @@
       "from": "root",
       "to": "activate",
       "action": "open invalid activation route in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
       },
@@ -818,7 +818,7 @@
       "from": "app-console",
       "to": "app-data-migration",
       "action": "open data migration route in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/14-data-migration-route.spec.ts"
       },
@@ -839,7 +839,7 @@
       "from": "app-itemId-email-management",
       "to": "app-itemId-email-management-communications-id",
       "action": "open first email communication detail in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
       },
@@ -860,7 +860,7 @@
       "from": "app-itemId-email-management-communications-id",
       "to": "app-itemId-email-management-communications-id-edit",
       "action": "open first email communication edit in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
       },
@@ -881,7 +881,7 @@
       "from": "app-console",
       "to": "app-itemId-email-management",
       "action": "open Email Management in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
       },
@@ -902,7 +902,7 @@
       "from": "app-itemId-email-management",
       "to": "app-itemId-email-management-new-communication",
       "action": "open new email communication in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
       },
@@ -923,7 +923,7 @@
       "from": "app-itemId-email-management",
       "to": "app-itemId-email-management-usage-id",
       "action": "open first email usage detail in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/10-email-management-routes.spec.ts"
       },
@@ -943,7 +943,7 @@
       "from": "app-itemId-idp-permissions",
       "to": "app-itemId-idp-permission-detail-new",
       "action": "open new IDP permission form in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -963,7 +963,7 @@
       "from": "app-itemId-idp",
       "to": "app-itemId-idp-oidc-template",
       "action": "open IDP OIDC template in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -984,7 +984,7 @@
       "from": "app-itemId-idp",
       "to": "app-itemId-idp-permission",
       "action": "open IDP permission alias redirect in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -1004,7 +1004,7 @@
       "from": "app-itemId-idp-permissions",
       "to": "app-itemId-idp-permission-detail-id",
       "action": "open first IDP permission detail in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -1025,7 +1025,7 @@
       "from": "app-itemId-idp",
       "to": "app-itemId-idp-permission-detail",
       "action": "open IDP permission-detail alias redirect in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -1045,7 +1045,7 @@
       "from": "app-itemId-idp",
       "to": "app-itemId-idp-role",
       "action": "open IDP role alias redirect in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -1065,7 +1065,7 @@
       "from": "app-itemId-idp-roles",
       "to": "app-itemId-idp-role-detail-id",
       "action": "open first IDP role detail in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -1085,7 +1085,7 @@
       "from": "app-itemId-idp",
       "to": "app-itemId-idp-role-detail",
       "action": "open IDP role-detail alias redirect in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -1105,7 +1105,7 @@
       "from": "app-itemId-idp",
       "to": "app-itemId-idp-settings",
       "action": "open IDP settings in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/11-idp-routes.spec.ts"
       },
@@ -1126,7 +1126,7 @@
       "from": "root",
       "to": "invitation",
       "action": "open invalid invitation route in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
       },
@@ -1147,7 +1147,7 @@
       "from": "invitation",
       "to": "invitation-result",
       "action": "open invitation result route in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
       },
@@ -1167,7 +1167,7 @@
       "from": "app-itemId-lmt",
       "to": "app-itemId-lmt-logs",
       "action": "open LMT logs in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
       },
@@ -1188,7 +1188,7 @@
       "from": "app-itemId-lmt-logs-serviceName",
       "to": "app-itemId-lmt-logs-serviceName-trace-traceId",
       "action": "open service log trace route in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
       },
@@ -1208,7 +1208,7 @@
       "from": "app-itemId-lmt-logs",
       "to": "app-itemId-lmt-logs-serviceName",
       "action": "open service logs route in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
       },
@@ -1228,7 +1228,7 @@
       "from": "app-itemId-lmt-tracing-timeline-traceId",
       "to": "app-itemId-lmt-tracing-traceId",
       "action": "open LMT trace detail in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
       },
@@ -1248,7 +1248,7 @@
       "from": "app-itemId-lmt",
       "to": "app-itemId-lmt-tracing",
       "action": "open LMT tracing in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
       },
@@ -1269,7 +1269,7 @@
       "from": "app-itemId-lmt-tracing",
       "to": "app-itemId-lmt-tracing-timeline-traceId",
       "action": "open LMT timeline redirect in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
       },
@@ -1289,7 +1289,7 @@
       "from": "app-itemId-lmt",
       "to": "app-itemId-lmt-usage",
       "action": "open LMT usage in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/13-lmt-routes.spec.ts"
       },
@@ -1310,7 +1310,7 @@
       "from": "app-console",
       "to": "app-profile",
       "action": "open authenticated profile in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
       },
@@ -1330,7 +1330,7 @@
       "from": "app-console",
       "to": "app-project-tenantGroupId",
       "action": "open project overview index redirect",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
       },
@@ -1350,7 +1350,7 @@
       "from": "app-project-tenantGroupId",
       "to": "app-project-tenantGroupId-repositories",
       "action": "open project repositories in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
       },
@@ -1370,7 +1370,7 @@
       "from": "app-project-tenantGroupId",
       "to": "app-project-tenantGroupId-settings",
       "action": "open project settings in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
       },
@@ -1391,7 +1391,7 @@
       "from": "app-project-tenantGroupId",
       "to": "app-project-tenantGroupId-subscription-usage",
       "action": "open project subscription usage in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/08-project-overview-routes.spec.ts"
       },
@@ -1412,7 +1412,7 @@
       "from": "app-console",
       "to": "app-itemId",
       "action": "open scoped app index redirect in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1432,7 +1432,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-captcha",
       "action": "open secret-management captcha in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1453,7 +1453,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-client-credentials",
       "action": "open secret-management client-credentials in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1474,7 +1474,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-email",
       "action": "open secret-management email in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1495,7 +1495,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-external-idp",
       "action": "open secret-management external-idp in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1516,7 +1516,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-identity-providers",
       "action": "open secret-management identity-providers in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1537,7 +1537,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-managed-services",
       "action": "open retired managed-services redirect in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1557,7 +1557,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-mfa",
       "action": "open secret-management mfa in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1578,7 +1578,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-notification",
       "action": "open secret-management notification in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1599,7 +1599,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-oidc",
       "action": "open secret-management oidc in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1620,7 +1620,7 @@
       "from": "app-itemId-secret-management-oidc",
       "to": "app-itemId-secret-management-oidc-clientId-branding",
       "action": "open first OIDC branding route in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1640,7 +1640,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-sso",
       "action": "open secret-management sso in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1661,7 +1661,7 @@
       "from": "app-itemId-secret-management",
       "to": "app-itemId-secret-management-storage",
       "action": "open secret-management storage in flow",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/12-secret-management-routes.spec.ts"
       },
@@ -1682,7 +1682,7 @@
       "from": "root",
       "to": "app-console",
       "action": "open root and land on console",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/09-account-and-public-routes.spec.ts"
       },
@@ -1702,7 +1702,7 @@
       "from": "app-project-tenantGroupId-people",
       "to": "app-project-tenantGroupId-people-id",
       "action": "grant invited person access to testing",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/04-add-person-to-env.spec.ts"
       },
@@ -1723,7 +1723,7 @@
       "from": "app-project-tenantGroupId-people",
       "to": "app-project-tenantGroupId-people",
       "action": "invite a person to development",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/03-invite-people.spec.ts"
       },
@@ -1744,7 +1744,7 @@
       "from": "login",
       "to": "app-console",
       "action": "login through dev IAM",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/auth/login.spec.ts"
       },
@@ -1765,7 +1765,7 @@
       "from": "app-console",
       "to": "app-itemId-api-settings",
       "action": "navigate from console to API Settings",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
       },
@@ -1785,7 +1785,7 @@
       "from": "app-console",
       "to": "app-itemId-idp",
       "action": "navigate from console to IDP",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
       },
@@ -1805,7 +1805,7 @@
       "from": "app-console",
       "to": "app-itemId-lmt",
       "action": "navigate from console to Logs and Traces",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
       },
@@ -1825,7 +1825,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management",
       "action": "navigate from console to Secrets and Configs",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/flow/07-sidebar-navigation.spec.ts"
       },
@@ -1841,11 +1841,31 @@
       }
     },
     {
+      "id": "open-create-project-wizard",
+      "from": "app-console",
+      "to": "app-create-project",
+      "action": "open create project wizard",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/01-create-project.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/01-create-project.spec.ts"
+      ],
+      "actionType": "open",
+      "evidence": {
+        "urlPattern": "/app/create-project",
+        "assertions": [
+          "Enter your project name"
+        ]
+      }
+    },
+    {
       "id": "open-data-migration",
       "from": "app-console",
       "to": "app-data-migration",
       "action": "open the data migration wizard",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/account.steps.ts"
       },
@@ -1867,7 +1887,7 @@
       "from": "app-console",
       "to": "app-itemId-email-management",
       "action": "open Email Management",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/email-management.steps.ts"
       },
@@ -1889,7 +1909,7 @@
       "from": "app-itemId-email-management",
       "to": "app-itemId-email-management-new-communication",
       "action": "open new email template wizard",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/email-management.steps.ts"
       },
@@ -1911,7 +1931,7 @@
       "from": "app-itemId-idp-permissions",
       "to": "app-itemId-idp-permission-detail-new",
       "action": "open new permission form",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/idp.steps.ts"
       },
@@ -1932,7 +1952,7 @@
       "from": "app-console",
       "to": "app-itemId-idp-oidc-template",
       "action": "open IDP OIDC template",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/idp.steps.ts"
       },
@@ -1954,7 +1974,7 @@
       "from": "app-console",
       "to": "app-itemId-idp-permissions",
       "action": "open IDP permissions",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/idp.steps.ts"
       },
@@ -1976,7 +1996,7 @@
       "from": "app-console",
       "to": "app-itemId-idp-roles",
       "action": "open IDP roles",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/idp.steps.ts"
       },
@@ -1998,7 +2018,7 @@
       "from": "app-console",
       "to": "app-itemId-idp-settings",
       "action": "open IDP settings",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/idp.steps.ts"
       },
@@ -2020,7 +2040,7 @@
       "from": "root",
       "to": "activate",
       "action": "open activation without code",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/public-flows.steps.ts"
       },
@@ -2042,7 +2062,7 @@
       "from": "root",
       "to": "invitation",
       "action": "open invitation without confirmation code",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/public-flows.steps.ts"
       },
@@ -2064,7 +2084,7 @@
       "from": "app-console",
       "to": "app-itemId-lmt-logs",
       "action": "open Logs and Traces logs",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/lmt.steps.ts"
       },
@@ -2086,7 +2106,7 @@
       "from": "app-console",
       "to": "app-itemId-lmt-tracing",
       "action": "open Logs and Traces tracing",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/lmt.steps.ts"
       },
@@ -2108,7 +2128,7 @@
       "from": "app-console",
       "to": "app-itemId-lmt-usage",
       "action": "open Logs and Traces usage metrics",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/lmt.steps.ts"
       },
@@ -2130,7 +2150,7 @@
       "from": "app-console",
       "to": "app-profile",
       "action": "open the authenticated user's profile",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/account.steps.ts"
       },
@@ -2151,7 +2171,7 @@
       "from": "app-console",
       "to": "app-project-tenantGroupId-repositories",
       "action": "open project repositories",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/project-overview.steps.ts"
       },
@@ -2172,7 +2192,7 @@
       "from": "app-console",
       "to": "app-project-tenantGroupId-settings",
       "action": "open project settings",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/project-overview.steps.ts"
       },
@@ -2194,7 +2214,7 @@
       "from": "app-console",
       "to": "app-project-tenantGroupId-subscription-usage",
       "action": "open project subscription usage",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/project-overview.steps.ts"
       },
@@ -2216,7 +2236,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-captcha",
       "action": "open Captcha configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2238,7 +2258,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-client-credentials",
       "action": "open Client Credentials configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2260,7 +2280,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-email",
       "action": "open Email configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2282,7 +2302,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-external-idp",
       "action": "open External IdP configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2304,7 +2324,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-identity-providers",
       "action": "open Identity Provider configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2326,7 +2346,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-mfa",
       "action": "open MFA configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2348,7 +2368,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-notification",
       "action": "open Notification configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2370,7 +2390,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-oidc",
       "action": "open OIDC configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2392,7 +2412,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-sso",
       "action": "open SSO configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2414,7 +2434,7 @@
       "from": "app-console",
       "to": "app-itemId-secret-management-storage",
       "action": "open Storage configuration",
-      "convention": "steps",
+      "convention": "journey",
       "via": {
         "file": "e2e/support/steps/secret-management.steps.ts"
       },
@@ -2436,7 +2456,7 @@
       "from": "app-itemId-secret-management-my-services",
       "to": "app-itemId-secret-management-my-services",
       "action": "open My Services setup guide",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
       },
@@ -2457,7 +2477,7 @@
       "from": "app-itemId-secret-management-my-services",
       "to": "app-itemId-secret-management-my-services",
       "action": "register a service in My Services",
-      "convention": "legacy",
+      "convention": "flow",
       "via": {
         "file": "e2e/tests/secrets-and-configs/01-my-service.spec.ts"
       },

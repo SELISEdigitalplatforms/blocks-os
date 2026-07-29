@@ -11,11 +11,6 @@
       "reason": "GitHub callback route is integration callback plumbing, not a stable browser journey target."
     },
     {
-      "nodeId": "app-create-project",
-      "status": "covered-by-parent",
-      "reason": "Create-project route is exercised by the legacy create-project flow."
-    },
-    {
       "nodeId": "login-callback",
       "status": "no-e2e-needed",
       "reason": "Login callback is handled by auth provider plumbing rather than direct app E2E."
