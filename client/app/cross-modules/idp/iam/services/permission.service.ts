@@ -6,7 +6,6 @@ import {
   IGetPermissionByIdPayload,
   IGetPermissionByIdResponse,
   IGetPermissionsPayload,
-  IGetPermissionsSeverityRequestPayload,
   IGetPermissionsSeverityResponse,
   IGetResourceGroupPayload,
   IGetResourceGroupResponse,
@@ -25,9 +24,9 @@ export class PermissionService {
     });
   }
 
-  getPermissionsSeverity(
-    payload: IGetPermissionsSeverityRequestPayload,
-  ): Promise<IGetPermissionsSeverityResponse> {
+  // The endpoint takes no parameters; nothing from the caller is sent. Project scoping happens
+  // via the X-Blocks-Key header, and the hook gates the request on a selected project.
+  getPermissionsSeverity(): Promise<IGetPermissionsSeverityResponse> {
     return http.get(`${PERMISSION_ENDPOINTS.GET_PERMISSIONS_GROUP_BY_SEVERITY}`, undefined, {
       absoluteUrl: true,
     });

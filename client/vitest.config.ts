@@ -22,10 +22,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
-    // jsdom test files accumulate memory within a worker as more files run in
-    // it; recycle the worker once it grows past this instead of running it
-    // until it hits Node's default heap ceiling and crashes mid-suite.
-    vmMemoryLimit: "1GB",
+    // Constructing a jsdom environment costs several seconds and a lot of RSS
+    // per test file. Letting the default pool fan out to (cores - 1) workers
+    // oversubscribes memory on a 16-core/16GB box: the suite gets *slower* and
+    // sheds tests to load-induced timeouts. Measured on the 146-file idp
+    // subtree: 15 workers -> 252s / 81 failures, 8 workers -> 149s / 17.
+    maxWorkers: 8,
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
