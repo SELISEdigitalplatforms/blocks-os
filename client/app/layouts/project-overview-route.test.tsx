@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.stubGlobal("matchMedia", (query: string) => ({
@@ -38,8 +38,8 @@ const h = vi.hoisted(() => ({
 
 // The route param is the source of the tenant-group id (the source reads it via
 // useParams). Mock only useParams so Navigate/Outlet/MemoryRouter stay real.
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router-dom")>();
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
   return { ...actual, useParams: () => h.params };
 });
 
@@ -49,7 +49,7 @@ vi.mock("@/hooks/use-project", () => ({
 
 // Lightweight stand-in for the shared zustand store, supporting the selector
 // call form `useProjectStore((s) => s.setTenantGroup)` the source uses.
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ user: h.user }),
   useProjectStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -58,7 +58,7 @@ vi.mock("@seliseblocks/blocks-kit/store", () => ({
     }),
 }));
 
-vi.mock("@seliseblocks/blocks-kit/components", () => ({
+vi.mock("@seliseblocks/genesis-os/components", () => ({
   AppLoadingSpinner: () => <div>loading spinner</div>,
 }));
 

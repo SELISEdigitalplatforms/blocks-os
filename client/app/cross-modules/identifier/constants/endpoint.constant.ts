@@ -27,6 +27,8 @@ export const PROJECT_ENDPOINTS = {
   /** @deprecated Renamed to UPDATE_PROJECT_GROUP. */
   UPDATE_TENANT_GROUP: `/api${PROJECT_SUBPATH}/UpdateTenantGroup`,
   DISABLE: `/api${PROJECT_SUBPATH}/Disable`,
+  GET_PROJECT_STATUS: `/api${PROJECT_SUBPATH}/GetProjectStatus`,
+  RESTORE: `/api${PROJECT_SUBPATH}/Restore`,
 
   GET_ASSET: `/api${PROJECT_SUBPATH}/GetAsset`,
   ADD_ASSET: `/api${PROJECT_SUBPATH}/AddAsset`,
@@ -50,9 +52,9 @@ export const DOMAIN_ENDPOINTS = {
 const MIGRATION_SUBPATH = "/Migration";
 
 export const MIGRATION_ENDPOINTS = {
-  MIGRATE: `/api${MIGRATION_SUBPATH}/Migrate`,
-  VERIFY: `/api${MIGRATION_SUBPATH}/Verify`,
-  GET_STATUS: `/api${MIGRATION_SUBPATH}/GetMigrationStatus`,
+  MIGRATE: `${API_BASES.LOGIC}${MIGRATION_SUBPATH}/Migrate`,
+  VERIFY: `${API_BASES.LOGIC}${MIGRATION_SUBPATH}/Verify`,
+  GET_STATUS: `${API_BASES.LOGIC}${MIGRATION_SUBPATH}/GetMigrationStatus`,
 } as const;
 
 // ─── Subscription endpoints ───────────────────────────────────────────────────

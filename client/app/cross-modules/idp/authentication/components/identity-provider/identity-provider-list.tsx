@@ -44,6 +44,7 @@ import {
 import { KVDetailItem } from "../kv-detail-item";
 import { IdentityProviderFormDialog } from "./identity-provider-form-dialog";
 import { format } from "date-fns";
+import { useProjectStore } from "@seliseblocks/genesis-os/store";
 
 const PROVIDER_CONFIG: Record<
   string,
@@ -427,7 +428,8 @@ const LoadingSkeleton = () => (
 );
 
 export function IdentityProviderList() {
-  const { data, isLoading } = useGetIdentityProviders();
+ const projectId = useProjectStore().selectedProject?.itemId || "";
+  const { data, isLoading } = useGetIdentityProviders({projectId});
 
   const providers = data?.data ?? [];
 

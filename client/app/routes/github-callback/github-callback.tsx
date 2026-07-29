@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { githubInfoService } from "@/cross-modules/devops/services/github-info.service";
 import LogoLoadingSpinner from "@/components/loader-spinner/loader-spinner";
@@ -7,7 +7,6 @@ import LogoLoadingSpinner from "@/components/loader-spinner/loader-spinner";
 export default function GitHubCallbackPage() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
-  const state = searchParams.get("state");
   const [projectKey] = useState(() => localStorage.getItem("github_auth_project_key") || "");
   const { isLoading, isSuccess } = useQuery({
     queryKey: ["github-verification", code, projectKey],

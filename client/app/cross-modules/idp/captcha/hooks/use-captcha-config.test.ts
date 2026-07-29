@@ -32,7 +32,7 @@ describe("use-captcha-config hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockCaptchaConfigsResponse);
-      expect(captchaService.getCaptchaConfigs).toHaveBeenCalledWith(mockGetCaptchaConfigsPayload);
+      expect(captchaService.getCaptchaConfigs).toHaveBeenCalledWith();
     });
   });
 

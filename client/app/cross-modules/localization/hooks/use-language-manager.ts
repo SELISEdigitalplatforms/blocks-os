@@ -1,4 +1,4 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { ExportHistoryFilters, IKeyUilmExport } from "@blocks-localization/models/language";
 import { languageManagerService } from "@blocks-localization/services/language.manager.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,7 +84,7 @@ export const useGetLanguages = () => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
     queryKey: ["get-languages", tenantId],
-    queryFn: () => languageManagerService.fetchBlocksLanguages(tenantId),
+    queryFn: () => languageManagerService.fetchBlocksLanguages(),
   });
 };
 

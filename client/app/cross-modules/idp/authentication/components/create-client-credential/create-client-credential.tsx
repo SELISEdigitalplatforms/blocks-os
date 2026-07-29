@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui-kits/switch/switch";
 import { Plus, KeyRound } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useForm } from "react-hook-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";

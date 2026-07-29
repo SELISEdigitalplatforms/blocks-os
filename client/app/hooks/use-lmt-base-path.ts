@@ -1,6 +1,6 @@
 // The generic project-id path builder lives in blocks-kit so every app can
 // reuse it; re-exported here so blocks-os call sites keep a local import.
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 
 /**
  * The LMT section base path scoped to the active project id

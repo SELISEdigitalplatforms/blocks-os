@@ -25,7 +25,7 @@ import {
 } from "./use-email-template";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 vi.mock("@/hooks/use-toast", () => mockToastFactory());
 
 describe("Email Template Hooks", () => {

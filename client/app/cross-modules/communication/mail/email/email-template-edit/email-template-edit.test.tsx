@@ -11,8 +11,8 @@ const h = vi.hoisted(() => ({
   navigate: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
 vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
@@ -54,11 +54,12 @@ describe("EditEmailTemplate", () => {
     expect(screen.queryByTestId("bee-save")).toBeNull();
   });
 
-  it("renders the template name, action buttons and editor", () => {
+  it("renders the action buttons and editor without a page title", () => {
     render(<EditEmailTemplate params={{ id: "t1" }} />);
-    expect(screen.getByText("Welcome Email")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Welcome Email" })).toBeNull();
     expect(screen.getByRole("button", { name: /Reset/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Preview/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Save/ })).toBeTruthy();
     expect(screen.getByTestId("bee-save")).toBeTruthy();
   });
 

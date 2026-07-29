@@ -10,14 +10,14 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("react-router-dom")>()),
+vi.mock("react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router")>()),
   useNavigate: () => h.navigate,
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
 }));
-vi.mock("@seliseblocks/blocks-kit", () => {
+vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
     useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),

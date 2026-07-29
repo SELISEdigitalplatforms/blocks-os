@@ -56,7 +56,7 @@ import {
 vi.mock("@blocks-localization/services/language.manager.service", () =>
   mockLanguageServiceFactory(),
 );
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("Language Manager Hooks", () => {
   beforeEach(() => {
@@ -189,7 +189,7 @@ describe("Language Manager Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toEqual(mockLanguageConfigList);
-      expect(languageManagerService.fetchBlocksLanguages).toHaveBeenCalledWith(TEST_TENANT_ID);
+      expect(languageManagerService.fetchBlocksLanguages).toHaveBeenCalledWith();
     });
 
     it("should return empty array when no languages exist", async () => {

@@ -15,11 +15,11 @@ const h = vi.hoisted(() => ({
   customModalProps: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
 vi.mock("@blocks-ai/hooks/use-aimodel", () => ({

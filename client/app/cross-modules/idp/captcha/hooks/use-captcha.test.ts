@@ -1,8 +1,8 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useTheme } from "@seliseblocks/blocks-kit/hooks";
+import { useTheme } from "@seliseblocks/genesis-os/hooks";
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useTheme: vi.fn(() => ({ theme: "light" })),
 }));
 

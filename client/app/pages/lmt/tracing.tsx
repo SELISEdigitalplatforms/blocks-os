@@ -1,5 +1,5 @@
 import { TracesOverview } from "@/cross-modules/lmt/components/traces-overview/traces-overview";
-import { Card, CardContent, useProjectStore } from "@seliseblocks/blocks-kit";
+import { Card, CardContent, useProjectStore } from "@seliseblocks/genesis-os";
 
 // tracing-route.tsx
 export function TracingRoute() {

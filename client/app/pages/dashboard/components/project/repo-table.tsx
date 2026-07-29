@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
-import type { IDomain, IEnvRepository } from "@seliseblocks/blocks-kit/models";
-import { formatFullDate } from "@seliseblocks/blocks-kit/utils";
+import type { IDomain, IEnvRepository } from "@seliseblocks/genesis-os/models";
+import { formatFullDate } from "@seliseblocks/genesis-os/utils";
 import {
   createColumnHelper,
   flexRender,

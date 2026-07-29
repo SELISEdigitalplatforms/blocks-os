@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   notificationListener: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => {
+vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
     useProjectStore: () => ({ selectedTenantGroup: h.selectedTenantGroup }),
