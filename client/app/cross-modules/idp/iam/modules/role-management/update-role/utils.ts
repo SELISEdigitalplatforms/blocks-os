@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-export const updateRoleFormDefaultValue = {
-  name: "",
-  description: "",
-};
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const updateRoleFormDefaultValue = {
+//   name: "",
+//   description: "",
+// };
 
 export const updateRoleFormSchema = z.object({
   name: z
