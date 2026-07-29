@@ -1,9 +1,9 @@
 {
   "metadata": {
     "schemaVersion": 1,
-    "lastUpdatedAt": "2026-07-28T20:58:13.173Z",
+    "lastUpdatedAt": "2026-07-29T11:52:43.525Z",
     "lastUpdatedBy": "graph-update.js",
-    "contentHash": "sha256:0befb6f069f0b1cb8123a287d8543441554a1bee1cf7662287f01a887a980e7a"
+    "contentHash": "sha256:4d47377a8ffbdcece63e0c7aa2e4d3d9eda3b9ccdd7e0d8d5442278c798558d3"
   },
   "nodes": [
     {
@@ -790,6 +790,27 @@
           "project name is absent"
         ],
         "result": "Each environment is deleted and the created project name is absent from the console."
+      }
+    },
+    {
+      "id": "email-new-communication-step1",
+      "from": "app-itemId-email-management-new-communication",
+      "to": "app-itemId-email-management-new-communication",
+      "action": "create a new email communication, basic information step",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/25-email-new-communication-step1.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/25-email-new-communication-step1.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/email-management/new-communication",
+        "assertions": [
+          "About the Template"
+        ],
+        "result": "Step 1 (Basic information) of the New Communication wizard is submitted and persists server-side, advancing the wizard to the Template design step. Step 2 (the BeePlugin WYSIWYG template body editor) is not covered by this test."
       }
     },
     {
@@ -1719,6 +1740,49 @@
       }
     },
     {
+      "id": "idp-add-role",
+      "from": "app-itemId-idp-roles",
+      "to": "app-itemId-idp-roles",
+      "action": "add a role",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/17-idp-add-role.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/17-idp-add-role.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/roles",
+        "assertions": [
+          "Roles",
+          "Create and manage roles that group permissions for users"
+        ],
+        "result": "The Add Role dialog is submitted, the success toast appears, and the newly created role's name is visible in the roles list."
+      }
+    },
+    {
+      "id": "idp-create-permission",
+      "from": "app-itemId-idp-permission-detail-new",
+      "to": "app-itemId-idp-permissions",
+      "action": "create a new permission",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/16-idp-create-permission.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/16-idp-create-permission.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/idp/permissions",
+        "assertions": [
+          "Permissions"
+        ],
+        "result": "The New Permission form is submitted, the success toast appears, the browser lands on the permissions list, and the newly created permission's name is visible in the list."
+      }
+    },
+    {
       "id": "invite-person",
       "from": "app-project-tenantGroupId-people",
       "to": "app-project-tenantGroupId-people",
@@ -2473,6 +2537,27 @@
       }
     },
     {
+      "id": "project-settings-edit-name",
+      "from": "app-project-tenantGroupId-settings",
+      "to": "app-project-tenantGroupId-settings",
+      "action": "edit project name and revert",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/15-project-settings-edit-name.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/15-project-settings-edit-name.spec.ts"
+      ],
+      "actionType": "update",
+      "evidence": {
+        "urlPattern": "/app/project/.+/settings",
+        "assertions": [
+          "Project Settings"
+        ],
+        "result": "The project name is changed, the change persists across a page reload, and the name is reverted to its original value at the end of the test."
+      }
+    },
+    {
       "id": "register-service",
       "from": "app-itemId-secret-management-my-services",
       "to": "app-itemId-secret-management-my-services",
@@ -2492,6 +2577,160 @@
           "Logs"
         ],
         "result": "A service named Test Service is saved and its service card with a Logs link is visible."
+      }
+    },
+    {
+      "id": "secret-management-add-captcha",
+      "from": "app-itemId-secret-management-captcha",
+      "to": "app-itemId-secret-management-captcha",
+      "action": "add or update a captcha configuration",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/20-secret-management-add-captcha.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/20-secret-management-add-captcha.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/captcha",
+        "assertions": [
+          "Captcha",
+          "Bot protection configuration"
+        ],
+        "result": "A captcha configuration (site key + secret key) is saved and the success toast appears; falls back to editing an existing configuration when both providers are already configured on the test project."
+      }
+    },
+    {
+      "id": "secret-management-add-client-credential",
+      "from": "app-itemId-secret-management-client-credentials",
+      "to": "app-itemId-secret-management-client-credentials",
+      "action": "add a client credential",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/19-secret-management-add-client-credential.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/19-secret-management-add-client-credential.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/client-credentials",
+        "assertions": [
+          "Client Credentials",
+          "OAuth client credentials for service-to-service access"
+        ],
+        "result": "The Add Client Credential dialog is submitted with only the required client name, the success toast appears, and the new credential's name is visible in the list."
+      }
+    },
+    {
+      "id": "secret-management-add-external-idp",
+      "from": "app-itemId-secret-management-external-idp",
+      "to": "app-itemId-secret-management-external-idp",
+      "action": "add an external IdP certificate via URL",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/21-secret-management-add-external-idp.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/21-secret-management-add-external-idp.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/external-idp",
+        "assertions": [
+          "External IdP",
+          "External identity providers & certificates"
+        ],
+        "result": "An external IdP certificate is registered via the 'Others' provider (which skips real JWKS validation) with a dummy URL, and the success toast appears."
+      }
+    },
+    {
+      "id": "secret-management-add-notification",
+      "from": "app-itemId-secret-management-notification",
+      "to": "app-itemId-secret-management-notification",
+      "action": "add a notification configuration",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/24-secret-management-add-notification.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/24-secret-management-add-notification.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/notification",
+        "assertions": [
+          "Notification",
+          "Push & notification settings"
+        ],
+        "result": "A notification configuration is saved and the success toast appears, and the new configuration's name is visible in the list."
+      }
+    },
+    {
+      "id": "secret-management-add-storage",
+      "from": "app-itemId-secret-management-storage",
+      "to": "app-itemId-secret-management-storage",
+      "action": "add an SFTP storage configuration",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/22-secret-management-add-storage.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/22-secret-management-add-storage.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/storage",
+        "assertions": [
+          "Storage",
+          "File and object storage"
+        ],
+        "result": "An SFTP storage configuration is saved with dummy host/port/credential values and the success toast appears."
+      }
+    },
+    {
+      "id": "secret-management-create-oidc-client",
+      "from": "app-itemId-secret-management-oidc",
+      "to": "app-itemId-secret-management-oidc",
+      "action": "create an OIDC client",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/23-secret-management-create-oidc-client.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/23-secret-management-create-oidc-client.spec.ts"
+      ],
+      "actionType": "create",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/oidc",
+        "assertions": [
+          "OIDC",
+          "OpenID Connect configuration"
+        ],
+        "result": "An OIDC client is created with a dummy HTTPS redirect URI, the success toast appears, and the new client's name is visible in the list."
+      }
+    },
+    {
+      "id": "secret-management-mfa-toggle",
+      "from": "app-itemId-secret-management-mfa",
+      "to": "app-itemId-secret-management-mfa",
+      "action": "toggle an MFA provider and revert",
+      "convention": "flow",
+      "via": {
+        "file": "e2e/tests/flow/18-secret-management-mfa-toggle.spec.ts"
+      },
+      "coveredBy": [
+        "e2e/tests/flow/18-secret-management-mfa-toggle.spec.ts"
+      ],
+      "actionType": "update",
+      "evidence": {
+        "urlPattern": "/app/.+/secret-management/mfa",
+        "assertions": [
+          "MFA",
+          "Multi-factor authentication settings"
+        ],
+        "result": "The first MFA provider's Enable/Disable state is flipped through the confirmation modal, the status badge updates accordingly, and the state is toggled back to its original value at the end of the test."
       }
     }
   ]
