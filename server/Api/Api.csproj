@@ -14,7 +14,7 @@
 	
   <ItemGroup>
     <PackageReference Include="FluentValidation.AspNetCore" />
-	<PackageReference Include="SeliseBlocks.Genesis" />
+	<PackageReference Include="SeliseBlocks.Genesis.OS" />
 	<PackageReference Include="SeliseBlocks.ConfigurationDriver" />
   </ItemGroup>
   <ItemGroup>
