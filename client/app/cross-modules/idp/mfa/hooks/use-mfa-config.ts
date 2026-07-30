@@ -14,12 +14,13 @@ export const useGetMFAConfig = () => {
   });
 };
 
-export const useGetProfileMFAConfig = () => {
-  return useQuery({
-    queryKey: ["profile-mfa-config", "get"],
-    queryFn: () => mfaService.getProfileMfaConfiguration(),
-  });
-};
+// DEADCODE 2026-07-29: hook with no callers in client, e2e or tests; commented pending review
+// export const useGetProfileMFAConfig = () => {
+//   return useQuery({
+//     queryKey: ["profile-mfa-config", "get"],
+//     queryFn: () => mfaService.getProfileMfaConfiguration(),
+//   });
+// };
 
 export const useSaveMFAConfig = () => {
   const queryClient = useQueryClient();

@@ -49,4 +49,5 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export const ALL_AUTHENTICATION_NAV_ITEMS = AUTHENTICATION_NAV_GROUPS.flatMap((g) => g.items);
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const ALL_AUTHENTICATION_NAV_ITEMS = AUTHENTICATION_NAV_GROUPS.flatMap((g) => g.items);
