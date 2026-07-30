@@ -1,4 +1,4 @@
-import { FileCode, ShieldCheck, Lock, SlidersHorizontal } from "lucide-react";
+import { Building2, FileCode, ShieldCheck, Lock, SlidersHorizontal, Users } from "lucide-react";
 import { NavItem, NavGroup } from "@/constants/secret-management-nav";
 
 export type { NavItem, NavGroup };
@@ -31,6 +31,20 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
   {
     label: "Access Control",
     items: [
+      {
+        id: "users",
+        label: "Users",
+        value: "users",
+        icon: Users,
+        desc: "Invite, manage, and organize people across your workspace",
+      },
+      {
+        id: "organizations",
+        label: "Organizations",
+        value: "organizations",
+        icon: Building2,
+        desc: "Manage and organize access across your workspace",
+      },
       {
         id: "roles",
         label: "Roles",

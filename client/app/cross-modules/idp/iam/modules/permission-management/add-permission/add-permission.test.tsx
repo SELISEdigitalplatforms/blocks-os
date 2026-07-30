@@ -89,7 +89,7 @@ describe("AddPermission", () => {
       dependentPermissions: ["dp"],
     });
     expect(h.showSuccessToast).toHaveBeenCalled();
-    expect(h.navigate).toHaveBeenCalledWith("/app/proj/idp/permissions");
+    expect(h.navigate).toHaveBeenCalledWith("/app/proj/iam/permissions");
   });
 
   it("shows an error toast when the create response fails", async () => {

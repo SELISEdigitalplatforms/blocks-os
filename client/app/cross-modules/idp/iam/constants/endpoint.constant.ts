@@ -15,6 +15,11 @@ export const USER_ENDPOINTS = {
   SAVE_SIGNUP_SETTING: `${API_BASES.IAM}${IAM_SUBPATH}/signup-settings`,
   SAVE_ROLES_AND_PERMISSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/roles-permissions`,
 
+  UPDATE_ME: `${API_BASES.IAM}${IAM_SUBPATH}/me`,
+  ACCESS_CONTROL: `${API_BASES.IAM}${IAM_SUBPATH}/users/access`,
+  REVOKE_ACCESS: `${API_BASES.IAM}${IAM_SUBPATH}/users/revoke-access`,
+  EXISTS: `${API_BASES.IAM}${IAM_SUBPATH}/users/exists`,
+
   GET_USER_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/user/roles`,
   GET_USER_PERMISSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/user/permissions`,
   GET_USER_TIMELINES: `${API_BASES.IAM}${IAM_SUBPATH}/user/timelines`,

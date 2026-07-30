@@ -158,7 +158,7 @@ describe("use-user extra hooks", () => {
     it("invalidates the current user query when own", async () => {
       const client = makeClient();
       const spy = vi.spyOn(client, "invalidateQueries");
-      vi.mocked(userService.updateUser).mockResolvedValue(undefined as never);
+      vi.mocked(userService.updateMe).mockResolvedValue(undefined as never);
       const { result } = renderHook(
         () =>
           useUpdateUser({
