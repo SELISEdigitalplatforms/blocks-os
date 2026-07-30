@@ -1,7 +1,7 @@
 name: Inception Scan & Deploy
 on:
   push:
-    branches: [inception]
+    branches: [inception-disabled]
 concurrency:
   group: inception-deploy
   cancel-in-progress: false
