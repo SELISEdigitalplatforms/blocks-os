@@ -89,8 +89,9 @@ export const useGetPermissionsGroupBySeverity = (
   });
 };
 
-export const usePermissionSeverityOptions = (options: IGetPermissionsSeverityRequestPayload) => {
-  const { data, isLoading } = useGetPermissionsGroupBySeverity(options);
-  const severityOptions = useMemo(() => getSeverityOptionsFromResponse(data), [data]);
-  return { severityOptions, isLoading };
-};
+// DEADCODE 2026-07-29: hook with no callers in client, e2e or tests; commented pending review
+// export const usePermissionSeverityOptions = (options: IGetPermissionsSeverityRequestPayload) => {
+//   const { data, isLoading } = useGetPermissionsGroupBySeverity(options);
+//   const severityOptions = useMemo(() => getSeverityOptionsFromResponse(data), [data]);
+//   return { severityOptions, isLoading };
+// };

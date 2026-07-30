@@ -56,8 +56,9 @@ export const organizationConfigFormSchema = z.object({
 
 export type IOrganizationConfigForm = z.infer<typeof organizationConfigFormSchema>;
 
-export const organizationConfigFormDefaultValues: IOrganizationConfigForm = {
-  isMultiOrgEnabled: false,
-  allowCreationFromCloud: true,
-  allowCreationFromConstruct: false,
-};
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const organizationConfigFormDefaultValues: IOrganizationConfigForm = {
+//   isMultiOrgEnabled: false,
+//   allowCreationFromCloud: true,
+//   allowCreationFromConstruct: false,
+// };
