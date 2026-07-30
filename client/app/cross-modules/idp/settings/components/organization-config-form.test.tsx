@@ -85,7 +85,7 @@ describe("OrganizationConfigForm", () => {
 
     await user.click(multiOrgToggle());
     await user.click(await screen.findByRole("button", { name: "Enable" }));
-    await user.click(await screen.findByRole("switch", { name: "Allow Creation from Cloud" }));
+    await user.click(await screen.findByRole("switch", { name: "Allow Creation from OS" }));
 
     await user.click(saveButton());
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
@@ -124,7 +124,7 @@ describe("OrganizationConfigForm", () => {
     h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: { general: "bad" } });
     renderForm({ ...baseConfig, isMultiOrgEnabled: true, consentForMultiOrgEnable: true });
 
-    await user.click(await screen.findByRole("switch", { name: "Allow Creation from Cloud" }));
+    await user.click(await screen.findByRole("switch", { name: "Allow Creation from OS" }));
     await user.click(saveButton());
 
     await waitFor(() =>
@@ -137,7 +137,7 @@ describe("OrganizationConfigForm", () => {
     h.mutateAsync.mockRejectedValue(new Error("boom"));
     renderForm({ ...baseConfig, isMultiOrgEnabled: true, consentForMultiOrgEnable: true });
 
-    await user.click(await screen.findByRole("switch", { name: "Allow Creation from Cloud" }));
+    await user.click(await screen.findByRole("switch", { name: "Allow Creation from OS" }));
     await user.click(saveButton());
 
     await waitFor(() =>
@@ -149,7 +149,7 @@ describe("OrganizationConfigForm", () => {
     const user = userEvent.setup();
     renderForm({ ...baseConfig, isMultiOrgEnabled: true, consentForMultiOrgEnable: true });
 
-    const cloud = await screen.findByRole("switch", { name: "Allow Creation from Cloud" });
+    const cloud = await screen.findByRole("switch", { name: "Allow Creation from OS" });
     await user.click(cloud);
     expect(cloud.getAttribute("aria-checked")).toBe("true");
 
