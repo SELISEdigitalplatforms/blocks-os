@@ -98,7 +98,15 @@ describe("UserService", () => {
         undefined,
         { absoluteUrl: true },
       );
-      expect(result).toEqual({ data: mockUser });
+      // The service normalizes the API record: roles/permissions become
+      // org-scoped records and the Organizations* aliases are backfilled.
+      expect(result).toEqual({
+        data: {
+          ...mockUser,
+          OrganizationsRoles: mockUser.roles,
+          OrganizationsPermissions: mockUser.permissions,
+        },
+      });
     });
 
     it("should throw when the API call fails", async () => {
@@ -135,16 +143,27 @@ describe("UserService", () => {
 
   // ─── updateUser ───────────────────────────────────────────────────────────
   describe("updateUser", () => {
-    it("should POST to the correct endpoint with normalized payload", async () => {
+    it("reads the current record and POSTs the merged body", async () => {
+      // updateUser is read-modify-write: the endpoint replaces the whole
+      // record, so the service GETs the latest record first and merges the
+      // requested changes on top.
+      vi.mocked(http.get).mockResolvedValue({ data: mockUser });
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
       const result = await service.updateUser(mockUpdateUserPayload);
 
+      expect(http.get).toHaveBeenCalledWith(
+        `${USER_ENDPOINTS.GET_USERS}/${mockUpdateUserPayload.itemId}`,
+        undefined,
+        { absoluteUrl: true },
+      );
       expect(http.post).toHaveBeenCalledWith(
         `${USER_ENDPOINTS.GET_USERS}/${mockUpdateUserPayload.itemId}`,
         expect.objectContaining({
           itemId: mockUpdateUserPayload.itemId,
           firstName: mockUpdateUserPayload.firstName,
+          // Untouched fields of the current record survive the update.
+          email: mockUser.email,
         }),
         undefined,
         { absoluteUrl: true },
@@ -153,6 +172,7 @@ describe("UserService", () => {
     });
 
     it("should throw when the API call fails", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: mockUser });
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
       await expect(service.updateUser(mockUpdateUserPayload)).rejects.toThrow("Network error");

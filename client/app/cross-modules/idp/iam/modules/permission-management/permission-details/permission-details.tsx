@@ -67,7 +67,7 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
     return <PermissionDetailsPageSkeleton />;
   }
 
-  const breadcrumbTitles = { [`/app/idp/permission-detail/${id}`]: permission.name };
+  const breadcrumbTitles = { [`/app/iam/permission-detail/${id}`]: permission.name };
 
   return (
     <div>

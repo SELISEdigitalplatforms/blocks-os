@@ -6,6 +6,7 @@ import {
   IGetOrganizationByIdResponse,
   IGetOrganizationsParams,
   IGetOrganizationsResponse,
+  IUpdateOrganizationPayload,
 } from "@blocks-idp/iam/models/organization";
 import {
   IOrganizationConfigPayload,
@@ -58,6 +59,19 @@ export class OrganizationService {
     return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION, payload, undefined, {
       absoluteUrl: true,
     });
+  };
+
+  // The API exposes the update as a POST to the organizations collection with the item id
+  // appended, which is the same base path SAVE_ORGANIZATION points at.
+  updateOrganization = (
+    payload: IUpdateOrganizationPayload,
+  ): Promise<ICreateOrUpdateOrganizationResponse> => {
+    return http.post(
+      `${ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION}/${payload.itemId}`,
+      { name: payload.name, isEnable: payload.isEnable },
+      undefined,
+      { absoluteUrl: true },
+    );
   };
 
   getOrganizationConfig(_projectKey?: string): Promise<IOrganizationConfigResponse | null> {
