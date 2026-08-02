@@ -58,12 +58,26 @@ describe("CreateOIDC", () => {
     expect(h.saveOidc).not.toHaveBeenCalled();
   });
 
+  it("shows Device Flow before Redirect URI(s)", async () => {
+    const user = userEvent.setup();
+    render(<CreateOIDC />);
+    await user.click(screen.getByRole("button", { name: /Create/i }));
+
+    const deviceFlowLabel = screen.getByText("Device Flow");
+    const redirectLabel = screen.getByText("Redirect URI(s)");
+
+    expect(
+      deviceFlowLabel.compareDocumentPosition(redirectLabel) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("creates a device-flow OIDC client without auth-code response metadata", async () => {
     const user = userEvent.setup();
     render(<CreateOIDC />);
     await user.click(screen.getByRole("button", { name: /Create/i }));
     await user.type(screen.getByPlaceholderText("Enter client name"), "My App");
     await user.click(screen.getByLabelText("Generate this OIDC client only for device flow"));
+    expect(screen.queryByText("Redirect URI(s)")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));

@@ -41,7 +41,7 @@ export const redirectUriSubmitSchema = z
 
 export const createOidcSchema = z
   .object({
-    redirectUris: redirectUriEntry.array().min(1, "At least one redirect URI is required"),
+    redirectUris: redirectUriEntry.array(),
     scope: z.string().trim(),
     clientBrandColor: z.string().optional(),
     clientDisplayName: z.string().trim().min(1, "Client display name is required"),
@@ -55,6 +55,17 @@ export const createOidcSchema = z
   .superRefine((value, ctx) => {
     if (value.isDeviceFlowClient) {
       return;
+    }
+
+    const redirectResult = redirectUriSubmitSchema.safeParse(value.redirectUris);
+    if (!redirectResult.success) {
+      redirectResult.error.issues.forEach((issue) => {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["redirectUris", ...issue.path],
+          message: issue.message,
+        });
+      });
     }
 
     if (value.allowedResponseTypes.length === 0) {
