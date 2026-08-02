@@ -37,26 +37,38 @@ const toSaveApiPayload = (
 });
 
 export class OrganizationService {
+  // The list endpoint binds a BaseGetsRequest: Page/PageSize at the root and the
+  // free-text term under Filter.Search. Project scoping comes from the
+  // X-Blocks-Key header, so projectKey is not a query parameter here.
   getOrganizations(params: IGetOrganizationsParams): Promise<IGetOrganizationsResponse> {
-    const url =
-      `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${params.projectKey}` +
-      `&page=${params.page}&pageSize=${params.pageSize}` +
-      (params.searchText ? `&SearchText=${encodeURIComponent(params.searchText)}` : "");
-    return http.get(url, undefined, { absoluteUrl: true });
+    const query = new URLSearchParams({
+      Page: String(params.page),
+      PageSize: String(params.pageSize),
+    });
+    if (params.searchText) query.set("Filter.Search", params.searchText);
+    if (params.sort) {
+      query.set("Sort.Property", params.sort.property);
+      query.set("Sort.IsDescending", String(params.sort.isDescending));
+    }
+    return http.get(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?${query.toString()}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   getOrganizationById(params: IGetOrganizationByIdParams): Promise<IGetOrganizationByIdResponse> {
     return http.get(
-      `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}?ProjectKey=${params.projectKey}&ItemId=${params.itemId}`,
+      `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}/${params.itemId}`,
       undefined,
       { absoluteUrl: true },
     );
   }
 
+  // Creation has its own route; POSTing the collection root is a 405 because
+  // /organizations only serves GET.
   saveOrganization = (
     payload: ICreateOrUpdateOrganizationPayload,
   ): Promise<ICreateOrUpdateOrganizationResponse> => {
-    return http.post(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION, payload, undefined, {
+    return http.post(ORGANIZATION_ENDPOINTS.CREATE_ORGANIZATION, payload, undefined, {
       absoluteUrl: true,
     });
   };

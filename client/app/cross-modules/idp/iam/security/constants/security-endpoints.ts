@@ -9,6 +9,6 @@ export const SECURITY_ENDPOINTS = {
   REVOKE_SESSION: `${API_BASES.IAM}${SECURITY_SUBPATH}/sessions/{sessionId}/revoke`,
   REVOKE_REFRESH_TOKEN: `${API_BASES.IAM}${SECURITY_SUBPATH}/revoke/refresh-tokens/{tokenId}`,
   ACTIVITY: `${API_BASES.IAM}${SECURITY_SUBPATH}/activity`,
-  GET_USER_CODES: `${API_BASES.IAM}/auth/GetUserCodes`,
-  GENERATE_USER_CODE: `${API_BASES.IAM}/auth/GenerateUserCode`,
+  GET_USER_CODES: `${API_BASES.IAM}/auth/user-codes`,
+  GENERATE_USER_CODE: `${API_BASES.IAM}/auth/user-codes`,
 } as const;

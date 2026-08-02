@@ -34,7 +34,7 @@ import {
   ISaveSignUpSettingResponse,
 } from "@blocks-idp/iam/models/user";
 import { UserAccountService } from "./account.service";
-import { USER_ENDPOINTS } from "../constants/endpoint.constant";
+import { PERMISSION_ENDPOINTS, ROLE_ENDPOINTS, USER_ENDPOINTS } from "../constants/endpoint.constant";
 import { mapSignUpSettingFromApi } from "../utils/normalize-tenant-config";
 import { toSignupSettingsSaveApiPayload } from "../utils/signup-settings-payload";
 import { UserDetails } from "@seliseblocks/genesis-os";
@@ -50,6 +50,12 @@ const toScopedRecord = (
   if (organizationIds.length === 0) return {};
   return Object.fromEntries(organizationIds.map((orgId) => [orgId, [...value]]));
 };
+
+// Roles and permissions are stored per organization, so the same slug can appear
+// under several keys. Flatten to the distinct set the lookup endpoints expect.
+const uniqueScopedValues = (scoped: Record<string, string[]> | undefined): string[] => [
+  ...new Set(Object.values(scoped ?? {}).flat()),
+];
 
 const normalizeUserFromApi = (raw: ApiUser): User => {
   const organizationIds =
@@ -187,16 +193,37 @@ export class UserService {
     });
   }
 
-  getUserRoles(payload: IGetUserRolesPayload): Promise<IGetUserRolesResponse> {
-    return http.get(`${USER_ENDPOINTS.GET_USER_ROLES}?Id=${payload.userId}`, undefined, {
-      absoluteUrl: true,
-    });
+  // There is no per-user roles endpoint. A user record carries role slugs (keyed
+  // by organization), and the role list endpoint resolves those slugs to the full
+  // records the roles table renders.
+  async getUserRoles(payload: IGetUserRolesPayload): Promise<IGetUserRolesResponse> {
+    const user = await this.getUserById({ id: payload.userId, projectKey: "" });
+    const slugs = uniqueScopedValues(user.data?.roles);
+    if (slugs.length === 0) return { data: [], totalCount: 0, errors: null };
+
+    return http.post(
+      ROLE_ENDPOINTS.GET_ROLES,
+      { page: 0, pageSize: slugs.length, filter: { slugs } },
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
-  getUserPermissions(payload: IGetUserPermissionsPayload): Promise<IGetUserPermissionsResponse> {
-    return http.get(`${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${payload.userId}`, undefined, {
-      absoluteUrl: true,
-    });
+  // Same shape as getUserRoles: the user record holds the granted resources and
+  // the permission list endpoint expands them into full permission records.
+  async getUserPermissions(
+    payload: IGetUserPermissionsPayload,
+  ): Promise<IGetUserPermissionsResponse> {
+    const user = await this.getUserById({ id: payload.userId, projectKey: "" });
+    const resources = uniqueScopedValues(user.data?.permissions);
+    if (resources.length === 0) return { data: [], totalCount: 0, errors: null };
+
+    return http.post(
+      PERMISSION_ENDPOINTS.GET_PERMISSIONS,
+      { page: 0, pageSize: resources.length, filter: { resources } },
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   accountDeactivate(
