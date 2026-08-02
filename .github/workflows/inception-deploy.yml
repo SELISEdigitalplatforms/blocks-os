@@ -1,16 +1,5 @@
 name: Reusable - Inception Deploy
 
-# The ONLY job that runs on the self-hosted inception runner.
-#
-# Raw-code deploy, defined entirely here - there is no deploy script in the
-# repository. The client is built with npm/vite into server/Api/wwwroot, the
-# server with `dotnet publish`, and systemd restarts the two units. No
-# container image is built, pushed or pulled, and no scanning happens on this
-# box: SAST, SCA, DAST and the secret scan all run on GitHub-hosted runners.
-#
-# Mutual exclusion: the inception runner has a single job slot and the caller
-# sets cancel-in-progress, so two blocks-os deploys cannot overlap.
-
 on:
   workflow_call:
     inputs:

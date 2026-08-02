@@ -1,15 +1,4 @@
-# Ownership for the inception branch.
-#
-# CODEOWNERS only requests reviews; the hard block is enforced by
-# .github/workflows/inception-guard.yml (called from cicd-inception.yml).
-# For CODEOWNERS to be mandatory, enable "Require review from Code Owners"
-# in the inception branch protection rule.
-
-# Ignore files are owned by the inception maintainers only.
-/.gitignore        @rezwanx
-**/.gitignore      @rezwanx
-/.gitattributes    @rezwanx
-
-# CI/CD definitions and deploy scripts.
+/.gitignore         @rezwanx
+**/.gitignore       @rezwanx
+/.gitattributes     @rezwanx
 /.github/workflows/ @rezwanx
-/scripts/           @rezwanx

@@ -1,20 +1,5 @@
 name: CI/CD - Inception
 
-# Single entry point for the inception branch. Do not add other workflows that
-# trigger on `inception` - everything hangs off this file.
-#
-# Where work runs:
-#   GitHub-hosted runners : all scanning (sast, sca, dast, secrets) - these are
-#                           CPU/RAM heavy and must never touch the inception VM
-#   self-hosted "inception": ONLY the raw-code build + deploy (npm build,
-#                           dotnet publish, systemctl restart)
-#
-# Scan results are published exclusively to the dedicated portals. Nothing is
-# committed to the repo and no scan output is uploaded as a GitHub artifact.
-#
-# Anti-pileup: cancel-in-progress collapses a push burst to one run, docs are
-# path-ignored, and the single self-hosted job slot serialises deploys.
-
 on:
   push:
     branches: [inception]

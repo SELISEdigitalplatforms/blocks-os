@@ -1,9 +1,5 @@
 name: Reusable - Inception DAST
 
-# OWASP ZAP baseline against the freshly deployed inception site, run on a
-# GitHub-hosted runner (the ZAP container used to eat the VM's RAM). The report
-# goes only to the DAST portal (DefectDojo).
-
 on:
   workflow_call:
     inputs:

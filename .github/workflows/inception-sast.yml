@@ -1,18 +1,5 @@
 name: Reusable - Inception SAST
 
-# SonarQube analysis of the WHOLE product - client + api + worker - including
-# unit tests and coverage from both stacks. Runs entirely on a GitHub-hosted
-# runner; the inception VM is not involved.
-#
-# Coverage feeding SonarQube:
-#   server : dotnet test -> coverlet opencover + trx
-#            (exclusions live in server/XUnitTest/coverage.runsettings)
-#   client : vitest --coverage -> lcov, plus junit converted to Sonar's
-#            generic test-execution format by scripts/junit-to-sonar.py
-#
-# Results are published to the SAST portal only - nothing is written back to
-# the repository and no report is uploaded as a workflow artifact.
-
 on:
   workflow_call:
     inputs:

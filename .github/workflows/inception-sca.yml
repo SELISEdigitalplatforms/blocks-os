@@ -1,9 +1,5 @@
 name: Reusable - Inception SCA
 
-# Dependency / SBOM scan on a GitHub-hosted runner. The CycloneDX SBOM is
-# pushed straight to the SCA portal (Dependency-Track); it is never committed
-# and never uploaded as a workflow artifact.
-
 on:
   workflow_call:
     inputs:
