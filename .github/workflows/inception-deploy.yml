@@ -1,15 +1,29 @@
 name: Inception Scan & Deploy
+
 on:
   push:
-    branches: [inception-disabled]
+    branches:
+      - inception
+
 concurrency:
   group: inception-deploy
   cancel-in-progress: false
+
 jobs:
   scan-deploy:
-    runs-on: [self-hosted, inception]
+    runs-on:
+      - self-hosted
+      - inception
+
     env:
       HOME: /root
+
     steps:
-      - name: Scan + deploy (deploy.sh)
-        run: bash /opt/blocks/code/blocks-os/scripts/deploy.sh
+      - name: Scan + Deploy
+        run: |
+          set -euo pipefail
+
+          LOCKFILE="/tmp/inception-deploy.lock"
+
+          flock "$LOCKFILE" \
+            bash /opt/blocks/code/blocks-os/scripts/deploy.sh
