@@ -84,7 +84,7 @@ describe("CreateClientCredential", () => {
           {
             itemId: "client-1",
             name: "Existing Client",
-            accessTokenValidForNumberMinutes: 3,
+            accessTokenValidForNumberMinutes: 15,
             isActive: false,
             roles: ["viewer"],
             permissions: [],
