@@ -1,0 +1,67 @@
+name: Reusable - Inception Deploy
+
+# The ONLY job that runs on the self-hosted inception runner.
+#
+# Raw-code deploy: vite build -> server/Api/wwwroot, dotnet publish for api and
+# worker, systemd restart. No container image is built, pushed or pulled, and
+# no scanning happens here - all scans run on GitHub-hosted runners.
+
+on:
+  workflow_call:
+    inputs:
+      timeout_minutes:
+        required: false
+        type: number
+        default: 45
+      jobs:
+        description: "Build parallelism cap (MSBuild -m / vite workers)"
+        required: false
+        type: number
+        default: 4
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & deploy (inception VM)
+    runs-on: [self-hosted, inception]
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+
+    env:
+      HOME: /root
+      REPO_DIR: /opt/blocks/code/blocks-os
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      MSBUILDDISABLENODEREUSE: "1"
+
+    steps:
+      - name: Preflight
+        run: |
+          set -euo pipefail
+          test -x "$REPO_DIR/scripts/deploy.sh" \
+            || { echo "::error::$REPO_DIR/scripts/deploy.sh missing or not executable"; exit 1; }
+          echo "commit: ${GITHUB_SHA}"
+          uptime; free -h
+
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          # deploy.sh holds a non-blocking lock: exit 75 means another deploy
+          # (CI or manual) is already running, which is a skip, not a failure.
+          set +e
+          nice -n 10 ionice -c3 "$REPO_DIR/scripts/deploy.sh" \
+            --ref "$GITHUB_SHA" --jobs "${{ inputs.jobs }}"
+          rc=$?
+          set -e
+          if [ "$rc" -eq 75 ]; then
+            echo "::warning title=Deploy skipped::Another deploy holds the lock; this run is a no-op."
+            exit 0
+          fi
+          exit "$rc"
+
+      - name: Post-run report
+        if: always()
+        run: |
+          uptime; free -h
+          systemctl is-active blocks-os-api blocks-os-worker || true

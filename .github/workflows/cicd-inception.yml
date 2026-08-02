@@ -1,16 +1,19 @@
 name: CI/CD - Inception
 
-# Single entry point for the inception branch.
-# Everything (guards, scans, deploy) is invoked from here - do not add other
-# workflows that trigger on `inception`.
+# Single entry point for the inception branch. Do not add other workflows that
+# trigger on `inception` - everything hangs off this file.
 #
-# Anti-pileup design:
-#   * cancel-in-progress: true  -> a burst of pushes collapses to ONE run
-#   * paths-ignore              -> docs/workflow-only edits do not redeploy
-#   * ONE self-hosted job       -> scans + deploy share a single process tree
-#                                  instead of N runner slots each doing a build
-#   * scripts/deploy.sh takes a non-blocking lock and exits if another run holds
-#     it, so a manual run and a CI run can never build at the same time.
+# Where work runs:
+#   GitHub-hosted runners : all scanning (sast, sca, dast, secrets) - these are
+#                           CPU/RAM heavy and must never touch the inception VM
+#   self-hosted "inception": ONLY the raw-code build + deploy (npm build,
+#                           dotnet publish, systemctl restart)
+#
+# Scan results are published exclusively to the dedicated portals. Nothing is
+# committed to the repo and no scan output is uploaded as a GitHub artifact.
+#
+# Anti-pileup: cancel-in-progress collapses a push burst to one run, docs are
+# path-ignored, and scripts/deploy.sh holds a non-blocking lock on the VM.
 
 on:
   push:
@@ -24,105 +27,163 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
-      stages:
-        description: "Comma-separated stages to run (secret,sca,sast,dast,deploy,graphify) or 'all'"
-        required: false
-        default: "all"
-        type: string
-      skip_guards:
-        description: "Skip the guard job (admin escape hatch)"
-        required: false
-        default: false
+      run_sast:
+        description: "Run SAST (SonarQube: client + api + worker, with unit tests & coverage)"
         type: boolean
+        default: true
+      run_sca:
+        description: "Run SCA (Trivy -> Dependency-Track)"
+        type: boolean
+        default: true
+      run_secrets:
+        description: "Run secret scan (TruffleHog git history -> Shield)"
+        type: boolean
+        default: true
+      run_dast:
+        description: "Run DAST (ZAP -> DefectDojo) after deploy"
+        type: boolean
+        default: true
+      run_deploy:
+        description: "Build + deploy on the inception VM"
+        type: boolean
+        default: true
 
-# One inception run at a time, newest wins. Older queued/running runs are
-# cancelled instead of stacking up on the single self-hosted runner.
 concurrency:
   group: inception-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   # ---------------------------------------------------------------------------
-  # 1. Decide what this run should do (cheap, hosted runner).
+  # Decide what runs. PRs are validated but never deployed.
   # ---------------------------------------------------------------------------
   plan:
     name: Plan
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      stages: ${{ steps.plan.outputs.stages }}
-      run_pipeline: ${{ steps.plan.outputs.run_pipeline }}
-      run_guards: ${{ steps.plan.outputs.run_guards }}
+      sast: ${{ steps.p.outputs.sast }}
+      sca: ${{ steps.p.outputs.sca }}
+      secrets: ${{ steps.p.outputs.secrets }}
+      dast: ${{ steps.p.outputs.dast }}
+      deploy: ${{ steps.p.outputs.deploy }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - id: plan
-        name: Resolve stages
+      - id: p
         env:
           EVENT: ${{ github.event_name }}
-          INPUT_STAGES: ${{ inputs.stages }}
-          SKIP_GUARDS: ${{ inputs.skip_guards }}
           HEAD_MSG: ${{ github.event.head_commit.message }}
+          I_SAST: ${{ inputs.run_sast }}
+          I_SCA: ${{ inputs.run_sca }}
+          I_SECRETS: ${{ inputs.run_secrets }}
+          I_DAST: ${{ inputs.run_dast }}
+          I_DEPLOY: ${{ inputs.run_deploy }}
         run: |
           set -euo pipefail
-
-          run_guards=true
-          [ "${SKIP_GUARDS:-false}" = "true" ] && run_guards=false
-
           case "$EVENT" in
             workflow_dispatch)
-              stages="${INPUT_STAGES:-all}"
-              run_pipeline=true
+              sast="$I_SAST"; sca="$I_SCA"; secrets="$I_SECRETS"
+              dast="$I_DAST"; deploy="$I_DEPLOY"
               ;;
             pull_request)
-              # PRs are validated, never deployed to the inception VM.
-              stages="none"
-              run_pipeline=false
+              # Validate the code, never touch the VM.
+              sast=true; sca=true; secrets=true; dast=false; deploy=false
               ;;
             *)
-              stages="all"
-              run_pipeline=true
+              sast=true; sca=true; secrets=true; dast=true; deploy=true
               ;;
           esac
 
-          # Honour [skip ci] / [skip deploy] in the head commit message.
           case "${HEAD_MSG:-}" in
-            *"[skip ci]"*|*"[ci skip]"*) run_pipeline=false ;;
-            *"[skip deploy]"*)           stages="secret,sca,sast" ;;
+            *"[skip ci]"*|*"[ci skip]"*) sast=false; sca=false; secrets=false; dast=false; deploy=false ;;
+            *"[skip deploy]"*)           deploy=false; dast=false ;;
+            *"[skip scan]"*)             sast=false; sca=false; secrets=false; dast=false ;;
           esac
 
-          echo "stages=$stages"             >> "$GITHUB_OUTPUT"
-          echo "run_pipeline=$run_pipeline" >> "$GITHUB_OUTPUT"
-          echo "run_guards=$run_guards"     >> "$GITHUB_OUTPUT"
-          echo "::notice::stages=$stages run_pipeline=$run_pipeline run_guards=$run_guards"
+          {
+            echo "sast=$sast"; echo "sca=$sca"; echo "secrets=$secrets"
+            echo "dast=$dast"; echo "deploy=$deploy"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::sast=$sast sca=$sca secrets=$secrets dast=$dast deploy=$deploy"
 
   # ---------------------------------------------------------------------------
-  # 2. Guards: .gitignore ownership + repo hygiene. Hosted, fast, blocking.
+  # Blocking policy gates (hosted, seconds).
   # ---------------------------------------------------------------------------
   guards:
     name: Guards
     needs: plan
-    if: needs.plan.outputs.run_guards == 'true'
     uses: ./.github/workflows/inception-guard.yml
+
+  # ---------------------------------------------------------------------------
+  # Scans - all GitHub-hosted, all in parallel, results go to the portals only.
+  # ---------------------------------------------------------------------------
+  sast:
+    name: SAST
+    needs: [plan, guards]
+    if: needs.plan.outputs.sast == 'true'
+    uses: ./.github/workflows/inception-sast.yml
+    secrets: inherit
+
+  sca:
+    name: SCA
+    needs: [plan, guards]
+    if: needs.plan.outputs.sca == 'true'
+    uses: ./.github/workflows/inception-sca.yml
+    secrets: inherit
+
+  secret-scan:
+    name: Secrets
+    needs: [plan, guards]
+    if: needs.plan.outputs.secrets == 'true'
+    uses: ./.github/workflows/inception-secrets.yml
     secrets: inherit
 
   # ---------------------------------------------------------------------------
-  # 3. Scan + deploy on the inception VM. One job, one lock, one process tree.
+  # Deploy - the ONLY job on the self-hosted inception runner.
+  # Runs in parallel with the scans; it does not wait for them.
   # ---------------------------------------------------------------------------
-  pipeline:
-    name: Scan & Deploy
+  deploy:
+    name: Deploy
     needs: [plan, guards]
-    if: |
-      always()
-      && needs.plan.outputs.run_pipeline == 'true'
-      && (needs.guards.result == 'success' || needs.guards.result == 'skipped')
-    uses: ./.github/workflows/inception-pipeline.yml
-    with:
-      stages: ${{ needs.plan.outputs.stages }}
+    if: needs.plan.outputs.deploy == 'true'
+    uses: ./.github/workflows/inception-deploy.yml
+
+  # ---------------------------------------------------------------------------
+  # DAST last - it probes the freshly deployed site, so it needs the deploy.
+  # ---------------------------------------------------------------------------
+  dast:
+    name: DAST
+    needs: [plan, deploy]
+    if: needs.plan.outputs.dast == 'true' && needs.deploy.result == 'success'
+    uses: ./.github/workflows/inception-dast.yml
     secrets: inherit
+
+  # ---------------------------------------------------------------------------
+  # One status to gate the branch on.
+  # ---------------------------------------------------------------------------
+  summary:
+    name: Pipeline result
+    if: always()
+    needs: [guards, sast, sca, secret-scan, deploy, dast]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          set -euo pipefail
+          printf '%-12s %s\n' \
+            guards  "${{ needs.guards.result }}" \
+            sast    "${{ needs.sast.result }}" \
+            sca     "${{ needs.sca.result }}" \
+            secrets "${{ needs.secret-scan.result }}" \
+            deploy  "${{ needs.deploy.result }}" \
+            dast    "${{ needs.dast.result }}"
+          for r in "${{ needs.guards.result }}" "${{ needs.sast.result }}" \
+                   "${{ needs.sca.result }}" "${{ needs.secret-scan.result }}" \
+                   "${{ needs.deploy.result }}" "${{ needs.dast.result }}"; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::inception pipeline failed"; exit 1 ;;
+            esac
+          done
+          echo "inception pipeline OK"
