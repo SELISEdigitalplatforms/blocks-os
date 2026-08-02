@@ -130,8 +130,13 @@ jobs:
         id: build_server
         run: |
           set -euo pipefail
-          sln="$(ls server/*.sln server/*.slnx 2>/dev/null | head -1)"
+          # nullglob, not `ls`: with pipefail a non-matching glob makes ls
+          # exit 2 and kills the step before the check below can report.
+          shopt -s nullglob
+          candidates=(server/*.sln server/*.slnx)
+          sln="${candidates[0]:-}"
           [ -n "$sln" ] || { echo "::error::no solution under server/"; exit 1; }
+          echo "solution: $sln"
           echo "sln=$sln" >> "$GITHUB_OUTPUT"
           dotnet build "$sln" -c Release --nologo -v q
 
