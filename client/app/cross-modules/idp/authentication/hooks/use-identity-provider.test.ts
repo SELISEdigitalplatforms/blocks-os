@@ -27,11 +27,19 @@ describe("use-identity-provider hooks", () => {
 
   it("useGetIdentityProviders fetches all providers", async () => {
     vi.mocked(identityProviderService.getAll).mockResolvedValue([] as never);
-    const { result } = renderHook(() => useGetIdentityProviders(), {
+    const { result } = renderHook(() => useGetIdentityProviders({ projectId: "proj-1" }), {
       wrapper: createWrapper(),
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(identityProviderService.getAll).toHaveBeenCalled();
+  });
+
+  it("useGetIdentityProviders is disabled without a projectId", () => {
+    const { result } = renderHook(() => useGetIdentityProviders({ projectId: "" }), {
+      wrapper: createWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(identityProviderService.getAll).not.toHaveBeenCalled();
   });
 
   it("useGetIdentityProviderById is disabled without an id", () => {

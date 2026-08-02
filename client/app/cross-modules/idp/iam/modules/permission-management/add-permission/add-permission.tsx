@@ -9,7 +9,7 @@ import { useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 
 const BREADCRUMB_TITLES = {
-  "/app/idp/permission-detail/new": "New",
+  "/app/iam/permission-detail/new": "New",
 };
 
 export const AddPermission = () => {
@@ -33,7 +33,7 @@ export const AddPermission = () => {
       const res = await mutateAsync(newPermission);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({ description: "Permission created successfully" });
-      navigate(scoped(`idp/permissions`));
+      navigate(scoped(`iam/permissions`));
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });

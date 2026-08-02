@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import {
   IGetOrganizationByIdParams,
   IOrganizationFilter,
+  IUpdateOrganizationPayload,
 } from "@blocks-idp/iam/models/organization";
 import { IOrganizationConfigPayload } from "@blocks-idp/iam/models/organization-config.model";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
@@ -36,6 +37,22 @@ export const useSaveOrganization = () => {
     mutationFn: iamService.organization.saveOrganization,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
+    },
+  });
+};
+
+export const useUpdateOrganization = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["organization", "update"],
+    mutationFn: (payload: IUpdateOrganizationPayload) =>
+      iamService.organization.updateOrganization(payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["organization"] });
+      if (variables?.itemId) {
+        queryClient.invalidateQueries({ queryKey: ["organization", variables.itemId] });
+      }
     },
   });
 };

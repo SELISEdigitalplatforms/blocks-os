@@ -133,13 +133,21 @@ describe("use-project hooks", () => {
       expect(crossProjectService.getEnvRepositories).toHaveBeenCalledWith();
     });
 
-    it("useGetMigrationStatus stays disabled until the migration feature is ready", () => {
-      vi.mocked(crossProjectService.getMigrationStatus).mockResolvedValue({} as never);
-      const { result } = renderHook(() => useGetMigrationStatus("tg"), {
+    it("useGetMigrationStatus is disabled without a tenant group id", () => {
+      const { result } = renderHook(() => useGetMigrationStatus(""), {
         wrapper: createWrapper(),
       });
       expect(result.current.fetchStatus).toBe("idle");
       expect(crossProjectService.getMigrationStatus).not.toHaveBeenCalled();
+    });
+
+    it("useGetMigrationStatus fetches with a tenant group id", async () => {
+      vi.mocked(crossProjectService.getMigrationStatus).mockResolvedValue({} as never);
+      const { result } = renderHook(() => useGetMigrationStatus("tg"), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(crossProjectService.getMigrationStatus).toHaveBeenCalledWith("tg");
     });
   });
 

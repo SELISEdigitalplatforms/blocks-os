@@ -34,11 +34,17 @@ const getBreadcrumbTitle = (
 
 const getBreadcrumbLinkHref = (href: string): string => {
   const normalizedHref = normalizeBreadcrumbHref(href);
-  if (normalizedHref === "/app/idp/role-detail") {
-    return href.replace("/idp/role-detail", "/idp/roles");
+  if (normalizedHref === "/app/iam/role-detail") {
+    return href.replace("/iam/role-detail", "/iam/roles");
   }
-  if (normalizedHref === "/app/idp/permission-detail") {
-    return href.replace("/idp/permission-detail", "/idp/permissions");
+  if (normalizedHref === "/app/iam/permission-detail") {
+    return href.replace("/iam/permission-detail", "/iam/permissions");
+  }
+  if (normalizedHref === "/app/iam/user-detail") {
+    return href.replace("/iam/user-detail", "/iam/users");
+  }
+  if (normalizedHref === "/app/iam/organization-detail") {
+    return href.replace("/iam/organization-detail", "/iam/organizations");
   }
   return href;
 };
