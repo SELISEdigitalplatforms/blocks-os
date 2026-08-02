@@ -59,11 +59,21 @@ describe("createOidcSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires at least one response type", () => {
+  it("requires at least one response type for a standard OIDC client", () => {
     const result = createOidcSchema.safeParse({
       ...createOIDCFormDefaultValue,
       allowedResponseTypes: [],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("allows empty response types for a device-flow client", () => {
+    const result = createOidcSchema.safeParse({
+      ...createOIDCFormDefaultValue,
+      clientDisplayName: "Device Client",
+      isDeviceFlowClient: true,
+      allowedResponseTypes: [],
+    });
+    expect(result.success).toBe(true);
   });
 });
