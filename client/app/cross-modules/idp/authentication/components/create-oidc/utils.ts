@@ -39,17 +39,32 @@ export const redirectUriSubmitSchema = z
     });
   });
 
-export const createOidcSchema = z.object({
-  redirectUris: redirectUriEntry.array().min(1, "At least one redirect URI is required"),
-  scope: z.string().trim(),
-  clientBrandColor: z.string().optional(),
-  clientDisplayName: z.string().trim().min(1, "Client display name is required"),
-  isAutoRedirect: z.boolean(),
-  isActive: z.boolean(),
-  requirePkce: z.boolean(),
-  registerAsIdentityProvider: z.boolean(),
-  allowedResponseTypes: z.array(z.string()).min(1, "At least one response type is required"),
-});
+export const createOidcSchema = z
+  .object({
+    redirectUris: redirectUriEntry.array().min(1, "At least one redirect URI is required"),
+    scope: z.string().trim(),
+    clientBrandColor: z.string().optional(),
+    clientDisplayName: z.string().trim().min(1, "Client display name is required"),
+    isAutoRedirect: z.boolean(),
+    isActive: z.boolean(),
+    requirePkce: z.boolean(),
+    registerAsIdentityProvider: z.boolean(),
+    isDeviceFlowClient: z.boolean(),
+    allowedResponseTypes: z.array(z.string()),
+  })
+  .superRefine((value, ctx) => {
+    if (value.isDeviceFlowClient) {
+      return;
+    }
+
+    if (value.allowedResponseTypes.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["allowedResponseTypes"],
+        message: "At least one response type is required",
+      });
+    }
+  });
 
 export type CreateOIDCFormValues = z.infer<typeof createOidcSchema>;
 
@@ -62,5 +77,6 @@ export const createOIDCFormDefaultValue: CreateOIDCFormValues = {
   isActive: true,
   requirePkce: true,
   registerAsIdentityProvider: true,
+  isDeviceFlowClient: false,
   allowedResponseTypes: ["code"],
 };
