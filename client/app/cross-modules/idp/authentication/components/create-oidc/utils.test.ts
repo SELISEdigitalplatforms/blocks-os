@@ -44,8 +44,11 @@ describe("redirectUriSubmitSchema", () => {
 describe("createOidcSchema", () => {
   it("validates a filled-in form value", () => {
     expect(
-      createOidcSchema.safeParse({ ...createOIDCFormDefaultValue, clientDisplayName: "My App" })
-        .success,
+      createOidcSchema.safeParse({
+        ...createOIDCFormDefaultValue,
+        clientDisplayName: "My App",
+        redirectUris: [{ value: "https://app.example.com/cb" }],
+      }).success,
     ).toBe(true);
   });
 
@@ -65,6 +68,19 @@ describe("createOidcSchema", () => {
       allowedResponseTypes: [],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("requires a redirect URI for a standard OIDC client", () => {
+    const result = createOidcSchema.safeParse({
+      ...createOIDCFormDefaultValue,
+      clientDisplayName: "Standard Client",
+      redirectUris: [{ value: "" }],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("Redirect URI is required");
+    }
   });
 
   it("allows empty response types for a device-flow client", () => {

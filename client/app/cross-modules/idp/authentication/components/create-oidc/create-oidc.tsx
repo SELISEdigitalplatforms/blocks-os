@@ -75,6 +75,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   const dialogDescription = isEditMode
     ? "Update OIDC client details"
     : "Enter details to generate a new key";
+  const isDeviceFlowClient = form.watch("isDeviceFlowClient");
 
   useEffect(() => {
     if (isEditMode && existingOidc?.oIDCClientCredential && open) {
@@ -207,8 +208,36 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="isDeviceFlowClient"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Device Flow</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="isDeviceFlowClient"
+                        className="shrink-0"
+                        checked={!!field.value}
+                        onCheckedChange={(v) => {
+                          field.onChange(!!v);
+                          if (v) form.clearErrors("redirectUris");
+                        }}
+                      />
+                      <label
+                        htmlFor="isDeviceFlowClient"
+                        className="cursor-pointer text-sm text-high-emphasis"
+                      >
+                        Generate this OIDC client only for device flow
+                      </label>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Redirect URI(s) - multi entry like identity provider */}
-              {!form.watch("isDeviceFlowClient") && (
+              {!isDeviceFlowClient && (
                 <div className="space-y-2">
                   <FormLabel>
                     Redirect URI(s) <span className="text-destructive">*</span>
@@ -395,31 +424,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           </p>
                         </TooltipContent>
                       </Tooltip>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="isDeviceFlowClient"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Device Flow</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="isDeviceFlowClient"
-                        className="shrink-0"
-                        checked={!!field.value}
-                        onCheckedChange={(v) => field.onChange(!!v)}
-                      />
-                      <label
-                        htmlFor="isDeviceFlowClient"
-                        className="cursor-pointer text-sm text-high-emphasis"
-                      >
-                        Generate this OIDC client only for device flow
-                      </label>
                     </div>
                     <FormMessage />
                   </FormItem>
