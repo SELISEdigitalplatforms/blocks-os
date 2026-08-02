@@ -1,0 +1,128 @@
+name: CI/CD - Inception
+
+# Single entry point for the inception branch.
+# Everything (guards, scans, deploy) is invoked from here - do not add other
+# workflows that trigger on `inception`.
+#
+# Anti-pileup design:
+#   * cancel-in-progress: true  -> a burst of pushes collapses to ONE run
+#   * paths-ignore              -> docs/workflow-only edits do not redeploy
+#   * ONE self-hosted job       -> scans + deploy share a single process tree
+#                                  instead of N runner slots each doing a build
+#   * scripts/deploy.sh takes a non-blocking lock and exits if another run holds
+#     it, so a manual run and a CI run can never build at the same time.
+
+on:
+  push:
+    branches: [inception]
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+      - ".vscode/**"
+  pull_request:
+    branches: [inception]
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+    inputs:
+      stages:
+        description: "Comma-separated stages to run (secret,sca,sast,dast,deploy,graphify) or 'all'"
+        required: false
+        default: "all"
+        type: string
+      skip_guards:
+        description: "Skip the guard job (admin escape hatch)"
+        required: false
+        default: false
+        type: boolean
+
+# One inception run at a time, newest wins. Older queued/running runs are
+# cancelled instead of stacking up on the single self-hosted runner.
+concurrency:
+  group: inception-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Decide what this run should do (cheap, hosted runner).
+  # ---------------------------------------------------------------------------
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      stages: ${{ steps.plan.outputs.stages }}
+      run_pipeline: ${{ steps.plan.outputs.run_pipeline }}
+      run_guards: ${{ steps.plan.outputs.run_guards }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: plan
+        name: Resolve stages
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_STAGES: ${{ inputs.stages }}
+          SKIP_GUARDS: ${{ inputs.skip_guards }}
+          HEAD_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+
+          run_guards=true
+          [ "${SKIP_GUARDS:-false}" = "true" ] && run_guards=false
+
+          case "$EVENT" in
+            workflow_dispatch)
+              stages="${INPUT_STAGES:-all}"
+              run_pipeline=true
+              ;;
+            pull_request)
+              # PRs are validated, never deployed to the inception VM.
+              stages="none"
+              run_pipeline=false
+              ;;
+            *)
+              stages="all"
+              run_pipeline=true
+              ;;
+          esac
+
+          # Honour [skip ci] / [skip deploy] in the head commit message.
+          case "${HEAD_MSG:-}" in
+            *"[skip ci]"*|*"[ci skip]"*) run_pipeline=false ;;
+            *"[skip deploy]"*)           stages="secret,sca,sast" ;;
+          esac
+
+          echo "stages=$stages"             >> "$GITHUB_OUTPUT"
+          echo "run_pipeline=$run_pipeline" >> "$GITHUB_OUTPUT"
+          echo "run_guards=$run_guards"     >> "$GITHUB_OUTPUT"
+          echo "::notice::stages=$stages run_pipeline=$run_pipeline run_guards=$run_guards"
+
+  # ---------------------------------------------------------------------------
+  # 2. Guards: .gitignore ownership + repo hygiene. Hosted, fast, blocking.
+  # ---------------------------------------------------------------------------
+  guards:
+    name: Guards
+    needs: plan
+    if: needs.plan.outputs.run_guards == 'true'
+    uses: ./.github/workflows/inception-guard.yml
+    secrets: inherit
+
+  # ---------------------------------------------------------------------------
+  # 3. Scan + deploy on the inception VM. One job, one lock, one process tree.
+  # ---------------------------------------------------------------------------
+  pipeline:
+    name: Scan & Deploy
+    needs: [plan, guards]
+    if: |
+      always()
+      && needs.plan.outputs.run_pipeline == 'true'
+      && (needs.guards.result == 'success' || needs.guards.result == 'skipped')
+    uses: ./.github/workflows/inception-pipeline.yml
+    with:
+      stages: ${{ needs.plan.outputs.stages }}
+    secrets: inherit

@@ -1,0 +1,80 @@
+name: Reusable - Inception Scan & Deploy
+
+# Called only by cicd-inception.yml.
+#
+# ONE job on the single self-hosted inception runner. All stages run inside a
+# single invocation of scripts/deploy.sh so they share one process tree, one
+# lock and one resource budget. Splitting these into separate jobs would
+# serialise them on the one runner anyway while multiplying checkout + build
+# cost - which is exactly what caused the previous pileup.
+
+on:
+  workflow_call:
+    inputs:
+      stages:
+        description: "Comma-separated stages, or 'all'"
+        required: false
+        type: string
+        default: "all"
+      timeout_minutes:
+        description: "Hard ceiling for the whole scan+deploy run"
+        required: false
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+jobs:
+  scan-deploy:
+    name: Scan & Deploy (inception VM)
+    runs-on: [self-hosted, inception]
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+
+    env:
+      HOME: /root
+      REPO_DIR: /opt/blocks/code/blocks-os
+      STAGES: ${{ inputs.stages }}
+      # Keep .NET/MSBuild from fanning out across all 16 cores and from
+      # leaving node-reuse processes resident after the build.
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+      MSBUILDDISABLENODEREUSE: "1"
+
+    steps:
+      - name: Preflight
+        run: |
+          set -euo pipefail
+          test -x "$REPO_DIR/scripts/deploy.sh" \
+            || { echo "::error::$REPO_DIR/scripts/deploy.sh missing or not executable"; exit 1; }
+          echo "commit : ${GITHUB_SHA}"
+          echo "stages : ${STAGES}"
+          echo "load   : $(uptime)"
+          free -h
+
+      - name: Scan + Deploy
+        run: |
+          set -euo pipefail
+          # deploy.sh takes its own non-blocking lock; if another run (CI or a
+          # manual shell) already holds it, this exits 75 instead of piling a
+          # second full build onto the box.
+          set +e
+          nice -n 10 ionice -c3 \
+            "$REPO_DIR/scripts/deploy.sh" --stages "$STAGES" --ref "$GITHUB_SHA"
+          rc=$?
+          set -e
+          if [ "$rc" -eq 75 ]; then
+            echo "::warning title=Deploy skipped::Another scan/deploy already holds the lock; this run is a no-op."
+            exit 0
+          fi
+          exit "$rc"
+
+      - name: Post-run resource report
+        if: always()
+        run: |
+          set +e
+          echo "load : $(uptime)"
+          free -h
+          systemctl is-active blocks-os-api blocks-os-worker
+          exit 0
