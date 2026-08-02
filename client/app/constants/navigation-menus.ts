@@ -215,14 +215,14 @@ export const navigationMenus: Menu[] = [
   {
     id: "service-identity__authentication",
     type: "menu",
-    name: "IDP",
-    path: "/app/idp",
+    name: "Identity & Access",
+    path: "/app/iam",
     icon: Key,
     children: [
       {
         id: "settings",
         name: "Settings",
-        path: "/app/idp/settings",
+        path: "/app/iam/settings",
         icon: SlidersHorizontal,
         desc: "Tenant IAM, auth, organization, and signup configuration",
         type: "menu",
@@ -231,18 +231,40 @@ export const navigationMenus: Menu[] = [
       // {
       //   id: "oidc-template",
       //   name: "OIDC Template",
-      //   path: "/app/idp/oidc-template",
+      //   path: "/app/iam/oidc-template",
       //   icon: FileCode,
       //   desc: "Configure OIDC template",
       //   type: "menu",
       // },
       {
+        id: "users",
+        name: "Users",
+        // Path is intentionally "user" (not "users"): sidebar expansion uses
+        // pathname.startsWith(menu.path), and detail pages live at
+        // "/iam/user-detail/:id" which does not start with "/iam/users".
+        path: "/app/iam/user",
+        icon: Users,
+        desc: "Manage users",
+        type: "menu",
+      },
+      {
+        id: "organizations",
+        name: "Organizations",
+        // Path is intentionally "organization" (not "organizations"): sidebar expansion uses
+        // pathname.startsWith(menu.path), and detail pages live at
+        // "/iam/organization-detail/:orgId" which does not start with "/iam/organizations".
+        path: "/app/iam/organization",
+        icon: Building2,
+        desc: "Manage organizations",
+        type: "menu",
+      },
+      {
         id: "roles",
         name: "Roles",
         // Path is intentionally "role" (not "roles"): sidebar expansion uses
         // pathname.startsWith(menu.path), and detail pages live at
-        // "/idp/role-detail/:id" which does not start with "/idp/roles".
-        path: "/app/idp/role",
+        // "/iam/role-detail/:id" which does not start with "/iam/roles".
+        path: "/app/iam/role",
         icon: ShieldCheck,
         desc: "Manage roles",
         type: "menu",
@@ -252,8 +274,8 @@ export const navigationMenus: Menu[] = [
         name: "Permissions",
         // Path is intentionally "permission" (not "permissions"): sidebar expansion uses
         // pathname.startsWith(menu.path), and detail pages live at
-        // "/idp/permission-detail/:id" which does not start with "/idp/permissions".
-        path: "/app/idp/permission",
+        // "/iam/permission-detail/:id" which does not start with "/iam/permissions".
+        path: "/app/iam/permission",
         icon: Lock,
         desc: "Manage permissions",
         type: "menu",

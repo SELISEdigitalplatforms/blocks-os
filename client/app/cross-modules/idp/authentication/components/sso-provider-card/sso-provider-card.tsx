@@ -82,7 +82,7 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                 <DropdownMenuContent align="end">
                   <Link
                     to={scoped(
-                      `idp/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`,
+                      `iam/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`,
                     )}
                   >
                     <DropdownMenuItem>Configure</DropdownMenuItem>

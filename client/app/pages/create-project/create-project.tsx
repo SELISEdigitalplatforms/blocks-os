@@ -25,17 +25,20 @@ export const CreateProjectWrapper = () => {
 const CreateProject = () => {
   const { resetFormData } = useCreateProjectFormState();
   const [tab, setTab] = useQueryState("tab", { defaultValue: "1" });
-  const { currentStep, goToStep, setCompletedSteps } = useStepper();
+  const { currentStep, goToStep, setCompletedSteps, completedSteps } = useStepper();
   useEffect(() => {
     if (tab) {
       const step = parseInt(tab, 10);
       if (!isNaN(step) && step > 0 && step <= stepData.length && step === 2) {
-        setCompletedSteps([1]);
+        if (!completedSteps.includes(1)) {
+          setCompletedSteps([1]);
+          return;
+        }
         goToStep(step);
         setTab("0");
       }
     }
-  }, [tab, goToStep, setCompletedSteps, setTab]);
+  }, [tab, completedSteps, goToStep, setCompletedSteps, setTab]);
   return (
     <>
       {/* mobile design */}

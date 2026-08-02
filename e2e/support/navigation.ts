@@ -67,7 +67,7 @@ export async function enterConsole(page: Page): Promise<void> {
  * Enter a project by clicking the first environment chip on the first project
  * card. The console's ProjectCard component navigates to
  * `/app/<itemId>/dashboard` (which is the only route that mounts the full
- * sidebar containing API Settings / IDP / Secrets & Configs / Logs & Traces).
+ * sidebar containing API Settings / Identity & Access / Secrets & Configs / Logs & Traces).
  *
  * Returns the resulting `:itemId` so callers can build direct URLs.
  */
