@@ -13,7 +13,7 @@ name: CI/CD - Inception
 # committed to the repo and no scan output is uploaded as a GitHub artifact.
 #
 # Anti-pileup: cancel-in-progress collapses a push burst to one run, docs are
-# path-ignored, and scripts/deploy.sh holds a non-blocking lock on the VM.
+# path-ignored, and the single self-hosted job slot serialises deploys.
 
 on:
   push:

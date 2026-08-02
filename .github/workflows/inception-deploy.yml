@@ -2,9 +2,14 @@ name: Reusable - Inception Deploy
 
 # The ONLY job that runs on the self-hosted inception runner.
 #
-# Raw-code deploy: vite build -> server/Api/wwwroot, dotnet publish for api and
-# worker, systemd restart. No container image is built, pushed or pulled, and
-# no scanning happens here - all scans run on GitHub-hosted runners.
+# Raw-code deploy, defined entirely here - there is no deploy script in the
+# repository. The client is built with npm/vite into server/Api/wwwroot, the
+# server with `dotnet publish`, and systemd restarts the two units. No
+# container image is built, pushed or pulled, and no scanning happens on this
+# box: SAST, SCA, DAST and the secret scan all run on GitHub-hosted runners.
+#
+# Mutual exclusion: the inception runner has a single job slot and the caller
+# sets cancel-in-progress, so two blocks-os deploys cannot overlap.
 
 on:
   workflow_call:
@@ -13,11 +18,24 @@ on:
         required: false
         type: number
         default: 45
-      jobs:
-        description: "Build parallelism cap (MSBuild -m / vite workers)"
+      build_jobs:
+        description: "Build parallelism cap (MSBuild -m). The box also runs SonarQube, Dependency-Track, DefectDojo and ~20 services."
         required: false
         type: number
         default: 4
+      deploy_dir:
+        description: "Working tree the systemd units run from"
+        required: false
+        type: string
+        default: /opt/blocks/code/blocks-os
+      service_prefix:
+        required: false
+        type: string
+        default: blocks-os
+      health_port:
+        required: false
+        type: number
+        default: 5002
 
 permissions:
   contents: read
@@ -30,38 +48,105 @@ jobs:
 
     env:
       HOME: /root
-      REPO_DIR: /opt/blocks/code/blocks-os
+      REPO: ${{ inputs.deploy_dir }}
+      SVC: ${{ inputs.service_prefix }}
+      PORT: ${{ inputs.health_port }}
+      BUILD_ARGS: -m:${{ inputs.build_jobs }} -nodeReuse:false
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
       MSBUILDDISABLENODEREUSE: "1"
+      NODE_OPTIONS: --max-old-space-size=3072
 
     steps:
       - name: Preflight
         run: |
           set -euo pipefail
-          test -x "$REPO_DIR/scripts/deploy.sh" \
-            || { echo "::error::$REPO_DIR/scripts/deploy.sh missing or not executable"; exit 1; }
-          echo "commit: ${GITHUB_SHA}"
+          test -d "$REPO/.git" || { echo "::error::$REPO is not a git working tree"; exit 1; }
+          echo "target commit : $GITHUB_SHA"
+          echo "deploy dir    : $REPO"
           uptime; free -h
 
-      - name: Deploy
+      - name: Sync working tree to this commit
         run: |
           set -euo pipefail
-          # deploy.sh holds a non-blocking lock: exit 75 means another deploy
-          # (CI or manual) is already running, which is a skip, not a failure.
-          set +e
-          nice -n 10 ionice -c3 "$REPO_DIR/scripts/deploy.sh" \
-            --ref "$GITHUB_SHA" --jobs "${{ inputs.jobs }}"
-          rc=$?
-          set -e
-          if [ "$rc" -eq 75 ]; then
-            echo "::warning title=Deploy skipped::Another deploy holds the lock; this run is a no-op."
-            exit 0
+          git -C "$REPO" fetch --prune origin inception
+          git -C "$REPO" checkout -f inception
+          # Deploy exactly the commit CI was triggered for, when it is still on
+          # the branch; otherwise a newer push has landed, so take the tip.
+          if git -C "$REPO" merge-base --is-ancestor "$GITHUB_SHA" origin/inception 2>/dev/null; then
+            git -C "$REPO" reset --hard "$GITHUB_SHA"
+          else
+            echo "::warning::$GITHUB_SHA is not on origin/inception (newer push?) - deploying branch tip"
+            git -C "$REPO" reset --hard origin/inception
           fi
-          exit "$rc"
+          echo "deploying $(git -C "$REPO" rev-parse --short HEAD)"
 
-      - name: Post-run report
+      # vite writes to ../server/Api/wwwroot (client/vite.config.ts), so the
+      # client ships inside the API publish output - no separate node process.
+      - name: Build client
+        run: |
+          set -euo pipefail
+          cd "$REPO/client"
+          if [ -f package-lock.json ]; then
+            nice -n 10 ionice -c3 npm ci --no-audit --no-fund --prefer-offline
+          else
+            nice -n 10 ionice -c3 npm install --no-audit --no-fund
+          fi
+          nice -n 10 ionice -c3 npm run build
+          test -f "$REPO/server/Api/wwwroot/index.html" \
+            || { echo "::error::client build produced no wwwroot/index.html"; exit 1; }
+
+      - name: Publish api + worker
+        run: |
+          set -euo pipefail
+          nice -n 10 ionice -c3 dotnet publish "$REPO/server/Api/Api.csproj" \
+            -c Release -o "$REPO/builds/api" --nologo $BUILD_ARGS
+          nice -n 10 ionice -c3 dotnet publish "$REPO/server/Worker/Worker.csproj" \
+            -c Release -o "$REPO/builds/worker" --nologo $BUILD_ARGS
+
+      - name: Restart services
+        run: |
+          set -euo pipefail
+          r0a=$(systemctl show "$SVC-api"    -p NRestarts --value)
+          r0w=$(systemctl show "$SVC-worker" -p NRestarts --value)
+          systemctl restart "$SVC-api" "$SVC-worker"
+          sleep 10
+          r1a=$(systemctl show "$SVC-api"    -p NRestarts --value)
+          r1w=$(systemctl show "$SVC-worker" -p NRestarts --value)
+          systemctl is-active --quiet "$SVC-api"    || { echo "::error::api not active after restart";    exit 1; }
+          systemctl is-active --quiet "$SVC-worker" || { echo "::error::worker not active after restart"; exit 1; }
+          # A bumped restart counter means systemd already had to revive it.
+          [ "$r1a" = "$r0a" ] || { echo "::error::api crash-looped ($r0a->$r1a)";    exit 1; }
+          [ "$r1w" = "$r0w" ] || { echo "::error::worker crash-looped ($r0w->$r1w)"; exit 1; }
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$PORT/" || true)
+            case "$code" in
+              200|204|301|302|401|403)
+                echo "http $code from 127.0.0.1:$PORT (attempt $i)"; exit 0 ;;
+            esac
+            sleep 3
+          done
+          echo "::error::no healthy response from 127.0.0.1:$PORT (last code: ${code:-none})"
+          exit 1
+
+      - name: Release build daemons
         if: always()
         run: |
+          # Scoped to this SDK's own daemons - safe while other repos build.
+          dotnet build-server shutdown >/dev/null 2>&1 || true
+
+      - name: Status
+        if: always()
+        run: |
+          for u in "$SVC-api" "$SVC-worker"; do
+            printf '  %-20s %s (%s) restarts=%s\n' "$u" \
+              "$(systemctl is-active "$u" 2>/dev/null)" \
+              "$(systemctl show "$u" -p SubState --value 2>/dev/null)" \
+              "$(systemctl show "$u" -p NRestarts --value 2>/dev/null)"
+          done
           uptime; free -h
-          systemctl is-active blocks-os-api blocks-os-worker || true
