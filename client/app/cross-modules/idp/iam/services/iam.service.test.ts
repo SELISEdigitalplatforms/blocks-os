@@ -39,7 +39,7 @@ describe("iamService", () => {
       pageSize: 20,
     });
     expect(http.get).toHaveBeenCalledWith(
-      `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=pk&page=1&pageSize=20`,
+      `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?Page=1&PageSize=20`,
       undefined,
       ABS,
     );

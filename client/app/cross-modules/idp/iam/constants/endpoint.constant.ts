@@ -20,8 +20,8 @@ export const USER_ENDPOINTS = {
   REVOKE_ACCESS: `${API_BASES.IAM}${IAM_SUBPATH}/users/revoke-access`,
   EXISTS: `${API_BASES.IAM}${IAM_SUBPATH}/users/exists`,
 
-  GET_USER_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/user/roles`,
-  GET_USER_PERMISSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/user/permissions`,
+  // A user's roles and permissions are resolved through ROLE_ENDPOINTS.GET_ROLES
+  // and PERMISSION_ENDPOINTS.GET_PERMISSIONS; there is no /user/* lookup.
   GET_USER_TIMELINES: `${API_BASES.IAM}${IAM_SUBPATH}/user/timelines`,
   DEACTIVATE: `${API_BASES.IAM}${IAM_SUBPATH}/users/deactivate`,
   UPDATE_ACCOUNT: `${API_BASES.IAM}${IAM_SUBPATH}/account/update`,
@@ -33,20 +33,22 @@ export const USER_ENDPOINTS = {
 
   GET_SESSIONS: `${API_BASES.IAM}${IAM_SUBPATH}/sessions`,
   GET_HISTORIES: `${API_BASES.IAM}${IAM_SUBPATH}/history`,
-  GET_USER_CODES: `${API_BASES.IAM}/auth/GetUserCodes`,
-  GENERATE_USER_CODE: `${API_BASES.IAM}/auth/GenerateUserCode`,
+  // Personal access tokens live under /auth/user-codes (GET lists, POST issues).
+  // The old /auth/PascalCase pair does not exist and falls through to the IAM
+  // SPA, so the client got an HTML document back instead of JSON.
+  GET_USER_CODES: `${API_BASES.IAM}/auth/user-codes`,
+  GENERATE_USER_CODE: `${API_BASES.IAM}/auth/user-codes`,
 } as const;
 
 // ─── Account endpoints (account.service) ────────────────────────────────────
 
 export const ACCOUNT_ENDPOINTS = {
   // IAM serves these account actions under /auth (kebab-case). The old /iam/PascalCase paths
-  // no longer exist and return 405. RECOVER/RESET_PASSWORD are the same stale pattern and still
-  // need migrating (password-recovery flow) — left as-is for now, out of the activation scope.
+  // no longer exist and return 405.
   ACTIVATE: `${API_BASES.IAM}/auth/activate`,
   RESEND_ACTIVATION: `${API_BASES.IAM}/auth/resend-activation`,
-  RECOVER: `${API_BASES.IAM}${IAM_SUBPATH}/Recover`,
-  RESET_PASSWORD: `${API_BASES.IAM}${IAM_SUBPATH}/ResetPassword`,
+  RECOVER: `${API_BASES.IAM}/auth/recover`,
+  RESET_PASSWORD: `${API_BASES.IAM}/auth/reset-password`,
   VALIDATE_ACTIVATION_CODE: `${API_BASES.IAM}/auth/validate-activation`,
 } as const;
 
@@ -75,7 +77,11 @@ export const PERMISSION_ENDPOINTS = {
 export const ORGANIZATION_ENDPOINTS = {
   CREATE_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/create`,
   GET_ORGANIZATIONS: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
-  GET_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organization`,
+  // Single organization is a path segment on the collection, not a singular
+  // resource: GET /organizations/{id}. The singular /organization path does not
+  // exist and falls through to the IAM SPA.
+  GET_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
+  // Base path for the update route, POST /organizations/{id}.
   SAVE_ORGANIZATION: `${API_BASES.IAM}${IAM_SUBPATH}/organizations`,
   GET_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,
   SAVE_ORGANIZATION_CONFIG: `${API_BASES.IAM}${IAM_SUBPATH}/organizations/config`,

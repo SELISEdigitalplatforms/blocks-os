@@ -3,7 +3,11 @@ import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http/http-client";
 import { UserService } from "./user.service";
 import { UserAccountService } from "./account.service";
-import { USER_ENDPOINTS } from "../constants/endpoint.constant";
+import {
+  PERMISSION_ENDPOINTS,
+  ROLE_ENDPOINTS,
+  USER_ENDPOINTS,
+} from "../constants/endpoint.constant";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import {
   mockGetUsersPayload,
@@ -375,18 +379,41 @@ describe("UserService", () => {
 
   // ─── getUserRoles ─────────────────────────────────────────────────────────
   describe("getUserRoles", () => {
-    it("should GET with correct query params", async () => {
-      const mockResponse = { data: ["admin"], errors: null };
-      vi.mocked(http.get).mockResolvedValue(mockResponse);
+    it("should resolve the user's role slugs through the role list endpoint", async () => {
+      const mockResponse = { data: [{ slug: "admin" }], totalCount: 1, errors: null };
+      vi.mocked(http.get).mockResolvedValue({
+        data: { ...mockUser, organizationIds: ["org-1", "org-2"], roles: ["admin", "viewer"] },
+        errors: null,
+      });
+      vi.mocked(http.post).mockResolvedValue(mockResponse);
 
       const result = await service.getUserRoles(mockGetUserRolesPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${USER_ENDPOINTS.GET_USER_ROLES}?Id=${mockGetUserRolesPayload.userId}`,
+        `${USER_ENDPOINTS.GET_USERS}/${mockGetUserRolesPayload.userId}`,
+        undefined,
+        { absoluteUrl: true },
+      );
+      // The same slugs are scoped to both organizations; they must be sent once.
+      expect(http.post).toHaveBeenCalledWith(
+        ROLE_ENDPOINTS.GET_ROLES,
+        { page: 0, pageSize: 2, filter: { slugs: ["admin", "viewer"] } },
         undefined,
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockResponse);
+    });
+
+    it("should not call the role endpoint when the user has no roles", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        data: { ...mockUser, organizationIds: [], roles: [] },
+        errors: null,
+      });
+
+      const result = await service.getUserRoles(mockGetUserRolesPayload);
+
+      expect(http.post).not.toHaveBeenCalled();
+      expect(result).toEqual({ data: [], totalCount: 0, errors: null });
     });
 
     it("should throw when the API call fails", async () => {
@@ -398,18 +425,35 @@ describe("UserService", () => {
 
   // ─── getUserPermissions ───────────────────────────────────────────────────
   describe("getUserPermissions", () => {
-    it("should GET with correct query params", async () => {
-      const mockResponse = { data: ["read"], errors: null };
-      vi.mocked(http.get).mockResolvedValue(mockResponse);
+    it("should resolve the user's resources through the permission list endpoint", async () => {
+      const mockResponse = { data: [{ resource: "read" }], totalCount: 1, errors: null };
+      vi.mocked(http.get).mockResolvedValue({
+        data: { ...mockUser, organizationIds: ["org-1"], permissions: ["read", "write"] },
+        errors: null,
+      });
+      vi.mocked(http.post).mockResolvedValue(mockResponse);
 
       const result = await service.getUserPermissions(mockGetUserPermissionsPayload);
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${USER_ENDPOINTS.GET_USER_PERMISSIONS}?Id=${mockGetUserPermissionsPayload.userId}`,
+      expect(http.post).toHaveBeenCalledWith(
+        PERMISSION_ENDPOINTS.GET_PERMISSIONS,
+        { page: 0, pageSize: 2, filter: { resources: ["read", "write"] } },
         undefined,
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockResponse);
+    });
+
+    it("should not call the permission endpoint when the user has none", async () => {
+      vi.mocked(http.get).mockResolvedValue({
+        data: { ...mockUser, organizationIds: [], permissions: [] },
+        errors: null,
+      });
+
+      const result = await service.getUserPermissions(mockGetUserPermissionsPayload);
+
+      expect(http.post).not.toHaveBeenCalled();
+      expect(result).toEqual({ data: [], totalCount: 0, errors: null });
     });
 
     it("should throw when the API call fails", async () => {
