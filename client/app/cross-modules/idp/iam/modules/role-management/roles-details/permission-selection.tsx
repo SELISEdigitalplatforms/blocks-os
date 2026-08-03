@@ -32,7 +32,7 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
     isFetching: isPermissionFetching,
     data: permissions,
   } = useQuery({
-    queryKey: ["permissions", slug],
+    queryKey: ["permissions", tenantId, slug],
     queryFn: () =>
       permissionService.getPermissions({
         page: 0,
