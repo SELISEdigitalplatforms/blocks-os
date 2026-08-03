@@ -60,9 +60,9 @@ export const useSaveOIDCCredential = () => {
     mutationFn: ssoService.saveBlocksSsoCredential,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["oidc"] });
-    }
-  })
-}
+    },
+  });
+};
 
 export const useSaveGetOIDCCredential = (projectKey: string) => {
   return useQuery({
@@ -70,4 +70,4 @@ export const useSaveGetOIDCCredential = (projectKey: string) => {
     queryFn: () => ssoService.getBlocksSsoCredential(projectKey),
     enabled: !!projectKey,
   });
-}
+};

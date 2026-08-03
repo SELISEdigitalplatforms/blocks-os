@@ -1,11 +1,6 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +10,11 @@ import {
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ISsoProviderConfigurationWithMeta } from "@blocks-idp/authentication/models/sso.model";
 import { EllipsisVertical } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { Link } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { SSoProviderStatusToggle } from "../sso-provider-status-toggle";
 import { useMemo, useState } from "react";
-import { useTheme } from "@seliseblocks/blocks-kit/hooks";
+import { useTheme } from "@seliseblocks/genesis-os/hooks";
 type SSOProviderCardProps = {
   configuration: ISsoProviderConfigurationWithMeta;
 };
@@ -74,32 +69,30 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm font-normal text-low-emphasis">
-                  Social Connections
-                </p>
+                <p className="text-sm font-normal text-low-emphasis">Social Connections</p>
               </div>
             </div>
             {configuration.isAvailable && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="aspect-square w-10 rounded-full p-0">
+                  <Button variant="ghost" className="aspect-square w-10 rounded-full p-0">
                     <EllipsisVertical className="aspect-square w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <Link
                     to={scoped(
-                      `idp/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`,
-                    )}>
+                      `iam/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`,
+                    )}
+                  >
                     <DropdownMenuItem>Configure</DropdownMenuItem>
                   </Link>
                   {configuration.itemId && (
                     <DropdownMenuItem
                       onSelect={() => {
                         setOpen(true);
-                      }}>
+                      }}
+                    >
                       {configuration.isDisabled ? "Enable" : "Disable"}
                     </DropdownMenuItem>
                   )}
@@ -109,16 +102,10 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mt-4 text-medium-emphasis">
-            {configuration.description}
-          </div>
+          <div className="mt-4 text-medium-emphasis">{configuration.description}</div>
         </CardContent>
       </Card>
-      <SSoProviderStatusToggle
-        open={open}
-        setOpen={setOpen}
-        configuration={configuration}
-      />
+      <SSoProviderStatusToggle open={open} setOpen={setOpen} configuration={configuration} />
     </>
   );
 };

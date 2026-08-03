@@ -1,4 +1,8 @@
-import { IPermission, PermissionSeverityLevel, normalizePermissionSeverity } from "@blocks-idp/iam/models/permission";
+import {
+  IPermission,
+  PermissionSeverityLevel,
+  normalizePermissionSeverity,
+} from "@blocks-idp/iam/models/permission";
 import { z } from "zod";
 
 export const BUILTIN_PERMISSION_READONLY_MESSAGE =
@@ -39,7 +43,11 @@ export const mapPermissionToFormValues = (permission: IPermission): permissionFo
 
 export const permissionFormSchema = z
   .object({
-    name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters").trim(),
+    name: z
+      .string()
+      .min(1, "Name is required")
+      .max(100, "Name must be at most 100 characters")
+      .trim(),
     type: z.coerce.number().min(1, "Type is required"),
     resource: z
       .string()
@@ -51,9 +59,11 @@ export const permissionFormSchema = z
     tags: z.string().array(),
     description: z.string().max(150, "Description must be at most 150 characters"),
     dependentPermissions: z.array(z.string()),
-    permissionSeverity: z.nativeEnum(PermissionSeverityLevel, {
-      message: "Severity is required",
-    }).optional(),
+    permissionSeverity: z
+      .nativeEnum(PermissionSeverityLevel, {
+        message: "Severity is required",
+      })
+      .optional(),
   })
   .refine(
     (arg) => {
@@ -66,7 +76,7 @@ export const permissionFormSchema = z
     {
       message: "Resource format should be service :: controller :: name",
       path: ["resource"],
-    }
+    },
   );
 
 export type permissionFormSchemaType = z.infer<typeof permissionFormSchema>;

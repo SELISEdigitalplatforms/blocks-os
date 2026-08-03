@@ -26,23 +26,17 @@ vi.stubGlobal(
 
 const navigate = vi.fn();
 
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router-dom")>();
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
   return { ...actual, useNavigate: () => navigate };
 });
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (path: string) => `/app/tenant-1/${path}`,
 }));
 
 vi.mock("./delete-sso-role", () => ({
-  DeleteSSORole: ({
-    role,
-    onDelete,
-  }: {
-    role: IRole;
-    onDelete: (role: IRole) => void;
-  }) => (
+  DeleteSSORole: ({ role, onDelete }: { role: IRole; onDelete: (role: IRole) => void }) => (
     <button type="button" onClick={() => onDelete(role)}>
       delete-{role.slug}
     </button>
@@ -87,7 +81,7 @@ describe("SSORolesList", () => {
 
     await user.click(screen.getByText("admin-name"));
 
-    expect(navigate).toHaveBeenCalledWith("/app/tenant-1/idp/role-detail/r1");
+    expect(navigate).toHaveBeenCalledWith("/app/tenant-1/iam/role-detail/r1");
   });
 
   it("forwards deletions through the delete control", async () => {

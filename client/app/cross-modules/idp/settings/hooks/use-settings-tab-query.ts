@@ -1,10 +1,10 @@
-import type { UseQueryResult } from "@tanstack/react-query"
+import type { UseQueryResult } from "@tanstack/react-query";
 
 type SettingsTabQueryState<TData> = {
-  data: TData | undefined
-  showLoader: boolean
-  showError: boolean
-}
+  data: TData | undefined;
+  showLoader: boolean;
+  showError: boolean;
+};
 
 /** Show loader only until first successful data arrives (not on background refetch). */
 export const getSettingsTabQueryState = <TData>(
@@ -13,4 +13,4 @@ export const getSettingsTabQueryState = <TData>(
   data: query.data,
   showLoader: query.isPending,
   showError: query.isError || (!query.isPending && query.data == null),
-})
+});

@@ -1,25 +1,17 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { X, Plus } from "lucide-react";
 import { User } from "@blocks-idp/iam/models/user";
-import {
-  useRemoveEnvironmentAccess,
-  useInvitePeople,
-} from "@/hooks/use-people";
+import { useRemoveEnvironmentAccess, useInvitePeople } from "@/hooks/use-people";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { PeopleGroupedByEnvironments } from "@/models/people";
 import { IProjectGroup } from "@/models/project.model";
 import { environmentOptions } from "@/constants/environment-options";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { buildInvitePeoplePayload } from "./invite-people-utils";
 
 interface PeopleEnvironmentsTabProps {
@@ -56,13 +48,9 @@ export const PeopleEnvironmentsTab = ({
   );
 
   const allAvailableEnvironments = useMemo(() => {
-    const projects =
-      environmentList?.[0]?.projects?.map((project) => project.environment) ||
-      [];
+    const projects = environmentList?.[0]?.projects?.map((project) => project.environment) || [];
     const nonShared =
-      environmentList?.[0]?.nonSharedProject?.map(
-        (project) => project.environment,
-      ) || [];
+      environmentList?.[0]?.nonSharedProject?.map((project) => project.environment) || [];
     return Array.from(new Set([...projects, ...nonShared]));
   }, [environmentList]);
 
@@ -72,20 +60,15 @@ export const PeopleEnvironmentsTab = ({
   }, [isProfileUserOwner, allAvailableEnvironments, withAccessEnvironments]);
 
   const withoutAccessEnvironments = useMemo(() => {
-    return allAvailableEnvironments.filter(
-      (env) => !currentAvailableEnvironments.includes(env),
-    );
+    return allAvailableEnvironments.filter((env) => !currentAvailableEnvironments.includes(env));
   }, [allAvailableEnvironments, currentAvailableEnvironments]);
 
-  const { mutateAsync: removeEnvAsync, isPending: isRemoving } =
-    useRemoveEnvironmentAccess();
+  const { mutateAsync: removeEnvAsync, isPending: isRemoving } = useRemoveEnvironmentAccess();
   const { mutateAsync: inviteAsync, isPending: isInviting } = useInvitePeople();
   const isProcessing = isRemoving || isInviting;
 
   const getEnvironmentLabel = (value: string) => {
-    return (
-      environmentOptions.find((opt) => opt.value === value)?.label || value
-    );
+    return environmentOptions.find((opt) => opt.value === value)?.label || value;
   };
 
   const getProjectIdForEnvironment = useCallback(
@@ -94,9 +77,7 @@ export const PeopleEnvironmentsTab = ({
         (p) => p.environment === envValue,
       );
       if (projectFromEnvList?.tenantId) return projectFromEnvList.tenantId;
-      const projectFromShared = sharedEnvironments.find(
-        (e) => e.enviroment === envValue,
-      );
+      const projectFromShared = sharedEnvironments.find((e) => e.enviroment === envValue);
       return projectFromShared?.tenantId || "";
     },
     [environmentList, sharedEnvironments],
@@ -112,9 +93,7 @@ export const PeopleEnvironmentsTab = ({
     const { type, envValue } = pendingAction;
     const projectId = getProjectIdForEnvironment(envValue);
     const groupId =
-      useProjectStore.getState().selectedTenantGroup ||
-      environmentList?.[0]?.tenantGroupId ||
-      "";
+      useProjectStore.getState().selectedTenantGroup || environmentList?.[0]?.tenantGroupId || "";
 
     try {
       if (type === "add") {
@@ -123,9 +102,7 @@ export const PeopleEnvironmentsTab = ({
           buildInvitePeoplePayload({ [user.email]: [projectId] }, groupId),
         );
         if (!res?.isSuccess) {
-          throw new Error(
-            `Failed to grant access to ${getEnvironmentLabel(envValue)}`,
-          );
+          throw new Error(`Failed to grant access to ${getEnvironmentLabel(envValue)}`);
         }
         showSuccessToast({
           description: `Access granted to ${getEnvironmentLabel(envValue)}`,
@@ -138,17 +115,14 @@ export const PeopleEnvironmentsTab = ({
           groupId,
         });
         if (!res?.isSuccess) {
-          throw new Error(
-            `Failed to remove access from ${getEnvironmentLabel(envValue)}`,
-          );
+          throw new Error(`Failed to remove access from ${getEnvironmentLabel(envValue)}`);
         }
         showSuccessToast({
           description: `Access removed from ${getEnvironmentLabel(envValue)}`,
         });
       }
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update access";
+      const message = error instanceof Error ? error.message : "Failed to update access";
       showErrorToast({ errors: message });
     } finally {
       handleCloseDialog();
@@ -167,17 +141,13 @@ export const PeopleEnvironmentsTab = ({
     return (
       <Card>
         <CardContent className="py-8">
-          <div className="text-center text-muted-foreground">
-            User data not available
-          </div>
+          <div className="text-center text-muted-foreground">User data not available</div>
         </CardContent>
       </Card>
     );
   }
 
-  const pendingEnvLabel = pendingAction
-    ? getEnvironmentLabel(pendingAction.envValue)
-    : "";
+  const pendingEnvLabel = pendingAction ? getEnvironmentLabel(pendingAction.envValue) : "";
 
   return (
     <>
@@ -187,18 +157,15 @@ export const PeopleEnvironmentsTab = ({
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground">
-              With access to
-            </div>
+            <div className="text-sm font-semibold text-foreground">With access to</div>
             <div className="flex flex-wrap gap-3">
               {currentAvailableEnvironments.length > 0 ? (
                 currentAvailableEnvironments.map((envValue) => (
                   <div
                     key={envValue}
-                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50">
-                    <span className="text-sm font-medium">
-                      {getEnvironmentLabel(envValue)}
-                    </span>
+                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
+                  >
+                    <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
                     {isViewerOwner && !isProfileUserOwner && (
                       <button
                         type="button"
@@ -209,7 +176,8 @@ export const PeopleEnvironmentsTab = ({
                         disabled={isProcessing}
                         className="ml-2 cursor-pointer p-1 text-destructive transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                         title="Remove access"
-                        aria-label={`Remove access from ${getEnvironmentLabel(envValue)}`}>
+                        aria-label={`Remove access from ${getEnvironmentLabel(envValue)}`}
+                      >
                         <X className="h-4 w-4" />
                       </button>
                     )}
@@ -223,18 +191,15 @@ export const PeopleEnvironmentsTab = ({
             </div>
           </div>
           <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground">
-              Without access to
-            </div>
+            <div className="text-sm font-semibold text-foreground">Without access to</div>
             <div className="flex flex-wrap gap-3">
               {withoutAccessEnvironments.length > 0 ? (
                 withoutAccessEnvironments.map((envValue) => (
                   <div
                     key={envValue}
-                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50">
-                    <span className="text-sm font-medium">
-                      {getEnvironmentLabel(envValue)}
-                    </span>
+                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
+                  >
+                    <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
                     {isViewerOwner && !isProfileUserOwner && (
                       <button
                         type="button"
@@ -245,7 +210,8 @@ export const PeopleEnvironmentsTab = ({
                         disabled={isProcessing}
                         className="ml-2 cursor-pointer p-1 text-primary transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                         title="Grant access"
-                        aria-label={`Grant access to ${getEnvironmentLabel(envValue)}`}>
+                        aria-label={`Grant access to ${getEnvironmentLabel(envValue)}`}
+                      >
                         <Plus className="h-4 w-4" />
                       </button>
                     )}
@@ -267,8 +233,7 @@ export const PeopleEnvironmentsTab = ({
             onConfirm={handleConfirm}
             buttonState={{ confirm: { disable: isProcessing } }}
             data={{
-              dialogTitle:
-                pendingAction.type === "add" ? "Grant Access" : "Remove Access",
+              dialogTitle: pendingAction.type === "add" ? "Grant Access" : "Remove Access",
               dialogSubtitle:
                 pendingAction.type === "add"
                   ? `Are you sure you want to grant ${user.email} access to ${pendingEnvLabel}?`

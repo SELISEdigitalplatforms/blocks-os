@@ -20,6 +20,8 @@ export interface User {
   status: number;
   statusReason: string | null;
   deactivatedAtUtc: string | null;
+  /** Legacy misspelled flag still present on some API records; prefer `isVerified`. */
+  isVarified?: boolean;
   isVerified: boolean;
   emailVerifiedAtUtc: string | null;
   phoneVerifiedAtUtc: string | null;
@@ -39,6 +41,8 @@ export interface User {
   employeeId: string | null;
   isMultiOrgEnabled: boolean;
   organizations: IMembership[];
+  OrganizationsRoles?: Record<string, string[]>;
+  OrganizationsPermissions?: Record<string, string[]>;
 }
 
 export interface IMembership {
@@ -49,6 +53,7 @@ export interface IMembership {
 export interface IGetUsersPayload {
   page: number;
   pageSize: number;
+  query?: string;
   sort?: {
     property: string;
     isDescending: boolean;
@@ -56,6 +61,12 @@ export interface IGetUsersPayload {
   filter?: {
     email: string;
     name: string;
+    userIds?: string[];
+    status?: { active?: boolean; inactive?: boolean };
+    mfa?: { enabled?: boolean; disabled?: boolean };
+    joinedOn?: string;
+    lastLogin?: string;
+    lastUpdatedDate?: string;
     organizationId?: string;
   };
   projectKey: string;
@@ -82,8 +93,9 @@ export interface ICreateUserPayload {
   userPassType: number;
   userCreationType: number;
   platform: string;
-  projectKey: string;
+  projectKey?: string;
   organizationId?: string;
+  organizationIds?: string[];
 }
 export interface ICreateUserResponse {
   errors: unknown;
@@ -133,6 +145,26 @@ export interface ISaveRolesAndPermissionsResponse {
   errors: unknown | null;
   isSuccess: boolean;
   itemId: string;
+}
+export interface IUpdateUserAccessControlPayload {
+  userId: string;
+  roles: string[];
+  permissions: string[];
+  organizationId: string;
+}
+export interface IUpdateUserAccessControlResponse {
+  errors: unknown | null;
+  isSuccess: boolean;
+}
+
+export interface IRevokeAccessPayload {
+  userId: string;
+  organizationId: string;
+}
+
+export interface IRevokeAccessResponse {
+  errors: unknown | null;
+  isSuccess: boolean;
 }
 export interface IGetSessionPayload {
   page: number;
@@ -297,7 +329,8 @@ export interface IAccountActivationResponse {
 export interface IAccountResendActivationPayload {
   userId: string;
   // mailPurpose: string;
-  projectKey: string;
+  projectKey?: string;
+  tenantId?: string;
 }
 export interface IAccountResendActivationResponse {
   errors: unknown | null;
@@ -307,7 +340,8 @@ export interface IAccountRecoverPayload {
   email: string;
   captchaCode?: string;
   mailPurpose?: string;
-  projectKey: string;
+  projectKey?: string;
+  tenantId?: string;
 }
 export interface IAccountRecoverResponse {
   errors: unknown | null;

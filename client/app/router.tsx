@@ -1,24 +1,7 @@
-import {
-  AuthResolver,
-  ProtectedGuard,
-  PublicGuard,
-} from "@seliseblocks/blocks-kit/guards";
-import {
-  ConsoleLayout,
-  DashboardRoute,
-} from "@seliseblocks/blocks-kit/layouts";
-import {
-  CallbackPage,
-  ConsolePage,
-  LoginPage,
-  ProfilePage,
-} from "@seliseblocks/blocks-kit/pages";
-import {
-  createBrowserRouter,
-  Navigate,
-  Outlet,
-  useParams,
-} from "react-router-dom";
+import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/genesis-os/guards";
+import { ConsoleLayout, DashboardRoute } from "@seliseblocks/genesis-os/layouts";
+import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/genesis-os/pages";
+import { createBrowserRouter, Navigate, Outlet, useLocation, useParams } from "react-router";
 import { navigationMenus } from "./constants/navigation-menus";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
@@ -43,15 +26,14 @@ import { AuthenticationConfigLayout } from "@blocks-idp/authentication/pages/aut
 import { Certificates } from "@blocks-idp/authentication/pages/authentication-config/general/certificates/certificates";
 import { SSO } from "@blocks-idp/authentication/pages/authentication-config/sso";
 import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
+import { Organizations } from "@blocks-idp/iam/modules/organization-management";
+import { Users } from "@blocks-idp/iam/modules/user-management";
 import { Permissions } from "@blocks-idp/iam/modules/permission-management";
 import { Roles } from "@blocks-idp/iam/modules/role-management";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { IdpSettingsPage } from "@blocks-idp/settings/pages/settings-page";
 import { CreateProjectWrapper } from "./pages/create-project/create-project";
-import {
-  EnvironmentMigrationPage,
-  EnvironmentsPage,
-} from "./pages/environments/environments";
+import { EnvironmentMigrationPage, EnvironmentsPage } from "./pages/environments/environments";
 import { InvitationConfirmPage } from "./pages/invitation/invitation-confirm-page";
 import { InvitationResultPage } from "./pages/invitation/invitation-result-page";
 import { LogsRoute } from "./pages/lmt/logs";
@@ -71,8 +53,10 @@ import GitHubCallbackPage from "./routes/github-callback/github-callback";
 // import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ApiSettingsPage from "./routes/dashboard/api-settings";
 import IamAddPermissionPage from "./routes/dashboard/iam-add-permission";
+import IamOrgDetailPage from "./routes/dashboard/iam-org-detail";
 import IamPermissionDetailPage from "./routes/dashboard/iam-permission-detail";
 import IamRoleDetailPage from "./routes/dashboard/iam-role-detail";
+import IamUserDetailPage from "./routes/dashboard/iam-user-detail";
 import LmtTraceDetailsRedirect from "./routes/dashboard/lmt-trace-details";
 // Temporarily disabled
 // import MagicUrlDetailsPage from "./routes/dashboard/magic-url-details";
@@ -85,11 +69,18 @@ import SecretManagementLayout from "./routes/dashboard/secret-management";
 import { IdentityProviderPage } from "@blocks-idp/authentication/components/identity-provider/identity-provider";
 
 const redirectPaths: Record<string, string> = {
-  "/app/idp/user-detail/*": "/app/idp",
-  "/app/idp/role-detail/*": "/app/idp/roles",
-  "/app/idp/organization-detail/*": "/app/idp/organizations",
-  "/app/idp/permission-detail/*": "/app/idp/permissions",
+  "/app/iam/user-detail/*": "/app/iam/users",
+  "/app/iam/role-detail/*": "/app/iam/roles",
+  "/app/iam/organization-detail/*": "/app/iam/organizations",
+  "/app/iam/permission-detail/*": "/app/iam/permissions",
 };
+
+// Legacy /app/:itemId/idp/* paths (bookmarks, cross-app deep links) forward to /app/:itemId/iam/*.
+function LegacyIdpRedirect() {
+  const location = useLocation();
+  const target = location.pathname.replace(/\/idp(\/|$)/, "/iam$1") + location.search;
+  return <Navigate to={target} replace />;
+}
 
 const emailPageShellClassName = "flex flex-col gap-6 p-6";
 
@@ -247,10 +238,7 @@ export const router = createBrowserRouter([
               {
                 path: ":itemId",
                 element: (
-                  <DashboardRoute
-                    redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}
-                  />
+                  <DashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
                 ),
                 children: [
                   {
@@ -281,12 +269,7 @@ export const router = createBrowserRouter([
                       // Redirect from the retired "managed-services" path
                       {
                         path: "managed-services",
-                        element: (
-                          <Navigate
-                            to="/app/secret-management/my-services"
-                            replace
-                          />
-                        ),
+                        element: <Navigate to="/app/secret-management/my-services" replace />,
                       },
                       {
                         path: "oidc",
@@ -366,7 +349,11 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
-                    path: "idp",
+                    path: "idp/*",
+                    element: <LegacyIdpRedirect />,
+                  },
+                  {
+                    path: "iam",
                     element: <AuthenticationConfigLayout />,
                     children: [
                       {
@@ -380,6 +367,38 @@ export const router = createBrowserRouter([
                       {
                         path: "oidc-template",
                         element: <OidcTemplate />,
+                      },
+                      {
+                        path: "users",
+                        element: <Users />,
+                      },
+                      {
+                        path: "user",
+                        element: <Navigate to="../users" replace />,
+                      },
+                      {
+                        path: "user-detail",
+                        element: <Navigate to="../users" replace />,
+                      },
+                      {
+                        path: "user-detail/:id",
+                        element: <IamUserDetailPage />,
+                      },
+                      {
+                        path: "organizations",
+                        element: <Organizations />,
+                      },
+                      {
+                        path: "organization",
+                        element: <Navigate to="../organizations" replace />,
+                      },
+                      {
+                        path: "organization-detail",
+                        element: <Navigate to="../organizations" replace />,
+                      },
+                      {
+                        path: "organization-detail/:orgId",
+                        element: <IamOrgDetailPage />,
                       },
                       {
                         path: "roles",

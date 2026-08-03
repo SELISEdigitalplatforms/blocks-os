@@ -21,23 +21,23 @@ import {
 } from "@/components/ui-kits/select/select";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import {
-  IdentityProvider,
-} from "@blocks-idp/authentication/models/identity-provider.model";
+import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import {
   useCreateIdentityProvider,
   useGetIdentityProviderById,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
-import {
-  SOCIAL_AUTH_PROVIDERS_CONFIG,
-} from "@blocks-idp/authentication/constants/sso-providers.constant";
+import { SOCIAL_AUTH_PROVIDERS_CONFIG } from "@blocks-idp/authentication/constants/sso-providers.constant";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
-import { toPermissionStubs, toRoleStubs, buildIdentityProviderPayload } from "./identity-provider-form.util";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import {
+  toPermissionStubs,
+  toRoleStubs,
+  buildIdentityProviderPayload,
+} from "./identity-provider-form.util";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -115,8 +115,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     error: providerFetchError,
   } = useGetIdentityProviderById(editId ?? "", open && isEditing);
 
-  const editedProvider =
-    providerResponse?.isSuccess ? providerResponse.data : undefined;
+  const editedProvider = providerResponse?.isSuccess ? providerResponse.data : undefined;
   const isFormLoading = isEditing && isLoadingProvider;
 
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
@@ -140,9 +139,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   });
 
   const providerType = watch("providerType");
-  const blocksOidcWellKnownUrl = tenantId
-    ? getBlocksOidcWellKnownUrl(tenantId)
-    : "";
+  const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
 
   useEffect(() => {
     if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
@@ -179,15 +176,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     setSelectedPermissions(toPermissionStubs(editedProvider.initialPermissions ?? []));
     setRequirePkce(!!editedProvider.requirePkce);
     setRedirectUrisError(null);
-  }, [
-    open,
-    isEditing,
-    isLoadingProvider,
-    providerResponse,
-    editedProvider,
-    reset,
-    onOpenChange,
-  ]);
+  }, [open, isEditing, isLoadingProvider, providerResponse, editedProvider, reset, onOpenChange]);
 
   useEffect(() => {
     if (!open || !isEditing || !isProviderFetchError) return;
@@ -267,141 +256,144 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
               ))}
             </div>
           ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
-          {/* Select Provider */}
-          <div className="space-y-1.5">
-            <Label htmlFor="providerType">
-              Select Provider <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={providerType}
-              disabled={isEditing}
-              onValueChange={(v) => setValue("providerType", v, { shouldValidate: true })}
-            >
-              <SelectTrigger id="providerType">
-                <SelectValue placeholder="Select Provider" />
-              </SelectTrigger>
-              <SelectContent>
-                {PROVIDER_OPTIONS.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Provider Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="provider">
-              Provider Name <span className="text-destructive">*</span>
-            </Label>
-            {providerType === "social" ? (
-              <Select
-                value={watch("provider")}
-                onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
-              >
-                <SelectTrigger id="provider">
-                  <SelectValue placeholder="Select a provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
-                    .filter((c) => c.provider === "google" || c.provider === "microsoft")
-                    .map((config) => (
-                      <SelectItem key={config.provider} value={config.provider}>
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={config.imageSrc}
-                            alt={config.label}
-                            className="h-5 w-5 object-contain"
-                          />
-                          <span>{config.label}</span>
-                        </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Select Provider */}
+              <div className="space-y-1.5">
+                <Label htmlFor="providerType">
+                  Select Provider <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={providerType}
+                  disabled={isEditing}
+                  onValueChange={(v) => setValue("providerType", v, { shouldValidate: true })}
+                >
+                  <SelectTrigger id="providerType">
+                    <SelectValue placeholder="Select Provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROVIDER_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                id="provider"
-                placeholder="my-identity-provider"
-                disabled={isEditing}
-                {...register("provider", { required: "Provider name is required" })}
-              />
-            )}
-            {errors.provider && (
-              <p className="text-xs text-destructive">{errors.provider.message}</p>
-            )}
-          </div>
-
-          {/* Client ID + Client Secret */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="clientId">
-                Client ID <span className="text-destructive">*</span>
-                {isEditing && (
-                  <span className="ml-1 text-xs font-normal text-muted-foreground">
-                    (Cannot be changed)
-                  </span>
-                )}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="clientId"
-                  type={showClientId ? "text" : "password"}
-                  placeholder="Enter client ID"
-                  className="pr-10"
-                  disabled={isEditing}
-                  {...register("clientId", { required: "Client ID is required" })}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowClientId(!showClientId)}
-                >
-                  {showClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  </SelectContent>
+                </Select>
               </div>
-              {errors.clientId && (
-                <p className="text-xs text-destructive">{errors.clientId.message}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="clientSecret">
-                Client Secret <span className="text-destructive">*</span>
-                {isEditing && (
-                  <span className="ml-1 text-xs font-normal text-muted-foreground">
-                    (leave blank to keep existing)
-                  </span>
-                )}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="clientSecret"
-                  type={showClientSecret ? "text" : "password"}
-                  placeholder={isEditing ? "••••••••••••" : "Enter client secret"}
-                  className="pr-10"
-                  {...register("clientSecret", {
-                    required: isEditing ? false : "Client secret is required",
-                  })}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowClientSecret(!showClientSecret)}
-                >
-                  {showClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {errors.clientSecret && (
-                <p className="text-xs text-destructive">{errors.clientSecret.message}</p>
-              )}
-            </div>
-          </div>
 
-          {/* Audience */}
-          {/* <div className="space-y-1.5">
+              {/* Provider Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="provider">
+                  Provider Name <span className="text-destructive">*</span>
+                </Label>
+                {providerType === "social" ? (
+                  <Select
+                    value={watch("provider")}
+                    onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
+                  >
+                    <SelectTrigger id="provider">
+                      <SelectValue placeholder="Select a provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
+                        .filter((c) => c.provider === "google" || c.provider === "microsoft")
+                        .map((config) => (
+                          <SelectItem key={config.provider} value={config.provider}>
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={config.imageSrc}
+                                alt={config.label}
+                                className="h-5 w-5 object-contain"
+                              />
+                              <span>{config.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="provider"
+                    placeholder="my-identity-provider"
+                    disabled={isEditing}
+                    {...register("provider", { required: "Provider name is required" })}
+                  />
+                )}
+                {errors.provider && (
+                  <p className="text-xs text-destructive">{errors.provider.message}</p>
+                )}
+              </div>
+
+              {/* Client ID + Client Secret */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="clientId">
+                    Client ID <span className="text-destructive">*</span>
+                    {isEditing && (
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        (Cannot be changed)
+                      </span>
+                    )}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="clientId"
+                      type={showClientId ? "text" : "password"}
+                      placeholder="Enter client ID"
+                      className="pr-10"
+                      disabled={isEditing}
+                      {...register("clientId", { required: "Client ID is required" })}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowClientId(!showClientId)}
+                    >
+                      {showClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {errors.clientId && (
+                    <p className="text-xs text-destructive">{errors.clientId.message}</p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clientSecret">
+                    Client Secret <span className="text-destructive">*</span>
+                    {isEditing && (
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        (leave blank to keep existing)
+                      </span>
+                    )}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="clientSecret"
+                      type={showClientSecret ? "text" : "password"}
+                      placeholder={isEditing ? "••••••••••••" : "Enter client secret"}
+                      className="pr-10"
+                      {...register("clientSecret", {
+                        required: isEditing ? false : "Client secret is required",
+                      })}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowClientSecret(!showClientSecret)}
+                    >
+                      {showClientSecret ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.clientSecret && (
+                    <p className="text-xs text-destructive">{errors.clientSecret.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Audience */}
+              {/* <div className="space-y-1.5">
             <Label htmlFor="audience">Audience</Label>
             <Input
               id="audience"
@@ -410,33 +402,31 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
             />
           </div> */}
 
-          {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
-          {providerType === "blocks-oidc" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="generatedWellKnownUrl">Well Known URL</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="generatedWellKnownUrl"
-                  readOnly
-                  aria-readonly="true"
-                  tabIndex={-1}
-                  value={blocksOidcWellKnownUrl}
-                  className="cursor-default bg-muted font-mono text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                <CopyToClipboardButton
-                  textToCopy={blocksOidcWellKnownUrl}
-                >
-                  <span />
-                </CopyToClipboardButton>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Auto-generated discovery URL for this Blocks OIDC provider.
-              </p>
-            </div>
-          )}
+              {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
+              {providerType === "blocks-oidc" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="generatedWellKnownUrl">Well Known URL</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="generatedWellKnownUrl"
+                      readOnly
+                      aria-readonly="true"
+                      tabIndex={-1}
+                      value={blocksOidcWellKnownUrl}
+                      className="cursor-default bg-muted font-mono text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                    <CopyToClipboardButton textToCopy={blocksOidcWellKnownUrl}>
+                      <span />
+                    </CopyToClipboardButton>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Auto-generated discovery URL for this Blocks OIDC provider.
+                  </p>
+                </div>
+              )}
 
-          {/* Well Known URL - Hidden for social type */}
-          {/* {providerType !== "social" && (
+              {/* Well Known URL - Hidden for social type */}
+              {/* {providerType !== "social" && (
             <div className="space-y-1.5">
               <Label htmlFor="wellKnownUrl">
                 Well Known URL <span className="text-destructive">*</span>
@@ -456,65 +446,65 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
             </div>
           )} */}
 
-          {/* Redirect URIs */}
-          <div className="space-y-2">
-            <Label>
-              Redirect URI(s) <span className="text-destructive">*</span>
-            </Label>
-            {redirectUris.map((uri, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <Input
-                  value={uri}
-                  onChange={(e) => updateRedirectUri(idx, e.target.value)}
-                  placeholder="https://your-app.com/callback"
-                />
-                {redirectUris.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeRedirectUri(idx)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+              {/* Redirect URIs */}
+              <div className="space-y-2">
+                <Label>
+                  Redirect URI(s) <span className="text-destructive">*</span>
+                </Label>
+                {redirectUris.map((uri, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Input
+                      value={uri}
+                      onChange={(e) => updateRedirectUri(idx, e.target.value)}
+                      placeholder="https://your-app.com/callback"
+                    />
+                    {redirectUris.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeRedirectUri(idx)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {redirectUrisError && (
+                  <p className="text-xs text-destructive">{redirectUrisError}</p>
                 )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-1 h-7 gap-1 px-2 text-xs"
+                  onClick={addRedirectUri}
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Redirect URI
+                </Button>
               </div>
-            ))}
-            {redirectUrisError && (
-              <p className="text-xs text-destructive">{redirectUrisError}</p>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-1 h-7 gap-1 px-2 text-xs"
-              onClick={addRedirectUri}
-            >
-              <Plus className="h-3 w-3" />
-              Add Redirect URI
-            </Button>
-          </div>
 
-          {/* Initial Roles */}
-          <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
+              {/* Initial Roles */}
+              <SSOInitialRoles roles={selectedRoles} onChange={setSelectedRoles} />
 
-          {/* Initial Permissions */}
-          <SSOInitialPermissions
-            permissions={selectedPermissions}
-            onChange={setSelectedPermissions}
-          />
+              {/* Initial Permissions */}
+              <SSOInitialPermissions
+                permissions={selectedPermissions}
+                onChange={setSelectedPermissions}
+              />
 
-          {/* Scope(s) + PKCE */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Label>Scope(s)</Label>
-              <div className="flex items-center gap-2">
-                <Checkbox checked disabled />
-                <span className="text-sm text-muted-foreground">openid</span>
-              </div>
-            </div>
-            {/* <div className="flex items-center gap-2">
+              {/* Scope(s) + PKCE */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Label>Scope(s)</Label>
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked disabled />
+                    <span className="text-sm text-muted-foreground">openid</span>
+                  </div>
+                </div>
+                {/* <div className="flex items-center gap-2">
               <Checkbox
                 id="requirePkce"
                 checked={requirePkce}
@@ -524,20 +514,17 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                 Require PKCE
               </Label>
             </div> */}
-          </div>
+              </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isPending || !isValid || isFormLoading}
-            >
-              {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
-            </Button>
-          </DialogFooter>
-          </form>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isPending || !isValid || isFormLoading}>
+                  {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Provider"}
+                </Button>
+              </DialogFooter>
+            </form>
           )}
         </div>
       </DialogContent>

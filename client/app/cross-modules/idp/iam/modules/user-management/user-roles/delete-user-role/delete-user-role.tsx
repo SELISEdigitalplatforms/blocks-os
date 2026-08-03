@@ -15,14 +15,17 @@ import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { X } from "lucide-react";
 import { useState } from "react";
+
 type DeleteUserRoleProps = {
   role: IRole;
   userId: string;
   projectKey: string;
 };
+
 export const DeleteUserRole = ({ role, userId, projectKey }: DeleteUserRoleProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { deleteRoles, isPending } = useUserRoles({ id: userId, projectKey });
+
   const onClickHandler = async () => {
     try {
       const res = await deleteRoles([role.slug]);
@@ -34,6 +37,7 @@ export const DeleteUserRole = ({ role, userId, projectKey }: DeleteUserRoleProps
       showErrorToast({ errors: "Something went wrong" });
     }
   };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

@@ -34,79 +34,81 @@ export const GRANT_TYPES_OPTIONS: { id: GRANT_TYPES; label: string; value: strin
   },
 ];
 
-export const AuthenticationTabs: { id: string; label: string; value: string }[] = [
-  { id: "oidc-template", label: "OIDC template", value: "oidc-template" },
-  { id: "roles", label: "Roles", value: "roles" },
-  { id: "permissions", label: "Permissions", value: "permissions" },
-  // {
-  //   id: GRANT_TYPES.clientCredential,
-  //   label: "Client Credential",
-  //   value: GRANT_TYPES.clientCredential,
-  // },
-];
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const AuthenticationTabs: { id: string; label: string; value: string }[] = [
+//   { id: "oidc-template", label: "OIDC template", value: "oidc-template" },
+//   { id: "roles", label: "Roles", value: "roles" },
+//   { id: "permissions", label: "Permissions", value: "permissions" },
+//   // {
+//   //   id: GRANT_TYPES.clientCredential,
+//   //   label: "Client Credential",
+//   //   value: GRANT_TYPES.clientCredential,
+//   // },
+// ];
 
-export const SecretManagementTabs: { id: string; label: string; value: string }[] = [
-  {
-    id: "my-secret",
-    label: "My Secret",
-    value: "my-secret",
-  },
-  {
-    id: "managed-services",
-    label: "My Services",
-    value: "my-services",
-  },
-  {
-    id: GRANT_TYPES.authorizationCode,
-    label: "OIDC",
-    value: GRANT_TYPES.authorizationCode,
-  },
-  {
-    id: GRANT_TYPES.social,
-    label: "SSO",
-    value: GRANT_TYPES.social,
-  },
-  {
-    id: "external-idp",
-    label: "External IdP",
-    value: "external-idp",
-  },
-  {
-    id: "captcha",
-    label: "Captcha",
-    value: "captcha",
-  },
-  {
-    id: "mfa",
-    label: "MFA",
-    value: "mfa",
-  },
-  {
-    id: "magic-url",
-    label: "Magic URL",
-    value: "magic-url",
-  },
-  {
-    id: "storage",
-    label: "Storage",
-    value: "storage",
-  },
-  {
-    id: "email",
-    label: "Email",
-    value: "email",
-  },
-  {
-    id: "notification",
-    label: "Notification",
-    value: "notification",
-  },
-  {
-    id: "ai-models",
-    label: "AI Models",
-    value: "ai-models",
-  },
-];
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const SecretManagementTabs: { id: string; label: string; value: string }[] = [
+//   {
+//     id: "my-secret",
+//     label: "My Secret",
+//     value: "my-secret",
+//   },
+//   {
+//     id: "managed-services",
+//     label: "My Services",
+//     value: "my-services",
+//   },
+//   {
+//     id: GRANT_TYPES.authorizationCode,
+//     label: "OIDC",
+//     value: GRANT_TYPES.authorizationCode,
+//   },
+//   {
+//     id: GRANT_TYPES.social,
+//     label: "SSO",
+//     value: GRANT_TYPES.social,
+//   },
+//   {
+//     id: "external-idp",
+//     label: "External IdP",
+//     value: "external-idp",
+//   },
+//   {
+//     id: "captcha",
+//     label: "Captcha",
+//     value: "captcha",
+//   },
+//   {
+//     id: "mfa",
+//     label: "MFA",
+//     value: "mfa",
+//   },
+//   {
+//     id: "magic-url",
+//     label: "Magic URL",
+//     value: "magic-url",
+//   },
+//   {
+//     id: "storage",
+//     label: "Storage",
+//     value: "storage",
+//   },
+//   {
+//     id: "email",
+//     label: "Email",
+//     value: "email",
+//   },
+//   {
+//     id: "notification",
+//     label: "Notification",
+//     value: "notification",
+//   },
+//   {
+//     id: "ai-models",
+//     label: "AI Models",
+//     value: "ai-models",
+//   },
+// ];
 
 export const providers = [
   { id: "keycloak", name: "Keycloak", icon: "/assets/images/keycloak_icon.png" },

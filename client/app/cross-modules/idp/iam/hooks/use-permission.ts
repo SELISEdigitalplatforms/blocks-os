@@ -29,7 +29,9 @@ export const useGetPermissions = (
           isBuiltIn: options.isBuiltIn,
           resourceGroup: options.resourceGroup || "",
           ...(options.type && { type: options.type }),
-          ...(options.permissionSeverity && { permissionSeverity: Number(options.permissionSeverity) }),
+          ...(options.permissionSeverity && {
+            permissionSeverity: Number(options.permissionSeverity),
+          }),
           ...(options.tags && { tags: options.tags }),
           ...(options.resources && { resources: options.resources }),
           ...(options.isArchived !== undefined && { isArchived: options.isArchived }),
@@ -77,16 +79,19 @@ export const useGetResourceGroup = (options: IGetResourceGroupPayload) => {
   });
 };
 
-export const useGetPermissionsGroupBySeverity = (options: IGetPermissionsSeverityRequestPayload) => {
+export const useGetPermissionsGroupBySeverity = (
+  options: IGetPermissionsSeverityRequestPayload,
+) => {
   return useQuery({
     queryKey: ["permissions-group-by-severity", options],
-    queryFn: () => iamService.permission.getPermissionsSeverity(options),
+    queryFn: () => iamService.permission.getPermissionsSeverity(),
     enabled: !!options.projectKey,
   });
 };
 
-export const usePermissionSeverityOptions = (options: IGetPermissionsSeverityRequestPayload) => {
-  const { data, isLoading } = useGetPermissionsGroupBySeverity(options);
-  const severityOptions = useMemo(() => getSeverityOptionsFromResponse(data), [data]);
-  return { severityOptions, isLoading };
-};
+// DEADCODE 2026-07-29: hook with no callers in client, e2e or tests; commented pending review
+// export const usePermissionSeverityOptions = (options: IGetPermissionsSeverityRequestPayload) => {
+//   const { data, isLoading } = useGetPermissionsGroupBySeverity(options);
+//   const severityOptions = useMemo(() => getSeverityOptionsFromResponse(data), [data]);
+//   return { severityOptions, isLoading };
+// };

@@ -1,7 +1,4 @@
-import {
-  IPermission,
-  PermissionSeverityLevel,
-} from "@blocks-idp/iam/models/permission";
+import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 import { toRoleStubs } from "@blocks-idp/iam/utils/role-stub";
 import {
   IdentityProvider,
@@ -94,8 +91,7 @@ export const buildIdentityProviderPayload = ({
     clientId,
     audience: values.audience || editedProvider?.audience,
     wellKnownUrl,
-    tokenEndpointAuthMethod:
-      editedProvider?.tokenEndpointAuthMethod ?? "client_secret_basic",
+    tokenEndpointAuthMethod: editedProvider?.tokenEndpointAuthMethod ?? "client_secret_basic",
     scope: editedProvider?.scope ?? "openid",
     redirectUris: cleanedUris,
     requirePkce,

@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui-kits/switch/switch";
 import { Plus, KeyRound } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useForm } from "react-hook-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -53,10 +53,7 @@ const getBackendErrorMap = (response: unknown) => {
     return typedResponse.errors as Record<string, string | string[]>;
   }
 
-  if (
-    typedResponse.error?.errors &&
-    typeof typedResponse.error.errors === "object"
-  ) {
+  if (typedResponse.error?.errors && typeof typedResponse.error.errors === "object") {
     return typedResponse.error.errors as Record<string, string | string[]>;
   }
 
@@ -94,9 +91,10 @@ export const CreateClientCredential = ({
   const form = useForm<CreateClientModalFormValues>({
     resolver: zodResolver(createClientSchema),
     defaultValues: CreateClientModalFormDefaultValues,
+    mode: "onChange",
   });
   const {
-    formState: { isDirty },
+    formState: { isDirty, isValid },
     reset,
   } = form;
 
@@ -106,8 +104,7 @@ export const CreateClientCredential = ({
       reset({
         itemId: editClient.itemId,
         clientNameService: editClient.name,
-        accessTokenValidForNumberMinutes:
-          editClient.accessTokenValidForNumberMinutes,
+        accessTokenValidForNumberMinutes: editClient.accessTokenValidForNumberMinutes,
         isActive: editClient.isActive,
         roles: editClient.roles ?? [],
         permissions: editClient.permissions ?? [],
@@ -149,8 +146,7 @@ export const CreateClientCredential = ({
       });
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
     } finally {
       reset();
@@ -171,9 +167,7 @@ export const CreateClientCredential = ({
       )}
       <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6 pr-12">
-          <DialogTitle>
-            {isEdit ? "Edit Client Credential" : "Add Client Credential"}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Client Credential" : "Add Client Credential"}</DialogTitle>
           <DialogDescription>
             {isEdit
               ? "Update the credential name, lifetime, roles, and permissions."
@@ -183,7 +177,8 @@ export const CreateClientCredential = ({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+            className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+          >
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
@@ -211,20 +206,22 @@ export const CreateClientCredential = ({
                       <FormLabel>Access Token Lifetime (minutes)</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          min={1}
-                          max={5}
-                          placeholder="5"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="15"
+                          aria-label="Access Token Lifetime in minutes"
                           value={
-                            Number.isFinite(field.value) ? field.value : ""
+                            !Number.isFinite(field.value) || field.value === 0
+                              ? ""
+                              : String(field.value)
                           }
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === ""
-                                ? 0
-                                : Number(e.target.value),
-                            )
-                          }
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            if (raw !== "" && !/^\d+$/.test(raw)) return;
+                            field.onChange(raw === "" ? 0 : Number(raw));
+                            void form.trigger("accessTokenValidForNumberMinutes");
+                          }}
                           onBlur={field.onBlur}
                           name={field.name}
                         />
@@ -242,8 +239,7 @@ export const CreateClientCredential = ({
                         <div className="space-y-0.5">
                           <FormLabel className="text-sm">Status</FormLabel>
                           <p className="text-xs text-muted-foreground">
-                            Inactive credentials cannot be used to obtain new
-                            tokens.
+                            Inactive credentials cannot be used to obtain new tokens.
                           </p>
                         </div>
                         <FormControl>
@@ -298,7 +294,7 @@ export const CreateClientCredential = ({
                   Cancel
                 </Button>
               </DialogClose>
-              <Button disabled={isPending || !isDirty} type="submit">
+              <Button disabled={isPending || !isDirty || !isValid} type="submit">
                 {isPending ? "Saving..." : isEdit ? "Save Changes" : "Add"}
               </Button>
             </DialogFooter>

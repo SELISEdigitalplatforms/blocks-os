@@ -1,21 +1,10 @@
 import React, { createContext, useEffect, useState } from "react";
-import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
+import PageBreadcrumb, { BreadcrumbTitles } from "@/components/breadcrumb/breadcrumb";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import {
-  Download,
-  GitBranch,
-  PanelRightClose,
-  PanelRightOpen,
-} from "lucide-react";
+import { Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { useGetTraceById } from "@blocks-lmt/hooks/use-trace";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { TracingListBreadCrumb } from "./tracing-list-breadcrum/tracing-list-breadcrum";
@@ -50,13 +39,7 @@ export const timelineContext = createContext<{
   isPanelOpen: true,
   isLoading: false,
 });
-const TraceDetailsEmptyState = ({
-  traceId,
-  isError,
-}: {
-  traceId: string;
-  isError: boolean;
-}) => (
+const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError: boolean }) => (
   <Card className="rounded-sm shadow-none">
     <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -71,9 +54,7 @@ const TraceDetailsEmptyState = ({
           : `No trace data exists for this ID in the current project. The trace may have expired, or it may not have been recorded yet.`}
       </p>
       {traceId ? (
-        <p className="mt-4 break-all font-mono text-xs text-low-emphasis">
-          {traceId}
-        </p>
+        <p className="mt-4 break-all font-mono text-xs text-low-emphasis">{traceId}</p>
       ) : null}
     </CardContent>
   </Card>
@@ -96,10 +77,13 @@ export const TraceDetails = ({
   id,
   breadcrumbIndex = 2,
   logsTraceBreadcrumbHref,
+  breadcrumbTitles,
 }: {
   id: string;
   breadcrumbIndex?: number;
   logsTraceBreadcrumbHref?: string;
+  /** Titles for ancestor segments owned by the routing page (e.g. the logs crumbs). */
+  breadcrumbTitles?: BreadcrumbTitles;
 }) => {
   const lmtBase = useLmtBasePath();
   const isMobile = useIsMobile();
@@ -147,22 +131,15 @@ export const TraceDetails = ({
   const isPending = isLoading || isFetching;
   const hasTrace = Boolean(data?.data);
   const isEmpty = !isPending && !hasTrace;
-  const showTimelineLoading =
-    isPending || (hasTrace && traceHistory.length === 0);
+  const showTimelineLoading = isPending || (hasTrace && traceHistory.length === 0);
   const entryPoint = data?.data?.entryPoint;
-  BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing`] = "Tracing";
-  if (id) {
-    BREADCRUMB_CUSTOM_TITLES[`${lmtBase}/tracing/${id}`] =
-      getTraceBreadcrumbLabel(id, hasTrace, entryPoint, true);
-  }
-  if (logsTraceBreadcrumbHref) {
-    BREADCRUMB_CUSTOM_TITLES[logsTraceBreadcrumbHref] = getTraceBreadcrumbLabel(
-      id,
-      hasTrace,
-      entryPoint,
-      true,
-    );
-  }
+  const traceLabel = getTraceBreadcrumbLabel(id, hasTrace, entryPoint, true);
+  const resolvedBreadcrumbTitles: BreadcrumbTitles = {
+    ...breadcrumbTitles,
+    [`${lmtBase}/tracing`]: "Tracing",
+    ...(id ? { [`${lmtBase}/tracing/${id}`]: traceLabel } : {}),
+    ...(logsTraceBreadcrumbHref ? { [logsTraceBreadcrumbHref]: traceLabel } : {}),
+  };
   const selectedTraceHistory = traceHistory[traceHistory?.length - 1];
   return (
     <timelineContext.Provider
@@ -173,7 +150,8 @@ export const TraceDetails = ({
         setSelectedTrace,
         isPanelOpen,
         isLoading: showTimelineLoading,
-      }}>
+      }}
+    >
       <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
         {isPending ? (
           <>
@@ -185,13 +163,15 @@ export const TraceDetails = ({
             <PageBreadcrumb
               breadcrumbIndex={breadcrumbIndex}
               listClassName="text-base sm:text-lg"
+              customTitles={resolvedBreadcrumbTitles}
             />
             {hasTrace ? (
               <Button
                 size="default"
                 variant="outline"
                 className="shrink-0 shadow-none"
-                onClick={downloadJSONFile}>
+                onClick={downloadJSONFile}
+              >
                 <Download className="h-4 w-4 lg:mr-2" />
                 <span className="sr-only lg:not-sr-only">Download JSON</span>
               </Button>
@@ -214,7 +194,8 @@ export const TraceDetails = ({
                     <Skeleton className="h-6 w-64" />
                   ) : (
                     <div
-                      className={`mt-2 flex flex-col items-start gap-2 md:mt-0 md:flex-row md:items-center md:justify-end md:gap-10`}>
+                      className={`mt-2 flex flex-col items-start gap-2 md:mt-0 md:flex-row md:items-center md:justify-end md:gap-10`}
+                    >
                       <div className="flex flex-col items-start text-[12px] font-medium text-low-emphasis sm:items-center lg:flex-row">
                         <span>Duration </span>
                         <span className="ml-1 break-all text-high-emphasis">
@@ -243,7 +224,8 @@ export const TraceDetails = ({
                       <Button
                         variant="outline"
                         className="h-10 w-10 p-0"
-                        onClick={() => setIsPanelOpen(!isPanelOpen)}>
+                        onClick={() => setIsPanelOpen(!isPanelOpen)}
+                      >
                         {isPanelOpen ? (
                           <PanelRightClose width={20} height={20} />
                         ) : (
@@ -260,10 +242,9 @@ export const TraceDetails = ({
           {isPanelOpen && (
             <div
               className={`w-full overflow-hidden transition-all duration-500 ease-in-out md:w-[32%] ${
-                isPanelOpen
-                  ? "translate-x-0 opacity-100"
-                  : "translate-x-full opacity-0"
-              }`}>
+                isPanelOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+              }`}
+            >
               <TracingInsights />
             </div>
           )}

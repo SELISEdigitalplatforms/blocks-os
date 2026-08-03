@@ -4,21 +4,22 @@ interface ChatEventMessageProps {
   message: string;
 }
 
-export const eventTypes = [
-  "workflow_start",
-  "node_start",
-  "planner_decision_task",
-  "retrieval_start",
-  "retrieval_complete",
-  "tool_execution_start",
-  "tool_execution_approval_required",
-  "tool_execution_complete",
-  "subagent_call_start",
-  "subagent_call_complete",
-  "execution_long_running",
-  "partial_failure",
-  "execution_failed",
-];
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const eventTypes = [
+//   "workflow_start",
+//   "node_start",
+//   "planner_decision_task",
+//   "retrieval_start",
+//   "retrieval_complete",
+//   "tool_execution_start",
+//   "tool_execution_approval_required",
+//   "tool_execution_complete",
+//   "subagent_call_start",
+//   "subagent_call_complete",
+//   "execution_long_running",
+//   "partial_failure",
+//   "execution_failed",
+// ];
 
 const EVENT_MESSAGES: Record<string, string[]> = {
   workflow_start: [
@@ -191,20 +192,18 @@ const EVENT_MESSAGES: Record<string, string[]> = {
   ],
 };
 
-export const getRandomEventMessage = (eventType: string): string => {
-  let normalizedType = eventType.toLowerCase().replace(/-/g, "_");
-
-  if (normalizedType.startsWith("node_start")) {
-    normalizedType = "node_start";
-  }
-
-  const messages = EVENT_MESSAGES[normalizedType];
-  if (!messages || messages.length === 0) {
-    return "Processing";
-  }
-
-  return messages[Math.floor(Math.random() * messages.length)];
-};
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const getRandomEventMessage = (eventType: string): string => {
+//   let normalizedType = eventType.toLowerCase().replace(/-/g, "_");
+////   if (normalizedType.startsWith("node_start")) {
+//     normalizedType = "node_start";
+//   }
+////   const messages = EVENT_MESSAGES[normalizedType];
+//   if (!messages || messages.length === 0) {
+//     return "Processing";
+//   }
+////   return messages[Math.floor(Math.random() * messages.length)];
+// };
 
 export const AnimatedDots = () => {
   return (

@@ -5,5 +5,5 @@ export const isHttpErrorStatus = (error: unknown, status: number): boolean => {
     "status" in error &&
     typeof (error as { status: unknown }).status === "number" &&
     (error as { status: number }).status === status
-  )
-}
+  );
+};

@@ -3,7 +3,8 @@ import { BarChart3, GitBranch, ScrollText } from "lucide-react";
 
 export type { NavGroup, NavItem };
 
-export const LMT_BASE_PATH = "/app/lmt" as const;
+// DEADCODE 2026-07-29: no importers; every usage is a local variable from useLmtBasePath(); commented pending review
+// export const LMT_BASE_PATH = "/app/lmt" as const;
 
 export const LMT_NAV_GROUPS: NavGroup[] = [
   {
@@ -39,4 +40,5 @@ export const LMT_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export const ALL_LMT_NAV_ITEMS = LMT_NAV_GROUPS.flatMap((g) => g.items);
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const ALL_LMT_NAV_ITEMS = LMT_NAV_GROUPS.flatMap((g) => g.items);

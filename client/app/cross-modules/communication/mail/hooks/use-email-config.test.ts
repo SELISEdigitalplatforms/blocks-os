@@ -13,7 +13,7 @@ import { emailService } from "@blocks-communication/mail/services/email.services
 import { useGetEmailConfigs, useSaveEmailConfig, useDeleteEmailConfig } from "./use-email-config";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("Email Config Hooks", () => {
   beforeEach(() => {
@@ -63,7 +63,7 @@ describe("Email Config Hooks", () => {
     });
 
     it("should handle empty tenantId", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: { tenantId: "" },
       });
@@ -104,7 +104,10 @@ describe("Email Config Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.saveMailConfig).toHaveBeenCalledWith(mockSaveConfigPayload, expect.anything());
+      expect(emailService.saveMailConfig).toHaveBeenCalledWith(
+        mockSaveConfigPayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 
@@ -174,7 +177,10 @@ describe("Email Config Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.deleteMailConfig).toHaveBeenCalledWith(mockDeleteConfigPayload, expect.anything());
+      expect(emailService.deleteMailConfig).toHaveBeenCalledWith(
+        mockDeleteConfigPayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 

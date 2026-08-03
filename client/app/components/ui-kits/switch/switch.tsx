@@ -36,28 +36,27 @@ const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root> & VariantProps<typeof switchVariants>
 >(({ className, size, ...props }, ref) => (
-    <SwitchPrimitive.Root
-      ref={ref}
+  <SwitchPrimitive.Root
+    ref={ref}
+    className={cn(
+      switchVariants({ size }),
+      "border-neutral-300 bg-neutral-200 data-[state=checked]:border-blocks-primary-500 data-[state=checked]:bg-blocks-primary-500",
+      "disabled:pointer-events-none disabled:cursor-not-allowed",
+      "disabled:border-neutral-200 disabled:bg-neutral-100",
+      "disabled:data-[state=checked]:border-slate-300 disabled:data-[state=checked]:bg-slate-300",
+      "group",
+      className,
+    )}
+    {...props}
+  >
+    <SwitchPrimitive.Thumb
       className={cn(
-        switchVariants({ size }),
-        "border-neutral-300 bg-neutral-200 data-[state=checked]:border-blocks-primary-500 data-[state=checked]:bg-blocks-primary-500",
-        "disabled:pointer-events-none disabled:cursor-not-allowed",
-        "disabled:border-neutral-200 disabled:bg-neutral-100",
-        "disabled:data-[state=checked]:border-slate-300 disabled:data-[state=checked]:bg-slate-300",
-        "group",
-        className,
+        switchThumbVariants({ size }),
+        "bg-white shadow-sm",
+        "group-data-[disabled]:bg-neutral-50 group-data-[disabled]:shadow-none",
       )}
-      {...props}
-    >
-      <SwitchPrimitive.Thumb
-        className={cn(
-          switchThumbVariants({ size }),
-          "bg-white shadow-sm",
-          "group-data-[disabled]:bg-neutral-50 group-data-[disabled]:shadow-none",
-        )}
-      />
-    </SwitchPrimitive.Root>
-  ),
-);
+    />
+  </SwitchPrimitive.Root>
+));
 Switch.displayName = SwitchPrimitive.Root.displayName;
 export { Switch };

@@ -9,10 +9,15 @@ import {
 import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
 import { Settings } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
-import { Link, Outlet, useLocation } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { Link, Outlet, useLocation } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { AddRole } from "@blocks-idp/iam/modules/role-management";
+import {
+  AddOrganization,
+  OrganizationConfig,
+} from "@blocks-idp/iam/modules/organization-management";
+import { InviteUser } from "@blocks-idp/iam/modules/user-management";
 
 export const AuthenticationConfigLayout = () => {
   const { pathname } = useLocation();
@@ -33,9 +38,16 @@ export const AuthenticationConfigLayout = () => {
 
   const headerActions = (
     <>
+      {currentPath === "users" && <InviteUser />}
+      {currentPath === "organizations" && (
+        <>
+          <OrganizationConfig />
+          <AddOrganization />
+        </>
+      )}
       {currentPath === "roles" && <AddRole />}
       {currentPath === "permissions" && (
-        <Link to={scoped("idp/permission-detail/new")}>
+        <Link to={scoped("iam/permission-detail/new")}>
           <PrimaryButton label="Add Permission" />
         </Link>
       )}
@@ -44,7 +56,8 @@ export const AuthenticationConfigLayout = () => {
           variant="outline"
           size="default"
           className="gap-1 text-sm font-medium"
-          onClick={() => setConfigureOpen(true)}>
+          onClick={() => setConfigureOpen(true)}
+        >
           <Settings className="h-5 w-5" />
           <span className="sr-only sm:not-sr-only">Configure</span>
         </Button>
@@ -62,22 +75,16 @@ export const AuthenticationConfigLayout = () => {
                 <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] sm:text-2xl">
                   {currentItem.label}
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  {currentItem.desc}
-                </p>
+                <p className="text-sm text-muted-foreground">{currentItem.desc}</p>
               </div>
-              <div className="flex shrink-0 items-center justify-end gap-2">
-                {headerActions}
-              </div>
+              <div className="flex shrink-0 items-center justify-end gap-2">{headerActions}</div>
             </header>
           )}
           <Outlet />
         </div>
       </div>
 
-      <Dialog
-        open={configureOpen ?? false}
-        onOpenChange={(open) => setConfigureOpen(open)}>
+      <Dialog open={configureOpen ?? false} onOpenChange={(open) => setConfigureOpen(open)}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Email Configuration</DialogTitle>

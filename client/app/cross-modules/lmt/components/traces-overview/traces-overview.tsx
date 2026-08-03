@@ -1,16 +1,9 @@
-import {
-  FilterControls,
-  FilterToolbar,
-  useSortQueryParams,
-} from "@/components/filter-toolbar";
+import { FilterControls, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import {
-  ScrollArea,
-  ScrollBar,
-} from "@/components/ui-kits/scroll-area/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 import {
   Select,
   SelectContent,
@@ -29,32 +22,19 @@ import {
 } from "@/components/ui-kits/table/table";
 import { Tabs, TabsContent } from "@/components/ui-kits/tabs/tabs";
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { formatDate, parseDateString } from "@/lib/utils";
 import { TraceProviderSetupGuideLine } from "@blocks-lmt/components/trace-guideline/trace-provider-guideline";
-import {
-  CLOUD_BUILTIN_SERVICES,
-  TRACE_PROVIDERS,
-} from "@blocks-lmt/constants/trace.constant";
+import { CLOUD_BUILTIN_SERVICES, TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
 import { useGetTraces } from "@blocks-lmt/hooks/use-trace";
 import { TraceTree, getTypeColor } from "@blocks-lmt/models/trace.model";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Archive, BookOpenText, Flame, Snowflake } from "lucide-react";
-import {
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  useQueryStates,
-} from "nuqs";
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { serviceRegistryService } from "@/cross-modules/identifier/services/service-registry.service";
 type TracesOverviewProps = {
   projectKey: string;
@@ -128,8 +108,7 @@ function TracesList({
           const entryPoint = row.original.entryPoint;
           return (
             <div className="ml-2 flex w-[220px] flex-row items-center gap-2 sm:ml-0 sm:w-[320px]">
-              <span
-                className={`font-semibold uppercase ${getTypeColor(entryPoint.method)}`}>
+              <span className={`font-semibold uppercase ${getTypeColor(entryPoint.method)}`}>
                 {entryPoint.method}
               </span>
               <span>{entryPoint.actionName}</span>
@@ -148,9 +127,7 @@ function TracesList({
           />
         ),
         cell: ({ row }) => {
-          const service = services.find(
-            (item) => item.value === row.original.serviceName,
-          );
+          const service = services.find((item) => item.value === row.original.serviceName);
           return (
             <div className="ml-2 flex items-center sm:ml-0 sm:w-[180px]">
               {service?.label || row.original.serviceName}
@@ -186,11 +163,7 @@ function TracesList({
         ),
         cell: ({ row }) => {
           const dateValue = parseDateString(row.original.timestamp);
-          return (
-            <div className="ml-2 w-[180px] lowercase sm:ml-0">
-              {formatDate(dateValue)}
-            </div>
-          );
+          return <div className="ml-2 w-[180px] lowercase sm:ml-0">{formatDate(dateValue)}</div>;
         },
       },
     ],
@@ -207,19 +180,12 @@ function TracesList({
       <Table className="text-sm">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow
-              key={headerGroup.id}
-              className="px-4 py-2 hover:bg-transparent">
+            <TableRow key={headerGroup.id} className="px-4 py-2 hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className="font-bold text-medium-emphasis">
+                <TableHead key={header.id} className="font-bold text-medium-emphasis">
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -231,9 +197,8 @@ function TracesList({
               <TableRow
                 key={row.id}
                 className="cursor-pointer text-medium-emphasis hover:bg-accent/50"
-                onClick={() =>
-                  navigate(`${LMT_BASE_PATH}/tracing/${row.original.traceId}`)
-                }>
+                onClick={() => navigate(`${LMT_BASE_PATH}/tracing/${row.original.traceId}`)}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -245,7 +210,8 @@ function TracesList({
             <TableRow>
               <TableCell
                 colSpan={table.getAllColumns().length}
-                className="h-24 text-center text-muted-foreground">
+                className="h-24 text-center text-muted-foreground"
+              >
                 No results.
               </TableCell>
             </TableRow>
@@ -262,9 +228,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const { sortQueryParams } = useTraceSortQueryParams();
   const [tabId, setTabId] = useState("hot");
   const [open, setOpen] = useState(false);
-  const [provider, setProvider] = useState<TRACE_PROVIDERS>(
-    TRACE_PROVIDERS.hot,
-  );
+  const [provider, setProvider] = useState<TRACE_PROVIDERS>(TRACE_PROVIDERS.hot);
   const { data: registeredServices } = useQuery({
     queryKey: ["registered-services", projectKey],
     queryFn: () =>
@@ -297,8 +261,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       })),
     ];
     return merged.filter(
-      (item, index, array) =>
-        array.findIndex((value) => value.value === item.value) === index,
+      (item, index, array) => array.findIndex((value) => value.value === item.value) === index,
     );
   }, [registeredServices?.data]);
   const pageChangeHandler = (page: number) => {
@@ -324,18 +287,14 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     <main>
       <Tabs
         value={tabId}
-        onValueChange={(value: string) =>
-          tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)
-        }>
+        onValueChange={(value: string) => tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)}
+      >
         <PageHeader
           title="Tracing"
           description="Trace requests across services"
           actions={
             <>
-              <Button
-                onClick={() => setOpen((current) => !current)}
-                variant="outline"
-                size="sm">
+              <Button onClick={() => setOpen((current) => !current)} variant="outline" size="sm">
                 <BookOpenText className="aspect-square w-4" />
                 <span className="sr-only sm:not-sr-only sm:ml-2">Guide</span>
               </Button>
@@ -356,7 +315,8 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
               value={tabId}
               onValueChange={(value: string) =>
                 tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)
-              }>
+              }
+            >
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -377,17 +337,14 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() =>
-                      tabChangedHandler(
-                        option.value as keyof typeof TRACE_PROVIDERS,
-                      )
-                    }
+                    onClick={() => tabChangedHandler(option.value as keyof typeof TRACE_PROVIDERS)}
                     className={[
                       "rounded-xl border p-4 text-left transition-all",
                       isActive
                         ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
                         : "border-border bg-background hover:border-primary/40 hover:bg-accent/30",
-                    ].join(" ")}>
+                    ].join(" ")}
+                  >
                     <div className="flex items-center gap-3">
                       <div
                         className={[
@@ -395,13 +352,12 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
                           isActive
                             ? "bg-primary/10 text-primary"
                             : "bg-muted text-muted-foreground",
-                        ].join(" ")}>
+                        ].join(" ")}
+                      >
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <div className="font-medium text-high-emphasis">
-                          {option.title}
-                        </div>
+                        <div className="font-medium text-high-emphasis">{option.title}</div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {option.description}
                         </div>
@@ -436,11 +392,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
               />
             </CardHeader>
             <CardContent>
-              <TracesList
-                data={data?.data || []}
-                isLoading={loading}
-                services={allServices}
-              />
+              <TracesList data={data?.data || []} isLoading={loading} services={allServices} />
               {!loading && data && data.totalCount > queryParams.pageSize && (
                 <div className="mt-5 flex items-center md:justify-end">
                   <Pagination
@@ -471,11 +423,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
           </Card>
         </TabsContent>
         {!isMobile ? (
-          <TraceProviderSetupGuideLine
-            open={open}
-            onOpenChange={setOpen}
-            provider={provider}
-          />
+          <TraceProviderSetupGuideLine open={open} onOpenChange={setOpen} provider={provider} />
         ) : null}
       </Tabs>
     </main>

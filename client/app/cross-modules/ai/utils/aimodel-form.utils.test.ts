@@ -20,9 +20,9 @@ describe("aimodel-form.utils", () => {
           apiKey: "sk-x",
         }).success,
       ).toBe(true);
-      expect(
-        OpenAIModelSchema.safeParse({ model: "", url: "bad", apiKey: "" }).success,
-      ).toBe(false);
+      expect(OpenAIModelSchema.safeParse({ model: "", url: "bad", apiKey: "" }).success).toBe(
+        false,
+      );
     });
 
     it("OfficialApiModelSchema validates url format", () => {

@@ -14,7 +14,7 @@ import {
   useTransferOwnership,
 } from "./use-people";
 
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 vi.mock("@blocks-identifier/services/people.service", () => ({
   peopleService: {
     getPeople: vi.fn(),
@@ -37,10 +37,9 @@ describe("use-people hooks", () => {
       peoplesTotalCount: 1,
       isOwner: true,
     } as never);
-    const { result } = renderHook(
-      () => useGetPeople({ page: 0, pageSize: 10, filter: "" }),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useGetPeople({ page: 0, pageSize: 10, filter: "" }), {
+      wrapper: createWrapper(),
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(peopleService.getPeople).toHaveBeenCalledWith({
       page: 0,

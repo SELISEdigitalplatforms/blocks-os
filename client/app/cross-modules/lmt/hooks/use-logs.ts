@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { IAPIResponse } from "@/models/api-response";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import type { ILog } from "../models/log.model";
 import { lmtService } from "../services/lmt.service";
 
@@ -168,8 +168,7 @@ export const useLogs = ({
         const payload = generateFetchLogsPayload();
         payload.filter.endDate = lastDate;
         const res = await lmtService.log.getLogsByDate(payload);
-        if (res.totalCount && res.totalCount <= page * pageSize)
-          setHasTopMore(false);
+        if (res.totalCount && res.totalCount <= page * pageSize) setHasTopMore(false);
         setPage((currentPage) => currentPage + 1);
         if (!res.data.length) return [];
         return res.data.reverse();

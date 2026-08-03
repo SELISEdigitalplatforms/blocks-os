@@ -26,7 +26,7 @@ import { resolveModelConfig } from "@blocks-ai/utils/aimodel-form.utils";
 import { IModelInfo, IUpdateModelPayload } from "@blocks-ai/types/aimodel.service.type";
 import { useUpdateModel } from "@blocks-ai/hooks/use-aimodel";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 interface ModelEditKeyModalProps {
   modelOptions: { model: string; goodName: string }[];
   editKeyModalOpen: boolean;
@@ -154,7 +154,9 @@ export const ModelEditKeyModal = ({
                   name="url"
                   render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>URL <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        URL <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl className="w-full">
                         <Input
                           className="flex w-full"
@@ -173,7 +175,9 @@ export const ModelEditKeyModal = ({
               )}
               {fields.includes("deploymentName") && (
                 <FormItem>
-                  <FormLabel>Deployment Name <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Deployment Name <span className="text-red-500">*</span>
+                  </FormLabel>
                   <Input value={selectedModel} disabled />
                 </FormItem>
               )}
@@ -193,7 +197,9 @@ export const ModelEditKeyModal = ({
                                 ? ((field.value as string) ?? "")
                                 : maskKey((field.value as string) ?? "")
                             }
-                            onChange={(e) => { if (apiKeyEditable) field.onChange(e.target.value); }}
+                            onChange={(e) => {
+                              if (apiKeyEditable) field.onChange(e.target.value);
+                            }}
                             disabled={!apiKeyEditable}
                             placeholder={apiKeyEditable ? "Enter new API key" : ""}
                             className="inline-block w-full truncate border-none shadow-none focus-visible:ring-0"
@@ -204,7 +210,10 @@ export const ModelEditKeyModal = ({
                             type="button"
                             variant="ghost"
                             className="h-fit w-fit p-1"
-                            onClick={() => { field.onChange(""); setApiKeyEditable(true); }}
+                            onClick={() => {
+                              field.onChange("");
+                              setApiKeyEditable(true);
+                            }}
                           >
                             <Pen className="h-4 w-4 text-foreground/60" />
                           </Button>
@@ -248,7 +257,9 @@ export const ModelEditKeyModal = ({
             </div>
             <DialogFooter className="mt-6">
               <DialogClose asChild>
-                <Button variant="secondary" disabled={isPending}>Cancel</Button>
+                <Button variant="secondary" disabled={isPending}>
+                  Cancel
+                </Button>
               </DialogClose>
               <Button disabled={!form.formState.isValid || isPending} type="submit">
                 {isPending ? "Saving..." : "Save"}

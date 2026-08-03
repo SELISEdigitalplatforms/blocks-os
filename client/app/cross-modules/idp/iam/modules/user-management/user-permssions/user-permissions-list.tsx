@@ -1,12 +1,14 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
+
 interface UserPermissionsListProps {
   permissions: IPermission[];
   isLoading: boolean;
   userId: string;
   onRemovePermission: (resource: string) => void;
 }
+
 const LoadingSkelton = () => (
   <div className="grid w-full grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -24,15 +26,16 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
+
 export const UserPermissionsList = ({
   permissions,
   isLoading,
-  userId,
   onRemovePermission,
 }: UserPermissionsListProps) => {
   if (isLoading) {
     return <LoadingSkelton />;
   }
+
   return (
     <>
       {permissions && permissions.length > 0 ? (

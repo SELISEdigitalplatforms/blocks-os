@@ -1,5 +1,5 @@
-import { http } from "@/lib/http-client";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
+import { http } from "@/lib/http/http-client";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -14,7 +14,7 @@ import {
 import { ORGANIZATION_ENDPOINTS } from "../constants/endpoint.constant";
 import { OrganizationService } from "./organization.service";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("OrganizationService", () => {
   let service: OrganizationService;
@@ -33,38 +33,46 @@ describe("OrganizationService", () => {
     it("should GET with correct query params", async () => {
       vi.mocked(http.get).mockResolvedValue(mockOrganizationsResponse);
 
-      const result = await service.getOrganizations(
-        mockGetOrganizationsPayload,
-      );
+      const result = await service.getOrganizations(mockGetOrganizationsPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?projectKey=${mockGetOrganizationsPayload.projectKey}&page=${mockGetOrganizationsPayload.page}&pageSize=${mockGetOrganizationsPayload.pageSize}`,
+        `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?Page=${mockGetOrganizationsPayload.page}&PageSize=${mockGetOrganizationsPayload.pageSize}`,
         undefined,
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockOrganizationsResponse);
     });
 
+    it("should send the search term as Filter.Search", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockOrganizationsResponse);
+
+      await service.getOrganizations({ ...mockGetOrganizationsPayload, searchText: "acme corp" });
+
+      expect(http.get).toHaveBeenCalledWith(
+        `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}?Page=${mockGetOrganizationsPayload.page}&PageSize=${mockGetOrganizationsPayload.pageSize}&Filter.Search=acme+corp`,
+        undefined,
+        { absoluteUrl: true },
+      );
+    });
+
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.getOrganizations(mockGetOrganizationsPayload),
-      ).rejects.toThrow("Network error");
+      await expect(service.getOrganizations(mockGetOrganizationsPayload)).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 
   // ─── getOrganizationById ──────────────────────────────────────────────────
   describe("getOrganizationById", () => {
-    it("should GET with correct query params", async () => {
+    it("should GET the organization as a path segment", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetOrganizationByIdResponse);
 
-      const result = await service.getOrganizationById(
-        mockGetOrganizationByIdPayload,
-      );
+      const result = await service.getOrganizationById(mockGetOrganizationByIdPayload);
 
       expect(http.get).toHaveBeenCalledWith(
-        `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}?ProjectKey=${mockGetOrganizationByIdPayload.projectKey}&ItemId=${mockGetOrganizationByIdPayload.itemId}`,
+        `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}/${mockGetOrganizationByIdPayload.itemId}`,
         undefined,
         { absoluteUrl: true },
       );
@@ -74,9 +82,9 @@ describe("OrganizationService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.getOrganizationById(mockGetOrganizationByIdPayload),
-      ).rejects.toThrow("Network error");
+      await expect(service.getOrganizationById(mockGetOrganizationByIdPayload)).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 
@@ -85,12 +93,10 @@ describe("OrganizationService", () => {
     it("should POST to the correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const result = await service.saveOrganization(
-        mockSaveOrganizationPayload,
-      );
+      const result = await service.saveOrganization(mockSaveOrganizationPayload);
 
       expect(http.post).toHaveBeenCalledWith(
-        ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION,
+        ORGANIZATION_ENDPOINTS.CREATE_ORGANIZATION,
         mockSaveOrganizationPayload,
         undefined,
         { absoluteUrl: true },
@@ -101,9 +107,9 @@ describe("OrganizationService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.saveOrganization(mockSaveOrganizationPayload),
-      ).rejects.toThrow("Network error");
+      await expect(service.saveOrganization(mockSaveOrganizationPayload)).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 
@@ -149,9 +155,9 @@ describe("OrganizationService", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.getOrganizationConfig(TEST_PROJECT_KEY),
-      ).rejects.toThrow("Network error");
+      await expect(service.getOrganizationConfig(TEST_PROJECT_KEY)).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 
@@ -160,9 +166,7 @@ describe("OrganizationService", () => {
     it("should POST to the correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const result = await service.saveOrganizationConfig(
-        mockSaveOrganizationConfigPayload,
-      );
+      const result = await service.saveOrganizationConfig(mockSaveOrganizationConfigPayload);
 
       expect(http.post).toHaveBeenCalledWith(
         ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG,

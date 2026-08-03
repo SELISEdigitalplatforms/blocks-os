@@ -29,6 +29,12 @@ export interface GetRolesPayload {
   };
   page?: number;
   pageSize?: number;
+  /**
+   * Scopes the role list to a tenant or organization. The service posts the
+   * payload straight through, so callers that manage per-organization access
+   * (the user-detail Access tab) can narrow the list to one organization.
+   */
+  projectKey?: string;
 }
 export interface GetRolesResponse {
   data: IRole[];
@@ -101,7 +107,7 @@ export interface GroupsData {
  */
 export enum ResourceType {
   /** Permission guards a server-side API endpoint. */
-  "Endpoint" = 1,
+  Endpoint = 1,
   /** Permission guards a client-side user action / UI affordance. */
   "FE action" = 2,
   /** Permission guards access to a specific data record or data class. */

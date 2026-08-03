@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Button } from "@/components/ui-kits/button/button";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 type ConfigureCaptchaModalProps = {
@@ -117,7 +117,9 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                 name="provider"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Captcha Provider <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel>
+                      Captcha Provider <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Select
                         onValueChange={field.onChange}

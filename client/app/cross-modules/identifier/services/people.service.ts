@@ -32,9 +32,7 @@ export class PeopleService {
     return http.post<GetPeopleResponse>(PEOPLE_ENDPOINTS.GETS, payload);
   }
 
-  invitePeople(
-    invitePeoplePayload: IInvitePeoplePayload,
-  ): Promise<IInvitePeopleResponse> {
+  invitePeople(invitePeoplePayload: IInvitePeoplePayload): Promise<IInvitePeopleResponse> {
     return http.post(PEOPLE_ENDPOINTS.INVITE, invitePeoplePayload);
   }
 

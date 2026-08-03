@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { AlertTriangle, Check } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import {
   Dialog,
   DialogContent,
@@ -25,26 +20,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui-kits/input-otp/input-otp";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui-kits/input-otp/input-otp";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { useCountDown } from "@seliseblocks/blocks-kit/hooks";
+import { useCountDown } from "@seliseblocks/genesis-os/hooks";
 import { useInitiateMigration, useVerifyMigration } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useDataMigrationFormState } from "./migration-form-state";
-import {
-  MIGRATION_SERVICE_NAME_TO_ID,
-  migrationVerificationSchema,
-} from "./migration-form-schema";
+import { MIGRATION_SERVICE_NAME_TO_ID, migrationVerificationSchema } from "./migration-form-schema";
 
 const CustomInputOTPSlot = ({ index }: { index: number }) => (
   <InputOTPSlot
@@ -61,10 +49,8 @@ export const ReviewConfirmForm = () => {
   const [verificationId, setVerificationId] = useState("");
   const { remainingTime, reset } = useCountDown(300);
 
-  const { mutateAsync: initiateMigration, isPending: isInitiating } =
-    useInitiateMigration();
-  const { mutateAsync: verifyMigration, isPending: isVerifying } =
-    useVerifyMigration();
+  const { mutateAsync: initiateMigration, isPending: isInitiating } = useInitiateMigration();
+  const { mutateAsync: verifyMigration, isPending: isVerifying } = useVerifyMigration();
 
   const verificationForm = useForm({
     resolver: zodResolver(migrationVerificationSchema),
@@ -137,9 +123,7 @@ export const ReviewConfirmForm = () => {
     }
   };
 
-  const handleVerifyMigration = async (values: {
-    verificationCode: string;
-  }) => {
+  const handleVerifyMigration = async (values: { verificationCode: string }) => {
     try {
       const response = await verifyMigration({
         verificationId,
@@ -149,9 +133,7 @@ export const ReviewConfirmForm = () => {
       if (response.isSuccess && response.isValid) {
         showSuccessToast({ description: "Migration has been started, you will be notified once it's complete!" });
         setIsVerificationModalOpen(false);
-        navigate(
-          groupId ? `/app/project/${groupId}/environments` : "/app/console",
-        );
+        navigate(groupId ? `/app/project/${groupId}/environments` : "/app/console");
         return;
       }
       showErrorToast({ errors: { general: "Invalid verification code" } });
@@ -162,17 +144,13 @@ export const ReviewConfirmForm = () => {
     }
   };
 
-  const selectedServices = formData[0].services.filter(
-    (service) => service.selected,
-  );
+  const selectedServices = formData[0].services.filter((service) => service.selected);
 
   return (
     <>
       <div className="mt-4 flex flex-col gap-6 text-left">
         <div>
-          <p className="text-3xl font-bold tracking-tight">
-            Review &amp; confirm
-          </p>
+          <p className="text-3xl font-bold tracking-tight">Review &amp; confirm</p>
           <p className="mt-2 text-sm text-muted-foreground">
             Check the details below before starting the migration.
           </p>
@@ -180,9 +158,8 @@ export const ReviewConfirmForm = () => {
 
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <p className="text-sm text-yellow-800">
-            <strong>Please note:</strong> You are about to migrate data across
-            environments. Please ensure that all the details below are correct,
-            as this action is permanent.
+            <strong>Please note:</strong> You are about to migrate data across environments. Please
+            ensure that all the details below are correct, as this action is permanent.
           </p>
         </div>
 
@@ -193,29 +170,21 @@ export const ReviewConfirmForm = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Source environment
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">Source environment</p>
                 <p className="text-base font-medium">
-                  {formData[0].sourceEnvironmentName ||
-                    formData[0].sourceEnvironment}
+                  {formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}
                 </p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Target environment
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">Target environment</p>
                 <p className="text-base font-medium">
-                  {formData[0].targetEnvironmentName ||
-                    formData[0].targetEnvironment}
+                  {formData[0].targetEnvironmentName || formData[0].targetEnvironment}
                 </p>
               </div>
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-medium text-muted-foreground">
-                Services selected
-              </p>
+              <p className="mb-2 text-sm font-medium text-muted-foreground">Services selected</p>
               <TooltipProvider>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {selectedServices.map((service) => (
@@ -252,43 +221,35 @@ export const ReviewConfirmForm = () => {
           <Button
             type="button"
             onClick={handleStartMigration}
-            disabled={isInitiating || selectedServices.length === 0}>
+            disabled={isInitiating || selectedServices.length === 0}
+          >
             {isInitiating ? "Starting migration..." : "Start migration"}
           </Button>
         </div>
       </div>
 
-      <Dialog
-        open={isVerificationModalOpen}
-        onOpenChange={setIsVerificationModalOpen}>
+      <Dialog open={isVerificationModalOpen} onOpenChange={setIsVerificationModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Verify your migration</DialogTitle>
             <DialogDescription>
               You&apos;re about to migrate services from{" "}
-              <strong>
-                {formData[0].sourceEnvironmentName ||
-                  formData[0].sourceEnvironment}
-              </strong>{" "}
+              <strong>{formData[0].sourceEnvironmentName || formData[0].sourceEnvironment}</strong>{" "}
               to{" "}
-              <strong>
-                {formData[0].targetEnvironmentName ||
-                  formData[0].targetEnvironment}
-              </strong>
-              .
+              <strong>{formData[0].targetEnvironmentName || formData[0].targetEnvironment}</strong>.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <p className="text-sm text-medium-emphasis">
-              We&apos;ve sent a verification code to your email. Enter the code
-              below to continue.
+              We&apos;ve sent a verification code to your email. Enter the code below to continue.
             </p>
 
             <Form {...verificationForm}>
               <form
                 onSubmit={verificationForm.handleSubmit(handleVerifyMigration)}
-                className="space-y-4">
+                className="space-y-4"
+              >
                 <FormField
                   control={verificationForm.control}
                   name="verificationCode"
@@ -319,7 +280,8 @@ export const ReviewConfirmForm = () => {
                       variant="link"
                       className="p-0 text-sm font-medium !no-underline"
                       disabled={!!remainingTime || isInitiating}
-                      onClick={handleResendVerification}>
+                      onClick={handleResendVerification}
+                    >
                       {remainingTime
                         ? `Resend in (${Math.floor(remainingTime / 60)}:${String(remainingTime % 60).padStart(2, "0")})`
                         : "Resend"}
@@ -332,7 +294,8 @@ export const ReviewConfirmForm = () => {
                     type="button"
                     variant="outline"
                     onClick={() => setIsVerificationModalOpen(false)}
-                    disabled={isVerifying}>
+                    disabled={isVerifying}
+                  >
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isVerifying}>

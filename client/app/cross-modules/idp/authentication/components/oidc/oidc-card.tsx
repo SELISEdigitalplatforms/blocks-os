@@ -1,14 +1,8 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useNavigate } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { format } from "date-fns";
-import {
-  ChevronRight,
-  LayoutTemplate,
-  RotateCw,
-  Shield,
-  Trash2,
-} from "lucide-react";
+import { ChevronRight, LayoutTemplate, RotateCw, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -20,11 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { TableCell, TableRow } from "@/components/ui-kits/table/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -36,7 +26,7 @@ import {
   IDeleteOidcClientPayload,
   IOidcConfig,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { CreateOIDC } from "../create-oidc/create-oidc";
 import { KVDetailItem } from "../kv-detail-item";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
@@ -58,16 +48,13 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
   });
-  const { mutateAsync: rotateSecret, isPending: isRotating } =
-    useRotateAuthOidcSecret({
-      projectKey: tenantId,
-    });
+  const { mutateAsync: rotateSecret, isPending: isRotating } = useRotateAuthOidcSecret({
+    projectKey: tenantId,
+  });
 
   const clientSecret = rotatedSecret ?? item.clientSecret;
 
-  const createdAt = item.createdDate
-    ? format(new Date(item.createdDate), "dd MMM yyyy")
-    : "—";
+  const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd MMM yyyy") : "—";
 
   const redirectUris =
     item.redirectUris && item.redirectUris.length
@@ -76,9 +63,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         ? [item.redirectUri]
         : [];
 
-  const responseTypes = item.allowedResponseTypes?.length
-    ? item.allowedResponseTypes
-    : ["code"];
+  const responseTypes = item.allowedResponseTypes?.length ? item.allowedResponseTypes : ["code"];
 
   const kvPairs: {
     key: string;
@@ -101,10 +86,14 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       key: "Scope(s)",
       value: item.scope ?? "",
     },
-    {
-      key: "PKCE",
-      value: item.requirePkce ? "required" : "not required",
-    },
+    ...(item.isDeviceFlowClient
+      ? []
+      : [
+          {
+            key: "PKCE",
+            value: item.requirePkce ? "required" : "not required",
+          },
+        ]),
     {
       key: "Redirect automatically after authentication",
       value: item.isAutoRedirect ? "true" : "false",
@@ -131,8 +120,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       showSuccessToast({ description: "OIDC credential deleted successfully" });
       setShowDeleteDialog(false);
     } catch (error) {
-      if (isErrorWithErrors(error))
-        return showErrorToast({ errors: error.errors });
+      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       showErrorToast({ errors: "Something went wrong" });
     }
   };
@@ -167,11 +155,10 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         className={cn(
           "hover:bg-muted/50",
           kvPairs.length > 0 && "cursor-pointer",
-          expanded && kvPairs.length > 0
-            ? "border-b-0"
-            : "border-b-2 border-border",
+          expanded && kvPairs.length > 0 ? "border-b-0" : "border-b-2 border-border",
         )}
-        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}>
+        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}
+      >
         <TableCell className="w-8 py-3.5 pl-4">
           {kvPairs.length > 0 ? (
             <ChevronRight
@@ -190,26 +177,33 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               <p className="truncate text-sm font-medium">
                 {item.clientDisplayName || item.itemId}
               </p>
-              <p className="truncate font-mono text-xs text-muted-foreground">
-                {item.itemId}
-              </p>
+              <p className="truncate font-mono text-xs text-muted-foreground">{item.itemId}</p>
             </div>
           </div>
         </TableCell>
         <TableCell className="hidden py-3.5 sm:table-cell">
-          <Badge
-            variant="outline"
-            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-            OIDC
-          </Badge>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge
+              variant="outline"
+              className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+              OIDC
+            </Badge>
+            {item.isDeviceFlowClient && (
+              <Badge
+                variant="outline"
+                className="w-fit border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+              >
+                Device Flow
+              </Badge>
+            )}
+          </div>
         </TableCell>
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
-        <TableCell
-          className="py-3.5 pr-4 text-right"
-          onClick={(e) => e.stopPropagation()}>
+        <TableCell className="py-3.5 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -218,33 +212,31 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
                   size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
                   aria-label="Template"
-                  onClick={() =>
-                    navigate(
-                      scoped(`secret-management/oidc/${item.itemId}/branding`),
-                    )
-                  }>
+                  onClick={() => navigate(scoped(`secret-management/oidc/${item.itemId}/branding`))}
+                >
                   <LayoutTemplate className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Template</TooltipContent>
             </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                  aria-label="Rotate client secret"
-                  onClick={() => setShowRotateDialog(true)}
-                  disabled={isRotating}>
-                  <RotateCw
-                    className={cn("h-3.5 w-3.5", isRotating && "animate-spin")}
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Rotate Secret</TooltipContent>
-            </Tooltip>
+            {!item.isDeviceFlowClient && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                    aria-label="Rotate client secret"
+                    onClick={() => setShowRotateDialog(true)}
+                    disabled={isRotating}
+                  >
+                    <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Rotate Secret</TooltipContent>
+              </Tooltip>
+            )}
             <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
               <TooltipTrigger asChild>
@@ -253,7 +245,8 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
                   size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   aria-label="Delete"
-                  onClick={() => setShowDeleteDialog(true)}>
+                  onClick={() => setShowDeleteDialog(true)}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -267,7 +260,8 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         <TableRow className="border-b-2 border-border hover:bg-transparent">
           <TableCell
             colSpan={5}
-            className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+            className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
+          >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
               {kvPairs.map(({ key, value, copyable, sensitive }) => (
                 <KVDetailItem
@@ -288,8 +282,7 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           <DialogHeader>
             <DialogTitle>Rotate client secret</DialogTitle>
             <DialogDescription>
-              Do you want to rotate the client secret for{" "}
-              <strong>{clientLabel}</strong>?
+              Do you want to rotate the client secret for <strong>{clientLabel}</strong>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
@@ -297,35 +290,29 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               variant="outline"
               size="sm"
               onClick={() => setShowRotateDialog(false)}
-              disabled={isRotating}>
+              disabled={isRotating}
+            >
               Cancel
             </Button>
-            <Button
-              size="sm"
-              onClick={handleConfirmRotate}
-              disabled={isRotating}>
+            <Button size="sm" onClick={handleConfirmRotate} disabled={isRotating}>
               {isRotating ? "Rotating…" : "Rotate Secret"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={showRotatedSecretDialog}
-        onOpenChange={setShowRotatedSecretDialog}>
+      <Dialog open={showRotatedSecretDialog} onOpenChange={setShowRotatedSecretDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New client secret</DialogTitle>
             <DialogDescription>
-              Copy the new secret for <strong>{clientLabel}</strong> now. The
-              previous secret no longer works.
+              Copy the new secret for <strong>{clientLabel}</strong> now. The previous secret no
+              longer works.
             </DialogDescription>
           </DialogHeader>
           {rotatedSecret ? (
             <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-              <code className="min-w-0 flex-1 break-all text-sm">
-                {rotatedSecret}
-              </code>
+              <code className="min-w-0 flex-1 break-all text-sm">{rotatedSecret}</code>
               <CopyToClipboardButton textToCopy={rotatedSecret}>
                 <span />
               </CopyToClipboardButton>
@@ -344,22 +331,20 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           <DialogHeader>
             <DialogTitle>Delete OIDC Client</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete <strong>{clientLabel}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{clientLabel}</strong>? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeleteDialog(false)}>
+            <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={handleConfirmDelete}
-              disabled={isDeleting}>
+              disabled={isDeleting}
+            >
               {isDeleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>

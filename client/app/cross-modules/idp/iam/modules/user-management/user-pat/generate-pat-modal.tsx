@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,14 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { IGeneratePATPayload, IPATResponse } from "@blocks-idp/iam/models/user";
-import { useGeneratePats } from "@blocks-idp/iam/hooks/use-activity";
+import { useGeneratePats } from "@blocks-idp/iam/security/hooks/use-generate-pats";
+import type { IGeneratePATPayload, IPATApi } from "@blocks-idp/iam/security/api";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 interface GenerateTokenModalProps {
   isOpen: boolean;
   onClose: () => void;
   id: string;
-  onSuccess?: (data: IPATResponse) => void;
+  onSuccess?: (data: IPATApi) => void;
 }
 
 export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateTokenModalProps) {
@@ -44,7 +45,6 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
     });
   };
 
-
   const getExpirationLabel = (days: string): string => {
     const daysNum = parseInt(days);
     return `${days} days (${getExpirationDate(daysNum)})`;
@@ -52,25 +52,16 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
 
   const handleGenerate = () => {
     if (!note.trim()) {
-      console.error("Name is required");
       return;
     }
 
     const expirationDays = parseInt(expiration);
 
-    let clientIdEnvWise;
-    if (import.meta.env.BLOCKS_APP_URL === "https://dev-cloud.seliseblocks.com") {
-      clientIdEnvWise = "11640778-423d-41e6-acba-1cf947cecb54";
-    } else if (import.meta.env.BLOCKS_APP_URL === "https://stg-cloud.seliseblocks.com") {
-      clientIdEnvWise = "4fe41cda-cb8d-458e-8a95-010549bd6d7e";
-    } else if (import.meta.env.BLOCKS_APP_URL === "https://cloud.seliseblocks.com") {
-      clientIdEnvWise = "dce12fb6-3ed7-4704-9426-81d7d957dfb8";
-    } else {
-      clientIdEnvWise = "11640778-423d-41e6-acba-1cf947cecb54";
-    }
-
+    // The IAM source hard-codes a client id per SELISE cloud environment. OS
+    // already resolves the IAM OIDC client id from the environment, so read it
+    // from there instead of shipping environment-specific ids in source.
     const payload: IGeneratePATPayload = {
-      clientId: clientIdEnvWise,
+      clientId: getRuntimeEnv("BLOCKS_IAM_CLIENT_ID") || "",
       note: note || undefined,
       codeTtlInMinute: expirationDays * 24 * 60,
     };
@@ -80,12 +71,10 @@ export function GenerateTokenModal({ isOpen, onClose, onSuccess }: GenerateToken
         setNote("");
         setExpiration("30");
 
-        onSuccess?.(data);
+        const first = Array.isArray(data) ? data[0] : data;
+        if (first) onSuccess?.(first);
 
         onClose();
-      },
-      onError: (error) => {
-        console.error("Failed to generate token:", error);
       },
     });
   };

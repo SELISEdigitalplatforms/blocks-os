@@ -1,8 +1,7 @@
 // import { useMemo } from "react";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { Button } from "@/components/ui-kits/button/button";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -26,7 +25,7 @@ const RoleDetailsPageSkeleton = () => (
       </CardContent>
     </Card>
   </>
-)
+);
 
 export function RoleDetailsContainer() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -37,11 +36,7 @@ export function RoleDetailsContainer() {
   const changeEditMode = useRoleDetailsStore((state) => state.changeEditMode);
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
-  const { isPending, mutateAsync } = useSetRoles(role?.slug);
-
-  if (role?.itemId && role?.name) {
-    BREADCRUMB_CUSTOM_TITLES["/app/idp/role-detail/" + role.itemId] = role.name;
-  }
+  const { isPending, mutateAsync } = useSetRoles();
 
   const onSaveClick = async () => {
     const changedPermissions = Array.from(permissionMap.values()).reduce(
@@ -79,8 +74,11 @@ export function RoleDetailsContainer() {
   };
 
   if (!isInitialized || !role?.slug) {
-    return <RoleDetailsPageSkeleton />
+    return <RoleDetailsPageSkeleton />;
   }
+
+  const breadcrumbTitles =
+    role?.itemId && role?.name ? { ["/app/iam/role-detail/" + role.itemId]: role.name } : undefined;
 
   return (
     <>
@@ -89,6 +87,7 @@ export function RoleDetailsContainer() {
           breadcrumbIndex={4}
           className="flex min-w-0 flex-1"
           listClassName="text-base sm:text-lg"
+          customTitles={breadcrumbTitles}
         />
         <div className="flex shrink-0 items-center gap-2">
           {!isEditMode ? (

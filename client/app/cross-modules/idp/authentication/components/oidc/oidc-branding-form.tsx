@@ -12,25 +12,16 @@ import {
   useGetAuthOidcCredential,
   useSaveAuthOidc,
 } from "@blocks-idp/authentication/hooks/use-auth-oidc";
-import {
-  useGetPreSignedUrlForUpload,
-  useUploadFile,
-} from "@blocks-storage/hooks/use-storage-file";
+import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
 import { storageService } from "@blocks-storage/services/storage.service";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useOidcBrandingHeader } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { OidcLoginPreview } from "./oidc-login-preview";
 import { buildOidcSavePayload } from "./build-oidc-save-payload";
 
 const DEFAULT_BRAND_COLOR = "#124091";
 const MAX_LOGO_SIZE_MB = 2;
-const ALLOWED_LOGO_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/svg+xml",
-  "image/webp",
-];
+const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"];
 
 type OidcBrandingFormProps = {
   clientId: string;
@@ -59,13 +50,16 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
 
   const credential = data?.oIDCClientCredential;
 
-  useEffect(() => {
-    if (!credential) return;
-    setBrandColor(credential.clientBrandColor || DEFAULT_BRAND_COLOR);
-    setLogoUrl(credential.clientLogoUrl ?? null);
-    setPreviewLogoUrl(credential.clientLogoUrl ?? null);
-    setPendingLogoFile(null);
-  }, [credential]);
+  const [prevCredential, setPrevCredential] = useState<typeof credential | undefined>(undefined);
+  if (prevCredential !== credential) {
+    setPrevCredential(credential);
+    if (credential) {
+      setBrandColor(credential.clientBrandColor || DEFAULT_BRAND_COLOR);
+      setLogoUrl(credential.clientLogoUrl ?? null);
+      setPreviewLogoUrl(credential.clientLogoUrl ?? null);
+      setPendingLogoFile(null);
+    }
+  }
 
   useEffect(() => {
     return () => {
@@ -237,9 +231,7 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
         <div className="grid min-w-0 grid-cols-1 gap-4 md:gap-5 xl:grid-cols-2 xl:gap-6">
           <section className="flex min-w-0 flex-col gap-5 rounded-xl border border-border bg-card p-4 sm:p-5">
             <div className="border-b border-border pb-3">
-              <h2 className="text-base font-semibold text-high-emphasis">
-                Configuration
-              </h2>
+              <h2 className="text-base font-semibold text-high-emphasis">Configuration</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Upload a client logo and set a brand color.
               </p>
@@ -265,7 +257,8 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
                     setIsDragOver(false);
                     const file = e.dataTransfer.files?.[0];
                     if (file) applyLogoFile(file);
-                  }}>
+                  }}
+                >
                   <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-border bg-background">
                     {previewLogoUrl ? (
                       <img
@@ -291,13 +284,13 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
                     size="sm"
                     disabled={isBusy}
                     className="gap-2"
-                    onClick={() => fileInputRef.current?.click()}>
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     <Upload className="h-4 w-4" />
                     Upload logo
                   </Button>
                   <p className="text-center text-xs text-muted-foreground">
-                    Drag and drop or browse. PNG, JPG, SVG, or WebP up to{" "}
-                    {MAX_LOGO_SIZE_MB}MB.
+                    Drag and drop or browse. PNG, JPG, SVG, or WebP up to {MAX_LOGO_SIZE_MB}MB.
                   </p>
                 </div>
               </div>
@@ -326,18 +319,13 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
 
           <section className="flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
             <div className="border-b border-border pb-3">
-              <h2 className="text-base font-semibold text-high-emphasis">
-                Live Preview
-              </h2>
+              <h2 className="text-base font-semibold text-high-emphasis">Live Preview</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Changes appear here in real time.
               </p>
             </div>
             <div className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-muted/20 p-0 sm:p-3">
-              <OidcLoginPreview
-                clientLogoUrl={previewLogoUrl}
-                clientBrandColor={brandColor}
-              />
+              <OidcLoginPreview clientLogoUrl={previewLogoUrl} clientBrandColor={brandColor} />
             </div>
           </section>
         </div>
