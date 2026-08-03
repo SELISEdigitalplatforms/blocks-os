@@ -86,10 +86,14 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       key: "Scope(s)",
       value: item.scope ?? "",
     },
-    {
-      key: "PKCE",
-      value: item.requirePkce ? "required" : "not required",
-    },
+    ...(item.isDeviceFlowClient
+      ? []
+      : [
+          {
+            key: "PKCE",
+            value: item.requirePkce ? "required" : "not required",
+          },
+        ]),
     {
       key: "Redirect automatically after authentication",
       value: item.isAutoRedirect ? "true" : "false",
@@ -216,21 +220,23 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               <TooltipContent>Template</TooltipContent>
             </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                  aria-label="Rotate client secret"
-                  onClick={() => setShowRotateDialog(true)}
-                  disabled={isRotating}
-                >
-                  <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Rotate Secret</TooltipContent>
-            </Tooltip>
+            {!item.isDeviceFlowClient && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                    aria-label="Rotate client secret"
+                    onClick={() => setShowRotateDialog(true)}
+                    disabled={isRotating}
+                  >
+                    <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Rotate Secret</TooltipContent>
+              </Tooltip>
+            )}
             <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
               <TooltipTrigger asChild>
