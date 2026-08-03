@@ -1,15 +1,15 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import { cn } from "@/lib/utils"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
-import type { ReactNode } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { cn } from "@/lib/utils";
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
+import type { ReactNode } from "react";
 
 type SettingsFormSectionProps = {
-  title: string
-  children: ReactNode
-  className?: string
-  headerClassName?: string
-  titleClassName?: string
-}
+  title: string;
+  children: ReactNode;
+  className?: string;
+  headerClassName?: string;
+  titleClassName?: string;
+};
 
 export const SettingsFormSection = ({
   title,
@@ -26,4 +26,4 @@ export const SettingsFormSection = ({
     </CardHeader>
     <CardContent>{children}</CardContent>
   </Card>
-)
+);

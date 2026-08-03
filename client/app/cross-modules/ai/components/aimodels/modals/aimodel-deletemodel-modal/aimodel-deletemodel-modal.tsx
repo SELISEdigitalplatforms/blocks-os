@@ -2,18 +2,14 @@ import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useDeleteModel } from "@blocks-ai/hooks/use-aimodel";
 type DeleteModelProps = {
   modelId: string;
   open: boolean;
   onOpenChange: (value: boolean) => void;
 };
-export const DeleteModel = ({
-  modelId,
-  open,
-  onOpenChange,
-}: DeleteModelProps) => {
+export const DeleteModel = ({ modelId, open, onOpenChange }: DeleteModelProps) => {
   const project_key = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync } = useDeleteModel();
   const confirmHandler = async () => {
@@ -44,7 +40,8 @@ export const DeleteModel = ({
       open={open}
       onOpenChange={(value) => {
         if (!value) onOpenChange(false);
-      }}>
+      }}
+    >
       <ConfirmationModal
         data={{
           dialogTitle: "Delete Model",

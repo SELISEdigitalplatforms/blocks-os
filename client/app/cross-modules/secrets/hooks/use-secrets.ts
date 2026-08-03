@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { secretsService } from "@/services/secrets.service";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import type { SaveSecretRequest } from "@/cross-modules/secrets/constants/secret-key.enum";
@@ -28,8 +28,7 @@ export const useSaveSecret = () => {
   const queryClient = useQueryClient();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useMutation({
-    mutationFn: (payload: SaveSecretRequest) =>
-      secretsService.save(payload),
+    mutationFn: (payload: SaveSecretRequest) => secretsService.save(payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["secrets", "list", tenantId, variables.secretKey],
@@ -46,8 +45,7 @@ export const useDeleteSecret = () => {
   const queryClient = useQueryClient();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useMutation({
-    mutationFn: (itemId: string) =>
-      secretsService.delete(itemId),
+    mutationFn: (itemId: string) => secretsService.delete(itemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["secrets", "list", tenantId] });
       showSuccessToast({ description: "Secret deleted successfully." });

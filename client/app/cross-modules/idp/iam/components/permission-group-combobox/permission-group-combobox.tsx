@@ -8,7 +8,7 @@ import {
 } from "@/components/ui-kits/command/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetResourceGroup } from "@blocks-idp/iam/hooks/use-permission";
 import { ChevronDown, Plus, X } from "lucide-react";
 import { useMemo, useState, type MouseEvent } from "react";
@@ -19,7 +19,11 @@ type PermissionGroupComboboxProps = {
   disabled?: boolean;
 };
 
-export function PermissionGroupCombobox({ value, onChange, disabled }: PermissionGroupComboboxProps) {
+export function PermissionGroupCombobox({
+  value,
+  onChange,
+  disabled,
+}: PermissionGroupComboboxProps) {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: resourceGroupData } = useGetResourceGroup({ projectKey: tenantId });
   const [open, setOpen] = useState(false);
@@ -34,9 +38,7 @@ export function PermissionGroupCombobox({ value, onChange, disabled }: Permissio
 
   const filtered = useMemo(() => {
     if (!trimmedInput) return resourceGroups;
-    return resourceGroups.filter((item) =>
-      item.toLowerCase().includes(trimmedInput.toLowerCase()),
-    );
+    return resourceGroups.filter((item) => item.toLowerCase().includes(trimmedInput.toLowerCase()));
   }, [resourceGroups, trimmedInput]);
 
   const canCreate =
@@ -79,10 +81,7 @@ export function PermissionGroupCombobox({ value, onChange, disabled }: Permissio
           )}
         >
           <span
-            className={cn(
-              "min-w-0 flex-1 truncate text-left",
-              !value && "text-muted-foreground",
-            )}
+            className={cn("min-w-0 flex-1 truncate text-left", !value && "text-muted-foreground")}
           >
             {value || "Select or create group..."}
           </span>
@@ -130,9 +129,7 @@ export function PermissionGroupCombobox({ value, onChange, disabled }: Permissio
                 className="font-medium text-primary"
               >
                 <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-                <span>
-                  Create group &ldquo;{trimmedInput}&rdquo;
-                </span>
+                <span>Create group &ldquo;{trimmedInput}&rdquo;</span>
                 <span className="ml-auto text-xs text-muted-foreground">Enter</span>
               </CommandItem>
             ) : null}

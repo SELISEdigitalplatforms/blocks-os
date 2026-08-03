@@ -38,9 +38,7 @@ describe("SettingsConfigService", () => {
 
   describe("getAuthConfig", () => {
     it("delegates to authentication configuration service", async () => {
-      vi.mocked(
-        authenticationService.configuration.getConfig,
-      ).mockResolvedValue({
+      vi.mocked(authenticationService.configuration.getConfig).mockResolvedValue({
         itemId: "auth-1",
         allowedGrantTypes: ["password"],
         accessTokenValidForNumberMinutes: 7,
@@ -65,9 +63,7 @@ describe("SettingsConfigService", () => {
 
       const result = await settingsConfigService.getAuthConfig();
 
-      expect(
-        authenticationService.configuration.getConfig,
-      ).toHaveBeenCalledWith();
+      expect(authenticationService.configuration.getConfig).toHaveBeenCalledWith();
       expect(result.itemId).toBe("auth-1");
       expect(result.allowedGrantTypes).toEqual(["password"]);
       expect(result.accessTokenValidForNumberMinutes).toBe(7);
@@ -76,9 +72,7 @@ describe("SettingsConfigService", () => {
 
   describe("saveAuthConfig", () => {
     it("delegates to authentication configuration save", async () => {
-      vi.mocked(
-        authenticationService.configuration.saveAuthConfig,
-      ).mockResolvedValue({
+      vi.mocked(authenticationService.configuration.saveAuthConfig).mockResolvedValue({
         isSuccess: true,
         errors: null,
       });
@@ -107,9 +101,7 @@ describe("SettingsConfigService", () => {
 
       const result = await settingsConfigService.saveAuthConfig(payload);
 
-      expect(
-        authenticationService.configuration.saveAuthConfig,
-      ).toHaveBeenCalledWith({
+      expect(authenticationService.configuration.saveAuthConfig).toHaveBeenCalledWith({
         ...payload,
         projectKey: "",
         isSelfSignUpAllowed: false,
@@ -153,13 +145,11 @@ describe("SettingsConfigService", () => {
     });
 
     it("throws when organization config is missing", async () => {
-      vi.mocked(organizationService.getOrganizationConfig).mockResolvedValue(
-        null,
-      );
+      vi.mocked(organizationService.getOrganizationConfig).mockResolvedValue(null);
 
-      await expect(
-        settingsConfigService.getOrganizationConfig(),
-      ).rejects.toThrow("Organization config not found");
+      await expect(settingsConfigService.getOrganizationConfig()).rejects.toThrow(
+        "Organization config not found",
+      );
     });
   });
 
@@ -183,12 +173,9 @@ describe("SettingsConfigService", () => {
         keepOrgPermissionsSameAsDefaultPermissions: true,
       };
 
-      const result =
-        await settingsConfigService.saveOrganizationConfig(payload);
+      const result = await settingsConfigService.saveOrganizationConfig(payload);
 
-      expect(organizationService.saveOrganizationConfig).toHaveBeenCalledWith(
-        payload,
-      );
+      expect(organizationService.saveOrganizationConfig).toHaveBeenCalledWith(payload);
       expect(result.isSuccess).toBe(true);
     });
   });
@@ -216,9 +203,7 @@ describe("SettingsConfigService", () => {
       expect(userService.getSignUpSetting).toHaveBeenCalledWith();
       expect(result.isSignUpEnable).toBe(true);
       expect(result.defaultRolesForNewUser).toEqual(["user"]);
-      expect(result.defaultPermissionsForNewUser).toEqual([
-        "blocks-idp::self-service",
-      ]);
+      expect(result.defaultPermissionsForNewUser).toEqual(["blocks-idp::self-service"]);
     });
   });
 

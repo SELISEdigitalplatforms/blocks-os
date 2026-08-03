@@ -23,10 +23,9 @@ describe("useNotificationListener", () => {
 
   it("re-subscribes to the new event name when it changes", () => {
     const cb = vi.fn();
-    const { rerender } = renderHook(
-      ({ name }) => useNotificationListener(name, cb),
-      { initialProps: { name: "a" } },
-    );
+    const { rerender } = renderHook(({ name }) => useNotificationListener(name, cb), {
+      initialProps: { name: "a" },
+    });
 
     rerender({ name: "b" });
 

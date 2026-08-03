@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
   formData: undefined as unknown,
 }));
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => h.navigate,
 }));
 
@@ -29,7 +29,7 @@ vi.mock("@/components/create-project/utils", () => ({
   shortGuidGenerator: () => "abcde",
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({
     setTenantGroup: h.setTenantGroup,
     setSelectedProject: h.setSelectedProject,
@@ -77,9 +77,7 @@ describe("useProjectForm", () => {
       tenantGroupId: "tg-1",
       errors: null,
     });
-    h.getProjects.mockResolvedValue([
-      { projects: [{ itemId: "p-1", name: "First" }] },
-    ]);
+    h.getProjects.mockResolvedValue([{ projects: [{ itemId: "p-1", name: "First" }] }]);
 
     const { result } = renderHook(() => useProjectForm(), {
       wrapper: createWrapper(),
@@ -94,7 +92,7 @@ describe("useProjectForm", () => {
       expect.objectContaining({
         name: "My Project",
         isAcceptBlocksTerms: true,
-        isProduction: false,
+        isUseBlocksExclusively: false,
         resources: [
           {
             name: "org/repo",

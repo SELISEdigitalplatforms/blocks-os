@@ -1,4 +1,4 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   SSOProviderCard,
   SSOProviderCardSkelton,
@@ -7,7 +7,6 @@ import { useMemo } from "react";
 import { useGetSsoCredentials } from "@blocks-idp/authentication/hooks/use-sso";
 import {
   SOCIAL_AUTH_PROVIDERS_CONFIG,
-  SSO_PROVIDERS,
 } from "@blocks-idp/authentication/constants/sso-providers.constant";
 import { useGetAuthConfig } from "@blocks-idp/authentication/hooks/use-auth-config";
 const LoadingSkelton = () => {

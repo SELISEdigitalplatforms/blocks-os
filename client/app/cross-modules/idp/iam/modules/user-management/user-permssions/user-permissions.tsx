@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { UserPermissionsList } from "./user-permissions-list";
 import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
@@ -6,33 +6,41 @@ import { AddUserPermission } from "./add-user-permission";
 import { Button } from "@/components/ui-kits/button/button";
 import { toast } from "@/hooks/use-toast";
 import { IPermission } from "@blocks-idp/iam/models/permission";
+
 type UserPermissionsProps = {
   userId: string;
   projectKey: string;
 };
+
 export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
   const { permissions, isLoading, deletePermissions } = useUserPermissions({ userId, projectKey });
-  const [localPermissions, setLocalPermissions] = useState<IPermission[]>([]);
+
+  // Only the pending removals are state. The displayed list is derived from the
+  // fetched permissions, so a refetch flows straight through without an effect
+  // that copies props into state.
   const [removedResources, setRemovedResources] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  useEffect(() => {
-    setLocalPermissions(permissions);
-    setRemovedResources([]);
-  }, [permissions]);
+
+  const localPermissions: IPermission[] = useMemo(
+    () => permissions.filter((perm) => !removedResources.includes(perm.resource)),
+    [permissions, removedResources],
+  );
+
   const onRemovePermission = (resource: string) => {
-    setLocalPermissions((prev) => prev.filter((perm) => perm.resource !== resource));
-    setRemovedResources((prev) => [...prev, resource]);
+    setRemovedResources((prev) => (prev.includes(resource) ? prev : [...prev, resource]));
   };
+
   const onReset = () => {
-    setLocalPermissions(permissions);
     setRemovedResources([]);
   };
+
   const onSave = async () => {
     if (!removedResources.length) return;
     setIsSaving(true);
     try {
       const res = await deletePermissions(removedResources);
       if (res.isSuccess) {
+        setRemovedResources([]);
         toast({
           variant: "success",
           title: "Success",
@@ -55,6 +63,7 @@ export function UserPermissions({ userId, projectKey }: UserPermissionsProps) {
       setIsSaving(false);
     }
   };
+
   return (
     <div>
       <div className="flex w-full flex-col">

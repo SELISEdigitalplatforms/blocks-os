@@ -21,6 +21,8 @@ describe("lib/utils", () => {
   describe("cn", () => {
     it("merges class names and resolves tailwind conflicts", () => {
       expect(cn("px-2", "px-4")).toBe("px-4");
+      // The constant falsy operand is the point: it asserts cn() drops falsy class values.
+      // eslint-disable-next-line no-constant-binary-expression
       expect(cn("text-sm", false && "hidden", "font-bold")).toBe("text-sm font-bold");
     });
   });
@@ -116,9 +118,7 @@ describe("lib/utils", () => {
     it("unwraps ISODate, ObjectId, $date and NumberLong tokens", () => {
       const input =
         'ObjectId("abc123") ISODate("2026-01-15") { "$date": "2026-02-01" } NumberLong(42)';
-      expect(parseMongoDBString(input)).toBe(
-        '"abc123" "2026-01-15" "2026-02-01" 42',
-      );
+      expect(parseMongoDBString(input)).toBe('"abc123" "2026-01-15" "2026-02-01" 42');
     });
   });
 

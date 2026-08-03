@@ -1,4 +1,3 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit"
+import { useProjectStore } from "@seliseblocks/genesis-os";
 
-export const useSettingsTenantId = () =>
-  useProjectStore().selectedProject?.tenantId ?? ""
+export const useSettingsTenantId = () => useProjectStore().selectedProject?.tenantId ?? "";

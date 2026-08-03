@@ -12,10 +12,7 @@ import {
   mockRotateOidcSecretPayload,
   MOCK_OIDC_ITEM_ID,
 } from "../../test-utils/__mocks__";
-import {
-  TEST_PROJECT_KEY,
-  mockProjectStoreFactory,
-} from "@/test-utils/__mocks__";
+import { TEST_PROJECT_KEY, mockProjectStoreFactory } from "@/test-utils/__mocks__";
 import { authOidc } from "@blocks-idp/authentication/services/auth-clients-oidc.service";
 import { getBlocksOidcWellKnownUrl } from "@/lib/get-api-path";
 import {
@@ -30,7 +27,7 @@ vi.mock("@blocks-idp/authentication/services/auth-clients-oidc.service", () =>
   mockAuthOidcServiceFactory(),
 );
 
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 type BlocksWindow = Window & {
   __BLOCKS_ENV__?: Record<string, string | undefined>;
@@ -45,10 +42,11 @@ const makeClient = () =>
   });
 
 const WrapperWith = (client: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client }, children);
+  Wrapper.displayName = "WrapperWith";
+  return Wrapper;
 };
-WrapperWith.displayName = "WrapperWith";
 
 describe("use-auth-oidc hooks", () => {
   beforeEach(() => {
@@ -64,9 +62,7 @@ describe("use-auth-oidc hooks", () => {
 
   describe("useGetAuthOidcCredentials", () => {
     it("should fetch OIDC credentials list successfully", async () => {
-      vi.mocked(authOidc.clients.getOidcCredentials).mockResolvedValue(
-        mockOidcCredentialsResponse,
-      );
+      vi.mocked(authOidc.clients.getOidcCredentials).mockResolvedValue(mockOidcCredentialsResponse);
 
       const { result } = renderHook(
         () => useGetAuthOidcCredentials({ projectKey: TEST_PROJECT_KEY }),
@@ -81,9 +77,7 @@ describe("use-auth-oidc hooks", () => {
 
   describe("useGetAuthOidcCredential", () => {
     it("should fetch a single OIDC credential successfully", async () => {
-      vi.mocked(authOidc.clients.getOidcCredential).mockResolvedValue(
-        mockOidcCredentialResponse,
-      );
+      vi.mocked(authOidc.clients.getOidcCredential).mockResolvedValue(mockOidcCredentialResponse);
 
       const options = {
         projectKey: TEST_PROJECT_KEY,
@@ -101,9 +95,7 @@ describe("use-auth-oidc hooks", () => {
 
   describe("useSaveAuthOidc", () => {
     it("should save OIDC credential successfully", async () => {
-      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useSaveAuthOidc(), {
         wrapper: createWrapper(),
@@ -111,15 +103,11 @@ describe("use-auth-oidc hooks", () => {
 
       result.current.mutate(mockSaveOidcPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(authOidc.clients.saveOidcCredential).toHaveBeenCalledWith(
-        mockSaveOidcPayload,
-      );
+      expect(authOidc.clients.saveOidcCredential).toHaveBeenCalledWith(mockSaveOidcPayload);
     });
 
     it("should add externalDiscoveryEndpoint when registerAsIdentityProvider is true", async () => {
-      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useSaveAuthOidc(), {
         wrapper: createWrapper(),
@@ -133,15 +121,12 @@ describe("use-auth-oidc hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(authOidc.clients.saveOidcCredential).toHaveBeenCalledWith({
         ...payload,
-        externalDiscoveryEndpoint:
-          getBlocksOidcWellKnownUrl("test-tenant-id-123"),
+        externalDiscoveryEndpoint: getBlocksOidcWellKnownUrl("test-tenant-id-123"),
       });
     });
 
     it("should not add externalDiscoveryEndpoint when registerAsIdentityProvider is false", async () => {
-      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useSaveAuthOidc(), {
         wrapper: createWrapper(),
@@ -149,9 +134,7 @@ describe("use-auth-oidc hooks", () => {
 
       result.current.mutate(mockSaveOidcPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(authOidc.clients.saveOidcCredential).toHaveBeenCalledWith(
-        mockSaveOidcPayload,
-      );
+      expect(authOidc.clients.saveOidcCredential).toHaveBeenCalledWith(mockSaveOidcPayload);
       expect(authOidc.clients.saveOidcCredential).not.toHaveBeenCalledWith(
         expect.objectContaining({
           externalDiscoveryEndpoint: expect.any(String),
@@ -162,9 +145,7 @@ describe("use-auth-oidc hooks", () => {
     it("should invalidate identity-providers when registerAsIdentityProvider is true", async () => {
       const client = makeClient();
       const spy = vi.spyOn(client, "invalidateQueries");
-      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useSaveAuthOidc(), {
         wrapper: WrapperWith(client),
@@ -182,9 +163,7 @@ describe("use-auth-oidc hooks", () => {
     it("should invalidate identity-providers when registerAsIdentityProvider is false", async () => {
       const client = makeClient();
       const spy = vi.spyOn(client, "invalidateQueries");
-      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authOidc.clients.saveOidcCredential).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(() => useSaveAuthOidc(), {
         wrapper: WrapperWith(client),
@@ -198,16 +177,11 @@ describe("use-auth-oidc hooks", () => {
 
   describe("useDeleteAuthOidc", () => {
     it("should delete OIDC credential successfully", async () => {
-      vi.mocked(authOidc.clients.deleteOidcCredential).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authOidc.clients.deleteOidcCredential).mockResolvedValue(undefined as never);
 
-      const { result } = renderHook(
-        () => useDeleteAuthOidc({ projectKey: TEST_PROJECT_KEY }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useDeleteAuthOidc({ projectKey: TEST_PROJECT_KEY }), {
+        wrapper: createWrapper(),
+      });
 
       result.current.mutate(mockDeleteClientPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -220,9 +194,7 @@ describe("use-auth-oidc hooks", () => {
 
   describe("useRotateAuthOidcSecret", () => {
     it("should rotate OIDC client secret successfully", async () => {
-      vi.mocked(authOidc.clients.rotateOidcClientSecret).mockResolvedValue(
-        undefined as never,
-      );
+      vi.mocked(authOidc.clients.rotateOidcClientSecret).mockResolvedValue(undefined as never);
 
       const { result } = renderHook(
         () => useRotateAuthOidcSecret({ projectKey: TEST_PROJECT_KEY }),

@@ -11,7 +11,7 @@ vi.mock("./use-mfa-config", () => ({
 }));
 
 const mockReset = vi.fn();
-vi.mock("@/hooks/use-count-down", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useCountDown: vi.fn(() => ({
     remainingTime: 300,
     reset: mockReset,

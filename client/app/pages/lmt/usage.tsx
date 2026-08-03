@@ -1,11 +1,5 @@
-import {
-  UsageSummaryCard,
-  UsageServiceCard,
-} from "@/cross-modules/lmt/components";
-import {
-  USAGES_SERVICE_MAP,
-  UsageServiceMap,
-} from "@/cross-modules/lmt/constants/usage.constant";
+import { UsageSummaryCard, UsageServiceCard } from "@/cross-modules/lmt/components";
+import { USAGES_SERVICE_MAP, UsageServiceMap } from "@/cross-modules/lmt/constants/usage.constant";
 import { useUsagesMetrics } from "@/cross-modules/lmt/hooks/use-usage";
 import {
   defaultUsagesMetrics,
@@ -19,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
   useProjectStore,
-} from "@seliseblocks/blocks-kit";
+} from "@seliseblocks/genesis-os";
 import { Network, Clock, CircleCheck, CircleAlert } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 
@@ -27,10 +21,7 @@ import { parseAsString, useQueryState } from "nuqs";
 export function UsageRoute() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const LMT_BASE_PATH = useLmtBasePath();
-  const [timeRange] = useQueryState(
-    "timeRange",
-    parseAsString.withDefault("1h"),
-  );
+  const [timeRange] = useQueryState("timeRange", parseAsString.withDefault("1h"));
   const { data, isLoading, isFetching } = useUsagesMetrics({ timeRange });
 
   const defaultUsageData = {
@@ -53,9 +44,7 @@ export function UsageRoute() {
           />
           <UsageSummaryCard
             description="Average response time"
-            title={
-              data ? abbreviateDurationMs(data.accumulatedAverageDuration) : ""
-            }
+            title={data ? abbreviateDurationMs(data.accumulatedAverageDuration) : ""}
             isLoading={isLoading || isFetching}
             Icon={Clock}
             className="bg-blocks-secondary-50 text-blocks-secondary-600"
@@ -80,9 +69,7 @@ export function UsageRoute() {
       {tenantId ? (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {(
-              Object.keys(USAGES_SERVICE_MAP) as Array<keyof UsageServiceMap>
-            ).map((item) => (
+            {(Object.keys(USAGES_SERVICE_MAP) as Array<keyof UsageServiceMap>).map((item) => (
               <UsageServiceCard
                 key={item}
                 name={USAGES_SERVICE_MAP[item].label}

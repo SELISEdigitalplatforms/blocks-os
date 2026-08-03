@@ -1,4 +1,4 @@
-import { useRef, MouseEvent, useState, useEffect, ReactNode } from "react";
+import { useRef, MouseEvent, useState, useEffect, useMemo, ReactNode } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
@@ -39,15 +39,22 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   keepValueOnTypeChange = false,
 }) => {
   const [state, setState] = useState<ValueType>(value);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState<ValueType>(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setState(value);
-  }, [value]);
-  const debounced = useRef(
-    debounce((val: ValueType) => {
-      onChange(val);
-    }, debounceMs),
-  ).current;
+  }
+  const inputRef = useRef<HTMLInputElement>(null);
+  // See search-input.tsx: the debounced wrapper stays stable while the ref keeps the latest
+  // onChange, so a caller passing a new inline callback each render is still called correctly.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+  const debounced = useMemo(
+    () => debounce((val: ValueType) => onChangeRef.current(val), debounceMs),
+    [debounceMs],
+  );
   useEffect(() => {
     return () => {
       debounced.cancel();

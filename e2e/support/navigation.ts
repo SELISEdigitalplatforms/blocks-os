@@ -23,9 +23,7 @@ const password = process.env.E2E_PASSWORD;
  */
 export async function loginFresh(page: Page): Promise<void> {
   if (!username || !password) {
-    throw new Error(
-      "E2E_USERNAME / E2E_PASSWORD are not set. Fill them in e2e/.env.e2e.",
-    );
+    throw new Error("E2E_USERNAME / E2E_PASSWORD are not set. Fill them in e2e/.env.e2e.");
   }
 
   // Probe the landing page first — if storageState is already authenticated
@@ -69,7 +67,7 @@ export async function enterConsole(page: Page): Promise<void> {
  * Enter a project by clicking the first environment chip on the first project
  * card. The console's ProjectCard component navigates to
  * `/app/<itemId>/dashboard` (which is the only route that mounts the full
- * sidebar containing API Settings / IDP / Secrets & Configs / Logs & Traces).
+ * sidebar containing API Settings / Identity & Access / Secrets & Configs / Logs & Traces).
  *
  * Returns the resulting `:itemId` so callers can build direct URLs.
  */
@@ -78,9 +76,9 @@ export async function enterProject(page: Page): Promise<string> {
 
   // Wait for at least one project card to render. The console shows a "Your
   // Blocks Projects" heading once the projects API has returned.
-  await expect(
-    page.getByRole("heading", { name: "Your Blocks Projects" }),
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
+    timeout: 30_000,
+  });
 
   // The first environment chip is the entry point into the dashboard layout.
   // The chip label comes from environmentOptions (e.g. "Development" /
@@ -90,10 +88,9 @@ export async function enterProject(page: Page): Promise<string> {
     .locator("button")
     .filter({ hasText: /^(Development|Testing|Staging|Production)$/ })
     .first();
-  await expect(
-    firstChip,
-    "no project environment chip visible on console",
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(firstChip, "no project environment chip visible on console").toBeVisible({
+    timeout: 30_000,
+  });
   await firstChip.click();
 
   await page.waitForURL(/\/app\/[^/]+\/dashboard/, { timeout: 30_000 });
@@ -120,10 +117,9 @@ export async function openSidebarItem(
     .or(page.getByRole("button", { name: parentLabel }))
     .first();
 
-  await expect(
-    parent,
-    `sidebar item "${parentLabel}" not visible`,
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(parent, `sidebar item "${parentLabel}" not visible`).toBeVisible({
+    timeout: 30_000,
+  });
   await parent.click();
 
   if (childLabel) {

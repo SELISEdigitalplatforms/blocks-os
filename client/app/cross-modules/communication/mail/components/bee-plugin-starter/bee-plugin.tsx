@@ -10,7 +10,8 @@ interface IBeePluginProps {
   onBeeSave(data: { htmlFile: string; jsonFile: string }): void;
   onPreviewModeChange?: (isPreviewOn: boolean) => void;
   onBeeTemplateLoad?: (isLoaded: boolean) => void;
-  jsonFile?: any;
+  /** Bee template JSON — an opaque blob handed straight to the Bee SDK. */
+  jsonFile?: Record<string, unknown>;
 }
 const BeePlugin = forwardRef(function Inner(
   {
@@ -43,14 +44,14 @@ const BeePlugin = forwardRef(function Inner(
         onBeeSave({ jsonFile, htmlFile });
       },
       onAutoSave: (jsonFile) => {
-        console.log(`${new Date().toISOString()} autosaving...,`, jsonFile);
+        console.error(`${new Date().toISOString()} autosaving...,`, jsonFile);
       },
       onTogglePreview: (isPreviewOn) => {
         setIsPreviewOn(isPreviewOn);
         onPreviewModeChange?.(isPreviewOn);
       },
       onLoad: () => {
-        console.log("*** [integration] loading a new template...");
+        console.error("*** [integration] loading a new template...");
         onBeeTemplateLoad?.(true);
       },
       onError: (errorMessage) => console.error("onError ", errorMessage),

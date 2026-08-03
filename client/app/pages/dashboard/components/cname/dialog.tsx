@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 import { CheckCircle2 } from "lucide-react";
 import { CNameInstruction } from "./instructions";
 import { CnameValidatorProject } from "./validator-project";
@@ -16,11 +16,7 @@ interface CnameValidatorDialogProps {
   domain: IDomain | null;
 }
 
-export const CnameValidatorDialog = ({
-  open,
-  onOpenChange,
-  domain,
-}: CnameValidatorDialogProps) => {
+export const CnameValidatorDialog = ({ open, onOpenChange, domain }: CnameValidatorDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-md overflow-y-auto overflow-x-hidden rounded-lg">
@@ -38,17 +34,13 @@ export const CnameValidatorDialog = ({
               <p className="text-xs font-semibold uppercase tracking-wide text-medium-emphasis">
                 Application Domain
               </p>
-              <p className="break-all text-sm font-medium text-high-emphasis">
-                {domain?.domain}
-              </p>
+              <p className="break-all text-sm font-medium text-high-emphasis">{domain?.domain}</p>
             </div>
             <div className="space-y-0.5">
               <p className="text-xs font-semibold uppercase tracking-wide text-medium-emphasis">
                 Cookie Domain
               </p>
-              <p className="break-all text-sm text-muted-foreground">
-                {domain?.cookieDomain}
-              </p>
+              <p className="break-all text-sm text-muted-foreground">{domain?.cookieDomain}</p>
             </div>
           </div>
 
@@ -56,8 +48,8 @@ export const CnameValidatorDialog = ({
           {domain && !domain.isDomainVerified && (
             <div className="flex min-w-0 flex-col gap-1 rounded-sm border border-base-error bg-blocks-error-100 px-4 py-3 text-sm font-normal text-blocks-error-800">
               <p className="wrap-break-word">
-                No servers found for &apos;{domain.cookieDomain}&apos;. Run a
-                CNAME lookup to check your DNS configuration.
+                No servers found for &apos;{domain.cookieDomain}&apos;. Run a CNAME lookup to check
+                your DNS configuration.
               </p>
             </div>
           )}
@@ -66,18 +58,13 @@ export const CnameValidatorDialog = ({
           {domain && domain.isDomainVerified && (
             <div className="flex min-w-0 items-center gap-2 rounded-sm border border-green-200 bg-green-50 px-4 py-3 text-sm font-normal text-green-800">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <p className="wrap-break-word">
-                This domain is verified and ready to use.
-              </p>
+              <p className="wrap-break-word">This domain is verified and ready to use.</p>
             </div>
           )}
 
           {/* DNS records the user must create before the lookup can pass */}
           {domain && !domain.isDomainVerified && (
-            <CNameInstruction
-              cookieDomainName={domain.cookieDomain}
-              customDomain={domain.domain}
-            />
+            <CNameInstruction cookieDomainName={domain.cookieDomain} customDomain={domain.domain} />
           )}
 
           {domain && !domain.isDomainVerified && (

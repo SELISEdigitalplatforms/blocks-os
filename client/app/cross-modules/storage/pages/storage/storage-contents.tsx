@@ -50,7 +50,10 @@ export function StorageContents() {
     }
     return data;
   }, [data]);
-  const storageCards = useMemo(() => configurations.map(mapConfigurationToCardData), [configurations]);
+  const storageCards = useMemo(
+    () => configurations.map(mapConfigurationToCardData),
+    [configurations],
+  );
   const onChange: FilterChangeHandler<FilterValues> = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -102,11 +105,7 @@ export function StorageContents() {
         ) : filteredData.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredData.map((storage) => (
-              <StorageCard
-                key={storage.id}
-                data={storage}
-                onViewDetails={handleViewDetails}
-              />
+              <StorageCard key={storage.id} data={storage} onViewDetails={handleViewDetails} />
             ))}
           </div>
         ) : (

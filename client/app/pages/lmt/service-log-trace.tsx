@@ -1,9 +1,8 @@
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { TraceDetails } from "@blocks-lmt/components/trace-details";
 import { SERVICES } from "@blocks-lmt/constants/services.constant";
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 
 export function LmtServiceLogTraceRoute() {
   const { serviceName, traceId } = useParams<{
@@ -14,23 +13,21 @@ export function LmtServiceLogTraceRoute() {
 
   // Try to find the base service (removing -api/-worker suffix if present)
   const service = useMemo(() => {
-    const baseServiceName = serviceName
-      ?.replace(/-api$/, "")
-      .replace(/-worker$/, "");
-    return SERVICES.find(
-      (item) => item.name === baseServiceName && item.showInLogs,
-    );
+    const baseServiceName = serviceName?.replace(/-api$/, "").replace(/-worker$/, "");
+    return SERVICES.find((item) => item.name === baseServiceName && item.showInLogs);
   }, [serviceName]);
 
   const id = traceId ?? "";
 
-  BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs`] = "Logs";
-  if (serviceName) {
-    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}`] =
-      service?.label ?? serviceName;
-    BREADCRUMB_CUSTOM_TITLES[`${LMT_BASE_PATH}/logs/${serviceName}/trace`] =
-      "Trace";
-  }
+  const breadcrumbTitles = {
+    [`${LMT_BASE_PATH}/logs`]: "Logs",
+    ...(serviceName
+      ? {
+          [`${LMT_BASE_PATH}/logs/${serviceName}`]: service?.label ?? serviceName,
+          [`${LMT_BASE_PATH}/logs/${serviceName}/trace`]: "Trace",
+        }
+      : {}),
+  };
 
   return (
     <div className="flex flex-col">
@@ -38,10 +35,9 @@ export function LmtServiceLogTraceRoute() {
         id={id}
         breadcrumbIndex={4}
         logsTraceBreadcrumbHref={
-          serviceName && id
-            ? `${LMT_BASE_PATH}/logs/${serviceName}/trace/${id}`
-            : undefined
+          serviceName && id ? `${LMT_BASE_PATH}/logs/${serviceName}/trace/${id}` : undefined
         }
+        breadcrumbTitles={breadcrumbTitles}
       />
     </div>
   );

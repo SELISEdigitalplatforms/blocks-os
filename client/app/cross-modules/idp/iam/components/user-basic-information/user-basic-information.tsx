@@ -38,13 +38,22 @@ export const UserBasicInformation = ({
         <CardTitle>Basic Information</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={cn("grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-y-[22px]", detailsGridClassName)}>
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-y-[22px]",
+            detailsGridClassName,
+          )}
+        >
           <Item label="Name" isLoading={isLoading}>
             {user?.firstName} {user?.lastName}
           </Item>
           <Item label="Email" isLoading={isLoading}>
             <div className="flex items-center gap-2">
-              {user?.email && <CopyToClipboardButton textToCopy={user?.email}>{user?.email}</CopyToClipboardButton>}
+              {user?.email && (
+                <CopyToClipboardButton textToCopy={user?.email}>
+                  {user?.email}
+                </CopyToClipboardButton>
+              )}
             </div>
           </Item>
           <Item label="No. of logins" isLoading={isLoading}>

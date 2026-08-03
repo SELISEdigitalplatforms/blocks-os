@@ -10,7 +10,7 @@ import {
 } from "@blocks-idp/api-settings/hooks/use-api-settings";
 import { IApiEndpoint } from "@blocks-idp/api-settings/models/api-endpoint.model";
 import { getServiceSwaggerUrl } from "@blocks-idp/api-settings/utils/service-swagger";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { BookOpen, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /** ─── Loading skeleton ──────────────────────────────────────────────────────── */
@@ -36,10 +36,7 @@ export default function ApiSettingsPage() {
   const { mutateAsync: updateEndpoint } = useUpdateApiEndpoint();
   const { mutateAsync: bulkUpdate } = useBulkUpdateApiEndpoints();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const endpoints = useMemo(
-    () => data?.pages.flatMap((p) => p.data) ?? [],
-    [data],
-  );
+  const endpoints = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -47,8 +44,7 @@ export default function ApiSettingsPage() {
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage)
-          fetchNextPage();
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
       },
       { threshold: 0.1 },
     );
@@ -101,7 +97,11 @@ export default function ApiSettingsPage() {
   const handleSelectEndpoint = useCallback((id: string, checked: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      checked ? next.add(id) : next.delete(id);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
       return next;
     });
   }, []);
@@ -129,19 +129,14 @@ export default function ApiSettingsPage() {
           captchaProvider: ep.captchaProvider,
         });
         if (!result.isSuccess) {
-          throw new Error(
-            result.errors?.join(", ") || "Failed to update MFA setting",
-          );
+          throw new Error(result.errors?.join(", ") || "Failed to update MFA setting");
         }
         showSuccessToast({
           description: `MFA ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}`,
         });
       } catch (error) {
         showErrorToast({
-          errors:
-            error instanceof Error
-              ? error.message
-              : "Failed to update MFA setting",
+          errors: error instanceof Error ? error.message : "Failed to update MFA setting",
         });
       }
     },
@@ -162,19 +157,14 @@ export default function ApiSettingsPage() {
           mfaType: ep.mfaType,
         });
         if (!result.isSuccess) {
-          throw new Error(
-            result.errors?.join(", ") || "Failed to update Captcha setting",
-          );
+          throw new Error(result.errors?.join(", ") || "Failed to update Captcha setting");
         }
         showSuccessToast({
           description: `Captcha ${value ? "enabled" : "disabled"} for /${ep.controller}/${ep.method.charAt(0).toUpperCase() + ep.method.slice(1)}`,
         });
       } catch (error) {
         showErrorToast({
-          errors:
-            error instanceof Error
-              ? error.message
-              : "Failed to update Captcha setting",
+          errors: error instanceof Error ? error.message : "Failed to update Captcha setting",
         });
       }
     },
@@ -185,9 +175,7 @@ export default function ApiSettingsPage() {
     async (ids: string[], value: boolean) => {
       try {
         // Preserve current Captcha state when toggling MFA
-        const groupEndpoints = endpoints.filter((ep) =>
-          ids.includes(ep.itemId),
-        );
+        const groupEndpoints = endpoints.filter((ep) => ids.includes(ep.itemId));
         const captchaState =
           groupEndpoints.length > 0
             ? groupEndpoints.every((ep) => ep.isCaptchaRequired)
@@ -203,19 +191,14 @@ export default function ApiSettingsPage() {
           disableAll: false,
         });
         if (!result.isSuccess) {
-          throw new Error(
-            result.errors?.join(", ") || "Failed to bulk update MFA",
-          );
+          throw new Error(result.errors?.join(", ") || "Failed to bulk update MFA");
         }
         showSuccessToast({
           description: `MFA ${value ? "enabled" : "disabled"} for ${ids.length} endpoints`,
         });
       } catch (error) {
         showErrorToast({
-          errors:
-            error instanceof Error
-              ? error.message
-              : "Failed to bulk update MFA",
+          errors: error instanceof Error ? error.message : "Failed to bulk update MFA",
         });
       }
     },
@@ -225,9 +208,7 @@ export default function ApiSettingsPage() {
     async (ids: string[], value: boolean) => {
       try {
         // Preserve current MFA state when toggling Captcha
-        const groupEndpoints = endpoints.filter((ep) =>
-          ids.includes(ep.itemId),
-        );
+        const groupEndpoints = endpoints.filter((ep) => ids.includes(ep.itemId));
         const mfaState =
           groupEndpoints.length > 0
             ? groupEndpoints.every((ep) => ep.isMFARequired)
@@ -243,19 +224,14 @@ export default function ApiSettingsPage() {
           disableAll: false,
         });
         if (!result.isSuccess) {
-          throw new Error(
-            result.errors?.join(", ") || "Failed to bulk update Captcha",
-          );
+          throw new Error(result.errors?.join(", ") || "Failed to bulk update Captcha");
         }
         showSuccessToast({
           description: `Captcha ${value ? "enabled" : "disabled"} for ${ids.length} endpoints`,
         });
       } catch (error) {
         showErrorToast({
-          errors:
-            error instanceof Error
-              ? error.message
-              : "Failed to bulk update Captcha",
+          errors: error instanceof Error ? error.message : "Failed to bulk update Captcha",
         });
       }
     },
@@ -267,9 +243,7 @@ export default function ApiSettingsPage() {
   const handleBulkMfa = useCallback(async () => {
     try {
       // Preserve current Captcha state when enabling MFA
-      const selectedEndpoints = endpoints.filter((ep) =>
-        selectedArray.includes(ep.itemId),
-      );
+      const selectedEndpoints = endpoints.filter((ep) => selectedArray.includes(ep.itemId));
       const captchaState =
         selectedEndpoints.length > 0
           ? selectedEndpoints.every((ep) => ep.isCaptchaRequired)
@@ -300,9 +274,7 @@ export default function ApiSettingsPage() {
   const handleBulkCaptcha = useCallback(async () => {
     try {
       // Preserve current MFA state when enabling Captcha
-      const selectedEndpoints = endpoints.filter((ep) =>
-        selectedArray.includes(ep.itemId),
-      );
+      const selectedEndpoints = endpoints.filter((ep) => selectedArray.includes(ep.itemId));
       const mfaState =
         selectedEndpoints.length > 0
           ? selectedEndpoints.every((ep) => ep.isMFARequired)
@@ -318,9 +290,7 @@ export default function ApiSettingsPage() {
         disableAll: false,
       });
       if (!result.isSuccess) {
-        throw new Error(
-          result.errors?.join(", ") || "Failed to enable Captcha",
-        );
+        throw new Error(result.errors?.join(", ") || "Failed to enable Captcha");
       }
       showSuccessToast({
         description: `Captcha enabled for ${selectedArray.length} endpoints`,
@@ -328,20 +298,17 @@ export default function ApiSettingsPage() {
       clearSelection();
     } catch (error) {
       showErrorToast({
-        errors:
-          error instanceof Error ? error.message : "Failed to enable Captcha",
+        errors: error instanceof Error ? error.message : "Failed to enable Captcha",
       });
     }
   }, [endpoints, selectedArray, bulkUpdate, clearSelection]);
   return (
     <main className="flex flex-col gap-4 p-4 pb-24 sm:gap-6 sm:p-6">
       <div>
-        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
-          API Settings
-        </h1>
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">API Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Configure security policies for your API endpoints — enable MFA,
-          Captcha, and manage access controls.
+          Configure security policies for your API endpoints — enable MFA, Captcha, and manage
+          access controls.
         </p>
       </div>
       {isLoading ? (
@@ -360,27 +327,22 @@ export default function ApiSettingsPage() {
             <div key={service} className="flex flex-col gap-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-bold capitalize sm:text-lg">
-                    {service}
-                  </h2>
+                  <h2 className="text-base font-bold capitalize sm:text-lg">{service}</h2>
                   {swaggerUrl && (
                     <a
                       href={swaggerUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="hidden items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-primary hover:underline sm:inline-flex"
-                      title={swaggerUrl}>
+                      title={swaggerUrl}
+                    >
                       <span className="truncate">{swaggerUrl}</span>
                       <ExternalLink className="h-3 w-3 shrink-0" />
                     </a>
                   )}
                 </div>
                 {swaggerUrl && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    asChild
-                    className="w-fit shrink-0 gap-1.5">
+                  <Button size="sm" variant="outline" asChild className="w-fit shrink-0 gap-1.5">
                     <a href={swaggerUrl} target="_blank" rel="noreferrer">
                       <BookOpen className="h-3.5 w-3.5" />
                       <span>API Docs</span>

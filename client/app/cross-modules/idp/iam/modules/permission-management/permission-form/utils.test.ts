@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  BUILTIN_PERMISSION_READONLY_MESSAGE,
-  isPermissionFormReadOnly,
-} from "./utils";
+import { BUILTIN_PERMISSION_READONLY_MESSAGE, isPermissionFormReadOnly } from "./utils";
 
 describe("isPermissionFormReadOnly", () => {
   it("returns true when permission is built-in", () => {

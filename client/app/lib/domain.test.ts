@@ -95,9 +95,7 @@ describe("lib/domain", () => {
 
     it("returns the base url when there is no custom domain", () => {
       vi.stubEnv("VITE_PROJECT_DEFAULT_API_BASE_URL", "https://base.api");
-      expect(getProjectBlocksApiUrl({ customDomain: "" } as IProject)).toBe(
-        "https://base.api",
-      );
+      expect(getProjectBlocksApiUrl({ customDomain: "" } as IProject)).toBe("https://base.api");
     });
 
     it("derives a blocksapi host from the custom domain", () => {

@@ -28,7 +28,7 @@ import {
 import { z } from "zod";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useSaveStorageConfiguration } from "@blocks-storage/hooks/use-storage-configuration";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   IStorageConfiguration,
   STORAGE_STRATEGIES,
@@ -138,7 +138,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Access Key</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter access key" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter access key"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -151,7 +155,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Secret Key</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter secret key" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter secret key"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -164,7 +172,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Region Endpoint</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter region endpoint" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter region endpoint"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -180,7 +192,11 @@ export const SaveStorageConfiguration = ({
                     <FormItem>
                       <FormLabel>Connection String</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter connection string" {...field} value={field.value ?? ""} />
+                        <Input
+                          placeholder="Enter connection string"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,7 +212,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Access Key</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter access key" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter access key"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -209,7 +229,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Secret Key</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter secret key" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter secret key"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -222,7 +246,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Host URL</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter host URL" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter host URL"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -239,7 +267,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Remote Base Path</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter remote base path" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter remote base path"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -265,7 +297,12 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>PORT</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="Enter port" {...field} value={field.value ?? ""} />
+                          <Input
+                            type="number"
+                            placeholder="Enter port"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -278,7 +315,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Username</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter username" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter username"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -291,7 +332,11 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter password" {...field} value={field.value ?? ""} />
+                          <Input
+                            placeholder="Enter password"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -68,8 +68,7 @@ const initialContextValue: LogsViewerContextType = {
   isManagedLoading: false,
 };
 // Create context with the initial value
-export const LogsViewerContext =
-  createContext<LogsViewerContextType>(initialContextValue);
+export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
 interface LogsViewerProps {
   services: Service[];
   startDate?: string;
@@ -105,10 +104,7 @@ export const LogsViewer = ({
   });
 
   const selectedService = useMemo(() => {
-    return (
-      services.find((s) => s.id === serviceId) ||
-      (services.length > 0 ? services[0] : null)
-    );
+    return services.find((s) => s.id === serviceId) || (services.length > 0 ? services[0] : null);
   }, [services, serviceId]);
 
   // Compute the effective selected service with serviceNames based on subService
@@ -117,20 +113,14 @@ export const LogsViewer = ({
     if (!isSourceBlocks) return selectedService;
 
     // For blocks services, filter serviceNames based on subService
-    const allServiceNames = selectedService.serviceNames || [
-      selectedService.serviceName,
-    ];
+    const allServiceNames = selectedService.serviceNames || [selectedService.serviceName];
     let filteredServiceNames: string[];
     if (subService === "all") {
       filteredServiceNames = allServiceNames;
     } else if (subService === "api") {
-      filteredServiceNames = allServiceNames.filter(
-        (name) => !name.includes("worker"),
-      );
+      filteredServiceNames = allServiceNames.filter((name) => !name.includes("worker"));
     } else if (subService === "worker") {
-      filteredServiceNames = allServiceNames.filter((name) =>
-        name.includes("worker"),
-      );
+      filteredServiceNames = allServiceNames.filter((name) => name.includes("worker"));
     } else {
       filteredServiceNames = allServiceNames;
     }
@@ -180,7 +170,8 @@ export const LogsViewer = ({
         subService,
         setSubService,
         isManagedLoading,
-      }}>
+      }}
+    >
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
         <LogsList

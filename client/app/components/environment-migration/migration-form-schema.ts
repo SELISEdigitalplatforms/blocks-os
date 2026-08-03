@@ -1,11 +1,11 @@
-import { z } from "zod"
+import { z } from "zod";
 
 export type MigrationServiceOption = {
-  name: string
-  label: string
-  selected: boolean
-  overrideData: boolean
-}
+  name: string;
+  label: string;
+  selected: boolean;
+  overrideData: boolean;
+};
 
 export const environmentServiceSelectionFormDefaultValue = {
   sourceEnvironment: "",
@@ -23,11 +23,11 @@ export const environmentServiceSelectionFormDefaultValue = {
     { name: "Storage", label: "Storage", selected: false, overrideData: false },
     { name: "Language", label: "Localization", selected: false, overrideData: false },
   ] as MigrationServiceOption[],
-}
+};
 
 export const reviewConfirmFormDefaultValue = {
   confirmed: false,
-}
+};
 
 export const environmentServiceSelectionFormSchema = z.object({
   sourceEnvironment: z.string().min(1, "Source environment is required"),
@@ -46,14 +46,14 @@ export const environmentServiceSelectionFormSchema = z.object({
     .refine((services) => services.some((service) => service.selected), {
       message: "At least one service must be selected",
     }),
-})
+});
 
 export const migrationVerificationSchema = z.object({
   verificationCode: z
     .string()
     .min(5, "Verification code must be 5 digits")
     .max(5, "Verification code must be 5 digits"),
-})
+});
 
 export const MIGRATION_SERVICE_NAME_TO_ID: Record<string, number> = {
   Authentication: 0,
@@ -65,7 +65,7 @@ export const MIGRATION_SERVICE_NAME_TO_ID: Record<string, number> = {
   Notifications: 6,
   Storage: 7,
   Language: 8,
-}
+};
 
 /** Matches blocks-app-next data-migration availability rules. */
 export const MIGRATION_SERVICE_UI_CATALOG = [
@@ -83,4 +83,4 @@ export const MIGRATION_SERVICE_UI_CATALOG = [
   { id: "Notifications", name: "Notifications", chips: ["Key", "Module"], available: false },
   { id: "Storage", name: "Storage", chips: ["Key", "Module"], available: false },
   { id: "Language", name: "Localization", chips: ["Key", "Module"], available: true },
-] as const
+] as const;

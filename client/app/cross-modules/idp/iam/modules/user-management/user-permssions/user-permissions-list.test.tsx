@@ -1,95 +1,52 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
-vi.stubGlobal("matchMedia", (query: string) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  dispatchEvent: vi.fn(),
-}));
-
-vi.stubGlobal(
-  "ResizeObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
-
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import type { IPermission } from "@blocks-idp/iam/models/permission";
 import { UserPermissionsList } from "./user-permissions-list";
-import { IPermission } from "@blocks-idp/iam/models/permission";
 
-const makePermission = (over: Partial<IPermission>): IPermission =>
-  ({
-    itemId: "perm-1",
-    name: "Manage Billing",
-    type: 1,
-    description: "",
-    resource: "billing",
-    resourceGroup: "",
-    projectKey: "p1",
-    tags: [],
-    roles: [],
-    dependentPermissions: [],
-    isArchived: false,
-    isBuiltIn: false,
-    language: null,
-    organizationIds: [],
-    permissionSeverity: 1,
-    ...over,
-  }) as IPermission;
-
-const baseProps = { userId: "user-1", onRemovePermission: vi.fn() };
+const permissions = [
+  { itemId: "1", name: "Read Users", resource: "user:read" },
+  { itemId: "2", name: "Write Users", resource: "user:write" },
+] as IPermission[];
 
 describe("UserPermissionsList", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("renders skeletons and no empty message while loading", () => {
-    render(<UserPermissionsList permissions={[]} isLoading {...baseProps} />);
-    expect(screen.queryByText("No permission found")).toBeNull();
-    expect(screen.queryByLabelText("Remove role")).toBeNull();
-  });
-
-  it("shows the empty-state message when there are no permissions", () => {
-    render(
-      <UserPermissionsList permissions={[]} isLoading={false} {...baseProps} />,
+  it("renders a loading skeleton while loading", () => {
+    const { container } = render(
+      <UserPermissionsList permissions={[]} isLoading={true} userId="u1" onRemovePermission={vi.fn()} />,
     );
-    expect(screen.getByText("No permission found")).toBeTruthy();
+    expect(container.querySelectorAll("[class*='animate-pulse']").length).toBeGreaterThan(0);
   });
 
-  it("renders permission name and resource for each permission", () => {
+  it("renders each permission with name and resource", () => {
     render(
       <UserPermissionsList
-        permissions={[makePermission({ name: "Manage Billing", resource: "billing" })]}
+        permissions={permissions}
         isLoading={false}
-        {...baseProps}
+        userId="u1"
+        onRemovePermission={vi.fn()}
       />,
     );
-    expect(screen.getByText("Manage Billing")).toBeTruthy();
-    expect(screen.getByText("billing")).toBeTruthy();
+    expect(screen.getByText("Read Users")).toBeTruthy();
+    expect(screen.getByText("user:read")).toBeTruthy();
   });
 
-  it("invokes onRemovePermission with the resource when remove is clicked", async () => {
-    const user = userEvent.setup();
+  it("invokes onRemovePermission with the resource", () => {
     const onRemovePermission = vi.fn();
     render(
       <UserPermissionsList
-        permissions={[makePermission({ resource: "users" })]}
+        permissions={permissions}
         isLoading={false}
-        userId="user-1"
+        userId="u1"
         onRemovePermission={onRemovePermission}
       />,
     );
-    await user.click(screen.getByLabelText("Remove role"));
-    expect(onRemovePermission).toHaveBeenCalledWith("users");
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove role" })[1]);
+    expect(onRemovePermission).toHaveBeenCalledWith("user:write");
+  });
+
+  it("shows the empty state when there are no permissions", () => {
+    render(
+      <UserPermissionsList permissions={[]} isLoading={false} userId="u1" onRemovePermission={vi.fn()} />,
+    );
+    expect(screen.getByText("No permission found")).toBeTruthy();
   });
 });

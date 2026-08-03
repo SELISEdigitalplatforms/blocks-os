@@ -40,9 +40,7 @@ class MemoryStorage implements Storage {
 function ensureStorage(name: "localStorage" | "sessionStorage"): void {
   let usable = false;
   try {
-    const existing = (globalThis as Record<string, unknown>)[name] as
-      | Storage
-      | undefined;
+    const existing = (globalThis as Record<string, unknown>)[name] as Storage | undefined;
     if (existing) {
       existing.setItem("__probe__", "1");
       existing.removeItem("__probe__");
@@ -110,8 +108,7 @@ if (typeof globalThis.IntersectionObserver === "undefined") {
       return [];
     }
   }
-  (globalThis as Record<string, unknown>).IntersectionObserver =
-    IntersectionObserverStub;
+  (globalThis as Record<string, unknown>).IntersectionObserver = IntersectionObserverStub;
 }
 
 if (typeof window !== "undefined" && typeof window.scrollTo !== "function") {
@@ -120,4 +117,45 @@ if (typeof window !== "undefined" && typeof window.scrollTo !== "function") {
     configurable: true,
     value: () => {},
   });
+}
+
+// Radix UI primitives (Select, Dropdown, etc.) call these DOM APIs that jsdom
+// does not implement. Define no-op stubs only when they are missing so that
+// components using those primitives can be exercised under jsdom.
+if (typeof Element !== "undefined") {
+  const proto = Element.prototype as unknown as Record<string, unknown>;
+  if (typeof proto.scrollIntoView !== "function") {
+    proto.scrollIntoView = function scrollIntoView(): void {};
+  }
+  if (typeof proto.scrollTo !== "function") {
+    proto.scrollTo = function scrollTo(): void {};
+  }
+  if (typeof proto.hasPointerCapture !== "function") {
+    proto.hasPointerCapture = function hasPointerCapture(): boolean {
+      return false;
+    };
+  }
+  if (typeof proto.setPointerCapture !== "function") {
+    proto.setPointerCapture = function setPointerCapture(): void {};
+  }
+  if (typeof proto.releasePointerCapture !== "function") {
+    proto.releasePointerCapture = function releasePointerCapture(): void {};
+  }
+}
+
+// jsdom does not implement hit testing, so `document.elementFromPoint` is
+// missing. Some Radix primitives call it asynchronously after interaction,
+// which surfaces as an uncaught error that fails an otherwise passing run.
+// Provide inert stubs only when they are absent.
+if (typeof document !== "undefined") {
+  const doc = document as unknown as {
+    elementFromPoint?: unknown;
+    elementsFromPoint?: unknown;
+  };
+  if (typeof doc.elementFromPoint !== "function") {
+    doc.elementFromPoint = (): Element | null => null;
+  }
+  if (typeof doc.elementsFromPoint !== "function") {
+    doc.elementsFromPoint = (): Element[] => [];
+  }
 }

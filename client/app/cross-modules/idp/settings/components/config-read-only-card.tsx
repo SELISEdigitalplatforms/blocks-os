@@ -1,15 +1,15 @@
-import type { ReactNode } from "react"
-import { Button } from "@/components/ui-kits/button/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card"
-import { Pencil } from "lucide-react"
+import type { ReactNode } from "react";
+import { Button } from "@/components/ui-kits/button/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
+import { Pencil } from "lucide-react";
 
 type ConfigReadOnlyCardProps = {
-  title: string
-  children: ReactNode
-  showEditButton?: boolean
-  onEdit?: () => void
-  editAction?: ReactNode
-}
+  title: string;
+  children: ReactNode;
+  showEditButton?: boolean;
+  onEdit?: () => void;
+  editAction?: ReactNode;
+};
 
 export const ConfigReadOnlyCard = ({
   title,
@@ -41,4 +41,4 @@ export const ConfigReadOnlyCard = ({
     </CardHeader>
     <CardContent>{children}</CardContent>
   </Card>
-)
+);

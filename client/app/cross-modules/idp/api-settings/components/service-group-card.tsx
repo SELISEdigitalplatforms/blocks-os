@@ -57,8 +57,12 @@ export const ServiceGroupCard = ({
           <CollapsibleTrigger asChild>
             <button className="flex flex-1 items-center gap-2 text-left sm:gap-3">
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-sm font-semibold leading-snug sm:text-base">{controller}</h3>
-                <p className="truncate text-[10px] text-muted-foreground sm:text-[11px]">{meta.description}</p>
+                <h3 className="truncate text-sm font-semibold leading-snug sm:text-base">
+                  {controller}
+                </h3>
+                <p className="truncate text-[10px] text-muted-foreground sm:text-[11px]">
+                  {meta.description}
+                </p>
               </div>
             </button>
           </CollapsibleTrigger>

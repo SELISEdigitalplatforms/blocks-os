@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { AuthOidc } from "./auth-clients-oidc.service";
 import { AUTH_OIDC_ENDPOINTS } from "../constants/endpoint.constant";
 import {
@@ -14,7 +14,7 @@ import {
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("AuthOidc", () => {
   let service: AuthOidc;
@@ -35,11 +35,9 @@ describe("AuthOidc", () => {
 
       const result = await service.getOidcCredentials(mockGetOidcPayload);
 
-      expect(http.get).toHaveBeenCalledWith(
-        AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS,
-        undefined,
-        { absoluteUrl: true },
-      );
+      expect(http.get).toHaveBeenCalledWith(AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENTS, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockOidcCredentialsResponse);
     });
 
@@ -142,9 +140,9 @@ describe("AuthOidc", () => {
     it("should throw when the API call fails", async () => {
       vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
-      await expect(
-        service.rotateOidcClientSecret(mockRotateOidcSecretPayload),
-      ).rejects.toThrow("Network error");
+      await expect(service.rotateOidcClientSecret(mockRotateOidcSecretPayload)).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 });

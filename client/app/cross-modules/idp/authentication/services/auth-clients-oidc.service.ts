@@ -25,11 +25,9 @@ export class AuthOidc {
     errors: Record<string, string> | null;
     isSuccess: boolean;
   }> {
-    return http.get(
-      `${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}/${payload.clientId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.get(`${AUTH_OIDC_ENDPOINTS.GET_OIDC_CLIENT}/${payload.clientId}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   saveOidcCredential(
@@ -43,11 +41,9 @@ export class AuthOidc {
   deleteOidcCredential(
     payload: IDeleteOidcClientPayload,
   ): Promise<APIResponse<IDeleteOidcClientResponse>> {
-    return http.delete(
-      `${AUTH_OIDC_ENDPOINTS.DELETE_OIDC_CLIENT}/${payload.itemId}`,
-      undefined,
-      { absoluteUrl: true },
-    );
+    return http.delete(`${AUTH_OIDC_ENDPOINTS.DELETE_OIDC_CLIENT}/${payload.itemId}`, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   rotateOidcClientSecret(

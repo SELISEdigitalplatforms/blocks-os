@@ -1,6 +1,6 @@
 import { useGetAuthOidcCredentials } from "@blocks-idp/authentication/hooks/use-auth-oidc";
 import { useMemo } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -24,10 +24,7 @@ const LoadingSkeleton = () => (
         <Skeleton className="h-3 w-24" />
       </div>
       {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-4 border-b px-4 py-4 last:border-0"
-        >
+        <div key={i} className="flex items-center gap-4 border-b px-4 py-4 last:border-0">
           <Skeleton className="h-4 w-4 rounded" />
           <div className="flex items-center gap-2 flex-1">
             <Skeleton className="h-9 w-9 rounded-lg" />
@@ -99,11 +96,7 @@ export const OidcList = () => {
           </TableHeader>
           <TableBody className="[&_tr:last-child]:border-b">
             {sortedOidcData.map((item, index) => (
-              <OIDCRowExport
-                key={item.itemId}
-                item={item}
-                defaultExpanded={index === 0}
-              />
+              <OIDCRowExport key={item.itemId} item={item} defaultExpanded={index === 0} />
             ))}
           </TableBody>
         </Table>

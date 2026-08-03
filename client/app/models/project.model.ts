@@ -1,5 +1,5 @@
 import { DomainAction } from "@/pages/dashboard/components/domain";
-import { IProject, IDomain } from "@seliseblocks/blocks-kit/models";
+import { IProject, IDomain } from "@seliseblocks/genesis-os/models";
 
 export interface IProjectGroup {
   tenantGroupId: string;
@@ -24,6 +24,14 @@ export interface IUpdateProjectResponse {
 }
 export interface IValidateCnameProjectPayload {
   cookieDomain: string;
+}
+
+export interface IRestoreProjectPayload {
+  itemId: string;
+}
+export interface IRestoreProjectResponse {
+  errors: unknown | null;
+  isSuccess: boolean;
 }
 
 export type { IProject };

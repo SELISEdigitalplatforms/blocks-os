@@ -53,17 +53,15 @@ export class NotificationConfigService {
     }
 
     return http
-      .get<
-        | INotificationGetsApiResponse
-        | IAPIResponse<INotificationGetsApiResponse>
-      >(`${NOTIFICATION_ENDPOINTS.GET_CONFIGS}?${params.toString()}`)
+      .get<INotificationGetsApiResponse | IAPIResponse<INotificationGetsApiResponse>>(
+        `${NOTIFICATION_ENDPOINTS.GET_CONFIGS}?${params.toString()}`,
+      )
       .then((response) => {
         const data: INotificationGetsApiResponse = Array.isArray(
           (response as IAPIResponse<INotificationGetsApiResponse>).data,
         )
           ? (response as IAPIResponse<INotificationGetsApiResponse>).data
-          : (response as INotificationGetsApiResponse).configurations !==
-              undefined
+          : (response as INotificationGetsApiResponse).configurations !== undefined
             ? (response as INotificationGetsApiResponse)
             : { configurations: [], totalCount: 0 };
 
@@ -90,13 +88,11 @@ export class NotificationConfigService {
         itemId: payload.itemId ?? "",
         isUpdateRequest: !!payload.itemId,
       })
-      .then(
-        (response): ISaveNotificationConfigResponse => ({
-          isSuccess: !!response?.isSuccess,
-          errors: response?.errors ?? null,
-          itemId: payload.itemId ?? "",
-        }),
-      );
+      .then((response): ISaveNotificationConfigResponse => ({
+        isSuccess: !!response?.isSuccess,
+        errors: response?.errors ?? null,
+        itemId: payload.itemId ?? "",
+      }));
   }
 
   deleteNotificationConfig(itemId: string): Promise<void> {
@@ -109,9 +105,9 @@ export class NotificationConfigService {
 
   getNotificationConfig(itemId: string): Promise<INotificationConfigRow> {
     return http
-      .get<
-        INotificationConfigRow | IAPIResponse<INotificationConfigRow>
-      >(`${NOTIFICATION_ENDPOINTS.GET_CONFIG}?itemId=${encodeURIComponent(itemId)}`)
+      .get<INotificationConfigRow | IAPIResponse<INotificationConfigRow>>(
+        `${NOTIFICATION_ENDPOINTS.GET_CONFIG}?itemId=${encodeURIComponent(itemId)}`,
+      )
       .then((response) =>
         (response as IAPIResponse<INotificationConfigRow>).data
           ? (response as IAPIResponse<INotificationConfigRow>).data

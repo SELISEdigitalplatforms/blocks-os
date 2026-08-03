@@ -1,12 +1,28 @@
 # Contributing to Blocks OS
 
-Thanks for contributing. This guide covers the day-to-day workflow for this repository. See `README.md` and `LOCAL_GUIDE.md` for environment setup.
+Thanks for contributing. This guide covers the day-to-day workflow for this repository. See `README.md` for environment setup.
+
+## Branch model
+
+- `main`: production-ready code (protected)
+- `dev`: integration branch (protected); all pull requests target `dev`
+- `inception`: the working branch; day-to-day work happens here
+
+Never commit directly to `dev` or `main`. Work on `inception` and open a pull request from `inception` into `dev`. Do not force-push and do not rewrite published history.
+
+## Commit conventions
+
+Match the style already in the log. Most commits use Conventional Commits (`type(scope): subject`, for example `test(client): ...`, `chore(e2e): ...`); a plain imperative subject is also used for straightforward changes. Keep the subject concise and explain the what and the why in the body when it is not obvious.
+
+## Reporting a security issue
+
+Do not open a public issue for a suspected vulnerability. Follow the private disclosure process in [SECURITY.md](SECURITY.md).
 
 ## Repository layout
 
-- `server/` — .NET backend (`Api`, `Worker`, and the `*.DomainService` projects). Tests live in `server/XUnitTest`.
-- `client/` — React + TypeScript + Vite frontend. Tests are colocated next to the code they cover.
-- `.github/workflows/` — CI pipelines (`ci-dev.yml`, `ci-stg.yml`, `ci_prod.yml`).
+- `server/`: .NET backend (`Api`, `Worker`, and the `*.DomainService` projects). Tests live in `server/XUnitTest`.
+- `client/`: React + TypeScript + Vite frontend. Tests are colocated next to the code they cover.
+- `.github/workflows/`: CI pipelines (`ci-dev.yml`, `ci-stg.yml`, `ci_prod.yml`).
 
 ## Running the tests
 
@@ -35,12 +51,10 @@ On pull requests, the `RUN_TESTS` flag enables PR-only jobs that run the backend
 
 ## Naming conventions
 
-Follow the documented conventions when adding code:
+Follow the conventions the code already uses when adding code. There is no lint/analyzer enforcement of these yet:
 
-- Frontend: `client/NAMING-CONVENTIONS.md`
-- Backend: `server/NAMING-CONVENTIONS.md`
-
-These are documentation only for now; there is no lint/analyzer enforcement yet.
+- Backend (C#): interfaces are `I`-prefixed; types and public members are PascalCase; parameters and locals are camelCase; private fields are `_camelCase`; `Task`-returning methods carry the `Async` suffix; request/response DTOs end in `Request`/`Response`.
+- Frontend (TypeScript): files and folders are kebab-case (`use-*.ts` hooks, `*.service.ts` services); types and React components are PascalCase; variables and functions are camelCase.
 
 ## Backward-compatible renames
 

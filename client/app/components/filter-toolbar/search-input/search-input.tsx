@@ -1,4 +1,4 @@
-import { useRef, MouseEvent, useState, useEffect } from "react";
+import { useRef, MouseEvent, useState, useEffect, useMemo } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
@@ -16,15 +16,20 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   className = "",
 }) => {
   const [state, setState] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setState(value);
-  }, [value]);
-  const debounced = useRef(
-    debounce((val: string) => {
-      onChange(val);
-    }, 300),
-  ).current;
+  }
+  const inputRef = useRef<HTMLInputElement>(null);
+  // The debounced wrapper must stay stable for the whole lifetime, but callers pass a new
+  // inline onChange every render. Route through a ref refreshed on each render so the
+  // debounced call always reaches the latest prop instead of the first render's closure.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+  const debounced = useMemo(() => debounce((val: string) => onChangeRef.current(val), 300), []);
   useEffect(() => {
     return () => {
       debounced.cancel();
