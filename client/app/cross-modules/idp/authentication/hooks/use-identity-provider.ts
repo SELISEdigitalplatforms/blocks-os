@@ -1,22 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { identityProviderService } from "@blocks-idp/authentication/services/identity-provider.service";
 import {
- IdentityProvider,
- UpdateStatusRequest,
+  IdentityProvider,
+  UpdateStatusRequest,
 } from "@blocks-idp/authentication/models/identity-provider.model";
+import type { Id } from "@seliseblocks/genesis-os/types";
 
 const QUERY_KEY = ["identity-providers"] as const;
 
-export const useGetIdentityProviders = ({
- projectId,
-}: {
- projectId: string;
-}) => {
- return useQuery({
-  queryKey: [QUERY_KEY, projectId],
-  queryFn: () => identityProviderService.getAll(),
-  enabled: !!projectId,
- });
+
+export const useGetIdentityProviders = ({ projectId }: {projectId:Id}) => {
+  return useQuery({
+   queryKey: [QUERY_KEY, projectId],
+   queryFn: () => identityProviderService.getAll(),
+   enabled: !!projectId
+  });
 };
 
 export const useGetIdentityProviderById = (

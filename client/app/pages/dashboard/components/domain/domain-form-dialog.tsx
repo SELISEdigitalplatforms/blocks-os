@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import type { IDomain } from "@seliseblocks/blocks-kit/models";
+import type { IDomain } from "@seliseblocks/genesis-os/models";
 import { DomainForm } from "./domain-form";
 
 interface DomainFormDialogProps {
@@ -18,11 +18,7 @@ interface DomainFormDialogProps {
   application?: IDomain | null;
 }
 
-export const DomainFormDialog = ({
-  open,
-  onOpenChange,
-  application,
-}: DomainFormDialogProps) => {
+export const DomainFormDialog = ({ open, onOpenChange, application }: DomainFormDialogProps) => {
   const isEditMode = !!application;
 
   return (
@@ -31,15 +27,10 @@ export const DomainFormDialog = ({
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Edit Domain" : "Add Domain"}</DialogTitle>
           <DialogDescription>
-            {isEditMode
-              ? "Update the domain configuration."
-              : "Add a new domain to this project."}
+            {isEditMode ? "Update the domain configuration." : "Add a new domain to this project."}
           </DialogDescription>
         </DialogHeader>
-        <DomainForm
-          application={application}
-          onAfterSubmit={() => onOpenChange(false)}
-        />
+        <DomainForm application={application} onAfterSubmit={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   );

@@ -20,7 +20,7 @@ import {
   IRollbackResponse,
   IValidationError,
 } from "@blocks-localization/models/language";
-import { getRuntimeEnv } from "@seliseblocks/blocks-kit";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 class LanguageManagerService {
   fetchBlocksLanguageKey = (request: {
@@ -70,16 +70,18 @@ class LanguageManagerService {
     );
   };
 
-  fetchBlocksLanguageModules = (
-    projectKey: string,
-  ): Promise<ILanguageModule[]> => {
-    return http.get(
-      `${LANGUAGE_MODULE_ENDPOINTS.GETS}?projectKey=${projectKey}`,
-    );
+  fetchBlocksLanguageModules = (projectKey: string): Promise<ILanguageModule[]> => {
+    return http.get(`${LANGUAGE_MODULE_ENDPOINTS.GETS}?projectKey=${projectKey}`);
   };
 
-  fetchBlocksLanguages = (projectKey: string): Promise<ILanguageConfig[]> => {
-    return http.get(`${getRuntimeEnv("BLOCKS_LOGIC_BASE_URL")}${LANGUAGE_ENDPOINTS.GETS}`, undefined, { absoluteUrl: true });
+  // Returns the platform-wide language list; the endpoint is not project-scoped, so it takes
+  // no arguments (the server's Gets action ignores its request object entirely).
+  fetchBlocksLanguages = (): Promise<ILanguageConfig[]> => {
+    return http.get(
+      `${getRuntimeEnv("BLOCKS_LOGIC_BASE_URL")}${LANGUAGE_ENDPOINTS.GETS}`,
+      undefined,
+      { absoluteUrl: true },
+    );
   };
 
   saveBlocksLanguageKey = (payload: {
@@ -147,10 +149,7 @@ class LanguageManagerService {
       .then((response) => response);
   }
 
-  deleteLanguage(payload: {
-    languageName: string;
-    projectKey: string;
-  }): Promise<{
+  deleteLanguage(payload: { languageName: string; projectKey: string }): Promise<{
     errors: null | unknown;
     isSuccess: boolean;
   }> {
@@ -159,9 +158,7 @@ class LanguageManagerService {
       .delete<{
         errors: unknown;
         isSuccess: boolean;
-      }>(
-        `${url}?languageName=${payload.languageName}&projectKey=${payload.projectKey}`,
-      )
+      }>(`${url}?languageName=${payload.languageName}&projectKey=${payload.projectKey}`)
       .then((response) => response);
   }
 
@@ -312,15 +309,10 @@ class LanguageManagerService {
       payload.logFromValues.forEach((v) => params.append("LogFromValues", v));
     }
     if (payload.excludeLogFromValues) {
-      payload.excludeLogFromValues.forEach((v) =>
-        params.append("ExcludeLogFromValues", v),
-      );
+      payload.excludeLogFromValues.forEach((v) => params.append("ExcludeLogFromValues", v));
     }
     if (payload.createDateRange?.startDate) {
-      params.append(
-        "CreateDateRange.StartDate",
-        payload.createDateRange.startDate,
-      );
+      params.append("CreateDateRange.StartDate", payload.createDateRange.startDate);
     }
     if (payload.createDateRange?.endDate) {
       params.append("CreateDateRange.EndDate", payload.createDateRange.endDate);

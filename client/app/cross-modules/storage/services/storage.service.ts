@@ -19,7 +19,7 @@ export class StorageService {
     public file: StorageFile,
   ) {}
 
-  uploadFile(payload: IUploadImagePayload): Promise<{}> {
+  uploadFile(payload: IUploadImagePayload): Promise<unknown> {
     return http.put(
       payload.url,
       payload.file,
@@ -31,15 +31,18 @@ export class StorageService {
     );
   }
 
-  uploadFileToLocalStorage(payload: IUploadFileToLocalStorage): Promise<{}> {
-    const formData = (
-      Object.keys(payload) as (keyof IUploadFileToLocalStorage)[]
-    ).reduce((acc, key) => {
-      const value = payload[key];
-      acc.append(key, value instanceof Blob ? value : value.toString());
-      return acc;
-    }, new FormData());
-    return http.post(STORAGE_FILE_ENDPOINTS.UPLOAD_TO_LOCAL_STORAGE, formData);
+  uploadFileToLocalStorage(payload: IUploadFileToLocalStorage): Promise<unknown> {
+    const formData = (Object.keys(payload) as (keyof IUploadFileToLocalStorage)[]).reduce(
+      (acc, key) => {
+        const value = payload[key];
+        acc.append(key, value instanceof Blob ? value : value.toString());
+        return acc;
+      },
+      new FormData(),
+    );
+    return http.post(STORAGE_FILE_ENDPOINTS.UPLOAD_TO_LOCAL_STORAGE, formData, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   uploadPublicCertificateFile(
@@ -56,29 +59,27 @@ export class StorageService {
       `${STORAGE_FILE_ENDPOINTS.UPLOAD_PUBLIC_CERTIFICATE}?TenantId=${payload.TenantId}&IsThirdParty=true`,
       formData,
       { Accept: "*/*" },
+      { absoluteUrl: true },
     );
   }
 
-  getFilesAndFolders(
-    payload: IGetDmsFileAndFolderPayload,
-  ): Promise<IGetDmsFileAndFolderResponse> {
-    return http.post(STORAGE_FILE_ENDPOINTS.GET_DMS_FILE_AND_FOLDER, payload);
+  getFilesAndFolders(payload: IGetDmsFileAndFolderPayload): Promise<IGetDmsFileAndFolderResponse> {
+    return http.post(STORAGE_FILE_ENDPOINTS.GET_DMS_FILE_AND_FOLDER, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
-  uploadDmsFile(
-    payload: IUploadDmsFilePayload,
-  ): Promise<IUploadDmsFileResponse> {
-    return http.post(STORAGE_FILE_ENDPOINTS.UPLOAD_DMS_FILE, payload);
+  uploadDmsFile(payload: IUploadDmsFilePayload): Promise<IUploadDmsFileResponse> {
+    return http.post(STORAGE_FILE_ENDPOINTS.UPLOAD_DMS_FILE, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
-  createDmsFolder(
-    payload: ICreateDmsFolderPayload,
-  ): Promise<IUploadDmsFileResponse> {
-    return http.post(STORAGE_FILE_ENDPOINTS.CREATE_FOLDER, payload);
+  createDmsFolder(payload: ICreateDmsFolderPayload): Promise<IUploadDmsFileResponse> {
+    return http.post(STORAGE_FILE_ENDPOINTS.CREATE_FOLDER, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 
-export const storageService = new StorageService(
-  new StorageConfiguration(),
-  new StorageFile(),
-);
+export const storageService = new StorageService(new StorageConfiguration(), new StorageFile());

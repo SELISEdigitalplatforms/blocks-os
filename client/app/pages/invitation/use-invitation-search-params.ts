@@ -1,28 +1,28 @@
-import { getTrimmedSearchParam } from "@/lib/search-params"
-import { useMemo } from "react"
-import { useSearchParams } from "react-router-dom"
+import { getTrimmedSearchParam } from "@/lib/search-params";
+import { useMemo } from "react";
+import { useSearchParams } from "react-router";
 
 export type InvitationResultSearchParams = {
-  success: string
-  old: string
-  error: string
+  success: string;
+  old: string;
+  error: string;
   /** Activation key from accept API (query name `code` on `/invitation/result`). */
-  code: string
-}
+  code: string;
+};
 
 /** Invitation email link: `/invitation?code=...` */
 export const useInvitationConfirmCode = () => {
-  const [searchParams] = useSearchParams()
+  const [searchParams] = useSearchParams();
 
   return useMemo(() => {
-    const code = getTrimmedSearchParam(searchParams, "code")
-    return { code, isValid: code.length > 0 }
-  }, [searchParams])
-}
+    const code = getTrimmedSearchParam(searchParams, "code");
+    return { code, isValid: code.length > 0 };
+  }, [searchParams]);
+};
 
 /** Post-accept screen: `/invitation/result?success=&old=&error=&code=` */
 export const useInvitationResultSearchParams = (): InvitationResultSearchParams => {
-  const [searchParams] = useSearchParams()
+  const [searchParams] = useSearchParams();
 
   return useMemo(
     () => ({
@@ -32,10 +32,10 @@ export const useInvitationResultSearchParams = (): InvitationResultSearchParams 
       code: getTrimmedSearchParam(searchParams, "code"),
     }),
     [searchParams],
-  )
-}
+  );
+};
 
 export const buildInvitationResultPath = (params: Record<string, string>) => {
-  const search = new URLSearchParams(params)
-  return `/invitation/result?${search.toString()}`
-}
+  const search = new URLSearchParams(params);
+  return `/invitation/result?${search.toString()}`;
+};

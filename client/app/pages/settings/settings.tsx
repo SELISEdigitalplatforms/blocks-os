@@ -4,12 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { formatDate } from "@/lib/utils";
 import { EnvironmentsCard, getEnvironmentOrder } from "./environments-card";
 const SettingsLoading = () => (
@@ -54,13 +49,7 @@ const SettingsLoading = () => (
     <EnvironmentsCard environments={[]} isLoading />
   </main>
 );
-const InfoField = ({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) => (
+const InfoField = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="space-y-1">
     <p className="text-sm text-muted-foreground">{label}</p>
     <div className="font-medium">{children}</div>
@@ -76,8 +65,7 @@ const projectNameSchema = z.object({
 });
 type ProjectNameForm = z.infer<typeof projectNameSchema>;
 export const SettingsPage = () => {
-  const { selectedProject, selectedTenantGroup, setSelectedProject } =
-    useProjectStore();
+  const { selectedProject, selectedTenantGroup, setSelectedProject } = useProjectStore();
   const { data: projectsData, isLoading } = useGetProjects({
     tenantGroupId: selectedTenantGroup ?? "",
     enabled: !!selectedTenantGroup,
@@ -85,13 +73,9 @@ export const SettingsPage = () => {
   // Ordered like the "Select environments" step: dev → test → stg → … → prod
   const environments = (projectsData?.[0]?.projects ?? [])
     .filter((environment) => !environment.isDisabled)
-    .sort(
-      (a, b) =>
-        getEnvironmentOrder(a.environment) - getEnvironmentOrder(b.environment),
-    );
+    .sort((a, b) => getEnvironmentOrder(a.environment) - getEnvironmentOrder(b.environment));
   const project = projectsData?.[0]?.projects?.[0];
-  const { mutateAsync: updateTenantGroup, isPending: isUpdating } =
-    useUpdateTenantGroup();
+  const { mutateAsync: updateTenantGroup, isPending: isUpdating } = useUpdateTenantGroup();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const form = useForm<ProjectNameForm>({
     resolver: zodResolver(projectNameSchema),
@@ -154,7 +138,8 @@ export const SettingsPage = () => {
             variant="outline"
             className="h-10"
             aria-label="Edit project name"
-            onClick={() => setIsEditOpen(true)}>
+            onClick={() => setIsEditOpen(true)}
+          >
             <Pencil className="mr-2 h-4 w-4" />
             <span>Edit</span>
           </Button>
@@ -163,9 +148,7 @@ export const SettingsPage = () => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <InfoField label="Name">{project?.name || "-"}</InfoField>
             <InfoField label="Created On">{formattedDate}</InfoField>
-            <InfoField label="Environments">
-              {environments.length || "-"}
-            </InfoField>
+            <InfoField label="Environments">{environments.length || "-"}</InfoField>
             <InfoField label="Plan">Free</InfoField>
           </div>
         </CardContent>
@@ -208,15 +191,12 @@ export const SettingsPage = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditOpen(false)}
-                  disabled={isUpdating}>
+                  disabled={isUpdating}
+                >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isUpdating || !form.formState.isValid}>
-                  {isUpdating && (
-                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  )}
+                <Button type="submit" disabled={isUpdating || !form.formState.isValid}>
+                  {isUpdating && <Loader className="mr-2 h-4 w-4 animate-spin" />}
                   Save
                 </Button>
               </DialogFooter>

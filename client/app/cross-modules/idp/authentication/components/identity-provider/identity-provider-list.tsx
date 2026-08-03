@@ -31,11 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -48,7 +44,7 @@ import {
 import { KVDetailItem } from "../kv-detail-item";
 import { IdentityProviderFormDialog } from "./identity-provider-form-dialog";
 import { format } from "date-fns";
-import { useProjectStore } from "@seliseblocks/blocks-kit/store";
+import { useProjectStore } from "@seliseblocks/genesis-os/store";
 
 const PROVIDER_CONFIG: Record<
   string,
@@ -95,27 +91,19 @@ interface IdentityProviderRowProps {
   defaultExpanded?: boolean;
 }
 
-const IdentityProviderRow = ({
-  item,
-  defaultExpanded = false,
-}: IdentityProviderRowProps) => {
+const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProviderRowProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { mutateAsync: updateStatus, isPending: isUpdating } =
-    useUpdateIdentityProviderStatus();
-  const { mutateAsync: deleteProvider, isPending: isDeleting } =
-    useDeleteIdentityProvider();
+  const { mutateAsync: updateStatus, isPending: isUpdating } = useUpdateIdentityProviderStatus();
+  const { mutateAsync: deleteProvider, isPending: isDeleting } = useDeleteIdentityProvider();
 
   const cfg = PROVIDER_CONFIG[item.providerType] ?? DEFAULT_PROVIDER_CONFIG;
   const Icon = cfg.Icon;
   const isActive = item.isActive;
-  const statusDotClass =
-    PROVIDER_STATUS_DOT[item.providerType] ?? "bg-emerald-500";
-  const createdAt = item.createdDate
-    ? format(new Date(item.createdDate), "dd MMM yyyy")
-    : "—";
+  const statusDotClass = PROVIDER_STATUS_DOT[item.providerType] ?? "bg-emerald-500";
+  const createdAt = item.createdDate ? format(new Date(item.createdDate), "dd MMM yyyy") : "—";
 
   const handleConfirmStatusChange = async () => {
     try {
@@ -181,9 +169,7 @@ const IdentityProviderRow = ({
     },
     {
       key: "Permissions",
-      value: item.initialPermissions?.length
-        ? item.initialPermissions.join(", ")
-        : "",
+      value: item.initialPermissions?.length ? item.initialPermissions.join(", ") : "",
     },
   ].filter((pair) => pair.value);
 
@@ -193,9 +179,7 @@ const IdentityProviderRow = ({
         className={cn(
           "hover:bg-muted/50",
           kvPairs.length > 0 && "cursor-pointer",
-          expanded && kvPairs.length > 0
-            ? "border-b-0"
-            : "border-b-2 border-border",
+          expanded && kvPairs.length > 0 ? "border-b-0" : "border-b-2 border-border",
           !isActive && "opacity-75",
         )}
         onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}>
@@ -214,19 +198,13 @@ const IdentityProviderRow = ({
               className={cn(
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                 isActive ? cfg.iconBg : "bg-muted",
-              )}>
-              <Icon
-                className={cn(
-                  "h-4 w-4",
-                  isActive ? cfg.iconColor : "text-muted-foreground",
-                )}
-              />
+              )}
+            >
+              <Icon className={cn("h-4 w-4", isActive ? cfg.iconColor : "text-muted-foreground")} />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{item.displayName}</p>
-              <p className="truncate font-mono text-xs text-muted-foreground">
-                {item.provider}
-              </p>
+              <p className="truncate font-mono text-xs text-muted-foreground">{item.provider}</p>
             </div>
           </div>
         </TableCell>
@@ -246,9 +224,7 @@ const IdentityProviderRow = ({
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
-        <TableCell
-          className="py-3.5 pr-4 text-right"
-          onClick={(e) => e.stopPropagation()}>
+        <TableCell className="py-3.5 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -309,7 +285,8 @@ const IdentityProviderRow = ({
         <TableRow className="border-b-2 border-border hover:bg-transparent">
           <TableCell
             colSpan={5}
-            className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12">
+            className="max-w-0 bg-muted/20 px-3 py-3 pl-8 sm:px-6 sm:py-4 sm:pl-12"
+          >
             <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
               {kvPairs.map(({ key, value, copyable, sensitive }) => (
                 <KVDetailItem
@@ -344,15 +321,13 @@ const IdentityProviderRow = ({
             <DialogDescription>
               {willEnable ? (
                 <>
-                  Users will be able to sign in with{" "}
-                  <strong>{providerLabel}</strong>. Are you sure you want to
-                  enable this provider?
+                  Users will be able to sign in with <strong>{providerLabel}</strong>. Are you sure
+                  you want to enable this provider?
                 </>
               ) : (
                 <>
-                  Users will no longer be able to sign in with{" "}
-                  <strong>{providerLabel}</strong>. Are you sure you want to
-                  disable this provider?
+                  Users will no longer be able to sign in with <strong>{providerLabel}</strong>. Are
+                  you sure you want to disable this provider?
                 </>
               )}
             </DialogDescription>
@@ -389,14 +364,13 @@ const IdentityProviderRow = ({
             <DialogDescription>
               {isActive ? (
                 <>
-                  Users will no longer be able to sign in with{" "}
-                  <strong>{providerLabel}</strong>. This provider and its
-                  configuration will be permanently removed.
+                  Users will no longer be able to sign in with <strong>{providerLabel}</strong>.
+                  This provider and its configuration will be permanently removed.
                 </>
               ) : (
                 <>
-                  <strong>{providerLabel}</strong> and its configuration will be
-                  permanently removed. This cannot be undone.
+                  <strong>{providerLabel}</strong> and its configuration will be permanently
+                  removed. This cannot be undone.
                 </>
               )}
             </DialogDescription>
@@ -433,9 +407,7 @@ const LoadingSkeleton = () => (
         <Skeleton className="h-3 w-24" />
       </div>
       {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-4 border-b px-4 py-4 last:border-0">
+        <div key={i} className="flex items-center gap-4 border-b px-4 py-4 last:border-0">
           <Skeleton className="h-4 w-4 rounded" />
           <div className="flex flex-1 items-center gap-2">
             <Skeleton className="h-9 w-9 rounded-lg" />
@@ -458,8 +430,8 @@ const LoadingSkeleton = () => (
 );
 
 export function IdentityProviderList() {
-  const projectId = useProjectStore().selectedProject?.itemId || "";
-  const { data, isLoading } = useGetIdentityProviders({ projectId });
+ const projectId = useProjectStore().selectedProject?.itemId || "";
+  const { data, isLoading } = useGetIdentityProviders({projectId});
 
   const providers = data?.data ?? [];
 

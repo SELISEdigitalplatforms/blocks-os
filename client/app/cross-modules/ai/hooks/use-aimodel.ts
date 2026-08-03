@@ -56,13 +56,8 @@ export const useUpdateModel = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["model", "update"],
-    mutationFn: ({
-      modelId,
-      payload,
-    }: {
-      modelId: string;
-      payload: IUpdateModelPayload;
-    }) => modelService.updateModel(modelId, payload),
+    mutationFn: ({ modelId, payload }: { modelId: string; payload: IUpdateModelPayload }) =>
+      modelService.updateModel(modelId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["model"] });
       queryClient.invalidateQueries({ queryKey: ["models"] });

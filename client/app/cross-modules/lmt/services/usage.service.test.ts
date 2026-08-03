@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { UsageService } from "./usage.service";
 import { TRACE_ENDPOINTS } from "../constants/endpoint.constant";
 import {
@@ -9,7 +9,7 @@ import {
   mockGetServiceAnalyticsPayload,
 } from "../test-utils/__mocks__";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 describe("UsageService", () => {
   let service: UsageService;

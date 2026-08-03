@@ -25,7 +25,7 @@ vi.stubGlobal(
 
 const navigate = vi.fn();
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => navigate,
   Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
     <a href={to} data-testid="edit-link">
@@ -34,7 +34,7 @@ vi.mock("react-router-dom", () => ({
   ),
 }));
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (path: string) => `/scoped/${path}`,
 }));
 
@@ -52,10 +52,7 @@ vi.mock("@/components/filter-toolbar", () => ({
 }));
 
 import { PermissionsList } from "./permissions-list";
-import {
-  IPermission,
-  PermissionSeverityLevel,
-} from "@blocks-idp/iam/models/permission";
+import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 
 const customPermission = {
   itemId: "perm-custom",
@@ -91,25 +88,18 @@ describe("PermissionsList", () => {
   });
 
   it("renders loading skeletons and no table while loading", () => {
-    const { container } = render(
-      <PermissionsList permissions={[]} isLoading />,
-    );
+    const { container } = render(<PermissionsList permissions={[]} isLoading />);
     expect(container.querySelector("table")).toBeNull();
   });
 
   it("shows the empty-state message for no permissions", () => {
     render(<PermissionsList permissions={[]} isLoading={false} />);
-    expect(
-      screen.getByText("No permission found. Please create new permission."),
-    ).toBeTruthy();
+    expect(screen.getByText("No permission found. Please create new permission.")).toBeTruthy();
   });
 
   it("renders permission rows with name, resource, source, severity and role count", () => {
     render(
-      <PermissionsList
-        permissions={[customPermission, builtInPermission]}
-        isLoading={false}
-      />,
+      <PermissionsList permissions={[customPermission, builtInPermission]} isLoading={false} />,
     );
     expect(screen.getByText("Manage Billing")).toBeTruthy();
     expect(screen.getByText("Read Users")).toBeTruthy();
@@ -126,10 +116,7 @@ describe("PermissionsList", () => {
 
   it("only renders an edit link for custom (non built-in) permissions", () => {
     render(
-      <PermissionsList
-        permissions={[customPermission, builtInPermission]}
-        isLoading={false}
-      />,
+      <PermissionsList permissions={[customPermission, builtInPermission]} isLoading={false} />,
     );
     const links = screen.getAllByTestId("edit-link");
     expect(links).toHaveLength(1);
@@ -138,12 +125,8 @@ describe("PermissionsList", () => {
 
   it("navigates to the permission detail page when a row is clicked", async () => {
     const user = userEvent.setup();
-    render(
-      <PermissionsList permissions={[customPermission]} isLoading={false} />,
-    );
+    render(<PermissionsList permissions={[customPermission]} isLoading={false} />);
     await user.click(screen.getByText("Manage Billing"));
-    expect(navigate).toHaveBeenCalledWith(
-      "/scoped/idp/permission-detail/perm-custom",
-    );
+    expect(navigate).toHaveBeenCalledWith("/scoped/iam/permission-detail/perm-custom");
   });
 });

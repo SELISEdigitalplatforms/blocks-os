@@ -38,7 +38,7 @@ if (!Element.prototype.scrollIntoView) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let rolesResult: any = { data: undefined, isLoading: false };
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 
@@ -48,10 +48,7 @@ vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
 
 vi.mock("@/components/filter-toolbar", () => ({
   FilterControls: {
-    SearchInput: (props: {
-      value: string;
-      onChange: (value: string) => void;
-    }) => (
+    SearchInput: (props: { value: string; onChange: (value: string) => void }) => (
       <input
         aria-label="search-roles"
         value={props.value}

@@ -22,8 +22,7 @@ describe("parseSSEEvent", () => {
 
 describe("parseSSEBuffer", () => {
   it("splits complete events and keeps the trailing partial as remaining", () => {
-    const buffer =
-      'event: a\ndata: {"n":1}\n\nevent: b\ndata: {"n":2}\n\nevent: c\ndata: {"n":3}';
+    const buffer = 'event: a\ndata: {"n":1}\n\nevent: b\ndata: {"n":2}\n\nevent: c\ndata: {"n":3}';
     const { events, remaining } = parseSSEBuffer(buffer);
     expect(events).toEqual([
       { eventType: "a", eventData: { n: 1 } },

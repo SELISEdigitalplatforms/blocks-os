@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Info, Logs } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 interface ServiceCardProps {
   isLoading: boolean;
   name: string;
@@ -72,8 +72,12 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="api" className="text-xs">API</SelectItem>
-                <SelectItem value="worker" className="text-xs">Worker</SelectItem>
+                <SelectItem value="api" className="text-xs">
+                  API
+                </SelectItem>
+                <SelectItem value="worker" className="text-xs">
+                  Worker
+                </SelectItem>
               </SelectContent>
             </Select>
             {logLink ? (
@@ -107,9 +111,7 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
                     {currentMatrix.successRate}% ok
                   </span>
                   <span className="text-border">·</span>
-                  <span className="font-medium text-red-500">
-                    {currentMatrix.errorRate}% err
-                  </span>
+                  <span className="font-medium text-red-500">{currentMatrix.errorRate}% err</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -119,7 +121,11 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-1">
                             <div className="text-xs font-semibold">Success</div>
-                            {[["1xx", currentMatrix.Status1xx], ["2xx", currentMatrix.Status2xx], ["3xx", currentMatrix.Status3xx]].map(([k, v]) => (
+                            {[
+                              ["1xx", currentMatrix.Status1xx],
+                              ["2xx", currentMatrix.Status2xx],
+                              ["3xx", currentMatrix.Status3xx],
+                            ].map(([k, v]) => (
                               <div key={k} className="flex justify-between gap-4 text-xs">
                                 <span className="text-muted-foreground">{k}</span>
                                 <span>{abbreviateNumber(v as number)}</span>
@@ -128,7 +134,10 @@ export const UsageServiceCard: React.FC<ServiceCardProps> = ({
                           </div>
                           <div className="space-y-1">
                             <div className="text-xs font-semibold">Errors</div>
-                            {[["4xx", currentMatrix.Status4xx], ["5xx", currentMatrix.Status5xx]].map(([k, v]) => (
+                            {[
+                              ["4xx", currentMatrix.Status4xx],
+                              ["5xx", currentMatrix.Status5xx],
+                            ].map(([k, v]) => (
                               <div key={k} className="flex justify-between gap-4 text-xs">
                                 <span className="text-muted-foreground">{k}</span>
                                 <span>{abbreviateNumber(v as number)}</span>

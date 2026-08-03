@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { randomInt } from "crypto";
 
 // Shared state for the sequential flow specs (tests/flow/*). Each numbered file
 // runs in order (workers: 1) and reads/writes this file so later steps know the
@@ -26,9 +27,7 @@ export type FlowState = {
  */
 export function resolveProjectName(): string {
   const configured = process.env.E2E_PROJECT_NAME?.trim();
-  return configured && configured.length > 0
-    ? configured
-    : `e2e-${randomToken(6)}`;
+  return configured && configured.length > 0 ? configured : `e2e-${randomToken(6)}`;
 }
 
 /** Project + tenantGroupId recorded by step 01, or a clear failure message. */
@@ -70,7 +69,7 @@ export function randomToken(length = 6): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let out = "";
   for (let i = 0; i < length; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
+    out += chars[randomInt(chars.length)];
   }
   return out;
 }
@@ -80,7 +79,7 @@ export function randomLetters(length: number): string {
   const chars = "abcdefghijklmnopqrstuvwxyz";
   let out = "";
   for (let i = 0; i < length; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
+    out += chars[randomInt(chars.length)];
   }
   return out;
 }

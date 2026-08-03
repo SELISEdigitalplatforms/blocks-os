@@ -1,14 +1,8 @@
-import {
-  DashboardHeader,
-  SidebarMenuDesktop,
-} from "@seliseblocks/blocks-kit/components";
-import {
-  ImpersonationChecker,
-  ImpersonationTerminator,
-} from "@seliseblocks/blocks-kit/guards";
+import { DashboardHeader, SidebarMenuDesktop } from "@seliseblocks/genesis-os/components";
+import { ImpersonationChecker, ImpersonationTerminator } from "@seliseblocks/genesis-os/guards";
 import type * as React from "react";
-import type { LayoutProps } from "@seliseblocks/blocks-kit/layouts";
-import { DashboardLayoutProvider } from "@seliseblocks/blocks-kit/providers";
+import type { LayoutProps } from "@seliseblocks/genesis-os/layouts";
+import { DashboardLayoutProvider } from "@seliseblocks/genesis-os/providers";
 
 export interface ProjectOverviewLayoutProps extends LayoutProps {
   wrapper?: (content: React.ReactNode) => React.ReactNode;
@@ -25,10 +19,7 @@ export function ProjectOverviewLayout({
   const content = (
     <DashboardLayoutProvider isOpen={true} persist>
       <div className="flex w-full overflow-hidden">
-        <SidebarMenuDesktop
-          redirectPaths={redirectPaths}
-          navigationMenus={navigationMenus}
-        />
+        <SidebarMenuDesktop redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
         <div className="flex h-screen min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <DashboardHeader
             redirectPaths={redirectPaths}
@@ -47,9 +38,7 @@ export function ProjectOverviewLayout({
 
   return (
     <ImpersonationChecker>
-      <ImpersonationTerminator>
-        {wrapper ? wrapper(content) : content}
-      </ImpersonationTerminator>
+      <ImpersonationTerminator>{wrapper ? wrapper(content) : content}</ImpersonationTerminator>
     </ImpersonationChecker>
   );
 }

@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 import {
   buildOrganizationConfigSavePayload,
   toOrganizationConfigFormValues,
-} from "./organization-config-form"
-import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model"
+} from "./organization-config-form";
+import type { ISettingsOrganizationConfig } from "@blocks-idp/settings/models/settings.model";
 
 const baseConfig: ISettingsOrganizationConfig = {
   itemId: "org-1",
@@ -17,7 +17,7 @@ const baseConfig: ISettingsOrganizationConfig = {
   defaultPermissionsOnOrgCreation: ["blocks-idp::read-users"],
   keepOrgRolesSameAsDefaultRoles: true,
   keepOrgPermissionsSameAsDefaultPermissions: false,
-}
+};
 
 describe("organization-config-form", () => {
   it("maps settings config into form values", () => {
@@ -27,14 +27,14 @@ describe("organization-config-form", () => {
       allowOrgCreationFromSignup: false,
       allowOrgCreationFromPortal: true,
       isMultiOrgEnabled: false,
-    })
-  })
+    });
+  });
 
   it("preserves server multi-org flags on save", () => {
-    const config = { ...baseConfig, isMultiOrgEnabled: true, consentForMultiOrgEnable: true }
-    const values = toOrganizationConfigFormValues(config)
+    const config = { ...baseConfig, isMultiOrgEnabled: true, consentForMultiOrgEnable: true };
+    const values = toOrganizationConfigFormValues(config);
 
-    const payload = buildOrganizationConfigSavePayload(config, values)
+    const payload = buildOrganizationConfigSavePayload(config, values);
 
     expect(payload).toEqual({
       allowOrgCreationFromCloud: true,
@@ -47,20 +47,20 @@ describe("organization-config-form", () => {
       defaultPermissionsOnOrgCreation: ["blocks-idp::read-users"],
       keepOrgRolesSameAsDefaultRoles: true,
       keepOrgPermissionsSameAsDefaultPermissions: false,
-    })
-  })
+    });
+  });
 
   it("enables multi-org and grants consent from the pending form value", () => {
     const values = {
       ...toOrganizationConfigFormValues(baseConfig),
       isMultiOrgEnabled: true,
-    }
+    };
 
-    const payload = buildOrganizationConfigSavePayload(baseConfig, values)
+    const payload = buildOrganizationConfigSavePayload(baseConfig, values);
 
-    expect(payload.isMultiOrgEnabled).toBe(true)
-    expect(payload.consentForMultiOrgEnable).toBe(true)
-  })
+    expect(payload.isMultiOrgEnabled).toBe(true);
+    expect(payload.consentForMultiOrgEnable).toBe(true);
+  });
 
   it("sends creation workflow edits made in the same unsaved batch as the enable", () => {
     const values = {
@@ -68,21 +68,21 @@ describe("organization-config-form", () => {
       isMultiOrgEnabled: true,
       allowOrgCreationFromSignup: true,
       allowOrgCreationFromCloud: false,
-    }
+    };
 
-    const payload = buildOrganizationConfigSavePayload(baseConfig, values)
+    const payload = buildOrganizationConfigSavePayload(baseConfig, values);
 
-    expect(payload.allowOrgCreationFromSignup).toBe(true)
-    expect(payload.allowOrgCreationFromCloud).toBe(false)
-    expect(payload.isMultiOrgEnabled).toBe(true)
-  })
+    expect(payload.allowOrgCreationFromSignup).toBe(true);
+    expect(payload.allowOrgCreationFromCloud).toBe(false);
+    expect(payload.isMultiOrgEnabled).toBe(true);
+  });
 
   it("does not enable multi-org while the toggle is left off", () => {
-    const values = toOrganizationConfigFormValues(baseConfig)
+    const values = toOrganizationConfigFormValues(baseConfig);
 
-    const payload = buildOrganizationConfigSavePayload(baseConfig, values)
+    const payload = buildOrganizationConfigSavePayload(baseConfig, values);
 
-    expect(payload.isMultiOrgEnabled).toBe(false)
-    expect(payload.consentForMultiOrgEnable).toBe(false)
-  })
-})
+    expect(payload.isMultiOrgEnabled).toBe(false);
+    expect(payload.consentForMultiOrgEnable).toBe(false);
+  });
+});

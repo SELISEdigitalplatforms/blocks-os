@@ -5,9 +5,9 @@
 	  <PackageReference Include="Azure.ResourceManager.ServiceBus" />
 	  <PackageReference Include="FluentValidation" />
 	  <PackageReference Include="MongoDB.Driver" />
-	  <PackageReference Include="SeliseBlocks.Genesis" />
-	  <PackageReference Include="SeliseBlocks.MailDriver" />
-	  <PackageReference Include="SeliseBlocks.StorageDriver" />
+	  <PackageReference Include="SeliseBlocks.Genesis.OS" />
+	  <PackageReference Include="SeliseBlocks.MailDriver.OS" />
+	  <PackageReference Include="SeliseBlocks.StorageDriver.OS" />
 	  <PackageReference Include="SixLabors.Fonts" />
     <PackageReference Include="SSH.NET" />
   </ItemGroup>

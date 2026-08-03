@@ -29,11 +29,7 @@ const providerColors: Record<StorageStrategyType, string> = {
   SftpStorage: "bg-green-100 text-green-600",
   S3Compatible: "bg-purple-100 text-purple-600",
 };
-export const StorageCard = ({
-  data,
-  onClick,
-  onViewDetails,
-}: StorageCardProps) => {
+export const StorageCard = ({ data, onClick, onViewDetails }: StorageCardProps) => {
   const handleClick = () => {
     onClick?.(data.id);
   };
@@ -59,18 +55,10 @@ export const StorageCard = ({
             )}
           >
             {(data.provider === "AWS" || data.provider === "S3Compatible") && (
-              <img
-                src="/assets/images/amazon.png"
-                alt="AWS"
-                className="h-5 w-5 object-contain"
-              />
+              <img src="/assets/images/amazon.png" alt="AWS" className="h-5 w-5 object-contain" />
             )}
             {data.provider === "Azure" && (
-              <img
-                src="/assets/images/azure.png"
-                alt="Azure"
-                className="h-5 w-5 object-contain"
-              />
+              <img src="/assets/images/azure.png" alt="Azure" className="h-5 w-5 object-contain" />
             )}
             {data.provider === "SftpStorage" && <PackageOpen className="h-5 w-5" />}
           </div>

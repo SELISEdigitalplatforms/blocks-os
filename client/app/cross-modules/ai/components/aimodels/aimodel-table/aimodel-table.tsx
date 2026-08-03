@@ -63,7 +63,9 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
           },
           onError: (error) => {
             const fallbackMessage =
-              error instanceof Error ? error.message : "Failed to validate model. Please try again.";
+              error instanceof Error
+                ? error.message
+                : "Failed to validate model. Please try again.";
             showErrorToast({ errors: fallbackMessage });
             setValidatingRowId(null);
           },
@@ -84,7 +86,14 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
           setActionMenuRowId(open ? rowId : null);
         },
       }),
-    [custom, handleEditClick, handleDeleteClick, handleValidateClick, isValidating, validatingRowId],
+    [
+      custom,
+      handleEditClick,
+      handleDeleteClick,
+      handleValidateClick,
+      isValidating,
+      validatingRowId,
+    ],
   );
   const table = useReactTable({
     data: models,
@@ -115,7 +124,10 @@ export const AIModelsTable = ({ custom, models, isLoading }: AIModelsTableProps)
         <TableBody>
           {!models.length ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
                 No models found.
               </TableCell>
             </TableRow>

@@ -1,29 +1,25 @@
-import { Badge } from "@/components/ui-kits/badge/badge"
-import { Button } from "@/components/ui-kits/button/button"
-import { cn } from "@/lib/utils"
-import { useState } from "react"
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { Button } from "@/components/ui-kits/button/button";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
-const DEFAULT_VISIBLE_COUNT = 8
+const DEFAULT_VISIBLE_COUNT = 8;
 
 type ConfigTagListProps = {
-  items: string[]
-  emptyLabel?: string
-  className?: string
-}
+  items: string[];
+  emptyLabel?: string;
+  className?: string;
+};
 
-export const ConfigTagList = ({
-  items,
-  emptyLabel = "None",
-  className,
-}: ConfigTagListProps) => {
-  const [expanded, setExpanded] = useState(false)
+export const ConfigTagList = ({ items, emptyLabel = "None", className }: ConfigTagListProps) => {
+  const [expanded, setExpanded] = useState(false);
 
   if (!items.length) {
-    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   }
 
-  const visibleItems = expanded ? items : items.slice(0, DEFAULT_VISIBLE_COUNT)
-  const hiddenCount = items.length - DEFAULT_VISIBLE_COUNT
+  const visibleItems = expanded ? items : items.slice(0, DEFAULT_VISIBLE_COUNT);
+  const hiddenCount = items.length - DEFAULT_VISIBLE_COUNT;
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -51,5 +47,5 @@ export const ConfigTagList = ({
         </Button>
       ) : null}
     </div>
-  )
-}
+  );
+};

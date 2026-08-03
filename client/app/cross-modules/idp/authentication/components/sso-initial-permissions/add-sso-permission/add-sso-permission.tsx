@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { Plus } from "lucide-react";
@@ -78,9 +78,9 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
     });
     setSelectedPermissions([]);
   };
-  const permissionsResource = useMemo(() => {
-    return permissions.map((item) => item.resource) || [];
-  }, [permissions]);
+  // Plain derivation: the compiler declines to memoize this mapping, and nothing observes the
+  // array's identity (it is only read inside this component), so the useMemo bought nothing.
+  const permissionsResource = permissions.map((item) => item.resource);
   const selectedPermissionsResource = useMemo(() => {
     return selectedPermission.map((item) => item.resource) || [];
   }, [selectedPermission]);
@@ -191,10 +191,7 @@ export const AddSSOPermission = ({ onAdd, permissions }: AddSSOPermissionProps) 
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="h-24 text-center text-muted-foreground"
-                    >
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                       No permissions found
                     </TableCell>
                   </TableRow>

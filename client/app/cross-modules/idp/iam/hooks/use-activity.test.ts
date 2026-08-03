@@ -64,9 +64,7 @@ describe("use-activity hooks", () => {
     const { result } = renderHook(() => useGeneratePats(), { wrapper: createWrapper() });
     await result.current.mutateAsync({} as never);
     await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "success" }),
-      ),
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "success" })),
     );
   });
 
@@ -75,9 +73,7 @@ describe("use-activity hooks", () => {
     const { result } = renderHook(() => useGeneratePats(), { wrapper: createWrapper() });
     await expect(result.current.mutateAsync({} as never)).rejects.toThrow("fail");
     await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "destructive" }),
-      ),
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
     );
   });
 });

@@ -8,10 +8,11 @@ ASP.NET Core + React (Vite, TypeScript) application: **Genesis-backed API**, **b
 blocks-os/
 ├── client/                         # React + Vite + TypeScript
 │   ├── app/                        # Application source
-│   │   ├── idp/                    # Identity provider UI (auth, IAM, captcha, API settings, …)
-│   │   ├── cross-modules/          # Shared feature areas (ai, communication, identifier, lmt, …)
-│   │   ├── routes/                 # Route modules (dashboard, auth, oidc, …)
+│   │   ├── cross-modules/          # Feature areas (idp, ai, communication, devops, identifier,
+│   │   │                           #   lmt, localization, secrets, storage, utilities)
+│   │   ├── routes/, pages/         # Route modules and pages
 │   │   ├── layouts/, components/   # Shell UI, shared components
+│   │   ├── hooks/, lib/, services/, providers/
 │   │   ├── main.tsx, router.tsx
 │   │   └── …
 │   ├── public/                     # Static assets
@@ -27,17 +28,16 @@ blocks-os/
 │   │   ├── Api.csproj
 │   │   └── GlobalApiRoutePrefixConvention.cs
 │   ├── Worker/                     # Background worker (message consumers, …)
-│   ├── Authentication.DomainService/
-│   ├── Captcha.DomainService/
+│   ├── LmtManagedServiceWorker/    # Managed-service worker for logs, metrics and traces
 │   ├── Cloud.DomainService/
 │   ├── Cloud.LmtService/
-│   ├── CloudConfiguration.DomainService/
-│   ├── Iam.DomainService/
+│   ├── Configuration.DomainService/
 │   ├── Identifier.DomainService/
-│   ├── Mfa.DomainService/
+│   ├── Secrets.DomainService/
 │   ├── XUnitTest/                  # Unit tests
-│   ├── Captcha.Driver/, Iam.Driver/, Mfa.Driver/   # Driver-style projects
-│   └── BlocksOS.sln                # Solution: Api, domain libraries, Worker, XUnitTest
+│   └── BlocksOS.sln                # Solution: Api, domain libraries, Workers, XUnitTest
+├── e2e/                            # Playwright end-to-end tests (see e2e/README.md)
+├── scripts/                        # deploy.sh entry point
 ├── run.sh                          # Build/run helpers (Unix/macOS; see below)
 ├── run.ps1                         # Same role on Windows (PowerShell; see below)
 ├── LICENSE
@@ -58,7 +58,7 @@ To run Blocks OS **locally**, clone **[blocks-infra](https://github.com/SELISEdi
 
 Both **`run.sh`** (Bash) and **`run.ps1`** (PowerShell) live at the repo root. They **require an option**; calling them with no recognized flags prints usage and exits.
 
-**Ports:** both scripts assume API port **5000**. `run.sh` also uses **4000** for `npm run dev` when you pass **`-f`** (see `run.sh`). `server/Api/Properties/launchSettings.json` may differ for IDE launches—use the URL your process prints.
+**Ports:** both scripts assume API port **5000**. `run.sh` also uses **4000** for `npm run dev` when you pass **`-f`** (see `run.sh`). `server/Api/Properties/launchSettings.json` may differ for IDE launches; use the URL your process prints.
 
 ### Options (same flags, different invocation)
 
@@ -76,11 +76,9 @@ Both **`run.sh`** (Bash) and **`run.ps1`** (PowerShell) live at the repo root. T
 | **`-ta`**, **`--test-all`** | FE unit → BE unit → E2E, stopping at the first failure |
 | **`-h`**, **`--help`** | Show usage |
 
-Full task-runner reference, including test workflows: **[docs/run-scripts.md](docs/run-scripts.md)**.
-
 **Windows only (`run.ps1`):** **`-d`** / **`--dotnet`** *args…* runs **`dotnet`** from the repo root (for example restore, build, or test commands).
 
-### Unix / macOS — `run.sh`
+### Unix / macOS (`run.sh`)
 
 ```bash
 ./run.sh -a              # full stack (build + API + Worker in this shell)
@@ -95,7 +93,7 @@ Full task-runner reference, including test workflows: **[docs/run-scripts.md](do
 
 `run.sh` syncs the built SPA with **`rsync`** (`dist/` → `wwwroot/`). For **`-a`**, the API and Worker run as background jobs in the same terminal; **Ctrl+C** runs the script’s cleanup trap.
 
-### Windows — `run.ps1`
+### Windows (`run.ps1`)
 
 ```powershell
 .\run.ps1 -a             # build + start API and Worker in separate windows
@@ -123,9 +121,12 @@ dotnet run --project server/Api/Api.csproj
 
 Vite exposes env vars prefixed with **`BLOCKS_`** (see **`client/vite.config.ts`**). Copy **`client/.env.example`** → **`client/.env`** and set values as needed:
 
-- **`BLOCKS_API_BASE_URL`** — Base URL the client uses for API/OIDC calls (see `client/app/lib/get-api-path.ts` and related usage).
-- **`BLOCKS_X_BLOCKS_KEY`** — Genesis / Blocks key when your environment requires it.
-- **`BLOCKS_GOOGLE_SITE_KEY`**, **`BLOCKS_CONSTRUCT_URL`** — Used where the app expects them (for example captcha or construct flows).
+- **`BLOCKS_OS_BASE_URL`**: base URL of this service; when set it also enables the Vite dev proxy (`client/vite.config.ts`).
+- **`BLOCKS_IAM_BASE_URL`**, **`BLOCKS_IAM_CLIENT_ID`**, **`BLOCKS_IAM_CALLBACK_URL`**: IAM endpoint and OIDC client for the sign-in flow.
+- **`BLOCKS_<SERVICE>_BASE_URL` / `_CALLBACK_URL` / `_CLIENT_ID`**: per-service URLs and OIDC client ids for the sibling Blocks apps the console links to (data, logic, monitor, release, studio, utilities, localization, agents).
+- **`BLOCKS_X_BLOCKS_KEY`**, **`BLOCKS_GOOGLE_SITE_KEY`**, **`BLOCKS_CONSTRUCT_URL`**, **`BLOCKS_GITHUB_SSO_CLIENT_ID`**, **`BLOCKS_BASE_DOMAIN`**: tenant key, captcha site key, construct URL, GitHub SSO client id and base domain used across the UI.
+
+The full key list with comments is in `client/.env.example`.
 
 Rebuild the client (`npm run build` in **`client/`** or **`./run.sh -a`** / **`.\run.ps1 -a`**) after changing env for **production** bundles.
 
@@ -140,10 +141,53 @@ dotnet publish server/Api/Api.csproj -c Release -o ./publish
 
 No Node process is required on the server at runtime.
 
+## Tests
+
+Run from the repository root:
+
+```bash
+# backend unit tests (xUnit); the solution is server/BlocksOS.sln
+dotnet test server/XUnitTest/XUnitTest.csproj
+
+# frontend unit tests (Vitest)
+npm --prefix client run test
+
+# end-to-end tests (Playwright); needs a reachable app and e2e/.env.e2e,
+# see e2e/README.md for setup and target modes
+npm --prefix e2e run test
+```
+
+Coverage:
+
+```bash
+dotnet test server/XUnitTest/XUnitTest.csproj --collect:"XPlat Code Coverage"
+npm --prefix client run test:coverage
+```
+
+## Deployment
+
+`scripts/deploy.sh` is the maintainer deploy-and-scan pipeline for the dev host: it syncs the latest `inception`, builds and publishes the Api and Worker projects, restarts their systemd services, and then runs the security scans (SAST, SCA and DAST) against the deployed instance using scanners in the maintainers' environment. It is not a general-purpose installer.
+
 ## API and routing
 
 - Controllers live under **`server/Api/Controllers/`** (e.g. authentication, IAM, MFA, mail, storage, traces, projects). Route templates omit the **`api`** segment in code; **`GlobalApiRoutePrefixConvention`** in **`Program.cs`** adds the **`api`** prefix for attribute-routed controllers.
 - **`/api` is reserved for the HTTP API** in the integrated setup; keep client-side routes from colliding with API paths.
+
+### Identity & Access client routes
+
+The client's identity administration section is labelled **Identity & Access** in the sidebar and is served under the **`/app/:itemId/iam/`** prefix:
+
+| Route | Page |
+|---|---|
+| `/app/:itemId/iam/settings` | Auth, IAM, Signup and Organization configuration tabs |
+| `/app/:itemId/iam/users` | Users list |
+| `/app/:itemId/iam/user-detail/:id` | User detail |
+| `/app/:itemId/iam/organizations` | Organizations list |
+| `/app/:itemId/iam/organization-detail/:orgId` | Organization detail |
+| `/app/:itemId/iam/roles`, `/app/:itemId/iam/role-detail/:id` | Roles |
+| `/app/:itemId/iam/permissions`, `/app/:itemId/iam/permission-detail/:id` | Permissions |
+
+Users and Organizations management is owned by this client and calls the existing IAM backend APIs unchanged. The section previously used the `/app/:itemId/idp/` prefix; those paths now redirect to their `/iam/` equivalent.
 
 ### Version endpoint
 
@@ -155,6 +199,12 @@ No Node process is required on the server at runtime.
   ```
 
   The value is read from the running assembly (`Assembly.GetExecutingAssembly().GetName().Version`), so it reflects whatever version the deployed build was stamped with.
+
+## Contributing and security
+
+- Contribution conventions and workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Reporting a vulnerability: [SECURITY.md](SECURITY.md)
+- Community standards: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## License
 

@@ -1,9 +1,6 @@
 import { DomainAction } from "@/pages/dashboard/components/domain";
-import {
-  GRANT_TYPES,
-  SSO_PROVIDERS,
-} from "@blocks-idp/authentication/constants";
-import { IDomain } from "@seliseblocks/blocks-kit/models";
+import { GRANT_TYPES, SSO_PROVIDERS } from "@blocks-idp/authentication/constants";
+import { IDomain } from "@seliseblocks/genesis-os/models";
 
 export interface IProject {
   itemId: string;

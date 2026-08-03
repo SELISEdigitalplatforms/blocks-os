@@ -1,10 +1,6 @@
 import { vi } from "vitest";
 import type { IGetLogsPayload, IGetLogsByDatePayload } from "../../models/log.model";
-import type {
-  IGetTracesPayload,
-  IGetTraceByTraceIdPayload,
-  Trace,
-} from "../../models/trace.model";
+import type { IGetTracesPayload, IGetTraceByTraceIdPayload, Trace } from "../../models/trace.model";
 import type {
   IGetOperationalAnalyticsPayload,
   IGetServiceAnalyticsPayload,

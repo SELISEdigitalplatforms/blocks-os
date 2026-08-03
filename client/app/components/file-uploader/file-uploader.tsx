@@ -11,12 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  useDropzone,
-  DropzoneState,
-  FileRejection,
-  DropzoneOptions,
-} from "react-dropzone";
+import { useDropzone, DropzoneState, FileRejection, DropzoneOptions } from "react-dropzone";
 import { Trash2 as RemoveIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui-kits/button/button";
 import { showErrorToast } from "@/hooks/use-toast";
@@ -25,7 +20,7 @@ type FileUploaderContextType = {
   dropzoneState: DropzoneState;
   isLOF: boolean;
   isFileTooBig: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   removeFileFromSet: (index: number) => void;
   activeIndex: number;
   setActiveIndex: Dispatch<SetStateAction<number>>;
@@ -43,14 +38,14 @@ export const useFileUpload = () => {
 type FileUploaderProps = {
   value: File[] | null;
   reSelect?: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   onValueChange: (value: File[] | null) => void;
   dropzoneOptions: DropzoneOptions;
   orientation?: "horizontal" | "vertical";
 };
 export const FileUploader = forwardRef<
   HTMLDivElement,
-  // eslint-disable-next-line no-undef
+   
   FileUploaderProps & React.HTMLAttributes<HTMLDivElement>
 >(
   (
@@ -94,7 +89,7 @@ export const FileUploader = forwardRef<
       }
     }, [isFileTooBig]);
     const handleKeyDown = useCallback(
-      // eslint-disable-next-line no-undef
+       
       (e: React.KeyboardEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -194,9 +189,7 @@ export const FileUploader = forwardRef<
       }
       setIsLOF(false);
     }, [value, maxFiles]);
-    const opts = dropzoneOptions
-      ? dropzoneOptions
-      : { accept, maxFiles, maxSize, multiple };
+    const opts = dropzoneOptions ? dropzoneOptions : { accept, maxFiles, maxSize, multiple };
     const dropzoneState = useDropzone({
       ...opts,
       onDrop,
@@ -214,20 +207,18 @@ export const FileUploader = forwardRef<
           setActiveIndex,
           orientation,
           direction,
-        }}>
+        }}
+      >
         <div
           ref={ref}
           tabIndex={0}
           onKeyDownCapture={handleKeyDown}
-          className={cn(
-            "grid w-full overflow-hidden focus:outline-none",
-            className,
-            {
-              "gap-2": value && value.length > 0,
-            },
-          )}
+          className={cn("grid w-full overflow-hidden focus:outline-none", className, {
+            "gap-2": value && value.length > 0,
+          })}
           dir={dir}
-          {...props}>
+          {...props}
+        >
           {children}
         </div>
       </FileUploaderContext.Provider>
@@ -235,35 +226,32 @@ export const FileUploader = forwardRef<
   },
 );
 FileUploader.displayName = "FileUploader";
-// eslint-disable-next-line no-undef
-export const FileUploaderContent = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ children, className, ...props }, ref) => {
-  const { orientation } = useFileUpload();
-  const containerRef = useRef<HTMLDivElement>(null);
-  return (
-    <div
-      className={cn("w-full px-1")}
-      ref={containerRef}
-      aria-description="content file holder">
-      <div
-        {...props}
-        ref={ref}
-        className={cn(
-          "flex gap-1 rounded-xl",
-          orientation === "horizontal" ? "flex-raw flex-wrap" : "flex-col",
-          className,
-        )}>
-        {children}
+ 
+export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ children, className, ...props }, ref) => {
+    const { orientation } = useFileUpload();
+    const containerRef = useRef<HTMLDivElement>(null);
+    return (
+      <div className={cn("w-full px-1")} ref={containerRef} aria-description="content file holder">
+        <div
+          {...props}
+          ref={ref}
+          className={cn(
+            "flex gap-1 rounded-xl",
+            orientation === "horizontal" ? "flex-raw flex-wrap" : "flex-col",
+            className,
+          )}
+        >
+          {children}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 FileUploaderContent.displayName = "FileUploaderContent";
 export const FileUploaderItem = forwardRef<
   HTMLDivElement,
-  // eslint-disable-next-line no-undef
+   
   { index: number } & React.HTMLAttributes<HTMLDivElement>
 >(({ className, index, children, ...props }, ref) => {
   const { removeFileFromSet, activeIndex, direction } = useFileUpload();
@@ -277,17 +265,16 @@ export const FileUploaderItem = forwardRef<
         className,
         isSelected ? "bg-muted" : "",
       )}
-      {...props}>
+      {...props}
+    >
       <div className="flex h-full w-full items-center gap-1.5 font-medium leading-none tracking-tight">
         {children}
       </div>
       <button
         type="button"
-        className={cn(
-          "absolute",
-          direction === "rtl" ? "left-1 top-1" : "right-1 top-1",
-        )}
-        onClick={() => removeFileFromSet(index)}>
+        className={cn("absolute", direction === "rtl" ? "left-1 top-1" : "right-1 top-1")}
+        onClick={() => removeFileFromSet(index)}
+      >
         <span className="sr-only">remove item {index}</span>
         <RemoveIcon className="h-4 w-4 duration-200 ease-in-out hover:stroke-destructive" />
       </button>
@@ -295,39 +282,40 @@ export const FileUploaderItem = forwardRef<
   );
 });
 FileUploaderItem.displayName = "FileUploaderItem";
-// eslint-disable-next-line no-undef
-export const FileInput = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, children, ...props }, ref) => {
-  const { dropzoneState, isFileTooBig, isLOF } = useFileUpload();
-  const rootProps = isLOF ? {} : dropzoneState.getRootProps();
-  return (
-    <div
-      ref={ref}
-      {...props}
-      className={`relative w-full ${isLOF ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+ 
+export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => {
+    const { dropzoneState, isFileTooBig, isLOF } = useFileUpload();
+    const rootProps = isLOF ? {} : dropzoneState.getRootProps();
+    return (
       <div
-        className={cn(
-          `w-full rounded-lg duration-300 ease-in-out ${
-            dropzoneState.isDragAccept
-              ? "border-green-500"
-              : dropzoneState.isDragReject || isFileTooBig
-                ? "border-red-500"
-                : "border-gray-300"
-          }`,
-          className,
-        )}
-        {...rootProps}>
-        {children}
+        ref={ref}
+        {...props}
+        className={`relative w-full ${isLOF ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+      >
+        <div
+          className={cn(
+            `w-full rounded-lg duration-300 ease-in-out ${
+              dropzoneState.isDragAccept
+                ? "border-green-500"
+                : dropzoneState.isDragReject || isFileTooBig
+                  ? "border-red-500"
+                  : "border-gray-300"
+            }`,
+            className,
+          )}
+          {...rootProps}
+        >
+          {children}
+        </div>
+        <Input
+          ref={dropzoneState.inputRef}
+          disabled={isLOF}
+          {...dropzoneState.getInputProps()}
+          className={`${isLOF ? "cursor-not-allowed" : ""}`}
+        />
       </div>
-      <Input
-        ref={dropzoneState.inputRef}
-        disabled={isLOF}
-        {...dropzoneState.getInputProps()}
-        className={`${isLOF ? "cursor-not-allowed" : ""}`}
-      />
-    </div>
-  );
-});
+    );
+  },
+);
 FileInput.displayName = "FileInput";

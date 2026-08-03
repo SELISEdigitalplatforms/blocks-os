@@ -8,7 +8,7 @@ import {
   mockGetMailBoxMailResponse,
   mockSuccessResponse,
 } from "../../test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import EmailService from "./email.services";
 import {
   EMAIL_TEMPLATE_ENDPOINTS,
@@ -16,7 +16,7 @@ import {
   MAIL_ENDPOINTS,
 } from "../constants/endpoint.constant";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const ABSOLUTE_OPTIONS = undefined;
 const ABSOLUTE_FLAGS = { absoluteUrl: true };
@@ -63,9 +63,7 @@ describe("EmailService", () => {
       const error = new Error("Network error");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.fetchEmailConfigs(0, 10)).rejects.toThrow(
-        "Network error",
-      );
+      await expect(service.fetchEmailConfigs(0, 10)).rejects.toThrow("Network error");
     });
 
     it("should handle different page sizes", async () => {
@@ -171,9 +169,9 @@ describe("EmailService", () => {
       const error = new Error("Failed to fetch templates");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(
-        service.fetchEmailTemplates(0, 10, "", "Name", false, "", ""),
-      ).rejects.toThrow("Failed to fetch templates");
+      await expect(service.fetchEmailTemplates(0, 10, "", "Name", false, "", "")).rejects.toThrow(
+        "Failed to fetch templates",
+      );
     });
   });
 
@@ -195,9 +193,7 @@ describe("EmailService", () => {
       const error = new Error("Template not found");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.fetchEmailTemplate("invalid-id")).rejects.toThrow(
-        "Template not found",
-      );
+      await expect(service.fetchEmailTemplate("invalid-id")).rejects.toThrow("Template not found");
     });
   });
 
@@ -212,9 +208,21 @@ describe("EmailService", () => {
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageNumber=1"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("PageSize=10"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("IsInbound=false"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
+      expect(http.get).toHaveBeenCalledWith(
+        expect.stringContaining("PageNumber=1"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(http.get).toHaveBeenCalledWith(
+        expect.stringContaining("PageSize=10"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+      expect(http.get).toHaveBeenCalledWith(
+        expect.stringContaining("IsInbound=false"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
       expect(result).toEqual(mockEmailUsageResponse);
     });
 
@@ -223,7 +231,11 @@ describe("EmailService", () => {
 
       await service.getMailBoxMails(0, 10, false, "test search");
 
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("SearchText=test+search"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
+      expect(http.get).toHaveBeenCalledWith(
+        expect.stringContaining("SearchText=test+search"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
     });
 
     it("should include optional status parameter", async () => {
@@ -231,21 +243,17 @@ describe("EmailService", () => {
 
       await service.getMailBoxMails(0, 10, false, undefined, "Delivered");
 
-      expect(http.get).toHaveBeenCalledWith(expect.stringContaining("Status=Delivered"), ABSOLUTE_OPTIONS, ABSOLUTE_FLAGS);
+      expect(http.get).toHaveBeenCalledWith(
+        expect.stringContaining("Status=Delivered"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
     });
 
     it("should include optional date range parameters", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
-      await service.getMailBoxMails(
-        0,
-        10,
-        false,
-        undefined,
-        undefined,
-        "2024-01-01",
-        "2024-01-31",
-      );
+      await service.getMailBoxMails(0, 10, false, undefined, undefined, "2024-01-01", "2024-01-31");
 
       expect(http.get).toHaveBeenCalledWith(
         expect.stringContaining("SendDateRange.StartDate=2024-01-01"),
@@ -262,15 +270,7 @@ describe("EmailService", () => {
     it("should include all optional parameters when provided", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
-      await service.getMailBoxMails(
-        0,
-        10,
-        true,
-        "test",
-        "Sent",
-        "2024-01-01",
-        "2024-01-31",
-      );
+      await service.getMailBoxMails(0, 10, true, "test", "Sent", "2024-01-01", "2024-01-31");
 
       const call = vi.mocked(http.get).mock.calls[0][0];
       expect(call).toContain("IsInbound=true");
@@ -284,9 +284,7 @@ describe("EmailService", () => {
       const error = new Error("Failed to fetch emails");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.getMailBoxMails(0, 10, false)).rejects.toThrow(
-        "Failed to fetch emails",
-      );
+      await expect(service.getMailBoxMails(0, 10, false)).rejects.toThrow("Failed to fetch emails");
     });
   });
 
@@ -308,9 +306,7 @@ describe("EmailService", () => {
       const error = new Error("Email not found");
       vi.mocked(http.get).mockRejectedValue(error);
 
-      await expect(service.getMailBoxMail("invalid-id")).rejects.toThrow(
-        "Email not found",
-      );
+      await expect(service.getMailBoxMail("invalid-id")).rejects.toThrow("Email not found");
     });
   });
 

@@ -1,17 +1,19 @@
-# Blocks OS — End-to-End Tests (Playwright)
+# Blocks OS; End-to-End Tests (Playwright)
 
 E2E tests that drive the real app through the browser, including the dev-iam
 login redirect flow.
 
 ## One-time setup
 
-1. **Configure env** — copy the template and fill in your values:
+1. **Configure env**: copy the template and fill in your values:
+
    ```bash
    cd e2e
    cp .env.e2e.example .env.e2e
    ```
+
    Set `E2E_BASE_URL` (your named domain, e.g. `https://dev-os.blocksdevelopers.com:5000`),
-   `E2E_USERNAME`, `E2E_PASSWORD`. `.env.e2e` is gitignored — never commit real
+   `E2E_USERNAME`, `E2E_PASSWORD`. `.env.e2e` is gitignored; never commit real
    credentials.
 
 2. **Install** Playwright + the browser:
@@ -29,6 +31,7 @@ npm test
 ```
 
 That's it. `npm test` will:
+
 1. start the app via `run.sh -a` from the repo root (builds the FE, syncs to
    `server/Api/wwwroot`, runs API + Worker),
 2. wait until `E2E_BASE_URL` responds (up to 10 min for the first build),
@@ -40,11 +43,13 @@ If the app is **already** running at `E2E_BASE_URL`, it is reused (no rebuild).
 > Auto-start uses `bash run.sh -a`, so **Git Bash's `bash` must be on PATH**
 > (`run.ps1 -a` can't be automated). To manage the server yourself instead, run
 > it manually and start tests with auto-start disabled:
+>
 > ```bash
 > E2E_NO_WEBSERVER=1 npm test
 > ```
 
 ### Other run modes
+
 ```bash
 npm run test:headed   # watch it in a real browser
 npm run test:ui       # Playwright UI mode
@@ -60,7 +65,7 @@ selectors against the live page:
 npm run codegen -- <E2E_BASE_URL>/login
 ```
 
-## The flow suite — one project per run
+## The flow suite; one project per run
 
 `tests/flow/*` is a **single sequential scenario**, not independent tests. Step 01
 creates one project and records its name + `tenantGroupId` in
@@ -82,19 +87,19 @@ numeric filename prefixes exist. Running one step alone fails fast with
 
 Knobs in `.env.e2e`:
 
-| Variable | Effect |
-|---|---|
-| `E2E_PROJECT_NAME` | Name for the run's project. **Blank = `e2e-<random>` per run** (recommended — repeated runs never collide). Set a value when you want a predictable project to inspect. |
-| `E2E_KEEP_PROJECT=1` | Skip step 06, leaving the project behind. |
-| `E2E_NO_WEBSERVER=1` | Don't auto-start the app; you manage the server. |
-| `E2E_PAUSE_MS` | How long the browser holds after **each** test so you can see the result. Defaults to **10 s in headed mode**, 0 when headless. Set a number to override either way; `0` disables. |
-| `E2E_SLOWMO` | Milliseconds of delay per action, to watch the steps themselves. |
+| Variable             | Effect                                                                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `E2E_PROJECT_NAME`   | Name for the run's project. **Blank = `e2e-<random>` per run** (recommended; repeated runs never collide). Set a value when you want a predictable project to inspect.            |
+| `E2E_KEEP_PROJECT=1` | Skip step 06, leaving the project behind.                                                                                                                                          |
+| `E2E_NO_WEBSERVER=1` | Don't auto-start the app; you manage the server.                                                                                                                                   |
+| `E2E_PAUSE_MS`       | How long the browser holds after **each** test so you can see the result. Defaults to **10 s in headed mode**, 0 when headless. Set a number to override either way; `0` disables. |
+| `E2E_SLOWMO`         | Milliseconds of delay per action, to watch the steps themselves.                                                                                                                   |
 
 ```bash
 E2E_PROJECT_NAME=e2e-demo E2E_KEEP_PROJECT=1 npm run test:headed
 ```
 
-> Nothing in the suite scans the console for "some `e2e-*` project" any more — a run
+> Nothing in the suite scans the console for "some `e2e-*` project" any more; a run
 > only ever touches the project it created itself.
 
 ## Layout

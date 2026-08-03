@@ -27,7 +27,9 @@ export const tableColumns = (
   const providerColumn: ColumnDef<IModelInfo> = {
     id: "provider",
     accessorFn: (row) => row.Provider,
-    header: () => <div className="ml-2 font-semibold text-medium-emphasis sm:ml-0">Provider Name</div>,
+    header: () => (
+      <div className="ml-2 font-semibold text-medium-emphasis sm:ml-0">Provider Name</div>
+    ),
     cell: ({ row }) => (
       <div className="ml-2 flex items-center gap-2 truncate sm:ml-0">
         {row.original.Provider || "-"}
@@ -49,7 +51,9 @@ export const tableColumns = (
     {
       id: "requestUrl",
       accessorFn: (row) => row.BaseUrl,
-      header: () => <div className="ml-2 font-semibold text-medium-emphasis sm:ml-0">Request Url</div>,
+      header: () => (
+        <div className="ml-2 font-semibold text-medium-emphasis sm:ml-0">Request Url</div>
+      ),
       cell: ({ row }) => (
         <div className="ml-2 flex items-center gap-2 sm:ml-0">
           <CopyToClipboardButton textToCopy={row.original.BaseUrl} isHoverable>

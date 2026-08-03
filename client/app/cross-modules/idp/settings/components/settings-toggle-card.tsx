@@ -1,16 +1,16 @@
-import { Card } from "@/components/ui-kits/card/card"
-import { FormControl, FormItem, FormLabel } from "@/components/ui-kits/form/form"
-import { Switch } from "@/components/ui-kits/switch/switch"
-import { cn } from "@/lib/utils"
-import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout"
+import { Card } from "@/components/ui-kits/card/card";
+import { FormControl, FormItem, FormLabel } from "@/components/ui-kits/form/form";
+import { Switch } from "@/components/ui-kits/switch/switch";
+import { cn } from "@/lib/utils";
+import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 
 type SettingsToggleCardProps = {
-  label: string
-  description?: string
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-  disabled?: boolean
-}
+  label: string;
+  description?: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+};
 
 export const SettingsToggleCard = ({
   label,
@@ -43,4 +43,4 @@ export const SettingsToggleCard = ({
       </div>
     </FormItem>
   </Card>
-)
+);

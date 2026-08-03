@@ -67,15 +67,15 @@ const BeePluginStarter = forwardRef(function Inner(
         // console.warn("*** [integration] loading a new template...");
         onBeeTemplateLoad?.(true);
       },
-      onAutoSave: (jsonFile) => {
+      onAutoSave: (_jsonFile) => {
         // console.log(`${new Date().toISOString()} autosaving...,`, jsonFile);
       },
-      onSend: (htmlFile) => console.log("onSend"),
-      onError: (errorMessage) => console.log("onError ", errorMessage),
+      onSend: (_htmlFile) => console.error("onSend"),
+      onError: (errorMessage) => console.error("onError ", errorMessage),
       onChange: (msg, response) =>
-        console.warn("*** [integration] (OnChange) message --> ", msg, response),
-      onWarning: (e) => console.warn("*** [integration] (OnWarning) message --> ", e.message),
-      onPreview: () => console.warn("*** [integration] --> (onPreview) "),
+        console.error("*** [integration] (OnChange) message --> ", msg, response),
+      onWarning: (e) => console.error("*** [integration] (OnWarning) message --> ", e.message),
+      onPreview: () => console.error("*** [integration] --> (onPreview) "),
     }),
     [onBeeSave, onBeeTemplateLoad],
   );

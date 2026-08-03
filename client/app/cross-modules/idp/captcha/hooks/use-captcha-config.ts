@@ -8,7 +8,7 @@ export const useGetCaptchaConfigs = (
 ) => {
   return useQuery({
     queryKey: ["captcha-configs", options.projectKey],
-    queryFn: () => captchaService.getCaptchaConfigs(options),
+    queryFn: () => captchaService.getCaptchaConfigs(),
     enabled: !!options.projectKey && enabled,
   });
 };

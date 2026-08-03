@@ -6,11 +6,7 @@ export const useDeactivateMagicUrl = () => {
   const queryClient = useQueryClient();
   const { mutate: removeMagicUrl, isPending: isRemoving } = useRemoveMagicUrl();
 
-  const deactivateMagicUrl = (
-    itemId: string,
-    projectKey: string,
-    onSuccess?: () => void,
-  ) => {
+  const deactivateMagicUrl = (itemId: string, projectKey: string, onSuccess?: () => void) => {
     removeMagicUrl(
       { linkIds: [itemId], projectKey },
       {

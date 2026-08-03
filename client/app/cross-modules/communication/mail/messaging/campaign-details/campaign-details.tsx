@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
@@ -7,28 +7,30 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import CampaignCreation from "@blocks-communication/mail/components/messaging/campaign-creation/campaign-creation";
 import { formatDate } from "@/lib/utils";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { messagingServiceData } from "@blocks-communication/mail/constants/messaging";
 export function CampaignDetails({ params }: { params: { id: string } }) {
   const { id } = params;
   const [messageDetails, setMessageDetails] = useState<IMessagingServiceData | null>(null);
-  useEffect(() => {
+  const [prevId, setPrevId] = useState<typeof id | undefined>(undefined);
+  if (prevId !== id) {
+    setPrevId(id);
     if (id) {
       const messageId = Array.isArray(id) ? id[0] : id;
-      const message = messagingServiceData.find((message) => message.id === messageId);
+      const message = messagingServiceData.find((item) => item.id === messageId);
       setMessageDetails(message || null);
     }
-  }, [id]);
+  }
   if (!messageDetails) {
     return <div>Loading...</div>;
   }
-  BREADCRUMB_CUSTOM_TITLES["/utilities/messaging/campaigns"] = "Messaging Messages";
-  BREADCRUMB_CUSTOM_TITLES["/utilities/messaging/campaigns/" + messageDetails?.id] =
-    messageDetails.name;
+  const breadcrumbTitles = {
+    "/utilities/messaging/campaigns": "Messaging Messages",
+    ["/utilities/messaging/campaigns/" + messageDetails?.id]: messageDetails.name,
+  };
   return (
     <div>
       <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
+        <PageBreadcrumb breadcrumbIndex={3} customTitles={breadcrumbTitles} />
       </div>
       <div className="mt-5 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{messageDetails.name}</h1>

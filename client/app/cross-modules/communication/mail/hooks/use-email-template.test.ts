@@ -25,7 +25,7 @@ import {
 } from "./use-email-template";
 
 vi.mock("@blocks-communication/mail/services/email.services", () => mockEmailServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 vi.mock("@/hooks/use-toast", () => mockToastFactory());
 
 describe("Email Template Hooks", () => {
@@ -45,7 +45,10 @@ describe("Email Template Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.sendTestMail).toHaveBeenCalledWith(mockSendTestMailPayload, expect.anything());
+      expect(emailService.sendTestMail).toHaveBeenCalledWith(
+        mockSendTestMailPayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 
@@ -91,7 +94,10 @@ describe("Email Template Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.cloneMailTemplate).toHaveBeenCalledWith(mockCloneTemplatePayload, expect.anything());
+      expect(emailService.cloneMailTemplate).toHaveBeenCalledWith(
+        mockCloneTemplatePayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 
@@ -153,7 +159,10 @@ describe("Email Template Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.deleteMailTemplate).toHaveBeenCalledWith(mockDeleteTemplatePayload, expect.anything());
+      expect(emailService.deleteMailTemplate).toHaveBeenCalledWith(
+        mockDeleteTemplatePayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 
@@ -443,7 +452,10 @@ describe("Email Template Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(emailService.saveMailTemplate).toHaveBeenCalledWith(mockSaveTemplatePayload, expect.anything());
+      expect(emailService.saveMailTemplate).toHaveBeenCalledWith(
+        mockSaveTemplatePayload,
+        expect.anything(),
+      );
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 
