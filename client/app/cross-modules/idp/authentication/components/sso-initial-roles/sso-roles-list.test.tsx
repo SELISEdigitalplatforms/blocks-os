@@ -81,7 +81,7 @@ describe("SSORolesList", () => {
 
     await user.click(screen.getByText("admin-name"));
 
-    expect(navigate).toHaveBeenCalledWith("/app/tenant-1/idp/role-detail/r1");
+    expect(navigate).toHaveBeenCalledWith("/app/tenant-1/iam/role-detail/r1");
   });
 
   it("forwards deletions through the delete control", async () => {

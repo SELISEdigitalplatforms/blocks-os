@@ -173,6 +173,22 @@ npm --prefix client run test:coverage
 - Controllers live under **`server/Api/Controllers/`** (e.g. authentication, IAM, MFA, mail, storage, traces, projects). Route templates omit the **`api`** segment in code; **`GlobalApiRoutePrefixConvention`** in **`Program.cs`** adds the **`api`** prefix for attribute-routed controllers.
 - **`/api` is reserved for the HTTP API** in the integrated setup; keep client-side routes from colliding with API paths.
 
+### Identity & Access client routes
+
+The client's identity administration section is labelled **Identity & Access** in the sidebar and is served under the **`/app/:itemId/iam/`** prefix:
+
+| Route | Page |
+|---|---|
+| `/app/:itemId/iam/settings` | Auth, IAM, Signup and Organization configuration tabs |
+| `/app/:itemId/iam/users` | Users list |
+| `/app/:itemId/iam/user-detail/:id` | User detail |
+| `/app/:itemId/iam/organizations` | Organizations list |
+| `/app/:itemId/iam/organization-detail/:orgId` | Organization detail |
+| `/app/:itemId/iam/roles`, `/app/:itemId/iam/role-detail/:id` | Roles |
+| `/app/:itemId/iam/permissions`, `/app/:itemId/iam/permission-detail/:id` | Permissions |
+
+Users and Organizations management is owned by this client and calls the existing IAM backend APIs unchanged. The section previously used the `/app/:itemId/idp/` prefix; those paths now redirect to their `/iam/` equivalent.
+
 ### Version endpoint
 
 - **`GET /api/version`** returns the running API assembly version. No authentication is required.

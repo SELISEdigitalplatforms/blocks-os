@@ -130,6 +130,7 @@ export const mockSaveOidcPayload: ISaveOidcCredentialPayload = {
   scope: "openid profile email",
   requirePkce: true,
   registerAsIdentityProvider: false,
+  isDeviceFlowClient: false,
   allowedResponseTypes: ["code"],
   clientDisplayName: "Test OIDC App",
 };

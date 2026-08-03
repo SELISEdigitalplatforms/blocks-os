@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
    <PackageReference Include="SeliseBlocks.ConfigurationDriver" />
-   <PackageReference Include="SeliseBlocks.Genesis" />
+   <PackageReference Include="SeliseBlocks.Genesis.OS" />
   </ItemGroup>
 
   <ItemGroup>
