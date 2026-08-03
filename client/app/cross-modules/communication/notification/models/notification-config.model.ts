@@ -1,4 +1,5 @@
-export const NOTIFICATION_CONFIG_SECRET_KEY = "notification" as const;
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const NOTIFICATION_CONFIG_SECRET_KEY = "notification" as const;
 
 export interface INotificationConfigRow {
   itemId: string;

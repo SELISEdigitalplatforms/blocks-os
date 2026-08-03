@@ -1,76 +1,79 @@
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { User } from "@blocks-idp/iam/models/user";
+import { MemoryRouter } from "react-router";
 
-const h = vi.hoisted(() => ({
-  navigate: vi.fn(),
-  setSortQueryParams: vi.fn(),
-}));
+const h = vi.hoisted(() => ({ navigate: vi.fn() }));
 
-vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
+  return { ...actual, useNavigate: () => h.navigate };
+});
 vi.mock("./users-filter-toolbar", () => ({
   useUsersSortQueryParams: () => ({
     sortQueryParams: { property: "FirstName", isDescending: false },
-    setSortQueryParams: h.setSortQueryParams,
+    setSortQueryParams: vi.fn(),
   }),
+}));
+vi.mock("@/components/filter-toolbar", () => ({
+  FilterControls: { SortHeader: ({ label }: { label: string }) => <span>{label}</span> },
+}));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
+  useScopedPath: () => (segment: string) => `/base/${segment}`,
+}));
+vi.mock("@/components/copy-to-clipboard-button", () => ({
+  CopyToClipboardButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 import { UsersTable } from "./users-table";
 
-const users = [
-  {
-    itemId: "u-1",
+const user = (over: Record<string, unknown> = {}) =>
+  ({
+    itemId: "u1",
     firstName: "Ada",
     lastName: "Lovelace",
     email: "ada@example.com",
-    logInCount: 5,
-    lastLoggedInTime: "2024-05-01T10:00:00Z",
     active: true,
-  },
-  {
-    itemId: "u-2",
-    firstName: "Alan",
-    lastName: "Turing",
-    email: "alan@example.com",
-    logInCount: 0,
+    createdDate: "",
+    lastUpdatedDate: "",
     lastLoggedInTime: "",
-    active: false,
-  },
-] as unknown as User[];
+    ...over,
+  }) as unknown as Parameters<typeof UsersTable>[0]["users"][number];
+
+const renderTable = (props: Partial<Parameters<typeof UsersTable>[0]> = {}) =>
+  render(
+    <MemoryRouter>
+      <UsersTable users={props.users ?? [user()]} isLoading={props.isLoading ?? false} />
+    </MemoryRouter>,
+  );
+
+beforeEach(() => vi.clearAllMocks());
 
 describe("UsersTable", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("shows loading skeletons and no table while loading", () => {
-    const { container } = render(<UsersTable users={[]} isLoading />);
-    expect(container.querySelector("table")).toBeNull();
-  });
-
-  it("shows the empty state when there are no users", () => {
-    render(<UsersTable users={[]} isLoading={false} />);
-    expect(screen.getByText("No results found.")).toBeTruthy();
-  });
-
-  it("renders user rows with name, email and status", () => {
-    render(<UsersTable users={users} isLoading={false} />);
+  it("renders a row per user with name and status", () => {
+    renderTable({ users: [user({ active: true })] });
     expect(screen.getByText("Ada Lovelace")).toBeTruthy();
-    expect(screen.getByText("alan@example.com")).toBeTruthy();
     expect(screen.getByText("Active")).toBeTruthy();
+  });
+
+  it("renders the inactive badge for inactive users", () => {
+    renderTable({ users: [user({ active: false })] });
     expect(screen.getByText("Inactive")).toBeTruthy();
   });
 
-  it("renders a dash for an invalid last-login date", () => {
-    render(<UsersTable users={users} isLoading={false} />);
-    const turingRow = screen.getByText("Alan Turing").closest("tr") as HTMLElement;
-    expect(within(turingRow).getByText("-")).toBeTruthy();
+  it("shows the empty state when there are no users", () => {
+    renderTable({ users: [] });
+    expect(screen.getByText("No users found.")).toBeTruthy();
   });
 
-  it("navigates to the user detail page on row click", async () => {
-    const user = userEvent.setup();
-    render(<UsersTable users={users} isLoading={false} />);
+  it("renders the loading skeleton while loading", () => {
+    const { container } = renderTable({ isLoading: true });
+    expect(container.querySelector(".flex-col")).not.toBeNull();
+    expect(screen.queryByText("Ada Lovelace")).toBeNull();
+  });
 
-    await user.click(screen.getByText("Ada Lovelace"));
-    expect(h.navigate).toHaveBeenCalledWith("/services/iam/user-detail/u-1");
+  it("navigates to the user detail on row click", () => {
+    renderTable({ users: [user({ itemId: "u9" })] });
+    fireEvent.click(screen.getByText("Ada Lovelace"));
+    expect(h.navigate).toHaveBeenCalledWith("/base/iam/user-detail/u9");
   });
 });

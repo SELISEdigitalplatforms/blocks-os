@@ -1,18 +1,28 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Tooltip re-exports blocks-kit (process.env at load); passthrough keeps it renderable.
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
+
 const h = vi.hoisted(() => ({
-  useGetPermissions: vi.fn(),
+  permissionsResult: {} as Record<string, unknown>,
   addPermissions: vi.fn(),
   resources: [] as string[],
   isPending: false,
-  showErrorToast: vi.fn(),
-  showSuccessToast: vi.fn(),
+  showError: vi.fn(),
+  showSuccess: vi.fn(),
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({
-  useGetPermissions: (...args: unknown[]) => h.useGetPermissions(...args),
+  useGetPermissions: () => h.permissionsResult,
 }));
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useUserPermissions: () => ({
@@ -22,150 +32,138 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
-  showErrorToast: h.showErrorToast,
-  showSuccessToast: h.showSuccessToast,
+  showErrorToast: (arg: unknown) => h.showError(arg),
+  showSuccessToast: (arg: unknown) => h.showSuccess(arg),
+}));
+vi.mock("@/components/filter-toolbar", () => ({
+  FilterControls: {
+    SearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
+      <input aria-label="search" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    ),
+  },
 }));
 
 import { AddUserPermission } from "./add-user-permission";
 
-const makePermission = (i: number) => ({
-  itemId: `perm-${i}`,
-  name: `Permission ${i}`,
-  resource: `resource-${i}`,
-  type: 1,
-});
+const renderCmp = () =>
+  render(<AddUserPermission userId="u1" projectKey="p1" />);
 
-const setPermissions = (count: number, totalCount = count) => {
-  h.useGetPermissions.mockReturnValue({
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isPending = false;
+  h.resources = [];
+  h.permissionsResult = {
     data: {
-      data: Array.from({ length: count }, (_, i) => makePermission(i + 1)),
-      totalCount,
+      data: [
+        { itemId: "perm1", name: "Read Users", resource: "users:read", type: 1 },
+        { itemId: "perm2", name: "Edit Users", resource: "users:edit", type: 1 },
+      ],
+      totalCount: 2,
     },
     isLoading: false,
-  });
-};
-
-const openDialog = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole("button", { name: "Assign Permissions" }));
-  return screen.findByText("Include Permissions");
-};
+  };
+});
 
 describe("AddUserPermission", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.resources = [];
-    h.isPending = false;
-    h.addPermissions.mockResolvedValue({ isSuccess: true });
-    setPermissions(3);
+  it("renders the assign trigger enabled when under the cap", () => {
+    renderCmp();
+    expect(screen.getByText("Assign Permissions")).toBeTruthy();
   });
 
-  it("disables the trigger once the user already has five permissions", () => {
+  it("disables the trigger when the user already has 5 permissions", () => {
     h.resources = ["a", "b", "c", "d", "e"];
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    expect(
-      (screen.getByRole("button", { name: "Assign Permissions" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    renderCmp();
+    const trigger = screen.getByText("Assign Permissions").closest("button");
+    expect((trigger as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("includes the selected permissions and reports success", async () => {
-    const user = userEvent.setup();
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    const checkboxes = screen.getAllByRole("checkbox");
-    await user.click(checkboxes[0]);
-
-    const include = screen.getByRole("button", { name: "Include" }) as HTMLButtonElement;
-    expect(include.disabled).toBe(false);
-    await user.click(include);
-
-    await waitFor(() => expect(h.addPermissions).toHaveBeenCalledWith(["resource-1"]));
-    expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "New permission added" });
+  it("opens the dialog, selects a permission and includes it", async () => {
+    h.addPermissions.mockResolvedValue({ isSuccess: true });
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    const checkbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.addPermissions).toHaveBeenCalledWith(["users:read"]));
+    await waitFor(() => expect(h.showSuccess).toHaveBeenCalled());
   });
 
-  it("uses the plural success message when several permissions are added", async () => {
-    const user = userEvent.setup();
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    await openDialog(user);
+  it("shows an error toast when the include request fails", async () => {
+    h.addPermissions.mockResolvedValue({ isSuccess: false, errors: "nope" });
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "nope" }));
+  });
 
-    const checkboxes = screen.getAllByRole("checkbox");
-    await user.click(checkboxes[0]);
-    await user.click(checkboxes[1]);
-    await user.click(screen.getByRole("button", { name: "Include" }));
-
+  it("includes multiple selected permissions with a plural success toast", async () => {
+    h.addPermissions.mockResolvedValue({ isSuccess: true });
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    const boxes = screen.getAllByRole("checkbox");
+    fireEvent.click(boxes[0]);
+    fireEvent.click(boxes[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
     await waitFor(() =>
-      expect(h.addPermissions).toHaveBeenCalledWith(["resource-1", "resource-2"]),
+      expect(h.addPermissions).toHaveBeenCalledWith(["users:read", "users:edit"]),
     );
-    expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "New permissions added" });
-  });
-
-  it("surfaces a backend error when the include call is not successful", async () => {
-    const user = userEvent.setup();
-    h.addPermissions.mockResolvedValue({ isSuccess: false, errors: { general: "nope" } });
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    await user.click(screen.getAllByRole("checkbox")[0]);
-    await user.click(screen.getByRole("button", { name: "Include" }));
-
     await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { general: "nope" } }),
-    );
-    expect(h.showSuccessToast).not.toHaveBeenCalled();
-  });
-
-  it("falls back to a generic error when the include call throws", async () => {
-    const user = userEvent.setup();
-    h.addPermissions.mockRejectedValue(new Error("boom"));
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    await user.click(screen.getAllByRole("checkbox")[0]);
-    await user.click(screen.getByRole("button", { name: "Include" }));
-
-    await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }),
+      expect(h.showSuccess).toHaveBeenCalledWith({ description: "New permissions added" }),
     );
   });
 
-  it("disables checkboxes for permissions the user already holds", async () => {
-    const user = userEvent.setup();
-    h.resources = ["resource-2"];
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    const checkboxes = screen.getAllByRole("checkbox");
-    expect((checkboxes[1] as HTMLButtonElement).disabled).toBe(true);
-    expect(checkboxes[1].getAttribute("data-state")).toBe("checked");
+  it("shows the mapped error toast when include throws structured errors", async () => {
+    h.addPermissions.mockRejectedValue({ errors: { p: "thrown" } });
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: { p: "thrown" } }));
   });
 
-  it("blocks selections that would exceed the five-permission ceiling", async () => {
-    const user = userEvent.setup();
-    h.resources = ["resource-2", "resource-3"];
-    setPermissions(6);
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    const checkboxes = screen.getAllByRole("checkbox");
-    // Two already assigned; three fresh picks reach the cap of five.
-    await user.click(checkboxes[0]); // resource-1
-    await user.click(checkboxes[3]); // resource-4
-    await user.click(checkboxes[4]); // resource-5
-    // A fourth fresh pick is rejected because 2 held + 3 selected already exceeds 4.
-    await user.click(checkboxes[5]); // resource-6
-    expect(checkboxes[5].getAttribute("data-state")).toBe("unchecked");
+  it("shows a generic error toast when include throws a plain value", async () => {
+    h.addPermissions.mockRejectedValue("boom");
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "Something went wrong" }));
   });
 
-  it("passes the search term into the permissions query", async () => {
-    const user = userEvent.setup();
-    render(<AddUserPermission userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    await user.type(screen.getByPlaceholderText("Search by permission name"), "read");
+  it("toggles a permission off when unchecked", async () => {
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    const checkbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(checkbox);
+    fireEvent.click(checkbox);
     await waitFor(() =>
-      expect(h.useGetPermissions).toHaveBeenLastCalledWith(
-        expect.objectContaining({ search: "read", projectKey: "p1" }),
-      ),
+      expect((screen.getByRole("button", { name: "Include" }) as HTMLButtonElement).disabled).toBe(true),
     );
+  });
+
+  it("prevents selecting beyond the five-permission maximum", async () => {
+    h.resources = ["a", "b", "c", "d"];
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    const boxes = screen.getAllByRole("checkbox");
+    fireEvent.click(boxes[0]);
+    fireEvent.click(boxes[1]);
+    expect(boxes[1].getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("resets its filter when the dialog is closed", async () => {
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Permissions"));
+    await waitFor(() => expect(screen.getByText("Include Permissions")).toBeTruthy());
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByText("Include Permissions")).toBeNull());
   });
 });

@@ -112,7 +112,7 @@ describe("use-user hooks", () => {
 
       result.current.mutate(mockUpdateUserPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.updateUser).toHaveBeenCalledWith(mockUpdateUserPayload, expect.anything());
+      expect(userService.updateUser).toHaveBeenCalledWith(mockUpdateUserPayload);
     });
   });
 

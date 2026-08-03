@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { AddUserRole } from "./add-user-role";
 import { useUserRoles } from "@blocks-idp/iam/hooks/use-user";
@@ -7,32 +7,36 @@ import { Button } from "@/components/ui-kits/button/button";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { IRole } from "@blocks-idp/iam/models/role";
+
 type UserRolesProps = {
   id: string;
   projectKey: string;
 };
+
 export const UserRoles = ({ id, projectKey }: UserRolesProps) => {
   const { isLoading, roles } = useUserRoles({ id, projectKey });
-  // Local state for roles and removed roles
-  const [localRoles, setLocalRoles] = useState<IRole[]>([]);
+
+  // Only the pending removals are state. The displayed list is derived from the
+  // fetched roles, so a refetch flows straight through without an effect that
+  // copies props into state.
   const [removedRoleSlugs, setRemovedRoleSlugs] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  // Sync localRoles with fetched roles
-  const [prevRoles, setPrevRoles] = useState<typeof roles | undefined>(undefined);
-  if (prevRoles !== roles) {
-    setPrevRoles(roles);
-    setLocalRoles(roles);
-    setRemovedRoleSlugs([]);
-  }
+
+  const localRoles: IRole[] = useMemo(
+    () => roles.filter((role) => !removedRoleSlugs.includes(role.slug)),
+    [roles, removedRoleSlugs],
+  );
+
   const onRemoveRole = (slug: string) => {
-    setLocalRoles((prev) => prev.filter((role) => role.slug !== slug));
-    setRemovedRoleSlugs((prev) => [...prev, slug]);
+    setRemovedRoleSlugs((prev) => (prev.includes(slug) ? prev : [...prev, slug]));
   };
+
   const onReset = () => {
-    setLocalRoles(roles);
     setRemovedRoleSlugs([]);
   };
+
   const { deleteRoles } = useUserRoles({ id, projectKey });
+
   const onSave = async () => {
     if (!removedRoleSlugs.length) return;
     setIsSaving(true);
@@ -41,6 +45,7 @@ export const UserRoles = ({ id, projectKey }: UserRolesProps) => {
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
       } else {
+        setRemovedRoleSlugs([]);
         showSuccessToast({ description: "Roles updated successfully" });
       }
     } catch (error) {
@@ -50,6 +55,7 @@ export const UserRoles = ({ id, projectKey }: UserRolesProps) => {
       setIsSaving(false);
     }
   };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -76,17 +82,6 @@ export const UserRoles = ({ id, projectKey }: UserRolesProps) => {
           projectKey={projectKey}
           onRemoveRole={onRemoveRole}
         />
-        {/* {!isLoading && roles.length > filter.pageSize && (
-          <div className="flex items-center md:justify-end">
-            <Pagination
-              page={filter.page}
-              onChange={onPageChangeHandler}
-              totalCount={roles.length || 0}
-              pageSizeOptions={[filter.pageSize]}
-              pageSize={filter.pageSize}
-            />
-          </div>
-        )} */}
       </CardContent>
     </Card>
   );

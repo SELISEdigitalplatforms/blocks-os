@@ -131,7 +131,7 @@ export const ReviewConfirmForm = () => {
       });
 
       if (response.isSuccess && response.isValid) {
-        showSuccessToast({ description: "Migration started successfully!" });
+        showSuccessToast({ description: "Migration has been started, you will be notified once it's complete!" });
         setIsVerificationModalOpen(false);
         navigate(groupId ? `/app/project/${groupId}/environments` : "/app/console");
         return;

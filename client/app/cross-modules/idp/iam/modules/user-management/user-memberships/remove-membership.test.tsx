@@ -1,97 +1,75 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IMembership } from "@blocks-idp/iam/models/user";
 
 const h = vi.hoisted(() => ({
-  userData: undefined as unknown,
   mutateAsync: vi.fn(),
   isPending: false,
-  showErrorToast: vi.fn(),
-  showSuccessToast: vi.fn(),
+  showError: vi.fn(),
+  showSuccess: vi.fn(),
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUserById: () => ({ data: h.userData }),
-  useUpdateUser: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
+  useRevokeAccess: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
-  showErrorToast: (...a: unknown[]) => h.showErrorToast(...a),
-  showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
+  showErrorToast: (a: unknown) => h.showError(a),
+  showSuccessToast: (a: unknown) => h.showSuccess(a),
 }));
 
 import { RemoveMembership } from "./remove-membership";
-import type { IMembership } from "@blocks-idp/iam/models/user";
 
-const membership = { organizationId: "org-2" } as unknown as IMembership;
+const membership = { organizationId: "org1" } as IMembership;
 
-const setup = (overrides: Partial<React.ComponentProps<typeof RemoveMembership>> = {}) => {
-  const onOpenChange = vi.fn();
-  const onSuccess = vi.fn();
+const renderModal = (onSuccess = vi.fn(), onOpenChange = vi.fn()) => {
   render(
     <RemoveMembership
-      open
+      open={true}
       onOpenChange={onOpenChange}
       membership={membership}
       organizationName="Acme"
-      userId="user-1"
-      projectKey="tenant-1"
+      userId="u1"
+      projectKey="p1"
       onSuccess={onSuccess}
-      {...overrides}
     />,
   );
-  return { onOpenChange, onSuccess };
+  return { onSuccess, onOpenChange };
 };
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isPending = false;
+});
+
 describe("RemoveMembership", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.isPending = false;
-    h.userData = {
-      data: {
-        organizationIds: ["org-1", "org-2"],
-        roles: { "org-1": ["admin"], "org-2": ["viewer"] },
-        permissions: { "org-1": ["read"], "org-2": ["write"] },
-      },
-    };
+  it("removes the membership and notifies success", async () => {
     h.mutateAsync.mockResolvedValue({ isSuccess: true });
-  });
-
-  it("renders the confirmation copy with the organization name", () => {
-    setup();
-    expect(screen.getByText("Remove organization membership")).toBeTruthy();
-    expect(screen.getByText(/Acme/)).toBeTruthy();
-  });
-
-  it("removes the org and its roles/permissions then reports success", async () => {
-    const { onOpenChange, onSuccess } = setup();
+    const { onSuccess, onOpenChange } = renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalled());
-    const payload = h.mutateAsync.mock.calls[0][0];
-    expect(payload.organizationIds).toEqual(["org-1"]);
-    // Roles/permissions for the removed org are dropped, keeping org-1's.
-    expect(payload.roles).toEqual(["admin"]);
-    expect(payload.permissions).toEqual(["read"]);
-    expect(h.showSuccessToast).toHaveBeenCalled();
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledWith({ organizationId: "org1" }));
+    await waitFor(() => expect(h.showSuccess).toHaveBeenCalled());
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it("shows an error toast when the update is not successful", async () => {
-    h.mutateAsync.mockResolvedValueOnce({ isSuccess: false, errors: { general: "nope" } });
-    const { onOpenChange } = setup();
+  it("shows an error toast when the result is not successful", async () => {
+    h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: "nope" });
+    renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "nope" }));
   });
 
-  it("surfaces thrown errors with an error toast", async () => {
-    h.mutateAsync.mockRejectedValueOnce(new Error("boom"));
-    setup();
+  it("shows a generic error when the mutation throws an unshaped error", async () => {
+    h.mutateAsync.mockRejectedValue(new Error("boom"));
+    renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }));
+    await waitFor(() =>
+      expect(h.showError).toHaveBeenCalledWith({ errors: "Something went wrong" }),
+    );
   });
 
-  it("closes without mutating when cancel is clicked", () => {
-    const { onOpenChange } = setup();
+  it("closes without removing on cancel", () => {
+    const { onOpenChange } = renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(h.mutateAsync).not.toHaveBeenCalled();

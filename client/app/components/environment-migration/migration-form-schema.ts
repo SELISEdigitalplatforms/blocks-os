@@ -21,7 +21,7 @@ export const environmentServiceSelectionFormDefaultValue = {
     { name: "DataGateway", label: "Data Gateway", selected: false, overrideData: false },
     { name: "Notifications", label: "Notifications", selected: false, overrideData: false },
     { name: "Storage", label: "Storage", selected: false, overrideData: false },
-    { name: "Language", label: "Language", selected: false, overrideData: false },
+    { name: "Language", label: "Localization", selected: false, overrideData: false },
   ] as MigrationServiceOption[],
 };
 
@@ -73,14 +73,14 @@ export const MIGRATION_SERVICE_UI_CATALOG = [
   { id: "IAM", name: "IAM", chips: ["Schemas"], available: false },
   { id: "MFA", name: "MFA", chips: ["Key", "Module"], available: false },
   { id: "CAPTCHA", name: "CAPTCHA", chips: ["Key", "Module"], available: false },
-  { id: "Email", name: "Email", chips: ["Templates"], available: true },
+  { id: "Email", name: "Email", chips: ["Templates"], available: false },
   {
     id: "DataGateway",
     name: "Data Gateway",
     chips: ["SchemaDefinitions", "DataServiceConfigurations"],
-    available: true,
+    available: false,
   },
   { id: "Notifications", name: "Notifications", chips: ["Key", "Module"], available: false },
   { id: "Storage", name: "Storage", chips: ["Key", "Module"], available: false },
-  { id: "Language", name: "Language", chips: ["Key", "Module"], available: true },
+  { id: "Language", name: "Localization", chips: ["Key", "Module"], available: true },
 ] as const;

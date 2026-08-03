@@ -5,7 +5,7 @@ import type {
   IEmailUsage,
   IEmailUsageResponse,
   IGetMailBoxMailResponse,
-} from "../mail/models/email";
+} from "../../mail/models/email";
 
 // ─── Email config mock data ───────────────────────────────────────────────────
 

@@ -101,6 +101,8 @@ describe("StorageService", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.UPLOAD_TO_LOCAL_STORAGE,
         expect.any(FormData),
+        undefined,
+        { absoluteUrl: true },
       );
     });
 
@@ -139,6 +141,7 @@ describe("StorageService", () => {
         `${STORAGE_FILE_ENDPOINTS.UPLOAD_PUBLIC_CERTIFICATE}?TenantId=tenant-1&IsThirdParty=true`,
         expect.any(FormData),
         { Accept: "*/*" },
+        { absoluteUrl: true },
       );
       expect(result).toEqual({ downloadUrl: "https://cert.example.com/cert.pfx" });
     });
@@ -164,6 +167,8 @@ describe("StorageService", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.GET_DMS_FILE_AND_FOLDER,
         mockGetDmsPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockGetDmsFileAndFolderResponse);
     });
@@ -188,6 +193,8 @@ describe("StorageService", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.UPLOAD_DMS_FILE,
         mockUploadDmsFilePayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockUploadDmsFileResponse);
     });
@@ -212,6 +219,8 @@ describe("StorageService", () => {
       expect(http.post).toHaveBeenCalledWith(
         STORAGE_FILE_ENDPOINTS.CREATE_FOLDER,
         mockCreateDmsFolderPayload,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockUploadDmsFileResponse);
     });

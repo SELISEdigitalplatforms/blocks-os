@@ -52,6 +52,7 @@ const credential = {
   redirectUris: ["https://app/cb"],
   allowedResponseTypes: ["code"],
   registerAsIdentityProvider: true,
+  isDeviceFlowClient: true,
   clientBrandColor: "#abcdef",
   clientLogoUrl: "https://cdn/logo.png",
 };
@@ -135,7 +136,12 @@ describe("OidcBrandingForm", () => {
     await waitFor(() => expect(latestActions()).toBeTruthy());
     await latestActions().onSave();
     expect(h.saveOidc).toHaveBeenCalledWith(
-      expect.objectContaining({ itemId: "c1", clientBrandColor: "#abcdef" }),
+      expect.objectContaining({
+        itemId: "c1",
+        clientBrandColor: "#abcdef",
+        isDeviceFlowClient: true,
+        allowedResponseTypes: [],
+      }),
     );
     expect(h.showSuccessToast).toHaveBeenCalled();
   });

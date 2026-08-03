@@ -21,6 +21,7 @@ export interface IOidcConfig {
   isActive: boolean;
   requirePkce: boolean;
   registerAsIdentityProvider?: boolean;
+  isDeviceFlowClient?: boolean;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   tenantId: string;
@@ -42,6 +43,7 @@ export interface ISaveOidcCredentialPayload {
   scope: string;
   requirePkce: boolean;
   registerAsIdentityProvider: boolean;
+  isDeviceFlowClient: boolean;
   externalDiscoveryEndpoint?: string;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
@@ -59,6 +61,7 @@ export interface ISaveOidcCredentialResponse {
   redirectUris: string[];
   scope: string;
   requirePkce: boolean;
+  isDeviceFlowClient: boolean;
   allowedResponseTypes: string[];
   allowedServiceAccessResources?: string[];
   clientLogoUrl?: string;

@@ -1,78 +1,79 @@
 import { ILanguage, ILanguageConfig } from "../models/language";
 
-export const langData: ILanguage[] = [
-  {
-    id: "1",
-    key: "app-signup-workflow",
-    module: "UILM Tool",
-    pages: ["/release-note/blocks-app"],
-    translation: {
-      en: "   ",
-      de: "   ",
-      fr: "   ",
-    },
-    lastModified: "2024-06-20T10:42:00",
-    createdOn: "2024-06-20T10:42:00",
-  },
-  {
-    id: "2",
-    key: "opt-in-email",
-    module: "Resource Centre",
-    pages: ["/release-note/blocks-app", "/services/blocks-app"],
-    translation: {
-      en: "   ",
-      de: "   ",
-      fr: "   ",
-    },
-    lastModified: "2024-08-29T10:42:00",
-    createdOn: "2024-08-29T10:42:00",
-  },
-  {
-    id: "3",
-    key: "newsletters",
-    module: "Commission",
-    pages: ["/service-log/timeline", "/login/"],
-    translation: {
-      en: "   ",
-      de: "   ",
-      fr: "   ",
-    },
-    lastModified: "2024-02-19T11:23:00",
-    createdOn: "2024-02-19T11:23:00",
-  },
-  {
-    id: "4",
-    key: "remove-from-calling-list",
-    module: "Performance",
-    pages: ["/typesofroutes/examplethis", "/service/log", "+1"],
-    translation: {
-      en: "   ",
-      de: "   ",
-      fr: "   ",
-    },
-    lastModified: "2024-04-18T10:42:00",
-    createdOn: "2024-04-18T10:42:00",
-  },
-  {
-    id: "5",
-    key: "all-empty-key-check",
-    module: "Commission",
-    pages: ["/typesofroutes/examplethis", "/service/log", "+1"],
-    lastModified: "2024-04-18T10:42:00",
-    createdOn: "2024-04-18T10:42:00",
-  },
-  {
-    id: "6",
-    key: "empty-key-check",
-    module: "Performance",
-    pages: ["/typesofroutes/examplethis", "/service/log", "+1"],
-    translation: {
-      en: "   ",
-    },
-    lastModified: "2024-04-18T10:42:00",
-    createdOn: "2024-04-18T10:42:00",
-  },
-];
+// DEADCODE 2026-07-29: dummy data with no importers; commented pending review
+// export const langData: ILanguage[] = [
+//   {
+//     id: "1",
+//     key: "app-signup-workflow",
+//     module: "UILM Tool",
+//     pages: ["/release-note/blocks-app"],
+//     translation: {
+//       en: "   ",
+//       de: "   ",
+//       fr: "   ",
+//     },
+//     lastModified: "2024-06-20T10:42:00",
+//     createdOn: "2024-06-20T10:42:00",
+//   },
+//   {
+//     id: "2",
+//     key: "opt-in-email",
+//     module: "Resource Centre",
+//     pages: ["/release-note/blocks-app", "/services/blocks-app"],
+//     translation: {
+//       en: "   ",
+//       de: "   ",
+//       fr: "   ",
+//     },
+//     lastModified: "2024-08-29T10:42:00",
+//     createdOn: "2024-08-29T10:42:00",
+//   },
+//   {
+//     id: "3",
+//     key: "newsletters",
+//     module: "Commission",
+//     pages: ["/service-log/timeline", "/login/"],
+//     translation: {
+//       en: "   ",
+//       de: "   ",
+//       fr: "   ",
+//     },
+//     lastModified: "2024-02-19T11:23:00",
+//     createdOn: "2024-02-19T11:23:00",
+//   },
+//   {
+//     id: "4",
+//     key: "remove-from-calling-list",
+//     module: "Performance",
+//     pages: ["/typesofroutes/examplethis", "/service/log", "+1"],
+//     translation: {
+//       en: "   ",
+//       de: "   ",
+//       fr: "   ",
+//     },
+//     lastModified: "2024-04-18T10:42:00",
+//     createdOn: "2024-04-18T10:42:00",
+//   },
+//   {
+//     id: "5",
+//     key: "all-empty-key-check",
+//     module: "Commission",
+//     pages: ["/typesofroutes/examplethis", "/service/log", "+1"],
+//     lastModified: "2024-04-18T10:42:00",
+//     createdOn: "2024-04-18T10:42:00",
+//   },
+//   {
+//     id: "6",
+//     key: "empty-key-check",
+//     module: "Performance",
+//     pages: ["/typesofroutes/examplethis", "/service/log", "+1"],
+//     translation: {
+//       en: "   ",
+//     },
+//     lastModified: "2024-04-18T10:42:00",
+//     createdOn: "2024-04-18T10:42:00",
+//   },
+// ];
 
 export const langConfigureData: ILanguageConfig[] = [
   {
@@ -742,30 +743,31 @@ export const langConfigureData: ILanguageConfig[] = [
   },
 ];
 
-export const events = [
-  {
-    date: "2024-08-28",
-    time: "10:00 AM",
-    description: "Mike Lydis uploaded 256 keys",
-  },
-  {
-    date: "2024-08-29",
-    time: "02:00 PM",
-    description: "Shane M’lepnos exported 128 keys",
-  },
-  {
-    date: "2024-08-30",
-    time: "11:00 AM",
-    description: "Kwame Atta translated 42 keys",
-  },
-  {
-    date: "2024-08-30",
-    time: "11:00 AM",
-    description: "Carmine Marafioti created a new key: signin4all for the module: Ligmapp_name",
-  },
-  {
-    date: "2024-08-30",
-    time: "11:00 AM",
-    description: "Carmine Marafioti created a new module: Ligmapp_name",
-  },
-];
+// DEADCODE 2026-07-29: dummy data with no importers; commented pending review
+// export const events = [
+//   {
+//     date: "2024-08-28",
+//     time: "10:00 AM",
+//     description: "Mike Lydis uploaded 256 keys",
+//   },
+//   {
+//     date: "2024-08-29",
+//     time: "02:00 PM",
+//     description: "Shane M’lepnos exported 128 keys",
+//   },
+//   {
+//     date: "2024-08-30",
+//     time: "11:00 AM",
+//     description: "Kwame Atta translated 42 keys",
+//   },
+//   {
+//     date: "2024-08-30",
+//     time: "11:00 AM",
+//     description: "Carmine Marafioti created a new key: signin4all for the module: Ligmapp_name",
+//   },
+//   {
+//     date: "2024-08-30",
+//     time: "11:00 AM",
+//     description: "Carmine Marafioti created a new module: Ligmapp_name",
+//   },
+// ];

@@ -86,10 +86,14 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
       key: "Scope(s)",
       value: item.scope ?? "",
     },
-    {
-      key: "PKCE",
-      value: item.requirePkce ? "required" : "not required",
-    },
+    ...(item.isDeviceFlowClient
+      ? []
+      : [
+          {
+            key: "PKCE",
+            value: item.requirePkce ? "required" : "not required",
+          },
+        ]),
     {
       key: "Redirect automatically after authentication",
       value: item.isAutoRedirect ? "true" : "false",
@@ -178,13 +182,23 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
           </div>
         </TableCell>
         <TableCell className="hidden py-3.5 sm:table-cell">
-          <Badge
-            variant="outline"
-            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
-          >
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-            OIDC
-          </Badge>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge
+              variant="outline"
+              className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+              OIDC
+            </Badge>
+            {item.isDeviceFlowClient && (
+              <Badge
+                variant="outline"
+                className="w-fit border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+              >
+                Device Flow
+              </Badge>
+            )}
+          </div>
         </TableCell>
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
@@ -206,21 +220,23 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
               <TooltipContent>Template</TooltipContent>
             </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                  aria-label="Rotate client secret"
-                  onClick={() => setShowRotateDialog(true)}
-                  disabled={isRotating}
-                >
-                  <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Rotate Secret</TooltipContent>
-            </Tooltip>
+            {!item.isDeviceFlowClient && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
+                    aria-label="Rotate client secret"
+                    onClick={() => setShowRotateDialog(true)}
+                    disabled={isRotating}
+                  >
+                    <RotateCw className={cn("h-3.5 w-3.5", isRotating && "animate-spin")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Rotate Secret</TooltipContent>
+              </Tooltip>
+            )}
             <span className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
             <Tooltip>
               <TooltipTrigger asChild>

@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/page-header/page-header";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
@@ -226,11 +225,14 @@ export default function SecretManagementLayout() {
     parseAsString.withDefault(""),
   );
 
-  if (isOidcBranding && oidcClientId) {
-    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc`] = "OIDC";
-    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc/${oidcClientId}`] = null;
-    BREADCRUMB_CUSTOM_TITLES[`${secretManagementBase}/oidc/${oidcClientId}/branding`] = "Template";
-  }
+  const breadcrumbTitles =
+    isOidcBranding && oidcClientId
+      ? {
+          [`${secretManagementBase}/oidc`]: "OIDC",
+          [`${secretManagementBase}/oidc/${oidcClientId}`]: null,
+          [`${secretManagementBase}/oidc/${oidcClientId}/branding`]: "Template",
+        }
+      : undefined;
 
   const currentItem = isOidcBranding
     ? null
@@ -284,6 +286,7 @@ export default function SecretManagementLayout() {
                 breadcrumbIndex={4}
                 listClassName="text-base sm:text-lg"
                 className="flex"
+                customTitles={breadcrumbTitles}
               />
               <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
             </header>
