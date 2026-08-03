@@ -122,7 +122,7 @@ export class ProjectService {
   initiateMigration(
     payload: IMigrationRequest,
   ): Promise<IMigrationInitiateResponse> {
-    return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload);
+    return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload, undefined, { absoluteUrl: true });
   }
 
   verifyMigration(
