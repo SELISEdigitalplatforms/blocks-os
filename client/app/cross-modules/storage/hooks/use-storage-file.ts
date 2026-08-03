@@ -66,19 +66,19 @@ export const useDeleteFile = () => {
   });
 };
 
-export const useDeleteFolder = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: ["storage", "folder", "delete"],
-    mutationFn: storageService.file.deleteFolderByFileId,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["storage", "folder", "getFolderInfo"],
-      });
-    },
-  });
-};
+// DEADCODE 2026-07-29: hook with no callers in client, e2e or tests; commented pending review
+// export const useDeleteFolder = () => {
+//   const queryClient = useQueryClient();
+////   return useMutation({
+//     mutationKey: ["storage", "folder", "delete"],
+//     mutationFn: storageService.file.deleteFolderByFileId,
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({
+//         queryKey: ["storage", "folder", "getFolderInfo"],
+//       });
+//     },
+//   });
+// };
 
 export const useGetFilesInfo = (options: IGetFilesInfoPayload) => {
   return useQuery({

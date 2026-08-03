@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  pathname: "/app/p1/idp/role-detail",
+  pathname: "/app/p1/iam/role-detail",
   segments: [] as Array<{ href: string; label: string }>,
 }));
 
@@ -28,8 +28,8 @@ const renderCrumb = (props: Record<string, unknown> = {}) =>
 describe("PageBreadcrumb", () => {
   beforeEach(() => {
     h.segments = [
-      { href: "/app/p1/idp/role-detail", label: "Role default" },
-      { href: "/app/p1/idp/permission-detail", label: "Permission default" },
+      { href: "/app/p1/iam/role-detail", label: "Role default" },
+      { href: "/app/p1/iam/permission-detail", label: "Permission default" },
       { href: "/app/p1/dashboard", label: "Dashboard" },
     ];
   });
@@ -38,9 +38,9 @@ describe("PageBreadcrumb", () => {
     renderCrumb();
     // Custom titles from BREADCRUMB_CUSTOM_TITLES replace the defaults.
     const rolesLink = screen.getByRole("link", { name: "Roles" }) as HTMLAnchorElement;
-    expect(rolesLink.getAttribute("href")).toContain("/app/p1/idp/roles");
+    expect(rolesLink.getAttribute("href")).toContain("/app/p1/iam/roles");
     const permsLink = screen.getByRole("link", { name: "Permissions" }) as HTMLAnchorElement;
-    expect(permsLink.getAttribute("href")).toContain("/app/p1/idp/permissions");
+    expect(permsLink.getAttribute("href")).toContain("/app/p1/iam/permissions");
   });
 
   it("renders the last segment as the current page rather than a link", () => {
@@ -50,7 +50,7 @@ describe("PageBreadcrumb", () => {
   });
 
   it("renders a disabled segment as a page instead of a link", () => {
-    renderCrumb({ disabledHrefs: ["/app/p1/idp/permission-detail"] });
+    renderCrumb({ disabledHrefs: ["/app/p1/iam/permission-detail"] });
     // The disabled middle segment renders as a BreadcrumbPage span, not an anchor.
     const perms = screen.getByText("Permissions");
     expect(perms.tagName).toBe("SPAN");

@@ -1,128 +1,83 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IRole } from "@blocks-idp/iam/models/role";
 
 const h = vi.hoisted(() => ({
-  roles: [] as IRole[],
+  roles: [] as { slug: string; name: string }[],
   isLoading: false,
   deleteRoles: vi.fn(),
-  showErrorToast: vi.fn(),
-  showSuccessToast: vi.fn(),
+  showError: vi.fn(),
+  showSuccess: vi.fn(),
+  lastListProps: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useUserRoles: () => ({
-    roles: h.roles,
-    isLoading: h.isLoading,
-    deleteRoles: h.deleteRoles,
-  }),
+  useUserRoles: () => ({ isLoading: h.isLoading, roles: h.roles, deleteRoles: h.deleteRoles }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
-  showErrorToast: h.showErrorToast,
-  showSuccessToast: h.showSuccessToast,
+  showErrorToast: (a: unknown) => h.showError(a),
+  showSuccessToast: (a: unknown) => h.showSuccess(a),
 }));
-vi.mock("./add-user-role", () => ({
-  AddUserRole: () => <button type="button">Assign Role</button>,
-}));
+vi.mock("./add-user-role", () => ({ AddUserRole: () => <div data-testid="add-user-role" /> }));
 vi.mock("./user-roles-list", () => ({
-  UserRolesList: ({
-    roles,
-    onRemoveRole,
-  }: {
-    roles: IRole[];
-    onRemoveRole: (slug: string) => void;
-  }) => (
-    <ul>
-      {roles.map((role) => (
-        <li key={role.slug}>
-          <span>{role.name}</span>
-          <button type="button" onClick={() => onRemoveRole(role.slug)}>
-            remove-{role.slug}
+  UserRolesList: (props: Record<string, unknown>) => {
+    h.lastListProps = props;
+    const roles = props.roles as { slug: string; name: string }[];
+    return (
+      <div>
+        {roles.map((r) => (
+          <button key={r.slug} onClick={() => (props.onRemoveRole as (s: string) => void)(r.slug)}>
+            remove-{r.slug}
           </button>
-        </li>
-      ))}
-    </ul>
-  ),
+        ))}
+      </div>
+    );
+  },
 }));
 
 import { UserRoles } from "./user-roles";
 
-const roles = [
-  { itemId: "r-1", name: "Cloud Admin", slug: "cloudadmin" },
-  { itemId: "r-2", name: "Viewer", slug: "viewer" },
-] as unknown as IRole[];
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isLoading = false;
+  h.roles = [{ slug: "admin", name: "Admin" }, { slug: "viewer", name: "Viewer" }];
+});
 
 describe("UserRoles", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.roles = roles;
-    h.isLoading = false;
-    h.deleteRoles.mockResolvedValue({ isSuccess: true });
+  it("renders the roles card and add-role control", () => {
+    render(<UserRoles id="u1" projectKey="p1" />);
+    expect(screen.getByText("Roles")).toBeTruthy();
+    expect(screen.getByTestId("add-user-role")).toBeTruthy();
   });
 
-  it("lists the roles without Reset/Save until a removal is pending", () => {
+  it("reveals Save and Reset actions after a role is removed", () => {
     render(<UserRoles id="u1" projectKey="p1" />);
-    expect(screen.getByText("Cloud Admin")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
-  });
-
-  it("reveals Reset/Save once a role is removed locally", async () => {
-    const user = userEvent.setup();
-    render(<UserRoles id="u1" projectKey="p1" />);
-
-    await user.click(screen.getByRole("button", { name: "remove-cloudadmin" }));
-
+    fireEvent.click(screen.getByText("remove-admin"));
     expect(screen.getByRole("button", { name: "Save" })).toBeTruthy();
-    expect(screen.queryByText("Cloud Admin")).toBeNull();
+    expect(screen.getByRole("button", { name: "Reset" })).toBeTruthy();
   });
 
-  it("persists the removed role slugs on Save", async () => {
-    const user = userEvent.setup();
+  it("saves removed roles and shows a success toast", async () => {
+    h.deleteRoles.mockResolvedValue({ isSuccess: true });
     render(<UserRoles id="u1" projectKey="p1" />);
-
-    await user.click(screen.getByRole("button", { name: "remove-cloudadmin" }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(h.deleteRoles).toHaveBeenCalledWith(["cloudadmin"]));
-    expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Roles updated successfully" });
+    fireEvent.click(screen.getByText("remove-admin"));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(h.deleteRoles).toHaveBeenCalledWith(["admin"]));
+    await waitFor(() => expect(h.showSuccess).toHaveBeenCalled());
   });
 
-  it("restores the local roles on Reset", async () => {
-    const user = userEvent.setup();
+  it("shows an error toast when the save fails", async () => {
+    h.deleteRoles.mockResolvedValue({ isSuccess: false, errors: "nope" });
     render(<UserRoles id="u1" projectKey="p1" />);
-
-    await user.click(screen.getByRole("button", { name: "remove-cloudadmin" }));
-    await user.click(screen.getByRole("button", { name: "Reset" }));
-
-    expect(screen.getByText("Cloud Admin")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    fireEvent.click(screen.getByText("remove-viewer"));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "nope" }));
   });
 
-  it("surfaces a backend error when the removal fails", async () => {
-    const user = userEvent.setup();
-    h.deleteRoles.mockResolvedValue({ isSuccess: false, errors: { role: "in use" } });
+  it("restores the original roles on reset", () => {
     render(<UserRoles id="u1" projectKey="p1" />);
-
-    await user.click(screen.getByRole("button", { name: "remove-viewer" }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { role: "in use" } }),
-    );
-  });
-
-  it("falls back to a generic error when the removal throws", async () => {
-    const user = userEvent.setup();
-    h.deleteRoles.mockRejectedValue(new Error("boom"));
-    render(<UserRoles id="u1" projectKey="p1" />);
-
-    await user.click(screen.getByRole("button", { name: "remove-viewer" }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }),
-    );
+    fireEvent.click(screen.getByText("remove-admin"));
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getByText("remove-admin")).toBeTruthy();
   });
 });

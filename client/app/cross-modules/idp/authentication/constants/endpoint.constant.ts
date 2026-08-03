@@ -55,11 +55,12 @@ export const OIDC_FLOW_ENDPOINTS = {
   USER_ACKNOWLEDGEMENT: `/api${AUTH_SUBPATH}/UserAcknowledgement`,
 } as const;
 
-export const IMPERSONATE_ENDPOINTS = {
-  IMPERSONATE: `${API_BASES.IAM}${AUTH_SUBPATH}/impersonate`,
-  STOP_IMPERSONATION: `${API_BASES.IAM}${AUTH_SUBPATH}/impersonation/stop`,
-  IMPERSONATION_STATUS: `${API_BASES.IAM}${AUTH_SUBPATH}/impersonation/status`,
-} as const;
+// DEADCODE 2026-07-29: no references in client, e2e or msw handlers; commented pending review
+// export const IMPERSONATE_ENDPOINTS = {
+//   IMPERSONATE: `${API_BASES.IAM}${AUTH_SUBPATH}/impersonate`,
+//   STOP_IMPERSONATION: `${API_BASES.IAM}${AUTH_SUBPATH}/impersonation/stop`,
+//   IMPERSONATION_STATUS: `${API_BASES.IAM}${AUTH_SUBPATH}/impersonation/status`,
+// } as const;
 
 // ─── Identity Provider endpoints (identity-provider.service) ─────────────────
 
@@ -72,6 +73,7 @@ export const IDENTITY_PROVIDER_ENDPOINTS = {
   DELETE: `${API_BASES.IAM}${AUTH_SUBPATH}/identity-providers`,
 } as const;
 
-export const EXECUTION_CONTEXT_ENDPOINTS = {
-  CONTEXT: `${API_BASES.IAM}${AUTH_SUBPATH}/context`,
-};
+// DEADCODE 2026-07-29: no references in client, e2e or msw handlers; commented pending review
+// export const EXECUTION_CONTEXT_ENDPOINTS = {
+//   CONTEXT: `${API_BASES.IAM}${AUTH_SUBPATH}/context`,
+// };

@@ -150,7 +150,9 @@ describe("ProjectService", () => {
       };
       const result = await service.repoUpdate(payload);
 
-      expect(http.post).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPO_UPDATE, payload);
+      expect(http.post).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPO_UPDATE, payload, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockSuccessResponse);
     });
 
@@ -311,7 +313,9 @@ describe("ProjectService", () => {
       };
       const result = await service.initiateMigration(payload);
 
-      expect(http.post).toHaveBeenCalledWith(MIGRATION_ENDPOINTS.MIGRATE, payload);
+      expect(http.post).toHaveBeenCalledWith(MIGRATION_ENDPOINTS.MIGRATE, payload, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockMigrationInitiateResponse);
     });
 
@@ -341,7 +345,9 @@ describe("ProjectService", () => {
       };
       const result = await service.verifyMigration(payload);
 
-      expect(http.post).toHaveBeenCalledWith(MIGRATION_ENDPOINTS.VERIFY, payload);
+      expect(http.post).toHaveBeenCalledWith(MIGRATION_ENDPOINTS.VERIFY, payload, undefined, {
+        absoluteUrl: true,
+      });
       expect(result).toEqual(mockMigrationVerifyResponse);
     });
 
@@ -367,6 +373,8 @@ describe("ProjectService", () => {
 
       expect(http.get).toHaveBeenCalledWith(
         `${MIGRATION_ENDPOINTS.GET_STATUS}?tenantGroupId=group-1`,
+        undefined,
+        { absoluteUrl: true },
       );
       expect(result).toEqual(mockMigrationStatusResponse);
     });
@@ -422,11 +430,9 @@ describe("ProjectService", () => {
     it("should call correct endpoint with projectKey", async () => {
       vi.mocked(http.get).mockResolvedValue(mockPublicCertificateResponse);
 
-      const result = await service.getPublicCertificateInformation("proj-key-1");
+      const result = await service.getPublicCertificateInformation();
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${PROJECT_ENDPOINTS.GET_TOKEN_VALIDATION}?ProjectKey=proj-key-1`,
-      );
+      expect(http.get).toHaveBeenCalledWith(PROJECT_ENDPOINTS.GET_TOKEN_VALIDATION);
       expect(result).toEqual(mockPublicCertificateResponse);
     });
 

@@ -1,7 +1,4 @@
 import React from "react";
-import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router";
-import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { formatDate } from "@/lib/utils";
 import { useGetEmailUsageById } from "@blocks-communication/mail/hooks/use-email-usage";
@@ -9,7 +6,6 @@ import { StatusBadge } from "@blocks-communication/mail/email/email-usage/status
 import { EmailUsageDetailsSkeleton } from "@blocks-communication/mail/email/email-usage/email-usage-details-skeleton";
 import { EmailUsageDetailsBreadcrumb } from "@blocks-communication/mail/email/email-usage/email-usage-details-breadcrumb";
 export const EmailUsageDetails = ({ id }: { id: string }) => {
-  const navigate = useNavigate();
   const { data: details, isLoading } = useGetEmailUsageById(id);
   if (isLoading) return <EmailUsageDetailsSkeleton />;
   if (!details) return <div>Email details not found.</div>;

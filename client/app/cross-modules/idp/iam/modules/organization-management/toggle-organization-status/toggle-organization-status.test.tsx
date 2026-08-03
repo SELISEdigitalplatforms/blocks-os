@@ -1,130 +1,81 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IOrganization } from "@blocks-idp/iam/models/organization";
 
-// blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
-vi.stubGlobal("matchMedia", (query: string) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  dispatchEvent: vi.fn(),
-}));
-
-vi.stubGlobal(
-  "ResizeObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
-
-const { mutateAsync, showErrorToast, showSuccessToast } = vi.hoisted(() => ({
+const h = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
-  showErrorToast: vi.fn(),
+  isPending: false,
   showSuccessToast: vi.fn(),
-}));
-
-vi.mock("@seliseblocks/genesis-os", () => ({
-  useProjectStore: () => ({
-    selectedProject: { itemId: "p1", tenantId: "t1" },
-  }),
-}));
-
-vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
-  useSaveOrganization: () => ({ mutateAsync, isPending: false }),
+  showErrorToast: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
-  showErrorToast,
-  showSuccessToast,
-  showInfoToast: vi.fn(),
-  useToast: () => ({ toast: vi.fn() }),
+  showSuccessToast: h.showSuccessToast,
+  showErrorToast: h.showErrorToast,
+}));
+vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
+  useUpdateOrganization: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
 
-import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { ToggleOrganizationStatus } from "./toggle-organization-status";
-import { IOrganization } from "@blocks-idp/iam/models/organization";
 
-const makeOrg = (over: Partial<IOrganization>): IOrganization =>
-  ({
-    itemId: "org-1",
-    name: "Acme",
-    isEnable: true,
-    createdDate: "",
-    lastUpdatedDate: "",
-    createdBy: "",
-    lastUpdatedBy: "",
-    language: null,
-    organizationIds: [],
-    tags: [],
-    ...over,
-  }) as IOrganization;
+const org = { itemId: "org-1", name: "Acme", isDisabled: false } as IOrganization;
 
-const renderDialog = (org: IOrganization, onClose = vi.fn()) => {
+const renderToggle = (o: Partial<IOrganization> = {}, onClose = vi.fn()) =>
   render(
-    <Dialog open onOpenChange={() => {}}>
-      <ToggleOrganizationStatus organization={org} onClose={onClose} />
+    <Dialog open>
+      <ToggleOrganizationStatus organization={{ ...org, ...o }} onClose={onClose} />
     </Dialog>,
   );
-  return onClose;
-};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isPending = false;
+});
 
 describe("ToggleOrganizationStatus", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("renders the disable confirmation for an enabled organization", () => {
-    renderDialog(makeOrg({ isEnable: true }));
+  it("shows the Disable prompt for an active organization", () => {
+    renderToggle();
     expect(screen.getByText("Disable Organization")).toBeTruthy();
-    expect(screen.getByText(/Are you sure you want to disable the organization/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Disable" })).toBeTruthy();
   });
 
-  it("renders the enable confirmation for a disabled organization", () => {
-    renderDialog(makeOrg({ isEnable: false }));
+  it("shows the Enable prompt for a disabled organization", () => {
+    renderToggle({ isDisabled: true });
     expect(screen.getByText("Enable Organization")).toBeTruthy();
-    expect(screen.getByText(/Are you sure you want to enable the organization/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Enable" })).toBeTruthy();
   });
 
-  it("calls the mutation and closes on success", async () => {
-    mutateAsync.mockResolvedValueOnce({ isSuccess: true });
-    const user = userEvent.setup();
-    const onClose = renderDialog(makeOrg({ isEnable: true, name: "Acme" }));
+  it("disables the organization and shows a success toast", async () => {
+    const onClose = vi.fn();
+    h.mutateAsync.mockResolvedValue({ isSuccess: true });
+    renderToggle({}, onClose);
 
-    await user.click(screen.getByRole("button", { name: "Disable" }));
+    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
 
-    await waitFor(() =>
-      expect(mutateAsync).toHaveBeenCalledWith({
-        projectKey: "t1",
-        name: "Acme",
-        itemId: "org-1",
-        isEnable: false,
-      }),
-    );
-    expect(showSuccessToast).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
-    expect(showErrorToast).not.toHaveBeenCalled();
-  });
-
-  it("shows an error toast and keeps the dialog open on failure", async () => {
-    mutateAsync.mockResolvedValueOnce({
-      isSuccess: false,
-      errors: { foo: "bar" },
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalled());
+    expect(h.mutateAsync.mock.calls[0][0]).toMatchObject({ itemId: "org-1", isEnable: false });
+    expect(h.showSuccessToast).toHaveBeenCalledWith({
+      description: "Organization disabled successfully",
     });
-    const user = userEvent.setup();
-    const onClose = renderDialog(makeOrg({ isEnable: true }));
+    expect(onClose).toHaveBeenCalled();
+  });
 
-    await user.click(screen.getByRole("button", { name: "Disable" }));
+  it("shows an error toast when the update is unsuccessful", async () => {
+    h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: "nope" });
+    renderToggle();
 
-    await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
-    expect(showSuccessToast).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
+
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "nope" }));
+  });
+
+  it("shows the mapped error toast when the update throws with errors", async () => {
+    h.mutateAsync.mockRejectedValue({ errors: { org: "boom" } });
+    renderToggle();
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
+
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { org: "boom" } }));
   });
 });

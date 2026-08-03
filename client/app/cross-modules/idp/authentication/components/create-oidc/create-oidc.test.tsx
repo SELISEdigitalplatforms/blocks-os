@@ -58,7 +58,40 @@ describe("CreateOIDC", () => {
     expect(h.saveOidc).not.toHaveBeenCalled();
   });
 
-  it("creates an OIDC client with a valid redirect URI", async () => {
+  it("shows Device Flow before Redirect URI(s)", async () => {
+    const user = userEvent.setup();
+    render(<CreateOIDC />);
+    await user.click(screen.getByRole("button", { name: /Create/i }));
+
+    const deviceFlowLabel = screen.getByText("Device Flow");
+    const redirectLabel = screen.getByText("Redirect URI(s)");
+
+    expect(
+      deviceFlowLabel.compareDocumentPosition(redirectLabel) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("creates a device-flow OIDC client without auth-code response metadata", async () => {
+    const user = userEvent.setup();
+    render(<CreateOIDC />);
+    await user.click(screen.getByRole("button", { name: /Create/i }));
+    await user.type(screen.getByPlaceholderText("Enter client name"), "My App");
+    await user.click(screen.getByLabelText("Generate this OIDC client only for device flow"));
+    expect(screen.queryByText("Redirect URI(s)")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
+    const payload = h.saveOidc.mock.calls[0][0];
+    expect(payload.clientDisplayName).toBe("My App");
+    expect(payload.redirectUris).toEqual([]);
+    expect(payload.isDeviceFlowClient).toBe(true);
+    expect(payload.allowedResponseTypes).toEqual([]);
+    expect(h.showSuccessToast).toHaveBeenCalledWith({
+      description: "OIDC Client created successfully",
+    });
+  });
+
+  it("creates a standard OIDC client with code response metadata", async () => {
     const user = userEvent.setup();
     render(<CreateOIDC />);
     await user.click(screen.getByRole("button", { name: /Create/i }));
@@ -71,11 +104,9 @@ describe("CreateOIDC", () => {
 
     await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
     const payload = h.saveOidc.mock.calls[0][0];
-    expect(payload.clientDisplayName).toBe("My App");
     expect(payload.redirectUris).toEqual(["https://app.example.com/callback"]);
-    expect(h.showSuccessToast).toHaveBeenCalledWith({
-      description: "OIDC Client created successfully",
-    });
+    expect(payload.isDeviceFlowClient).toBe(false);
+    expect(payload.allowedResponseTypes).toEqual(["code"]);
   });
 
   it("adds another redirect URI input on demand", async () => {
@@ -97,6 +128,7 @@ describe("CreateOIDC", () => {
           scope: "openid",
           isActive: true,
           requirePkce: true,
+          isDeviceFlowClient: true,
         },
       },
       isLoading: false,
@@ -105,11 +137,14 @@ describe("CreateOIDC", () => {
     await user.click(screen.getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Edit OIDC Client" })).toBeTruthy();
     await waitFor(() => expect(screen.getByDisplayValue("Existing OIDC")).toBeTruthy());
-    expect(screen.getByDisplayValue("https://existing.example.com/cb")).toBeTruthy();
+    expect(screen.queryByDisplayValue("https://existing.example.com/cb")).toBeNull();
+    expect(screen.getByLabelText("Generate this OIDC client only for device flow")).toBeChecked();
 
     await user.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(h.saveOidc).toHaveBeenCalledTimes(1));
     expect(h.saveOidc.mock.calls[0][0].itemId).toBe("oidc-1");
+    expect(h.saveOidc.mock.calls[0][0].isDeviceFlowClient).toBe(true);
+    expect(h.saveOidc.mock.calls[0][0].allowedResponseTypes).toEqual([]);
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "OIDC Client updated successfully",
     });

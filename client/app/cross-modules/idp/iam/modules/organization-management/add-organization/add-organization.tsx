@@ -24,30 +24,45 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { z } from "zod";
+import {
+  useSaveOrganization,
+  useGetOrganizationConfig,
+} from "@blocks-idp/iam/hooks/use-organization";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
 import { Plus } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
+
 interface AddOrganizationProps {
   disabled?: boolean;
 }
+
 export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { mutateAsync, isPending } = useSaveOrganization();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  const isDisabled =
+    disabled || !orgConfig?.isMultiOrgEnabled || !orgConfig?.allowCreationFromCloud;
+
   const form = useForm({
     defaultValues: addOrganizationFormDefaultValue,
     resolver: zodResolver(addOrganizationFormSchema),
   });
+
   const {
     formState: { isDirty },
   } = form;
+
   const onSubmit: SubmitHandler<z.infer<typeof addOrganizationFormSchema>> = async (data) => {
     try {
       const res = await mutateAsync({
-        projectKey: tenantId,
         name: data.name,
-        itemId: "",
-        isEnable: true,
+        createdFrom: 1,
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
@@ -62,20 +77,39 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
       }
     }
   };
+
   const handleModalOpenChange = (value: boolean) => {
     if (!value) {
       form.reset();
     }
     setIsModalOpen(value);
   };
+
   return (
     <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" disabled={disabled} className="text-primary">
-          <Plus className="h-5 w-5 text-primary md:mr-2.5" />
-          <span className="sr-only sm:not-sr-only">Add Organization</span>
-        </Button>
-      </DialogTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex" tabIndex={isDisabled ? 0 : undefined}>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  disabled={isDisabled}
+                  className="gap-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="sr-only sm:not-sr-only">Add Organization</span>
+                </Button>
+              </DialogTrigger>
+            </span>
+          </TooltipTrigger>
+          {isDisabled && (
+            <TooltipContent side="left">
+              Organization creation from cloud is not enabled
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent>
         <DialogHeader className="mb-4">
           <DialogTitle>Add Organization</DialogTitle>

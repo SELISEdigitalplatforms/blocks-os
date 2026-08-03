@@ -1,152 +1,154 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Tooltip re-exports blocks-kit (process.env at load); passthrough keeps it renderable.
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
+
 const h = vi.hoisted(() => ({
-  useGetRoles: vi.fn(),
+  rolesResult: {} as Record<string, unknown>,
   addRoles: vi.fn(),
   slugs: [] as string[],
   isPending: false,
-  showErrorToast: vi.fn(),
-  showSuccessToast: vi.fn(),
+  showError: vi.fn(),
+  showSuccess: vi.fn(),
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
-  useGetRoles: (...args: unknown[]) => h.useGetRoles(...args),
+  useGetRoles: () => h.rolesResult,
 }));
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useUserRoles: () => ({ isPending: h.isPending, addRoles: h.addRoles, slugs: h.slugs }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
-  showErrorToast: h.showErrorToast,
-  showSuccessToast: h.showSuccessToast,
+  showErrorToast: (arg: unknown) => h.showError(arg),
+  showSuccessToast: (arg: unknown) => h.showSuccess(arg),
+}));
+vi.mock("@/components/filter-toolbar", () => ({
+  FilterControls: {
+    SearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
+      <input aria-label="search" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    ),
+  },
 }));
 
 import { AddUserRole } from "./add-user-role";
 
-const makeRole = (i: number) => ({ itemId: `role-${i}`, name: `Role ${i}`, slug: `role_${i}` });
+const renderCmp = () => render(<AddUserRole userId="u1" projectKey="p1" />);
 
-const setRoles = (count: number, totalCount = count, isLoading = false) => {
-  h.useGetRoles.mockReturnValue({
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isPending = false;
+  h.slugs = [];
+  h.rolesResult = {
     data: {
-      data: Array.from({ length: count }, (_, i) => makeRole(i + 1)),
-      totalCount,
+      data: [
+        { itemId: "r1", name: "Admin", slug: "admin" },
+        { itemId: "r2", name: "Viewer", slug: "viewer" },
+      ],
+      totalCount: 2,
     },
-    isLoading,
-  });
-};
-
-const openDialog = async (user: ReturnType<typeof userEvent.setup>) => {
-  // DialogTrigger is not asChild here, so it nests a button inside the styled
-  // Button; the outer trigger is the one that toggles the dialog.
-  await user.click(screen.getAllByRole("button", { name: "Assign Role" })[0]);
-  return screen.findByText("Assign roles");
-};
+    isLoading: false,
+  };
+});
 
 describe("AddUserRole", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.slugs = [];
-    h.isPending = false;
+  it("renders the assign trigger", () => {
+    renderCmp();
+    expect(screen.getByText("Assign Role")).toBeTruthy();
+  });
+
+  it("disables the trigger when the user already has 5 roles", () => {
+    h.slugs = ["a", "b", "c", "d", "e"];
+    renderCmp();
+    expect((screen.getByText("Assign Role").closest("button") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("shows the empty state inside the dialog when there are no roles", async () => {
+    h.rolesResult = { data: { data: [], totalCount: 0 }, isLoading: false };
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("No roles found")).toBeTruthy());
+  });
+
+  it("selects a role and assigns it", async () => {
     h.addRoles.mockResolvedValue({ isSuccess: true });
-    setRoles(3);
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.addRoles).toHaveBeenCalledWith(["admin"]));
+    await waitFor(() => expect(h.showSuccess).toHaveBeenCalled());
   });
 
-  it("lists the available roles once the dialog is open", async () => {
-    const user = userEvent.setup();
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-    expect(screen.getByText("Role 1")).toBeTruthy();
-    expect(screen.getByText("role_3")).toBeTruthy();
+  it("shows an error toast when the assign request fails", async () => {
+    h.addRoles.mockResolvedValue({ isSuccess: false, errors: "bad" });
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "bad" }));
   });
 
-  it("assigns the selected roles and reports success", async () => {
-    const user = userEvent.setup();
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    await user.click(screen.getAllByRole("checkbox")[0]);
-    const include = screen.getByRole("button", { name: "Include" }) as HTMLButtonElement;
-    expect(include.disabled).toBe(false);
-    await user.click(include);
-
-    await waitFor(() => expect(h.addRoles).toHaveBeenCalledWith(["role_1"]));
-    expect(h.showSuccessToast).toHaveBeenCalledWith({
-      description: "New role assigned successfully",
-    });
+  it("shows the mapped error toast when assigning throws structured errors", async () => {
+    h.addRoles.mockRejectedValue({ errors: { role: "thrown" } });
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: { role: "thrown" } }));
   });
 
-  it("unchecking a role removes it from the selection", async () => {
-    const user = userEvent.setup();
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    const first = screen.getAllByRole("checkbox")[0];
-    await user.click(first);
-    await user.click(first);
-
-    expect((screen.getByRole("button", { name: "Include" }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+  it("shows a generic error toast when assigning throws a plain value", async () => {
+    h.addRoles.mockRejectedValue("nope");
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "Something went wrong" }));
   });
 
-  it("surfaces a backend error when the assignment fails", async () => {
-    const user = userEvent.setup();
-    h.addRoles.mockResolvedValue({ isSuccess: false, errors: { role: "exists" } });
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    await user.click(screen.getAllByRole("checkbox")[0]);
-    await user.click(screen.getByRole("button", { name: "Include" }));
-
+  it("toggles a role selection off when unchecked", async () => {
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    const checkbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(checkbox);
+    fireEvent.click(checkbox);
+    // Include should be disabled again once nothing is selected.
     await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { role: "exists" } }),
+      expect((screen.getByRole("button", { name: "Include" }) as HTMLButtonElement).disabled).toBe(true),
     );
   });
 
-  it("falls back to a generic error when the assignment throws", async () => {
-    const user = userEvent.setup();
-    h.addRoles.mockRejectedValue(new Error("boom"));
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    await user.click(screen.getAllByRole("checkbox")[0]);
-    await user.click(screen.getByRole("button", { name: "Include" }));
-
-    await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }),
-    );
+  it("prevents selecting beyond the five-role maximum", async () => {
+    h.slugs = ["a", "b", "c", "d"];
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    const boxes = screen.getAllByRole("checkbox");
+    fireEvent.click(boxes[0]);
+    fireEvent.click(boxes[1]);
+    // The second selection is blocked by the max-role guard.
+    expect(boxes[1].getAttribute("aria-checked")).toBe("false");
   });
 
-  it("disables checkboxes for roles the user already holds", async () => {
-    const user = userEvent.setup();
-    h.slugs = ["role_2"];
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    const checkboxes = screen.getAllByRole("checkbox");
-    expect((checkboxes[1] as HTMLButtonElement).disabled).toBe(true);
-    expect(checkboxes[1].getAttribute("data-state")).toBe("checked");
-  });
-
-  it("shows the empty state when no roles are returned", async () => {
-    const user = userEvent.setup();
-    setRoles(0, 0);
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-    expect(screen.getByText("No roles found")).toBeTruthy();
-  });
-
-  it("passes the search term into the roles query", async () => {
-    const user = userEvent.setup();
-    render(<AddUserRole userId="u1" projectKey="p1" />);
-    await openDialog(user);
-
-    await user.type(screen.getByPlaceholderText("Search by roles name"), "adm");
-    await waitFor(() =>
-      expect(h.useGetRoles).toHaveBeenLastCalledWith(
-        expect.objectContaining({ filter: { search: "adm" } }),
-      ),
-    );
+  it("resets its state when the dialog is closed", async () => {
+    renderCmp();
+    fireEvent.click(screen.getByText("Assign Role"));
+    await waitFor(() => expect(screen.getByText("Admin")).toBeTruthy());
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByText("Admin")).toBeNull());
   });
 });

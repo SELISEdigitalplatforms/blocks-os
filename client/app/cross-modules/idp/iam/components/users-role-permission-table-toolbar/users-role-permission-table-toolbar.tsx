@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui-kits/button/button";
 import { Cross2Icon } from "@radix-ui/react-icons";
@@ -17,13 +17,16 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { useActiveFiltersCount } from "@/hooks/use-active-filters-count";
 import { SearchInput } from "@/components/search-input/search-input";
 import useIsServiceBarOpenLocal from "@blocks-localization/hooks/use-is-service-tab-open-local";
+
 interface TableFilterData {
   resourceGroup: string;
 }
+
 interface UsersRolePermissionTableToolbarProps<TData> {
   table: Table<TData>;
 }
-function PermissionFilterContent<TData extends TableFilterData>({ table }: { table: Table<TData> }) {
+
+function FilterContent<TData extends TableFilterData>({ table }: { table: Table<TData> }) {
   return (
     <>
       {table.getRowModel() && (
@@ -31,9 +34,7 @@ function PermissionFilterContent<TData extends TableFilterData>({ table }: { tab
           column={table.getColumn("resourceGroup")}
           title="Group"
           options={[
-            ...Array.from(
-              new Set(table.getRowModel().rows.map((row) => row.original.resourceGroup)),
-            ).map((group) => ({
+            ...Array.from(new Set(table.getRowModel().rows.map((row) => row.original.resourceGroup))).map((group) => ({
               label: group,
               value: group,
             })),
@@ -43,6 +44,7 @@ function PermissionFilterContent<TData extends TableFilterData>({ table }: { tab
     </>
   );
 }
+
 export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
   table,
 }: UsersRolePermissionTableToolbarProps<TData>) {
@@ -50,25 +52,48 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
   const isServiceBarOpen = useIsServiceBarOpenLocal();
   const textSearchColumn = table.getColumn("name");
   const [searchValue, setSearchValue] = useState("");
-  const [isSearchVisible, setIsSearchVisible] = useState(!isMobile);
+  // Search visibility defaults to the viewport (hidden on mobile) but can be
+  // toggled by the user. The override is scoped to the viewport it was made in,
+  // so crossing the breakpoint falls back to the default without an effect that
+  // writes state during synchronisation.
+  const [searchOverride, setSearchOverride] = useState<{ mobile: boolean; visible: boolean } | null>(
+    null,
+  );
+  const isSearchVisible =
+    searchOverride && searchOverride.mobile === isMobile ? searchOverride.visible : !isMobile;
+  const setIsSearchVisible = useCallback(
+    (value: React.SetStateAction<boolean>) => {
+      setSearchOverride((prev) => {
+        const current = prev && prev.mobile === isMobile ? prev.visible : !isMobile;
+        return {
+          mobile: isMobile,
+          visible: typeof value === "function" ? value(current) : value,
+        };
+      });
+    },
+    [isMobile],
+  );
+
   const activeFiltersCount = useActiveFiltersCount(table, undefined, "name");
   const isFiltered = activeFiltersCount > 0;
-  useEffect(() => {
-    setIsSearchVisible(!isMobile);
-  }, [isMobile]);
+
   const onSearchInputChange = useCallback(
     (text: string) => {
       setSearchValue(text);
       textSearchColumn?.setFilterValue(text);
     },
-    [textSearchColumn],
+    [textSearchColumn]
   );
+
   function resetFilters() {
     setSearchValue("");
+
     table.resetColumnFilters();
   }
+
   return (
     <div className="flex flex-col space-y-4 md:space-y-0">
+      {/* Mobile view */}
       <div className={`flex items-center justify-between ${isServiceBarOpen ? "flex" : "hidden"}`}>
         <SearchInput
           placeholder="Filter permission"
@@ -95,7 +120,7 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
               <SheetTitle className="mb-4">Filter</SheetTitle>
               <SheetDescription />
               <div className="flex flex-col space-y-4">
-                <PermissionFilterContent table={table} />
+                <FilterContent table={table} />
                 <SheetClose asChild>
                   <Button className="mt-4" size="sm">
                     Show Results
@@ -112,6 +137,8 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
           </Sheet>
         )}
       </div>
+
+      {/* Desktop view */}
       <div className={`${isServiceBarOpen ? "hidden" : "flex"} flex-1 items-center space-x-2`}>
         <SearchInput
           placeholder="Filter users by name or email"
@@ -121,7 +148,7 @@ export function UsersRolePermissionTableToolbar<TData extends TableFilterData>({
           isVisible={isSearchVisible}
           setIsVisible={setIsSearchVisible}
         />
-        <PermissionFilterContent table={table} />
+        <FilterContent table={table} />
         {isFiltered && (
           <Button variant="outline" onClick={resetFilters} className="h-8 px-2 lg:px-3">
             Reset

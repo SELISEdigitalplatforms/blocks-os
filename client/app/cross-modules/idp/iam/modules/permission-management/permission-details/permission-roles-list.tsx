@@ -90,7 +90,7 @@ export const PermissionRolesList = ({ slugs }: RolesTableProps) => {
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {
-    navigate(scoped(`idp/role-detail/${itemId}`));
+    navigate(scoped(`iam/role-detail/${itemId}`));
   };
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));

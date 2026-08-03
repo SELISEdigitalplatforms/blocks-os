@@ -133,13 +133,21 @@ describe("use-project hooks", () => {
       expect(crossProjectService.getEnvRepositories).toHaveBeenCalledWith();
     });
 
-    it("useGetMigrationStatus stays disabled until the migration feature is ready", () => {
-      vi.mocked(crossProjectService.getMigrationStatus).mockResolvedValue({} as never);
-      const { result } = renderHook(() => useGetMigrationStatus("tg"), {
+    it("useGetMigrationStatus is disabled without a tenant group id", () => {
+      const { result } = renderHook(() => useGetMigrationStatus(""), {
         wrapper: createWrapper(),
       });
       expect(result.current.fetchStatus).toBe("idle");
       expect(crossProjectService.getMigrationStatus).not.toHaveBeenCalled();
+    });
+
+    it("useGetMigrationStatus fetches with a tenant group id", async () => {
+      vi.mocked(crossProjectService.getMigrationStatus).mockResolvedValue({} as never);
+      const { result } = renderHook(() => useGetMigrationStatus("tg"), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(crossProjectService.getMigrationStatus).toHaveBeenCalledWith("tg");
     });
   });
 
@@ -157,11 +165,15 @@ describe("use-project hooks", () => {
       },
       {
         name: "useValidateCNameProject",
+        // These arrows are the callback renderHook mounts as a component, so the hook call is
+        // legal. The rule can only see a lowercase-named function and assumes otherwise.
+        // eslint-disable-next-line react-hooks/rules-of-hooks
         hook: () => useValidateCNameProject({ projectKey: "pk" }),
         fn: vi.mocked(crossProjectService.validateCNameProject),
       },
       {
         name: "useDisableProject",
+        // eslint-disable-next-line react-hooks/rules-of-hooks
         hook: () => useDisableProject({ projectKey: "pk" }),
         fn: vi.mocked(crossProjectService.disableProject),
       },

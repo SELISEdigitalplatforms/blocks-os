@@ -15,14 +15,17 @@ import { useUserPermissions } from "@blocks-idp/iam/hooks/use-user";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { X } from "lucide-react";
 import { useState } from "react";
+
 type DeleteUserPermissionProps = {
   permission: IPermission;
   userId: string;
 };
+
 export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissionProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState<boolean>(false);
   const { deletePermissions, isPending } = useUserPermissions({ userId, projectKey: tenantId });
+
   const onClickHandler = async () => {
     try {
       const res = await deletePermissions([permission.resource]);
@@ -48,6 +51,7 @@ export const DeleteUserPermission = ({ permission, userId }: DeleteUserPermissio
       });
     }
   };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

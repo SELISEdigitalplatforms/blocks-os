@@ -69,7 +69,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {
-    navigate(scoped(`idp/role-detail/${itemId}`));
+    navigate(scoped(`iam/role-detail/${itemId}`));
   };
   return (
     <>

@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -47,6 +48,13 @@ vi.mock("@/components/project-card/loading", () => ({
 
 import { EnvironmentsPage, EnvironmentMigrationPage } from "./environments";
 
+const renderPage = () =>
+  render(
+    <MemoryRouter>
+      <EnvironmentsPage />
+    </MemoryRouter>,
+  );
+
 const makeProjects = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
     itemId: `p-${i}`,
@@ -70,19 +78,19 @@ describe("EnvironmentsPage", () => {
 
   it("renders the loading skeleton while projects load", () => {
     h.useGetProjects.mockReturnValue({ data: undefined, isLoading: true, isFetching: false });
-    render(<EnvironmentsPage />);
+    renderPage();
     expect(screen.getAllByTestId("project-card-loading").length).toBeGreaterThan(0);
   });
 
   it("renders an environment card per project", () => {
-    render(<EnvironmentsPage />);
+    renderPage();
     expect(screen.getByText("Environments")).toBeTruthy();
     expect(screen.getAllByTestId("environment-card")).toHaveLength(2);
   });
 
   it("shows the New Environment action for an owner under the project cap", async () => {
     const user = userEvent.setup();
-    render(<EnvironmentsPage />);
+    renderPage();
     const btn = screen.getByRole("button", { name: /New Environment/i });
     await user.click(btn);
     expect(await screen.findByTestId("add-environment-modal")).toBeTruthy();
@@ -90,7 +98,7 @@ describe("EnvironmentsPage", () => {
 
   it("hides the New Environment action when the viewer is not an owner", () => {
     h.useGetPeople.mockReturnValue({ data: { isOwner: false } });
-    render(<EnvironmentsPage />);
+    renderPage();
     expect(screen.queryByRole("button", { name: /New Environment/i })).toBeNull();
   });
 
@@ -100,7 +108,7 @@ describe("EnvironmentsPage", () => {
       isLoading: false,
       isFetching: false,
     });
-    render(<EnvironmentsPage />);
+    renderPage();
     expect(screen.queryByRole("button", { name: /New Environment/i })).toBeNull();
   });
 
@@ -118,14 +126,14 @@ describe("EnvironmentsPage", () => {
       isLoading: false,
       isFetching: false,
     });
-    render(<EnvironmentsPage />);
+    renderPage();
     expect(screen.getByText("Shared with you")).toBeTruthy();
     expect(screen.getByText("Others")).toBeTruthy();
     expect(screen.getByText("Other Project")).toBeTruthy();
   });
 
   it("registers a migration notification listener", () => {
-    render(<EnvironmentsPage />);
+    renderPage();
     expect(h.notificationListener).toHaveBeenCalledWith(
       "EnvironmentDataMigration",
       expect.any(Function),
