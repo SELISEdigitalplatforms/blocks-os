@@ -9,6 +9,7 @@ using DomainService.Shared;
 using DomainService.Shared.Entities;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
 
@@ -30,7 +31,19 @@ namespace XUnitTest.Services
             _blocksSecret.SetupGet(s => s.LogConnectionString).Returns("mongodb://localhost");
         }
 
+        private static Tenant TenantWithSalt(string salt) => new()
+        {
+            TenantSalt = salt,
+            DbConnectionString = "mongodb://x",
+            JwtTokenParameters = new JwtTokenParameters
+            {
+                IssueDate = System.DateTime.UtcNow,
+                PrivateCertificatePassword = "pwd"
+            }
+        };
+
         private ServiceManagement Service() => new(
+            NullLogger<ServiceManagement>.Instance,
             _repo.Object,
             new RegisterServiceRequestValidator(),
             _blocksSecret.Object,
@@ -96,6 +109,111 @@ namespace XUnitTest.Services
             list.Should().HaveCount(2);
             list[0].ServiceType.Should().Be("backend"); // defaulted from null
             list[1].ServiceType.Should().Be("frontend");
+        }
+
+        [Fact]
+        public async Task GetAllServicesAsync_FallsBackToLmtKey_WhenStoredWithUnresolvedTenant()
+        {
+            using var _ = new BlocksTestContext(tenantId: "tenant-x");
+            _tenants.Setup(t => t.GetTenantByID(It.IsAny<string>())).Returns(TenantWithSalt("salt-x"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new()
+                {
+                    ServiceId = "s1",
+                    // Written while the tenant lookup was unresolved, so the fallback key was used.
+                    ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://logs", "LMT")
+                }
+            }.AsQueryable();
+
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>()))
+                 .ReturnsAsync((services, 1L));
+
+            var response = await Service().GetAllServicesAsync(new GetAllServiceRequest());
+
+            response.Data.Single().ServiceBusConnectionString.Should().Be("amqp://logs");
+        }
+
+        [Fact]
+        public async Task GetAllServicesAsync_WhenImpersonating_UsesOriginalTenantSalt()
+        {
+            // The console browses a project while authenticated as its own tenant, which is
+            // the tenant whose salt encrypted the row.
+            using var _ = new BlocksTestContext(tenantId: "project-p", impersonated: true, originalTenantId: "root-t");
+            _tenants.Setup(t => t.GetTenantByID("root-t")).Returns(TenantWithSalt("root-salt"));
+            _tenants.Setup(t => t.GetTenantByID("project-p")).Returns(TenantWithSalt("project-salt"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new()
+                {
+                    ServiceId = "s1",
+                    ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://logs", "root-salt")
+                }
+            }.AsQueryable();
+
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>()))
+                 .ReturnsAsync((services, 1L));
+
+            var response = await Service().GetAllServicesAsync(new GetAllServiceRequest());
+
+            response.Data.Single().ServiceBusConnectionString.Should().Be("amqp://logs");
+            _tenants.Verify(t => t.GetTenantByID("project-p"), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetAllServicesAsync_WhenNotImpersonating_UsesContextTenantSalt()
+        {
+            using var _ = new BlocksTestContext(tenantId: "project-p");
+            _tenants.Setup(t => t.GetTenantByID("project-p")).Returns(TenantWithSalt("project-salt"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new()
+                {
+                    ServiceId = "s1",
+                    ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://logs", "project-salt")
+                }
+            }.AsQueryable();
+
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>()))
+                 .ReturnsAsync((services, 1L));
+
+            var response = await Service().GetAllServicesAsync(new GetAllServiceRequest());
+
+            response.Data.Single().ServiceBusConnectionString.Should().Be("amqp://logs");
+        }
+
+        [Fact]
+        public async Task GetAllServicesAsync_BlanksUnreadableConnectionString_InsteadOfThrowing()
+        {
+            using var _ = new BlocksTestContext(tenantId: "tenant-x");
+            _tenants.Setup(t => t.GetTenantByID(It.IsAny<string>())).Returns(TenantWithSalt("salt-x"));
+
+            var services = new List<BlocksManagedService>
+            {
+                new()
+                {
+                    ServiceId = "s1",
+                    // Neither the current salt nor the fallback key opens this (rotated salt).
+                    ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://logs", "retired-salt")
+                },
+                new()
+                {
+                    ServiceId = "s2",
+                    ServiceBusConnectionString = EncryptionHelper.Encrypt("amqp://traces", "salt-x")
+                }
+            }.AsQueryable();
+
+            _repo.Setup(r => r.GetAllServicesAsync(It.IsAny<GetAllServiceRequest>()))
+                 .ReturnsAsync((services, 2L));
+
+            var response = await Service().GetAllServicesAsync(new GetAllServiceRequest());
+
+            var list = response.Data.ToList();
+            list[0].ServiceBusConnectionString.Should().BeEmpty();
+            list[1].ServiceBusConnectionString.Should().Be("amqp://traces");
         }
     }
 }

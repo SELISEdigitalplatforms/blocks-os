@@ -23,7 +23,7 @@ export const buildOidcSavePayload = (
   return {
     redirectUris,
     scope: credential.scope,
-    isAutoRedirect: credential.isAutoRedirect,
+    isAutoRedirect: credential.isDeviceFlowClient ? false : credential.isAutoRedirect,
     isActive: credential.isActive,
     requirePkce: credential.requirePkce,
     // A branding-only save must not silently unregister the identity provider.

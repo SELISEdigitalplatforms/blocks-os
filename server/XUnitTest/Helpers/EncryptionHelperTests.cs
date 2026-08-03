@@ -43,5 +43,32 @@ namespace XUnitTest.Helpers
         {
             EncryptionHelper.Decrypt(input!, "key").Should().Be(input);
         }
+
+        [Fact]
+        public void TryDecrypt_WithMatchingKey_ReturnsPlainText()
+        {
+            var cipher = EncryptionHelper.Encrypt("payload", "key");
+
+            EncryptionHelper.TryDecrypt(cipher, "key", out var plainText).Should().BeTrue();
+            plainText.Should().Be("payload");
+        }
+
+        [Fact]
+        public void TryDecrypt_WithWrongKey_ReturnsFalseInsteadOfThrowing()
+        {
+            var cipher = EncryptionHelper.Encrypt("payload", "key");
+
+            EncryptionHelper.TryDecrypt(cipher, "another-key", out var plainText).Should().BeFalse();
+            plainText.Should().BeEmpty();
+        }
+
+        [Theory]
+        [InlineData("not-base64!!")]
+        [InlineData("c2hvcnQ=")] // valid base64, but shorter than the IV
+        public void TryDecrypt_WithMalformedCipher_ReturnsFalse(string cipher)
+        {
+            EncryptionHelper.TryDecrypt(cipher, "key", out var plainText).Should().BeFalse();
+            plainText.Should().BeEmpty();
+        }
     }
 }
