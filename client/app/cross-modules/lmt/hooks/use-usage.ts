@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { lmtService } from "../services/lmt.service";
 import {
   IGetOperationalAnalyticsPayload,
@@ -13,16 +14,24 @@ export const useGetOperationalAnalytics = (option: IGetOperationalAnalyticsPaylo
   });
 };
 
+// Unlike the operational-analytics payload, IGetServiceAnalyticsPayload carries no
+// projectKey — the endpoint resolves the tenant from the request token. The active
+// tenant must be in the query key, otherwise switching projects serves the previous
+// project's cache until a reload.
 export const useGetServiceAnalytics = (option: IGetServiceAnalyticsPayload) => {
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
-    queryKey: ["usage-service", option],
+    queryKey: ["usage-service", tenantId, option],
     queryFn: () => lmtService.usage.getServiceAnalytics(option),
+    enabled: !!tenantId,
   });
 };
 
 export const useUsagesMetrics = (option: { timeRange: string }) => {
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
-    queryKey: ["usage-metrics", option],
+    queryKey: ["usage-metrics", tenantId, option],
+    enabled: !!tenantId,
     queryFn: async () => {
       const now = new Date();
       let startTime: Date;

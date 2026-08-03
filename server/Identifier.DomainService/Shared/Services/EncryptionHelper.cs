@@ -41,6 +41,10 @@ namespace DomainService.Shared
             aes.Key = keyBytes;
 
             var iv = new byte[aes.IV.Length];
+
+            if (fullCipher.Length <= iv.Length)
+                throw new CryptographicException("Cipher text is shorter than the initialization vector.");
+
             var cipher = new byte[fullCipher.Length - iv.Length];
 
             Buffer.BlockCopy(fullCipher, 0, iv, 0, iv.Length);
@@ -52,6 +56,20 @@ namespace DomainService.Shared
             var plainBytes = decryptor.TransformFinalBlock(cipher, 0, cipher.Length);
 
             return Encoding.UTF8.GetString(plainBytes);
+        }
+
+        public static bool TryDecrypt(string cipherText, string key, out string plainText)
+        {
+            try
+            {
+                plainText = Decrypt(cipherText, key);
+                return true;
+            }
+            catch (Exception ex) when (ex is CryptographicException or FormatException or ArgumentException)
+            {
+                plainText = string.Empty;
+                return false;
+            }
         }
     }
 }
