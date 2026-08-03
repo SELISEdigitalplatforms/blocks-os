@@ -134,8 +134,8 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         scope: data.scope,
         isAutoRedirect: data.isAutoRedirect,
         isActive: data.isActive,
-        requirePkce: data.requirePkce,
-        registerAsIdentityProvider: data.registerAsIdentityProvider,
+        requirePkce: isDeviceFlowClient ? false : data.requirePkce,
+        registerAsIdentityProvider: isDeviceFlowClient ? false : data.registerAsIdentityProvider,
         isDeviceFlowClient,
         allowedResponseTypes: isDeviceFlowClient ? [] : data.allowedResponseTypes,
         itemId: isEditMode ? itemId : "",
@@ -333,29 +333,31 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="requirePkce"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>PKCE</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="requirePkce"
-                          checked={!!field.value}
-                          onCheckedChange={(v) => field.onChange(!!v)}
-                        />
-                        <label
-                          htmlFor="requirePkce"
-                          className="cursor-pointer text-sm text-high-emphasis"
-                        >
-                          Enabled
-                        </label>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!isDeviceFlowClient && (
+                  <FormField
+                    control={form.control}
+                    name="requirePkce"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>PKCE</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="requirePkce"
+                            checked={!!field.value}
+                            onCheckedChange={(v) => field.onChange(!!v)}
+                          />
+                          <label
+                            htmlFor="requirePkce"
+                            className="cursor-pointer text-sm text-high-emphasis"
+                          >
+                            Enabled
+                          </label>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               {/* Auto Redirect — single borderless row */}
@@ -384,51 +386,56 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
               />
 
               {/* Register as Identity Provider — on by default; the full
-                  explanation lives in the tooltip to keep the row compact */}
-              <FormField
-                control={form.control}
-                name="registerAsIdentityProvider"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Identity Provider</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="registerAsIdentityProvider"
-                        className="shrink-0"
-                        checked={!!field.value}
-                        onCheckedChange={(v) => field.onChange(!!v)}
-                      />
-                      <label
-                        htmlFor="registerAsIdentityProvider"
-                        className="cursor-pointer text-sm text-high-emphasis"
-                      >
-                        Register as a Blocks OIDC identity provider
-                      </label>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            aria-label="More about Blocks OIDC identity providers"
-                            className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            <Info className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p className="text-xs leading-relaxed">
-                            Adds a matching <span className="font-medium">Blocks OIDC</span> entry
-                            under Identity Provider, so other Blocks projects can offer this project
-                            as a sign-in option and federate their users to it. Uncheck if this
-                            client is only used by your own app to sign users in — you can always
-                            add the provider later.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  explanation lives in the tooltip to keep the row compact.
+                  Not offered for device-flow clients: federation hardcodes the
+                  authorization_code grant and reuses redirect URIs, which
+                  device-flow clients don't have. */}
+              {!isDeviceFlowClient && (
+                <FormField
+                  control={form.control}
+                  name="registerAsIdentityProvider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Identity Provider</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="registerAsIdentityProvider"
+                          className="shrink-0"
+                          checked={!!field.value}
+                          onCheckedChange={(v) => field.onChange(!!v)}
+                        />
+                        <label
+                          htmlFor="registerAsIdentityProvider"
+                          className="cursor-pointer text-sm text-high-emphasis"
+                        >
+                          Register as a Blocks OIDC identity provider
+                        </label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="More about Blocks OIDC identity providers"
+                              className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-xs leading-relaxed">
+                              Adds a matching <span className="font-medium">Blocks OIDC</span> entry
+                              under Identity Provider, so other Blocks projects can offer this project
+                              as a sign-in option and federate their users to it. Uncheck if this
+                              client is only used by your own app to sign users in — you can always
+                              add the provider later.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </form>
           </Form>
         </div>
