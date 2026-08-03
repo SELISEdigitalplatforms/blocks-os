@@ -3,7 +3,18 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ tab: "1", setTab: vi.fn(), resetFormData: vi.fn() }));
+const h = vi.hoisted(() => {
+  const state = { tab: "1", setTab: vi.fn(), resetFormData: vi.fn() };
+  // Must mirror nuqs: writing the query state has to change what the *next*
+  // render reads back. CreateProject's effect escapes its own re-run by
+  // calling setTab("0") so the `step === 2` guard fails on the following pass
+  // — with an inert setter `tab` stays "2" and the effect loops until the
+  // worker dies.
+  state.setTab = vi.fn((value: string) => {
+    state.tab = value;
+  });
+  return state;
+});
 
 vi.mock("nuqs", () => ({ useQueryState: () => [h.tab, h.setTab] }));
 vi.mock("@/components/create-project/utils", () => ({

@@ -78,7 +78,7 @@ export function RoleDetailsContainer() {
   }
 
   const breadcrumbTitles =
-    role?.itemId && role?.name ? { ["/app/idp/role-detail/" + role.itemId]: role.name } : undefined;
+    role?.itemId && role?.name ? { ["/app/iam/role-detail/" + role.itemId]: role.name } : undefined;
 
   return (
     <>

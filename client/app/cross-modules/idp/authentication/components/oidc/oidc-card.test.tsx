@@ -77,6 +77,13 @@ describe("OIDCCard", () => {
     expect(screen.getByText("openid profile")).toBeTruthy();
   });
 
+  it("keeps the OIDC tag and adds a Device Flow tag for device-flow clients", () => {
+    renderCard(makeItem({ isDeviceFlowClient: true }));
+
+    expect(screen.getByText("OIDC")).toBeTruthy();
+    expect(screen.getByText("Device Flow")).toBeTruthy();
+  });
+
   it("navigates to the branding template", async () => {
     const user = userEvent.setup();
     renderCard();

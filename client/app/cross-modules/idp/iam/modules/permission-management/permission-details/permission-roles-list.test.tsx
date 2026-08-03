@@ -75,6 +75,6 @@ describe("PermissionRolesList", () => {
     render(<PermissionRolesList slugs={["cloudadmin", "viewer"]} />);
 
     await user.click(screen.getByText("Cloud Admin"));
-    expect(h.navigate).toHaveBeenCalledWith("/scoped/idp/role-detail/r-1");
+    expect(h.navigate).toHaveBeenCalledWith("/scoped/iam/role-detail/r-1");
   });
 });

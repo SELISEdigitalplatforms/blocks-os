@@ -156,7 +156,9 @@ describe("ReviewConfirmForm", () => {
         verificationCode: "12345",
       }),
     );
-    expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Migration started successfully!" });
+    expect(h.showSuccessToast).toHaveBeenCalledWith({
+      description: "Migration has been started, you will be notified once it's complete!",
+    });
     expect(h.navigate).toHaveBeenCalledWith("/app/project/group-1/environments");
   });
 

@@ -82,7 +82,9 @@ export class ProjectService {
     errors: unknown | null;
     isSuccess: boolean;
   }> {
-    return http.post(CLOUD_BUILD_ENDPOINTS.REPO_UPDATE, payload);
+    return http.post(CLOUD_BUILD_ENDPOINTS.REPO_UPDATE, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 
   // Resolves the project from the caller's auth context — there is no

@@ -69,54 +69,57 @@ export interface LogEntry {
   subEntries?: SubEntry[];
 }
 
-export const entryTypes = [
-  {
-    label: "GET",
-    value: "GET",
-  },
-  {
-    label: "POST",
-    value: "POST",
-  },
-  {
-    label: "DELETE",
-    value: "DELETE",
-  },
-];
+// DEADCODE 2026-07-29: sample data with no importers; commented pending review
+// export const entryTypes = [
+//   {
+//     label: "GET",
+//     value: "GET",
+//   },
+//   {
+//     label: "POST",
+//     value: "POST",
+//   },
+//   {
+//     label: "DELETE",
+//     value: "DELETE",
+//   },
+// ];
 
-export const durations = [
-  {
-    value: "800ms",
-    label: "800ms",
-  },
-  {
-    value: "1620ms",
-    label: "1620ms",
-  },
-  {
-    value: "1523ms",
-    label: "1523ms",
-  },
-  {
-    value: "1200ms",
-    label: "1200ms",
-  },
-];
+// DEADCODE 2026-07-29: sample data with no importers; commented pending review
+// export const durations = [
+//   {
+//     value: "800ms",
+//     label: "800ms",
+//   },
+//   {
+//     value: "1620ms",
+//     label: "1620ms",
+//   },
+//   {
+//     value: "1523ms",
+//     label: "1523ms",
+//   },
+//   {
+//     value: "1200ms",
+//     label: "1200ms",
+//   },
+// ];
 
-export const issues = [
-  {
-    label: "1",
-    value: "1",
-  },
-  {
-    label: "2",
-    value: "2",
-  },
-  {
-    label: "3",
-    value: "3",
-  },
-];
+// DEADCODE 2026-07-29: sample data with no importers; commented pending review
+// export const issues = [
+//   {
+//     label: "1",
+//     value: "1",
+//   },
+//   {
+//     label: "2",
+//     value: "2",
+//   },
+//   {
+//     label: "3",
+//     value: "3",
+//   },
+// ];
 
 export interface ISpan {
   id: number;
@@ -127,56 +130,57 @@ export interface ISpan {
   duration: string;
 }
 
-export const spanTableData: ISpan[] = [
-  {
-    id: 1,
-    spanID: "87f1e5f0bada89c2",
-    serviceName: "email",
-    spanName: "GET /",
-    startTime: new Date("19/02/2024 10:42:52.049"),
-    duration: "100ms",
-  },
-  {
-    id: 2,
-    spanID: "5c67ab09f3c2f76a",
-    serviceName: "email",
-    spanName: "GET / api",
-    startTime: new Date("19/02/2024 10:42:52.049"),
-    duration: "100ms",
-  },
-  {
-    id: 3,
-    spanID: "d3a72b4e9d8c01ef",
-    serviceName: "email",
-    spanName: "GET /",
-    startTime: new Date("19/02/2024 10:42:52.049"),
-    duration: "100ms",
-  },
-  {
-    id: 4,
-    spanID: "ec4716cf292b2b9d",
-    serviceName: "email",
-    spanName: "GET /",
-    startTime: new Date("19/02/2024 10:42:52.049"),
-    duration: "100ms",
-  },
-  {
-    id: 5,
-    spanID: "b8d7c0c114e5a0b6",
-    serviceName: "email",
-    spanName: "GET /",
-    startTime: new Date("19/02/2024 10:42:52.049"),
-    duration: "100ms",
-  },
-  {
-    id: 6,
-    spanID: "2e439f14c0e7d091",
-    serviceName: "email",
-    spanName: "GET /",
-    startTime: new Date("19/02/2024 10:42:52.049"),
-    duration: "100ms",
-  },
-];
+// DEADCODE 2026-07-29: sample data with no importers; commented pending review
+// export const spanTableData: ISpan[] = [
+//   {
+//     id: 1,
+//     spanID: "87f1e5f0bada89c2",
+//     serviceName: "email",
+//     spanName: "GET /",
+//     startTime: new Date("19/02/2024 10:42:52.049"),
+//     duration: "100ms",
+//   },
+//   {
+//     id: 2,
+//     spanID: "5c67ab09f3c2f76a",
+//     serviceName: "email",
+//     spanName: "GET / api",
+//     startTime: new Date("19/02/2024 10:42:52.049"),
+//     duration: "100ms",
+//   },
+//   {
+//     id: 3,
+//     spanID: "d3a72b4e9d8c01ef",
+//     serviceName: "email",
+//     spanName: "GET /",
+//     startTime: new Date("19/02/2024 10:42:52.049"),
+//     duration: "100ms",
+//   },
+//   {
+//     id: 4,
+//     spanID: "ec4716cf292b2b9d",
+//     serviceName: "email",
+//     spanName: "GET /",
+//     startTime: new Date("19/02/2024 10:42:52.049"),
+//     duration: "100ms",
+//   },
+//   {
+//     id: 5,
+//     spanID: "b8d7c0c114e5a0b6",
+//     serviceName: "email",
+//     spanName: "GET /",
+//     startTime: new Date("19/02/2024 10:42:52.049"),
+//     duration: "100ms",
+//   },
+//   {
+//     id: 6,
+//     spanID: "2e439f14c0e7d091",
+//     serviceName: "email",
+//     spanName: "GET /",
+//     startTime: new Date("19/02/2024 10:42:52.049"),
+//     duration: "100ms",
+//   },
+// ];
 
 export interface TraceTree extends Trace {
   entryPoint: {
