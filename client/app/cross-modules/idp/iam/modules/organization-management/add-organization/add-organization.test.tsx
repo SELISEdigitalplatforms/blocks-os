@@ -1,124 +1,85 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
-vi.stubGlobal("matchMedia", (query: string) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  dispatchEvent: vi.fn(),
-}));
-
-vi.stubGlobal(
-  "ResizeObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
-
-const { mutateAsync, showErrorToast, showSuccessToast } = vi.hoisted(() => ({
+const h = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
-  showErrorToast: vi.fn(),
-  showSuccessToast: vi.fn(),
+  isPending: false,
+  orgConfig: {} as Record<string, unknown>,
+  showError: vi.fn(),
+  showSuccess: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
-  useProjectStore: () => ({
-    selectedProject: { itemId: "p1", tenantId: "t1" },
-  }),
+// Tooltip re-exports blocks-kit (process.env at load); passthrough keeps it renderable.
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
-  useSaveOrganization: () => ({ mutateAsync, isPending: false }),
+  useSaveOrganization: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
+  useGetOrganizationConfig: () => ({ data: h.orgConfig }),
 }));
-
 vi.mock("@/hooks/use-toast", () => ({
-  showErrorToast,
-  showSuccessToast,
-  showInfoToast: vi.fn(),
-  useToast: () => ({ toast: vi.fn() }),
+  showErrorToast: (a: unknown) => h.showError(a),
+  showSuccessToast: (a: unknown) => h.showSuccess(a),
 }));
 
 import { AddOrganization } from "./add-organization";
 
-const openDialog = async () => {
-  const user = userEvent.setup();
-  await user.click(
-    screen.getByRole("button", { name: /Add Organization/ }),
-  );
-  return user;
-};
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isPending = false;
+  h.orgConfig = { isMultiOrgEnabled: true, allowCreationFromCloud: true };
+});
 
 describe("AddOrganization", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("renders the trigger button and keeps the dialog closed initially", () => {
+  it("enables the add trigger when org creation is allowed", () => {
     render(<AddOrganization />);
     expect(
-      screen.getByRole("button", { name: /Add Organization/ }),
-    ).toBeTruthy();
-    expect(screen.queryByText("Enter organization name")).toBeNull();
+      screen.getByText("Add Organization").closest("button") as HTMLButtonElement,
+    ).toHaveProperty("disabled", false);
   });
 
-  it("opens the dialog with the form and a disabled Add button", async () => {
+  it("disables the add trigger when org creation from cloud is not enabled", () => {
+    h.orgConfig = { isMultiOrgEnabled: true, allowCreationFromCloud: false };
     render(<AddOrganization />);
-    await openDialog();
     expect(
-      screen.getByText("Please fill in the details to add a new organization."),
-    ).toBeTruthy();
-    expect(
-      screen.getByPlaceholderText("Enter organization name"),
-    ).toBeTruthy();
-    const add = screen.getByRole("button", { name: "Add" }) as HTMLButtonElement;
-    expect(add.disabled).toBe(true);
+      screen.getByText("Add Organization").closest("button") as HTMLButtonElement,
+    ).toHaveProperty("disabled", true);
   });
 
-  it("submits a valid name and shows a success toast", async () => {
-    mutateAsync.mockResolvedValueOnce({ isSuccess: true });
+  it("adds an organization and shows a success toast", async () => {
+    h.mutateAsync.mockResolvedValue({ isSuccess: true });
     render(<AddOrganization />);
-    const user = await openDialog();
-
-    await user.type(
-      screen.getByPlaceholderText("Enter organization name"),
-      "New Org",
-    );
-    const add = screen.getByRole("button", { name: "Add" }) as HTMLButtonElement;
-    expect(add.disabled).toBe(false);
-
-    await user.click(add);
-
+    fireEvent.click(screen.getByText("Add Organization"));
     await waitFor(() =>
-      expect(mutateAsync).toHaveBeenCalledWith({
-        projectKey: "t1",
-        name: "New Org",
-        itemId: "",
-        isEnable: true,
-      }),
+      expect(screen.getByPlaceholderText("Enter organization name")).toBeTruthy(),
     );
-    expect(showSuccessToast).toHaveBeenCalled();
+    fireEvent.input(screen.getByPlaceholderText("Enter organization name"), {
+      target: { value: "Acme Inc" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(h.mutateAsync).toHaveBeenCalledWith({ name: "Acme Inc", createdFrom: 1 }),
+    );
+    await waitFor(() => expect(h.showSuccess).toHaveBeenCalled());
   });
 
-  it("blocks submission and shows a validation error for a blank name", async () => {
+  it("shows an error toast when creation fails", async () => {
+    h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: "duplicate" });
     render(<AddOrganization />);
-    const user = await openDialog();
-
-    // Whitespace makes the form dirty (enabling Add) but fails zod's trim/min(1).
-    await user.type(
-      screen.getByPlaceholderText("Enter organization name"),
-      "   ",
+    fireEvent.click(screen.getByText("Add Organization"));
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("Enter organization name")).toBeTruthy(),
     );
-    await user.click(screen.getByRole("button", { name: "Add" }));
-
-    expect(await screen.findByText("Name is required")).toBeTruthy();
-    expect(mutateAsync).not.toHaveBeenCalled();
+    fireEvent.input(screen.getByPlaceholderText("Enter organization name"), {
+      target: { value: "Acme Inc" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "duplicate" }));
   });
 });

@@ -151,5 +151,5 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export const ALL_SECRET_MANAGEMENT_NAV_ITEMS =
-  SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items);
+// DEADCODE 2026-07-29: no references in client or e2e; commented pending review
+// export const ALL_SECRET_MANAGEMENT_NAV_ITEMS = SECRET_MANAGEMENT_NAV_GROUPS.flatMap((g) => g.items);

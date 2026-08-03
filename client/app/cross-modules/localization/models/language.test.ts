@@ -9,10 +9,7 @@ describe("localization model constants", () => {
   });
 
   it("lists the translation status options", () => {
-    expect(translation.map((t) => t.value)).toEqual([
-      "No_translation",
-      "Complete",
-    ]);
+    expect(translation.map((t) => t.value)).toEqual(["No_translation", "Complete"]);
     expect(translation[0].label).toBe("No translation");
   });
 });

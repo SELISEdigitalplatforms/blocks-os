@@ -1,99 +1,43 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
-vi.stubGlobal("matchMedia", (query: string) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  dispatchEvent: vi.fn(),
-}));
-
-vi.stubGlobal(
-  "ResizeObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
-
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import type { IRole } from "@blocks-idp/iam/models/role";
 import { UserRolesList } from "./user-roles-list";
-import { IRole } from "@blocks-idp/iam/models/role";
 
-const makeRole = (over: Partial<IRole>): IRole =>
-  ({
-    itemId: "role-1",
-    name: "Administrator",
-    slug: "administrator",
-    description: "",
-    ancestorRoleSlugs: [],
-    parentRoleSlug: null,
-    canCreateOwn: true,
-    count: 0,
-    createdFromDefault: false,
-    createdDate: "",
-    lastUpdatedDate: "",
-    createdBy: "",
-    language: null,
-    lastUpdatedBy: "",
-    organizationId: "",
-    tags: [],
-    ...over,
-  }) as IRole;
-
-const baseProps = {
-  userId: "user-1",
-  projectKey: "p1",
-  onRemoveRole: vi.fn(),
-};
+const roles = [
+  { itemId: "1", name: "Admin", slug: "admin" },
+  { itemId: "2", name: "Viewer", slug: "viewer" },
+] as IRole[];
 
 describe("UserRolesList", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("renders loading skeletons and no role names while loading", () => {
-    render(<UserRolesList roles={[]} isLoading {...baseProps} />);
-    expect(screen.queryByText("No roles found")).toBeNull();
-    expect(screen.queryByLabelText("Remove role")).toBeNull();
-  });
-
-  it("shows the empty-state message when there are no roles", () => {
-    render(<UserRolesList roles={[]} isLoading={false} {...baseProps} />);
-    expect(screen.getByText("No roles found")).toBeTruthy();
-  });
-
-  it("renders role name and slug for each role", () => {
-    render(
-      <UserRolesList
-        roles={[makeRole({ name: "Administrator", slug: "administrator" })]}
-        isLoading={false}
-        {...baseProps}
-      />,
+  it("renders a loading skeleton while loading", () => {
+    const { container } = render(
+      <UserRolesList roles={[]} isLoading={true} userId="u1" projectKey="p1" onRemoveRole={vi.fn()} />,
     );
-    expect(screen.getByText("Administrator")).toBeTruthy();
-    expect(screen.getByText("administrator")).toBeTruthy();
+    expect(container.querySelectorAll("[class*='animate-pulse']").length).toBeGreaterThan(0);
   });
 
-  it("invokes onRemoveRole with the role slug when remove is clicked", async () => {
-    const user = userEvent.setup();
+  it("renders each role with name and slug", () => {
+    render(
+      <UserRolesList roles={roles} isLoading={false} userId="u1" projectKey="p1" onRemoveRole={vi.fn()} />,
+    );
+    expect(screen.getByText("Admin")).toBeTruthy();
+    expect(screen.getByText("admin")).toBeTruthy();
+    expect(screen.getByText("Viewer")).toBeTruthy();
+  });
+
+  it("invokes onRemoveRole with the role slug", () => {
     const onRemoveRole = vi.fn();
     render(
-      <UserRolesList
-        roles={[makeRole({ slug: "editor" })]}
-        isLoading={false}
-        userId="user-1"
-        projectKey="p1"
-        onRemoveRole={onRemoveRole}
-      />,
+      <UserRolesList roles={roles} isLoading={false} userId="u1" projectKey="p1" onRemoveRole={onRemoveRole} />,
     );
-    await user.click(screen.getByLabelText("Remove role"));
-    expect(onRemoveRole).toHaveBeenCalledWith("editor");
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove role" })[0]);
+    expect(onRemoveRole).toHaveBeenCalledWith("admin");
+  });
+
+  it("shows the empty state when there are no roles", () => {
+    render(
+      <UserRolesList roles={[]} isLoading={false} userId="u1" projectKey="p1" onRemoveRole={vi.fn()} />,
+    );
+    expect(screen.getByText("No roles found")).toBeTruthy();
   });
 });

@@ -1,25 +1,30 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { Mail, User } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+
 type OrganizationUsersFilter = {
-  search: {};
+  search: { selected: string; value: string };
 };
+
 export const useOrganizationUsersFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     page: parseAsInteger.withDefault(0),
-    pageSize: parseAsInteger.withDefault(10),
+    pageSize: parseAsInteger.withDefault(5),
     "selected-filter": parseAsString.withDefault("name"),
     name: parseAsString.withDefault(""),
     email: parseAsString.withDefault(""),
   });
   return { queryParams, setQueryParams };
 };
+
 export const useOrganizationUsersSortQueryParams = () =>
   useSortQueryParams({
     initial: { property: "FirstName", isDescending: false },
   });
+
 export const OrganizationUsersFilterToolbar = () => {
   const { queryParams, setQueryParams } = useOrganizationUsersFilterQueryParams();
+
   const changeHandler = (key: string, value: unknown) => {
     if (key === "search") {
       const val = value as { selected: "name" | "email"; value: string };
@@ -31,6 +36,7 @@ export const OrganizationUsersFilterToolbar = () => {
         page: 0,
       }));
     }
+
     setQueryParams((params) => ({
       ...params,
       [key]: value,
@@ -40,6 +46,7 @@ export const OrganizationUsersFilterToolbar = () => {
   const resetHandler = () => {
     setQueryParams(null);
   };
+
   return (
     <FilterToolbar<OrganizationUsersFilter>
       filters={[
@@ -48,6 +55,9 @@ export const OrganizationUsersFilterToolbar = () => {
           type: "DropdownSearchInput",
           label: "",
           props: {
+            placeholder: "Minimum 3 characters…",
+            // The OS DropdownSearchInput exposes selectContent/SelectItem/input only,
+            // so the iam-only selectTrigger and wrapper overrides are dropped here.
             className: {
               selectContent: "min-w-fit",
               SelectItem: "[&>*:first-child]:hidden flex justify-center px-2",

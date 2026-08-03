@@ -29,7 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useInvitePeople } from "@/hooks/use-people";
 import { useGetProjects } from "@/hooks/use-project";
 import { MultiSelect } from "@/components/filter-toolbar/multi-select/multi-select";
@@ -50,9 +50,7 @@ const formSchema = z.object({
           if (emails.length === 0) return false;
           return emails.every((email) => emailRegex.test(email));
         }, "Invalid email format"),
-      projectKeys: z
-        .array(z.string())
-        .min(1, "At least one environment is required"),
+      projectKeys: z.array(z.string()).min(1, "At least one environment is required"),
     }),
   ),
 });
@@ -64,10 +62,7 @@ interface InvitePeopleProps {
   isViewerOwner?: boolean;
 }
 
-export const InvitePeople = ({
-  existingEmails = [],
-  isViewerOwner = false,
-}: InvitePeopleProps) => {
+export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: InvitePeopleProps) => {
   const { isPending, mutateAsync } = useInvitePeople();
   const groupId = useProjectStore().selectedTenantGroup;
   const { data: projectsData } = useGetProjects({
@@ -79,9 +74,7 @@ export const InvitePeople = ({
     if (!projectsData) return [];
     return projectsData.flatMap((group) =>
       group.projects.map((p) => {
-        const mapping = environmentOptions.find(
-          (o) => o.value === p.environment,
-        );
+        const mapping = environmentOptions.find((o) => o.value === p.environment);
         return {
           value: p.tenantId,
           label: mapping?.label || p.environment || "Default",
@@ -113,9 +106,7 @@ export const InvitePeople = ({
             .split(/[\s,]+/)
             .map((e) => e.trim().toLowerCase())
             .filter((e) => e.length > 0 && emailRegex.test(e));
-          const duplicates = emails.filter((email) =>
-            existingEmailSet.has(email),
-          );
+          const duplicates = emails.filter((email) => existingEmailSet.has(email));
           if (duplicates.length > 0) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -123,13 +114,9 @@ export const InvitePeople = ({
               path: ["invitations", index, "recipients"],
             });
           }
-          const duplicatesInForm = emails.filter(
-            (email) => (emailCounts.get(email) || 0) > 1,
-          );
+          const duplicatesInForm = emails.filter((email) => (emailCounts.get(email) || 0) > 1);
           const uniqueDuplicates = Array.from(new Set(duplicatesInForm));
-          const finalDuplicates = uniqueDuplicates.filter(
-            (email) => !existingEmailSet.has(email),
-          );
+          const finalDuplicates = uniqueDuplicates.filter((email) => !existingEmailSet.has(email));
           if (finalDuplicates.length > 0) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -152,10 +139,7 @@ export const InvitePeople = ({
     mode: "onChange",
   });
 
-  const { fields, append, remove } = useFieldArray<
-    InvitePeopleFormValues,
-    "invitations"
-  >({
+  const { fields, append, remove } = useFieldArray<InvitePeopleFormValues, "invitations">({
     control: form.control,
     name: "invitations",
   });
@@ -195,9 +179,7 @@ export const InvitePeople = ({
         return;
       }
 
-      const response = await mutateAsync(
-        buildInvitePeoplePayload(invitationsMap, groupId ?? ""),
-      );
+      const response = await mutateAsync(buildInvitePeoplePayload(invitationsMap, groupId ?? ""));
 
       const { granted, skipped } = summarizeInviteOutcomes(response.results);
 
@@ -216,8 +198,7 @@ export const InvitePeople = ({
         errors?: { exceed_limit?: string; resource_limit_exceeded?: string };
       };
       const exceedLimitMessage =
-        errorObj?.errors?.exceed_limit ||
-        errorObj?.errors?.resource_limit_exceeded;
+        errorObj?.errors?.exceed_limit || errorObj?.errors?.resource_limit_exceeded;
       showErrorToast({
         errors: exceedLimitMessage || error,
       });
@@ -229,10 +210,7 @@ export const InvitePeople = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          size="sm"
-          variant="default"
-          className="h-10 text-sm text-primary-foreground">
+        <Button size="sm" variant="default" className="h-10 text-sm text-primary-foreground">
           <Plus className="mr-2 h-4 w-4" />
           <span>Invite</span>
         </Button>
@@ -245,9 +223,7 @@ export const InvitePeople = ({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmitHandler)}
-            className="flex min-h-0 flex-col">
+          <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex min-h-0 flex-col">
             <div className="flex-1 overflow-y-auto p-1 pr-2">
               <div className="space-y-6">
                 <div className="hidden w-full gap-4 text-sm font-medium text-muted-foreground sm:flex">
@@ -256,17 +232,11 @@ export const InvitePeople = ({
                   <div className="w-[10%]" />
                 </div>
                 {fields.map(
-                  (
-                    field: FieldArrayWithId<
-                      InvitePeopleFormValues,
-                      "invitations",
-                      "id"
-                    >,
-                    index,
-                  ) => (
+                  (field: FieldArrayWithId<InvitePeopleFormValues, "invitations", "id">, index) => (
                     <div
                       key={field.id}
-                      className="relative flex w-full flex-col items-start gap-4 sm:flex-row">
+                      className="relative flex w-full flex-col items-start gap-4 sm:flex-row"
+                    >
                       <div className="flex w-full gap-2 sm:w-[45%]">
                         <FormField
                           name={`invitations.${index}.recipients`}
@@ -274,10 +244,7 @@ export const InvitePeople = ({
                           render={({ field: emailField, fieldState }) => (
                             <FormItem className="w-full">
                               <FormControl>
-                                <Input
-                                  {...emailField}
-                                  placeholder="Enter email"
-                                />
+                                <Input {...emailField} placeholder="Enter email" />
                               </FormControl>
                               {fieldState.isTouched && <FormMessage />}
                             </FormItem>
@@ -289,7 +256,8 @@ export const InvitePeople = ({
                             variant="ghost"
                             size="icon"
                             className="text-muted-foreground hover:text-destructive sm:hidden"
-                            onClick={() => remove(index)}>
+                            onClick={() => remove(index)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -318,7 +286,8 @@ export const InvitePeople = ({
                             variant="ghost"
                             size="icon"
                             className="text-muted-foreground hover:text-destructive"
-                            onClick={() => remove(index)}>
+                            onClick={() => remove(index)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -331,7 +300,8 @@ export const InvitePeople = ({
                   variant="outline"
                   size="sm"
                   className="mt-2"
-                  onClick={() => append({ recipients: "", projectKeys: [] })}>
+                  onClick={() => append({ recipients: "", projectKeys: [] })}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Add another
                 </Button>
@@ -343,9 +313,7 @@ export const InvitePeople = ({
                   Cancel
                 </Button>
               </DialogClose>
-              <Button
-                disabled={isPending || !form.formState.isValid}
-                type="submit">
+              <Button disabled={isPending || !form.formState.isValid} type="submit">
                 Send
               </Button>
             </DialogFooter>

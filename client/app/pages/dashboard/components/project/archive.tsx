@@ -1,14 +1,11 @@
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { useDisableProject } from "@/hooks/use-project";
-import { isErrorWithErrors } from "@seliseblocks/blocks-kit/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit/store";
+import { isErrorWithErrors } from "@seliseblocks/genesis-os/utils";
+import { useProjectStore } from "@seliseblocks/genesis-os/store";
 import { Archive } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@seliseblocks/blocks-kit/utils";
+import { useNavigate } from "react-router";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { Button } from "@/components/ui-kits/button/button";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 
@@ -38,10 +35,7 @@ export const ArchiveProject = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="destructive"
-          size="sm"
-          className="flex items-center gap-2">
+        <Button variant="destructive" size="sm" className="flex items-center gap-2">
           <Archive className="h-4 w-4" />
           <span className="sr-only sm:not-sr-only">Delete</span>
         </Button>
@@ -55,8 +49,8 @@ export const ArchiveProject = () => {
             <>
               <p>Are you sure you want to delete this environment?</p>
               <p>
-                This will permanently delete the environment and you&apos;ll
-                need to contact support to recover it.
+                This will permanently delete the environment and you&apos;ll need to contact support
+                to recover it.
               </p>
             </>
           ),

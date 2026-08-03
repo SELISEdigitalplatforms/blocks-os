@@ -22,10 +22,9 @@ describe("use-magic-url hooks", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("useGetMagicUrls is disabled without a project key", () => {
-    const { result } = renderHook(
-      () => useGetMagicUrls({ projectKey: "" } as never),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useGetMagicUrls({ projectKey: "" } as never), {
+      wrapper: createWrapper(),
+    });
     expect(result.current.fetchStatus).toBe("idle");
   });
 

@@ -18,7 +18,11 @@ type SelectionState = {
     permissionResource: string;
   };
 };
-export const RequiredPermissionsDialog = ({ permission, onOpenChange, open }: PermissionDialogProps) => {
+export const RequiredPermissionsDialog = ({
+  permission,
+  onOpenChange,
+  open,
+}: PermissionDialogProps) => {
   const [selectionState, setSelectionState] = useState<SelectionState>({});
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
@@ -36,7 +40,7 @@ export const RequiredPermissionsDialog = ({ permission, onOpenChange, open }: Pe
       if (selectionState[permResource]) return selectionState[permResource].isChecked;
       return isChecked(permResource, permissionMap);
     },
-    [permissionMap, selectionState]
+    [permissionMap, selectionState],
   );
   const onSaveClick = () => {
     const changePermissions = Object.values(selectionState);
@@ -68,7 +72,7 @@ export const RequiredPermissionsDialog = ({ permission, onOpenChange, open }: Pe
           onCheckedChange={(checked) => onCheckedChangeHandler(permission.resource, !!checked)}
           hasDependentPermissions={isDependentPermissionChecked(permission.resource)}
           isAllDependentPermissionsChecked={permission.dependentPermissions.every((dp) =>
-            isDependentPermissionChecked(dp)
+            isDependentPermissionChecked(dp),
           )}
         />
         <div className="mt-2">

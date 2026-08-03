@@ -1,13 +1,9 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { Calendar } from "@/components/ui-kits/calendar/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui-kits/popover/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { CalendarIcon } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { MouseEvent, useEffect, useState } from "react";
 type DateRangeType = { from?: Date; to?: Date } | null;
@@ -44,7 +40,8 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
       onOpenChange={(open) => {
         setOpen(open);
         setDate(value);
-      }}>
+      }}
+    >
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 border-dashed">
           <div className="flex w-full items-center justify-between">
@@ -54,10 +51,7 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
             </div>
             {date?.from && (
               <>
-                <Separator
-                  orientation="vertical"
-                  className="hidden h-4 sm:mx-2 sm:block"
-                />
+                <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
                 {formatDate(date.from, true)}
                 {date.to && (
                   <>
@@ -80,11 +74,7 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
           numberOfMonths={isMobile ? 1 : 2}
         />
         <div className="flex items-center gap-4 px-3 pb-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={resetBtnHandler}>
+          <Button type="button" variant="outline" className="w-full" onClick={resetBtnHandler}>
             Reset
           </Button>
           <Button type="button" className="w-full" onClick={applyBtnHandler}>

@@ -12,8 +12,9 @@ export const buildOidcSavePayload = (
   credential: IOidcConfig,
   overrides: BrandingOverrides,
 ): ISaveOidcCredentialPayload => {
-  const redirectUris =
-    credential.redirectUris && credential.redirectUris.length
+  const redirectUris = credential.isDeviceFlowClient
+    ? []
+    : credential.redirectUris && credential.redirectUris.length
       ? credential.redirectUris
       : credential.redirectUri
         ? [credential.redirectUri]
@@ -27,8 +28,10 @@ export const buildOidcSavePayload = (
     requirePkce: credential.requirePkce,
     // A branding-only save must not silently unregister the identity provider.
     registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
-    allowedResponseTypes:
-      credential.allowedResponseTypes?.length > 0
+    isDeviceFlowClient: credential.isDeviceFlowClient ?? false,
+    allowedResponseTypes: credential.isDeviceFlowClient
+      ? []
+      : credential.allowedResponseTypes?.length > 0
         ? credential.allowedResponseTypes
         : ["code"],
     itemId: credential.itemId,

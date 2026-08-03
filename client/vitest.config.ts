@@ -11,22 +11,10 @@ export default defineConfig({
       "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
       "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
       "@blocks-storage": path.resolve(__dirname, "./app/cross-modules/storage"),
-      "@blocks-communication": path.resolve(
-        __dirname,
-        "./app/cross-modules/communication",
-      ),
-      "@blocks-identifier": path.resolve(
-        __dirname,
-        "./app/cross-modules/identifier",
-      ),
-      "@blocks-localization": path.resolve(
-        __dirname,
-        "./app/cross-modules/localization",
-      ),
-      "@blocks-utilities": path.resolve(
-        __dirname,
-        "./app/cross-modules/utilities",
-      ),
+      "@blocks-communication": path.resolve(__dirname, "./app/cross-modules/communication"),
+      "@blocks-identifier": path.resolve(__dirname, "./app/cross-modules/identifier"),
+      "@blocks-localization": path.resolve(__dirname, "./app/cross-modules/localization"),
+      "@blocks-utilities": path.resolve(__dirname, "./app/cross-modules/utilities"),
       "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
     },
   },
@@ -36,6 +24,7 @@ export default defineConfig({
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
     coverage: {
       provider: "v8",
+      reporter: ["text", "lcov"],
       include: ["app/**/*.{ts,tsx}"],
       exclude: [
         "app/**/*.test.*",

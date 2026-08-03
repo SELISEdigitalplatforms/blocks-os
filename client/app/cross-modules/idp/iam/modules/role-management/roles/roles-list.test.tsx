@@ -25,11 +25,11 @@ vi.stubGlobal(
 
 const navigate = vi.fn();
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock("@/hooks/use-scoped-path", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (path: string) => `/scoped/${path}`,
 }));
 
@@ -86,9 +86,7 @@ describe("RolesList", () => {
 
   it("shows the empty-state message for no roles", () => {
     render(<RolesList roles={[]} isLoading={false} />);
-    expect(
-      screen.getByText("No roles found. Please create new roles."),
-    ).toBeTruthy();
+    expect(screen.getByText("No roles found. Please create new roles.")).toBeTruthy();
   });
 
   it("renders role rows with name, slug, permission count and description", () => {
@@ -103,7 +101,7 @@ describe("RolesList", () => {
     const user = userEvent.setup();
     render(<RolesList roles={[role]} isLoading={false} />);
     await user.click(screen.getByText("Administrator"));
-    expect(navigate).toHaveBeenCalledWith("/scoped/idp/role-detail/role-1");
+    expect(navigate).toHaveBeenCalledWith("/scoped/iam/role-detail/role-1");
   });
 
   it("opens the update-role dialog when the edit button is clicked", async () => {

@@ -33,7 +33,7 @@ import {
 vi.mock("@blocks-idp/iam/services/user.service", () => mockUserServiceFactory());
 
 const mockSetUser = vi.fn();
-vi.mock("@/store/useAuthStore", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: vi.fn(() => ({ setUser: mockSetUser })),
 }));
 
@@ -112,7 +112,7 @@ describe("use-user hooks", () => {
 
       result.current.mutate(mockUpdateUserPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.updateUser).toHaveBeenCalledWith(mockUpdateUserPayload, expect.anything());
+      expect(userService.updateUser).toHaveBeenCalledWith(mockUpdateUserPayload);
     });
   });
 
@@ -140,7 +140,10 @@ describe("use-user hooks", () => {
 
       result.current.mutate(mockSaveSignUpSettingPayload);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(userService.saveSignUpSetting).toHaveBeenCalledWith(mockSaveSignUpSettingPayload, expect.anything());
+      expect(userService.saveSignUpSetting).toHaveBeenCalledWith(
+        mockSaveSignUpSettingPayload,
+        expect.anything(),
+      );
     });
   });
 

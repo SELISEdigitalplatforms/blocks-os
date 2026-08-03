@@ -6,15 +6,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useNavigate } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { DeleteSSORole } from "./delete-sso-role";
@@ -35,9 +30,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
             <span className="font-bold text-medium-emphasis">Roles</span>
           </div>
         ),
-        cell: (roles) => (
-          <div className="w-[130px] truncate">{roles.row.original.name}</div>
-        ),
+        cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
       },
       {
         id: "slug",
@@ -61,7 +54,8 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
             className="flex"
             onClick={(e) => {
               e.stopPropagation();
-            }}>
+            }}
+          >
             <DeleteSSORole role={row.original} onDelete={onDelete} />
           </div>
         ),
@@ -75,7 +69,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {
-    navigate(scoped(`idp/role-detail/${itemId}`));
+    navigate(scoped(`iam/role-detail/${itemId}`));
   };
   return (
     <>
@@ -87,10 +81,7 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
                 <TableHead key={header.id} className="px-4 py-3">
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               )),
             )}
@@ -101,7 +92,8 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground">
+                className="h-24 text-center text-muted-foreground"
+              >
                 No roles found
               </TableCell>
             </TableRow>
@@ -110,7 +102,8 @@ export const SSORolesList = ({ roles, onDelete }: SSORolesListProps) => {
               <TableRow
                 key={row.id}
                 className="cursor-pointer"
-                onClick={() => onRowClickHandler(row.original.itemId)}>
+                onClick={() => onRowClickHandler(row.original.itemId)}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="px-4 py-3">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

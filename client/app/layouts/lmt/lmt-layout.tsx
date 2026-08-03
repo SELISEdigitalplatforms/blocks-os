@@ -11,29 +11,22 @@ import { LMT_NAV_GROUPS } from "@/constants/lmt-nav";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { cn } from "@/lib/utils";
 import { useUsagesMetrics } from "@blocks-lmt/hooks/use-usage";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { RefreshCcw } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router";
 
 export default function LmtLayout() {
   const { pathname } = useLocation();
   const LMT_BASE_PATH = useLmtBasePath();
-  const isLogsDetail = new RegExp(
-    `^${LMT_BASE_PATH}/logs/[^/]+(/trace/[^/]+)?$`,
-  ).test(pathname);
-  const isTraceDetail = new RegExp(`^${LMT_BASE_PATH}/tracing/[^/]+$`).test(
-    pathname,
-  );
+  const isLogsDetail = new RegExp(`^${LMT_BASE_PATH}/logs/[^/]+(/trace/[^/]+)?$`).test(pathname);
+  const isTraceDetail = new RegExp(`^${LMT_BASE_PATH}/tracing/[^/]+$`).test(pathname);
   const isLmtDetail = isLogsDetail || isTraceDetail;
   const currentSegment = pathname.split("/").pop() ?? "usage";
 
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
-  const [timeRange, setTimeRange] = useQueryState(
-    "timeRange",
-    parseAsString.withDefault("1h"),
-  );
+  const [timeRange, setTimeRange] = useQueryState("timeRange", parseAsString.withDefault("1h"));
 
   const { isLoading, isFetching, refetch } = useUsagesMetrics({ timeRange });
 
@@ -60,12 +53,10 @@ export default function LmtLayout() {
           variant="outline"
           size="sm"
           onClick={() => refetch()}
-          disabled={isLoading || isFetching || !tenantId}>
+          disabled={isLoading || isFetching || !tenantId}
+        >
           <RefreshCcw
-            className={cn(
-              "aspect-square w-4",
-              (isLoading || isFetching) && "animate-spin",
-            )}
+            className={cn("aspect-square w-4", (isLoading || isFetching) && "animate-spin")}
           />
           <span className="sr-only sm:not-sr-only sm:ml-2">Refresh</span>
         </Button>

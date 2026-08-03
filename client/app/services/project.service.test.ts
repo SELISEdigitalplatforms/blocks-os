@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { http } from "@/lib/http/http-client";
 import { ProjectService } from "./project.service";
 import { PROJECT_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 const ABS = { absoluteUrl: true };
 const BASE = getRuntimeEnv("BLOCKS_OS_BASE_URL");
@@ -44,17 +44,13 @@ describe("ProjectService", () => {
     );
   });
 
-  it("getProject requests a single project by id", async () => {
+  it("getProject requests the current project", async () => {
     const project = { itemId: "p-1" };
     vi.mocked(http.get).mockResolvedValue(project);
 
-    const result = await service.getProject({ projectId: "p-1" });
+    const result = await service.getProject();
 
-    expect(http.get).toHaveBeenCalledWith(
-      `${BASE}${PROJECT_ENDPOINTS.GET}?projectId=p-1`,
-      undefined,
-      ABS,
-    );
+    expect(http.get).toHaveBeenCalledWith(`${BASE}${PROJECT_ENDPOINTS.GET}`, undefined, ABS);
     expect(result).toBe(project);
   });
 

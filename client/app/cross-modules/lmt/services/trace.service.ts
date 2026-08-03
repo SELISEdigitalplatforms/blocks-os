@@ -12,18 +12,12 @@ import {
 } from "../models/trace.model";
 import { IAPIResponse } from "@/models/api-response";
 import { TRACE_ENDPOINTS } from "../constants/endpoint.constant";
-import {
-  buildTraceTreeFromSpans,
-  parseTraceEntryPoint,
-} from "../utils/trace-tree.util";
+import { buildTraceTreeFromSpans, parseTraceEntryPoint } from "../utils/trace-tree.util";
 
 export class TraceService {
   async getTraces(payload: IGetTracesPayload): Promise<IGetTracesResponse> {
     try {
-      const response = await http.post<IAPIResponse<Trace[]>>(
-        TRACE_ENDPOINTS.GET_TRACES,
-        payload,
-      );
+      const response = await http.post<IAPIResponse<Trace[]>>(TRACE_ENDPOINTS.GET_TRACES, payload);
 
       const parsedData: TraceTree[] = response.data.map((trace) => ({
         ...trace,

@@ -17,10 +17,8 @@ import {
   useDeleteStorageConfiguration,
 } from "./use-storage-configuration";
 
-vi.mock("@blocks-storage/services/storage.service", () =>
-  mockStorageServiceFactory(),
-);
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@blocks-storage/services/storage.service", () => mockStorageServiceFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("Storage Configuration Hooks", () => {
   beforeEach(() => {
@@ -31,9 +29,7 @@ describe("Storage Configuration Hooks", () => {
 
   describe("useGetStorageConfigurations", () => {
     it("should fetch storage configurations successfully", async () => {
-      vi.mocked(storageService.configuration.gets).mockResolvedValue(
-        mockStorageConfigList,
-      );
+      vi.mocked(storageService.configuration.gets).mockResolvedValue(mockStorageConfigList);
 
       const { result } = renderHook(() => useGetStorageConfigurations(), {
         wrapper: createWrapper(),
@@ -48,21 +44,17 @@ describe("Storage Configuration Hooks", () => {
     });
 
     it("should query the configurations without arguments", async () => {
-      vi.mocked(storageService.configuration.gets).mockResolvedValue(
-        mockStorageConfigList,
-      );
+      vi.mocked(storageService.configuration.gets).mockResolvedValue(mockStorageConfigList);
 
       renderHook(() => useGetStorageConfigurations(), {
         wrapper: createWrapper(),
       });
 
-      await waitFor(() =>
-        expect(storageService.configuration.gets).toHaveBeenCalledWith(),
-      );
+      await waitFor(() => expect(storageService.configuration.gets).toHaveBeenCalledWith());
     });
 
     it("should still query configurations when no project is selected", async () => {
-      const { useProjectStore } = await import("@seliseblocks/blocks-kit");
+      const { useProjectStore } = await import("@seliseblocks/genesis-os");
       vi.mocked(useProjectStore).mockReturnValueOnce({
         selectedProject: undefined,
       });
@@ -109,9 +101,7 @@ describe("Storage Configuration Hooks", () => {
 
   describe("useSaveStorageConfiguration", () => {
     it("should save storage configuration successfully", async () => {
-      vi.mocked(storageService.configuration.save).mockResolvedValue(
-        mockSuccessResponse,
-      );
+      vi.mocked(storageService.configuration.save).mockResolvedValue(mockSuccessResponse);
 
       const { result } = renderHook(() => useSaveStorageConfiguration(), {
         wrapper: createWrapper(),
@@ -129,29 +119,19 @@ describe("Storage Configuration Hooks", () => {
     });
 
     it("should invalidate storage configurations query on success", async () => {
-      vi.mocked(storageService.configuration.save).mockResolvedValue(
-        mockSuccessResponse,
-      );
-      vi.mocked(storageService.configuration.gets).mockResolvedValue(
-        mockStorageConfigList,
-      );
+      vi.mocked(storageService.configuration.save).mockResolvedValue(mockSuccessResponse);
+      vi.mocked(storageService.configuration.gets).mockResolvedValue(mockStorageConfigList);
 
       const wrapper = createWrapper();
 
       // Load configurations first
-      const { result: configsResult } = renderHook(
-        () => useGetStorageConfigurations(),
-        {
-          wrapper,
-        },
-      );
+      const { result: configsResult } = renderHook(() => useGetStorageConfigurations(), {
+        wrapper,
+      });
       await waitFor(() => expect(configsResult.current.isSuccess).toBe(true));
 
       // Save a new configuration
-      const { result: saveResult } = renderHook(
-        () => useSaveStorageConfiguration(),
-        { wrapper },
-      );
+      const { result: saveResult } = renderHook(() => useSaveStorageConfiguration(), { wrapper });
       saveResult.current.mutate(mockSaveAmazonConfigPayload);
 
       await waitFor(() => expect(saveResult.current.isSuccess).toBe(true));
@@ -168,27 +148,17 @@ describe("Storage Configuration Hooks", () => {
         isSuccess: false,
         itemId: "",
       };
-      vi.mocked(storageService.configuration.save).mockResolvedValue(
-        failResponse,
-      );
-      vi.mocked(storageService.configuration.gets).mockResolvedValue(
-        mockStorageConfigList,
-      );
+      vi.mocked(storageService.configuration.save).mockResolvedValue(failResponse);
+      vi.mocked(storageService.configuration.gets).mockResolvedValue(mockStorageConfigList);
 
       const wrapper = createWrapper();
 
-      const { result: configsResult } = renderHook(
-        () => useGetStorageConfigurations(),
-        {
-          wrapper,
-        },
-      );
+      const { result: configsResult } = renderHook(() => useGetStorageConfigurations(), {
+        wrapper,
+      });
       await waitFor(() => expect(configsResult.current.isSuccess).toBe(true));
 
-      const { result: saveResult } = renderHook(
-        () => useSaveStorageConfiguration(),
-        { wrapper },
-      );
+      const { result: saveResult } = renderHook(() => useSaveStorageConfiguration(), { wrapper });
       saveResult.current.mutate(mockSaveAmazonConfigPayload);
 
       await waitFor(() => expect(saveResult.current.isSuccess).toBe(true));
@@ -220,9 +190,7 @@ describe("Storage Configuration Hooks", () => {
 
   describe("useDeleteStorageConfiguration", () => {
     it("should delete storage configuration successfully", async () => {
-      vi.mocked(storageService.configuration.delete).mockResolvedValue(
-        mockDeleteSuccessResponse,
-      );
+      vi.mocked(storageService.configuration.delete).mockResolvedValue(mockDeleteSuccessResponse);
 
       const { result } = renderHook(() => useDeleteStorageConfiguration(), {
         wrapper: createWrapper(),
@@ -240,31 +208,21 @@ describe("Storage Configuration Hooks", () => {
     });
 
     it("should always invalidate storage configurations query on success", async () => {
-      vi.mocked(storageService.configuration.delete).mockResolvedValue(
-        mockDeleteSuccessResponse,
-      );
-      vi.mocked(storageService.configuration.gets).mockResolvedValue(
-        mockStorageConfigList,
-      );
+      vi.mocked(storageService.configuration.delete).mockResolvedValue(mockDeleteSuccessResponse);
+      vi.mocked(storageService.configuration.gets).mockResolvedValue(mockStorageConfigList);
 
       const wrapper = createWrapper();
 
       // Load configurations first
-      const { result: configsResult } = renderHook(
-        () => useGetStorageConfigurations(),
-        {
-          wrapper,
-        },
-      );
+      const { result: configsResult } = renderHook(() => useGetStorageConfigurations(), {
+        wrapper,
+      });
       await waitFor(() => expect(configsResult.current.isSuccess).toBe(true));
 
       // Delete a configuration
-      const { result: deleteResult } = renderHook(
-        () => useDeleteStorageConfiguration(),
-        {
-          wrapper,
-        },
-      );
+      const { result: deleteResult } = renderHook(() => useDeleteStorageConfiguration(), {
+        wrapper,
+      });
       deleteResult.current.mutate(mockDeleteConfigPayload);
 
       await waitFor(() => expect(deleteResult.current.isSuccess).toBe(true));

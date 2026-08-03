@@ -139,19 +139,12 @@ const mergeUsageMatrices = (items: UsageMatrix[]): UsageMatrix => {
 
   return {
     ...merged,
-    AverageDuration: merged.TotalRequests
-      ? merged.TotalDuration / merged.TotalRequests
-      : 0,
-    AverageThroughput: merged.TotalRequests
-      ? merged.AverageThroughput / items.length
-      : 0,
+    AverageDuration: merged.TotalRequests ? merged.TotalDuration / merged.TotalRequests : 0,
+    AverageThroughput: merged.TotalRequests ? merged.AverageThroughput / items.length : 0,
   };
 };
 
-const resolveMatrixByIds = (
-  ids: string[],
-  byId: Record<string, UsageMatrix>,
-): UsageMatrix => {
+const resolveMatrixByIds = (ids: string[], byId: Record<string, UsageMatrix>): UsageMatrix => {
   const matched = ids.map((id) => byId[id]).filter(Boolean);
   return mergeUsageMatrices(matched);
 };
@@ -198,7 +191,9 @@ export function getNormalizeUsageMetricsData(
       const totalSuccess =
         transformedData.Status1xx + transformedData.Status2xx + transformedData.Status3xx;
       const totalError = transformedData.Status4xx + transformedData.Status5xx;
-      const totalRequests = Number(transformedData.TotalRequests) ?? 0;
+      // Number() yields NaN, never nullish, so `?? 0` never fired here and a
+      // malformed TotalRequests propagated NaN into the metrics.
+      const totalRequests = Number(transformedData.TotalRequests) || 0;
       return {
         ...transformedData,
         totalSuccess,

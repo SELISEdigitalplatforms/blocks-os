@@ -10,7 +10,7 @@ import { lmtService } from "../services/lmt.service";
 import { useLogs } from "./use-logs";
 
 vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
-vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 describe("useLogs", () => {
   beforeEach(() => {
@@ -20,13 +20,9 @@ describe("useLogs", () => {
   // ─── Initial fetch ────────────────────────────────────────────────────────
   describe("initial fetch", () => {
     it("should fetch initial logs on mount", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse);
 
-      const { result } = renderHook(() =>
-        useLogs({ serviceName: "blocks-idp-api" }),
-      );
+      const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(lmtService.log.getLogsByDate).toHaveBeenCalledWith(
@@ -36,34 +32,24 @@ describe("useLogs", () => {
     });
 
     it("should set isLoading to false after fetch", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockEmptyLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockEmptyLogsResponse);
 
-      const { result } = renderHook(() =>
-        useLogs({ serviceName: "blocks-idp-api" }),
-      );
+      const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
     });
 
     it("should handle fetch error gracefully", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockRejectedValue(
-        new Error("Network error"),
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockRejectedValue(new Error("Network error"));
 
-      const { result } = renderHook(() =>
-        useLogs({ serviceName: "blocks-idp-api" }),
-      );
+      const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.initialLogs).toHaveLength(0);
     });
 
     it("should refetch when serviceName changes", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse);
 
       const { rerender } = renderHook(
         ({ serviceName }: { serviceName: string }) => useLogs({ serviceName }),
@@ -86,20 +72,12 @@ describe("useLogs", () => {
     });
 
     it("should dedupe concurrent initial fetches with identical params", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse);
 
-      const { unmount: unmountA } = renderHook(() =>
-        useLogs({ serviceName: "blocks-iam" }),
-      );
-      const { unmount: unmountB } = renderHook(() =>
-        useLogs({ serviceName: "blocks-iam" }),
-      );
+      const { unmount: unmountA } = renderHook(() => useLogs({ serviceName: "blocks-iam" }));
+      const { unmount: unmountB } = renderHook(() => useLogs({ serviceName: "blocks-iam" }));
 
-      await waitFor(() =>
-        expect(lmtService.log.getLogsByDate).toHaveBeenCalledTimes(1),
-      );
+      await waitFor(() => expect(lmtService.log.getLogsByDate).toHaveBeenCalledTimes(1));
 
       unmountA();
       unmountB();
@@ -109,13 +87,9 @@ describe("useLogs", () => {
   // ─── fetchOldLogs ─────────────────────────────────────────────────────────
   describe("fetchOldLogs", () => {
     it("should fetch older logs with endDate", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse);
 
-      const { result } = renderHook(() =>
-        useLogs({ serviceName: "blocks-idp-api" }),
-      );
+      const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       let oldLogs: unknown[];
@@ -132,9 +106,7 @@ describe("useLogs", () => {
         .mockResolvedValueOnce(mockLogsResponse) // initial fetch
         .mockRejectedValueOnce(new Error("fail")); // fetchOldLogs
 
-      const { result } = renderHook(() =>
-        useLogs({ serviceName: "blocks-idp-api" }),
-      );
+      const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       let oldLogs: unknown[];
@@ -149,14 +121,10 @@ describe("useLogs", () => {
   // ─── fetchNewLogs ─────────────────────────────────────────────────────────
   describe("fetchNewLogs", () => {
     it("should fetch new logs via live endpoint", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse);
       vi.mocked(lmtService.log.getLiveLog).mockResolvedValue(mockLogsResponse);
 
-      const { result } = renderHook(() =>
-        useLogs({ serviceName: "blocks-idp-api" }),
-      );
+      const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       let newLogs: unknown[];
@@ -169,9 +137,7 @@ describe("useLogs", () => {
     });
 
     it("should return empty array when serviceName is empty", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse);
 
       const { result } = renderHook(() => useLogs({ serviceName: "" }));
       await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -185,14 +151,10 @@ describe("useLogs", () => {
     });
 
     it("should return empty array on error", async () => {
-      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(
-        mockLogsResponse,
-      );
+      vi.mocked(lmtService.log.getLogsByDate).mockResolvedValue(mockLogsResponse);
       vi.mocked(lmtService.log.getLiveLog).mockRejectedValue(new Error("fail"));
 
-      const { result } = renderHook(() =>
-        useLogs({ serviceName: "blocks-idp-api" }),
-      );
+      const { result } = renderHook(() => useLogs({ serviceName: "blocks-idp-api" }));
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       let newLogs: unknown[];

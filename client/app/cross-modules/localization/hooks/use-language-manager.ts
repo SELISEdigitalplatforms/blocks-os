@@ -1,4 +1,4 @@
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { ExportHistoryFilters, IKeyUilmExport } from "@blocks-localization/models/language";
 import { languageManagerService } from "@blocks-localization/services/language.manager.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,7 +84,7 @@ export const useGetLanguages = () => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   return useQuery({
     queryKey: ["get-languages", tenantId],
-    queryFn: () => languageManagerService.fetchBlocksLanguages(tenantId),
+    queryFn: () => languageManagerService.fetchBlocksLanguages(),
   });
 };
 
@@ -277,60 +277,62 @@ export const useRevertKeyTimeline = () => {
   });
 };
 
-export const useGetLocalizationTimeline = (
-  pageNumber: number,
-  pageSize: number,
-  filters?: {
-    userId?: string;
-    logFrom?: string;
-    logFromValues?: string[];
-    excludeLogFromValues?: string[];
-    createDateRange?: { startDate?: string; endDate?: string };
-  },
-) => {
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  return useQuery({
-    queryKey: [
-      "get-localization-timeline",
-      tenantId,
-      pageNumber,
-      pageSize,
-      filters?.userId ?? "",
-      filters?.logFrom ?? "",
-      filters?.logFromValues?.join(",") ?? "",
-      filters?.excludeLogFromValues?.join(",") ?? "",
-      filters?.createDateRange?.startDate ?? "",
-      filters?.createDateRange?.endDate ?? "",
-    ],
-    queryFn: () =>
-      languageManagerService.getLocalizationTimeline({
-        projectKey: tenantId,
-        pageNumber,
-        pageSize,
-        userId: filters?.userId,
-        logFrom: filters?.logFrom,
-        logFromValues: filters?.logFromValues,
-        excludeLogFromValues: filters?.excludeLogFromValues,
-        createDateRange: filters?.createDateRange,
-      }),
-  });
-};
+// DEADCODE 2026-07-29: hook with no callers in client, e2e or tests; commented pending review
+// export const useGetLocalizationTimeline = (
+//   pageNumber: number,
+//   pageSize: number,
+//   filters?: {
+//     userId?: string;
+//     logFrom?: string;
+//     logFromValues?: string[];
+//     excludeLogFromValues?: string[];
+//     createDateRange?: { startDate?: string; endDate?: string };
+//   },
+// ) => {
+//   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+//   return useQuery({
+//     queryKey: [
+//       "get-localization-timeline",
+//       tenantId,
+//       pageNumber,
+//       pageSize,
+//       filters?.userId ?? "",
+//       filters?.logFrom ?? "",
+//       filters?.logFromValues?.join(",") ?? "",
+//       filters?.excludeLogFromValues?.join(",") ?? "",
+//       filters?.createDateRange?.startDate ?? "",
+//       filters?.createDateRange?.endDate ?? "",
+//     ],
+//     queryFn: () =>
+//       languageManagerService.getLocalizationTimeline({
+//         projectKey: tenantId,
+//         pageNumber,
+//         pageSize,
+//         userId: filters?.userId,
+//         logFrom: filters?.logFrom,
+//         logFromValues: filters?.logFromValues,
+//         excludeLogFromValues: filters?.excludeLogFromValues,
+//         createDateRange: filters?.createDateRange,
+//       }),
+//   });
+// };
 
-export const useGetTimelineByOperationId = (
-  operationId: string,
-  pageNumber: number,
-  pageSize: number,
-) => {
-  const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
-  return useQuery({
-    queryKey: ["get-timeline-by-operation", tenantId, operationId, pageNumber, pageSize],
-    queryFn: () =>
-      languageManagerService.getTimelineByOperationId({
-        operationId,
-        projectKey: tenantId,
-        pageNumber,
-        pageSize,
-      }),
-    enabled: !!operationId,
-  });
-};
+// DEADCODE 2026-07-29: hook with no callers in client, e2e or tests; commented pending review
+// export const useGetTimelineByOperationId = (
+//   operationId: string,
+//   pageNumber: number,
+//   pageSize: number,
+// ) => {
+//   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
+//   return useQuery({
+//     queryKey: ["get-timeline-by-operation", tenantId, operationId, pageNumber, pageSize],
+//     queryFn: () =>
+//       languageManagerService.getTimelineByOperationId({
+//         operationId,
+//         projectKey: tenantId,
+//         pageNumber,
+//         pageSize,
+//       }),
+//     enabled: !!operationId,
+//   });
+// };

@@ -26,7 +26,10 @@ export const PermissionSelectionRow = ({ permission }: { permission: PermissionS
     checked: false,
   });
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
-  const checked = useMemo(() => isChecked(permission.resource, permissionMap), [permission.resource, permissionMap]);
+  const checked = useMemo(
+    () => isChecked(permission.resource, permissionMap),
+    [permission.resource, permissionMap],
+  );
   const changePermissionSelection = useRoleDetailsStore((state) => state.changePermissionSelection);
   const onCheckedChangeHandler = (nextChecked: CheckedState) => {
     if (permission.dependentPermissions && permission.dependentPermissions.length > 0)
@@ -37,13 +40,19 @@ export const PermissionSelectionRow = ({ permission }: { permission: PermissionS
       permission.parents.length > 0 &&
       permission.parents.some((parent) => isChecked(parent, permissionMap))
     ) {
-      return setAffectedPermissionsDialogModalState({ open: true, permission, checked: !!nextChecked });
+      return setAffectedPermissionsDialogModalState({
+        open: true,
+        permission,
+        checked: !!nextChecked,
+      });
     }
-    changePermissionSelection([{ permissionResource: permission.resource, isChecked: !!nextChecked }]);
+    changePermissionSelection([
+      { permissionResource: permission.resource, isChecked: !!nextChecked },
+    ]);
   };
   const hasDependentPermissions = useMemo(
     () => permission.dependentPermissions && permission.dependentPermissions.length > 0,
-    [permission.dependentPermissions]
+    [permission.dependentPermissions],
   );
   const isAllDependentPermissionsChecked = useMemo(() => {
     if (!hasDependentPermissions) return false;
@@ -63,13 +72,17 @@ export const PermissionSelectionRow = ({ permission }: { permission: PermissionS
         permission={permission}
         checked={requiredPermissionsModalState.checked}
         open={requiredPermissionsModalState.open}
-        onOpenChange={(open) => setRequiredPermissionsModalState({ ...requiredPermissionsModalState, open })}
+        onOpenChange={(open) =>
+          setRequiredPermissionsModalState({ ...requiredPermissionsModalState, open })
+        }
       />
       <AffectedPermissionsDialog
         permission={permission}
         checked={affectedPermissionsModalState.checked}
         open={affectedPermissionsModalState.open}
-        onOpenChange={(open) => setAffectedPermissionsDialogModalState({ ...affectedPermissionsModalState, open })}
+        onOpenChange={(open) =>
+          setAffectedPermissionsDialogModalState({ ...affectedPermissionsModalState, open })
+        }
       />
     </li>
   );

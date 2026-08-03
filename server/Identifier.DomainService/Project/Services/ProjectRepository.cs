@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
+using System.Collections;
 
 namespace DomainService.Projects
 {
@@ -295,7 +296,7 @@ namespace DomainService.Projects
            return await unfinishedList.FirstOrDefaultAsync();
         }      
 
-  public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
+        public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
         {
             if (statusTracer.IsDefaultConfigurationCopied) return;
 
@@ -358,12 +359,20 @@ namespace DomainService.Projects
 
             if (identityConfiguration != null)
             {
-                identityConfiguration["AccountActionBaseUrl"] = $"{project.Applications.FirstOrDefault().Domain}";
-                identityConfiguration["CreatedBy"] = userId;
-                identityConfiguration["LastUpdatedBy"] = userId;
 
-                var targetCollection = targetDb.GetCollection<BsonDocument>("IdentityConfigurations");
-                await targetCollection.InsertOneAsync(identityConfiguration);
+               var collectionExists = await targetDb.ListCollectionNames(new ListCollectionNamesOptions{Filter = new BsonDocument("name", "IdentityConfigurations") }).AnyAsync();
+
+               if (collectionExists)
+               {
+                  await targetDb.DropCollectionAsync("IdentityConfigurations");
+               }
+
+               identityConfiguration["AccountActionBaseUrl"] = $"{project.Applications.FirstOrDefault().Domain}";
+               identityConfiguration["CreatedBy"] = userId;
+               identityConfiguration["LastUpdatedBy"] = userId;
+
+               var targetCollection = targetDb.GetCollection<BsonDocument>("IdentityConfigurations");
+               await targetCollection.InsertOneAsync(identityConfiguration);
             }
         }
 
@@ -400,10 +409,12 @@ namespace DomainService.Projects
             {
                 var filter = Builders<BsonDocument>.Filter.Eq("_id", iamConfiguration["_id"]);
 
+                var applicationDomain = project.Applications.FirstOrDefault()?.Domain;
+
                 var update = Builders<BsonDocument>.Update
-                    .Set("AccountActivationUrl", $"{project.Applications.FirstOrDefault().Domain}/activate")
-                    .Set("AccountVerificationUrl", $"{project.Applications.FirstOrDefault().Domain}/verify")
-                    .Set("RecoverAccountUrl", $"{project.Applications.FirstOrDefault().Domain }/resetpassword")
+                    .Set("AccountActivationUrl", $"{applicationDomain}/activate")
+                    .Set("AccountVerificationUrl", $"{applicationDomain}/verify")
+                    .Set("RecoverAccountUrl", $"{applicationDomain}/resetpassword")
                     .Set("CreatedBy", project.TenantId)
                     .Set("LastUpdatedBy", project.TenantId);
 
@@ -426,7 +437,11 @@ namespace DomainService.Projects
 
             if (documents.Count > 0)
             {
-                documents[0]["DefaultDeploymentUrl"] = project.Applications.FirstOrDefault().Domain;
+                var applicationDomain = project.Applications.FirstOrDefault()?.Domain;
+                if (applicationDomain != null)
+                {
+                    documents[0]["DefaultDeploymentUrl"] = applicationDomain;
+                }
                 var targetCollection = targetDb.GetCollection<BsonDocument>("Repos");
                 await targetCollection.InsertManyAsync(documents);
             }

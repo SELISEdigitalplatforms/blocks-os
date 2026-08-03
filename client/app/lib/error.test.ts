@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  isErrorWithErrors,
-  hasErrorCode,
-  getErrorMessage,
-  handleErrorMessages,
-} from "./error";
+import { isErrorWithErrors, hasErrorCode, getErrorMessage, handleErrorMessages } from "./error";
 
 describe("lib/error", () => {
   describe("isErrorWithErrors", () => {
@@ -50,9 +45,10 @@ describe("lib/error", () => {
       ).toEqual(["Email already used"]);
     });
     it("collects string and array values", () => {
-      expect(
-        getErrorMessage({ a: "first", b: ["second", "third"] }),
-      ).toEqual(["first", "second, third"]);
+      expect(getErrorMessage({ a: "first", b: ["second", "third"] })).toEqual([
+        "first",
+        "second, third",
+      ]);
     });
     it("falls back when no usable values are found", () => {
       expect(getErrorMessage({ a: [] })).toBe("Something went wrong.");

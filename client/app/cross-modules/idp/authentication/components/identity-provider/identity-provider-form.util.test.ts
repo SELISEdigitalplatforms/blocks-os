@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildIdentityProviderPayload,
-  deriveProtocol,
-} from "./identity-provider-form.util";
+import { buildIdentityProviderPayload, deriveProtocol } from "./identity-provider-form.util";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 
 const editedProvider: IdentityProvider = {

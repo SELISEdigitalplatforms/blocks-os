@@ -1,6 +1,1 @@
-export {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@seliseblocks/blocks-kit"
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@seliseblocks/genesis-os";

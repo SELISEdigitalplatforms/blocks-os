@@ -13,7 +13,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { PasswordInput } from "@/components/password-input";
 import { z } from "zod";
 import { Input } from "@/components/ui-kits/input/input";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { showErrorToast } from "@/hooks/use-toast";
 import { useAccountActivation } from "@blocks-idp/iam/hooks/use-account";
 import { useEffect, useState } from "react";
@@ -49,7 +49,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
     if (!requirementsMet && captchaCode) resetCaptcha();
   }, [captchaCode, requirementsMet, resetCaptcha]);
   useEffect(() => {
-    if (!code) navigate("/login");
+    if (!code) {
+      navigate("/login");
+    }
   }, [code, navigate]);
   const onSubmitHandler = async (
     values: z.infer<typeof activationFormSchema>,

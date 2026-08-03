@@ -8,29 +8,31 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
 import { IOrganization } from "@blocks-idp/iam/models/organization";
-import { useSaveOrganization } from "@blocks-idp/iam/hooks/use-organization";
+import { useUpdateOrganization } from "@blocks-idp/iam/hooks/use-organization";
+
 type ToggleOrganizationStatusProps = {
   organization: IOrganization;
   onClose: () => void;
 };
+
 export const ToggleOrganizationStatus = ({
   organization,
   onClose,
 }: ToggleOrganizationStatusProps) => {
-  const { mutateAsync, isPending } = useSaveOrganization();
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const isEnabling = !organization.isEnable;
+  const { mutateAsync, isPending } = useUpdateOrganization();
+
+  // isDisabled is optional on the OS organization model, so normalise it to a boolean.
+  const isEnabling = !!organization.isDisabled;
   const action = isEnabling ? "enable" : "disable";
   const actionLabel = isEnabling ? "Enable" : "Disable";
   const actioningLabel = isEnabling ? "Enabling..." : "Disabling...";
+
   const handleConfirm = async () => {
     try {
       const res = await mutateAsync({
-        projectKey: tenantId,
-        name: organization.name,
         itemId: organization.itemId,
+        name: organization.name,
         isEnable: isEnabling,
       });
       if (!res.isSuccess) {
@@ -47,6 +49,7 @@ export const ToggleOrganizationStatus = ({
       }
     }
   };
+
   return (
     <DialogContent>
       <DialogHeader className="mb-4">

@@ -18,7 +18,10 @@ type ToggleCaptchaStatusModalProps = {
   configuration: ICaptchaConfig;
   children?: React.ReactNode;
 };
-export const ToggleCaptchaStatusModal = ({ configuration, children }: ToggleCaptchaStatusModalProps) => {
+export const ToggleCaptchaStatusModal = ({
+  configuration,
+  children,
+}: ToggleCaptchaStatusModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const { isPending, mutateAsync } = useToggleCaptchaConfigStatus();
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];

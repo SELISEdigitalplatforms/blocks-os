@@ -27,6 +27,8 @@ export const PROJECT_ENDPOINTS = {
   /** @deprecated Renamed to UPDATE_PROJECT_GROUP. */
   UPDATE_TENANT_GROUP: `/api${PROJECT_SUBPATH}/UpdateTenantGroup`,
   DISABLE: `/api${PROJECT_SUBPATH}/Disable`,
+  GET_PROJECT_STATUS: `/api${PROJECT_SUBPATH}/GetProjectStatus`,
+  RESTORE: `/api${PROJECT_SUBPATH}/Restore`,
 
   GET_ASSET: `/api${PROJECT_SUBPATH}/GetAsset`,
   ADD_ASSET: `/api${PROJECT_SUBPATH}/AddAsset`,

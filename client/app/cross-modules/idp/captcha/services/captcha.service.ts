@@ -5,7 +5,6 @@ import {
   ICaptchaSecretResponse,
   IEnableCaptchaConfigsStatusPayload,
   IEnableCaptchaConfigsStatusResponse,
-  IGetCaptchaConfigsPayload,
   IGetCaptchaConfigsResponse,
   ISaveCaptchaConfigsPayload,
   ISaveCaptchaConfigsResponse,
@@ -13,17 +12,16 @@ import {
 import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class CaptchaService {
-  getCaptchaConfigs(
-    payload: IGetCaptchaConfigsPayload,
-  ): Promise<IGetCaptchaConfigsResponse> {
+  // The captcha secrets are fetched with a fixed query (secretKey=captcha, first page); nothing
+  // from the caller is sent, so this takes no arguments. Project scoping happens via the
+  // X-Blocks-Key header, and the hook gates the request on a selected project.
+  getCaptchaConfigs(): Promise<IGetCaptchaConfigsResponse> {
     return http
-      .get<
-        ICaptchaSecretResponse[] | IAPIResponse<ICaptchaSecretResponse[]>
-      >(`${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`)
+      .get<ICaptchaSecretResponse[] | IAPIResponse<ICaptchaSecretResponse[]>>(
+        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`,
+      )
       .then((response) => {
-        const secrets = Array.isArray(response)
-          ? response
-          : (response.data ?? []);
+        const secrets = Array.isArray(response) ? response : (response.data ?? []);
         if (!secrets?.length) return { configurations: [] };
         return {
           configurations: secrets.map((secret) => {
@@ -38,23 +36,18 @@ export class CaptchaService {
               tags: secret.tags,
               captchaKey: kv.captchaKey,
               captchaSecret: kv.captchaSecret,
-              provider:
-                kv.provider as IGetCaptchaConfigsResponse["configurations"][0]["provider"],
+              provider: kv.provider as IGetCaptchaConfigsResponse["configurations"][0]["provider"],
               captchaGenerator:
                 kv.captchaGenerator as IGetCaptchaConfigsResponse["configurations"][0]["captchaGenerator"],
               isEnable:
-                typeof kv.isEnable === "string"
-                  ? kv.isEnable === "true"
-                  : Boolean(kv.isEnable),
+                typeof kv.isEnable === "string" ? kv.isEnable === "true" : Boolean(kv.isEnable),
             };
           }),
         };
       });
   }
 
-  saveCaptcha = (
-    payload: ISaveCaptchaConfigsPayload,
-  ): Promise<ISaveCaptchaConfigsResponse> => {
+  saveCaptcha = (payload: ISaveCaptchaConfigsPayload): Promise<ISaveCaptchaConfigsResponse> => {
     return secretsService
       .save({
         secretKey: "captcha",
