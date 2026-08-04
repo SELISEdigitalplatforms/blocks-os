@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <UserSecretsId>dotnet-Worker-d76f990a-b305-46d4-9d8a-6be392ee733f</UserSecretsId>
