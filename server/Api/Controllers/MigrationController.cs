@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BlocksOs.Api.Controllers
  {
- [Route("api/[controller]")]
  [ApiController]
+ [Route("[controller]/[action]")]
  public class MigrationController : ControllerBase
   {
   private readonly IMigrationService _migrationService;
