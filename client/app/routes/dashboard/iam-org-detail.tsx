@@ -1,6 +1,6 @@
-import { useParams } from "react-router-dom";
-import { OrganizationDetail } from "@blocks-idp/iam/pages/organization-detail/organization-detail";
+import { useParams } from "react-router";
+import { OrganizationDetail } from "@blocks-idp/iam/pages/organization-detail";
 export default function IamOrgDetailPage() {
-  const { itemId } = useParams<{ itemId: string }>();
-  return <OrganizationDetail id={itemId!} />;
+  const { orgId } = useParams<{ orgId: string }>();
+  return <OrganizationDetail id={orgId!} />;
 }

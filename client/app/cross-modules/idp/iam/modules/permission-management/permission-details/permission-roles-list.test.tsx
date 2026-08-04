@@ -8,8 +8,8 @@ const h = vi.hoisted(() => ({
   useGetRoles: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
 }));
 vi.mock("nuqs", () => ({
@@ -75,6 +75,6 @@ describe("PermissionRolesList", () => {
     render(<PermissionRolesList slugs={["cloudadmin", "viewer"]} />);
 
     await user.click(screen.getByText("Cloud Admin"));
-    expect(h.navigate).toHaveBeenCalledWith("/scoped/idp/role-detail/r-1");
+    expect(h.navigate).toHaveBeenCalledWith("/scoped/iam/role-detail/r-1");
   });
 });

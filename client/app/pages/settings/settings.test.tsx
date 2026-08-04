@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({
     selectedProject: h.selectedProject,
     selectedTenantGroup: h.selectedTenantGroup,

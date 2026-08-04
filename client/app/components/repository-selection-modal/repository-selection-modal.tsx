@@ -15,7 +15,7 @@ import { IRepository, iconMap } from "@/cross-modules/devops/models/github-info"
 import { githubInfoService } from "@/cross-modules/devops/services/github-info.service";
 import { cn, debounce } from "@/lib/utils";
 import { Check, ChevronsUpDown, ExternalLink, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 interface RepositorySelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,12 +45,15 @@ export const RepositorySelectionModal = ({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [isLoadingRevoke, setIsLoadingRevoke] = useState(false);
-  // Custom debounce implementation
-  const debouncedSetSearch = useRef(
-    debounce((value: string) => {
-      setDebouncedSearchTerm(value);
-    }, 500),
-  ).current;
+  // Custom debounce implementation. useMemo (not useRef) so the value can be read during
+  // render; the empty dep list keeps the same single instance for the component's lifetime.
+  const debouncedSetSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setDebouncedSearchTerm(value);
+      }, 500),
+    [],
+  );
   useEffect(() => {
     debouncedSetSearch(searchTerm);
     return () => {

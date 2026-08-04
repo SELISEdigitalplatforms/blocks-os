@@ -3,14 +3,14 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 interface SearchInputProps {
-  // eslint-disable-next-line no-unused-vars
+   
   onSearch: (value: string) => void;
   placeholder?: string;
   value: string;
   className?: string;
   toggleable?: boolean;
   isVisible: boolean;
-  // eslint-disable-next-line no-unused-vars
+   
   setIsVisible: (isVisible: boolean) => void;
 }
 export const SearchInput: React.FC<SearchInputProps> = ({

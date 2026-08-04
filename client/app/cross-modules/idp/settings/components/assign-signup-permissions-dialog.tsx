@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetPermissions } from "@blocks-idp/iam/hooks/use-permission";
 import { IPermission, RESOURCE_TYPE } from "@blocks-idp/iam/models/permission";
 import { CirclePlus } from "lucide-react";

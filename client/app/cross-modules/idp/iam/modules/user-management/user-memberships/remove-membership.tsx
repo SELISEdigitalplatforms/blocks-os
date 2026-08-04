@@ -8,9 +8,9 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { isErrorWithErrors } from "@/lib/error";
-import { useUpdateUser, useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { useRevokeAccess } from "@blocks-idp/iam/hooks/use-user";
 import { IMembership } from "@blocks-idp/iam/models/user";
+
 type RemoveMembershipProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -20,43 +20,21 @@ type RemoveMembershipProps = {
   projectKey: string;
   onSuccess?: () => void;
 };
+
 export const RemoveMembership = ({
   open,
   onOpenChange,
   membership,
   organizationName,
   userId,
-  projectKey,
   onSuccess,
 }: RemoveMembershipProps) => {
-  const { data: userData } = useGetUserById({ id: userId, projectKey });
-  const { mutateAsync, isPending } = useUpdateUser({ id: userId, projectKey });
+  const { mutateAsync, isPending } = useRevokeAccess({ id: userId });
+
   const onConfirm = async () => {
     try {
-      const updatedOrganizationIds = (userData?.data?.organizationIds || []).filter(
-        (id) => id !== membership.organizationId,
-      );
-      const updatedRoles = Object.values(
-        Object.fromEntries(
-          Object.entries(userData?.data?.roles || {}).filter(
-            ([orgId]) => orgId !== membership.organizationId,
-          ),
-        ),
-      ).flat();
-      const updatedPermissions = Object.values(
-        Object.fromEntries(
-          Object.entries(userData?.data?.permissions || {}).filter(
-            ([orgId]) => orgId !== membership.organizationId,
-          ),
-        ),
-      ).flat();
       const res = await mutateAsync({
-        ...userData?.data,
-        itemId: userId,
-        organizationIds: updatedOrganizationIds,
-        organizations: updatedOrganizationIds,
-        roles: updatedRoles,
-        permissions: updatedPermissions,
+        organizationId: membership.organizationId,
       });
       if (!res.isSuccess) {
         showErrorToast({ errors: res.errors });
@@ -66,13 +44,15 @@ export const RemoveMembership = ({
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      if (isErrorWithErrors(error)) {
-        showErrorToast({ errors: error.errors });
-      } else {
-        showErrorToast({ errors: "Something went wrong" });
-      }
+      showErrorToast({
+        errors:
+          typeof error === "object" && error !== null && "errors" in error
+            ? (error as { errors: unknown }).errors
+            : "Something went wrong",
+      });
     }
   };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -83,6 +63,7 @@ export const RemoveMembership = ({
             revoke all roles associated with this organization.
           </DialogDescription>
         </DialogHeader>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

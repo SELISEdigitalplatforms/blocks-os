@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui-kits/switch/switch";
 import { Plus, KeyRound } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useSaveAuthClient } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { useForm } from "react-hook-form";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -91,9 +91,10 @@ export const CreateClientCredential = ({
   const form = useForm<CreateClientModalFormValues>({
     resolver: zodResolver(createClientSchema),
     defaultValues: CreateClientModalFormDefaultValues,
+    mode: "onChange",
   });
   const {
-    formState: { isDirty },
+    formState: { isDirty, isValid },
     reset,
   } = form;
 
@@ -205,14 +206,22 @@ export const CreateClientCredential = ({
                       <FormLabel>Access Token Lifetime (minutes)</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          min={1}
-                          max={5}
-                          placeholder="5"
-                          value={Number.isFinite(field.value) ? field.value : ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.value === "" ? 0 : Number(e.target.value))
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="15"
+                          aria-label="Access Token Lifetime in minutes"
+                          value={
+                            !Number.isFinite(field.value) || field.value === 0
+                              ? ""
+                              : String(field.value)
                           }
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            if (raw !== "" && !/^\d+$/.test(raw)) return;
+                            field.onChange(raw === "" ? 0 : Number(raw));
+                            void form.trigger("accessTokenValidForNumberMinutes");
+                          }}
                           onBlur={field.onBlur}
                           name={field.name}
                         />
@@ -285,7 +294,7 @@ export const CreateClientCredential = ({
                   Cancel
                 </Button>
               </DialogClose>
-              <Button disabled={isPending || !isDirty} type="submit">
+              <Button disabled={isPending || !isDirty || !isValid} type="submit">
                 {isPending ? "Saving..." : isEdit ? "Save Changes" : "Add"}
               </Button>
             </DialogFooter>

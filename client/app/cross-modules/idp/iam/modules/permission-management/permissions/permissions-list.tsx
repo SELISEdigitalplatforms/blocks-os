@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { cn } from "@/lib/utils";
 import {
   IPermission,
@@ -22,7 +22,7 @@ import {
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
 type PermissionTableProps = {
   permissions: IPermission[];
@@ -220,7 +220,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
         cell: ({ row }) => (
           <div className="flex">
             {!row.original.isBuiltIn && (
-              <Link to={`/app/idp/permission-detail/${row.original.itemId}`}>
+              <Link to={`/app/iam/permission-detail/${row.original.itemId}`}>
                 <Button size="icon" className="rounded-full" variant="ghost">
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -261,7 +261,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 onClick={() => {
-                  navigate(scoped(`idp/permission-detail/${row.original.itemId}`));
+                  navigate(scoped(`iam/permission-detail/${row.original.itemId}`));
                 }}
                 isHoverable
               >

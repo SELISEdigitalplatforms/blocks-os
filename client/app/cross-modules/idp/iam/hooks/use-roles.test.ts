@@ -81,7 +81,7 @@ describe("use-roles hooks", () => {
     it("should set roles on permission successfully", async () => {
       vi.mocked(roleService.setRoles).mockResolvedValue(undefined as never);
 
-      const { result } = renderHook(() => useSetRoles("admin"), {
+      const { result } = renderHook(() => useSetRoles(), {
         wrapper: createWrapper(),
       });
 

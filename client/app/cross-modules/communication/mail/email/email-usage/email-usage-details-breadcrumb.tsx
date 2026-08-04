@@ -1,6 +1,6 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useNavigate } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import {
   Breadcrumb,
   BreadcrumbItem,

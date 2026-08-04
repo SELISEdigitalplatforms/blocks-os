@@ -11,8 +11,8 @@ const h = vi.hoisted(() => ({
   formProps: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
 vi.mock("@blocks-idp/iam/hooks/use-permission", () => ({
@@ -89,7 +89,7 @@ describe("AddPermission", () => {
       dependentPermissions: ["dp"],
     });
     expect(h.showSuccessToast).toHaveBeenCalled();
-    expect(h.navigate).toHaveBeenCalledWith("/app/proj/idp/permissions");
+    expect(h.navigate).toHaveBeenCalledWith("/app/proj/iam/permissions");
   });
 
   it("shows an error toast when the create response fails", async () => {

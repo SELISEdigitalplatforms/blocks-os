@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-auth-clients", () => ({
@@ -84,7 +84,7 @@ describe("CreateClientCredential", () => {
           {
             itemId: "client-1",
             name: "Existing Client",
-            accessTokenValidForNumberMinutes: 3,
+            accessTokenValidForNumberMinutes: 15,
             isActive: false,
             roles: ["viewer"],
             permissions: [],

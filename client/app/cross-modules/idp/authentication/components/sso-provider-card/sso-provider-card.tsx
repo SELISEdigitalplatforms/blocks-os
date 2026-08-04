@@ -10,11 +10,11 @@ import {
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ISsoProviderConfigurationWithMeta } from "@blocks-idp/authentication/models/sso.model";
 import { EllipsisVertical } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { Link } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { SSoProviderStatusToggle } from "../sso-provider-status-toggle";
 import { useMemo, useState } from "react";
-import { useTheme } from "@seliseblocks/blocks-kit/hooks";
+import { useTheme } from "@seliseblocks/genesis-os/hooks";
 type SSOProviderCardProps = {
   configuration: ISsoProviderConfigurationWithMeta;
 };
@@ -82,7 +82,7 @@ export const SSOProviderCard = ({ configuration }: SSOProviderCardProps) => {
                 <DropdownMenuContent align="end">
                   <Link
                     to={scoped(
-                      `idp/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`,
+                      `iam/sso-configuration?provider=${configuration.provider}&id=${configuration.itemId || ""}`,
                     )}
                   >
                     <DropdownMenuItem>Configure</DropdownMenuItem>

@@ -29,7 +29,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Button } from "@/components/ui-kits/button/button";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useNotificationConfigsFilterQueryParams } from "./notification-configs-filter-toolbar";
 import { useQueryState, parseAsBoolean } from "nuqs";
 

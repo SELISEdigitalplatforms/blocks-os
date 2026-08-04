@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui-kits/select/select";
 import { Info, Logs } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 interface ServiceCardProps {
   isLoading: boolean;
   name: string;

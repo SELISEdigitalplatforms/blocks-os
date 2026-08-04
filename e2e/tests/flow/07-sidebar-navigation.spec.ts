@@ -5,7 +5,7 @@ import { loginFresh, enterConsole, enterProject, openSidebarItem } from "../../s
 // dashboard layout. The sidebar lives inside /app/:itemId/*, so we first
 // click into a project from the console (its environment chip sets the
 // active :itemId and lands us on /app/<id>/dashboard). After that the full
-// sidebar — API Settings / IDP / Secrets & Configs / Logs & Traces — is
+// sidebar — API Settings / Identity & Access / Secrets & Configs / Logs & Traces — is
 // available and we click each group in turn.
 //
 // Each test sets its own timeout because the flow re-runs loginFresh.
@@ -22,14 +22,14 @@ test("navigates from console to API Settings", async ({ page }) => {
   });
 });
 
-test("navigates from console to IDP", async ({ page }) => {
+test("navigates from console to Identity & Access", async ({ page }) => {
   test.setTimeout(180_000);
   await loginFresh(page);
   await enterConsole(page);
   const itemId = await enterProject(page);
 
-  await openSidebarItem(page, "IDP");
-  await page.waitForURL(new RegExp(`/app/${itemId}/idp`), { timeout: 30_000 });
+  await openSidebarItem(page, "Identity & Access");
+  await page.waitForURL(new RegExp(`/app/${itemId}/iam`), { timeout: 30_000 });
 });
 
 test("navigates from console to Secrets & Configs", async ({ page }) => {

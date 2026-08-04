@@ -25,7 +25,7 @@ vi.stubGlobal(
 
 const navigate = vi.fn();
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => navigate,
   Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
     <a href={to} data-testid="edit-link">
@@ -34,7 +34,7 @@ vi.mock("react-router-dom", () => ({
   ),
 }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (path: string) => `/scoped/${path}`,
 }));
 
@@ -127,6 +127,6 @@ describe("PermissionsList", () => {
     const user = userEvent.setup();
     render(<PermissionsList permissions={[customPermission]} isLoading={false} />);
     await user.click(screen.getByText("Manage Billing"));
-    expect(navigate).toHaveBeenCalledWith("/scoped/idp/permission-detail/perm-custom");
+    expect(navigate).toHaveBeenCalledWith("/scoped/iam/permission-detail/perm-custom");
   });
 });

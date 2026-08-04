@@ -1,73 +1,67 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  setQueryParams: vi.fn(),
-  queryParams: { page: 0, pageSize: 10, email: "", name: "" },
-  getArgs: undefined as unknown,
-  data: { data: [{ itemId: "u1" }], totalCount: 25 },
   isLoading: false,
   isFetching: false,
+  data: { data: [], totalCount: 0 } as { data: unknown[]; totalCount: number },
+  setQueryParams: vi.fn(),
+  tableProps: null as Record<string, unknown> | null,
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
-  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
-}));
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUsers: (args: unknown) => {
-    h.getArgs = args;
-    return { isLoading: h.isLoading, isFetching: h.isFetching, data: h.data };
-  },
+  useGetUsers: () => ({ isLoading: h.isLoading, isFetching: h.isFetching, data: h.data }),
 }));
-vi.mock("./organization-users-table", () => ({
-  OrganizationUsersTable: ({ users, isLoading }: { users: unknown[]; isLoading: boolean }) => (
-    <div data-testid="table">{isLoading ? "loading" : `count:${users.length}`}</div>
-  ),
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
 }));
 vi.mock("./organization-users-filter-toolbar", () => ({
-  OrganizationUsersFilterToolbar: () => <div data-testid="toolbar" />,
+  OrganizationUsersFilterToolbar: () => <div data-testid="filter-toolbar" />,
   useOrganizationUsersFilterQueryParams: () => ({
-    queryParams: h.queryParams,
+    queryParams: { page: 0, pageSize: 5, email: "", name: "" },
     setQueryParams: h.setQueryParams,
   }),
-  useOrganizationUsersSortQueryParams: () => ({
-    sortQueryParams: { property: "Name", isDescending: false },
-  }),
+  useOrganizationUsersSortQueryParams: () => ({ sortQueryParams: {} }),
 }));
-vi.mock("@/components/ui-kits/pagination/pagination", () => ({
-  Pagination: ({ onChange }: { onChange: (p: number) => void }) => (
-    <button data-testid="page" onClick={() => onChange(3)}>
-      page
-    </button>
-  ),
+vi.mock("./organization-users-table", () => ({
+  OrganizationUsersTable: (props: Record<string, unknown>) => {
+    h.tableProps = props;
+    return <div data-testid="users-table">rows:{(props.users as unknown[]).length}</div>;
+  },
 }));
 
 import { OrganizationUsers } from "./organization-users";
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isLoading = false;
+  h.isFetching = false;
+  h.data = { data: [], totalCount: 0 };
+});
+
 describe("OrganizationUsers", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.isLoading = false;
-    h.isFetching = false;
-    h.data = { data: [{ itemId: "u1" }], totalCount: 25 };
+  it("renders the title, description and filter toolbar", () => {
+    render(<OrganizationUsers organizationId="o1" title="Members" description="All members" />);
+    expect(screen.getByText("Members")).toBeTruthy();
+    expect(screen.getByText("All members")).toBeTruthy();
+    expect(screen.getByTestId("filter-toolbar")).toBeTruthy();
   });
 
-  it("scopes the user query to the organization id", () => {
-    render(<OrganizationUsers organizationId="org-9" />);
-    expect(h.getArgs).toMatchObject({ filter: { organizationId: "org-9" }, projectKey: "tenant-1" });
+  it("passes fetched users to the table", () => {
+    h.data = { data: [{ id: 1 }, { id: 2 }], totalCount: 2 };
+    render(<OrganizationUsers organizationId="o1" />);
+    expect(screen.getByTestId("users-table").textContent).toContain("rows:2");
   });
 
-  it("renders the table and pagination", () => {
-    render(<OrganizationUsers organizationId="org-9" />);
-    expect(screen.getByTestId("table").textContent).toBe("count:1");
-    expect(screen.getByTestId("page")).toBeTruthy();
+  it("shows the members range summary in the footer when there are results", () => {
+    h.data = { data: [{ id: 1 }], totalCount: 12 };
+    render(<OrganizationUsers organizationId="o1" />);
+    expect(screen.getByText(/Showing 1.*of 12 members/)).toBeTruthy();
   });
 
-  it("changes the page through pagination", () => {
-    render(<OrganizationUsers organizationId="org-9" />);
-    fireEvent.click(screen.getByTestId("page"));
-    expect((h.setQueryParams.mock.calls[0][0] as (p: object) => object)({})).toMatchObject({
-      page: 3,
-    });
+  it("marks the table as loading while fetching", () => {
+    h.isFetching = true;
+    render(<OrganizationUsers organizationId="o1" />);
+    expect(h.tableProps?.isLoading).toBe(true);
   });
 });

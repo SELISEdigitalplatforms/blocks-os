@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -16,16 +16,16 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-project", () => ({
   useDisableProject: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
-vi.mock("@seliseblocks/blocks-kit/store", () => ({
+vi.mock("@seliseblocks/genesis-os/store", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/utils", () => ({
+vi.mock("@seliseblocks/genesis-os/utils", () => ({
   showSuccessToast: (...a: unknown[]) => h.showSuccessToast(...a),
   showErrorToast: (...a: unknown[]) => h.showErrorToast(...a),
   isErrorWithErrors: (e: unknown) => h.isErrorWithErrors(e),
 }));
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router-dom")>();
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
   return { ...actual, useNavigate: () => h.navigate };
 });
 

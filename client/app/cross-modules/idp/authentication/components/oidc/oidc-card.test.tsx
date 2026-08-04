@@ -10,14 +10,14 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("react-router-dom")>()),
+vi.mock("react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router")>()),
   useNavigate: () => h.navigate,
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
 }));
-vi.mock("@seliseblocks/blocks-kit", () => {
+vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
     useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
@@ -75,6 +75,13 @@ describe("OIDCCard", () => {
     expect(screen.getByText("Client Id")).toBeTruthy();
     expect(screen.getByText("Redirect URI(s)")).toBeTruthy();
     expect(screen.getByText("openid profile")).toBeTruthy();
+  });
+
+  it("keeps the OIDC tag and adds a Device Flow tag for device-flow clients", () => {
+    renderCard(makeItem({ isDeviceFlowClient: true }));
+
+    expect(screen.getByText("OIDC")).toBeTruthy();
+    expect(screen.getByText("Device Flow")).toBeTruthy();
   });
 
   it("navigates to the branding template", async () => {

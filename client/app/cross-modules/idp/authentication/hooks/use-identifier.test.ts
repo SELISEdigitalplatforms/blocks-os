@@ -56,7 +56,7 @@ describe("use-identifier hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockResponse);
-      expect(projectService.getPublicCertificateInformation).toHaveBeenCalledWith(TEST_PROJECT_KEY);
+      expect(projectService.getPublicCertificateInformation).toHaveBeenCalledWith();
     });
 
     it("should not fetch when projectKey is empty", () => {

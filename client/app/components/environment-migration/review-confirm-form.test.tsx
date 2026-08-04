@@ -15,8 +15,8 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({ useNavigate: () => h.navigate }));
-vi.mock("@seliseblocks/blocks-kit", () => {
+vi.mock("react-router", () => ({ useNavigate: () => h.navigate }));
+vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
     useProjectStore: () => ({ selectedTenantGroup: h.selectedTenantGroup }),
@@ -26,7 +26,7 @@ vi.mock("@seliseblocks/blocks-kit", () => {
     TooltipProvider: Passthrough,
   };
 });
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useCountDown: () => ({ remainingTime: h.remainingTime, reset: h.reset }),
 }));
 vi.mock("@/hooks/use-project", () => ({
@@ -156,7 +156,9 @@ describe("ReviewConfirmForm", () => {
         verificationCode: "12345",
       }),
     );
-    expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Migration started successfully!" });
+    expect(h.showSuccessToast).toHaveBeenCalledWith({
+      description: "Migration has been started, you will be notified once it's complete!",
+    });
     expect(h.navigate).toHaveBeenCalledWith("/app/project/group-1/environments");
   });
 

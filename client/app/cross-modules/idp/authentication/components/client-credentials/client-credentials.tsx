@@ -1,6 +1,6 @@
 import { ClientCredentialList } from "./client-credentials-list";
 import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 
 // type SummaryTileProps = {

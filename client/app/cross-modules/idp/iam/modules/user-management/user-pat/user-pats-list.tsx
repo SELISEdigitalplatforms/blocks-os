@@ -9,20 +9,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { IPATResponse } from "@blocks-idp/iam/models/user";
+import { IPATApi } from "@blocks-idp/iam/security/api";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
-import { useMemo, useState } from "react";
-import { GenerateTokenModal } from "./generate-pat-modal";
+import { useMemo } from "react";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
-import { useIsMobile } from "@seliseblocks/blocks-kit/hooks";
+import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
 type PATListProps = {
   isLoading: boolean;
-  data: IPATResponse[];
-  id: string;
+  data: IPATApi[];
 };
 
 const LoadingSkelton = () => (
@@ -33,10 +31,10 @@ const LoadingSkelton = () => (
   </div>
 );
 
-export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
+export const UserPATList = ({ isLoading, data }: PATListProps) => {
   const isMobile = useIsMobile();
 
-  const columns: ColumnDef<IPATResponse>[] = useMemo(
+  const columns: ColumnDef<IPATApi>[] = useMemo(
     () => [
       {
         accessorKey: "note",
@@ -47,8 +45,8 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
         ),
         cell: ({ row }) => (
           <div className="flex w-[100px] items-center sm:w-[140px] lg:w-[180px]">
-            <span className="truncate" title={row.original.note || "—"}>
-              {row.original.note || "—"}
+            <span className="truncate" title={row.original.note || "\u2014"}>
+              {row.original.note || "\u2014"}
             </span>
           </div>
         ),
@@ -62,11 +60,11 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
         ),
         cell: ({ row }) => {
           return (
-            <div className="group flex w-[120px] flex-col sm:w-[150px] lg:w-[200px]">
+            <div className="group flex w-[280px] min-w-[280px] max-w-[380px] flex-col">
               <div className="relative rounded-[4px] px-2 py-1">
                 <span
                   className={cn(
-                    "block truncate lg:overflow-visible lg:text-clip lg:whitespace-normal",
+                    "block truncate",
                     isMobile && "transition-all group-hover:blur-sm",
                   )}
                   title={row.original.code}
@@ -143,19 +141,11 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (isLoading) return <LoadingSkelton />;
 
   return (
-    <>
-      <div className="mb-5 flex items-center justify-between text-lg font-bold text-high-emphasis">
-        <h1>PATs (Personal Access Tokens)</h1>
-        <Button onClick={() => setIsModalOpen(true)} size="sm">
-          Generate PAT
-        </Button>
-      </div>
-
+    <div className="overflow-x-auto">
       <Table className="text-sm">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -197,8 +187,6 @@ export const UserPATList = ({ isLoading, data, id }: PATListProps) => {
           )}
         </TableBody>
       </Table>
-
-      <GenerateTokenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} id={id} />
-    </>
+    </div>
   );
 };

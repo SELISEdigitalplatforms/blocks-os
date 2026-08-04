@@ -1,66 +1,80 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({
-  setQueryParams: vi.fn(),
-  queryParams: { page: 0, pageSize: 10, email: "", name: "" },
-  data: { data: [{ itemId: "u1" }], totalCount: 25 },
-  isLoading: false,
-  isFetching: false,
-}));
-
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
+
+const h = vi.hoisted(() => ({
+  isLoading: false,
+  isFetching: false,
+  data: { data: [], totalCount: 0 } as { data: unknown[]; totalCount: number },
+  queryParams: {} as Record<string, string | number>,
+  lastQuery: null as Record<string, unknown> | null,
+  tableProps: null as Record<string, unknown> | null,
+}));
+
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUsers: () => ({ isLoading: h.isLoading, isFetching: h.isFetching, data: h.data }),
+  useGetUsers: (q: Record<string, unknown>) => {
+    h.lastQuery = q;
+    return { isLoading: h.isLoading, isFetching: h.isFetching, data: h.data };
+  },
+}));
+vi.mock("@/store/useProjectStore", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
 }));
 vi.mock("./users-table", () => ({
-  UsersTable: ({ users, isLoading }: { users: unknown[]; isLoading: boolean }) => (
-    <div data-testid="table">{isLoading ? "loading" : `count:${users.length}`}</div>
-  ),
+  UsersTable: (props: Record<string, unknown>) => {
+    h.tableProps = props;
+    return <div data-testid="users-table">rows:{(props.users as unknown[]).length}</div>;
+  },
 }));
 vi.mock("./users-filter-toolbar", () => ({
-  UsersFilterToolbar: () => <div data-testid="toolbar" />,
-  useUsersFilterQueryParams: () => ({ queryParams: h.queryParams, setQueryParams: h.setQueryParams }),
-  useUsersSortQueryParams: () => ({ sortQueryParams: { property: "Name", isDescending: false } }),
-}));
-vi.mock("@/components/ui-kits/pagination/pagination", () => ({
-  Pagination: ({ onChange }: { onChange: (p: number) => void }) => (
-    <button data-testid="page" onClick={() => onChange(2)}>
-      page
-    </button>
-  ),
+  UsersSearchFilter: () => <div data-testid="search-filter" />,
+  UsersDateFilters: () => <div data-testid="date-filter" />,
+  useUsersFilterQueryParams: () => ({ queryParams: h.queryParams, setQueryParams: vi.fn() }),
+  useUsersSortQueryParams: () => ({ sortQueryParams: {} }),
 }));
 
 import { Users } from "./users";
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.isLoading = false;
+  h.isFetching = false;
+  h.data = { data: [], totalCount: 0 };
+  h.queryParams = {
+    page: 0,
+    pageSize: 10,
+    "selected-filter": "name",
+    name: "alice",
+    email: "a@b.co",
+  };
+});
+
 describe("Users", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.isLoading = false;
-    h.isFetching = false;
-    h.data = { data: [{ itemId: "u1" }], totalCount: 25 };
+  it("renders the search and date filters plus the users table", () => {
+    h.data = { data: [{ id: 1 }, { id: 2 }], totalCount: 2 };
+    render(<Users />);
+    expect(screen.getByTestId("search-filter")).toBeTruthy();
+    expect(screen.getByTestId("date-filter")).toBeTruthy();
+    expect((screen.getByTestId("users-table") as HTMLElement).textContent).toContain("rows:2");
   });
 
-  it("renders the users table and pagination", () => {
+  it("uses the name as query text when the name filter is selected", () => {
     render(<Users />);
-    expect(screen.getByTestId("table").textContent).toBe("count:1");
-    expect(screen.getByTestId("page")).toBeTruthy();
+    expect(h.lastQuery?.query).toBe("alice");
   });
 
-  it("hides pagination while loading", () => {
-    h.isLoading = true;
+  it("uses the email as query text when the email filter is selected", () => {
+    h.queryParams["selected-filter"] = "email";
     render(<Users />);
-    expect(screen.getByTestId("table").textContent).toBe("loading");
-    expect(screen.queryByTestId("page")).toBeNull();
+    expect(h.lastQuery?.query).toBe("a@b.co");
   });
 
-  it("changes the page through pagination", () => {
+  it("marks the table as loading while fetching", () => {
+    h.isFetching = true;
     render(<Users />);
-    fireEvent.click(screen.getByTestId("page"));
-    expect((h.setQueryParams.mock.calls[0][0] as (p: object) => object)({})).toMatchObject({
-      page: 2,
-    });
+    expect(h.tableProps?.isLoading).toBe(true);
   });
 });

@@ -25,11 +25,11 @@ vi.stubGlobal(
 
 const navigate = vi.fn();
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (path: string) => `/scoped/${path}`,
 }));
 
@@ -101,7 +101,7 @@ describe("RolesList", () => {
     const user = userEvent.setup();
     render(<RolesList roles={[role]} isLoading={false} />);
     await user.click(screen.getByText("Administrator"));
-    expect(navigate).toHaveBeenCalledWith("/scoped/idp/role-detail/role-1");
+    expect(navigate).toHaveBeenCalledWith("/scoped/iam/role-detail/role-1");
   });
 
   it("opens the update-role dialog when the edit button is clicked", async () => {

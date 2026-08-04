@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({
   activeFilters: 0,
 }));
 
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({ useIsMobile: () => h.isMobile }));
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useIsMobile: () => h.isMobile }));
 vi.mock("@/hooks/use-active-filters-count", () => ({
   useActiveFiltersCount: () => h.activeFilters,
 }));

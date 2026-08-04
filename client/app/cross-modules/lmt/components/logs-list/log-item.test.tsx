@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/hooks/use-lmt-base-path", () => ({ useLmtBasePath: () => "/app/proj/lmt" }));

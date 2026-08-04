@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IEmailTemplate } from "@blocks-communication/mail/models/email";
 
@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
   isConfigsFetching: false,
   sendTestMail: vi.fn(),
   isSending: false,
-  user: { data: { email: "me@acme.io" } },
+  userDetails: { email: "me@acme.io" } as { email: string } | null,
   navigate: vi.fn(),
   toast: vi.fn(),
   showErrorToast: vi.fn(),
@@ -35,13 +35,14 @@ vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
     data: h.configs,
   }),
 }));
-vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUser: () => ({ data: h.user }),
+vi.mock("@seliseblocks/genesis-os/store", () => ({
+  useUserStore: (selector: (state: { userDetails: { email: string } | null }) => unknown) =>
+    selector({ userDetails: h.userDetails }),
 }));
 vi.mock("@blocks-localization/hooks/use-language-manager", () => ({
   useGetLanguages: () => ({ isLoading: false, data: { data: [] } }),
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/scoped/${p}`,
   usePathSegments: () => [],
 }));
@@ -49,8 +50,8 @@ vi.mock("@/hooks/use-toast", () => ({
   toast: h.toast,
   showErrorToast: h.showErrorToast,
 }));
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual<typeof import("react-router")>("react-router");
   return { ...actual, useNavigate: () => h.navigate };
 });
 
@@ -89,7 +90,7 @@ describe("EmailCommunicationDetails", () => {
     h.isConfigsLoading = false;
     h.isConfigsFetching = false;
     h.isSending = false;
-    h.user = { data: { email: "me@acme.io" } };
+    h.userDetails = { email: "me@acme.io" };
     h.sendTestMail.mockResolvedValue({ isSuccess: true });
   });
 
