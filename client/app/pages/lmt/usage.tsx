@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
   useProjectStore,
-} from "@seliseblocks/blocks-kit";
+} from "@seliseblocks/genesis-os";
 import { Network, Clock, CircleCheck, CircleAlert } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 

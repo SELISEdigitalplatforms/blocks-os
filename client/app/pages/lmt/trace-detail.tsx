@@ -1,5 +1,5 @@
 import { TraceDetails } from "@blocks-lmt/components/trace-details";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 
 export function LmtTraceDetailRoute() {
   const { traceId } = useParams<{ traceId: string }>();

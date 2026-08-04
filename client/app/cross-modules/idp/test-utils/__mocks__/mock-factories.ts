@@ -9,7 +9,7 @@
  *
  * Usage in test files (vi.mock calls must be at the top level of the test file):
  *
- *   vi.mock("@seliseblocks/blocks-kit", () => mockProjectStoreFactory());
+ *   vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
  *   vi.mock("@/hooks/use-toast", () => mockToastFactory());
  *   vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
  *   vi.mock("@blocks-idp/authentication/services/auth.service", () => mockAuthServiceFactory());
@@ -89,7 +89,11 @@ export const mockUserServiceFactory = () => ({
     getUser: vi.fn(),
     getUserById: vi.fn(),
     addUser: vi.fn(),
+    isUserExist: vi.fn(),
     updateUser: vi.fn(),
+    updateMe: vi.fn(),
+    updateUserAccessControl: vi.fn(),
+    revokeAccess: vi.fn(),
     getSignUpSetting: vi.fn(),
     saveSignUpSetting: vi.fn(),
     saveRolesAndPermissions: vi.fn(),

@@ -2,7 +2,7 @@
 import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { permissionService } from "@blocks-idp/iam/services/permission.service";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   Accordion,
   AccordionContent,
@@ -32,7 +32,7 @@ export const PermissionSelection = forwardRef(function PermissionSelection(
     isFetching: isPermissionFetching,
     data: permissions,
   } = useQuery({
-    queryKey: ["permissions", slug],
+    queryKey: ["permissions", tenantId, slug],
     queryFn: () =>
       permissionService.getPermissions({
         page: 0,

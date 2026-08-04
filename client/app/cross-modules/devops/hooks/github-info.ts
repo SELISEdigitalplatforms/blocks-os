@@ -2,13 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { githubInfoService } from "../services/github-info.service";
 import { IBuildApiResponse } from "../models/deployed-logs";
 import { IChangeRepoSpecs, IChangeSettings, IManualDeploymentPayload } from "../models/utils";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 
 export const useGithubVerification = (code: string) => {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
   return useQuery({
-    queryKey: ["github-verification", code],
+    queryKey: ["github-verification", projectKey, code],
     queryFn: () => githubInfoService.verifyAuthorization(code, projectKey),
     enabled: !!code && !!projectKey,
   });
@@ -74,7 +74,7 @@ export const useGithubBranches = (repo: string) => {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
   return useQuery({
-    queryKey: ["github-branches", repo],
+    queryKey: ["github-branches", projectKey, repo],
     queryFn: () => githubInfoService.getGithubBranches(repo, projectKey),
     enabled: !!repo && !!projectKey,
     retry: false,
@@ -86,7 +86,7 @@ export const useRepoAndGitBranchMatch = (repoId: string, enabled: boolean = true
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
   return useQuery({
-    queryKey: ["git-branch-match", repoId],
+    queryKey: ["git-branch-match", projectKey, repoId],
     queryFn: () => githubInfoService.getRepoAndGitBranchMatch(repoId, projectKey),
     enabled: !!repoId && enabled && !!projectKey,
     retry: false,
@@ -210,7 +210,7 @@ export const useGetCardProjectAndBranch = (buildId: string) => {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
   return useQuery<IBuildApiResponse>({
-    queryKey: ["project-repo", buildId],
+    queryKey: ["project-repo", projectKey, buildId],
     queryFn: () => {
       if (!buildId) {
         throw new Error("Project ID is required");

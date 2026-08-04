@@ -20,7 +20,7 @@ const h = vi.hoisted(() => ({
   showErrorToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@/hooks/use-toast", () => ({

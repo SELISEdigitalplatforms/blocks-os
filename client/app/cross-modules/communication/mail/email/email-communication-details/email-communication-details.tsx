@@ -6,13 +6,12 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import EditCommunication from "@blocks-communication/mail/components/email-service/modals/edit-communication/edit-communication";
 import { checkValidDate, formatFullDate, parseDateString } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
-import { useNavigate } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { useNavigate } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useUserStore } from "@seliseblocks/genesis-os/store";
 import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { langConfigureData } from "@blocks-localization/constants/language-dummy-data";
 import {
@@ -29,7 +28,7 @@ export function EmailCommunicationDetails({
 }) {
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
-  const { data: loggedInUser } = useGetUser();
+  const userDetails = useUserStore((state) => state.userDetails);
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
   const {
     isLoading: isConfigsLoading,
@@ -56,9 +55,12 @@ export function EmailCommunicationDetails({
   if (!emailDetails || isLoading || isFetching || isConfigsLoading || isConfigsFetching) {
     return <EmailTemplateDetailsSkeleton />;
   }
-  BREADCRUMB_CUSTOM_TITLES["/email-management/communications"] = "Email Templates";
-  BREADCRUMB_CUSTOM_TITLES["/email-management/communications/" + emailDetails?.itemId] =
-    emailDetails?.name ? emailDetails.name : "";
+  const emailBasePath = scoped("email-management");
+  const breadcrumbTitles = {
+    [emailBasePath]: "Email Management",
+    [`${emailBasePath}/communications`]: null,
+    [`${emailBasePath}/communications/${emailDetails.itemId}`]: emailDetails.name ?? "",
+  };
   const confirmationModalData = {
     dialogTitle: "Send test email",
     dialogSubtitle: "Are you sure you want to send a test email?",
@@ -87,7 +89,7 @@ export function EmailCommunicationDetails({
   const sendTestEmail = async () => {
     try {
       const payload = {
-        to: loggedInUser?.data?.email || "",
+        to: userDetails?.email || "",
         purpose: emailDetails.name || "",
         language: emailDetails.language || "",
       };
@@ -118,44 +120,46 @@ export function EmailCommunicationDetails({
   };
   return (
     <div>
-      <div className="hidden md:flex">
-        <PageBreadcrumb breadcrumbIndex={3} />
-      </div>
-      <div className="mt-5 flex items-center justify-between">
-        <div className="item-center flex gap-2">
+      <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8"
+            className="h-8 w-8 shrink-0 md:hidden"
             onClick={() => (onBack ? onBack() : navigate(-1))}
+            aria-label="Go back"
           >
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg font-semibold md:text-2xl">{emailDetails.name}</h1>
+          <PageBreadcrumb
+            breadcrumbIndex={3}
+            className="flex min-w-0"
+            listClassName="text-base sm:text-lg"
+            customTitles={breadcrumbTitles}
+          />
+          <h1 className="truncate text-lg font-semibold md:sr-only">{emailDetails.name}</h1>
         </div>
-        <div className="flex gap-4">
-          <div>
-            <Button
-              size="default"
-              variant="outline"
-              className="gap-2 shadow-none hover:bg-white"
-              disabled={isPending}
-              onClick={sendTestEmailModalOpen}
-            >
-              <Send className="h-5 w-5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Send test Email</span>
-            </Button>
-            <Dialog open={isSendTestEmailModalOpen} onOpenChange={setIsSendTestEmailModalOpen}>
-              <ConfirmationModal
-                onCancel={() => {
-                  setIsSendTestEmailModalOpen(false);
-                }}
-                onConfirm={sendTestEmail}
-                data={confirmationModalData}
-                buttonState={{ confirm: { disable: isPending } }}
-              />
-            </Dialog>
-          </div>
+        <div className="flex shrink-0">
+          <Button
+            size="default"
+            variant="outline"
+            className="gap-2 shadow-none hover:bg-white"
+            disabled={isPending}
+            onClick={sendTestEmailModalOpen}
+          >
+            <Send className="h-5 w-5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Send test Email</span>
+          </Button>
+          <Dialog open={isSendTestEmailModalOpen} onOpenChange={setIsSendTestEmailModalOpen}>
+            <ConfirmationModal
+              onCancel={() => {
+                setIsSendTestEmailModalOpen(false);
+              }}
+              onConfirm={sendTestEmail}
+              data={confirmationModalData}
+              buttonState={{ confirm: { disable: isPending } }}
+            />
+          </Dialog>
         </div>
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">

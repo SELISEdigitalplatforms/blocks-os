@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { AlertTriangle, Check } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
@@ -27,10 +27,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { useCountDown } from "@seliseblocks/blocks-kit/hooks";
+import { useCountDown } from "@seliseblocks/genesis-os/hooks";
 import { useInitiateMigration, useVerifyMigration } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useDataMigrationFormState } from "./migration-form-state";
 import { MIGRATION_SERVICE_NAME_TO_ID, migrationVerificationSchema } from "./migration-form-schema";
 
@@ -131,7 +131,7 @@ export const ReviewConfirmForm = () => {
       });
 
       if (response.isSuccess && response.isValid) {
-        showSuccessToast({ description: "Migration started successfully!" });
+        showSuccessToast({ description: "Migration has been started, you will be notified once it's complete!" });
         setIsVerificationModalOpen(false);
         navigate(groupId ? `/app/project/${groupId}/environments` : "/app/console");
         return;

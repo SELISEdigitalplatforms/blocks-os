@@ -1,5 +1,5 @@
 import { CaptchaProps, CaptchaRef } from "@/components/captcha/index.type";
-import { useTheme } from "@seliseblocks/blocks-kit/hooks";
+import { useTheme } from "@seliseblocks/genesis-os/hooks";
 import { useCallback, useRef, useState } from "react";
 
 type UseCaptchaProps = {
@@ -10,9 +10,9 @@ type UseCaptchaProps = {
 type UseCaptchaReturn = {
   code: string;
   reset: () => void;
-  ref: React.RefObject<CaptchaRef>;
+  ref: React.RefObject<CaptchaRef | null>;
   captcha: {
-    ref: React.RefObject<CaptchaRef>;
+    ref: React.RefObject<CaptchaRef | null>;
     type: CaptchaProps["type"];
     siteKey: string;
     theme: "dark" | "light";

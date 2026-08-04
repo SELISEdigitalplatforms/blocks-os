@@ -1,13 +1,17 @@
 import { shortGuidGenerator, useCreateProjectFormState } from "@/components/create-project/utils";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { IUpdateProjectPayload, IValidateCnameProjectPayload } from "@/models/project.model";
+import {
+  IRestoreProjectPayload,
+  IUpdateProjectPayload,
+  IValidateCnameProjectPayload,
+} from "@/models/project.model";
 import { projectService } from "@/services/project.service";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
-import { useImpersonateStore, useProjectStore } from "@seliseblocks/blocks-kit";
+import { useImpersonateStore, useProjectStore } from "@seliseblocks/genesis-os";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 export const useGetProjects = ({
   tenantGroupId,
@@ -149,6 +153,28 @@ export const useDisableProject = (options: { projectKey: string }) => {
   });
 };
 
+export const useGetProjectStatus = (itemId?: string) => {
+  return useQuery({
+    queryKey: ["identifier", "project-status", itemId],
+    queryFn: () => projectService.getProjectStatus(itemId as string),
+    enabled: Boolean(itemId),
+  });
+};
+
+export const useRestoreProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["identifier", "project", "restore"],
+    mutationFn: (payload: IRestoreProjectPayload) => projectService.restoreProject(payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["identifier", "project-status", variables.itemId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["identifier", "project"] });
+    },
+  });
+};
+
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -166,8 +192,7 @@ export const useGetMigrationStatus = (tenantGroupId: string) => {
   return useQuery({
     queryKey: ["identifier", "migration-status", tenantGroupId],
     queryFn: () => crossProjectService.getMigrationStatus(tenantGroupId),
-    //TODO: Enable this query when the migration feature is ready to be used
-    enabled: false,
+    enabled: !!tenantGroupId,
   });
 };
 

@@ -14,7 +14,9 @@ namespace XUnitTest.TestSupport
         public BlocksTestContext(
             string tenantId = "tenant-1",
             string userId = "user-1",
-            string userName = "user@blocks.com")
+            string userName = "user@blocks.com",
+            bool impersonated = false,
+            string? originalTenantId = null)
         {
             var context = BlocksContext.Create(
                 tenantId: tenantId,
@@ -30,7 +32,8 @@ namespace XUnitTest.TestSupport
                 phoneNumber: "0000000000",
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                originalTenantId: tenantId);
+                originalTenantId: originalTenantId ?? tenantId,
+                impersonated: impersonated);
 
             BlocksContext.SetContext(context);
         }

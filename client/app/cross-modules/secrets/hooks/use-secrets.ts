@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { secretsService } from "@/services/secrets.service";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import type { SaveSecretRequest } from "@/cross-modules/secrets/constants/secret-key.enum";

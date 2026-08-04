@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TraceTree } from "@blocks-lmt/models/trace.model";
 
@@ -18,11 +18,11 @@ const h = vi.hoisted(() => ({
 vi.mock("@/hooks/use-lmt-base-path", () => ({
   useLmtBasePath: () => "/app/lmt",
 }));
-vi.mock("@seliseblocks/blocks-kit/hooks", () => ({
+vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useIsMobile: () => h.isMobile,
   usePathSegments: () => [],
 }));
-vi.mock("@seliseblocks/blocks-kit", async () => {
+vi.mock("@seliseblocks/genesis-os", async () => {
   const React = await import("react");
   const Pass = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);

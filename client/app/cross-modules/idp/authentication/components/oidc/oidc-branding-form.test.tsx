@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => ({
+vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
 }));
 vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () => ({
@@ -52,6 +52,7 @@ const credential = {
   redirectUris: ["https://app/cb"],
   allowedResponseTypes: ["code"],
   registerAsIdentityProvider: true,
+  isDeviceFlowClient: true,
   clientBrandColor: "#abcdef",
   clientLogoUrl: "https://cdn/logo.png",
 };
@@ -135,7 +136,12 @@ describe("OidcBrandingForm", () => {
     await waitFor(() => expect(latestActions()).toBeTruthy());
     await latestActions().onSave();
     expect(h.saveOidc).toHaveBeenCalledWith(
-      expect.objectContaining({ itemId: "c1", clientBrandColor: "#abcdef" }),
+      expect.objectContaining({
+        itemId: "c1",
+        clientBrandColor: "#abcdef",
+        isDeviceFlowClient: true,
+        allowedResponseTypes: [],
+      }),
     );
     expect(h.showSuccessToast).toHaveBeenCalled();
   });

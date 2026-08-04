@@ -9,10 +9,15 @@ import {
 import { EmailConfiguration } from "@blocks-communication/mail/email/email-configure/email-configure";
 import { Settings } from "lucide-react";
 import { parseAsBoolean, useQueryState } from "nuqs";
-import { Link, Outlet, useLocation } from "react-router-dom";
-import { useScopedPath } from "@seliseblocks/blocks-kit/hooks";
+import { Link, Outlet, useLocation } from "react-router";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { AddRole } from "@blocks-idp/iam/modules/role-management";
+import {
+  AddOrganization,
+  OrganizationConfig,
+} from "@blocks-idp/iam/modules/organization-management";
+import { InviteUser } from "@blocks-idp/iam/modules/user-management";
 
 export const AuthenticationConfigLayout = () => {
   const { pathname } = useLocation();
@@ -33,9 +38,16 @@ export const AuthenticationConfigLayout = () => {
 
   const headerActions = (
     <>
+      {currentPath === "users" && <InviteUser />}
+      {currentPath === "organizations" && (
+        <>
+          <OrganizationConfig />
+          <AddOrganization />
+        </>
+      )}
       {currentPath === "roles" && <AddRole />}
       {currentPath === "permissions" && (
-        <Link to={scoped("idp/permission-detail/new")}>
+        <Link to={scoped("iam/permission-detail/new")}>
           <PrimaryButton label="Add Permission" />
         </Link>
       )}

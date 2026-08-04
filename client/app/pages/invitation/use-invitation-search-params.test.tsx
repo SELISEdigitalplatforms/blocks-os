@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import React from "react";
 import { describe, expect, it } from "vitest";
 import {

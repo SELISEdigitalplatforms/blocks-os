@@ -39,8 +39,6 @@ const GET_SESSIONS_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_SESSIONS}\\?`);
 const GET_HISTORIES_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_HISTORIES}\\?`);
 const GET_USER_CODES_PATTERN = new RegExp(USER_ENDPOINTS.GET_USER_CODES);
 const GENERATE_USER_CODE_PATTERN = new RegExp(USER_ENDPOINTS.GENERATE_USER_CODE);
-const GET_USER_ROLES_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_USER_ROLES}\\?`);
-const GET_USER_PERMISSIONS_PATTERN = new RegExp(`${USER_ENDPOINTS.GET_USER_PERMISSIONS}\\?`);
 const DEACTIVATE_PATTERN = new RegExp(USER_ENDPOINTS.DEACTIVATE);
 
 // Account
@@ -65,10 +63,14 @@ const GET_RESOURCE_GROUPS_PATTERN = new RegExp(`${PERMISSION_ENDPOINTS.GET_RESOU
 
 // Organization
 const GET_ORGANIZATIONS_PATTERN = new RegExp(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATIONS}\\?`);
-const GET_ORGANIZATION_PATTERN = new RegExp(`${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}\\?`);
+// Single organization is /organizations/{id}; "config" is a sibling segment on
+// the same collection, so it has to be kept out of the id match.
+const GET_ORGANIZATION_PATTERN = new RegExp(
+  `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION}/(?!config)[^/?]+$`,
+);
 const SAVE_ORGANIZATION_PATTERN = new RegExp(ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION);
 const GET_ORGANIZATION_CONFIG_PATTERN = new RegExp(
-  `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG}\\?`,
+  `${ORGANIZATION_ENDPOINTS.GET_ORGANIZATION_CONFIG}(\\?|$)`,
 );
 const SAVE_ORGANIZATION_CONFIG_PATTERN = new RegExp(
   ORGANIZATION_ENDPOINTS.SAVE_ORGANIZATION_CONFIG,
@@ -100,12 +102,6 @@ export const iamHandlers = [
   ),
   http.get(GET_USER_CODES_PATTERN, () => HttpResponse.json({ data: [], errors: null })),
   http.post(GENERATE_USER_CODE_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
-  http.get(GET_USER_ROLES_PATTERN, () =>
-    HttpResponse.json({ data: [], totalCount: 0, errors: null }),
-  ),
-  http.get(GET_USER_PERMISSIONS_PATTERN, () =>
-    HttpResponse.json({ data: [], totalCount: 0, errors: null }),
-  ),
   http.post(DEACTIVATE_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
 
   // Account
@@ -133,11 +129,11 @@ export const iamHandlers = [
 
   // Organization
   http.get(GET_ORGANIZATIONS_PATTERN, () => HttpResponse.json(mockOrganizationsResponse)),
-  http.get(GET_ORGANIZATION_PATTERN, () => HttpResponse.json(mockGetOrganizationByIdResponse)),
-  http.post(SAVE_ORGANIZATION_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
   http.get(GET_ORGANIZATION_CONFIG_PATTERN, () =>
     HttpResponse.json(mockOrganizationConfigResponse),
   ),
+  http.get(GET_ORGANIZATION_PATTERN, () => HttpResponse.json(mockGetOrganizationByIdResponse)),
+  http.post(SAVE_ORGANIZATION_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
   http.post(SAVE_ORGANIZATION_CONFIG_PATTERN, () => HttpResponse.json(mockSuccessResponse)),
 
   // IAM Configuration

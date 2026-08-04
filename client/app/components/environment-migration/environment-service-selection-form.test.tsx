@@ -8,7 +8,7 @@ const h = vi.hoisted(() => ({
   selectedTenantGroup: "group-1" as string | undefined,
 }));
 
-vi.mock("@seliseblocks/blocks-kit", () => {
+vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
     useProjectStore: () => ({ selectedTenantGroup: h.selectedTenantGroup }),
@@ -51,8 +51,11 @@ describe("EnvironmentServiceSelectionForm", () => {
     expect(screen.getByText("Select environments & services")).toBeTruthy();
     expect(screen.getByLabelText("Source environment")).toBeTruthy();
     expect(screen.getByLabelText("Target environment")).toBeTruthy();
-    // Available services expose an enabled checkbox.
-    expect(screen.getByLabelText("Select Email")).toBeTruthy();
+    // Available services expose an enabled checkbox, unavailable ones a disabled one.
+    expect((screen.getByLabelText("Select Localization") as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+    expect((screen.getByLabelText("Select Email") as HTMLButtonElement).disabled).toBe(true);
     // Unavailable services render the disabled hint.
     expect(screen.getAllByText("Not available for this service").length).toBeGreaterThan(0);
   });
@@ -81,7 +84,7 @@ describe("EnvironmentServiceSelectionForm", () => {
     await user.click(screen.getByLabelText("Target environment"));
     await user.click(await screen.findByRole("option", { name: "Production" }));
 
-    await user.click(screen.getByLabelText("Select Email"));
+    await user.click(screen.getByLabelText("Select Localization"));
 
     const submit = await waitFor(() => {
       const btn = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
@@ -94,21 +97,21 @@ describe("EnvironmentServiceSelectionForm", () => {
     const stored = useDataMigrationFormState.getState().formData[0];
     expect(stored.sourceEnvironment).toBe("tenant-dev");
     expect(stored.targetEnvironment).toBe("tenant-prod");
-    expect(stored.services.some((s) => s.name === "Email" && s.selected)).toBe(true);
+    expect(stored.services.some((s) => s.name === "Language" && s.selected)).toBe(true);
   });
 
   it("reveals the overwrite-data switch once a service is selected and toggles it", async () => {
     const user = userEvent.setup();
     render(<EnvironmentServiceSelectionForm />);
-    expect(screen.queryByLabelText("Overwrite data for Email")).toBeNull();
-    await user.click(screen.getByLabelText("Select Email"));
-    const overwrite = await screen.findByLabelText("Overwrite data for Email");
+    expect(screen.queryByLabelText("Overwrite data for Localization")).toBeNull();
+    await user.click(screen.getByLabelText("Select Localization"));
+    const overwrite = await screen.findByLabelText("Overwrite data for Localization");
     expect(overwrite.getAttribute("aria-checked")).toBe("false");
     await user.click(overwrite);
     await waitFor(() =>
-      expect(screen.getByLabelText("Overwrite data for Email").getAttribute("aria-checked")).toBe(
-        "true",
-      ),
+      expect(
+        screen.getByLabelText("Overwrite data for Localization").getAttribute("aria-checked"),
+      ).toBe("true"),
     );
   });
 

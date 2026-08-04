@@ -6,8 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { useUpdateRepositories } from "@/hooks/use-project";
-import type { IDomain, IEnvRepository } from "@seliseblocks/blocks-kit/models";
-import { showErrorToast, showSuccessToast } from "@seliseblocks/blocks-kit/utils";
+import type { IDomain, IEnvRepository } from "@seliseblocks/genesis-os/models";
+import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { useMemo } from "react";
 import { SetCustomDomainForm } from "./form";
 

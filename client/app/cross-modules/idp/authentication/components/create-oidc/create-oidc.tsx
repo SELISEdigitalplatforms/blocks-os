@@ -17,7 +17,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useProjectStore } from "@seliseblocks/blocks-kit";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Info, Plus, Pencil, X } from "lucide-react";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -75,6 +75,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   const dialogDescription = isEditMode
     ? "Update OIDC client details"
     : "Enter details to generate a new key";
+  const isDeviceFlowClient = form.watch("isDeviceFlowClient");
 
   useEffect(() => {
     if (isEditMode && existingOidc?.oIDCClientCredential && open) {
@@ -90,12 +91,14 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         scope: credential.scope || "openid",
         clientBrandColor: credential.clientBrandColor || "#124091",
         clientDisplayName: credential.clientDisplayName || "",
-        isAutoRedirect: credential.isAutoRedirect ?? false,
+        isAutoRedirect: credential.isDeviceFlowClient ? false : (credential.isAutoRedirect ?? false),
         isActive: credential.isActive ?? true,
         requirePkce: credential.requirePkce ?? true,
         registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
-        allowedResponseTypes:
-          credential.allowedResponseTypes && credential.allowedResponseTypes.length
+        isDeviceFlowClient: credential.isDeviceFlowClient ?? false,
+        allowedResponseTypes: credential.isDeviceFlowClient
+          ? []
+          : credential.allowedResponseTypes && credential.allowedResponseTypes.length
             ? credential.allowedResponseTypes
             : ["code"],
       });
@@ -108,7 +111,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
   }, [existingOidc, isEditMode, open, form]);
 
   const onSubmit = async (data: CreateOIDCFormValues) => {
-    const redirectResult = redirectUriSubmitSchema.safeParse(data.redirectUris);
+    const isDeviceFlowClient = data.isDeviceFlowClient;
+    const redirectResult = isDeviceFlowClient
+      ? { success: true } as const
+      : redirectUriSubmitSchema.safeParse(data.redirectUris);
     if (!redirectResult.success) {
       redirectResult.error.issues.forEach((issue) => {
         const path = issue.path as (string | number)[];
@@ -122,13 +128,16 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
     }
     try {
       const payload: ISaveOidcCredentialPayload = {
-        redirectUris: data.redirectUris.map((entry) => entry.value.trim()).filter(Boolean),
+        redirectUris: isDeviceFlowClient
+          ? []
+          : data.redirectUris.map((entry) => entry.value.trim()).filter(Boolean),
         scope: data.scope,
-        isAutoRedirect: data.isAutoRedirect,
+        isAutoRedirect: isDeviceFlowClient ? false : data.isAutoRedirect,
         isActive: data.isActive,
-        requirePkce: data.requirePkce,
-        registerAsIdentityProvider: data.registerAsIdentityProvider,
-        allowedResponseTypes: data.allowedResponseTypes,
+        requirePkce: isDeviceFlowClient ? false : data.requirePkce,
+        registerAsIdentityProvider: isDeviceFlowClient ? false : data.registerAsIdentityProvider,
+        isDeviceFlowClient,
+        allowedResponseTypes: isDeviceFlowClient ? [] : data.allowedResponseTypes,
         itemId: isEditMode ? itemId : "",
         clientLogoUrl: clientLogoUrl || undefined,
         clientBrandColor: data.clientBrandColor || undefined,
@@ -199,52 +208,87 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 )}
               />
 
-              {/* Redirect URI(s) - multi entry like identity provider */}
-              <div className="space-y-2">
-                <FormLabel>
-                  Redirect URI(s) <span className="text-destructive">*</span>
-                </FormLabel>
-                {fields.map((fieldItem, idx) => (
-                  <div key={fieldItem.id} className="flex items-start gap-2">
-                    <div className="flex-1 space-y-1">
-                      <Input
-                        placeholder="https://example.com/oidc"
-                        {...register(`redirectUris.${idx}.value` as const)}
+              <FormField
+                control={form.control}
+                name="isDeviceFlowClient"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Device Flow</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="isDeviceFlowClient"
+                        className="shrink-0"
+                        checked={!!field.value}
+                        onCheckedChange={(v) => {
+                          field.onChange(!!v);
+                          if (v) {
+                            form.clearErrors("redirectUris");
+                            // Auto redirect is meaningless without a browser
+                            // redirect, so drop any value held before the toggle.
+                            form.setValue("isAutoRedirect", false);
+                          }
+                        }}
                       />
-                      <FormMessage>
-                        {form.formState.errors.redirectUris?.[idx]?.value?.message as string}
-                      </FormMessage>
-                    </div>
-                    {fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="mt-0 h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => remove(idx)}
+                      <label
+                        htmlFor="isDeviceFlowClient"
+                        className="cursor-pointer text-sm text-high-emphasis"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
+                        Generate this OIDC client only for device flow
+                      </label>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Redirect URI(s) - multi entry like identity provider */}
+              {!isDeviceFlowClient && (
+                <div className="space-y-2">
+                  <FormLabel>
+                    Redirect URI(s) <span className="text-destructive">*</span>
+                  </FormLabel>
+                  {fields.map((fieldItem, idx) => (
+                    <div key={fieldItem.id} className="flex items-start gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Input
+                          placeholder="https://example.com/oidc"
+                          {...register(`redirectUris.${idx}.value` as const)}
+                        />
+                        <FormMessage>
+                          {form.formState.errors.redirectUris?.[idx]?.value?.message as string}
+                        </FormMessage>
+                      </div>
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="mt-0 h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => remove(idx)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-1 h-7 gap-1 px-2 text-xs"
+                    onClick={() => append({ value: "" })}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add Redirect URI
+                  </Button>
+                  {form.formState.errors.redirectUris &&
+                    !Array.isArray(form.formState.errors.redirectUris) && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.redirectUris.message as string}
+                      </p>
                     )}
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-1 h-7 gap-1 px-2 text-xs"
-                  onClick={() => append({ value: "" })}
-                >
-                  <Plus className="h-3 w-3" />
-                  Add Redirect URI
-                </Button>
-                {form.formState.errors.redirectUris &&
-                  !Array.isArray(form.formState.errors.redirectUris) && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.redirectUris.message as string}
-                    </p>
-                  )}
-              </div>
+                </div>
+              )}
 
               {/* Status | Scope(s) | PKCE — single borderless row */}
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
@@ -294,102 +338,113 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                   )}
                 />
 
+                {!isDeviceFlowClient && (
+                  <FormField
+                    control={form.control}
+                    name="requirePkce"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>PKCE</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="requirePkce"
+                            checked={!!field.value}
+                            onCheckedChange={(v) => field.onChange(!!v)}
+                          />
+                          <label
+                            htmlFor="requirePkce"
+                            className="cursor-pointer text-sm text-high-emphasis"
+                          >
+                            Enabled
+                          </label>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+
+              {/* Auto Redirect — single borderless row. Device-flow clients never
+                  redirect a browser: the device polls /oidc/token while the user
+                  approves elsewhere, so the option doesn't apply. */}
+              {!isDeviceFlowClient && (
                 <FormField
                   control={form.control}
-                  name="requirePkce"
+                  name="isAutoRedirect"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>PKCE</FormLabel>
+                      <FormLabel>Auto Redirect</FormLabel>
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          id="requirePkce"
+                          id="isAutoRedirect"
                           checked={!!field.value}
                           onCheckedChange={(v) => field.onChange(!!v)}
                         />
                         <label
-                          htmlFor="requirePkce"
+                          htmlFor="isAutoRedirect"
                           className="cursor-pointer text-sm text-high-emphasis"
                         >
-                          Enabled
+                          Redirect automatically after authentication
                         </label>
                       </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-
-              {/* Auto Redirect — single borderless row */}
-              <FormField
-                control={form.control}
-                name="isAutoRedirect"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Auto Redirect</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="isAutoRedirect"
-                        checked={!!field.value}
-                        onCheckedChange={(v) => field.onChange(!!v)}
-                      />
-                      <label
-                        htmlFor="isAutoRedirect"
-                        className="cursor-pointer text-sm text-high-emphasis"
-                      >
-                        Redirect automatically after authentication
-                      </label>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              )}
 
               {/* Register as Identity Provider — on by default; the full
-                  explanation lives in the tooltip to keep the row compact */}
-              <FormField
-                control={form.control}
-                name="registerAsIdentityProvider"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Identity Provider</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="registerAsIdentityProvider"
-                        className="shrink-0"
-                        checked={!!field.value}
-                        onCheckedChange={(v) => field.onChange(!!v)}
-                      />
-                      <label
-                        htmlFor="registerAsIdentityProvider"
-                        className="cursor-pointer text-sm text-high-emphasis"
-                      >
-                        Register as a Blocks OIDC identity provider
-                      </label>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            aria-label="More about Blocks OIDC identity providers"
-                            className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            <Info className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p className="text-xs leading-relaxed">
-                            Adds a matching <span className="font-medium">Blocks OIDC</span> entry
-                            under Identity Provider, so other Blocks projects can offer this project
-                            as a sign-in option and federate their users to it. Uncheck if this
-                            client is only used by your own app to sign users in — you can always
-                            add the provider later.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  explanation lives in the tooltip to keep the row compact.
+                  Not offered for device-flow clients: federation hardcodes the
+                  authorization_code grant and reuses redirect URIs, which
+                  device-flow clients don't have. */}
+              {!isDeviceFlowClient && (
+                <FormField
+                  control={form.control}
+                  name="registerAsIdentityProvider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Identity Provider</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="registerAsIdentityProvider"
+                          className="shrink-0"
+                          checked={!!field.value}
+                          onCheckedChange={(v) => field.onChange(!!v)}
+                        />
+                        <label
+                          htmlFor="registerAsIdentityProvider"
+                          className="cursor-pointer text-sm text-high-emphasis"
+                        >
+                          Register as a Blocks OIDC identity provider
+                        </label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="More about Blocks OIDC identity providers"
+                              className="shrink-0 rounded-full text-muted-foreground transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-xs leading-relaxed">
+                              Adds a matching <span className="font-medium">Blocks OIDC</span> entry
+                              under Identity Provider, so other Blocks projects can offer this project
+                              as a sign-in option and federate their users to it. Uncheck if this
+                              client is only used by your own app to sign users in — you can always
+                              add the provider later.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </form>
           </Form>
         </div>
