@@ -9,6 +9,7 @@
 	  <PackageReference Include="SeliseBlocks.MailDriver.OS" />
 	  <PackageReference Include="SeliseBlocks.StorageDriver.OS" />
    <PackageReference Include="MimeKit" />
+   <PackageReference Include="MailKit" />
 	  <PackageReference Include="SixLabors.Fonts" />
     <PackageReference Include="SSH.NET" />
   </ItemGroup>
