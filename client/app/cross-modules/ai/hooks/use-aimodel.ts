@@ -30,23 +30,27 @@ export const useCreateModel = () => {
   });
 };
 
+// `project_key` is sent as a query parameter, so the same payload returns different
+// models per project. It has to be part of the query key, otherwise switching
+// projects serves the previous project's cache until a reload. The two list hooks
+// also need distinct prefixes: they call different endpoints with the same payload.
 export const useGetModels = (payload: IModelListPayload, project_key: string) => {
   return useQuery({
-    queryKey: ["models", payload],
+    queryKey: ["models", "list", project_key, payload],
     queryFn: () => modelService.getModels(payload, project_key),
   });
 };
 
 export const useGetAllModels = (payload: IModelListPayload, project_key: string) => {
   return useQuery({
-    queryKey: ["models", payload],
+    queryKey: ["models", "all", project_key, payload],
     queryFn: () => modelService.getAllModels(payload, project_key),
   });
 };
 
 export const useGetModelById = (modelId: string, project_key: string) => {
   return useQuery({
-    queryKey: ["model", modelId],
+    queryKey: ["model", project_key, modelId],
     queryFn: () => modelService.getModelById(modelId, project_key),
     enabled: !!modelId,
   });

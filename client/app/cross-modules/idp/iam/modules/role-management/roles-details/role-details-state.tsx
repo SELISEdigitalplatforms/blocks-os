@@ -137,7 +137,7 @@ export const RoleDetailsProvider = ({
   const [store] = useState(() => createRoleDetailsStore());
   const { data: role } = useGetRoleById({ id, projectKey });
   const { data: permissionsData } = useQuery({
-    queryKey: ["permissions"],
+    queryKey: ["permissions", projectKey],
     queryFn: () =>
       permissionService.getPermissions({
         page: 0,
