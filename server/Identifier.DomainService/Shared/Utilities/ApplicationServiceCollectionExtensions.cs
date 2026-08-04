@@ -1,8 +1,10 @@
-﻿using Blocks.Extension.DependencyInjection;
+using Blocks.Extension.DependencyInjection;
 using DomainService.Certificate;
 using DomainService.ManagedService;
 using DomainService.ManagedService.Services;
 using DomainService.ManagedService.Validator;
+using DomainService.Migration;
+using DomainService.Migration.Services;
 using DomainService.People;
 using DomainService.Projects;
 using DomainService.Shared.Services;
@@ -25,9 +27,9 @@ namespace DomainService.Shared
             services.AddTransient<IValidator<UpdateAuthConfigRequest>, UpdateAuthConfigRequestValidator>();
             services.AddTransient<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
             services.AddTransient<IValidator<RegisterServiceRequest>, RegisterServiceRequestValidator>();
+            services.AddTransient<IValidator<MigrationRequest>, MigrationRequestValidator>();
 
-
-            // Register services
+   // Register services
             services.AddSingleton<IProjectManagementService, ProjectManagementService>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
 
@@ -39,8 +41,10 @@ namespace DomainService.Shared
             services.AddSingleton<IServiceManagementRepository, ServiceManagementRepository>();
             services.AddSingleton<ISubscriptionRepository, SubscriptionRepository>();
             services.AddSingleton<ISubscriptionService, SubscriptionService>();
-
-            // People
+            services.AddSingleton<IMigrationService, MigrationService>();
+            services.AddSingleton<IMigrationRepository, MigrationRepository>();
+            services.AddSingleton<IMigrationNotificationService, MigrationNotificationService>();
+   // People
             services.AddSingleton<IPeopleService, PeopleService>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
 
