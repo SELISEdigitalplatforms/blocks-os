@@ -128,7 +128,7 @@ export class ProjectService {
   verifyMigration(
     payload: IVerifyMigrationRequest,
   ): Promise<IMigrationVerificationResponse> {
-    return http.post(MIGRATION_ENDPOINTS.VERIFY, payload);
+    return http.post(MIGRATION_ENDPOINTS.VERIFY, payload, undefined, { absoluteUrl: true });
   }
 
   getMigrationStatus(tenantGroupId: string): Promise<IMigrationStatusResponse> {
