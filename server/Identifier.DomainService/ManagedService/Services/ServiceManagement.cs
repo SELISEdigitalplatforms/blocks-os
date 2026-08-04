@@ -7,6 +7,7 @@ using DomainService.Shared;
 using DomainService.Shared.Entities;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver.Linq;
 using SeliseBlocks.LMT.Client;
 using StackExchange.Redis;
@@ -17,6 +18,9 @@ namespace DomainService.ManagedService.Services
 {
     public class ServiceManagement : IServiceManagement
     {
+        private const string FallbackEncryptionKey = "LMT";
+
+        private readonly ILogger<ServiceManagement> _logger;
         private readonly IValidator<RegisterServiceRequest> _registerServiceRequestValidator;
         private readonly IServiceManagementRepository _serviceManagementRepository;
         private readonly IBlocksSecret _blocksSecret;
@@ -29,13 +33,15 @@ namespace DomainService.ManagedService.Services
         private readonly IConfiguration configuration;
 
         [ExcludeFromCodeCoverage]
-        public ServiceManagement(IServiceManagementRepository serviceManagementRepository,
+        public ServiceManagement(ILogger<ServiceManagement> logger,
+                                 IServiceManagementRepository serviceManagementRepository,
                                  IValidator<RegisterServiceRequest> registerServiceRequestValidator,
                                  IBlocksSecret blocksSecret,
                                  ICacheClient cacheClient,
                                  ITenants tenants,
                                  IConfiguration configuration)
         {
+            _logger = logger;
             _serviceManagementRepository = serviceManagementRepository;
             _registerServiceRequestValidator = registerServiceRequestValidator;
             _blocksSecret = blocksSecret;
@@ -86,9 +92,19 @@ namespace DomainService.ManagedService.Services
                 connectionString = await ProcessLmtAsync(service);
             }
 
-            var tenantId = BlocksContext.GetContext()?.TenantId ?? null;
-            var tenant = _tenants.GetTenantByID(tenantId ?? "");
-            service.ServiceBusConnectionString = EncryptionHelper.Encrypt(connectionString, tenant?.TenantSalt ?? "LMT");
+            var tenantId = ResolveEncryptionTenantId();
+            var tenant = _tenants.GetTenantByID(tenantId);
+
+            if (tenant is null)
+            {
+                // Encrypting under the fallback key writes a value that only decrypts while
+                // the tenant stays unresolvable, so this is worth knowing about at write time.
+                _logger.LogWarning(
+                    "Tenant {TenantId} did not resolve; encrypting service {ServiceId} with the fallback key",
+                    tenantId, service.ServiceId);
+            }
+
+            service.ServiceBusConnectionString = EncryptionHelper.Encrypt(connectionString, tenant?.TenantSalt ?? FallbackEncryptionKey);
 
             await _serviceManagementRepository.SaveAsync(service);
 
@@ -238,17 +254,34 @@ namespace DomainService.ManagedService.Services
         {
             var (data, count) = await _serviceManagementRepository.GetAllServicesAsync(request);
 
-            var tenantId = BlocksContext.GetContext()?.TenantId;
-            var tenant = _tenants.GetTenantByID(tenantId ?? string.Empty);
+            var tenantId = ResolveEncryptionTenantId();
+            var tenant = _tenants.GetTenantByID(tenantId);
 
             var serviceList = data.ToList();
 
+            if (tenant is null && serviceList.Count > 0)
+            {
+                _logger.LogWarning(
+                    "Tenant {TenantId} did not resolve; decrypting {Count} service(s) with the fallback key",
+                    tenantId, serviceList.Count);
+            }
+
             foreach (var item in serviceList)
             {
-                item.ServiceBusConnectionString = EncryptionHelper.Decrypt(
+                var plainText = DecryptConnectionString(
                     item.ServiceBusConnectionString,
-                    tenant?.TenantSalt ?? "LMT"
+                    tenant?.TenantSalt ?? FallbackEncryptionKey
                 );
+
+                if (plainText.Length == 0 && !string.IsNullOrEmpty(item.ServiceBusConnectionString))
+                {
+                    _logger.LogError(
+                        "Connection string for service {ServiceId} (tenant {TenantId}) could not be decrypted with " +
+                        "the {KeySource} key; returning it empty",
+                        item.ServiceId, tenantId, tenant is null ? "fallback" : "tenant salt");
+                }
+
+                item.ServiceBusConnectionString = plainText;
                 item.ServiceType = item.ServiceType ?? "backend";
             }
 
@@ -259,6 +292,45 @@ namespace DomainService.ManagedService.Services
             };
         }
 
+        // Connection strings are keyed on the salt of the tenant the caller authenticated
+        // as, never the tenant being browsed. Under impersonation those differ: the token
+        // carries the project in TenantId and the console's own tenant in OriginalTenantId,
+        // and it is the latter that encrypted the value. Services registered before the
+        // console moved to impersonation were written the same way, so honouring the
+        // original tenant keeps those rows readable.
+        private static string ResolveEncryptionTenantId()
+        {
+            var context = BlocksContext.GetContext();
+
+            if (context is null)
+            {
+                return string.Empty;
+            }
+
+            return context.Impersonated && !string.IsNullOrEmpty(context.OriginalTenantId)
+                ? context.OriginalTenantId
+                : context.TenantId;
+        }
+
+        // A service registered while the tenant lookup was unresolved was encrypted with
+        // the fallback key, so a salt that does not open the value is retried against it.
+        // Anything neither key opens (a rotated salt) is blanked rather than failing the
+        // whole listing on one unreadable row.
+        private static string DecryptConnectionString(string cipherText, string salt)
+        {
+            if (EncryptionHelper.TryDecrypt(cipherText, salt, out var plainText))
+            {
+                return plainText;
+            }
+
+            if (salt != FallbackEncryptionKey &&
+                EncryptionHelper.TryDecrypt(cipherText, FallbackEncryptionKey, out plainText))
+            {
+                return plainText;
+            }
+
+            return string.Empty;
+        }
     }
 
     public class ServiceUpdateMessage

@@ -94,10 +94,14 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
             value: item.requirePkce ? "required" : "not required",
           },
         ]),
-    {
-      key: "Redirect automatically after authentication",
-      value: item.isAutoRedirect ? "true" : "false",
-    },
+    ...(item.isDeviceFlowClient
+      ? []
+      : [
+          {
+            key: "Redirect automatically after authentication",
+            value: item.isAutoRedirect ? "true" : "false",
+          },
+        ]),
     {
       key: "Status",
       value: item.isActive ? "active" : "inactive",

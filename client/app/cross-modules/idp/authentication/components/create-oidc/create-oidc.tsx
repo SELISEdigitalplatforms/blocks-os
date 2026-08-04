@@ -91,7 +91,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         scope: credential.scope || "openid",
         clientBrandColor: credential.clientBrandColor || "#124091",
         clientDisplayName: credential.clientDisplayName || "",
-        isAutoRedirect: credential.isAutoRedirect ?? false,
+        isAutoRedirect: credential.isDeviceFlowClient ? false : (credential.isAutoRedirect ?? false),
         isActive: credential.isActive ?? true,
         requirePkce: credential.requirePkce ?? true,
         registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
@@ -132,7 +132,7 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
           ? []
           : data.redirectUris.map((entry) => entry.value.trim()).filter(Boolean),
         scope: data.scope,
-        isAutoRedirect: data.isAutoRedirect,
+        isAutoRedirect: isDeviceFlowClient ? false : data.isAutoRedirect,
         isActive: data.isActive,
         requirePkce: isDeviceFlowClient ? false : data.requirePkce,
         registerAsIdentityProvider: isDeviceFlowClient ? false : data.registerAsIdentityProvider,
@@ -221,7 +221,12 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                         checked={!!field.value}
                         onCheckedChange={(v) => {
                           field.onChange(!!v);
-                          if (v) form.clearErrors("redirectUris");
+                          if (v) {
+                            form.clearErrors("redirectUris");
+                            // Auto redirect is meaningless without a browser
+                            // redirect, so drop any value held before the toggle.
+                            form.setValue("isAutoRedirect", false);
+                          }
                         }}
                       />
                       <label
@@ -360,30 +365,34 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                 )}
               </div>
 
-              {/* Auto Redirect — single borderless row */}
-              <FormField
-                control={form.control}
-                name="isAutoRedirect"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Auto Redirect</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="isAutoRedirect"
-                        checked={!!field.value}
-                        onCheckedChange={(v) => field.onChange(!!v)}
-                      />
-                      <label
-                        htmlFor="isAutoRedirect"
-                        className="cursor-pointer text-sm text-high-emphasis"
-                      >
-                        Redirect automatically after authentication
-                      </label>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Auto Redirect — single borderless row. Device-flow clients never
+                  redirect a browser: the device polls /oidc/token while the user
+                  approves elsewhere, so the option doesn't apply. */}
+              {!isDeviceFlowClient && (
+                <FormField
+                  control={form.control}
+                  name="isAutoRedirect"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Auto Redirect</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="isAutoRedirect"
+                          checked={!!field.value}
+                          onCheckedChange={(v) => field.onChange(!!v)}
+                        />
+                        <label
+                          htmlFor="isAutoRedirect"
+                          className="cursor-pointer text-sm text-high-emphasis"
+                        >
+                          Redirect automatically after authentication
+                        </label>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Register as Identity Provider — on by default; the full
                   explanation lives in the tooltip to keep the row compact.
