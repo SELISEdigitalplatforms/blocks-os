@@ -148,6 +148,7 @@ export const RoleDetailsProvider = ({
           search: "",
           isBuiltIn: "",
         },
+        organizationId: role?.data?.organizationId,
       }),
     refetchOnMount: "always",
   });

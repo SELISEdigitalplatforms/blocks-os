@@ -129,6 +129,7 @@ export interface IGetPermissionsPayload {
   };
   roles: string[];
   projectKey: string;
+  organizationId?: string;
 }
 export interface IGetPermissionByIdPayload {
   id: string;
