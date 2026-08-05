@@ -52,9 +52,9 @@ export const DOMAIN_ENDPOINTS = {
 const MIGRATION_SUBPATH = "/Migration";
 
 export const MIGRATION_ENDPOINTS = {
-  MIGRATE: `${API_BASES.LOGIC}${MIGRATION_SUBPATH}/Migrate`,
-  VERIFY: `${API_BASES.LOGIC}${MIGRATION_SUBPATH}/Verify`,
-  GET_STATUS: `${API_BASES.LOGIC}${MIGRATION_SUBPATH}/GetMigrationStatus`,
+  MIGRATE: `${API_BASES.OS}${MIGRATION_SUBPATH}/Migrate`,
+  VERIFY: `${API_BASES.OS}${MIGRATION_SUBPATH}/Verify`,
+  GET_STATUS: `${API_BASES.OS}${MIGRATION_SUBPATH}/GetMigrationStatus`,
 } as const;
 
 // ─── Subscription endpoints ───────────────────────────────────────────────────

@@ -4,10 +4,11 @@ using DomainService.Projects;
 using DomainService.Shared;
 using DomainService.Shared.Dtos;
 using DomainService.Shared.Entities;
+using SeliseBlocks.ConfigurationDriver;
 using Worker;
 using Worker.Configuration;
 using Worker.Consumers.Identifier;
-using SeliseBlocks.ConfigurationDriver;
+using Worker.Consumers.Migration;
 
 const string _serviceName = "blocks-os-worker";
 
@@ -46,8 +47,8 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<ConfigureDomainRequest>, DomainConfigureConsumer>();
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
             services.AddSingleton<IConsumer<CreateUserByEmailPostEvent>, CreateUserByEmailPostConsumer>();
-
-            ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
+            services.AddSingleton<IConsumer<MigrationCompletionEvent>, MigrationCompletionConsumer>();
+         ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
             #endregion
         });
 
