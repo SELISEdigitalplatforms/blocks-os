@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type StoreShape = {
-  role: { itemId?: string; name?: string; slug?: string } | null;
+  role: { itemId?: string; name?: string; slug?: string; organizationId?: string } | null;
   isEditMode: boolean;
   isInitialized: boolean;
   permissionMap: Map<string, { itemId: string; modified: boolean; changeState: string }>;
@@ -44,7 +44,7 @@ vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
 import { RoleDetailsContainer } from "./role-details";
 
 const baseStore = (overrides: Partial<StoreShape> = {}): StoreShape => ({
-  role: { itemId: "role-1", name: "Admin", slug: "admin" },
+  role: { itemId: "role-1", name: "Admin", slug: "admin", organizationId: "org-1" },
   isEditMode: false,
   isInitialized: true,
   permissionMap: new Map([
@@ -99,7 +99,7 @@ describe("RoleDetailsContainer", () => {
       expect(h.mutateAsync).toHaveBeenCalledWith({
         addPermissions: ["p1"],
         removePermissions: ["p2"],
-        projectKey: "tenant-1",
+        organizationId: "org-1",
         slug: "admin",
       }),
     );
@@ -110,9 +110,7 @@ describe("RoleDetailsContainer", () => {
   it("does not call the mutation when nothing changed", async () => {
     const store = baseStore({
       isEditMode: true,
-      permissionMap: new Map([
-        ["p3", { itemId: "p3", modified: false, changeState: "unchanged" }],
-      ]),
+      permissionMap: new Map([["p3", { itemId: "p3", modified: false, changeState: "unchanged" }]]),
     });
     h.store = store;
     render(<RoleDetailsContainer />);
