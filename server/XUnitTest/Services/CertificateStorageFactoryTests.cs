@@ -18,12 +18,23 @@ namespace XUnitTest.Services
         [Fact]
         public void Create_Azure_AttemptsAzureKeyVaultStorage()
         {
-            // The factory routes Azure to AzureKeyVaultStorage, whose constructor
-            // demands KeyVault configuration that is not present in the test
-            // environment, so construction fails loudly here.
-            var act = () => Factory().Create(CertificateStorageType.Azure);
+            // Remove any ambient KeyVault config so the AzureKeyVaultStorage
+            // constructor throws the expected "Azure config" exception.
+            // SetupKeyVault reads KeyVault__KeyVaultUrl from the process
+            // environment; without it, construction fails loudly here.
+            var originalKeyVaultUrl = Environment.GetEnvironmentVariable("KeyVault__KeyVaultUrl");
+            Environment.SetEnvironmentVariable("KeyVault__KeyVaultUrl", null);
 
-            act.Should().Throw<Exception>().WithMessage("*Azure config*");
+            try
+            {
+                var act = () => Factory().Create(CertificateStorageType.Azure);
+
+                act.Should().Throw<Exception>().WithMessage("*Azure config*");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("KeyVault__KeyVaultUrl", originalKeyVaultUrl);
+            }
         }
 
         [Fact]

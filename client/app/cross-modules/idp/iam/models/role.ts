@@ -35,6 +35,7 @@ export interface GetRolesPayload {
    * (the user-detail Access tab) can narrow the list to one organization.
    */
   projectKey?: string;
+  organizationId?: string;
 }
 export interface GetRolesResponse {
   data: IRole[];
@@ -86,7 +87,7 @@ export interface SetRoles {
   addPermissions: string[];
   removePermissions: string[];
   slug: string;
-  projectKey: string;
+  organizationId: string;
 }
 
 export interface GroupsData {

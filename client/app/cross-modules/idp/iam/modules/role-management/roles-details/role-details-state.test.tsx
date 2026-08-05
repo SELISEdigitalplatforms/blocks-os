@@ -57,7 +57,7 @@ const renderStore = () =>
 describe("role-details-state store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useGetRoleById.mockReturnValue({ data: { data: { slug: "admin" } } });
+    useGetRoleById.mockReturnValue({ data: { data: { slug: "admin", organizationId: "org-1" } } });
     getPermissions.mockResolvedValue({ data: permissions });
   });
 
@@ -150,5 +150,13 @@ describe("role-details-state store", () => {
     expect(result.current.isEditMode).toBe(false);
     expect(result.current.permissionMap.get("users:view")?.isInitiallyAssigned).toBe(true);
     expect(result.current.permissionMap.get("users:view")?.modified).toBe(false);
+  });
+
+  it("forwards the role's organizationId to the permissions request", async () => {
+    renderStore();
+    await waitFor(() => expect(getPermissions).toHaveBeenCalledTimes(1));
+    expect(getPermissions).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: "org-1", projectKey: "t1" }),
+    );
   });
 });

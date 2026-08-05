@@ -53,6 +53,10 @@ describe("CreateOIDC", () => {
     render(<CreateOIDC />);
     await user.click(screen.getByRole("button", { name: /Create/i }));
     await user.type(screen.getByPlaceholderText("Enter client name"), "My App");
+    // Touch the redirect URI field to trigger onChange validation
+    await user.click(screen.getByPlaceholderText("https://example.com/oidc"));
+    await user.keyboard("a");
+    await user.keyboard("{Backspace}");
     await user.click(screen.getByRole("button", { name: "Add" }));
     expect(await screen.findByText("Redirect URI is required")).toBeTruthy();
     expect(h.saveOidc).not.toHaveBeenCalled();

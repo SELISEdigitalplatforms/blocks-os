@@ -69,8 +69,8 @@ export const mockProjectStoreFactory = () => ({
     setProjects: vi.fn(),
     resetProject: vi.fn(),
     reset: vi.fn(),
-    setTennantGroup: vi.fn(),
-    resetTennantGroup: vi.fn(),
+    setTenantGroup: vi.fn(),
+    resetTenantGroup: vi.fn(),
   })),
 });
 
