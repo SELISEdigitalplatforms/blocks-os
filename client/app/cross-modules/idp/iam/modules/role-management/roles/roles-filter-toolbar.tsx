@@ -43,10 +43,6 @@ export const RolesFilterToolBar = () => {
       })),
     [data?.organizations],
   );
-  const options = useMemo(
-    () => [{ label: "Default", value: "default" }, ...(orgOptions || [])],
-    [orgOptions],
-  );
 
   const changeHandler = (key: string, value: string) => {
     setQueryParams((params) => ({ ...params, [key]: value, page: 0 }));
@@ -63,7 +59,7 @@ export const RolesFilterToolBar = () => {
           type: "Radio",
           label: "Organization",
           props: {
-            options: options,
+            options: orgOptions || [],
           },
         },
       ]}
