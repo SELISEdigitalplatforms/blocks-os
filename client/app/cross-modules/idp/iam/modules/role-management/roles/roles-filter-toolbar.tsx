@@ -37,7 +37,7 @@ export const RolesFilterToolBar = () => {
   });
   const orgOptions = useMemo(
     () =>
-      data?.organizations.map((org) => ({
+      (data?.organizations ?? []).map((org) => ({
         label: org.name,
         value: org.itemId,
       })),

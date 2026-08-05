@@ -73,4 +73,9 @@ describe("RolesFilterToolBar", () => {
     useRolesSortQueryParams();
     expect(h.sort).toHaveBeenCalledWith({ initial: { property: "Name", isDescending: false } });
   });
+
+  it("does not crash when the organizations response is null", () => {
+    h.useGetOrganizations.mockReturnValue({ data: { organizations: null } });
+    expect(() => render(<RolesFilterToolBar />)).not.toThrow();
+  });
 });
