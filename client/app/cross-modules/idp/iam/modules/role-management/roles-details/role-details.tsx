@@ -1,15 +1,15 @@
 // import { useMemo } from "react";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { Button } from "@/components/ui-kits/button/button";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 // import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
 // import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
-import { PermissionsSelectionPanel } from "./permissions-selection-panel";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { PermissionsSelectionPanel } from "./permissions-selection-panel";
 
 const RoleDetailsPageSkeleton = () => (
   <>
@@ -28,7 +28,6 @@ const RoleDetailsPageSkeleton = () => (
 );
 
 export function RoleDetailsContainer() {
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const role = useRoleDetailsStore((state) => state.role);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
   const discardChanges = useRoleDetailsStore((state) => state.discardChanges);
@@ -60,8 +59,8 @@ export function RoleDetailsContainer() {
       await mutateAsync({
         addPermissions: changedPermissions.added,
         removePermissions: changedPermissions.removed,
-        projectKey: tenantId,
         slug: role.slug,
+        organizationId: role.organizationId,
       });
       commitChanges();
       showSuccessToast({ description: "Role permissions updated successfully" });
