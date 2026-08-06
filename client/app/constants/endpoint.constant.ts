@@ -15,6 +15,7 @@ export const API_BASES = {
   MFA: "/api",
   ALERT: "/api",
   AI: "/api",
+  OS: `${trimTrailingSlash(getRuntimeEnv("BLOCKS_OS_BASE_URL"))}/api`,
   LOGIC: `${trimTrailingSlash(getRuntimeEnv("BLOCKS_LOGIC_BASE_URL"))}/api`,
   RELEASE: `${trimTrailingSlash(getRuntimeEnv("BLOCKS_RELEASE_BASE_URL"))}/api`,
   STUDIO: `${trimTrailingSlash(getRuntimeEnv("BLOCKS_STUDIO_BASE_URL"))}/api`,

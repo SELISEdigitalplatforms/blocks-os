@@ -136,8 +136,9 @@ export const RoleDetailsProvider = ({
 }) => {
   const [store] = useState(() => createRoleDetailsStore());
   const { data: role } = useGetRoleById({ id, projectKey });
+  const organizationId = role?.data?.organizationId;
   const { data: permissionsData } = useQuery({
-    queryKey: ["permissions", projectKey],
+    queryKey: ["permissions", projectKey, organizationId],
     queryFn: () =>
       permissionService.getPermissions({
         page: 0,
@@ -148,20 +149,21 @@ export const RoleDetailsProvider = ({
           search: "",
           isBuiltIn: "",
         },
+        organizationId,
       }),
-    refetchOnMount: "always",
+    enabled: !!organizationId,
   });
 
   useEffect(() => {
     store.setState({ isEditMode: false, isInitialized: false });
   }, [id, store]);
 
-  // initilize store when role data changes
+  // initialize store when role data changes
   useEffect(() => {
     if (!role?.data) return;
     store.setState((state) => ({ ...state, role: role.data }));
   }, [role?.data, store]);
-  // initilize store when permissions data changes (skip while there are unsaved edits)
+  // initialize store when permissions data changes (skip while there are unsaved edits)
   useEffect(() => {
     if (!permissionsData?.data || !role?.data) return;
     const hasUnsavedChanges = Array.from(store.getState().permissionMap.values()).some(
