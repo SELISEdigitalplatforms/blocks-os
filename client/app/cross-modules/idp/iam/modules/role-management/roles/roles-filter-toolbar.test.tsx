@@ -5,6 +5,7 @@ const h = vi.hoisted(() => ({
   setQueryParams: vi.fn(),
   queryParams: { search: "role", page: 0, pageSize: 10 },
   sort: vi.fn(),
+  useGetOrganizations: vi.fn(),
 }));
 
 vi.mock("nuqs", () => {
@@ -15,6 +16,14 @@ vi.mock("nuqs", () => {
     useQueryStates: () => [h.queryParams, h.setQueryParams],
   };
 });
+
+vi.mock("../../../hooks/use-organization", () => ({
+  useGetOrganizations: () => h.useGetOrganizations(),
+}));
+
+vi.mock("@seliseblocks/genesis-os/store", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
 
 vi.mock("@/components/filter-toolbar", () => ({
   useSortQueryParams: (arg: unknown) => {
@@ -42,7 +51,10 @@ import {
 } from "./roles-filter-toolbar";
 
 describe("RolesFilterToolBar", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.useGetOrganizations.mockReturnValue({ data: { organizations: [] } });
+  });
 
   it("updates a filter value and resets the page", () => {
     render(<RolesFilterToolBar />);
@@ -60,5 +72,10 @@ describe("RolesFilterToolBar", () => {
   it("initializes sort with Name ascending", () => {
     useRolesSortQueryParams();
     expect(h.sort).toHaveBeenCalledWith({ initial: { property: "Name", isDescending: false } });
+  });
+
+  it("does not crash when the organizations response is null", () => {
+    h.useGetOrganizations.mockReturnValue({ data: { organizations: null } });
+    expect(() => render(<RolesFilterToolBar />)).not.toThrow();
   });
 });

@@ -17,6 +17,7 @@ export const Roles = () => {
       search: queryParams.search,
     },
     sort: sortQueryParams,
+    organizationId: queryParams.orgId,
   });
   const onPageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
