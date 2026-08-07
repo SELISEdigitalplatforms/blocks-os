@@ -265,3 +265,6 @@ zap-*.xml
 *.trufflehog.json
 *-secrets.json
 *-semgrep.sarif
+
+# local scan and coverage output, never committed
+results/
