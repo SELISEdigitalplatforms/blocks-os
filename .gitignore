@@ -241,3 +241,27 @@ copilot-instructions.md
 !SECURITY.md
 !CODE_OF_CONDUCT.md
 scripts/scan.sh
+
+# --- CI scan + test artefacts: results belong in the inception-* portals only,
+# --- never in git and never as a GitHub artifact.
+.coverage/
+coverage/
+**/coverage/
+TestResults/
+**/TestResults/
+*.trx
+*.opencover.xml
+*.cobertura.xml
+client-junit.xml
+client-tests.xml
+.sonarqube/
+.scannerwork/
+sbom*.json
+*.cdx.json
+raw.json
+shield.json
+zap-out/
+zap-*.xml
+*.trufflehog.json
+*-secrets.json
+*-semgrep.sarif

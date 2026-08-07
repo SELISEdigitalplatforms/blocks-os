@@ -37,7 +37,7 @@ blocks-os/
 │   ├── XUnitTest/                  # Unit tests
 │   └── BlocksOS.sln                # Solution: Api, domain libraries, Workers, XUnitTest
 ├── e2e/                            # Playwright end-to-end tests (see e2e/README.md)
-├── scripts/                        # deploy.sh entry point
+├── scripts/                        # CI helper scripts (report converters)
 ├── run.sh                          # Build/run helpers (Unix/macOS; see below)
 ├── run.ps1                         # Same role on Windows (PowerShell; see below)
 ├── LICENSE
@@ -166,7 +166,7 @@ npm --prefix client run test:coverage
 
 ## Deployment
 
-`scripts/deploy.sh` is the maintainer deploy-and-scan pipeline for the dev host: it syncs the latest `inception`, builds and publishes the Api and Worker projects, restarts their systemd services, and then runs the security scans (SAST, SCA and DAST) against the deployed instance using scanners in the maintainers' environment. It is not a general-purpose installer.
+Deployment to the dev host is driven entirely by GitHub Actions from `.github/workflows/cicd-inception.yml`, the single entry point for the `inception` branch. Security scanning (SAST, SCA, DAST and secret scanning) runs in parallel on GitHub-hosted runners and publishes to the dedicated portals; only the build and deploy step (`inception-deploy.yml`) runs on the self-hosted dev host, where it syncs `inception`, builds the client into `server/Api/wwwroot`, publishes the Api and Worker projects and restarts their systemd services. There is no deploy script in the repository, and this is not a general-purpose installer.
 
 ## API and routing
 
