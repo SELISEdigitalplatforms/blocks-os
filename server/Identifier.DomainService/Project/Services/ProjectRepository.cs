@@ -320,7 +320,7 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageKeys", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),
+                // CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "TenantConfigurations", project),
                 CopyAndCustomizeIdentityConfigurationAsync(sourceDatabase, consumerDb, project),
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
@@ -335,7 +335,7 @@ namespace DomainService.Projects
 
             if(collectionExists)
             {
-               await targetDb.DropCollectionAsync(collectionName);
+              return;
             }
 
             var sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);

@@ -12,7 +12,7 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
-          <Format>cobertura</Format>
+          <Format>opencover,cobertura</Format>
           <ExcludeByFile>
             **/Program.cs,
             **/*Extensions.cs,
