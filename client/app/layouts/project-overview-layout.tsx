@@ -17,7 +17,7 @@ export function ProjectOverviewLayout({
   wrapper,
 }: ProjectOverviewLayoutProps) {
   const content = (
-    <DashboardLayoutProvider isOpen={true} persist>
+    <DashboardLayoutProvider isOpen={true}>
       <div className="flex w-full overflow-hidden">
         <SidebarMenuDesktop redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
         <div className="flex h-screen min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
