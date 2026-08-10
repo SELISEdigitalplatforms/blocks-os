@@ -173,6 +173,7 @@ export const OrganizationConfigForm = ({ config }: OrganizationConfigFormProps) 
             checked={isMultiOrgEnabled}
             onCheckedChange={handleMultiOrgToggle}
             disabled={isMultiOrgLocked || isPending}
+            disabledTooltip="Multi-organization environment cannot be disabled once it has been enabled"
           />
 
           {isMultiOrgEnabled ? (

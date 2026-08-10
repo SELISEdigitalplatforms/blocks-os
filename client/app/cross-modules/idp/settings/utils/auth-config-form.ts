@@ -8,9 +8,9 @@ export const getBlocksIamBaseUrl = () => trimTrailingSlash(getRuntimeEnv("BLOCKS
 const positiveInt = z.coerce
   .number()
   .int({ message: "Must be a whole number." })
-  .min(0, { message: "Must be zero or greater." })
+  .min(1, { message: "Value must be greater than zero." })
   .max(2147483647, {
-    message: "Value exceeds the allowed limit (0 - 2,147,483,647).",
+    message: "Value exceeds the allowed limit (1 - 2,147,483,647).",
   });
 
 export const authSettingsFormSchema = z.object({
