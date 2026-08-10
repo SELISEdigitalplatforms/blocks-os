@@ -174,9 +174,7 @@ export const LogsViewer = ({
     >
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
-        <LogsList
-          key={`${effectiveSelectedService?.id ?? "none"}-${JSON.stringify(filter ?? null)}`}
-        />
+        <LogsList key={effectiveSelectedService?.id ?? "none"} />
       </div>
     </LogsViewerContext.Provider>
   );

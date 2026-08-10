@@ -95,14 +95,27 @@ describe("TracesOverview", () => {
     await waitFor(() => expect(screen.getByText("Service One")).toBeTruthy());
   });
 
-  it("shows the empty state when there are no traces", () => {
+  it("shows the no-data state when there are no traces and no filter", () => {
     h.useGetTraces.mockReturnValue({
       data: { data: [], totalCount: 0 },
       isLoading: false,
       isFetching: false,
     });
     renderOverview();
-    expect(screen.getByText("No results.")).toBeTruthy();
+    expect(screen.getByText("No data found.")).toBeTruthy();
+  });
+
+  it("shows the no-results state when the filter returns nothing", async () => {
+    const user = userEvent.setup();
+    h.useGetTraces.mockReturnValue({
+      data: { data: [], totalCount: 0 },
+      isLoading: false,
+      isFetching: false,
+    });
+    renderOverview();
+    const search = (await screen.findAllByPlaceholderText("Search..."))[0];
+    await user.type(search, "missing");
+    await waitFor(() => expect(screen.getByText("No results found.")).toBeTruthy());
   });
 
   it("navigates to the trace detail when a row is clicked", async () => {

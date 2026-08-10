@@ -52,6 +52,10 @@ export function PermissionGroupCombobox({
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (disabled) {
+      setOpen(false);
+      return;
+    }
     setOpen(nextOpen);
     if (!nextOpen) setInputValue("");
   };
@@ -70,14 +74,18 @@ export function PermissionGroupCombobox({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild disabled={disabled}>
-        <div
+      <PopoverTrigger asChild>
+        <button
+          type="button"
           role="combobox"
-          aria-expanded={open}
+          disabled={disabled}
+          aria-disabled={disabled}
           className={cn(
             "flex h-10 w-full items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm",
             "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+            disabled
+              ? "cursor-not-allowed opacity-50"
+              : "cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
           )}
         >
           <span
@@ -96,7 +104,7 @@ export function PermissionGroupCombobox({
             </button>
           ) : null}
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-        </div>
+        </button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command shouldFilter={false}>

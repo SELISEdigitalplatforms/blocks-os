@@ -84,10 +84,12 @@ function TracesList({
   data,
   isLoading,
   services,
+  hasActiveFilter,
 }: {
   data: TraceTree[];
   isLoading: boolean;
   services: { label: string; value: string }[];
+  hasActiveFilter: boolean;
 }) {
   const { sortQueryParams, setSortQueryParams } = useTraceSortQueryParams();
   const navigate = useNavigate();
@@ -212,7 +214,7 @@ function TracesList({
                 colSpan={table.getAllColumns().length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No results.
+                {hasActiveFilter ? "No results found." : "No data found."}
               </TableCell>
             </TableRow>
           )}
@@ -283,6 +285,8 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     }));
   };
   const resetHandler = () => setQueryParams(null);
+  const hasActiveFilter =
+    queryParams.search.trim().length > 0 || queryParams.services.length > 0;
   return (
     <main>
       <Tabs
@@ -392,7 +396,12 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
               />
             </CardHeader>
             <CardContent>
-              <TracesList data={data?.data || []} isLoading={loading} services={allServices} />
+              <TracesList
+              data={data?.data || []}
+              isLoading={loading}
+              services={allServices}
+              hasActiveFilter={hasActiveFilter}
+            />
               {!loading && data && data.totalCount > queryParams.pageSize && (
                 <div className="mt-5 flex items-center md:justify-end">
                   <Pagination

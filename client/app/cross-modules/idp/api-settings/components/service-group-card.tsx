@@ -76,6 +76,8 @@ export const ServiceGroupCard = ({
             <SecurityPresetsPopover
               onEnableAllMfa={() => onBulkGroupMfa(groupIds, true)}
               onEnableAllCaptcha={() => onBulkGroupCaptcha(groupIds, true)}
+              onDisableAllMfa={() => onBulkGroupMfa(groupIds, false)}
+              onDisableAllCaptcha={() => onBulkGroupCaptcha(groupIds, false)}
             />
             <CollapsibleTrigger asChild>
               <button className="rounded-md p-1 transition-colors hover:bg-accent sm:p-1.5">

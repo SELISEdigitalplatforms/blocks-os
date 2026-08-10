@@ -9,14 +9,6 @@ import { useNavigate, useParams } from "react-router";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui-kits/breadcrumb/breadcrumb";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -39,7 +31,7 @@ const tabs = [
 ];
 
 export const PersonDetailPage = () => {
-  const { id = "", tenantGroupId = "" } = useParams<{
+  const { id = "" } = useParams<{
     id: string;
     tenantGroupId: string;
   }>();
@@ -84,26 +76,6 @@ export const PersonDetailPage = () => {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-4">
-        <Breadcrumb className="hidden md:flex">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/app/project/${tenantGroupId}/people`)}
-                >
-                  People
-                </button>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>
-                {isLoading ? <Skeleton className="h-4 w-24" /> : fullName || id}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-6 w-6" />

@@ -1,23 +1,23 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/Icon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
-      rel="stylesheet"
-    />
-    <title>Blocks OS</title>
-  </head>
 
-  <body class="min-h-screen bg-background font-sans text-foreground antialiased">
-    <div id="root"></div>
-    <div id="portal-root"></div>
-    <script>
-      /* =========================================================
+ <head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/Icon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+   href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+   rel="stylesheet" />
+  <title>Blocks OS</title>
+ </head>
+
+ <body class="min-h-screen bg-background font-sans text-foreground antialiased">
+  <div id="root"></div>
+  <div id="portal-root"></div>
+  <script>
+   /* =========================================================
 Runtime configuration — placeholder tokens below are replaced at
 server startup from the Mongo "Secrets" document (SecretKey
 "blocks-secret-os") via the FrontendRuntime config section.
@@ -41,8 +41,7 @@ them another way — but never commit real values back into this file.
     BLOCKS_IAM_CALLBACK_URL: "__BLOCKS_IAM_CALLBACK_URL__",
     BLOCKS_IAM_CLIENT_ID: "__BLOCKS_IAM_CLIENT_ID__",
     BLOCKS_LOCALIZATION_BASE_URL: "__BLOCKS_LOCALIZATION_BASE_URL__",
-    BLOCKS_LOCALIZATION_CALLBACK_URL:
-     "__BLOCKS_LOCALIZATION_CALLBACK_URL__",
+    BLOCKS_LOCALIZATION_CALLBACK_URL: "__BLOCKS_LOCALIZATION_CALLBACK_URL__",
     BLOCKS_LOCALIZATION_CLIENT_ID: "__BLOCKS_LOCALIZATION_CLIENT_ID__",
     BLOCKS_AGENTS_BASE_URL: "__BLOCKS_AGENTS_BASE_URL__",
     BLOCKS_AGENTS_CALLBACK_URL: "__BLOCKS_AGENTS_CALLBACK_URL__",
@@ -69,7 +68,6 @@ them another way — but never commit real values back into this file.
     BLOCKS_STUDIO_CALLBACK_URL: "__BLOCKS_STUDIO_CALLBACK_URL__",
     BLOCKS_STUDIO_CLIENT_ID: "__BLOCKS_STUDIO_CLIENT_ID__",
     BLOCKS_ALLOWED_SERVICES: "__BLOCKS_ALLOWED_SERVICES__",
-
    };
   </script>
   <script type="module" src="/app/main.tsx"></script>
