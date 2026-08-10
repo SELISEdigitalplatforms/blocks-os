@@ -53,7 +53,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
       navigate("/login");
     }
   }, [code, navigate]);
-  const onSubmitHandler = async (values: z.infer<typeof activationFormSchema>) => {
+  const onSubmitHandler = async (
+    values: z.infer<typeof activationFormSchema>,
+  ) => {
     try {
       // console.log("captchaCode", captchaCode);
       // return;
@@ -86,7 +88,9 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
   const { isValid } = form.formState;
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
+      <form
+        onSubmit={form.handleSubmit(onSubmitHandler)}
+        className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="firstname"
@@ -148,8 +152,7 @@ export const ActivationForm = ({ code }: ActivationFormProps) => {
         <Button
           type="submit"
           className="w-full"
-          disabled={isPending || !captchaCode || !requirementsMet || !isValid}
-        >
+          disabled={isPending || !captchaCode || !requirementsMet || !isValid}>
           Activate
         </Button>
       </form>
