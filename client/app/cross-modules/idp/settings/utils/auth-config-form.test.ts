@@ -8,6 +8,7 @@ vi.mock("@/lib/runtime-env", () => ({
 
 const {
   applyOidcIamConfigOverrides,
+  authSettingsFormSchema,
   buildSavePayload,
   iamConfigFormSchema,
   toIamConfigFormValues,
@@ -117,5 +118,34 @@ describe("iamConfigFormSchema", () => {
     );
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe("authSettingsFormSchema", () => {
+  const baseValues = {
+    accessTokenValidForNumberMinutes: 10,
+    refreshTokenValidForNumberMinutes: 10,
+    absoluteRefreshTokenValidForNumberMinutes: 10,
+    rememberMeRefreshTokenValidForNumberMinutes: 10,
+    getNumberOfWrongAttemptsToLockTheAccount: 3,
+    accountLockDurationInMinutes: 5,
+    publicCertificatePath: "https://example.com/cert.pfx",
+  };
+
+  it("accepts a typical configuration", () => {
+    expect(authSettingsFormSchema.safeParse(baseValues).success).toBe(true);
+  });
+
+  it.each([
+    "accessTokenValidForNumberMinutes",
+    "refreshTokenValidForNumberMinutes",
+    "absoluteRefreshTokenValidForNumberMinutes",
+    "rememberMeRefreshTokenValidForNumberMinutes",
+    "getNumberOfWrongAttemptsToLockTheAccount",
+    "accountLockDurationInMinutes",
+  ] as const)("rejects zero for %s", (field) => {
+    const result = authSettingsFormSchema.safeParse({ ...baseValues, [field]: 0 });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("Value must be greater than zero.");
   });
 });

@@ -8,7 +8,13 @@ import {
   underlineTabsListClass,
   underlineTabTriggerClass,
 } from "@/components/ui-kits/tabs/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui-kits/select/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui-kits/select/select";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
@@ -81,7 +87,7 @@ export const UserProfileShell = ({
     // pin height explicitly to the viewport minus the fixed header instead. The header
     // height differs by layout (DashboardLayout vs ConsoleLayout), hence the prop.
     <div
-      className="mx-auto flex w-full max-w-7xl flex-col overflow-hidden p-4 md:h-[calc(100vh-var(--profile-shell-header-offset))] md:min-h-0 md:p-6"
+      className="mx-auto flex w-full flex-col overflow-hidden  md:h-[calc(100vh-var(--profile-shell-header-offset))] md:min-h-0"
       style={{ ["--profile-shell-header-offset" as string]: `${fixedHeaderOffsetPx}px` }}
     >
       <div className="mb-4 hidden shrink-0 md:mb-4 md:block">
@@ -147,7 +153,7 @@ export const UserProfileShell = ({
                 {tab.render()}
               </TabsContent>
             ))}
-            {!activeTab ? skeleton ?? <DefaultSkeleton /> : null}
+            {!activeTab ? (skeleton ?? <DefaultSkeleton />) : null}
           </div>
         </div>
       </Tabs>
@@ -155,21 +161,13 @@ export const UserProfileShell = ({
   );
 };
 
-const ProfileHeading = ({
-  id,
-  projectKey,
-}: {
-  id: string;
-  projectKey: string;
-}) => {
+const ProfileHeading = ({ id, projectKey }: { id: string; projectKey: string }) => {
   const { data } = useGetUserById({ id, projectKey });
   const user = data?.data;
   const firstName = user?.firstName?.trim() ?? "";
   const lastName = user?.lastName?.trim() ?? "";
   const displayName =
-    firstName && lastName
-      ? `${firstName} ${lastName}`
-      : firstName || lastName || "Profile";
+    firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || "Profile";
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <div className="flex min-w-0 items-center gap-2">

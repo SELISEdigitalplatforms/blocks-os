@@ -115,6 +115,13 @@ describe("PermissionGroupCombobox", () => {
     expect(screen.queryByLabelText("Clear group")).toBeNull();
   });
 
+  it("does not open the popover when disabled", async () => {
+    const user = userEvent.setup();
+    render(<PermissionGroupCombobox value="" onChange={vi.fn()} disabled />);
+    await user.click(screen.getByRole("combobox"));
+    expect(screen.queryByPlaceholderText("Search or create a group...")).toBeNull();
+  });
+
   it("shows the empty prompt when there are no groups and no query", async () => {
     const user = userEvent.setup();
     setGroups([]);
