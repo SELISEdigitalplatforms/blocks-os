@@ -28,6 +28,7 @@ namespace DomainService.Projects
         Task SaveTenantAssetAsync(TenantAsset asset);
         Task UpdateRepoResourceAsync(AddAssetRequest request);
         Task UpdateRepoResourceInfoAsync(AddAssetRequest request);
+        Task ArchiveRepoResourceAsync(DeleteAssetRequest request);
         Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources);
         Task UpdateIamConfigurationAsync(Tenant project);
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);

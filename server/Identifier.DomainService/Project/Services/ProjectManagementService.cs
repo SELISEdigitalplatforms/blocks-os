@@ -660,11 +660,13 @@ namespace DomainService.Projects
                 };
             }
 
-            // Archived, not removed: keeping the row is what lets a later re-add restore it.
+            // Archived, not removed: keeping the row is what lets a later re-add restore it. The
+            // copy each tenant in the group holds is flagged the same way.
             resource.IsArchived = true;
             resource.LastUpdatedDate = DateTime.UtcNow;
             StampTenantAsset(tenantAsset);
-            await _projectRepository.SaveTenantAssetAsync(tenantAsset);
+            await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
+                           _projectRepository.ArchiveRepoResourceAsync(request));
 
             return new BaseResponse { IsSuccess = true, Errors = new Dictionary<string, string>() };
         }

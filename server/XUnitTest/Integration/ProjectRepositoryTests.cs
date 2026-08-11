@@ -525,6 +525,91 @@ namespace XUnitTest.Integration
             untouched["RepoName"].AsString.Should().Be("owner/untouched");
         }
 
+        // Deleting archives the tenant copies instead of dropping them, and re-adding the same
+        // repository clears the flag again.
+        [Fact]
+        public async Task ArchiveRepoResourceAsync_FlagsEveryTenantCopyAndRestoreClearsIt()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            await InsertTenantsAsync(
+                NewTenant("dev-" + tenant, group, UserOf(tenant), tenantId: "DEV" + tenant),
+                NewTenant("prod-" + tenant, group, UserOf(tenant), tenantId: "PROD" + tenant));
+
+            var repos = _fixture.Collection<BsonDocument>("Repos");
+            await repos.InsertManyAsync(new[]
+            {
+                new BsonDocument
+                {
+                    ["_id"] = "arc-dev-" + tenant,
+                    ["SourceRepoId"] = "1210631964",
+                    ["RepoName"] = "owner/repo",
+                    ["RepoUrl"] = "https://github.com/owner/repo",
+                    ["IsArchived"] = false,
+                    ["ProjectId"] = "DEV" + tenant
+                },
+                new BsonDocument
+                {
+                    ["_id"] = "arc-prod-" + tenant,
+                    ["SourceRepoId"] = "1210631964",
+                    ["RepoName"] = "owner/repo",
+                    ["RepoUrl"] = "https://github.com/owner/repo",
+                    ["IsArchived"] = false,
+                    ["ProjectId"] = "PROD" + tenant
+                },
+                // A row that predates the flag: the update has to add the field, not skip it.
+                new BsonDocument
+                {
+                    ["_id"] = "arc-legacy-" + tenant,
+                    ["SourceRepoId"] = "1210631964",
+                    ["RepoName"] = "owner/repo",
+                    ["ProjectId"] = "DEV" + tenant
+                },
+                new BsonDocument
+                {
+                    ["_id"] = "arc-other-" + tenant,
+                    ["SourceRepoId"] = "8888",
+                    ["RepoName"] = "owner/other",
+                    ["IsArchived"] = false,
+                    ["ProjectId"] = "DEV" + tenant
+                }
+            });
+
+            await repo.ArchiveRepoResourceAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = group,
+                ResourceId = "1210631964"
+            });
+
+            var archived = await repos
+                .Find(Builders<BsonDocument>.Filter.Eq("SourceRepoId", "1210631964")).ToListAsync();
+            archived.Should().HaveCount(3);
+            archived.Should().OnlyContain(d => d["IsArchived"].AsBoolean);
+
+            var other = await repos
+                .Find(Builders<BsonDocument>.Filter.Eq("SourceRepoId", "8888")).FirstAsync();
+            other["IsArchived"].AsBoolean.Should().BeFalse();
+
+            // Re-adding the repository puts the tenant copies back in play.
+            await repo.UpdateRepoResourceInfoAsync(new AddAssetRequest
+            {
+                TenantGroupId = group,
+                Resource = new Resource
+                {
+                    ResourceId = "1210631964",
+                    Name = "owner/repo",
+                    Link = "https://github.com/owner/repo"
+                }
+            });
+
+            var restored = await repos
+                .Find(Builders<BsonDocument>.Filter.Eq("SourceRepoId", "1210631964")).ToListAsync();
+            restored.Should().OnlyContain(d => !d["IsArchived"].AsBoolean);
+        }
+
         [Fact]
         public async Task UpdateTenantAssetAsync_InsertsAsset()
         {

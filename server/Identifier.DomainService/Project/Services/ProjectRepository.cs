@@ -487,16 +487,37 @@ namespace DomainService.Projects
         // A repository keeps its ResourceId across a rename, so the copy held by every tenant in
         // the group is refreshed in place. UpdateMany because a group can hold more than one row
         // per SourceRepoId. The deployment url is derived from the id, not the name, so it stands.
+        // IsArchived is cleared here because every caller means "this repository is present and
+        // this is what it looks like now" — a rename leaves it false, a restore flips it back.
         public async Task UpdateRepoResourceInfoAsync(AddAssetRequest request)
         {
-            var projects = await GetByGroupIdAsync(request.TenantGroupId);
-
-            var filter = Builders<BsonDocument>.Filter.Eq("SourceRepoId", request.Resource.ResourceId);
             var update = Builders<BsonDocument>.Update
                 .Set("RepoName", request.Resource.Name)
                 .Set("RepoUrl", request.Resource.Link)
+                .Set("IsArchived", false)
                 .Set("LastUpdatedDate", DateTime.UtcNow)
                 .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
+
+            await UpdateGroupReposAsync(request.TenantGroupId, request.Resource.ResourceId, update);
+        }
+
+        // Deleting a repository archives it rather than dropping the row, so the tenant copies are
+        // flagged the same way the group's asset entry is. Restoring goes back through
+        // UpdateRepoResourceInfoAsync, which clears the flag again.
+        public async Task ArchiveRepoResourceAsync(DeleteAssetRequest request)
+        {
+            var update = Builders<BsonDocument>.Update
+                .Set("IsArchived", true)
+                .Set("LastUpdatedDate", DateTime.UtcNow)
+                .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
+
+            await UpdateGroupReposAsync(request.TenantGroupId, request.ResourceId, update);
+        }
+
+        private async Task UpdateGroupReposAsync(string tenantGroupId, string resourceId, UpdateDefinition<BsonDocument> update)
+        {
+            var projects = await GetByGroupIdAsync(tenantGroupId);
+            var filter = Builders<BsonDocument>.Filter.Eq("SourceRepoId", resourceId);
 
             foreach (var project in projects)
             {
@@ -516,6 +537,7 @@ namespace DomainService.Projects
                 ["SourceRepoId"] = resource.ResourceId,
                 ["RepoName"] = resource.Name,
                 ["RepoUrl"] = resource.Link,
+                ["IsArchived"] = false,
                 ["CreatedDate"] = DateTime.UtcNow,
                 ["LastUpdatedDate"] = DateTime.UtcNow,
                 ["CreatedBy"] = BlocksContext.GetContext()?.UserId ?? string.Empty,

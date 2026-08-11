@@ -503,6 +503,9 @@ namespace XUnitTest.Services
             asset.Resources.Single(r => r.ResourceId == "r1").IsArchived.Should().BeTrue();
             asset.Resources.Single(r => r.ResourceId == "r2").IsArchived.Should().BeFalse();
             _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
+            // The copy every tenant in the group holds is flagged too.
+            _repo.Verify(r => r.ArchiveRepoResourceAsync(It.Is<DeleteAssetRequest>(
+                d => d.TenantGroupId == "g" && d.ResourceId == "r1")), Times.Once);
         }
 
         [Theory]
@@ -527,6 +530,7 @@ namespace XUnitTest.Services
             response.IsSuccess.Should().BeFalse();
             response.Errors.Should().ContainKey("resource_not_found");
             _repo.Verify(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
+            _repo.Verify(r => r.ArchiveRepoResourceAsync(It.IsAny<DeleteAssetRequest>()), Times.Never);
         }
 
         [Fact]
