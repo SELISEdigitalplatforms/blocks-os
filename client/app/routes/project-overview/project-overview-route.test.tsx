@@ -65,7 +65,7 @@ vi.mock("@seliseblocks/genesis-os/components", () => ({
   DashboardHeader: () => <div>dashboard header</div>,
 }));
 
-vi.mock("./project-overview-layout", () => ({
+vi.mock("@/layouts/project-overview/project-overview-layout", () => ({
   ProjectOverviewLayout: ({ children }: { children: React.ReactNode }) => (
     <div>
       <span>overview layout</span>
