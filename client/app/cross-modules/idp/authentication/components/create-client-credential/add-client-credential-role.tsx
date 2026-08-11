@@ -119,7 +119,9 @@ export const AddClientCredentialRole = ({ onAdd, selectedSlugs }: AddClientCrede
                   </div>
                 ))
               ) : (
-                <div className="flex h-24 items-center justify-center">No roles are found</div>
+                <div className="flex h-24 items-center justify-center sm:col-span-2">
+                  No roles are found
+                </div>
               )}
             </div>
           </CardContent>

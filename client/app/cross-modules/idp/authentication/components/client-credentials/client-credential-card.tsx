@@ -275,7 +275,7 @@ export const ClientCredentialsCard = ({ clientCredential, onEdit }: ClientInfoCa
           onConfirm={() => handleConfirmDelete(clientCredential.itemId)}
           data={{
             dialogTitle: "Delete",
-            dialogSubtitle: `Are you sure you want to delete client-credential`,
+            dialogSubtitle: `Are you sure you want to delete "${clientCredential.name}"?`,
           }}
           buttonState={{
             confirm: { disable: isPending },

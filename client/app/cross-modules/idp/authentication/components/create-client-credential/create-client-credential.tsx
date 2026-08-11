@@ -144,12 +144,11 @@ export const CreateClientCredential = ({
           ? "Client credential updated successfully"
           : "Client credential created successfully",
       });
+      reset();
       setOpen(false);
     } catch (error) {
       if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
       return showErrorToast({ errors: "Something went wrong" });
-    } finally {
-      reset();
     }
   };
 
@@ -190,7 +189,9 @@ export const CreateClientCredential = ({
                   name="clientNameService"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Client Name</FormLabel>
+                      <FormLabel>
+                        Client Name <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter client name" {...field} />
                       </FormControl>
@@ -203,12 +204,18 @@ export const CreateClientCredential = ({
                   name="accessTokenValidForNumberMinutes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Access Token Lifetime (minutes)</FormLabel>
+                      <FormLabel>
+                        Access Token Lifetime (minutes){" "}
+                        <span className="text-xs font-normal text-muted-foreground">(5–120)</span>
+                      </FormLabel>
                       <FormControl>
                         <Input
-                          type="text"
+                          type="number"
                           inputMode="numeric"
                           autoComplete="off"
+                          min={5}
+                          max={120}
+                          step={1}
                           placeholder="15"
                           aria-label="Access Token Lifetime in minutes"
                           value={
@@ -219,7 +226,9 @@ export const CreateClientCredential = ({
                           onChange={(e) => {
                             const raw = e.target.value.trim();
                             if (raw !== "" && !/^\d+$/.test(raw)) return;
-                            field.onChange(raw === "" ? 0 : Number(raw));
+                            const parsed = raw === "" ? 0 : Number(raw);
+                            const clamped = parsed === 0 ? 0 : Math.min(120, Math.max(5, parsed));
+                            field.onChange(clamped);
                             void form.trigger("accessTokenValidForNumberMinutes");
                           }}
                           onBlur={field.onBlur}
@@ -295,7 +304,13 @@ export const CreateClientCredential = ({
                 </Button>
               </DialogClose>
               <Button disabled={isPending || !isDirty || !isValid} type="submit">
-                {isPending ? "Saving..." : isEdit ? "Save Changes" : "Add"}
+                {isPending
+                  ? isEdit
+                    ? "Updating..."
+                    : "Saving..."
+                  : isEdit
+                    ? "Update Changes"
+                    : "Add"}
               </Button>
             </DialogFooter>
           </form>

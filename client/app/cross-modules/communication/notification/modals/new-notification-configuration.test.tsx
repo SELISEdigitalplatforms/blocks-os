@@ -72,7 +72,10 @@ describe("NewNotificationConfiguration", () => {
       itemId: undefined,
     });
     expect(h.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "success", description: "New configuration added" }),
+      expect.objectContaining({
+        variant: "success",
+        description: "New configuration added successfully.",
+      }),
     );
     expect(onClose).toHaveBeenCalledWith(false);
   });
@@ -160,12 +163,12 @@ describe("NewNotificationConfiguration", () => {
     const method = screen.getByPlaceholderText("Enter notify method");
     await user.clear(method);
     await user.type(method, "updated-method");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Update Changes" }));
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     expect(h.mutateAsync.mock.calls[0][0].itemId).toBe("cfg-7");
     expect(h.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "Configuration updated" }),
+      expect.objectContaining({ description: "Configuration updated successfully." }),
     );
   });
 

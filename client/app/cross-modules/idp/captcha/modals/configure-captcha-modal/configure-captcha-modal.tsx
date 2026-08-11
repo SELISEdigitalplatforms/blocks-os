@@ -60,7 +60,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
           !data.configurations.find((config: { provider: string }) => config?.provider === item),
       )
       .map((item) => CAPTCHA_PROVIDERS[item as CAPTCHA_PROVIDERS_KEY]);
-  }, [data]);
+  }, [data, configuration]);
   useEffect(() => {
     if (configuration) {
       form.setValue("provider", configuration.provider);
@@ -68,7 +68,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
     if (unConfiguredProviders.length) {
       form.setValue("provider", unConfiguredProviders[0].value);
     }
-  }, [unConfiguredProviders]);
+  }, [unConfiguredProviders, configuration, form]);
   const onSubmitHandler = async (values: typeof ConfigureCaptchaFormDefaultValue) => {
     try {
       const payload = {
@@ -155,7 +155,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
                   disabled={isPending || isLoading || isFetching || !isDirty || !isValid}
                   type="submit"
                 >
-                  Save
+                  {isPending ? "Updating..." : configuration ? "Update Changes" : "Save"}
                 </Button>
               </DialogFooter>
             </form>
