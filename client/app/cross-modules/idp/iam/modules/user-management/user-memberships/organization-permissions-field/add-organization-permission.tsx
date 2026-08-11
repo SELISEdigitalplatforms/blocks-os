@@ -35,7 +35,6 @@ import {
   getTotalPermissionCount,
   isAtMaxPermissions,
   isPermissionInList,
-  isSelectedInModal,
   shouldDisablePermissionCheckbox,
   togglePermissionSelection,
 } from "./permission-selection.utils";
@@ -123,7 +122,7 @@ export const AddOrganizationPermission = ({
   };
 
   const getCheckboxAriaLabel = (item: IPermission) => {
-    const selected = isSelectedInModal(item, permissions, selectedPermissions);
+    const selected = isPermissionInList(item, selectedPermissions);
     const disabled = shouldDisablePermissionCheckbox(item, permissions, selectedPermissions);
 
     if (disabled && atMaxPermissions) {
@@ -213,7 +212,7 @@ export const AddOrganizationPermission = ({
             </TableHeader>
             <TableBody>
               {data.data.map((item) => {
-                const checked = isSelectedInModal(item, permissions, selectedPermissions);
+                const checked = isPermissionInList(item, selectedPermissions);
                 const disabled = shouldDisablePermissionCheckbox(
                   item,
                   permissions,
