@@ -11,6 +11,7 @@ using DomainService.Shared.Entities;
 using DomainService.Shared.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
 
@@ -283,6 +284,137 @@ namespace XUnitTest.Integration
             asset!.Resources.Should().ContainSingle(r => r.Name == "Alpha repo");
         }
 
+        // The repositories page has a single search box covering both columns, so Search has to
+        // match either one and the count has to describe the whole match, not the page.
+        [Fact]
+        public async Task GetTenantAssetAsync_SearchMatchesNameOrLinkAndCountsBeyondThePage()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var user = UserOf(tenant);
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            await repo.InsertPeopleAsync(new ProjectPeople
+            {
+                ItemId = "pp-" + tenant,
+                UserId = user,
+                TenantId = "tid-" + tenant,
+                IsInvitationConfirmed = true
+            });
+            await InsertProjectsAsync(new Project
+            {
+                ItemId = "pj-" + tenant,
+                CreatedBy = user,
+                IsDisabled = false,
+                TenantGroupId = group,
+                TenantId = "tid-" + tenant
+            });
+
+            var resources = Enumerable.Range(0, 5)
+                .Select(i => new Resource
+                {
+                    ResourceId = "r" + i,
+                    Name = "acme/service-" + i,
+                    Link = "https://github.com/acme/service-" + i
+                })
+                .ToList();
+            resources.Add(new Resource
+            {
+                ResourceId = "r-link",
+                Name = "unrelated",
+                Link = "https://github.com/acme/hidden"
+            });
+            await _fixture.Collection<TenantAsset>("TenantAssets").InsertOneAsync(new TenantAsset
+            {
+                ItemId = "ta-" + tenant,
+                TenantGroupId = group,
+                Resources = resources
+            });
+
+            var (firstPage, total) = await repo.GetTenantAssetAsync(new GetAssetRequest
+            {
+                TenantGroupId = group,
+                Page = 0,
+                PageSize = 2,
+                Filter = new GetAssetFilter { Search = "acme" }
+            });
+
+            // Five by name plus the one that only matches on its link.
+            total.Should().Be(6);
+            firstPage!.Resources.Should().HaveCount(2);
+
+            var (lastPage, _) = await repo.GetTenantAssetAsync(new GetAssetRequest
+            {
+                TenantGroupId = group,
+                Page = 2,
+                PageSize = 2,
+                Filter = new GetAssetFilter { Search = "acme" }
+            });
+
+            lastPage!.Resources.Should().Contain(r => r.ResourceId == "r-link");
+        }
+
+        // Deleting a repository archives its row, and every read has to hide it — including the
+        // count the pager is built from.
+        [Fact]
+        public async Task GetTenantAssetAsync_ExcludesArchivedResources()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var user = UserOf(tenant);
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            await repo.InsertPeopleAsync(new ProjectPeople
+            {
+                ItemId = "pp-" + tenant,
+                UserId = user,
+                TenantId = "tid-" + tenant,
+                IsInvitationConfirmed = true
+            });
+            await InsertProjectsAsync(new Project
+            {
+                ItemId = "pj-" + tenant,
+                CreatedBy = user,
+                IsDisabled = false,
+                TenantGroupId = group,
+                TenantId = "tid-" + tenant
+            });
+            await _fixture.Collection<TenantAsset>("TenantAssets").InsertOneAsync(new TenantAsset
+            {
+                ItemId = "ta-" + tenant,
+                TenantGroupId = group,
+                Resources = new List<Resource>
+                {
+                    new() { ResourceId = "live", Name = "acme/live", Link = "https://github.com/acme/live" },
+                    new() { ResourceId = "gone", Name = "acme/gone", Link = "https://github.com/acme/gone", IsArchived = true }
+                }
+            });
+
+            var (asset, total) = await repo.GetTenantAssetAsync(new GetAssetRequest
+            {
+                TenantGroupId = group,
+                Page = 0,
+                PageSize = 10
+            });
+
+            total.Should().Be(1);
+            asset!.Resources.Should().ContainSingle(r => r.ResourceId == "live");
+
+            // Nor should an archived row be reachable by searching for it.
+            var (searched, searchTotal) = await repo.GetTenantAssetAsync(new GetAssetRequest
+            {
+                TenantGroupId = group,
+                Page = 0,
+                PageSize = 10,
+                Filter = new GetAssetFilter { Search = "gone" }
+            });
+
+            searchTotal.Should().Be(0);
+            searched!.Resources.Should().BeEmpty();
+        }
+
         [Fact]
         public async Task GetTenantAssetAsync_NoSharedProjects_ReturnsNull()
         {
@@ -299,6 +431,98 @@ namespace XUnitTest.Integration
 
             asset.Should().BeNull();
             total.Should().Be(0);
+        }
+
+        [Fact]
+        public async Task GetTenantAssetByGroupIdAsync_ReturnsEveryResourceUnpaged()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            // More than one default page (10) so truncation would be visible.
+            var resources = Enumerable.Range(0, 15)
+                .Select(i => new Resource { ResourceId = "r" + i, Name = "repo-" + i, Link = "https://x/" + i })
+                .ToList();
+            await _fixture.Collection<TenantAsset>("TenantAssets").InsertOneAsync(new TenantAsset
+            {
+                ItemId = "ta-" + tenant,
+                TenantGroupId = group,
+                Resources = resources
+            });
+
+            var asset = await repo.GetTenantAssetByGroupIdAsync(group);
+
+            asset!.Resources.Should().HaveCount(15);
+        }
+
+        [Fact]
+        public async Task UpdateRepoResourceInfoAsync_RewritesNameAndLinkForEveryTenantInTheGroup()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var group = "grp-" + tenant;
+            using var _ = new IntegrationContext(tenant);
+            var repo = NewRepository();
+
+            await InsertTenantsAsync(
+                NewTenant("dev-" + tenant, group, UserOf(tenant), tenantId: "DEV" + tenant),
+                NewTenant("prod-" + tenant, group, UserOf(tenant), tenantId: "PROD" + tenant));
+
+            var repos = _fixture.Collection<BsonDocument>("Repos");
+            await repos.InsertManyAsync(new[]
+            {
+                new BsonDocument
+                {
+                    ["_id"] = "repo-dev-" + tenant,
+                    ["SourceRepoId"] = "1271072719",
+                    ["RepoName"] = "owner/old-name",
+                    ["RepoUrl"] = "https://github.com/owner/old-name",
+                    ["ProjectId"] = "DEV" + tenant,
+                    ["DefaultDeploymentUrl"] = "https://dev-abcde-abcde.blocks.dev"
+                },
+                new BsonDocument
+                {
+                    ["_id"] = "repo-prod-" + tenant,
+                    ["SourceRepoId"] = "1271072719",
+                    ["RepoName"] = "owner/old-name",
+                    ["RepoUrl"] = "https://github.com/owner/old-name",
+                    ["ProjectId"] = "PROD" + tenant,
+                    ["DefaultDeploymentUrl"] = "https://abcde-abcde.blocks.dev"
+                },
+                new BsonDocument
+                {
+                    ["_id"] = "repo-other-" + tenant,
+                    ["SourceRepoId"] = "9999",
+                    ["RepoName"] = "owner/untouched",
+                    ["RepoUrl"] = "https://github.com/owner/untouched",
+                    ["ProjectId"] = "DEV" + tenant
+                }
+            });
+
+            await repo.UpdateRepoResourceInfoAsync(new AddAssetRequest
+            {
+                TenantGroupId = group,
+                Resource = new Resource
+                {
+                    ResourceId = "1271072719",
+                    Name = "owner/new-name",
+                    Link = "https://github.com/owner/new-name"
+                }
+            });
+
+            var renamed = await repos
+                .Find(Builders<BsonDocument>.Filter.Eq("SourceRepoId", "1271072719")).ToListAsync();
+            renamed.Should().HaveCount(2);
+            renamed.Should().OnlyContain(d => d["RepoName"].AsString == "owner/new-name"
+                                           && d["RepoUrl"].AsString == "https://github.com/owner/new-name");
+            // The deployment url is derived from the resource id, so a rename must not move it.
+            renamed.Single(d => d["ProjectId"].AsString == "DEV" + tenant)["DefaultDeploymentUrl"]
+                .AsString.Should().Be("https://dev-abcde-abcde.blocks.dev");
+
+            var untouched = await repos
+                .Find(Builders<BsonDocument>.Filter.Eq("SourceRepoId", "9999")).FirstAsync();
+            untouched["RepoName"].AsString.Should().Be("owner/untouched");
         }
 
         [Fact]

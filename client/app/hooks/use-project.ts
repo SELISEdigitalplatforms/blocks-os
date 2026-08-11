@@ -9,7 +9,7 @@ import {
 import { projectService } from "@/services/project.service";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
 import { useImpersonateStore, useProjectStore } from "@seliseblocks/genesis-os";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 
@@ -64,7 +64,10 @@ export const useGetAssets = (
 ) => {
   return useQuery({
     queryKey: ["get-assets", tenantGroupId, page, pageSize, search],
-    queryFn: () => crossProjectService.getAssets(tenantGroupId),
+    queryFn: () => crossProjectService.getAssets(tenantGroupId, page, pageSize, search),
+    // Paging and searching are server side, so hold the previous page on screen while the
+    // next one loads instead of dropping back to the skeleton on every keystroke.
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -73,6 +76,18 @@ export const useAddAssets = () => {
   return useMutation({
     mutationKey: ["assets", "add"],
     mutationFn: crossProjectService.addAssets,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
+      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+    },
+  });
+};
+
+export const useDeleteAsset = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["assets", "delete"],
+    mutationFn: crossProjectService.deleteAsset,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["get-assets"] });
       queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
