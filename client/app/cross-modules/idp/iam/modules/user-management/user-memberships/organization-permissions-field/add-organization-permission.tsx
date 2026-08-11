@@ -34,7 +34,6 @@ import {
   getNewlySelectedPermissions,
   getTotalPermissionCount,
   isAtMaxPermissions,
-  isPermissionAssigned,
   isSelectedInModal,
   shouldDisablePermissionCheckbox,
   togglePermissionSelection,
@@ -109,9 +108,6 @@ export const AddOrganizationPermission = ({
     const selected = isSelectedInModal(item, permissions, selectedPermissions);
     const disabled = shouldDisablePermissionCheckbox(item, permissions, selectedPermissions);
 
-    if (isPermissionAssigned(item, permissions)) {
-      return `${item.name} already assigned`;
-    }
     if (disabled && atMaxPermissions) {
       return `${item.name} unavailable, maximum of ${MAX_PERMISSIONS_PER_USER} permissions reached`;
     }
