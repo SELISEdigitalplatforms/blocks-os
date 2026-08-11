@@ -13,7 +13,7 @@ import {
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 import { MaskedText } from "@/components/masked-text";
 import { useCopyToClipboard } from "@seliseblocks/genesis-os/hooks";
-import { showSuccessToast } from "@/hooks/use-toast";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { AccordionTrigger } from "@/components/ui-kits/accordion/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
@@ -55,7 +55,8 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
   const LMT_BASE_PATH = useLmtBasePath();
   const [showAllTags, setShowAllTags] = useState(false);
   const navigate = useNavigate();
-  const swaggerUrl = `${getRuntimeEnv("BLOCKS_OS_BASE_URL")}/identifier/v1/swagger/index.html`;
+  const blocksOsBaseUrl = getRuntimeEnv("BLOCKS_OS_BASE_URL");
+  const swaggerUrl = blocksOsBaseUrl ? `${blocksOsBaseUrl}/swagger/index.html` : "";
   const docsUrl = "https://docs.seliseblocks.com/";
   return (
     <>
@@ -98,7 +99,16 @@ export const ServiceCard = ({ service }: { service: RegisteredService }) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => window.open(swaggerUrl, "_blank", "noopener,noreferrer")}
+                  disabled={!swaggerUrl}
+                  onClick={() => {
+                    if (!swaggerUrl) {
+                      showErrorToast({
+                        errors: "Swagger is not configured for this environment.",
+                      });
+                      return;
+                    }
+                    window.open(swaggerUrl, "_blank", "noopener,noreferrer");
+                  }}
                 >
                   <Braces className="mr-2 aspect-square w-4" />
                   Swagger

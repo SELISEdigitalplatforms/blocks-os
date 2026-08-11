@@ -3,7 +3,7 @@ import {
   BarChart3,
   Bell,
   BookMinus,
-  // BrainCircuit, // Temporarily hidden (AI Models)
+  BrainCircuit,
   Building2,
   CreditCard,
   Database,
@@ -12,9 +12,9 @@ import {
   Globe,
   Home,
   Key,
-  // KeyRound, // Temporarily hidden (My Secret)
+  KeyRound,
   Layers,
-  // Link2, // Temporarily hidden (Magic URL)
+  Link2,
   Lock,
   Mail,
   Package,
@@ -77,6 +77,7 @@ export const navigationMenus: Menu[] = [
     path: "/app/project/subscription-usage",
     icon: CreditCard,
     desc: "View subscription details and usage metrics",
+    disabled: true, // Temporarily disabled
   },
   { type: "separator", id: "separator-identity" },
   {
@@ -87,15 +88,15 @@ export const navigationMenus: Menu[] = [
     icon: Lock,
     desc: "Manage secrets, configs, and credentials",
     children: [
-      // Temporarily hidden
-      // {
-      //   id: "my-secret",
-      //   type: "menu",
-      //   name: "My Secret",
-      //   path: "/app/secret-management/my-secret",
-      //   icon: KeyRound,
-      //   desc: "Personal secrets and credentials",
-      // },
+      {
+        id: "my-secret",
+        type: "menu",
+        name: "My Secret",
+        path: "/app/secret-management/my-secret",
+        icon: KeyRound,
+        desc: "Personal secrets and credentials",
+        disabled: true, // Temporarily disabled
+      },
       {
         id: "managed-services",
         type: "menu",
@@ -153,15 +154,16 @@ export const navigationMenus: Menu[] = [
         desc: "Multi-factor authentication settings",
         type: "menu",
       },
-      // Temporarily hidden
-      // {
-      //   id: "magic-url",
-      //   name: "Magic URL",
-      //   path: "/app/secret-management/magic-url",
-      //   icon: Link2,
-      //   desc: "Password less magic link settings",
-      //   type: "menu",
-      // },
+
+      {
+        id: "magic-url",
+        name: "Magic URL",
+        path: "/app/secret-management/magic-url",
+        icon: Link2,
+        desc: "Password less magic link settings",
+        type: "menu",
+        disabled: true, // Temporarily disabled
+      },
       {
         id: "email",
         name: "Email",
@@ -186,24 +188,26 @@ export const navigationMenus: Menu[] = [
         desc: "File and object storage",
         type: "menu",
       },
-      // Temporarily hidden
-      // {
-      //   id: "ai-models",
-      //   name: "AI Models",
-      //   path: "/app/secret-management/ai-models",
-      //   icon: BrainCircuit,
-      //   desc: "AI model integrations",
-      //   type: "menu",
-      // },
+      {
+        id: "ai-models",
+        name: "AI Models",
+        path: "/app/secret-management/ai-models",
+        icon: BrainCircuit,
+        desc: "AI model integrations",
+        type: "menu",
+        disabled: true, // Temporarily disabled
+      },
     ],
   },
-  // {
-  //   id: "service-identity__api-settings",
-  //   type: "menu",
-  //   name: "API Settings",
-  //   path: "/app/api-settings",
-  //   icon: Settings,
-  // },
+  {
+    id: "service-identity__api-settings",
+    type: "menu",
+    name: "API Settings",
+    path: "/app/api-settings",
+    icon: Settings,
+    desc: "Manage API keys and settings",
+    disabled: true, // Temporarily disabled
+  },
   {
     id: "service-identity__email-management",
     type: "menu",
@@ -228,14 +232,6 @@ export const navigationMenus: Menu[] = [
         type: "menu",
       },
 
-      // {
-      //   id: "oidc-template",
-      //   name: "OIDC Template",
-      //   path: "/app/iam/oidc-template",
-      //   icon: FileCode,
-      //   desc: "Configure OIDC template",
-      //   type: "menu",
-      // },
       {
         id: "users",
         name: "Users",

@@ -144,17 +144,22 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         clientDisplayName: data.clientDisplayName,
       };
       const res = await mutateAsync(payload);
-      if (!res.isSuccess) return showErrorToast({ errors: res.error });
+      if (!res.isSuccess) {
+        showErrorToast({ errors: res.error });
+        return;
+      }
       const message = isEditMode
         ? "OIDC Client updated successfully"
         : "OIDC Client created successfully";
       showSuccessToast({ description: message });
+      form.reset();
       setOpen(false);
     } catch (error) {
-      if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
-      return showErrorToast({ errors: "Something went wrong" });
-    } finally {
-      form.reset();
+      if (isErrorWithErrors(error)) {
+        showErrorToast({ errors: error.errors });
+        return;
+      }
+      showErrorToast({ errors: "Something went wrong" });
     }
   };
 

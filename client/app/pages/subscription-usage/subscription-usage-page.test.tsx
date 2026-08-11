@@ -3,6 +3,28 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { SubscriptionUsagePage } from "./subscription-usage-page";
 
+vi.mock("@/components/ui-kits/dropdown-menu/dropdown-menu", () => {
+  const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+  return {
+    DropdownMenu: Passthrough,
+    DropdownMenuTrigger: Passthrough,
+    DropdownMenuContent: ({ children }: { children?: React.ReactNode }) => (
+      <div role="menu">{children}</div>
+    ),
+    DropdownMenuItem: ({
+      children,
+      onClick,
+    }: {
+      children?: React.ReactNode;
+      onClick?: () => void;
+    }) => (
+      <button role="menuitem" type="button" onClick={onClick}>
+        {children}
+      </button>
+    ),
+  };
+});
+
 describe("SubscriptionUsagePage", () => {
   it("renders the plan, stats and service sections from the seeded data", () => {
     render(<SubscriptionUsagePage />);
@@ -15,19 +37,14 @@ describe("SubscriptionUsagePage", () => {
     expect(screen.getByText("Communication")).toBeTruthy();
   });
 
-  it("cycles the time range label when the range button is clicked", async () => {
+  it("opens a time range dropdown and selects a new range", async () => {
     const user = userEvent.setup();
     render(<SubscriptionUsagePage />);
     // default index is 1 -> "Last 30 days"
-    const rangeButton = screen.getByText("Last 30 days").closest("button") as HTMLButtonElement;
-    expect(rangeButton).toBeTruthy();
-    await user.click(rangeButton);
-    expect(within(rangeButton).getByText("Last 90 days")).toBeTruthy();
-    await user.click(rangeButton);
-    expect(within(rangeButton).getByText("This billing cycle")).toBeTruthy();
-    // wraps back to the first range
-    await user.click(rangeButton);
-    expect(within(rangeButton).getByText("Last 7 days")).toBeTruthy();
+    const trigger = screen.getByRole("button", { name: /Last 30 days/ });
+    await user.click(trigger);
+    await user.click(screen.getByRole("menuitem", { name: "Last 90 days" }));
+    expect(within(trigger).getByText("Last 90 days")).toBeTruthy();
   });
 
   it("expands and collapses a usage row's environment breakdown", async () => {

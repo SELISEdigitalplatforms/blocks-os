@@ -41,7 +41,8 @@ import { PeopleManagement } from "@/pages/people/people-management";
 import { PersonDetailPage } from "@/pages/people/person-detail-page";
 import { RepositoriesPage } from "@/pages/repositories/repositories";
 import { SettingsPage } from "@/pages/settings/settings";
-import { SubscriptionUsagePage } from "@/pages/subscription-usage/subscription-usage-page";
+// Temporarily disabled
+// import { SubscriptionUsagePage } from "@/pages/subscription-usage/subscription-usage-page";
 // Temporarily disabled
 // import AiModelSelectedRoute from "@/pages/dashboard/ai-model-selected";
 import ApiSettingsPage from "@/pages/api-settings/api-settings";
@@ -185,10 +186,11 @@ export const router = createBrowserRouter([
                     path: "settings",
                     element: <SettingsPage />,
                   },
-                  {
-                    path: "subscription-usage",
-                    element: <SubscriptionUsagePage />,
-                  },
+                  // Temporarily disabled
+                  // {
+                  //   path: "subscription-usage",
+                  //   element: <SubscriptionUsagePage />,
+                  // },
                 ],
               },
 

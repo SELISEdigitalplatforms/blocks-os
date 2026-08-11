@@ -207,8 +207,8 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         <TableCell className="hidden py-3.5 text-sm text-muted-foreground md:table-cell">
           {createdAt}
         </TableCell>
-        <TableCell className="py-3.5 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-end gap-1">
+        <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-start gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

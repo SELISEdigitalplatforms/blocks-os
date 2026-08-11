@@ -54,13 +54,14 @@ function SecretManagementHeaderActions({
   const brandingHeader = useOidcBrandingHeaderOptional();
 
   if (isOidcBranding && brandingHeader?.actions) {
-    const { onSave, onUndo, isBusy } = brandingHeader.actions;
+    const { onSave, onUndo, isBusy, isDirty } = brandingHeader.actions;
+    const disabled = isBusy || !isDirty;
     return (
       <>
-        <Button type="button" variant="outline" size="sm" onClick={onUndo} disabled={isBusy}>
+        <Button type="button" variant="outline" size="sm" onClick={onUndo} disabled={disabled}>
           Undo
         </Button>
-        <Button type="button" size="sm" onClick={onSave} disabled={isBusy}>
+        <Button type="button" size="sm" onClick={onSave} disabled={disabled}>
           {isBusy ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
