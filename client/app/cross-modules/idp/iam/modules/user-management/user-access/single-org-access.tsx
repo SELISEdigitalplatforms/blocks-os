@@ -137,7 +137,7 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     try {
       const res = await mutateAsync({
         roles: selectedRolesRef.current.map((role) => role.slug),
-        permissions: selectedPermissionsRef.current.map((permission) => permission.name),
+        permissions: selectedPermissionsRef.current.map((permission) => permission.resource),
         organizationId: DEFAULT_ORG_ID,
       });
       if (!res.isSuccess) {
