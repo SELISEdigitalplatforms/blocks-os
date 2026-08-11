@@ -183,7 +183,9 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
         toast({
           variant: "success",
           title: "Success",
-          description: isEdit ? "Configuration updated" : "New configuration added",
+          description: isEdit
+            ? "Configuration updated successfully."
+            : "Configuration created successfully.",
         });
         form.reset();
         onClose();
@@ -461,7 +463,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                 </Button>
               </DialogTrigger>
               <Button disabled={isPending || !form.formState.isValid} size="default">
-                Save
+                {isPending ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update Changes" : "Save"}
               </Button>
             </div>
           </div>

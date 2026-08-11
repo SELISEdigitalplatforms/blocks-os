@@ -36,6 +36,19 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./app"),
+        "@/layouts": path.resolve(__dirname, "./app/layouts"),
+        "@/lib": path.resolve(__dirname, "./app/lib"),
+        "@/test-utils": path.resolve(__dirname, "./app/test-utils"),
+        "@/routes": path.resolve(__dirname, "./app/routes"),
+        "@/hooks": path.resolve(__dirname, "./app/hooks"),
+        "@/models": path.resolve(__dirname, "./app/models"),
+        "@/constants": path.resolve(__dirname, "./app/constants"),
+        "@/components": path.resolve(__dirname, "./app/components"),
+        "@/pages": path.resolve(__dirname, "./app/pages"),
+        "@/providers": path.resolve(__dirname, "./app/providers"),
+        "@/services": path.resolve(__dirname, "./app/services"),
+        "@/styles": path.resolve(__dirname, "./app/styles"),
+
         "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
         "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
         "@blocks-storage": path.resolve(__dirname, "./app/cross-modules/storage"),
