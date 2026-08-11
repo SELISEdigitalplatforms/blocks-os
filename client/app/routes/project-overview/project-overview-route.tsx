@@ -3,7 +3,7 @@ import type { LayoutProps } from "@seliseblocks/genesis-os/layouts";
 import type { Menu } from "@seliseblocks/genesis-os/types";
 import { useEffect } from "react";
 import { Navigate, Outlet, useParams } from "react-router";
-import { ProjectOverviewLayout } from "./project-overview-layout";
+import { ProjectOverviewLayout } from "@/layouts/project-overview/project-overview-layout";
 import { useGetProjects } from "@/hooks/use-project";
 import { useAuthStore, useProjectStore } from "@seliseblocks/genesis-os/store";
 

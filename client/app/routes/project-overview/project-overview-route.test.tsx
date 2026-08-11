@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ProjectOverviewRoute } from "./project-overview-route";
 
 vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false,
@@ -60,6 +61,8 @@ vi.mock("@seliseblocks/genesis-os/store", () => ({
 
 vi.mock("@seliseblocks/genesis-os/components", () => ({
   AppLoadingSpinner: () => <div>loading spinner</div>,
+  SidebarMenuDesktop: () => <div>sidebar menu</div>,
+  DashboardHeader: () => <div>dashboard header</div>,
 }));
 
 vi.mock("./project-overview-layout", () => ({
@@ -71,15 +74,18 @@ vi.mock("./project-overview-layout", () => ({
   ),
 }));
 
-import { ProjectOverviewRoute } from "./project-overview-route";
-
 const renderRoute = () =>
   render(
     <MemoryRouter initialEntries={["/app/project/grp-1/overview"]}>
       <Routes>
         <Route
           path="/app/project/:tenantGroupId/*"
-          element={<ProjectOverviewRoute navigationMenus={[]} />}
+          element={
+            <ProjectOverviewRoute
+              navigationMenus={[]}
+              redirectPaths={{ "/app/iam/*": "/app/iam" }}
+            />
+          }
         >
           <Route path="overview" element={<div>overview child</div>} />
         </Route>
@@ -94,9 +100,7 @@ describe("ProjectOverviewRoute", () => {
     h.params = { tenantGroupId: "grp-1" };
     h.user = { sub: "owner-1" };
     h.projects = {
-      data: [
-        { projects: [{ itemId: "p-1", tenantGroupId: "grp-1", createdBy: "owner-1" }] },
-      ],
+      data: [{ projects: [{ itemId: "p-1", tenantGroupId: "grp-1", createdBy: "owner-1" }] }],
       isLoading: false,
       isError: false,
     };
