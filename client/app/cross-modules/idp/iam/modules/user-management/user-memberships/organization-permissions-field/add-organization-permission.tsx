@@ -34,6 +34,7 @@ import {
   getNewlySelectedPermissions,
   getTotalPermissionCount,
   isAtMaxPermissions,
+  isPermissionInList,
   isSelectedInModal,
   shouldDisablePermissionCheckbox,
   togglePermissionSelection,
@@ -41,7 +42,11 @@ import {
 
 type AddOrganizationPermissionProps = {
   permissions: IPermission[];
-  /** Called with the picked new permissions on confirm. */
+  /**
+   * Called with the final selection state on confirm. The argument contains
+   * every permission that should remain assigned — pre-existing assignments
+   * that the user unchecked are removed, and newly checked ones are added.
+   */
   onAdd: (data: IPermission[]) => void;
   onSave?: () => void;
   organizationId?: string;
@@ -56,7 +61,7 @@ export const AddOrganizationPermission = ({
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const scopeKey = organizationId || tenantId;
   const [open, setOpen] = useState<boolean>(false);
-  const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>(permissions);
   const [filter, setFilter] = useState({
     page: 0,
     pageSize: 5,
@@ -74,13 +79,26 @@ export const AddOrganizationPermission = ({
   );
 
   const reset = () => {
-    setSelectedPermissions([]);
+    setSelectedPermissions(permissions);
     setFilter({ page: 0, pageSize: 5, isBuiltIn: "", roles: [], search: "" });
   };
 
   const newlySelectedPermissions = useMemo(
     () => getNewlySelectedPermissions(selectedPermissions, permissions),
     [selectedPermissions, permissions],
+  );
+
+  const deselectedPermissions = useMemo(
+    () =>
+      permissions.filter(
+        (assigned) => !isPermissionInList(assigned, selectedPermissions),
+      ),
+    [permissions, selectedPermissions],
+  );
+
+  const finalSelection = useMemo(
+    () => [...permissions.filter((p) => !isPermissionInList(p, deselectedPermissions)), ...newlySelectedPermissions],
+    [permissions, newlySelectedPermissions, deselectedPermissions],
   );
 
   const totalPermissionCount = getTotalPermissionCount(permissions, selectedPermissions);
@@ -256,15 +274,17 @@ export const AddOrganizationPermission = ({
           </DialogClose>
           <Button
             size="default"
-            disabled={newlySelectedPermissions.length === 0}
+            disabled={
+              newlySelectedPermissions.length === 0 && deselectedPermissions.length === 0
+            }
             onClick={() => {
-              onAdd(newlySelectedPermissions);
+              onAdd(finalSelection);
               reset();
               setOpen(false);
               setTimeout(() => onSave?.(), 0);
             }}
           >
-            Add
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
