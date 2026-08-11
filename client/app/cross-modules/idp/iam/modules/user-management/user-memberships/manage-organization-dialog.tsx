@@ -105,18 +105,18 @@ export const ManageOrganizationDialog = ({
     () => new Map((rolesData?.data || []).map((role) => [role.slug, role])),
     [rolesData?.data],
   );
-  const permissionByName = useMemo(
-    () => new Map((permissionsData?.data || []).map((permission) => [permission.name, permission])),
+  const permissionByResource = useMemo(
+    () => new Map((permissionsData?.data || []).map((permission) => [permission.resource, permission])),
     [permissionsData?.data],
   );
 
   const getExistingSelection = (orgId: string) => {
     const user = userData?.data;
-    if (!user || !orgId) return { roleSlugs: [], permissionNames: [] };
+    if (!user || !orgId) return { roleSlugs: [], permissionResources: [] };
 
     const membership = user.organizations?.find((item) => item.organizationId === orgId);
     if (membership) {
-      return { roleSlugs: membership.roles ?? [], permissionNames: membership.permissions ?? [] };
+      return { roleSlugs: membership.roles ?? [], permissionResources: membership.permissions ?? [] };
     }
 
     return {
@@ -124,7 +124,7 @@ export const ManageOrganizationDialog = ({
         user.OrganizationsRoles?.[orgId] ??
         user.roles?.[orgId] ??
         [],
-      permissionNames:
+      permissionResources:
         user.OrganizationsPermissions?.[orgId] ??
         user.permissions?.[orgId] ??
         [],
@@ -134,15 +134,15 @@ export const ManageOrganizationDialog = ({
   const handleOrgChange = (orgId: string) => {
     setSelectedOrgId(orgId);
 
-    const { roleSlugs, permissionNames } = getExistingSelection(orgId);
+    const { roleSlugs, permissionResources } = getExistingSelection(orgId);
     setSelectedRoles(
       roleSlugs.map((slug) => roleBySlug.get(slug) ?? createRoleStub({ slug })),
     );
     setSelectedPermissions(
-      permissionNames.map(
-        (name) =>
-          permissionByName.get(name) ??
-          ({ itemId: name, name, resource: name, resourceGroup: "Other" } as IPermission),
+      permissionResources.map(
+        (resource) =>
+          permissionByResource.get(resource) ??
+          ({ itemId: resource, name: resource, resource, resourceGroup: "Other" } as IPermission),
       ),
     );
   };
@@ -173,7 +173,7 @@ export const ManageOrganizationDialog = ({
     try {
       const res = await mutateAsync({
         roles: selectedRoles.map((role) => role.slug),
-        permissions: selectedPermissions.map((permission) => permission.name),
+        permissions: selectedPermissions.map((permission) => permission.resource),
         organizationId: selectedOrgId,
       });
       if (!res.isSuccess) {
@@ -296,3 +296,4 @@ export const ManageOrganizationDialog = ({
     </Dialog>
   );
 };
+ 
