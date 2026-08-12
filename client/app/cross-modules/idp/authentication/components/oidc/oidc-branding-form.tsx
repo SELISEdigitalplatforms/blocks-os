@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, Upload } from "lucide-react";
+import { ImagePlus, Upload } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ModuleName } from "@/constants/modules.constants";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
@@ -191,6 +192,11 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
 
   const isBusy = isSaving || isUploading;
 
+  const savedBrandColor = credential?.clientBrandColor || DEFAULT_BRAND_COLOR;
+  const savedLogoUrl = credential?.clientLogoUrl ?? null;
+  const isDirty =
+    brandColor !== savedBrandColor || (previewLogoUrl ?? null) !== savedLogoUrl;
+
   useEffect(() => {
     if (!credential) {
       setActions(null);
@@ -201,17 +207,46 @@ export const OidcBrandingForm = ({ clientId }: OidcBrandingFormProps) => {
       onSave: handleSave,
       onUndo: handleUndo,
       isBusy,
+      isDirty,
     });
 
     return () => setActions(null);
-  }, [credential, handleSave, handleUndo, isBusy, setActions]);
+  }, [credential, handleSave, handleUndo, isBusy, isDirty, setActions]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24 text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        Loading client…
-      </div>
+      <Card className="bg-background">
+        <CardContent className="p-3 sm:p-5 lg:p-6">
+          <div className="grid min-w-0 grid-cols-1 gap-4 md:gap-5 xl:grid-cols-2 xl:gap-6">
+            <section className="flex min-w-0 flex-col gap-5 rounded-xl border border-border bg-card p-4 sm:p-5">
+              <div className="border-b border-border pb-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="mt-2 h-4 w-56" />
+              </div>
+              <div className="space-y-5">
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-32 w-full rounded-lg" />
+                </div>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-24" />
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-14 rounded" />
+                    <Skeleton className="h-10 w-[140px] rounded" />
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section className="flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+              <div className="border-b border-border pb-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="mt-2 h-4 w-56" />
+              </div>
+              <Skeleton className="h-[380px] w-full rounded-lg sm:h-[460px] lg:h-[520px]" />
+            </section>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

@@ -149,11 +149,16 @@ export const OidcLoginPreview = ({
             <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 {clientLogoUrl ? (
-                  <img
-                    src={clientLogoUrl}
-                    alt="Client logo"
-                    className="h-7 max-w-[140px] object-contain"
-                  />
+                  <span
+                    className="inline-flex h-7 items-center justify-center rounded-md px-1.5"
+                    style={{ backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)" }}
+                  >
+                    <img
+                      src={clientLogoUrl}
+                      alt="Client logo"
+                      className="h-5 max-w-[120px] object-contain"
+                    />
+                  </span>
                 ) : (
                   <BlocksLogo />
                 )}

@@ -23,6 +23,7 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => ({ data: h.projectsData, isLoading: h.isLoading }),
   useUpdateTenantGroup: () => ({ mutateAsync: h.updateTenantGroup, isPending: h.isUpdating }),
+  useGetEnvRepositories: () => ({ data: { data: [] }, isLoading: false, isFetching: false }),
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
 
@@ -89,7 +90,7 @@ describe("SettingsPage", () => {
     const input = within(dialog).getByLabelText("Project name");
     await user.clear(input);
     await user.type(input, "Acme Corp");
-    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await user.click(within(dialog).getByRole("button", { name: "Update" }));
 
     await waitFor(() =>
       expect(h.updateTenantGroup).toHaveBeenCalledWith({
@@ -113,7 +114,7 @@ describe("SettingsPage", () => {
     await user.type(input, "ab");
 
     expect(await screen.findByText("Project name must be at least 3 characters")).toBeTruthy();
-    expect((within(dialog).getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
+    expect((within(dialog).getByRole("button", { name: "Update" }) as HTMLButtonElement).disabled).toBe(
       true,
     );
   });
@@ -128,7 +129,7 @@ describe("SettingsPage", () => {
     const input = within(dialog).getByLabelText("Project name");
     await user.clear(input);
     await user.type(input, "Acme Corp");
-    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await user.click(within(dialog).getByRole("button", { name: "Update" }));
 
     await waitFor(() =>
       expect(h.toast).toHaveBeenCalledWith(
@@ -147,7 +148,7 @@ describe("SettingsPage", () => {
     const input = within(dialog).getByLabelText("Project name");
     await user.clear(input);
     await user.type(input, "Acme Corp");
-    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await user.click(within(dialog).getByRole("button", { name: "Update" }));
 
     await waitFor(() =>
       expect(h.toast).toHaveBeenCalledWith(

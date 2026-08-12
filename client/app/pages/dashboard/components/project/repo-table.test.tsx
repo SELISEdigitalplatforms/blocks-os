@@ -7,6 +7,16 @@ vi.mock("@seliseblocks/genesis-os/utils", () => ({
   formatFullDate: () => "FMT-DATE",
 }));
 
+vi.mock("@/components/ui-kits/tooltip/tooltip", () => {
+  const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+  return {
+    Tooltip: Passthrough,
+    TooltipTrigger: Passthrough,
+    TooltipContent: Passthrough,
+    TooltipProvider: Passthrough,
+  };
+});
+
 vi.mock("../custom-domain/dialog", () => ({
   SetCustomDomainDialog: ({
     open,

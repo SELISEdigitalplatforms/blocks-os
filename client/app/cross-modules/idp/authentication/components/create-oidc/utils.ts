@@ -1,11 +1,20 @@
 import { z } from "zod";
 
+const PUBLIC_TLD_PATTERN = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
+
+const hasPublicHostname = (hostname: string) => {
+  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+  return PUBLIC_TLD_PATTERN.test(hostname);
+};
+
 const httpsUrlRule = (val: string) => {
   try {
     const url = new URL(val);
+    if (url.hash || url.search) return false;
     if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
       return url.protocol === "http:" || url.protocol === "https:";
     }
+    if (!hasPublicHostname(url.hostname)) return false;
     return url.protocol === "https:";
   } catch {
     return false;
@@ -33,7 +42,8 @@ export const redirectUriSubmitSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: [idx, "value"],
-          message: "Only HTTP is allowed for localhost. All other URLs must use HTTPS.",
+          message:
+            "Enter a valid HTTPS URL with a public domain (e.g. https://example.com/callback). Localhost may use HTTP.",
         });
       }
     });

@@ -21,16 +21,22 @@ import { MaskedText } from "@/components/masked-text";
 import { environmentOptions } from "@/constants/environment-options";
 import { formatDate } from "@/lib/utils";
 import { IProject } from "@/models/project.model";
+import { useGetEnvRepositories } from "@/hooks/use-project";
+
+const DEFAULT_LAST_DEPLOYMENT = "0001-01-01T00:00:00";
 
 // Environments are listed in the same order the "Select environments" step
-// offers them (dev → test → stg → … → prod); anything unrecognised sinks to the
-// bottom of the list.
+// offers them (dev → test → stg → … → prod); anything unrecognized sinks to
+// the bottom of the list.
 export const getEnvironmentOrder = (environment: string): number =>
   environmentOptions.find((option) => option.value === environment)?.index ??
   Number.MAX_SAFE_INTEGER;
 
 const getEnvironmentLabel = (environment: string): string =>
   environmentOptions.find((option) => option.value === environment)?.label || environment || "-";
+
+const isDeployed = (lastDeploymentDate?: string) =>
+  !!lastDeploymentDate && lastDeploymentDate !== DEFAULT_LAST_DEPLOYMENT;
 
 const EnvironmentBadge = ({ environment }: { environment: string }) => (
   <Badge
@@ -45,20 +51,38 @@ const EnvironmentBadge = ({ environment }: { environment: string }) => (
   </Badge>
 );
 
-const EnvironmentDomain = ({ project }: { project: IProject }) => {
+const EnvironmentDomain = ({
+  project,
+  hasDeployment,
+}: {
+  project: IProject;
+  hasDeployment: boolean;
+}) => {
   const [primary, ...rest] = project.applications ?? [];
   if (!primary) return <span className="text-muted-foreground">-</span>;
   return (
     <div className="flex items-center gap-2">
-      <a
-        href={primary.domain}
-        target="_blank"
-        rel="noreferrer"
-        className="flex max-w-[220px] items-center gap-1 truncate text-primary hover:underline"
-      >
-        <span className="truncate">{primary.domain.replace(/^https?:\/\//, "")}</span>
-        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-      </a>
+      {hasDeployment ? (
+        <a
+          href={primary.domain}
+          target="_blank"
+          rel="noreferrer"
+          className="flex max-w-[220px] items-center gap-1 truncate text-primary hover:underline"
+        >
+          <span className="truncate">{primary.domain.replace(/^https?:\/\//, "")}</span>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+        </a>
+      ) : (
+        <span
+          className="flex max-w-[220px] items-center gap-2 truncate text-muted-foreground"
+          title="No repository has been deployed for this environment yet."
+        >
+          <span className="truncate">{primary.domain.replace(/^https?:\/\//, "")}</span>
+          <Badge variant="outline" className="w-fit shrink-0 text-[10px]">
+            Not deployed
+          </Badge>
+        </span>
+      )}
       {rest.length > 0 && (
         <Badge variant="secondary" className="w-fit text-xs">
           +{rest.length}
@@ -74,7 +98,7 @@ const EnvironmentsTableLoading = () => (
   <>
     {Array.from({ length: 3 }).map((_, rowIndex) => (
       <TableRow key={rowIndex}>
-        {Array.from({ length: COLUMN_COUNT }).map((__, cellIndex) => (
+        {Array.from({ length: COLUMN_COUNT }).map((_, cellIndex) => (
           <TableCell key={cellIndex}>
             <Skeleton className="h-6 w-full rounded-sm" />
           </TableCell>
@@ -90,6 +114,20 @@ type EnvironmentsCardProps = {
 };
 
 export const EnvironmentsCard = ({ environments, isLoading = false }: EnvironmentsCardProps) => {
+  const firstTenantId = environments[0]?.tenantId || "";
+  const {
+    data: envRepositories,
+    isLoading: isLoadingRepos,
+    isFetching: isFetchingRepos,
+  } = useGetEnvRepositories(firstTenantId);
+
+  const isRepoDataLoading = isLoadingRepos || isFetchingRepos;
+  const hasAnyDeployment = !!envRepositories?.data?.some((repo) =>
+    isDeployed(repo.lastDeploymentDate),
+  );
+
+  const showRowLoading = isLoading || (isRepoDataLoading && !envRepositories?.data);
+
   return (
     <Card>
       <CardHeader className="mb-4 flex flex-col gap-1">
@@ -109,7 +147,7 @@ export const EnvironmentsCard = ({ environments, isLoading = false }: Environmen
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {showRowLoading ? (
               <EnvironmentsTableLoading />
             ) : environments.length === 0 ? (
               <TableRow>
@@ -139,7 +177,7 @@ export const EnvironmentsCard = ({ environments, isLoading = false }: Environmen
                     </div>
                   </TableCell>
                   <TableCell>
-                    <EnvironmentDomain project={environment} />
+                    <EnvironmentDomain project={environment} hasDeployment={hasAnyDeployment} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-medium-emphasis">
                     {environment.createdDate ? formatDate(new Date(environment.createdDate)) : "-"}

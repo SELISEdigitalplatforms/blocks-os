@@ -151,9 +151,25 @@ describe("SecretManagementLayout", () => {
 
   it("renders the branding save/undo actions in branding mode", () => {
     h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
-    h.brandingActions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false };
+    h.brandingActions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false, isDirty: true };
     render(<SecretManagementLayout />);
     expect(screen.getByText("Save")).toBeTruthy();
     expect(screen.getByText("Undo")).toBeTruthy();
+  });
+
+  it("disables the branding save/undo actions when nothing is dirty", () => {
+    h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
+    h.brandingActions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false, isDirty: false };
+    render(<SecretManagementLayout />);
+    expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("enables the branding save/undo actions when dirty", () => {
+    h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
+    h.brandingActions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false, isDirty: true };
+    render(<SecretManagementLayout />);
+    expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(false);
   });
 });

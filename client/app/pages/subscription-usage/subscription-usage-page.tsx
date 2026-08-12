@@ -19,6 +19,12 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Card } from "@/components/ui-kits/card/card";
 import { Progress } from "@/components/ui-kits/progress/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui-kits/dropdown-menu/dropdown-menu";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -477,16 +483,26 @@ export function SubscriptionUsagePage() {
             Track platform consumption across all services for the current billing period.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-fit gap-2"
-          onClick={() => setTimeRangeIdx((i) => (i + 1) % TIME_RANGES.length)}
-        >
-          <Clock className="h-4 w-4" />
-          {TIME_RANGES[timeRangeIdx]}
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="w-fit gap-2">
+              <Clock className="h-4 w-4" />
+              {TIME_RANGES[timeRangeIdx]}
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {TIME_RANGES.map((range, idx) => (
+              <DropdownMenuItem
+                key={range}
+                onClick={() => setTimeRangeIdx(idx)}
+                className={cn(idx === timeRangeIdx && "font-medium")}
+              >
+                {range}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* ── Plan Card ── */}
@@ -510,7 +526,13 @@ export function SubscriptionUsagePage() {
               </p>
             </div>
           </div>
-          <Button size="sm" className="shrink-0">
+          <Button
+            size="sm"
+            className="shrink-0"
+            onClick={() => {
+              window.open("https://www.seliseblocks.com/pricing", "_blank", "noopener,noreferrer");
+            }}
+          >
             Manage Package
           </Button>
         </div>

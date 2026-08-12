@@ -20,7 +20,8 @@ namespace DomainService.Projects
         Task<BaseResponse> UpdateProjectAsync(UpdateProjectRequest request);
         Task<BaseResponse> DisableProjectAsync(string projectId);
         Task<GetAssetResponse> GetAssetAsync(GetAssetRequest request);
-        Task<BaseResponse> AddAssetAsync(AddAssetRequest asset);
+        Task<AddAssetResponse> AddAssetAsync(AddAssetRequest asset);
+        Task<BaseResponse> DeleteAssetAsync(DeleteAssetRequest request);
         Task<BaseResponse> UpdateTokenValidationParametersAsync(UpdateTokenValidationParametersRequest request);
         Task<IActionResult> GetProjectTokenValidationParametersAsync(string projectId);
         Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request);

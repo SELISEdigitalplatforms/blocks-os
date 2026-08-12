@@ -23,7 +23,7 @@ const DeleteEmailConfig: React.FC<DeleteEmailConfigProps> = ({ configId, onClose
         toast({
           variant: "success",
           title: "Success",
-          description: "Configuration deleted",
+          description: "Configuration deleted successfully.",
         });
         onClose();
       } else {

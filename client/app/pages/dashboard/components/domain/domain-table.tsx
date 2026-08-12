@@ -191,9 +191,14 @@ export const DomainTable = ({ data }: DomainTableProps) => {
             dialogTitle: "Delete Domain",
             dialogSubtitle: (
               <>
-                Are you sure you want to delete{" "}
-                <span className="break-all font-semibold">{deleteTarget?.domain}</span>? This action
-                cannot be undone.
+                <p>Are you sure you want to delete the following domain?</p>
+                <p
+                  className="mt-3 max-w-full truncate rounded-md bg-muted/60 px-3 py-2 font-mono text-sm font-semibold"
+                  title={deleteTarget?.domain}
+                >
+                  {deleteTarget?.domain}
+                </p>
+                <p className="mt-3">This action cannot be undone.</p>
               </>
             ),
             confirmButton: "Delete",
@@ -250,7 +255,7 @@ export const DomainTable = ({ data }: DomainTableProps) => {
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                <tr key={row.id} className="border-b border-border last:border-0">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-2 md:px-4 md:py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

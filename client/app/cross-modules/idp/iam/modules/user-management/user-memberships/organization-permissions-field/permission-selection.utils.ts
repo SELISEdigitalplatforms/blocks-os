@@ -45,7 +45,6 @@ export const shouldDisablePermissionCheckbox = (
   assignedPermissions: IPermission[],
   selectedPermissions: IPermission[],
 ) => {
-  if (isPermissionAssigned(permission, assignedPermissions)) return true;
   if (isPermissionInList(permission, selectedPermissions)) return false;
   return isAtMaxPermissions(assignedPermissions, selectedPermissions);
 };

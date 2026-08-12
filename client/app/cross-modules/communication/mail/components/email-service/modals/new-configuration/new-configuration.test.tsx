@@ -71,7 +71,10 @@ describe("NewConfiguration", () => {
     expect(payload.senderAddress).toBe("support@example.com");
     expect(payload.configurationId).toBe("");
     expect(h.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "success", description: "New configuration added" }),
+      expect.objectContaining({
+        variant: "success",
+        description: "Configuration created successfully.",
+      }),
     );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -161,14 +164,14 @@ describe("NewConfiguration", () => {
 
     // Supply the password (never prefilled) to make the form valid, then save.
     await user.type(screen.getByPlaceholderText("Enter password"), "secret1");
-    const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+    const save = screen.getByRole("button", { name: "Update Changes" }) as HTMLButtonElement;
     await waitFor(() => expect(save.disabled).toBe(false));
     await user.click(save);
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     expect(h.mutateAsync.mock.calls[0][0].configurationId).toBe("cfg-9");
     expect(h.toast).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "Configuration updated" }),
+      expect.objectContaining({ description: "Configuration updated successfully." }),
     );
   });
 

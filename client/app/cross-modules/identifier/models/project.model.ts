@@ -27,7 +27,16 @@ export interface IResource {
   name: string;
   link: string;
   resourceId: string;
+  createdDate?: string;
+  lastUpdatedDate?: string;
+  /** Deleted repositories are archived, not removed. Reads never return archived ones. */
+  isArchived?: boolean;
 }
+/**
+ * What AddAsset did with the resource: a first import, a rename applied, a previously deleted
+ * repository brought back, or nothing to change.
+ */
+export type AssetMutationStatus = "Added" | "Updated" | "Unchanged" | "Restored";
 export interface IProjectGroup {
   tenantGroupId: string;
   projects: IProject[];

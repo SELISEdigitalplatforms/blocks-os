@@ -133,7 +133,9 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
         toast({
           variant: "success",
           title: "Success",
-          description: isEdit ? "Configuration updated" : "New configuration added",
+          description: isEdit
+            ? "Configuration updated successfully."
+            : "New configuration added successfully.",
         });
         form.reset();
         onClose(false);
@@ -300,7 +302,7 @@ const NewNotificationConfiguration: React.FC<NewNotificationConfigurationProps> 
                 </Button>
               </DialogTrigger>
               <Button disabled={isPending || !form.formState.isValid} size="default">
-                Save
+                {isPending ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update Changes" : "Save"}
               </Button>
             </div>
           </div>
