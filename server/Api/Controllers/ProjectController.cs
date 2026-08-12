@@ -130,15 +130,26 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::add-asset")]
-        public async Task<BaseResponse> AddAsset([FromBody] AddAssetRequest asset)
+        public async Task<AddAssetResponse> AddAsset([FromBody] AddAssetRequest asset)
         {
             if (string.IsNullOrWhiteSpace(asset.TenantGroupId) || asset.Resource == null)
             {
-                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_asset", "Asset or GroupId cannot be null or empty" } } };
+                return new AddAssetResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_asset", "Asset or GroupId cannot be null or empty" } } };
             }
 
-            await _projectManagementService.AddAssetAsync(asset);
-            return new BaseResponse { IsSuccess = true };
+            return await _projectManagementService.AddAssetAsync(asset);
+        }
+
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::delete-asset")]
+        public async Task<BaseResponse> DeleteAsset([FromBody] DeleteAssetRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TenantGroupId) || string.IsNullOrWhiteSpace(request.ResourceId))
+            {
+                return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_asset", "ResourceId or GroupId cannot be null or empty" } } };
+            }
+
+            return await _projectManagementService.DeleteAssetAsync(request);
         }
 
         [HttpPost]

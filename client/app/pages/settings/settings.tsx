@@ -84,10 +84,10 @@ export const SettingsPage = () => {
     },
   });
   useEffect(() => {
-    if (project?.name) {
+    if (project?.name && isEditOpen) {
       form.reset({ name: project.name });
     }
-  }, [project?.name, form]);
+  }, [project?.name, isEditOpen, form]);
   useEffect(() => {
     if (project && selectedProject?.itemId === project.itemId) {
       if (selectedProject.name !== project.name) {
@@ -197,7 +197,7 @@ export const SettingsPage = () => {
                 </Button>
                 <Button type="submit" disabled={isUpdating || !form.formState.isValid}>
                   {isUpdating && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                  Save
+                  Update
                 </Button>
               </DialogFooter>
             </form>

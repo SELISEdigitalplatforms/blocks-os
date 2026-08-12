@@ -79,8 +79,8 @@ namespace XUnitTest.Services
         public async Task SaveProjectAsync_ExistingGroup_LoadsAssetsInsteadOfCreating()
         {
             using var _ = new BlocksTestContext();
-            _repo.Setup(r => r.GetTenantAssetAsync(It.IsAny<GetAssetRequest>()))
-                 .ReturnsAsync((new TenantAsset { Resources = new List<Resource>() }, 0L));
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("existing-group"))
+                 .ReturnsAsync(new TenantAsset { Resources = new List<Resource>() });
 
             var request = new CreateProjectRequest
             {
@@ -96,7 +96,7 @@ namespace XUnitTest.Services
 
             response.TenantGroupId.Should().Be("existing-group");
             _repo.Verify(r => r.UpdateTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
-            _repo.Verify(r => r.GetTenantAssetAsync(It.IsAny<GetAssetRequest>()), Times.Once);
+            _repo.Verify(r => r.GetTenantAssetByGroupIdAsync("existing-group"), Times.Once);
         }
 
         [Fact]
@@ -375,7 +375,7 @@ namespace XUnitTest.Services
         {
             using var _ = new BlocksTestContext();
             var asset = new TenantAsset { TenantGroupId = "g", Resources = new List<Resource>() };
-            _repo.Setup(r => r.GetTenantAssetAsync(It.IsAny<GetAssetRequest>())).ReturnsAsync((asset, 0L));
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
 
             var response = await Service().AddAssetAsync(new AddAssetRequest
             {
@@ -384,30 +384,264 @@ namespace XUnitTest.Services
             });
 
             response.IsSuccess.Should().BeTrue();
+            response.Status.Should().Be(AssetMutationStatus.Added);
             asset.Resources.Should().ContainSingle(r => r.ResourceId == "r1");
             _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
+            _repo.Verify(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Once);
+            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Never);
         }
 
         [Fact]
-        public async Task AddAssetAsync_ExistingResource_DoesNotDuplicate()
+        public async Task AddAssetAsync_NewResource_StampsServerOwnedFields()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset { TenantGroupId = "g", Resources = new List<Resource>() };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+
+            await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                // A caller must not be able to import a repository that is already archived.
+                Resource = new Resource { ResourceId = "r1", Name = "repo", IsArchived = true }
+            });
+
+            var stored = asset.Resources.Single();
+            stored.IsArchived.Should().BeFalse();
+            stored.CreatedDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+            stored.LastUpdatedDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        }
+
+        // Deleting archives the row, so re-adding the same repository has to revive it rather
+        // than leave a second entry behind for the same id.
+        [Fact]
+        public async Task AddAssetAsync_ArchivedResource_RestoresWithoutDuplicating()
+        {
+            using var _ = new BlocksTestContext();
+            var created = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource>
+                {
+                    new()
+                    {
+                        ResourceId = "r1",
+                        Name = "owner/repo",
+                        Link = "https://github.com/owner/repo",
+                        CreatedDate = created,
+                        IsArchived = true
+                    }
+                }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                Resource = new Resource { ResourceId = "r1", Name = "owner/repo", Link = "https://github.com/owner/repo" }
+            });
+
+            response.Status.Should().Be(AssetMutationStatus.Restored);
+            asset.Resources.Should().HaveCount(1);
+            asset.Resources[0].IsArchived.Should().BeFalse();
+            asset.Resources[0].CreatedDate.Should().Be(created);
+            _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
+            // The per-tenant Repos rows were never removed, so restoring must not insert more.
+            _repo.Verify(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Never);
+            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task AddAssetAsync_ArchivedResourceRenamedWhileGone_RestoresWithTheNewDetails()
         {
             using var _ = new BlocksTestContext();
             var asset = new TenantAsset
             {
                 TenantGroupId = "g",
-                Resources = new List<Resource> { new() { ResourceId = "r1" } }
+                Resources = new List<Resource>
+                {
+                    new() { ResourceId = "r1", Name = "owner/old", Link = "https://github.com/owner/old", IsArchived = true }
+                }
             };
-            _repo.Setup(r => r.GetTenantAssetAsync(It.IsAny<GetAssetRequest>())).ReturnsAsync((asset, 0L));
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
 
             var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                Resource = new Resource { ResourceId = "r1", Name = "owner/new", Link = "https://github.com/owner/new" }
+            });
+
+            response.Status.Should().Be(AssetMutationStatus.Restored);
+            asset.Resources[0].Name.Should().Be("owner/new");
+            asset.Resources[0].Link.Should().Be("https://github.com/owner/new");
+            asset.Resources[0].IsArchived.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task DeleteAssetAsync_ArchivesTheResourceInsteadOfRemovingIt()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource>
+                {
+                    new() { ResourceId = "r1", Name = "repo" },
+                    new() { ResourceId = "r2", Name = "other" }
+                }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+
+            var response = await Service().DeleteAssetAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = "r1"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            asset.Resources.Should().HaveCount(2);
+            asset.Resources.Single(r => r.ResourceId == "r1").IsArchived.Should().BeTrue();
+            asset.Resources.Single(r => r.ResourceId == "r2").IsArchived.Should().BeFalse();
+            _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
+            // The copy every tenant in the group holds is flagged too.
+            _repo.Verify(r => r.ArchiveRepoResourceAsync(It.Is<DeleteAssetRequest>(
+                d => d.TenantGroupId == "g" && d.ResourceId == "r1")), Times.Once);
+        }
+
+        [Theory]
+        [InlineData("missing")]
+        [InlineData("r1")]
+        public async Task DeleteAssetAsync_UnknownOrAlreadyArchivedResource_ReturnsError(string resourceId)
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", IsArchived = true } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+
+            var response = await Service().DeleteAssetAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = resourceId
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("resource_not_found");
+            _repo.Verify(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
+            _repo.Verify(r => r.ArchiveRepoResourceAsync(It.IsAny<DeleteAssetRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeleteAssetAsync_NoAssetForGroup_ReturnsError()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync((TenantAsset?)null);
+
+            var response = await Service().DeleteAssetAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = "r1"
+            });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("resource_not_found");
+        }
+
+        [Fact]
+        public async Task AddAssetAsync_RenamedResource_UpdatesInPlaceWithoutDuplicating()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource>
+                {
+                    new() { ResourceId = "r1", Name = "owner/old-name", Link = "https://github.com/owner/old-name" }
+                }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                Resource = new Resource { ResourceId = "r1", Name = "owner/new-name", Link = "https://github.com/owner/new-name" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            response.Status.Should().Be(AssetMutationStatus.Updated);
+            asset.Resources.Should().HaveCount(1);
+            asset.Resources[0].Name.Should().Be("owner/new-name");
+            asset.Resources[0].Link.Should().Be("https://github.com/owner/new-name");
+            _repo.Verify(r => r.SaveTenantAssetAsync(asset), Times.Once);
+            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Once);
+            _repo.Verify(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AddAssetAsync_UnchangedResource_DoesNotWrite()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", Name = "repo", Link = "link" } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                Resource = new Resource { ResourceId = "r1", Name = "repo", Link = "link" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            response.Status.Should().Be(AssetMutationStatus.Unchanged);
+            asset.Resources.Should().HaveCount(1);
+            _repo.Verify(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
+            _repo.Verify(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>()), Times.Never);
+        }
+
+        // The paged read truncates Resources to a single page, so saving its result back would
+        // delete every resource past that page.
+        [Fact]
+        public async Task AddAssetAsync_ReadsTheAssetUnpaged()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g"))
+                 .ReturnsAsync(new TenantAsset { TenantGroupId = "g", Resources = new List<Resource>() });
+
+            await Service().AddAssetAsync(new AddAssetRequest
             {
                 TenantGroupId = "g",
                 Resource = new Resource { ResourceId = "r1" }
             });
 
-            response.IsSuccess.Should().BeTrue();
-            asset.Resources.Should().HaveCount(1);
-            _repo.Verify(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
+            _repo.Verify(r => r.GetTenantAssetAsync(It.IsAny<GetAssetRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AddAssetAsync_NoExistingAsset_CreatesGroupAsset()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync((TenantAsset?)null);
+
+            TenantAsset? saved = null;
+            _repo.Setup(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>()))
+                 .Callback<TenantAsset>(a => saved = a)
+                 .Returns(Task.CompletedTask);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "g",
+                Resource = new Resource { ResourceId = "r1", Name = "repo" }
+            });
+
+            response.Status.Should().Be(AssetMutationStatus.Added);
+            saved.Should().NotBeNull();
+            saved!.TenantGroupId.Should().Be("g");
+            saved.Resources.Should().ContainSingle(r => r.ResourceId == "r1");
         }
 
         [Fact]

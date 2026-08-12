@@ -11,6 +11,7 @@ import {
   ICreateProjectPayload,
   IDisableProjectPayload,
   IDisableProjectResponse,
+  AssetMutationStatus,
   IEnvRepository,
   IGetProjectResponse,
   IGetPublicCertificateResponse,
@@ -39,7 +40,15 @@ export class ProjectService {
     return http.get(url);
   }
 
-  getAssets(tenantGroupId: string): Promise<{
+  // The endpoint binds a BaseGetsRequest: Page/PageSize at the root and the free-text term
+  // under Filter.Search, which matches either the repository name or its link. totalCount
+  // counts the filtered set, not the page.
+  getAssets(
+    tenantGroupId: string,
+    page: number = 0,
+    pageSize: number = 12,
+    search: string = "",
+  ): Promise<{
     assets: {
       resources: IResource[];
       tenantGroupId: string;
@@ -50,15 +59,30 @@ export class ProjectService {
     errors: unknown | null;
     isSuccess: boolean;
   }> {
-    const url = `${PROJECT_ENDPOINTS.GET_ASSET}?TenantGroupId=${tenantGroupId}`;
-    return http.get(url);
+    const query = new URLSearchParams({
+      TenantGroupId: tenantGroupId,
+      Page: String(page),
+      PageSize: String(pageSize),
+    });
+    if (search.trim()) query.set("Filter.Search", search.trim());
+
+    return http.get(`${PROJECT_ENDPOINTS.GET_ASSET}?${query.toString()}`);
   }
 
   addAssets(payload: { tenantGroupId: string; resource: IResource }): Promise<{
     errors: unknown | null;
     isSuccess: boolean;
+    status: AssetMutationStatus;
   }> {
     return http.post(PROJECT_ENDPOINTS.ADD_ASSET, payload);
+  }
+
+  // Archives the repository rather than erasing it, so adding the same one again restores it.
+  deleteAsset(payload: { tenantGroupId: string; resourceId: string }): Promise<{
+    errors: unknown | null;
+    isSuccess: boolean;
+  }> {
+    return http.post(PROJECT_ENDPOINTS.DELETE_ASSET, payload);
   }
 
   getEnvRepositories(): Promise<{

@@ -10,6 +10,11 @@ import {
 } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { SetCustomDomainDialog } from "../custom-domain/dialog";
 
 // ─── Column helper ────────────────────────────────────────────────────────────
@@ -61,17 +66,26 @@ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
     cell: ({ row }) => {
       const repo = row.original;
       const hasCustomDomain = !!repo.customDeploymentUrl;
+      const tooltipText = hasCustomDomain
+        ? "Edit custom domain"
+        : "Set a custom domain first to enable editing";
       return (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Edit custom domain"
-            disabled={!hasCustomDomain}
-            onClick={() => onSet(repo)}
-          >
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Edit custom domain"
+                disabled={!hasCustomDomain}
+                onClick={() => onSet(repo)}
+                className="disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tooltipText}</TooltipContent>
+          </Tooltip>
         </div>
       );
     },
@@ -157,7 +171,7 @@ export const ProjectRepoTable = ({
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                <tr key={row.id} className="border-b border-border last:border-0">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-2 md:px-4 md:py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

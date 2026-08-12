@@ -59,7 +59,12 @@ const credential = {
 
 const latestActions = () => {
   const calls = h.setActions.mock.calls.filter((c) => c[0] !== null);
-  return calls[calls.length - 1]?.[0] as { onSave: () => Promise<void>; onUndo: () => void };
+  return calls[calls.length - 1]?.[0] as {
+    onSave: () => Promise<void>;
+    onUndo: () => void;
+    isBusy: boolean;
+    isDirty: boolean;
+  };
 };
 
 beforeEach(() => {
@@ -72,8 +77,9 @@ beforeEach(() => {
 describe("OidcBrandingForm", () => {
   it("shows a loading state", () => {
     h.useGetAuthOidcCredential.mockReturnValue({ data: undefined, isLoading: true });
-    render(<OidcBrandingForm clientId="c1" />);
-    expect(screen.getByText(/Loading client/)).toBeTruthy();
+    const { container } = render(<OidcBrandingForm clientId="c1" />);
+    // Skeleton placeholder blocks are rendered while the credential loads.
+    expect(container.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
   });
 
   it("shows a not-found state when there is no credential", () => {
@@ -173,6 +179,34 @@ describe("OidcBrandingForm", () => {
     await waitFor(() => expect(latestActions()).toBeTruthy());
     await latestActions().onSave();
     expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "nope" });
+  });
+
+  it("reports isDirty=false when nothing has changed", async () => {
+    render(<OidcBrandingForm clientId="c1" />);
+    await waitFor(() => expect(latestActions()).toBeTruthy());
+    expect(latestActions().isDirty).toBe(false);
+  });
+
+  it("reports isDirty=true after the brand color changes", async () => {
+    const user = userEvent.setup();
+    render(<OidcBrandingForm clientId="c1" />);
+    await waitFor(() => expect(latestActions()).toBeTruthy());
+    const textColor = screen.getByRole("textbox") as HTMLInputElement;
+    await user.clear(textColor);
+    await user.type(textColor, "#000000");
+    await waitFor(() => expect(latestActions().isDirty).toBe(true));
+  });
+
+  it("clears isDirty after onUndo restores the saved state", async () => {
+    const user = userEvent.setup();
+    render(<OidcBrandingForm clientId="c1" />);
+    await waitFor(() => expect(latestActions()).toBeTruthy());
+    const textColor = screen.getByRole("textbox") as HTMLInputElement;
+    await user.clear(textColor);
+    await user.type(textColor, "#000000");
+    await waitFor(() => expect(latestActions().isDirty).toBe(true));
+    latestActions().onUndo();
+    await waitFor(() => expect(latestActions().isDirty).toBe(false));
   });
 
   it("surfaces an error toast when the save throws", async () => {

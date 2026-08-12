@@ -87,7 +87,7 @@ describe("CreateClientCredential", () => {
             accessTokenValidForNumberMinutes: 15,
             isActive: false,
             roles: ["viewer"],
-            permissions: [],
+            permissions: ["users:read"],
           } as unknown as IClientCredentialsConfig
         }
       />,
@@ -97,7 +97,7 @@ describe("CreateClientCredential", () => {
 
     // Make the form dirty by editing the name, then save.
     await user.type(screen.getByPlaceholderText("Enter client name"), " Updated");
-    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+    await user.click(screen.getByRole("button", { name: "Update Changes" }));
     await waitFor(() => expect(h.saveClient).toHaveBeenCalledTimes(1));
     const payload = h.saveClient.mock.calls[0][0];
     expect(payload.itemId).toBe("client-1");
@@ -111,6 +111,8 @@ describe("CreateClientCredential", () => {
     h.saveClient.mockResolvedValue({ isSuccess: false, errors: { name: "duplicate" } });
     render(<CreateClientCredential open hideTrigger />);
     await user.type(screen.getByPlaceholderText("Enter client name"), "Dup");
+    await user.click(screen.getByRole("button", { name: "pick-role" }));
+    await user.click(screen.getByRole("button", { name: "pick-permission" }));
     await user.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() =>
       expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { name: "duplicate" } }),
@@ -122,6 +124,8 @@ describe("CreateClientCredential", () => {
     h.saveClient.mockRejectedValue(new Error("boom"));
     render(<CreateClientCredential open hideTrigger />);
     await user.type(screen.getByPlaceholderText("Enter client name"), "Dup");
+    await user.click(screen.getByRole("button", { name: "pick-role" }));
+    await user.click(screen.getByRole("button", { name: "pick-permission" }));
     await user.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() =>
       expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }),

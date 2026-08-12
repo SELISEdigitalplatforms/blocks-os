@@ -9,8 +9,13 @@ export const createClientSchema = z.object({
     .min(5, "Must be at least 5 minutes")
     .max(120, "Must be at most 120 minutes"),
   isActive: z.boolean(),
-  roles: z.array(z.string().trim()),
-  permissions: z.array(z.string().trim()).max(10, "Maximum 10 permissions allowed"),
+  roles: z
+    .array(z.string().trim())
+    .min(1, "At least one role is required"),
+  permissions: z
+    .array(z.string().trim())
+    .min(1, "At least one permission is required")
+    .max(10, "Maximum 10 permissions allowed"),
 });
 
 export type CreateClientModalFormValues = z.infer<typeof createClientSchema>;

@@ -114,10 +114,22 @@ namespace DomainService.Projects
             if (tenantAsset == null)
                 return (null, 0);
 
-            var filteredResources = tenantAsset.Resources?.AsEnumerable() ?? Enumerable.Empty<Resource>();
+            // Deleted repositories are archived rather than removed, so every read hides them.
+            var filteredResources = tenantAsset.Resources?.Where(r => !r.IsArchived)
+                                    ?? Enumerable.Empty<Resource>();
 
             if (request.Filter != null)
             {
+                // One search box on the repositories page covers both columns, so Search matches
+                // either field. Name and Link stay available as individual column filters.
+                if (!string.IsNullOrWhiteSpace(request.Filter.Search))
+                {
+                    var search = request.Filter.Search.Trim();
+                    filteredResources = filteredResources.Where(r =>
+                        (r.Name != null && r.Name.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                        (r.Link != null && r.Link.Contains(search, StringComparison.OrdinalIgnoreCase)));
+                }
+
                 if (!string.IsNullOrWhiteSpace(request.Filter.Name))
                 {
                     filteredResources = filteredResources.Where(r =>
@@ -140,6 +152,17 @@ namespace DomainService.Projects
 
             tenantAsset.Resources = pagedResources;
             return (tenantAsset, totalCount);
+        }
+
+        // GetTenantAssetAsync pages Resources down to the requested window before it returns,
+        // so it must never feed a write: saving that document back drops every resource outside
+        // the page. Mutations read the whole document through here instead.
+        public async Task<TenantAsset?> GetTenantAssetByGroupIdAsync(string tenantGroupId)
+        {
+            var collection = _clientDb.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
+            var filter = Builders<TenantAsset>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId);
+
+            return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task UpdateProjectAsync(Tenant project)
@@ -461,6 +484,49 @@ namespace DomainService.Projects
             }
         }
 
+        // A repository keeps its ResourceId across a rename, so the copy held by every tenant in
+        // the group is refreshed in place. UpdateMany because a group can hold more than one row
+        // per SourceRepoId. The deployment url is derived from the id, not the name, so it stands.
+        // IsArchived is cleared here because every caller means "this repository is present and
+        // this is what it looks like now" — a rename leaves it false, a restore flips it back.
+        public async Task UpdateRepoResourceInfoAsync(AddAssetRequest request)
+        {
+            var update = Builders<BsonDocument>.Update
+                .Set("RepoName", request.Resource.Name)
+                .Set("RepoUrl", request.Resource.Link)
+                .Set("IsArchived", false)
+                .Set("LastUpdatedDate", DateTime.UtcNow)
+                .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
+
+            await UpdateGroupReposAsync(request.TenantGroupId, request.Resource.ResourceId, update);
+        }
+
+        // Deleting a repository archives it rather than dropping the row, so the tenant copies are
+        // flagged the same way the group's asset entry is. Restoring goes back through
+        // UpdateRepoResourceInfoAsync, which clears the flag again.
+        public async Task ArchiveRepoResourceAsync(DeleteAssetRequest request)
+        {
+            var update = Builders<BsonDocument>.Update
+                .Set("IsArchived", true)
+                .Set("LastUpdatedDate", DateTime.UtcNow)
+                .Set("LastUpdatedBy", BlocksContext.GetContext()?.UserId ?? string.Empty);
+
+            await UpdateGroupReposAsync(request.TenantGroupId, request.ResourceId, update);
+        }
+
+        private async Task UpdateGroupReposAsync(string tenantGroupId, string resourceId, UpdateDefinition<BsonDocument> update)
+        {
+            var projects = await GetByGroupIdAsync(tenantGroupId);
+            var filter = Builders<BsonDocument>.Filter.Eq("SourceRepoId", resourceId);
+
+            foreach (var project in projects)
+            {
+                var targetedDb = _dbContextProvider.GetDatabase(project.TenantId);
+                var reposCollection = targetedDb.GetCollection<BsonDocument>("Repos");
+                await reposCollection.UpdateManyAsync(filter, update);
+            }
+        }
+
         private BsonDocument GetRepoObject(Resource resource, Tenant project, string tenantSlug, string repoSlug)
         {
             string deployDomain = $"https://{IdentifierHelper.EnvironmentMapper(project.Environment)}{tenantSlug}-{repoSlug}{_configuration["KbtclIdentifier"]}";
@@ -471,6 +537,7 @@ namespace DomainService.Projects
                 ["SourceRepoId"] = resource.ResourceId,
                 ["RepoName"] = resource.Name,
                 ["RepoUrl"] = resource.Link,
+                ["IsArchived"] = false,
                 ["CreatedDate"] = DateTime.UtcNow,
                 ["LastUpdatedDate"] = DateTime.UtcNow,
                 ["CreatedBy"] = BlocksContext.GetContext()?.UserId ?? string.Empty,

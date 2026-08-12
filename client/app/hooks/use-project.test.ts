@@ -8,6 +8,7 @@ import {
   useGetProject,
   useGetAssets,
   useAddAssets,
+  useDeleteAsset,
   useGetEnvRepositories,
   useUpdateRepositories,
   useUpdateProject,
@@ -45,6 +46,7 @@ vi.mock("@blocks-identifier/services/project.service", () => ({
   projectService: {
     getAssets: vi.fn(),
     addAssets: vi.fn(),
+    deleteAsset: vi.fn(),
     getEnvRepositories: vi.fn(),
     repoUpdate: vi.fn(),
     updateProject: vi.fn(),
@@ -114,7 +116,16 @@ describe("use-project hooks", () => {
         wrapper: createWrapper(),
       });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(crossProjectService.getAssets).toHaveBeenCalledWith("tg-1");
+      expect(crossProjectService.getAssets).toHaveBeenCalledWith("tg-1", 0, 12, "");
+    });
+
+    it("useGetAssets forwards the page window and search term to the service", async () => {
+      vi.mocked(crossProjectService.getAssets).mockResolvedValue([] as never);
+      const { result } = renderHook(() => useGetAssets("tg-1", 3, 25, "acme"), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(crossProjectService.getAssets).toHaveBeenCalledWith("tg-1", 3, 25, "acme");
     });
 
     it("useGetEnvRepositories is disabled without a project key", () => {
@@ -158,6 +169,11 @@ describe("use-project hooks", () => {
       fn: ReturnType<typeof vi.fn>;
     }> = [
       { name: "useAddAssets", hook: useAddAssets, fn: vi.mocked(crossProjectService.addAssets) },
+      {
+        name: "useDeleteAsset",
+        hook: useDeleteAsset,
+        fn: vi.mocked(crossProjectService.deleteAsset),
+      },
       {
         name: "useUpdateRepositories",
         hook: useUpdateRepositories,

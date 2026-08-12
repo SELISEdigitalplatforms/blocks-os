@@ -122,7 +122,7 @@ describe("ConfigureCaptchaModal", () => {
     const siteKey = screen.getByPlaceholderText("Enter site key");
     await user.clear(siteKey);
     await user.type(siteKey, "updated-key");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Update Changes" }));
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     const payload = h.mutateAsync.mock.calls[0][0];

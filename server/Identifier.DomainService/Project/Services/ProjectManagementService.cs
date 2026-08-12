@@ -264,8 +264,10 @@ namespace DomainService.Projects
                 return;
             }
 
-           var (assets, _) = await _projectRepository.GetTenantAssetAsync(new GetAssetRequest { TenantGroupId = project.TenantGroupId });
-           project.Resources = assets.Resources ?? [];
+           // Unpaged: a new environment has to inherit every repository the group owns, not the
+           // first page of them. Archived ones were deleted from the project, so they stay out.
+           var assets = await _projectRepository.GetTenantAssetByGroupIdAsync(project.TenantGroupId);
+           project.Resources = assets?.Resources?.Where(r => !r.IsArchived).ToList() ?? [];
 
         }
 
@@ -584,9 +586,9 @@ namespace DomainService.Projects
             return new GetAssetResponse { Assets = assets, TotalCount = totalCount, IsSuccess = true };
         }
 
-        public async Task<BaseResponse> AddAssetAsync(AddAssetRequest asset)
+        public async Task<AddAssetResponse> AddAssetAsync(AddAssetRequest asset)
         {
-            var (tenantAsset, _) = await _projectRepository.GetTenantAssetAsync(new GetAssetRequest { TenantGroupId = asset.TenantGroupId });
+            var tenantAsset = await _projectRepository.GetTenantAssetByGroupIdAsync(asset.TenantGroupId);
 
             tenantAsset ??= new TenantAsset
             {
@@ -599,18 +601,85 @@ namespace DomainService.Projects
                 LastUpdatedBy = BlocksContext.GetContext()?.UserId
             };
 
-            bool isAlreadyExists = tenantAsset.Resources.Any(r => r.ResourceId == asset.Resource.ResourceId);
+            tenantAsset.Resources ??= [];
 
-            if (!isAlreadyExists)
+            // A renamed repository comes back with the same ResourceId and a new name and link,
+            // so an id that is already known is an update, not a duplicate to discard.
+            var existingResource = tenantAsset.Resources.FirstOrDefault(r => r.ResourceId == asset.Resource.ResourceId);
+
+            if (existingResource == null)
             {
+                // The timestamps and the archive flag belong to the server, never to the request.
+                asset.Resource.CreatedDate = DateTime.UtcNow;
+                asset.Resource.LastUpdatedDate = DateTime.UtcNow;
+                asset.Resource.IsArchived = false;
+
                 tenantAsset.Resources.Add(asset.Resource);
-                tenantAsset.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
-                tenantAsset.LastUpdatedDate = DateTime.UtcNow;
+                StampTenantAsset(tenantAsset);
                 await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
                                _projectRepository.UpdateRepoResourceAsync(asset));
+
+                return AssetResponse(AssetMutationStatus.Added);
             }
 
+            // A deleted repository is archived, not removed, so adding it again revives that row
+            // instead of creating a second entry for the same id.
+            var wasArchived = existingResource.IsArchived;
+            var hasNewDetails = existingResource.Name != asset.Resource.Name
+                             || existingResource.Link != asset.Resource.Link;
+
+            if (!wasArchived && !hasNewDetails)
+            {
+                return AssetResponse(AssetMutationStatus.Unchanged);
+            }
+
+            existingResource.Name = asset.Resource.Name;
+            existingResource.Link = asset.Resource.Link;
+            existingResource.IsArchived = false;
+            existingResource.LastUpdatedDate = DateTime.UtcNow;
+            StampTenantAsset(tenantAsset);
+            // The per-tenant Repos rows survive a delete, so this refreshes them; it never inserts.
+            await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
+                           _projectRepository.UpdateRepoResourceInfoAsync(asset));
+
+            return AssetResponse(wasArchived ? AssetMutationStatus.Restored : AssetMutationStatus.Updated);
+        }
+
+        public async Task<BaseResponse> DeleteAssetAsync(DeleteAssetRequest request)
+        {
+            var tenantAsset = await _projectRepository.GetTenantAssetByGroupIdAsync(request.TenantGroupId);
+            var resource = tenantAsset?.Resources?
+                .FirstOrDefault(r => r.ResourceId == request.ResourceId && !r.IsArchived);
+
+            if (tenantAsset == null || resource == null)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { "resource_not_found", $"No repository found with id {request.ResourceId}" } }
+                };
+            }
+
+            // Archived, not removed: keeping the row is what lets a later re-add restore it. The
+            // copy each tenant in the group holds is flagged the same way.
+            resource.IsArchived = true;
+            resource.LastUpdatedDate = DateTime.UtcNow;
+            StampTenantAsset(tenantAsset);
+            await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
+                           _projectRepository.ArchiveRepoResourceAsync(request));
+
             return new BaseResponse { IsSuccess = true, Errors = new Dictionary<string, string>() };
+        }
+
+        private static void StampTenantAsset(TenantAsset tenantAsset)
+        {
+            tenantAsset.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            tenantAsset.LastUpdatedDate = DateTime.UtcNow;
+        }
+
+        private static AddAssetResponse AssetResponse(AssetMutationStatus status)
+        {
+            return new AddAssetResponse { IsSuccess = true, Status = status, Errors = new Dictionary<string, string>() };
         }
 
         public async Task<BaseResponse> UpdateTokenValidationParametersAsync(UpdateTokenValidationParametersRequest request)

@@ -32,6 +32,7 @@ export const PROJECT_ENDPOINTS = {
 
   GET_ASSET: `/api${PROJECT_SUBPATH}/GetAsset`,
   ADD_ASSET: `/api${PROJECT_SUBPATH}/AddAsset`,
+  DELETE_ASSET: `/api${PROJECT_SUBPATH}/DeleteAsset`,
   UPDATE_TOKEN_VALIDATION: `/api${PROJECT_SUBPATH}/UpdateTokenValidationParameters`,
   GET_TOKEN_VALIDATION: `/api${PROJECT_SUBPATH}/GetTokenValidationParameters`,
   ADD_JWT_CLAIM: `/api${PROJECT_SUBPATH}/AddJwtClaim`,
