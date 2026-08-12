@@ -18,7 +18,6 @@ namespace DomainService.Shared
         public const string ProjectPeopleCollectionName = "ProjectPeoples";
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string ThirdPartyJWTClaimsCollectionName = "ThirdPartyJWTClaims";
-        public const string CookieDomainPrefix = "blocksapi.";
 
         public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_data_cleanup_listener";
