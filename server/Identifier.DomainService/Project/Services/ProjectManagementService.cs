@@ -539,6 +539,32 @@ namespace DomainService.Projects
                 Payload = new DisableDomainBindingRequest { ProjectId = tenantId, Domain = domain }
             });
 
+        // Tells blocks-release to destroy the deployments behind whatever was just deleted. Deliberately
+        // best-effort: the delete is already committed by the time this runs, so a broker that is down
+        // must not turn a completed delete into an error the user is asked to retry. The cost of a lost
+        // message is a deployment left running, which the same message re-sent later still settles.
+        private async Task SendReleaseTeardownAsync(ProjectDeleteQueue payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload.TenantGroupId))
+            {
+                // The consumer drops a message with no group, so sending one only costs a round trip.
+                return;
+            }
+
+            try
+            {
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<ProjectDeleteQueue>
+                {
+                    ConsumerName = IdentifierConstants.ReleaseProjectDeleteQueue,
+                    Payload = payload
+                });
+            }
+            catch (Exception)
+            {
+                // Swallowed on purpose — see above. Nothing here is recoverable by the caller.
+            }
+        }
+
         // Domains are stored inconsistently ("https://x", "x", trailing slash,
         // mixed case) — normalize before comparing so duplicates can't sneak in
         private static string NormalizeDomain(string? domain) =>
@@ -635,6 +661,15 @@ namespace DomainService.Projects
                 await SendDisableDomainBindingAsync(project.TenantId, application.Domain);
             }
 
+            // Group + project, which reaches every repository of this one project. No ResourceId: a
+            // project delete retires all of them, and naming one would narrow the teardown to that
+            // repository across the whole group — other projects included.
+            await SendReleaseTeardownAsync(new ProjectDeleteQueue
+            {
+                TenantGroupId = project.TenantGroupId,
+                ProjectId = project.TenantId
+            });
+
             return new BaseResponse { IsSuccess = true };
         }
 
@@ -725,6 +760,15 @@ namespace DomainService.Projects
             StampTenantAsset(tenantAsset);
             await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
                            _projectRepository.ArchiveRepoResourceAsync(request));
+
+            // Group + resource, which reaches this repository in every project of the group — the same
+            // set the archive above just wrote to. Published only once those writes have landed, so a
+            // delete that failed here never tears a running deployment down.
+            await SendReleaseTeardownAsync(new ProjectDeleteQueue
+            {
+                TenantGroupId = request.TenantGroupId,
+                ResourceId = request.ResourceId
+            });
 
             return new BaseResponse { IsSuccess = true, Errors = new Dictionary<string, string>() };
         }

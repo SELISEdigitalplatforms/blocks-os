@@ -677,6 +677,135 @@ namespace XUnitTest.Services
             response.Errors.Should().ContainKey("resource_not_found");
         }
 
+        private List<ConsumerMessage<ProjectDeleteQueue>> CaptureTeardownMessages()
+        {
+            var sent = new List<ConsumerMessage<ProjectDeleteQueue>>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<ProjectDeleteQueue>>()))
+                .Callback<ConsumerMessage<ProjectDeleteQueue>>(sent.Add)
+                .Returns(Task.CompletedTask);
+            return sent;
+        }
+
+        /// <summary>
+        /// Group + resource and nothing else. A ProjectId here would narrow blocks-release to one
+        /// project, leaving the same repository deployed in every other project of the group.
+        /// </summary>
+        [Fact]
+        public async Task DeleteAssetAsync_AsksReleaseToTearTheResourceDownAcrossTheGroup()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", Name = "repo" } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            var sent = CaptureTeardownMessages();
+
+            var response = await Service().DeleteAssetAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = "r1"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Should().ContainSingle();
+            sent[0].ConsumerName.Should().Be("blocks_release_project_delete_listener");
+            sent[0].Payload.TenantGroupId.Should().Be("g");
+            sent[0].Payload.ResourceId.Should().Be("r1");
+            sent[0].Payload.ProjectId.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData("missing")]
+        [InlineData("r1")]
+        public async Task DeleteAssetAsync_NothingWasDeleted_AsksReleaseForNothing(string resourceId)
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", IsArchived = true } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            var sent = CaptureTeardownMessages();
+
+            await Service().DeleteAssetAsync(new DeleteAssetRequest { TenantGroupId = "g", ResourceId = resourceId });
+
+            sent.Should().BeEmpty();
+        }
+
+        /// <summary>
+        /// The rows are already written by the time the message goes out, so a broker that is down must
+        /// not report a completed delete back to the user as a failure.
+        /// </summary>
+        [Fact]
+        public async Task DeleteAssetAsync_ReleaseUnreachable_StillReportsTheDeleteAsDone()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", Name = "repo" } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<ProjectDeleteQueue>>()))
+                .ThrowsAsync(new System.InvalidOperationException("broker down"));
+
+            var response = await Service().DeleteAssetAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = "r1"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            asset.Resources[0].IsArchived.Should().BeTrue();
+            _repo.Verify(r => r.ArchiveRepoResourceAsync(It.IsAny<DeleteAssetRequest>()), Times.Once);
+        }
+
+        /// <summary>
+        /// Group + project and no ResourceId: every repository of this project goes, and naming one
+        /// would instead single that repository out across every project in the group.
+        /// </summary>
+        [Fact]
+        public async Task DisableProjectAsync_AsksReleaseToTearDownEveryRepoOfThatProject()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith();
+            tenant.TenantGroupId = "g";
+            _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+            var sent = CaptureTeardownMessages();
+
+            var response = await Service().DisableProjectAsync("t1");
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Should().ContainSingle();
+            sent[0].ConsumerName.Should().Be("blocks_release_project_delete_listener");
+            sent[0].Payload.TenantGroupId.Should().Be("g");
+            sent[0].Payload.ProjectId.Should().Be("t1");
+            sent[0].Payload.ResourceId.Should().BeNull();
+        }
+
+        /// <summary>
+        /// A message with no group is dropped by the consumer, so it is not worth the round trip.
+        /// </summary>
+        [Fact]
+        public async Task DisableProjectAsync_ProjectWithoutAGroup_AsksReleaseForNothing()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith();
+            _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+            var sent = CaptureTeardownMessages();
+
+            await Service().DisableProjectAsync("t1");
+
+            sent.Should().BeEmpty();
+        }
+
         [Fact]
         public async Task AddAssetAsync_RenamedResource_UpdatesInPlaceWithoutDuplicating()
         {
