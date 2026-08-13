@@ -44,8 +44,8 @@ vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () =
   OidcBrandingHeaderProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useOidcBrandingHeaderOptional: () => (h.brandingActions ? { actions: h.brandingActions } : null),
 }));
-vi.mock("@/cross-modules/secrets/components/add-secret-modal/add-secret-modal", () => ({
-  AddSecretModal: () => <div data-testid="add-secret-modal" />,
+vi.mock("@/cross-modules/secrets/components/secret-form-modal/create-secret-button", () => ({
+  CreateSecretButton: () => <div data-testid="create-secret-button" />,
 }));
 vi.mock("@blocks-idp/authentication/components/create-client-credential/create-client-credential", () => ({
   CreateClientCredential: () => <div data-testid="create-client-credential" />,
@@ -91,10 +91,10 @@ describe("SecretManagementLayout", () => {
 
   it("renders the page header and outlet for a known nav item", () => {
     render(<SecretManagementLayout />);
-    expect(screen.getByText("My Secret")).toBeTruthy();
+    expect(screen.getByText("Secret Management")).toBeTruthy();
     expect(screen.getByTestId("outlet")).toBeTruthy();
-    // The my-secret page shows the add-secret modal action.
-    expect(screen.getByTestId("add-secret-modal")).toBeTruthy();
+    // The my-secret page shows the create-secret action.
+    expect(screen.getByTestId("create-secret-button")).toBeTruthy();
   });
 
   it("shows the OIDC create action on the oidc page", () => {

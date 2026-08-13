@@ -1,6 +1,6 @@
 import { http } from "@/lib/http/http-client";
 import { secretsService, SECRETS_ENDPOINTS } from "@/services/secrets.service";
-import type { SecretItem } from "@/cross-modules/secrets/constants/secret-key.enum";
+import type { SecretItem } from "@/services/secrets.service";
 import type { IAPIResponse } from "@/models/api-response";
 import {
   IGetMagicUrlConfigsPayload,

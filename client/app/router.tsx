@@ -7,8 +7,7 @@ import { navigationMenus } from "@/constants/navigation-menus";
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
 import { NotificationConfigurationListPage } from "@/cross-modules/communication/notification/components/notification-configuration-list";
-// Temporarily disabled
-// import { SecretsList } from "@/cross-modules/secrets/components/secrets-list/secrets-list";
+import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
 import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
 // Temporarily disabled
 // import { MagicUrls } from "@/cross-modules/utilities/pages/magic-urls/magic-urls";
@@ -217,11 +216,12 @@ export const router = createBrowserRouter([
                         index: true,
                         element: <Navigate to="my-services" replace />,
                       },
-                      // Temporarily disabled
-                      // {
-                      //   path: "my-secret",
-                      //   element: <SecretsList />,
-                      // },
+                      {
+                        // Path kept as "my-secret": external links and the nav item's `value`
+                        // depend on it.
+                        path: "my-secret",
+                        element: <SecretList />,
+                      },
                       {
                         path: "my-services",
                         element: <MyServicesPage />,
