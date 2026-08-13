@@ -182,7 +182,7 @@ describe("SecretList", () => {
     // The search box stays usable so the user can back out of a filter that produced the error.
     // FilterToolbar renders a desktop and a mobile view, hence the plural query.
     expect(
-      screen.getAllByPlaceholderText(/Search by name, description or secret ID/i).length,
+      screen.getAllByPlaceholderText(/Search by name or ID/i).length,
     ).toBeGreaterThan(0);
   });
 });

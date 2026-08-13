@@ -89,16 +89,15 @@ export const navigationMenus: Menu[] = [
     desc: "Manage secrets, configs, and credentials",
     children: [
       {
-        id: "my-secret",
+        id: "secret-management",
         type: "menu",
-        name: "My Secret",
-        path: "/app/secret-management/my-secret",
+        name: "Secret",
+        path: "/app/secret-management/secret",
         icon: KeyRound,
-        desc: "Personal secrets and credentials",
-        disabled: true, // Temporarily disabled
+        desc: "Securely manage API and service secrets for this environment",
       },
       {
-        id: "managed-services",
+        id: "my-services",
         type: "menu",
         name: "My Services",
         path: "/app/secret-management/my-services",

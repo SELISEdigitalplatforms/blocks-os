@@ -35,16 +35,14 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
     label: "Secrets & Keys",
     items: [
       {
-        id: "my-secret",
-        // The path stays "my-secret" — external links and the nav `value` depend on it — but
-        // the page now manages typed, access-controlled secrets rather than "my" key-value bags.
-        label: "Secret Management",
-        value: "my-secret",
+        id: "secret-management",
+        label: "Secret",
+        value: "secret",
         icon: KeyRound,
         desc: "Securely manage API and service secrets for this environment",
       },
       {
-        id: "managed-services",
+        id: "my-services",
         label: "My Services",
         value: "my-services",
         icon: Layers,

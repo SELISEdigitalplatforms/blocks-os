@@ -4,6 +4,7 @@ import {
   SECRET_STATUS_LABEL,
   SECRET_TYPE,
   SECRET_TYPE_LABEL,
+  SECRET_TYPE_DESCRIPTION,
   SECRET_VALUE_MAX_BYTES,
   isApiSecret,
   isDeleted,
@@ -27,9 +28,16 @@ describe("secret model", () => {
       expect(SECRET_STATUS.Deleted).toBe("deleted");
     });
 
-    it("capitalises only for display", () => {
-      expect(SECRET_TYPE_LABEL.api).toBe("API");
-      expect(SECRET_TYPE_LABEL.service).toBe("Service");
+    it("never shows the raw wire words to a person", () => {
+      // "API" and "Service" say nothing about which one you want, so the labels describe the
+      // thing instead. The values above stay lowercase regardless.
+      expect(SECRET_TYPE_LABEL.api).toBe("Application");
+      expect(SECRET_TYPE_LABEL.service).toBe("Platform service");
+      expect(SECRET_TYPE_DESCRIPTION.api).toMatch(/who can read it/i);
+      expect(SECRET_TYPE_DESCRIPTION.service).toMatch(/backend services/i);
+    });
+
+    it("capitalises statuses for display", () => {
       expect(SECRET_STATUS_LABEL.active).toBe("Active");
       expect(SECRET_STATUS_LABEL.locked).toBe("Locked");
       expect(SECRET_STATUS_LABEL.deleted).toBe("Deleted");

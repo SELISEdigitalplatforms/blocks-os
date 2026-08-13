@@ -46,10 +46,16 @@ export const useResolvedUserNames = (userIds: string[]): Record<string, string> 
   });
 };
 
-/** roleSlug -> role name, via the role list endpoint's `slugs` filter. */
+/**
+ * roleSlug -> role name, via the role list endpoint's `slugs` filter.
+ *
+ * `search` is sent even though it is empty: the endpoint validates `Filter.Search` as required
+ * and answers 400 "The Search field is required." without it. `PermissionRolesList` sends it the
+ * same way for the same reason.
+ */
 export const useResolvedRoleNames = (slugs: string[]): Record<string, string> => {
   const { data } = useGetRoles(
-    { page: 0, pageSize: Math.max(slugs.length, 1), filter: { slugs } },
+    { page: 0, pageSize: Math.max(slugs.length, 1), filter: { search: "", slugs } },
     { enabled: slugs.length > 0 },
   );
 

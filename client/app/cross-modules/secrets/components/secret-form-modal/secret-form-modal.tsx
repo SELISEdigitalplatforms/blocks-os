@@ -32,8 +32,7 @@ import {
   SECRET_NAME_PATTERN,
   SECRET_TYPE,
   SECRET_TYPE_LABEL,
-  SECRET_VALUE_MAX_BYTES,
-  secretValueByteLength,
+  SECRET_TYPE_DESCRIPTION,
   type SecretAccess,
   type SecretResult,
   type SecretType,
@@ -66,15 +65,11 @@ const descriptionField = z
   )
   .optional();
 
-// Key Vault's 25 KB cap is on the encoded payload, so this counts UTF-8 bytes. A `.length`
-// check would pass multi-byte values that then fail at the vault.
-const valueField = z
-  .string()
-  .min(1, "A value is required.")
-  .refine(
-    (value) => secretValueByteLength(value) <= SECRET_VALUE_MAX_BYTES,
-    "The value is larger than the 25 KB limit.",
-  );
+// Length is deliberately not validated here. Key Vault's 25 KB cap is enforced server-side and
+// comes back as a 400 with reason VALUE_TOO_LARGE, which `applyError` puts on this field — so an
+// oversized value still fails clearly, without a byte counter distracting from a limit almost
+// nobody reaches.
+const valueField = z.string().min(1, "A value is required.");
 
 const createSchema = z.object({
   name: nameField,
@@ -234,7 +229,6 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
     else await submitCreate(values);
   };
 
-  const valueBytes = secretValueByteLength(form.watch("value") ?? "");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -259,17 +253,20 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
 
               <div className="space-y-2">
                 <Label>
-                  Type {!isEdit && <span className="text-destructive">*</span>}
+                  Category {!isEdit && <span className="text-destructive">*</span>}
                 </Label>
                 {isEdit ? (
-                  // The backend has no type transition; changing it would mean a new secret.
-                  <p className="text-sm text-muted-foreground">{SECRET_TYPE_LABEL[type]}</p>
+                  // The backend has no category transition; changing it would mean a new secret.
+                  <div className="rounded-md border bg-muted/30 px-3 py-2">
+                    <p className="text-sm font-medium">{SECRET_TYPE_LABEL[type]}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {SECRET_TYPE_DESCRIPTION[type]}
+                    </p>
+                  </div>
                 ) : (
-                  <div
-                    role="radiogroup"
-                    aria-label="Secret type"
-                    className="inline-flex rounded-md border p-0.5"
-                  >
+                  // Cards rather than a segmented toggle: the choice is not obvious from a
+                  // one-word label, so each option carries the sentence that explains it.
+                  <div role="radiogroup" aria-label="Category" className="grid gap-2 sm:grid-cols-2">
                     {[SECRET_TYPE.Api, SECRET_TYPE.Service].map((option) => (
                       <button
                         key={option}
@@ -278,23 +275,21 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                         aria-checked={type === option}
                         onClick={() => setType(option)}
                         className={cn(
-                          "rounded px-3 py-1.5 text-sm transition-colors",
+                          "rounded-md border p-3 text-left transition-colors",
                           type === option
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground",
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "hover:border-muted-foreground/40 hover:bg-muted/40",
                         )}
                       >
-                        {SECRET_TYPE_LABEL[option]}
+                        <span className="block text-sm font-medium">
+                          {SECRET_TYPE_LABEL[option]}
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                          {SECRET_TYPE_DESCRIPTION[option]}
+                        </span>
                       </button>
                     ))}
                   </div>
-                )}
-                {!isEdit && (
-                  <p className="text-xs text-muted-foreground">
-                    {isApi
-                      ? "API secrets carry an access list of users and roles."
-                      : "Service secrets are consumed by backend services and have no access list."}
-                  </p>
                 )}
               </div>
 
@@ -351,7 +346,8 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                         />
                       </FormControl>
                       <FormDescription>
-                        {(valueBytes / 1024).toFixed(1)} KB of {SECRET_VALUE_MAX_BYTES / 1024} KB
+                        Stored in the secret store. It is never shown in a list and can only be
+                        read through an audited reveal.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -360,7 +356,11 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
               )}
 
               {isApi && (
-                <div className="space-y-2 rounded-md border p-3">
+                <div className="space-y-2">
+                  <Label>Access</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Who may read this secret&apos;s value.
+                  </p>
                   <UserRolePicker value={access} onChange={setAccess} disabled={isPending} />
                 </div>
               )}

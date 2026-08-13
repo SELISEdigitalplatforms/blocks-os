@@ -5,7 +5,6 @@ import {
   Copy,
   Eye,
   History,
-  KeyRound,
   Lock,
   MoreHorizontal,
   Pencil,
@@ -177,25 +176,18 @@ export function SecretRow({ secret }: SecretRowProps) {
         </TableCell>
 
         <TableCell className="py-3.5">
-          <div className="flex items-start gap-2">
-            <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="truncate font-medium text-high-emphasis">{secret.name}</p>
-              {secret.description && (
-                <p className="truncate text-xs text-muted-foreground">{secret.description}</p>
-              )}
-            </div>
-          </div>
+          {/* Name only — the description lives in the expanded panel, where it has room. */}
+          <p className="truncate font-medium text-high-emphasis">{secret.name}</p>
         </TableCell>
 
         <TableCell className="py-3.5">
-          <Badge variant="outline" className="font-normal">
+          <Badge variant="secondary" className="w-fit whitespace-nowrap font-normal">
             {SECRET_TYPE_LABEL[secret.type]}
           </Badge>
         </TableCell>
 
         <TableCell className="py-3.5">
-          <Badge variant={STATUS_VARIANT[secret.status]} className="font-normal">
+          <Badge variant={STATUS_VARIANT[secret.status]} className="w-fit whitespace-nowrap font-normal">
             {SECRET_STATUS_LABEL[secret.status]}
           </Badge>
         </TableCell>

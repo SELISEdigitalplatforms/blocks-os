@@ -70,19 +70,24 @@ export function SecretList() {
   const errorInfo = error ? describeSecretError(error, "Could not load secrets.") : null;
 
   return (
-    <div className="space-y-4">
-      <SecretToolbar />
+    // Toolbar, table and pagination share one card, matching the Roles and Users screens — the
+    // filters belong to the table, so putting them on the page background split the two apart.
+    <Card>
+      <CardContent className="space-y-3 p-3 sm:p-4">
+        <SecretToolbar />
 
-      {errorInfo ? (
-        <EmptyState
-          icon={ShieldAlert}
-          title={errorInfo.status === 403 ? "Not available for your account" : "Secrets unavailable"}
-          description={errorInfo.message}
-        />
-      ) : (
-        <>
-          <Card>
-            <CardContent className="p-0">
+        {errorInfo ? (
+          <EmptyState
+            className="border-0 shadow-none"
+            icon={ShieldAlert}
+            title={
+              errorInfo.status === 403 ? "Not available for your account" : "Secrets unavailable"
+            }
+            description={errorInfo.message}
+          />
+        ) : (
+          <>
+            <div className="overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -126,23 +131,24 @@ export function SecretList() {
                   </TableBody>
                 )}
               </Table>
-            </CardContent>
-          </Card>
-
-          {!isBusy && totalCount > queryParams.secretPageSize && (
-            <div className="flex items-center md:justify-end">
-              <Pagination
-                page={queryParams.secretPage}
-                pageSize={queryParams.secretPageSize}
-                totalCount={totalCount}
-                pageSizeOptions={[10, 20, 50]}
-                onChange={setPage}
-                onPageSizeChange={setPageSize}
-              />
             </div>
-          )}
-        </>
-      )}
-    </div>
+
+            {!isBusy && totalCount > queryParams.secretPageSize && (
+              <div className="flex items-center md:justify-end">
+                <Pagination
+                  compact
+                  page={queryParams.secretPage}
+                  pageSize={queryParams.secretPageSize}
+                  totalCount={totalCount}
+                  pageSizeOptions={[10, 20, 50]}
+                  onChange={setPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

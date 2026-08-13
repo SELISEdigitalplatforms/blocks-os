@@ -217,9 +217,7 @@ export const router = createBrowserRouter([
                         element: <Navigate to="my-services" replace />,
                       },
                       {
-                        // Path kept as "my-secret": external links and the nav item's `value`
-                        // depend on it.
-                        path: "my-secret",
+                        path: "secret",
                         element: <SecretList />,
                       },
                       {

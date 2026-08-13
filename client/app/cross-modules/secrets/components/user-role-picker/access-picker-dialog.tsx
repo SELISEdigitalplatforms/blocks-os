@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { cn } from "@/lib/utils";
 
 export interface AccessPickerItem {
   /** The value that is stored and sent to the API — a user GUID or a role slug. */
@@ -38,6 +39,8 @@ export interface AccessPickerDialogProps {
   search: string;
   open: boolean;
   disabled?: boolean;
+  /** Renders an initial-avatar per row, matching the Users list. */
+  showAvatar?: boolean;
   onOpenChange: (open: boolean) => void;
   onPageChange: (page: number) => void;
   onSearchChange: (search: string) => void;
@@ -65,6 +68,7 @@ export function AccessPickerDialog({
   search,
   open,
   disabled,
+  showAvatar,
   onOpenChange,
   onPageChange,
   onSearchChange,
@@ -89,6 +93,9 @@ export function AccessPickerDialog({
           variant="outline"
           className="h-7 px-2.5 text-xs"
           disabled={disabled}
+          // The visible label is short ("Add") and both boxes use it, so the accessible name
+          // comes from the dialog title instead — otherwise there are two buttons called "Add".
+          aria-label={title}
         >
           <Plus className="h-3.5 w-3.5 sm:mr-1.5" />
           <span className="sr-only sm:not-sr-only">{triggerLabel}</span>
@@ -119,33 +126,49 @@ export function AccessPickerDialog({
                 ))}
               </div>
             ) : items.length ? (
-              <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+              // One row per line rather than two columns: an email is long, and truncating it
+              // to fit a half-width cell defeats the point of showing it.
+              <div className="divide-y">
                 {items.map((item) => {
                   const alreadySelected = selected.includes(item.id);
+                  const checked = alreadySelected || pending.includes(item.id);
                   return (
                     <label
                       key={item.id}
-                      className="col-span-1 flex cursor-pointer items-center py-2"
+                      className={cn(
+                        "flex items-center gap-3 rounded-sm px-1 py-2.5",
+                        alreadySelected
+                          ? "cursor-default opacity-60"
+                          : "cursor-pointer hover:bg-muted/50",
+                      )}
                     >
                       <Checkbox
-                        checked={alreadySelected || pending.includes(item.id)}
+                        checked={checked}
                         disabled={alreadySelected}
                         onCheckedChange={(value) => toggle(!!value, item.id)}
                         aria-label={item.primary}
                       />
-                      <div className="ml-2 flex min-w-0 flex-col">
-                        <span className="truncate" title={item.primary}>
+                      {showAvatar && (
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold uppercase text-primary">
+                          {item.primary.trim().charAt(0) || "?"}
+                        </span>
+                      )}
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-sm font-medium" title={item.primary}>
                           {item.primary}
                         </span>
                         {item.secondary && (
                           <span
-                            className="truncate text-sm text-muted-foreground"
+                            className="truncate text-xs text-muted-foreground"
                             title={item.secondary}
                           >
                             {item.secondary}
                           </span>
                         )}
                       </div>
+                      {alreadySelected && (
+                        <span className="shrink-0 text-xs text-muted-foreground">Added</span>
+                      )}
                     </label>
                   );
                 })}

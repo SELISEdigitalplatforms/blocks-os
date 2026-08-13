@@ -66,7 +66,7 @@ describe("SecretToolbar", () => {
   it("offers search, type and status controls", () => {
     renderToolbar();
     expect(
-      screen.getAllByPlaceholderText(/Search by name, description or secret ID/i).length,
+      screen.getAllByPlaceholderText(/Search by name or ID/i).length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: /Type/ }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: /Status/ }).length).toBeGreaterThan(0);

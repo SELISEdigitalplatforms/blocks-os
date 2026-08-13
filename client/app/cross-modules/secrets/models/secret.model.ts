@@ -25,9 +25,20 @@ export const SECRET_STATUS = {
 export type SecretType = (typeof SECRET_TYPE)[keyof typeof SECRET_TYPE];
 export type SecretStatus = (typeof SECRET_STATUS)[keyof typeof SECRET_STATUS];
 
+/**
+ * What each category means to a person.
+ *
+ * The wire values stay `api` / `service` — the backend compares them ordinally — but "API" and
+ * "Service" say nothing about which one you want, so nothing user-facing shows them.
+ */
 export const SECRET_TYPE_LABEL: Record<SecretType, string> = {
-  api: "API",
-  service: "Service",
+  api: "Application",
+  service: "Platform service",
+};
+
+export const SECRET_TYPE_DESCRIPTION: Record<SecretType, string> = {
+  api: "A key or credential your team uses. You choose exactly who can read it.",
+  service: "A credential consumed by backend services. It has no per-person access list.",
 };
 
 export const SECRET_STATUS_LABEL: Record<SecretStatus, string> = {

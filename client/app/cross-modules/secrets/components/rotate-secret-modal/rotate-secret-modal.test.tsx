@@ -83,18 +83,36 @@ describe("RotateSecretModal", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("refuses a value over the 25 KB limit", async () => {
+  it("shows no size counter and leaves the length limit to the server", async () => {
     const user = userEvent.setup();
     renderModal();
     await confirmStep(user);
 
-    const oversized = "a".repeat(25 * 1024 + 1);
-    await user.click(screen.getByLabelText(/new value/i));
-    await user.paste(oversized);
+    expect(screen.queryByText(/KB of/i)).toBeNull();
 
-    expect(screen.getByText(/larger than the 25 KB limit/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Rotate" }).hasAttribute("disabled")).toBe(true);
-    expect(hoisted.rotate).not.toHaveBeenCalled();
+    await user.click(screen.getByLabelText(/new value/i));
+    await user.paste("a".repeat(30_000));
+    await user.click(screen.getByRole("button", { name: "Rotate" }));
+
+    await waitFor(() => expect(hoisted.rotate).toHaveBeenCalled());
+  });
+
+  it("surfaces a server-side size rejection", async () => {
+    const user = userEvent.setup();
+    hoisted.rotate.mockRejectedValue(new FakeHttpError(400, { reason: "VALUE_TOO_LARGE" }));
+    renderModal();
+    await confirmStep(user);
+
+    await user.type(screen.getByLabelText(/new value/i), "next-value");
+    await user.click(screen.getByRole("button", { name: "Rotate" }));
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("alert")
+          .some((el) => /larger than the 25 KB limit/i.test(el.textContent ?? "")),
+      ).toBe(true),
+    );
   });
 
   it("keeps the dialog open and explains a failure", async () => {

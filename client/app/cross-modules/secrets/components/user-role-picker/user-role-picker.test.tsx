@@ -58,13 +58,13 @@ describe("UserRolePicker", () => {
   it("warns that an empty list means the creator and root, not everyone", () => {
     renderPicker();
     expect(
-      screen.getByText("Only you and platform administrators will be able to read this."),
+      screen.getByText(/Leave both empty and only you and platform administrators/),
     ).toBeTruthy();
   });
 
   it("drops the warning once something is allowed", () => {
     renderPicker({ userIds: ["u-1"], roles: [] });
-    expect(screen.queryByText(/Only you and platform administrators/)).toBeNull();
+    expect(screen.queryByText(/Leave both empty and only you/)).toBeNull();
   });
 
   it("shows resolved names on the chips", () => {
@@ -92,7 +92,7 @@ describe("UserRolePicker", () => {
     const user = userEvent.setup();
     const { onChange } = renderPicker();
 
-    const dialog = await openDialog(user, /Add users/);
+    const dialog = await openDialog(user, /Add people/);
     await user.click(within(dialog).getByRole("checkbox", { name: "Ada Lovelace" }));
     await user.click(within(dialog).getByRole("button", { name: "Add" }));
 
@@ -133,7 +133,7 @@ describe("UserRolePicker", () => {
   it("scopes the user lookup to the active tenant", async () => {
     const user = userEvent.setup();
     renderPicker();
-    await openDialog(user, /Add users/);
+    await openDialog(user, /Add people/);
 
     expect(hoisted.lastUsersPayload).toMatchObject({ projectKey: "test-tenant-id-123" });
   });

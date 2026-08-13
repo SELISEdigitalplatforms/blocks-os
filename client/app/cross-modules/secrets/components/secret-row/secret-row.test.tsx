@@ -73,12 +73,16 @@ const openMenu = async (user: ReturnType<typeof userEvent.setup>, name = "paymen
 describe("SecretRow", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders the name, description and type/status badges", () => {
+  it("renders the name and the type/status badges", () => {
     renderRow(makeSecret({ status: SECRET_STATUS.Locked }));
     expect(screen.getByText("payment-gateway-key")).toBeTruthy();
-    expect(screen.getByText("Used by the checkout service")).toBeTruthy();
-    expect(screen.getByText("API")).toBeTruthy();
+    expect(screen.getByText("Application")).toBeTruthy();
     expect(screen.getByText("Locked")).toBeTruthy();
+  });
+
+  it("keeps the description out of the row — it belongs to the expanded panel", () => {
+    renderRow();
+    expect(screen.queryByText("Used by the checkout service")).toBeNull();
   });
 
   it("expands to the detail panel", async () => {

@@ -14,8 +14,6 @@ import { PasswordInput } from "@/components/password-input/password-input";
 import { useRotateSecret } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import {
-  SECRET_VALUE_MAX_BYTES,
-  secretValueByteLength,
   type SecretResult,
 } from "@/cross-modules/secrets/models/secret.model";
 
@@ -40,9 +38,9 @@ export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretMo
   const [confirmed, setConfirmed] = useState(false);
   const { mutateAsync: rotate, isPending } = useRotateSecret();
 
-  const bytes = secretValueByteLength(value);
-  const tooLarge = bytes > SECRET_VALUE_MAX_BYTES;
-  const canSubmit = confirmed && value.length > 0 && !tooLarge && !isPending;
+  // No client-side length check: the 25 KB vault cap is enforced server-side and comes back as
+  // a 400 the catch below surfaces.
+  const canSubmit = confirmed && value.length > 0 && !isPending;
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -87,10 +85,8 @@ export function RotateSecretModal({ open, onOpenChange, secret }: RotateSecretMo
               value={value}
               onChange={(event) => setValue(event.target.value)}
             />
-            <p className={tooLarge ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-              {tooLarge
-                ? "The value is larger than the 25 KB limit."
-                : `${(bytes / 1024).toFixed(1)} KB of ${SECRET_VALUE_MAX_BYTES / 1024} KB`}
+            <p className="text-xs text-muted-foreground">
+              Consumers keep using the old value until they pick this one up.
             </p>
           </div>
         )}

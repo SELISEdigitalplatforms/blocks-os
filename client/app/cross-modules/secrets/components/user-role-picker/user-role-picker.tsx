@@ -58,6 +58,38 @@ const AccessChips = ({
   </div>
 );
 
+/** One bordered box per access kind, so users and roles never read as a single blurred list. */
+const AccessBox = ({
+  title,
+  hint,
+  count,
+  action,
+  children,
+}: {
+  title: string;
+  hint: string;
+  count: number;
+  action: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <div className="rounded-md border">
+    <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2">
+      <div className="flex items-center gap-2">
+        <Label className="text-sm font-medium">{title}</Label>
+        {count > 0 && (
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
+            {count}
+          </span>
+        )}
+      </div>
+      {action}
+    </div>
+    <div className="px-3 py-2.5">
+      {count > 0 ? children : <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  </div>
+);
+
 /**
  * Picks the users and roles allowed to read an `api` secret.
  *
@@ -121,14 +153,16 @@ export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProp
   const isEmpty = value.userIds.length === 0 && value.roles.length === 0;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <Label className="text-sm font-medium">Allowed users</Label>
+    <div className="space-y-3">
+      <AccessBox
+        title="People"
+        hint="No one added yet."
+        count={value.userIds.length}
+        action={
           <AccessPickerDialog
-            title="Allow users"
-            description="Select the users who may read this secret's value."
-            triggerLabel="Add users"
+            title="Add people"
+            description="Pick the people who may read this secret's value."
+            triggerLabel="Add"
             searchPlaceholder="Search by email"
             emptyLabel="No users found"
             selected={value.userIds}
@@ -140,6 +174,7 @@ export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProp
             search={userSearch}
             open={usersOpen}
             disabled={disabled}
+            showAvatar
             onOpenChange={setUsersOpen}
             onPageChange={setUserPage}
             onSearchChange={(search) => {
@@ -148,29 +183,28 @@ export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProp
             }}
             onAdd={addUsers}
           />
-        </div>
-        {value.userIds.length > 0 ? (
-          <AccessChips
-            ids={value.userIds}
-            labels={userNames}
-            icon={User}
-            disabled={disabled}
-            onRemove={(id) =>
-              onChange({ ...value, userIds: value.userIds.filter((item) => item !== id) })
-            }
-          />
-        ) : (
-          <p className="text-xs text-muted-foreground">No users added.</p>
-        )}
-      </div>
+        }
+      >
+        <AccessChips
+          ids={value.userIds}
+          labels={userNames}
+          icon={User}
+          disabled={disabled}
+          onRemove={(id) =>
+            onChange({ ...value, userIds: value.userIds.filter((item) => item !== id) })
+          }
+        />
+      </AccessBox>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <Label className="text-sm font-medium">Allowed roles</Label>
+      <AccessBox
+        title="Roles"
+        hint="No roles added yet."
+        count={value.roles.length}
+        action={
           <AccessPickerDialog
-            title="Allow roles"
-            description="Select the roles whose members may read this secret's value."
-            triggerLabel="Add roles"
+            title="Add roles"
+            description="Anyone holding one of these roles may read this secret's value."
+            triggerLabel="Add"
             searchPlaceholder="Search by role name"
             emptyLabel="No roles found"
             selected={value.roles}
@@ -190,27 +224,24 @@ export function UserRolePicker({ value, onChange, disabled }: UserRolePickerProp
             }}
             onAdd={addRoles}
           />
-        </div>
-        {value.roles.length > 0 ? (
-          <AccessChips
-            ids={value.roles}
-            labels={roleNames}
-            icon={ShieldCheck}
-            disabled={disabled}
-            onRemove={(id) =>
-              onChange({ ...value, roles: value.roles.filter((item) => item !== id) })
-            }
-          />
-        ) : (
-          <p className="text-xs text-muted-foreground">No roles added.</p>
-        )}
-      </div>
+        }
+      >
+        <AccessChips
+          ids={value.roles}
+          labels={roleNames}
+          icon={ShieldCheck}
+          disabled={disabled}
+          onRemove={(id) =>
+            onChange({ ...value, roles: value.roles.filter((item) => item !== id) })
+          }
+        />
+      </AccessBox>
 
       {isEmpty && (
         // Backend semantics: an empty access list is not "everyone", it is the creator plus
         // root. Saying so inline is cheaper than a validation rule that forbids a legal state.
         <p className="text-xs text-muted-foreground">
-          Only you and platform administrators will be able to read this.
+          Leave both empty and only you and platform administrators will be able to read this.
         </p>
       )}
     </div>

@@ -145,7 +145,7 @@ function SecretManagementHeaderActions({
           </span>
         </Button>
       )}
-      {currentPath === "my-secret" && <CreateSecretButton />}
+      {currentPath === "secret" && <CreateSecretButton />}
       {currentPath === "external-idp" && (
         <>
           {externalIdpConfigured ? (
@@ -180,7 +180,7 @@ function SecretManagementHeaderActions({
 export default function SecretManagementLayout() {
   const { pathname } = useLocation();
   const scoped = useScopedPath();
-  const currentPath = pathname.split("/").pop() ?? "my-secret";
+  const currentPath = pathname.split("/").pop() ?? "secret";
   const oidcBrandingMatch = pathname.match(/\/oidc\/([^/]+)\/branding$/);
   const isOidcBranding = Boolean(oidcBrandingMatch);
   const oidcClientId = oidcBrandingMatch?.[1];

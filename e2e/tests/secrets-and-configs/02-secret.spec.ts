@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../../support/test-base";
 
-// Secrets & Configs > Secret Management flow.
+// Secrets & Configs > Secret flow.
 //
 // Routes & elements these specs target (verified against the codebase):
-//   /app/secret-management/my-secret  →  <PageHeader> titled "Secret Management"
+//   /app/secret-management/secret  →  <PageHeader> titled "Secret"
 //     - header action: [Create]  (CreateSecretButton)
 //     - toolbar: search input, Type filter, Status filter, Reset
 //     - table columns: Secret | Type | Status | Created On | Actions
@@ -24,8 +24,8 @@ const INITIAL_VALUE = "initial-value-0001";
 const ROTATED_VALUE = "rotated-value-0002";
 
 const openList = async (page: Page) => {
-  await page.goto("/app/secret-management/my-secret");
-  await expect(page.getByRole("heading", { name: "Secret Management" })).toBeVisible();
+  await page.goto("/app/secret-management/secret");
+  await expect(page.getByRole("heading", { name: "Secret" })).toBeVisible();
 };
 
 const rowActions = async (page: Page, name: string) => {
@@ -122,7 +122,7 @@ test("secrets&config-mysecret-lifecycle", async ({ page }) => {
 
   // ── Restore ───────────────────────────────────────────────────────────────
   await page.goto(
-    `/app/secret-management/my-secret?secretSearch=${SECRET_NAME}&secretStatus=deleted`,
+    `/app/secret-management/secret?secretSearch=${SECRET_NAME}&secretStatus=deleted`,
   );
   const deletedRow = page.getByRole("row", { name: new RegExp(SECRET_NAME) });
   await expect(deletedRow).toBeVisible({ timeout: 30_000 });
@@ -137,7 +137,7 @@ test("secrets&config-mysecret-lifecycle", async ({ page }) => {
   await menu.getByText("Restore").click();
   await page.getByRole("dialog").getByRole("button", { name: "Restore" }).click();
 
-  await page.goto(`/app/secret-management/my-secret?secretSearch=${SECRET_NAME}`);
+  await page.goto(`/app/secret-management/secret?secretSearch=${SECRET_NAME}`);
   await expect(
     page.getByRole("row", { name: new RegExp(SECRET_NAME) }).getByText("Active"),
   ).toBeVisible({ timeout: 30_000 });
@@ -149,9 +149,9 @@ test("mysecret-service-secret-has-no-reveal", async ({ page }) => {
 
   await page.getByRole("button", { name: "Create" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("radio", { name: "Service" }).click();
+  await dialog.getByRole("radio", { name: /Platform service/ }).click();
   // Service secrets have no access list, so the picker is not offered.
-  await expect(dialog.getByText("Allowed users")).toHaveCount(0);
+  await expect(dialog.getByText("People")).toHaveCount(0);
   await dialog.getByLabel(/^Name/).fill(serviceName);
   await dialog.getByLabel(/Secret value/).fill("service-value-0001");
   await dialog.getByRole("button", { name: "Save" }).click();
@@ -169,8 +169,8 @@ test("mysecret-service-secret-has-no-reveal", async ({ page }) => {
 });
 
 test("mysecret-audit-log", async ({ page }) => {
-  await page.goto(`/app/secret-management/my-secret?secretSearch=${SECRET_NAME}`);
-  await expect(page.getByRole("heading", { name: "Secret Management" })).toBeVisible();
+  await page.goto(`/app/secret-management/secret?secretSearch=${SECRET_NAME}`);
+  await expect(page.getByRole("heading", { name: "Secret" })).toBeVisible();
 
   const menu = await rowActions(page, SECRET_NAME);
   await menu.getByText("Audit").click();

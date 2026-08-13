@@ -104,21 +104,33 @@ describe("SecretFormModal — create", () => {
     expect(hoisted.create).not.toHaveBeenCalled();
   });
 
-  it("measures the value limit in UTF-8 bytes, not characters", async () => {
+  it("shows no size counter and does not police the length itself", async () => {
+    // The 25 KB vault cap is enforced server-side; a byte counter in the form is noise for a
+    // limit almost nobody reaches, and an oversized value still fails clearly via the 400 below.
     const user = userEvent.setup();
     renderCreate();
-    await user.type(screen.getByLabelText(/^name/i), "payment-key");
 
-    // 13k astral characters: 26k UTF-8 bytes but only 26k UTF-16 units — a `.length` check
-    // against 25 KB would let a value through that the vault then rejects.
+    expect(screen.queryByText(/KB of/i)).toBeNull();
+
+    await fillCreate(user, { name: "payment-key", value: "" });
     await user.click(screen.getByLabelText(/secret value/i));
-    await user.paste("😀".repeat(6600));
+    await user.paste("a".repeat(30_000));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(hoisted.create).toHaveBeenCalled());
+  });
+
+  it("surfaces the server's VALUE_TOO_LARGE on the value field", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    hoisted.create.mockRejectedValue(new FakeHttpError(400, { reason: "VALUE_TOO_LARGE" }));
+
+    await fillCreate(user);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(screen.getByText(/larger than the 25 KB limit/i)).toBeTruthy(),
     );
-    expect(hoisted.create).not.toHaveBeenCalled();
   });
 
   it("sends lowercase wire values and the chosen access list for an api secret", async () => {
@@ -145,7 +157,7 @@ describe("SecretFormModal — create", () => {
     const user = userEvent.setup();
     renderCreate();
 
-    await user.click(screen.getByRole("radio", { name: "Service" }));
+    await user.click(screen.getByRole("radio", { name: /Platform service/ }));
     expect(screen.queryByTestId("access-summary")).toBeNull();
 
     await fillCreate(user);
@@ -205,8 +217,8 @@ describe("SecretFormModal — edit", () => {
 
   it("does not offer a type change", () => {
     renderEdit();
-    expect(screen.queryByRole("radio", { name: "Service" })).toBeNull();
-    expect(screen.getByText("API")).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: /Platform service/ })).toBeNull();
+    expect(screen.getByText("Application")).toBeTruthy();
   });
 
   it("updates metadata only when the access list is untouched", async () => {

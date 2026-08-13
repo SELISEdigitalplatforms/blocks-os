@@ -105,7 +105,12 @@ export function SecretToolbar() {
           key: "search",
           type: "SearchInput",
           label: "",
-          props: { placeholder: "Search by name, description or secret ID" },
+          // The control defaults to w-52, which clips a placeholder this long. The backend also
+          // matches description, but naming every matched field is what made it overflow.
+          props: {
+            placeholder: "Search by name or ID",
+            className: "w-full sm:w-72",
+          },
         },
         { key: "type", type: "Radio", label: "Type", props: { options: TYPE_OPTIONS } },
         { key: "status", type: "Radio", label: "Status", props: { options: STATUS_OPTIONS } },

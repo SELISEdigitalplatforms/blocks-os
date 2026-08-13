@@ -122,6 +122,21 @@ public sealed class KeyVaultSecretValueStore : ISecretValueStore
                 "Required Azure config value 'KeyVault:KeyVaultUrl' is missing. Please check your environment configuration.");
         }
 
-        return new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
+        var credentialOptions = new DefaultAzureCredentialOptions();
+
+        // A developer machine has no IMDS endpoint, so the managed-identity probe burns six
+        // retries against an unreachable link-local address (169.254.169.254) before the chain
+        // moves on — every vault write stalls for seconds and then fails outright. Azure hosts
+        // keep it enabled; only Development opts out. Blocks.Genesis excludes it for the same
+        // reason when reading startup configuration.
+        if (string.Equals(
+                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                "Development",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            credentialOptions.ExcludeManagedIdentityCredential = true;
+        }
+
+        return new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential(credentialOptions));
     }
 }

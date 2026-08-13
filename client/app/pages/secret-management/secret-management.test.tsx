@@ -3,7 +3,7 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  pathname: "/app/proj/secret-management/my-secret",
+  pathname: "/app/proj/secret-management/secret",
   captchaData: undefined as unknown,
   externalIdpData: undefined as unknown,
   clientsData: [] as unknown[],
@@ -82,7 +82,7 @@ import SecretManagementLayout from "./secret-management";
 describe("SecretManagementLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.pathname = "/app/proj/secret-management/my-secret";
+    h.pathname = "/app/proj/secret-management/secret";
     h.captchaData = undefined;
     h.externalIdpData = undefined;
     h.clientsData = [];
@@ -91,9 +91,9 @@ describe("SecretManagementLayout", () => {
 
   it("renders the page header and outlet for a known nav item", () => {
     render(<SecretManagementLayout />);
-    expect(screen.getByText("Secret Management")).toBeTruthy();
+    expect(screen.getByText("Secret")).toBeTruthy();
     expect(screen.getByTestId("outlet")).toBeTruthy();
-    // The my-secret page shows the create-secret action.
+    // The secret page shows the create-secret action.
     expect(screen.getByTestId("create-secret-button")).toBeTruthy();
   });
 

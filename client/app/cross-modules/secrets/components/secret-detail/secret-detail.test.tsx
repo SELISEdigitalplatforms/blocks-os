@@ -50,7 +50,29 @@ describe("SecretDetail", () => {
     );
     expect(screen.getByText("Rotations")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
-    expect(screen.getByText(/user-9/)).toBeTruthy();
+    expect(screen.getByText(/last 02 Mar 2026/)).toBeTruthy();
+  });
+
+  it("shows dates without trailing actor GUIDs", () => {
+    // The API returns actors as raw GUIDs; a 36-character id after every timestamp is noise.
+    // "Who" belongs in the audit log, where it is resolved and searchable.
+    render(
+      <SecretDetail
+        secret={makeSecret({
+          createdBy: "df1abb8e-0433-4dc0-a01c-e9b6c875824b",
+          lastUpdatedBy: "df1abb8e-0433-4dc0-a01c-e9b6c875824b",
+          rotationCount: 2,
+          lastRotatedDate: "2026-03-02T08:00:00Z",
+          lastRotatedBy: "df1abb8e-0433-4dc0-a01c-e9b6c875824b",
+        })}
+      />,
+    );
+
+    expect(screen.queryByText(/df1abb8e/)).toBeNull();
+    // No "by <actor>" line anywhere; the description legitimately contains the word "by",
+    // so match the rendered pattern rather than the bare word.
+    expect(screen.queryByText(/^by\s/)).toBeNull();
+    expect(screen.getByText("Created")).toBeTruthy();
   });
 
   it("shows deletion details for a deleted secret", () => {
@@ -94,11 +116,13 @@ describe("SecretDetail", () => {
   });
 
   describe("service secrets", () => {
-    it("shows a neutral note and no access lists", () => {
+    it("shows no access lists and no explanatory note", () => {
+      // The category badge already says "Platform service"; repeating it as prose under every
+      // such row was noise.
       render(<SecretDetail secret={makeSecret({ type: SECRET_TYPE.Service, access: null })} />);
-      expect(screen.getByText("Service secrets are consumed by backend services.")).toBeTruthy();
       expect(screen.queryByText("Allowed users")).toBeNull();
       expect(screen.queryByText("Allowed roles")).toBeNull();
+      expect(screen.queryByText(/consumed by backend services/i)).toBeNull();
     });
 
     it("does not claim they are unreadable by users", () => {
