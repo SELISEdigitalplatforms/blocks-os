@@ -32,6 +32,28 @@
             <param name="tenantGroupId">The tenant group ID to check for migrations.</param>
             <returns>List of migration trackers with incomplete services.</returns>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.SecretsController">
+            <summary>
+            Secret management endpoints.
+            </summary>
+            <remarks>
+            Routing, permissions and request/response mapping only. Every domain rule — tenant scope,
+            access lists, status, rotation, audit — lives in <see cref="T:Blocks.Secrets.ISecretService"/>, which
+            re-checks everything regardless of what the transport did.
+            <para>
+            No action returns a <see cref="T:Blocks.Secrets.Secret"/> entity. Metadata goes out as
+            <see cref="T:Blocks.Secrets.SecretResult"/>, which has no value and no vault coordinates.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Value(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Reads a secret's plaintext value. Always audited.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Unlock(Blocks.Secrets.SecretIdRequest,System.Threading.CancellationToken)">
+            <summary>Unlocks a secret. Shares the lock permission — they are one capability.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>
             Reports the running API assembly version. Public by design (no auth) so health/deploy

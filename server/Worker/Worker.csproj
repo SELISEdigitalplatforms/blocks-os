@@ -12,6 +12,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Identifier.DomainService\Identifier.DomainService.csproj" />
-    <ProjectReference Include="..\Secrets.DomainService\Secrets.DomainService.csproj" />
   </ItemGroup>
 </Project>

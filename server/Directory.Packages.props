@@ -9,6 +9,8 @@
     <PackageVersion Include="MongoDB.Driver" Version="3.8.0" />
     <PackageVersion Include="SeliseBlocks.Genesis.OS" Version="4.0.5" />
     <PackageVersion Include="Azure.ResourceManager.ServiceBus" Version="1.1.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.0" />
     <PackageVersion Include="SeliseBlocks.StorageDriver.OS" Version="4.0.0" />
     <PackageVersion Include="SSH.NET" Version="2024.2.0" />
     <PackageVersion Include="SeliseBlocks.MailDriver.OS" Version="4.0.0" />
