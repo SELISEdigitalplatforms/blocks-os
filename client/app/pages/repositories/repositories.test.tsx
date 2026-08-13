@@ -65,6 +65,7 @@ const resource = {
   resourceId: "r-1",
   name: "acme/service",
   link: "https://github.com/acme/service",
+  createdDate: "2026-03-09T10:15:00Z",
 };
 
 const assetsResponse = { assets: { resources: [resource] }, totalCount: 1 };
@@ -132,6 +133,34 @@ describe("RepositoriesPage", () => {
     expect(screen.getByText("acme/service")).toBeTruthy();
     expect(screen.getByText("https://github.com/acme/service")).toBeTruthy();
     expect(screen.getByText("Github")).toBeTruthy();
+    expect(screen.getByText("Created")).toBeTruthy();
+    // Built from the same instant rather than hardcoded, so the assertion holds in any timezone.
+    const created = new Date(resource.createdDate);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    expect(
+      screen.getByText(
+        `${pad(created.getDate())}/${pad(created.getMonth() + 1)}/${created.getFullYear()}`,
+      ),
+    ).toBeTruthy();
+  });
+
+  // Repositories linked before the field existed come back as DateTime.MinValue, and rows that
+  // predate it entirely come back with no field at all.
+  it.each([
+    ["the .NET minimum date", "0001-01-01T00:00:00"],
+    ["no created date", undefined],
+  ])("shows a placeholder for %s", (_case, createdDate) => {
+    h.useGetAssets.mockReturnValue({
+      data: {
+        assets: { resources: [{ ...resource, createdDate }] },
+        totalCount: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      refetch: h.refetch,
+    });
+    render(<RepositoriesPage />);
+    expect(screen.getByText("—")).toBeTruthy();
   });
 
   it("asks the server for the search term and renders the rows it returns", async () => {

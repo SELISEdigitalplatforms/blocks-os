@@ -18,7 +18,6 @@ namespace DomainService.Shared
         public const string ProjectPeopleCollectionName = "ProjectPeoples";
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string ThirdPartyJWTClaimsCollectionName = "ThirdPartyJWTClaims";
-        public const string CookieDomainPrefix = "blocksapi.";
 
         public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_data_cleanup_listener";
@@ -26,6 +25,10 @@ namespace DomainService.Shared
         public const string IamQueue = "blocks_iam_listener_user";
         public const string MailQueue = "blocks_email_listener";
         public const string GenericMigrationQueue = "blocks_generic_migration_listener";
+        // Published to, never consumed here — blocks-release's worker owns this queue and is what
+        // declares it. Deliberately absent from the MessageConfiguration below: binding a queue this
+        // service has no consumer for would let the broker hand it deletes it would silently drop.
+        public const string ReleaseProjectDeleteQueue = "blocks_release_project_delete_listener";
         public const string MigrationCompletionTopic = "blocks_migration_topic";
         public const string ProjectPeopleInvitationMailPurpose = "project_invitation";
         public const string BlocksDomain = "seliseblocks.com";

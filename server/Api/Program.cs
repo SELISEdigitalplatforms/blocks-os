@@ -1,3 +1,4 @@
+using Blocks.Extensions.DependencyInjection;
 using Blocks.Genesis;
 using BlocksOs.Api;
 using Cloud.DomainService.Utilities;
@@ -52,6 +53,7 @@ services.AddCloudLmtServices();
 services.AddConfigurationServices();
 services.AddSingleton<ISecretManagementService, SecretManagementService>();
 services.AddSingleton<ISecretRepository, SecretRepository>();
+await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 
 var app = builder.Build();

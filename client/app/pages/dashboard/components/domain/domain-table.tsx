@@ -18,8 +18,7 @@ import {
   CopyToClipboardButton,
   RenderConditionally,
 } from "@seliseblocks/genesis-os/components";
-import { Dialog } from "@/components/ui-kits/dialog/dialog";
-import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { DomainDeleteDialog } from "./domain-delete-dialog";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -134,13 +133,14 @@ export const DomainTable = ({ data }: DomainTableProps) => {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (deleteCertificate: boolean) => {
     if (!deleteTarget) return;
     try {
       const res = await mutateAsync({
         action: DomainAction.Delete,
         application: deleteTarget,
         applicationDomain: deleteTarget.domain,
+        deleteCertificate,
       });
       if (res.isSuccess) {
         showSuccessToast({ description: "Domain deleted successfully" });
@@ -185,30 +185,13 @@ export const DomainTable = ({ data }: DomainTableProps) => {
       />
 
       {/* Delete confirmation — one instance, target swaps per row */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <ConfirmationModal
-          data={{
-            dialogTitle: "Delete Domain",
-            dialogSubtitle: (
-              <>
-                <p>Are you sure you want to delete the following domain?</p>
-                <p
-                  className="mt-3 max-w-full truncate rounded-md bg-muted/60 px-3 py-2 font-mono text-sm font-semibold"
-                  title={deleteTarget?.domain}
-                >
-                  {deleteTarget?.domain}
-                </p>
-                <p className="mt-3">This action cannot be undone.</p>
-              </>
-            ),
-            confirmButton: "Delete",
-            cancelButton: "Cancel",
-          }}
-          onCancel={() => setDeleteDialogOpen(false)}
-          onConfirm={handleDeleteConfirm}
-          buttonState={{ confirm: { disable: isPending } }}
-        />
-      </Dialog>
+      <DomainDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        domain={deleteTarget}
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
 
       {/* CNAME validator dialog — one instance, target swaps per row.
           Re-resolve the target from `data` so the open dialog reflects the

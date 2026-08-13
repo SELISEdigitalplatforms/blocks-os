@@ -2,6 +2,7 @@ import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetAssets, useAddAssets, useDeleteAsset } from "@/hooks/use-project";
 import { Plus, Github, FolderGit2, Trash2 } from "lucide-react";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { formatDate } from "@/lib/utils";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -32,6 +33,14 @@ import { useDebounce } from "@seliseblocks/genesis-os/hooks";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { RepositorySelectionModal } from "@/components/repository-selection-modal/repository-selection-modal";
 import ProviderButtons from "@/cross-modules/devops/components/deployment-steps/render-repos/render-provider";
+// Repositories linked before the field existed carry .NET's DateTime.MinValue, which is not a
+// real creation date, so those read as unknown rather than 01/01/0001.
+const formatCreatedDate = (value?: string) => {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime()) || parsed.getUTCFullYear() <= 1) return "—";
+  return formatDate(parsed, true);
+};
 const ADD_REPOSITORY_MESSAGES: Record<AssetMutationStatus, string> = {
   Added: "Repository added successfully",
   Updated: "Repository details updated successfully",
@@ -199,6 +208,18 @@ export const RepositoriesPage = () => {
             <Github className="mr-2 inline-block h-5 w-5" />
             <div className="truncate">Github</div>
           </div>
+        ),
+      },
+      {
+        id: "created",
+        accessorFn: (row) => `${row.createdDate ?? ""}`,
+        header: () => (
+          <div className="flex items-center">
+            <span className="font-bold text-medium-emphasis">Created</span>
+          </div>
+        ),
+        cell: (repos) => (
+          <div className="truncate">{formatCreatedDate(repos.row.original.createdDate)}</div>
         ),
       },
       {

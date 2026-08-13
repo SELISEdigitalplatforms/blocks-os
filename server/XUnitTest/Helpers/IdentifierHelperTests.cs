@@ -33,6 +33,29 @@ namespace XUnitTest.Helpers
         }
 
         [Theory]
+        // A cookie domain on record wins, whether the host sits under it or is it.
+        [InlineData("app.example.com", "example.com", "example.com")]
+        [InlineData("example.com", "example.com", "example.com")]
+        [InlineData("shop.example.co.uk", "example.co.uk", "example.co.uk")]
+        // ...but not when it cannot possibly be this host's cookie domain.
+        [InlineData("app.example.com", "unrelated.org", "example.com")]
+        [InlineData("app.example.com", "ample.com", "example.com")]
+        // Nothing on record: the parent of the site host, unless the host is
+        // already the registrable domain — the apex case that used to collapse
+        // to a bare public suffix.
+        [InlineData("app.example.com", "", "example.com")]
+        [InlineData("example.com", "", "example.com")]
+        [InlineData("example.shop", "", "example.shop")]
+        [InlineData("example.co.uk", "", "example.co.uk")]
+        [InlineData("app.example.co.uk", "", "example.co.uk")]
+        [InlineData("localhost", "", "localhost")]
+        [InlineData("", "", "")]
+        public void ResolveCookieDomain_ReturnsExpected(string siteHost, string storedCookieDomain, string expected)
+        {
+            IdentifierHelper.ResolveCookieDomain(siteHost, storedCookieDomain).Should().Be(expected);
+        }
+
+        [Theory]
         [InlineData("dev", "d")]
         [InlineData("test", "t")]
         [InlineData("stg", "s")]

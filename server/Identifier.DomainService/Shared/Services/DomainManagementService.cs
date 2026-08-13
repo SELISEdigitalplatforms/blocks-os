@@ -50,15 +50,21 @@ namespace DomainService.Shared
         {
             var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
             _logger.LogInformation("Processing request {RequestId} for domain {Domain}", tenantId, request.CookieDomain);
-            var cookieDomain = NormalizeDomain(request.CookieDomain);
+            // Despite the field name, callers send the site host here — the vhost
+            // this run provisions ("app.example.com", or a bare "example.com" when
+            // the application is served from the apex).
+            var domain = NormalizeDomain(request.CookieDomain);
 
-            if (!IsValidHostname(cookieDomain))
+            if (!IsValidHostname(domain))
             {
                 _logger.LogWarning("Rejected invalid domain {Domain}", request.CookieDomain);
                 return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "invalid_domain", $"{request.CookieDomain} is not a valid domain name." } } };
             }
 
-            var (domain, blocksApiDomain) = ExtractDomainParts(cookieDomain);
+            var existingApplication = _tenants.GetTenantByID(tenantId)?.Applications?
+                .FirstOrDefault(a => NormalizeDomain(a.Domain) == domain);
+
+            var blocksApiDomain = BuildBlocksApiDomain(domain, existingApplication?.CookieDomain);
 
             // Derived from config (CnameRecordDomain), so a missing or malformed
             // setting must not produce a hostname either
@@ -70,9 +76,6 @@ namespace DomainService.Shared
 
             // Already-verified domains have their nginx config and certificate in
             // place — skip the DNS/SSH/certbot pipeline instead of re-running it
-            var existingApplication = _tenants.GetTenantByID(tenantId)?.Applications?
-                .FirstOrDefault(a => NormalizeDomain(a.Domain) == NormalizeDomain(domain));
-
             if (existingApplication?.IsDomainVerified == true)
             {
                 _logger.LogInformation("Domain {Domain} is already verified; skipping configuration", domain);
@@ -111,7 +114,7 @@ namespace DomainService.Shared
 
         // Domains are stored inconsistently ("https://x", "x", trailing slash,
         // mixed case) — normalize before comparing
-        private static string NormalizeDomain(string domain) =>
+        private static string NormalizeDomain(string? domain) =>
             (domain ?? string.Empty)
                 .Trim()
                 .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
@@ -443,28 +446,22 @@ namespace DomainService.Shared
             }
         }
 
-        private (string feDomain, string blocksapiDomain) ExtractDomainParts(string domain)
+        // The API host is always the CNAME label placed directly under the
+        // application's cookie domain — "blocksapi.example.com" for both
+        // "app.example.com" and a bare "example.com". This used to overwrite the
+        // site host's first label instead, which ate the registrable name on an
+        // apex host and asked DNS for hosts like "blocksapi.com".
+        private string BuildBlocksApiDomain(string domain, string? storedCookieDomain)
         {
-            if (string.IsNullOrWhiteSpace(domain))
-                throw new ArgumentException("Domain cannot be null or empty.", nameof(domain));
+            var recordedCookieDomain = NormalizeDomain(storedCookieDomain);
+            var cookieDomain = IdentifierHelper.ResolveCookieDomain(domain, recordedCookieDomain);
 
-            var parts = domain.Split('.');
-            if (parts.Length < 1)
-                throw new ArgumentException("Invalid domain format.", nameof(domain));
-
-            string feDomain = domain;
-            string blocksapiDomain;
-
-            if (parts.Length == 1)
+            if (recordedCookieDomain.Length > 0 && cookieDomain != recordedCookieDomain)
             {
-                blocksapiDomain = $"{_configuration["CnameRecordDomain"]}.{domain}";
+                _logger.LogWarning("Cookie domain {CookieDomain} on record does not cover {Domain}; deriving the API host from the domain itself", recordedCookieDomain, domain);
             }
-            else
-            {
-                parts[0] = _configuration["CnameRecordDomain"];
-                blocksapiDomain = string.Join('.', parts);
-            }
-            return (feDomain, blocksapiDomain);
+
+            return $"{_configuration["CnameRecordDomain"]}.{cookieDomain}";
         }
 
         private List<string> UpdateNginxConfigCommands(string domain, string path, string placeholder)
@@ -529,18 +526,28 @@ namespace DomainService.Shared
             // host derived from the same root domain is shared with every other app under
             // it and must survive — which is why this targets exact paths rather than
             // globbing the filesystem for anything whose name contains the domain.
-            var commands = new[]
+            var commands = new List<string>
             {
                 $"sudo rm -f '/etc/nginx/sites-enabled/{domain}'",
                 $"sudo rm -f '/etc/nginx/sites-available/{domain}'",
-                // Exits non-zero when no such lineage exists, which is not a failure here.
-                $"sudo certbot delete --cert-name '{domain}' --non-interactive || true",
-                $"sudo nginx -t",
-                $"sudo systemctl reload nginx"
             };
+
+            // The certificate outlives the binding unless the caller asked for it to go.
+            // Keeping the lineage is what lets the same host be re-added without spending
+            // one of Let's Encrypt's five weekly duplicate-certificate slots; deleting it
+            // is the only way to stop renewals for a host that is never coming back.
+            if (request.DeleteCertificate)
+            {
+                // Exits non-zero when no such lineage exists, which is not a failure here.
+                commands.Add($"sudo certbot delete --cert-name '{domain}' --non-interactive || true");
+            }
+
+            commands.AddRange(ReloadNginxConfigCommands());
 
             var (success, _) = await ExecuteRemoteCommandsAsync(commands);
             await UpdateDomainValidationStatusAsync(request.ProjectId, domain, false);
+
+            _logger.LogInformation("Disabled domain binding for {Domain} (certificate removed: {CertificateRemoved})", domain, request.DeleteCertificate);
 
             return success
                 ? (true, $"Domain binding disabled for {domain}.")
