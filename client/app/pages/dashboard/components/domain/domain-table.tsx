@@ -133,14 +133,14 @@ export const DomainTable = ({ data }: DomainTableProps) => {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async (deleteCertificate: boolean) => {
+  const handleDeleteConfirm = async (deleteSharedApiHost: boolean) => {
     if (!deleteTarget) return;
     try {
       const res = await mutateAsync({
         action: DomainAction.Delete,
         application: deleteTarget,
         applicationDomain: deleteTarget.domain,
-        deleteCertificate,
+        deleteSharedApiHost,
       });
       if (res.isSuccess) {
         showSuccessToast({ description: "Domain deleted successfully" });

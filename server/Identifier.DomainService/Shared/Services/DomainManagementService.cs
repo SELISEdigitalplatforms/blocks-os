@@ -461,7 +461,7 @@ namespace DomainService.Shared
                 _logger.LogWarning("Cookie domain {CookieDomain} on record does not cover {Domain}; deriving the API host from the domain itself", recordedCookieDomain, domain);
             }
 
-            return $"{_configuration["CnameRecordDomain"]}.{cookieDomain}";
+            return IdentifierHelper.BuildApiHost(_configuration["CnameRecordDomain"] ?? string.Empty, domain, cookieDomain);
         }
 
         private List<string> UpdateNginxConfigCommands(string domain, string path, string placeholder)

@@ -465,6 +465,7 @@ namespace DomainService.Projects
                 ? null
                 : project.Applications?.FirstOrDefault(a => a.Domain == request.ApplicationDomain);
             var previousDomain = applicationBeforeUpdate?.Domain;
+            var previousCookieDomain = applicationBeforeUpdate?.CookieDomain;
             var previousDomainWasProvisioned = applicationBeforeUpdate is not null && IsSelfProvisioned(applicationBeforeUpdate);
 
             switch (request.Action)
@@ -498,15 +499,48 @@ namespace DomainService.Projects
 
             // Released only once the change is persisted — tearing the vhost and
             // certificate down for an update that failed to save would take a live
-            // site offline. Whether the certificate goes with it is the caller's
-            // call; on a rename the flag is off unless asked for, so the old host's
-            // lineage survives a domain that may well be moved back.
+            // site offline.
             if (previousDomainWasProvisioned && ReleasesPreviousHost(request, previousDomain))
             {
-                await SendDisableDomainBindingAsync(project.TenantId, previousDomain!, request.DeleteCertificate);
+                // Delete means delete: the certificate goes with the vhost, so
+                // nothing is left renewing for a host the project no longer has. A
+                // rename is a move, not a removal, so its lineage survives for the
+                // domain it may well be moved back to.
+                var isDelete = request.Action == ApplicationAction.Delete;
+
+                await SendDisableDomainBindingAsync(project.TenantId, previousDomain!, deleteCertificate: isDelete);
+
+                if (isDelete && request.DeleteSharedApiHost)
+                {
+                    await ReleaseSharedApiHostAsync(project.TenantId, previousDomain!, previousCookieDomain);
+                }
             }
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        // The API host serves every application under the same cookie domain, so
+        // this only runs when the caller ticked the box that says so in as many
+        // words. It is derived here rather than in the worker because the
+        // application record — and with it the cookie domain the host is built
+        // from — is already gone by the time the worker picks the message up.
+        private async Task ReleaseSharedApiHostAsync(string tenantId, string domain, string? cookieDomain)
+        {
+            var cnameLabel = _configuration["CnameRecordDomain"];
+            var resolvedCookieDomain = IdentifierHelper.ResolveCookieDomain(NormalizeDomain(domain), NormalizeDomain(cookieDomain));
+
+            // Without both halves the result is something like ".example.com" —
+            // a string that must never reach a shell command on the proxy. The
+            // worker rejects malformed hostnames too; this just stops the message
+            // from being sent at all.
+            if (string.IsNullOrWhiteSpace(cnameLabel) || string.IsNullOrWhiteSpace(resolvedCookieDomain))
+            {
+                return;
+            }
+
+            var apiHost = IdentifierHelper.BuildApiHost(cnameLabel, NormalizeDomain(domain), resolvedCookieDomain);
+
+            await SendDisableDomainBindingAsync(tenantId, apiHost, deleteCertificate: true);
         }
 
         // A delete always leaves the old host with nothing pointing at it; an edit
