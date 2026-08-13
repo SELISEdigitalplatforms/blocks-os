@@ -1,3 +1,4 @@
+using Blocks.Extensions.DependencyInjection;
 using Blocks.Genesis;
 using Blocks.Secrets;
 using BlocksOs.Api;
@@ -58,6 +59,7 @@ services.AddConfigurationServices();
 // Scoped internally: these read the request-scoped BlocksContext, so the old singleton
 // registration would have served the first caller's tenant to everyone afterwards.
 services.AddBlocksSecrets();
+await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 
 var app = builder.Build();

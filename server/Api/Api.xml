@@ -53,6 +53,19 @@
         </member>
         <member name="M:BlocksOs.Api.Controllers.SecretsController.Unlock(Blocks.Secrets.SecretIdRequest,System.Threading.CancellationToken)">
             <summary>Unlocks a secret. Shares the lock permission — they are one capability.</summary>
+        <member name="T:BlocksOs.Api.Controllers.ReleaseController">
+            <summary>
+            Release and repository operations, served out of blocks-os. This is the move of what blocks-logic
+            exposed as <c>logic/deployment/*</c>; the action names are kept identical so only the
+            <c>logic/deployment</c> prefix changes to <c>os/release</c> for callers.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ReleaseController.#ctor(ReleaseDriver.IReleaseDriverService)">
+            <summary>
+            Release and repository operations, served out of blocks-os. This is the move of what blocks-logic
+            exposed as <c>logic/deployment/*</c>; the action names are kept identical so only the
+            <c>logic/deployment</c> prefix changes to <c>os/release</c> for callers.
+            </summary>
         </member>
         <member name="T:BlocksOs.Api.Controllers.VersionController">
             <summary>
