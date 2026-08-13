@@ -1,13 +1,19 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Blocks.Genesis;
 using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Template;
+using Configuration.DomainService.Mail.Template.Models;
 using Configuration.DomainService.Mail.Template.Services;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using XUnitTest.TestSupport;
 
@@ -17,8 +23,10 @@ namespace XUnitTest.Services
     {
         private readonly Mock<IValidator<SaveMailTemplateRequest>> _validator = new();
         private readonly Mock<IMailTemplateRepository> _repo = new();
+        private readonly Mock<IHttpService> _httpService = new();
 
-        private MailTemplateService Service() => new(_validator.Object, _repo.Object);
+        private MailTemplateService Service() =>
+            new(_validator.Object, _repo.Object, _httpService.Object, NullLogger<MailTemplateService>.Instance);
 
         private void ValidationSucceeds() =>
             _validator.Setup(v => v.ValidateAsync(It.IsAny<SaveMailTemplateRequest>(), It.IsAny<CancellationToken>()))
@@ -251,6 +259,120 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeTrue();
             _repo.Verify(r => r.DeleteAsync("t1"), Times.Once);
+        }
+
+        private void PluginConfigExists(string provider, string contentType, Dictionary<string, string>? headers = null) =>
+            _repo.Setup(r => r.GetPluginConfigAsync(provider))
+                 .ReturnsAsync(new TemplatePluginConfig
+                 {
+                     ItemId = "cfg-1",
+                     PluginProvider = provider,
+                     HttpMethod = "POST",
+                     RequestUri = "https://auth.getbee.io/loginV2",
+                     ContentType = contentType,
+                     Payload = "{\"client_id\":\"cid\",\"client_secret\":\"secret\",\"uid\":\"placeholder\"}",
+                     HttpHeders = headers
+                 });
+
+        private void HttpReturns(BeeLoginResponse? response, string error = "") =>
+            _httpService.Setup(h => h.SendRequest<BeeLoginResponse>(
+                    It.IsAny<HttpMethod>(),
+                    It.IsAny<string>(),
+                    It.IsAny<object>(),
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, string>>(),
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<int?>()))
+                .ReturnsAsync((response!, error));
+
+        [Fact]
+        public async Task GetTemplatePluginTokenAsync_WhenUidMissing_ReturnsNull()
+        {
+            var response = await Service().GetTemplatePluginTokenAsync("Bee", string.Empty);
+
+            response.Should().BeNull();
+            _repo.Verify(r => r.GetPluginConfigAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetTemplatePluginTokenAsync_WhenNoConfig_ReturnsNull()
+        {
+            _repo.Setup(r => r.GetPluginConfigAsync("Bee")).ReturnsAsync((TemplatePluginConfig?)null);
+
+            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-1");
+
+            response.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetTemplatePluginTokenAsync_WithJsonPayload_ReturnsTokenAndOverwritesUid()
+        {
+            PluginConfigExists("Bee", "application/json");
+            HttpReturns(new BeeLoginResponse { AccessToken = "token-123" });
+
+            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-1");
+
+            response!.AccessToken.Should().Be("token-123");
+            _httpService.Verify(h => h.SendRequest<BeeLoginResponse>(
+                It.IsAny<HttpMethod>(),
+                "https://auth.getbee.io/loginV2",
+                It.Is<object>(p => ((Dictionary<string, JsonElement>)p)["uid"].GetString() == "uid-1"),
+                "application/json",
+                It.IsAny<Dictionary<string, string>>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<int?>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetTemplatePluginTokenAsync_WithFormPayload_OverwritesUid()
+        {
+            PluginConfigExists("Bee", "application/x-www-form-urlencoded");
+            HttpReturns(new BeeLoginResponse { AccessToken = "token-456" });
+
+            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-2");
+
+            response!.AccessToken.Should().Be("token-456");
+            _httpService.Verify(h => h.SendRequest<BeeLoginResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.Is<object>(p => ((Dictionary<string, string>)p)["uid"] == "uid-2"),
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, string>>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<int?>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetTemplatePluginTokenAsync_DropsStoredAuthorizationHeader()
+        {
+            PluginConfigExists("Bee", "application/json", new Dictionary<string, string>
+            {
+                ["Authorization"] = "should-be-dropped",
+                ["X-Api"] = "keep"
+            });
+            HttpReturns(new BeeLoginResponse { AccessToken = "token-789" });
+
+            await Service().GetTemplatePluginTokenAsync("Bee", "uid-3");
+
+            _httpService.Verify(h => h.SendRequest<BeeLoginResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<string>(),
+                It.Is<Dictionary<string, string>>(h2 => !h2.ContainsKey("Authorization") && h2["X-Api"] == "keep"),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<int?>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetTemplatePluginTokenAsync_WhenHttpFails_ReturnsNull()
+        {
+            PluginConfigExists("Bee", "application/json");
+            HttpReturns(null, "boom");
+
+            var response = await Service().GetTemplatePluginTokenAsync("Bee", "uid-1");
+
+            response.Should().BeNull();
         }
     }
 }

@@ -9,6 +9,7 @@ namespace Configuration.DomainService.Mail.Template.Services
     public class MailTemplateRepository : IMailTemplateRepository
     {
         private const string CollectionName = "EmailTemplates";
+        private const string PluginConfigCollectionName = "TemplatePluginConfigs";
         private readonly IDbContextProvider _dbContextProvider;
 
         public MailTemplateRepository(IDbContextProvider dbContextProvider)
@@ -98,6 +99,24 @@ namespace Configuration.DomainService.Mail.Template.Services
             var filter = Builders<EmailTemplate>.Filter.Eq(t => t.ItemId, itemId);
 
             await collection.DeleteOneAsync(filter);
+        }
+
+        public async Task<TemplatePluginConfig?> GetPluginConfigAsync(string pluginProvider)
+        {
+            var collection = _dbContextProvider.GetCollection<TemplatePluginConfig>(PluginConfigCollectionName);
+
+            var normalizedProvider = Regex.Replace(
+                pluginProvider?.Trim() ?? string.Empty,
+                @"\s+",
+                " ",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(2));
+
+            var filter = Builders<TemplatePluginConfig>.Filter.Regex(
+                c => c.PluginProvider,
+                new BsonRegularExpression($"^{Regex.Escape(normalizedProvider)}$", "i"));
+
+            return await collection.Find(filter).FirstOrDefaultAsync();
         }
     }
 }
