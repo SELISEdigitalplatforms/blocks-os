@@ -186,6 +186,51 @@ namespace XUnitTest.Validators
             result.IsValid.Should().BeFalse();
         }
 
+        [Theory]
+        // The domain itself, or any parent of it, is the customer's to claim.
+        [InlineData("https://app.example.com", "example.com", true)]
+        [InlineData("https://app.example.com", "app.example.com", true)]
+        [InlineData("https://deep.app.example.com", "app.example.com", true)]
+        [InlineData("https://example.com", "example.com", true)]
+        // The old leading-dot spelling still turns up in stored records.
+        [InlineData("https://app.example.com", ".example.com", true)]
+        // A domain they are not under is not — this is what stops one project
+        // claiming another's cookie domain and its shared API host with it.
+        [InlineData("https://app.evil.com", "example.com", false)]
+        [InlineData("https://app.notexample.com", "example.com", false)]
+        // Nor a bare public suffix, which would put the API host on a name that
+        // belongs to nobody in this system.
+        [InlineData("https://app.example.com", "com", false)]
+        [InlineData("https://app.example.co.uk", "co.uk", false)]
+        [InlineData("https://app.example.com", "", false)]
+        public async Task Validate_AddCookieDomain_MustCoverTheDomain(string domain, string cookieDomain, bool expected)
+        {
+            var request = new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Add,
+                Application = new Application { Domain = domain, CookieDomain = cookieDomain }
+            };
+
+            var result = await _validator.ValidateAsync(request);
+
+            result.IsValid.Should().Be(expected);
+        }
+
+        [Fact]
+        public async Task Validate_EditWithMismatchedCookieDomain_Fails()
+        {
+            var request = new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://app.example.com",
+                Application = new Application { Domain = "https://app.example.com", CookieDomain = "someone-else.com" }
+            };
+
+            var result = await _validator.ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+        }
+
         [Fact]
         public async Task Validate_EditWithoutApplicationDomain_Fails()
         {

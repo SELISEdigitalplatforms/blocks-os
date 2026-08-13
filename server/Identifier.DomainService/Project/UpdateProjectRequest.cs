@@ -8,13 +8,14 @@ namespace DomainService.Projects
         public string? ApplicationDomain { get; set; }
 
         /// <summary>
-        /// Opt in to removing the host's SSL certificate along with its nginx
-        /// binding. Off by default: keeping the lineage lets the same host be
-        /// re-added without spending one of Let's Encrypt's five weekly
-        /// duplicate-certificate slots. Ignored for platform-hosted domains,
-        /// whose certificates are not this project's to remove.
+        /// Opt in to tearing down the shared API host
+        /// ("&lt;cname-label&gt;.&lt;cookie-domain&gt;") along with the application. Off by
+        /// default, and for good reason: that host serves every application under
+        /// the same cookie domain, in this project and in others, so removing it
+        /// stops their API traffic until someone re-runs domain configuration.
+        /// Only honoured when deleting a verified, customer-owned domain.
         /// </summary>
-        public bool DeleteCertificate { get; set; }
+        public bool DeleteSharedApiHost { get; set; }
     }
 
     /// <summary>

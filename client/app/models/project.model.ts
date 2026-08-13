@@ -18,11 +18,11 @@ export interface IUpdateProjectPayload {
   application: IDomain;
   applicationDomain?: string;
   /**
-   * Remove the host's SSL certificate along with its nginx binding. Omitted or
-   * false keeps the certificate, so re-adding the same domain reuses it instead
-   * of issuing a new one against Let's Encrypt's weekly limit.
+   * Also tear down the shared API host under the cookie domain. It serves every
+   * application under that domain — in this project and in others — so omitting
+   * it (the default) keeps it running.
    */
-  deleteCertificate?: boolean;
+  deleteSharedApiHost?: boolean;
 }
 export interface IUpdateProjectResponse {
   errors: unknown | null;
