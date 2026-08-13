@@ -63,6 +63,44 @@ namespace DomainService.Shared
         private static bool CoversHost(string siteHost, string cookieDomain) =>
             siteHost == cookieDomain || siteHost.EndsWith($".{cookieDomain}", StringComparison.Ordinal);
 
+        /// <summary>
+        /// The API host an application's traffic is served from:
+        /// "&lt;cname-label&gt;.&lt;cookie-domain&gt;". Both callers that need it — the
+        /// one provisioning the host and the one tearing it down — go through
+        /// here, so a domain can never be created under one name and deleted
+        /// under another.
+        /// </summary>
+        public static string BuildApiHost(string cnameLabel, string siteHost, string cookieDomain) =>
+            $"{cnameLabel}.{ResolveCookieDomain(siteHost, cookieDomain)}";
+
+        /// <summary>
+        /// Whether a cookie domain may be claimed for a host. It has to be the
+        /// host itself or one of its parents — the same rule browsers apply to
+        /// Set-Cookie — and it has to be a registrable name: a bare public suffix
+        /// would put the derived API host on a domain nobody in this system owns.
+        /// </summary>
+        public static bool IsCookieDomainValidFor(string siteHost, string cookieDomain)
+        {
+            var host = Normalize(siteHost);
+            var cookie = Normalize(cookieDomain);
+
+            if (host.Length == 0 || cookie.Length == 0)
+                return false;
+
+            return CoversHost(host, cookie) && !IsPublicSuffix(cookie);
+
+            // A leading dot is the old cookie-domain spelling (".example.com") and
+            // still turns up in stored records, so it must not fail the check.
+            static string Normalize(string value) =>
+                (value ?? string.Empty)
+                    .Trim()
+                    .Replace("https://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                    .Replace("http://", string.Empty, StringComparison.OrdinalIgnoreCase)
+                    .TrimEnd('/')
+                    .TrimStart('.')
+                    .ToLowerInvariant();
+        }
+
         // Enough of the public suffix list to keep the common multi-label TLDs
         // ("co.uk", "com.bd") from being read as registrable domains. A suffix
         // missing from this set only degrades to the old parent-label guess for

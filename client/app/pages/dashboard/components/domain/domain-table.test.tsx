@@ -95,7 +95,7 @@ describe("DomainTable", () => {
     expect(showSuccessToast).toHaveBeenCalled();
   });
 
-  it("keeps the certificate unless the option is ticked", async () => {
+  it("keeps the shared API host unless the option is ticked", async () => {
     mutateAsync.mockResolvedValueOnce({ isSuccess: true });
     const user = userEvent.setup();
     render(<DomainTable data={domains} />);
@@ -103,12 +103,12 @@ describe("DomainTable", () => {
     await user.click(await screen.findByRole("button", { name: "Delete" }));
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ deleteCertificate: false }),
+        expect.objectContaining({ deleteSharedApiHost: false }),
       ),
     );
   });
 
-  it("deletes the certificate too when the option is ticked", async () => {
+  it("removes the shared API host when the option is ticked", async () => {
     mutateAsync.mockResolvedValueOnce({ isSuccess: true });
     const user = userEvent.setup();
     render(<DomainTable data={domains} />);
@@ -116,20 +116,37 @@ describe("DomainTable", () => {
     await user.click(await screen.findByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() =>
-      expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ deleteCertificate: true })),
+      expect(mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ deleteSharedApiHost: true }),
+      ),
     );
   });
 
-  it("does not offer the certificate option for an unverified domain", async () => {
+  it("names the shared API host and who it affects", async () => {
     const user = userEvent.setup();
     render(<DomainTable data={domains} />);
-    // Second row is pending.com — nothing was ever issued for it.
+    await user.click(screen.getAllByTitle("Delete domain")[0]);
+    expect(await screen.findByText("blocksapi.verified.com")).toBeTruthy();
+    expect(screen.getByText(/other projects you may not be able to see/)).toBeTruthy();
+  });
+
+  it("states that the certificate is removed rather than asking", async () => {
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+    await user.click(screen.getAllByTitle("Delete domain")[0]);
+    expect(await screen.findByText(/SSL certificate are removed from the proxy/)).toBeTruthy();
+  });
+
+  it("does not offer the shared API host option for an unverified domain", async () => {
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+    // Second row is pending.com — nothing was ever put on the proxy for it.
     await user.click(screen.getAllByTitle("Delete domain")[1]);
     await screen.findByRole("button", { name: "Delete" });
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
-  it("does not offer the certificate option for a platform-hosted domain", async () => {
+  it("does not offer the shared API host option for a platform-hosted domain", async () => {
     const user = userEvent.setup();
     const platform = [
       { domain: "https://xyz.slsblx.com", isDomainVerified: true, cookieDomain: "slsblx.com" },
@@ -140,7 +157,7 @@ describe("DomainTable", () => {
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
-  it("resets the certificate choice between domains", async () => {
+  it("resets the shared API host choice between domains", async () => {
     mutateAsync.mockResolvedValue({ isSuccess: true });
     const user = userEvent.setup();
     render(<DomainTable data={domains} />);
