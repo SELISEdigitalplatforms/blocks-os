@@ -75,6 +75,17 @@ class EmailService {
     });
   };
 
+  fetchTemplatePluginToken = (
+    provider: string,
+    uId: string,
+  ): Promise<{ access_token?: string }> => {
+    return http.get(
+      `${EMAIL_TEMPLATE_ENDPOINTS.LOAD_TEMPLATE_PLUGIN_TOKEN}?provider=${encodeURIComponent(provider)}&uId=${encodeURIComponent(uId)}`,
+      undefined,
+      { absoluteUrl: true },
+    );
+  };
+
   getMailBoxMails = (
     pageNumber: number,
     pageSize: number,
