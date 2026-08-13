@@ -498,10 +498,12 @@ namespace DomainService.Projects
 
             // Released only once the change is persisted — tearing the vhost and
             // certificate down for an update that failed to save would take a live
-            // site offline.
+            // site offline. Whether the certificate goes with it is the caller's
+            // call; on a rename the flag is off unless asked for, so the old host's
+            // lineage survives a domain that may well be moved back.
             if (previousDomainWasProvisioned && ReleasesPreviousHost(request, previousDomain))
             {
-                await SendDisableDomainBindingAsync(project.TenantId, previousDomain!);
+                await SendDisableDomainBindingAsync(project.TenantId, previousDomain!, request.DeleteCertificate);
             }
 
             return new BaseResponse { IsSuccess = true };
@@ -532,11 +534,16 @@ namespace DomainService.Projects
         // Handing the teardown to the worker keeps the SSH/certbot round trip off
         // the request thread; ProjectId carries the tenant id, which is what the
         // consumer needs to find the project again.
-        private Task SendDisableDomainBindingAsync(string tenantId, string domain) =>
+        private Task SendDisableDomainBindingAsync(string tenantId, string domain, bool deleteCertificate) =>
             _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest>
             {
                 ConsumerName = IdentifierConstants.IdentifierQueueName,
-                Payload = new DisableDomainBindingRequest { ProjectId = tenantId, Domain = domain }
+                Payload = new DisableDomainBindingRequest
+                {
+                    ProjectId = tenantId,
+                    Domain = domain,
+                    DeleteCertificate = deleteCertificate
+                }
             });
 
         // Tells blocks-release to destroy the deployments behind whatever was just deleted. Deliberately
@@ -651,14 +658,18 @@ namespace DomainService.Projects
                 Tenant = project
             });
 
-            // Every host this project put on the reverse proxy loses its vhost and
-            // certificate — all of them, not just the first application. The
-            // blocksapi host is deliberately left alone: it is shared by every
-            // application under the same root domain, including other projects',
-            // so disabling one project must not take it down.
+            // Every host this project put on the reverse proxy loses its vhost —
+            // all of them, not just the first application. The blocksapi host is
+            // deliberately left alone: it is shared by every application under the
+            // same root domain, including other projects', so disabling one project
+            // must not take it down.
+            //
+            // Certificates stay put. Disabling is reversible, and keeping the
+            // lineages means a restored project re-uses them instead of re-issuing
+            // every host against Let's Encrypt's weekly limit.
             foreach (var application in project.Applications?.Where(IsSelfProvisioned) ?? [])
             {
-                await SendDisableDomainBindingAsync(project.TenantId, application.Domain);
+                await SendDisableDomainBindingAsync(project.TenantId, application.Domain, deleteCertificate: false);
             }
 
             // Group + project, which reaches every repository of this one project. No ResourceId: a

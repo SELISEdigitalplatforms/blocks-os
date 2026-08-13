@@ -17,6 +17,12 @@ export interface IUpdateProjectPayload {
   action: DomainAction;
   application: IDomain;
   applicationDomain?: string;
+  /**
+   * Remove the host's SSL certificate along with its nginx binding. Omitted or
+   * false keeps the certificate, so re-adding the same domain reuses it instead
+   * of issuing a new one against Let's Encrypt's weekly limit.
+   */
+  deleteCertificate?: boolean;
 }
 export interface IUpdateProjectResponse {
   errors: unknown | null;

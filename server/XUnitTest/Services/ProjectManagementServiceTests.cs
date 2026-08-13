@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using DomainService.Certificate;
@@ -365,6 +366,67 @@ namespace XUnitTest.Services
             sent!.Payload.Domain.Should().Be("https://del.example.com");
             // The tenant id, which is what the consumer looks the project up by.
             sent.Payload.ProjectId.Should().Be("t1");
+            // Not asked for, so the certificate stays and a re-add can reuse it.
+            sent.Payload.DeleteCertificate.Should().BeFalse();
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task UpdateProjectAsync_DeleteApplication_CarriesTheCertificateChoice(bool deleteCertificate)
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            ConsumerMessage<DisableDomainBindingRequest>? sent = null;
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent = m)
+                .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com",
+                DeleteCertificate = deleteCertificate
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Should().NotBeNull();
+            sent!.Payload.DeleteCertificate.Should().Be(deleteCertificate);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeletePlatformHostedApplication_IgnoresTheCertificateChoice()
+        {
+            using var _ = new BlocksTestContext();
+            // Served by shared platform infrastructure, so its certificate is not
+            // this project's to remove no matter what the caller asks for.
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://xyz.slsblx.com",
+                CookieDomain = "slsblx.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://xyz.slsblx.com",
+                DeleteCertificate = true
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()), Times.Never);
         }
 
         [Fact]
@@ -469,10 +531,10 @@ namespace XUnitTest.Services
             _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
             _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
 
-            var sent = new List<string>();
+            var sent = new List<DisableDomainBindingRequest>();
             _messageClient
                 .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
-                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload.Domain))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
                 .Returns(Task.CompletedTask);
 
             var response = await Service().DisableProjectAsync("t1");
@@ -482,7 +544,9 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.DeletePrjectPeopleAsync("t1"), Times.Once);
             // Each application's own host, not just the first one, and never the
             // shared blocksapi host that other projects under example.com rely on.
-            sent.Should().BeEquivalentTo("https://app.example.com", "https://admin.example.com");
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://app.example.com", "https://admin.example.com");
+            // Disabling is reversible, so the certificates are left for a restore.
+            sent.Should().OnlyContain(p => !p.DeleteCertificate);
         }
 
         [Fact]

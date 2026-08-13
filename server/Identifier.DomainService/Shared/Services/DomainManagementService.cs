@@ -526,18 +526,28 @@ namespace DomainService.Shared
             // host derived from the same root domain is shared with every other app under
             // it and must survive — which is why this targets exact paths rather than
             // globbing the filesystem for anything whose name contains the domain.
-            var commands = new[]
+            var commands = new List<string>
             {
                 $"sudo rm -f '/etc/nginx/sites-enabled/{domain}'",
                 $"sudo rm -f '/etc/nginx/sites-available/{domain}'",
-                // Exits non-zero when no such lineage exists, which is not a failure here.
-                $"sudo certbot delete --cert-name '{domain}' --non-interactive || true",
-                $"sudo nginx -t",
-                $"sudo systemctl reload nginx"
             };
+
+            // The certificate outlives the binding unless the caller asked for it to go.
+            // Keeping the lineage is what lets the same host be re-added without spending
+            // one of Let's Encrypt's five weekly duplicate-certificate slots; deleting it
+            // is the only way to stop renewals for a host that is never coming back.
+            if (request.DeleteCertificate)
+            {
+                // Exits non-zero when no such lineage exists, which is not a failure here.
+                commands.Add($"sudo certbot delete --cert-name '{domain}' --non-interactive || true");
+            }
+
+            commands.AddRange(ReloadNginxConfigCommands());
 
             var (success, _) = await ExecuteRemoteCommandsAsync(commands);
             await UpdateDomainValidationStatusAsync(request.ProjectId, domain, false);
+
+            _logger.LogInformation("Disabled domain binding for {Domain} (certificate removed: {CertificateRemoved})", domain, request.DeleteCertificate);
 
             return success
                 ? (true, $"Domain binding disabled for {domain}.")

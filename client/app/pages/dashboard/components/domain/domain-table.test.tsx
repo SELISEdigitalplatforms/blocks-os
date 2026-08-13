@@ -95,6 +95,65 @@ describe("DomainTable", () => {
     expect(showSuccessToast).toHaveBeenCalled();
   });
 
+  it("keeps the certificate unless the option is ticked", async () => {
+    mutateAsync.mockResolvedValueOnce({ isSuccess: true });
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+    await user.click(screen.getAllByTitle("Delete domain")[0]);
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ deleteCertificate: false }),
+      ),
+    );
+  });
+
+  it("deletes the certificate too when the option is ticked", async () => {
+    mutateAsync.mockResolvedValueOnce({ isSuccess: true });
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+    await user.click(screen.getAllByTitle("Delete domain")[0]);
+    await user.click(await screen.findByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ deleteCertificate: true })),
+    );
+  });
+
+  it("does not offer the certificate option for an unverified domain", async () => {
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+    // Second row is pending.com — nothing was ever issued for it.
+    await user.click(screen.getAllByTitle("Delete domain")[1]);
+    await screen.findByRole("button", { name: "Delete" });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("does not offer the certificate option for a platform-hosted domain", async () => {
+    const user = userEvent.setup();
+    const platform = [
+      { domain: "https://xyz.slsblx.com", isDomainVerified: true, cookieDomain: "slsblx.com" },
+    ] as unknown as IDomain[];
+    render(<DomainTable data={platform} />);
+    await user.click(screen.getByTitle("Delete domain"));
+    await screen.findByRole("button", { name: "Delete" });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("resets the certificate choice between domains", async () => {
+    mutateAsync.mockResolvedValue({ isSuccess: true });
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+
+    await user.click(screen.getAllByTitle("Delete domain")[0]);
+    await user.click(await screen.findByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    // A box ticked for one domain must not carry over to the next one deleted.
+    await user.click(screen.getAllByTitle("Delete domain")[0]);
+    expect((await screen.findByRole("checkbox")).getAttribute("data-state")).toBe("unchecked");
+  });
+
   it("shows an error toast when deletion returns a failure", async () => {
     mutateAsync.mockResolvedValueOnce({ isSuccess: false, errors: { general: "no" } });
     const user = userEvent.setup();

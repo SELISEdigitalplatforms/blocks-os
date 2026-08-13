@@ -20,5 +20,12 @@ namespace DomainService.Shared.Entities
         /// same root domain.
         /// </summary>
         public string Domain {  get; set; }
+
+        /// <summary>
+        /// Whether the host's certificate lineage goes with the binding. False
+        /// leaves it in /etc/letsencrypt so re-adding the host reuses it instead
+        /// of issuing a fresh certificate against the weekly duplicate limit.
+        /// </summary>
+        public bool DeleteCertificate { get; set; }
     }
 }
