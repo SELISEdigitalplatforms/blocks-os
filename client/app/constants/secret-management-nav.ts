@@ -35,14 +35,14 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
     label: "Secrets & Keys",
     items: [
       {
-        id: "my-secret",
-        label: "My Secret",
-        value: "my-secret",
+        id: "secret-management",
+        label: "Secret",
+        value: "secret",
         icon: KeyRound,
-        desc: "Manage your secrets and credentials",
+        desc: "Securely manage API and service secrets for this environment",
       },
       {
-        id: "managed-services",
+        id: "my-services",
         label: "My Services",
         value: "my-services",
         icon: Layers,

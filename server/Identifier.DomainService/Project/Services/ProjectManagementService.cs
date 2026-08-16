@@ -465,6 +465,7 @@ namespace DomainService.Projects
                 ? null
                 : project.Applications?.FirstOrDefault(a => a.Domain == request.ApplicationDomain);
             var previousDomain = applicationBeforeUpdate?.Domain;
+            var previousCookieDomain = applicationBeforeUpdate?.CookieDomain;
             var previousDomainWasProvisioned = applicationBeforeUpdate is not null && IsSelfProvisioned(applicationBeforeUpdate);
 
             switch (request.Action)
@@ -501,10 +502,45 @@ namespace DomainService.Projects
             // site offline.
             if (previousDomainWasProvisioned && ReleasesPreviousHost(request, previousDomain))
             {
-                await SendDisableDomainBindingAsync(project.TenantId, previousDomain!);
+                // Delete means delete: the certificate goes with the vhost, so
+                // nothing is left renewing for a host the project no longer has. A
+                // rename is a move, not a removal, so its lineage survives for the
+                // domain it may well be moved back to.
+                var isDelete = request.Action == ApplicationAction.Delete;
+
+                await SendDisableDomainBindingAsync(project.TenantId, previousDomain!, deleteCertificate: isDelete);
+
+                if (isDelete && request.DeleteSharedApiHost)
+                {
+                    await ReleaseSharedApiHostAsync(project.TenantId, previousDomain!, previousCookieDomain);
+                }
             }
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        // The API host serves every application under the same cookie domain, so
+        // this only runs when the caller ticked the box that says so in as many
+        // words. It is derived here rather than in the worker because the
+        // application record — and with it the cookie domain the host is built
+        // from — is already gone by the time the worker picks the message up.
+        private async Task ReleaseSharedApiHostAsync(string tenantId, string domain, string? cookieDomain)
+        {
+            var cnameLabel = _configuration["CnameRecordDomain"];
+            var resolvedCookieDomain = IdentifierHelper.ResolveCookieDomain(NormalizeDomain(domain), NormalizeDomain(cookieDomain));
+
+            // Without both halves the result is something like ".example.com" —
+            // a string that must never reach a shell command on the proxy. The
+            // worker rejects malformed hostnames too; this just stops the message
+            // from being sent at all.
+            if (string.IsNullOrWhiteSpace(cnameLabel) || string.IsNullOrWhiteSpace(resolvedCookieDomain))
+            {
+                return;
+            }
+
+            var apiHost = IdentifierHelper.BuildApiHost(cnameLabel, NormalizeDomain(domain), resolvedCookieDomain);
+
+            await SendDisableDomainBindingAsync(tenantId, apiHost, deleteCertificate: true);
         }
 
         // A delete always leaves the old host with nothing pointing at it; an edit
@@ -532,11 +568,16 @@ namespace DomainService.Projects
         // Handing the teardown to the worker keeps the SSH/certbot round trip off
         // the request thread; ProjectId carries the tenant id, which is what the
         // consumer needs to find the project again.
-        private Task SendDisableDomainBindingAsync(string tenantId, string domain) =>
+        private Task SendDisableDomainBindingAsync(string tenantId, string domain, bool deleteCertificate) =>
             _messageClient.SendToConsumerAsync(new ConsumerMessage<DisableDomainBindingRequest>
             {
                 ConsumerName = IdentifierConstants.IdentifierQueueName,
-                Payload = new DisableDomainBindingRequest { ProjectId = tenantId, Domain = domain }
+                Payload = new DisableDomainBindingRequest
+                {
+                    ProjectId = tenantId,
+                    Domain = domain,
+                    DeleteCertificate = deleteCertificate
+                }
             });
 
         // Tells blocks-release to destroy the deployments behind whatever was just deleted. Deliberately
@@ -651,14 +692,18 @@ namespace DomainService.Projects
                 Tenant = project
             });
 
-            // Every host this project put on the reverse proxy loses its vhost and
-            // certificate — all of them, not just the first application. The
-            // blocksapi host is deliberately left alone: it is shared by every
-            // application under the same root domain, including other projects',
-            // so disabling one project must not take it down.
+            // Every host this project put on the reverse proxy loses its vhost —
+            // all of them, not just the first application. The blocksapi host is
+            // deliberately left alone: it is shared by every application under the
+            // same root domain, including other projects', so disabling one project
+            // must not take it down.
+            //
+            // Certificates stay put. Disabling is reversible, and keeping the
+            // lineages means a restored project re-uses them instead of re-issuing
+            // every host against Let's Encrypt's weekly limit.
             foreach (var application in project.Applications?.Where(IsSelfProvisioned) ?? [])
             {
-                await SendDisableDomainBindingAsync(project.TenantId, application.Domain);
+                await SendDisableDomainBindingAsync(project.TenantId, application.Domain, deleteCertificate: false);
             }
 
             // Group + project, which reaches every repository of this one project. No ResourceId: a

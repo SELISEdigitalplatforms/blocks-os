@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using DomainService.Certificate;
@@ -49,9 +50,15 @@ namespace XUnitTest.Services
                      .ReturnsAsync("abcde");
         }
 
-        private ProjectManagementService Service() => new(
-            _repo.Object, _blocksSecret.Object, _messageClient.Object, _configuration,
+        private ProjectManagementService Service(IConfiguration? configuration = null) => new(
+            _repo.Object, _blocksSecret.Object, _messageClient.Object, configuration ?? _configuration,
             _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object);
+
+        // The environment's CNAME label, which the shared API host is built from.
+        private static IConfiguration WithCnameRecordDomain(string label) =>
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { { "CnameRecordDomain", label } })
+                .Build();
 
         [Fact]
         public async Task SaveProjectAsync_NewGroup_InsertsProjectsAndReturnsGroupId()
@@ -365,6 +372,159 @@ namespace XUnitTest.Services
             sent!.Payload.Domain.Should().Be("https://del.example.com");
             // The tenant id, which is what the consumer looks the project up by.
             sent.Payload.ProjectId.Should().Be("t1");
+            // Delete means delete: the certificate goes with the vhost.
+            sent.Payload.DeleteCertificate.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteApplication_LeavesTheSharedApiHostAloneByDefault()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var sent = new List<DisableDomainBindingRequest>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
+                .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://del.example.com");
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteApplication_ReleasesTheSharedApiHostWhenAsked()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var sent = new List<DisableDomainBindingRequest>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
+                .Returns(Task.CompletedTask);
+
+            var response = await Service(WithCnameRecordDomain("blocksapi")).UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com",
+                DeleteSharedApiHost = true
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            // The API host is built from the cookie domain captured before the
+            // record was removed — the worker can no longer look it up.
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://del.example.com", "blocksapi.example.com");
+            sent.Should().OnlyContain(p => p.DeleteCertificate);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteApplication_SkipsTheSharedApiHostWithoutACnameLabel()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var sent = new List<DisableDomainBindingRequest>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
+                .Returns(Task.CompletedTask);
+
+            // No CnameRecordDomain configured would build ".example.com".
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com",
+                DeleteSharedApiHost = true
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://del.example.com");
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_RenameApplication_KeepsTheCertificate()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://old.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            ConsumerMessage<DisableDomainBindingRequest>? sent = null;
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent = m)
+                .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://old.example.com",
+                Application = new Application { Domain = "https://new.example.com", CookieDomain = "example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            // A rename is a move, not a removal — the lineage survives.
+            sent.Should().NotBeNull();
+            sent!.Payload.DeleteCertificate.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeletePlatformHostedApplication_IgnoresTheCertificateChoice()
+        {
+            using var _ = new BlocksTestContext();
+            // Served by shared platform infrastructure, so its certificate is not
+            // this project's to remove no matter what the caller asks for.
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://xyz.slsblx.com",
+                CookieDomain = "slsblx.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://xyz.slsblx.com",
+                DeleteSharedApiHost = true
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()), Times.Never);
         }
 
         [Fact]
@@ -469,10 +629,10 @@ namespace XUnitTest.Services
             _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
             _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
 
-            var sent = new List<string>();
+            var sent = new List<DisableDomainBindingRequest>();
             _messageClient
                 .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
-                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload.Domain))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
                 .Returns(Task.CompletedTask);
 
             var response = await Service().DisableProjectAsync("t1");
@@ -482,7 +642,9 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.DeletePrjectPeopleAsync("t1"), Times.Once);
             // Each application's own host, not just the first one, and never the
             // shared blocksapi host that other projects under example.com rely on.
-            sent.Should().BeEquivalentTo("https://app.example.com", "https://admin.example.com");
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://app.example.com", "https://admin.example.com");
+            // Disabling is reversible, so the certificates are left for a restore.
+            sent.Should().OnlyContain(p => !p.DeleteCertificate);
         }
 
         [Fact]

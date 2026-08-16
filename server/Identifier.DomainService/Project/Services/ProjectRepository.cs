@@ -349,7 +349,9 @@ namespace DomainService.Projects
                 // CopyAndCustomizeResourceLimitsAsync(sourceDatabase, consumerDb, project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "TemplatePluginConfigs", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "Directories", project));
+                CopyDocumentAsync(sourceDatabase, consumerDb, "FileDirectories", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project));
+                
         }
 
         private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, Tenant project)
