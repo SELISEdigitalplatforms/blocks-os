@@ -12,7 +12,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Configuration.DomainService
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identifier.DomainService", "Identifier.DomainService\Identifier.DomainService.csproj", "{A0E1C5B2-3D7F-4E8A-9C2B-1D3E5F7A8B6C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Secrets.DomainService", "Secrets.DomainService\Secrets.DomainService.csproj", "{B6059FF5-9775-449C-B1FF-3A64338EE404}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blocks.Secrets", "Blocks.Secrets\Blocks.Secrets.csproj", "{B6059FF5-9775-449C-B1FF-3A64338EE404}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Worker", "Worker\Worker.csproj", "{C2D4A6F8-1B3E-4F7A-9D5C-3E8B6F2A1D4C}"
 EndProject
