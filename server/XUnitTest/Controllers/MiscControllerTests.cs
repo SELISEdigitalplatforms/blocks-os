@@ -13,62 +13,11 @@ using DomainService.Shared;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using Secrets.DomainService.Entities;
-using Secrets.DomainService.ResponseModel;
-using Secrets.DomainService.Services;
 
 namespace XUnitTest.Controllers
 {
-    public class SecretsControllerTests
-    {
-        private readonly Mock<ISecretManagementService> _service = new();
-        private SecretsController Controller() => new(_service.Object);
-
-        [Fact]
-        public async Task Save_DelegatesToService()
-        {
-            _service.Setup(s => s.SaveSecretAsync(It.IsAny<SaveSecretRequest>()))
-                    .ReturnsAsync(new BaseResponse { IsSuccess = true });
-
-            var response = await Controller().Save(new SaveSecretRequest { SecretKey = "k" });
-
-            response.IsSuccess.Should().BeTrue();
-        }
-
-        [Fact]
-        public async Task Gets_LowercasesKeyAndUsesDefaults()
-        {
-            _service.Setup(s => s.GetSecretAsync("mykey", 1, 10))
-                    .ReturnsAsync(new GetSecretsResponse { TotalCount = 1 });
-
-            var response = await Controller().Gets(new GetSecretsRequest { SecretKey = "MyKey" });
-
-            response.TotalCount.Should().Be(1);
-            _service.Verify(s => s.GetSecretAsync("mykey", 1, 10), Times.Once);
-        }
-
-        [Fact]
-        public async Task Get_DelegatesToService()
-        {
-            var secret = new Secret { ItemId = "s1" };
-            _service.Setup(s => s.SecretAsync("s1")).ReturnsAsync(secret);
-
-            var response = await Controller().Get(new GetSecretRequest { ItemId = "s1" });
-
-            response.Should().BeSameAs(secret);
-        }
-
-        [Fact]
-        public async Task Delete_DelegatesToService()
-        {
-            _service.Setup(s => s.DeleteSecretAsync(It.IsAny<DeleteSecretRequest>()))
-                    .ReturnsAsync(new BaseResponse { IsSuccess = true });
-
-            var response = await Controller().Delete(new DeleteSecretRequest { ItemId = "s1" });
-
-            response.IsSuccess.Should().BeTrue();
-        }
-    }
+    // SecretsControllerTests moved to Controllers/SecretsControllerTests.cs when the controller
+    // was rewritten onto ISecretService.
 
     public class ApiEndpointConfigControllerTests
     {
