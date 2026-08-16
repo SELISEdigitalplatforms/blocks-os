@@ -119,6 +119,13 @@ export interface IUpdateProjectPayload {
   action: DomainAction;
   application: IDomain;
   applicationDomain?: string;
+  /**
+   * Also tear down the shared API host under the cookie domain. It serves every
+   * application under that domain — in this project and in others — so omitting
+   * it (the default) keeps it running. The server ignores it for platform-hosted
+   * domains and for anything other than a delete.
+   */
+  deleteSharedApiHost?: boolean;
 }
 
 export interface IUpdateTenantGroupPayload {

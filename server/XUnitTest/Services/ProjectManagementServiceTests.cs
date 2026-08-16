@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using DomainService.Certificate;
@@ -49,9 +50,15 @@ namespace XUnitTest.Services
                      .ReturnsAsync("abcde");
         }
 
-        private ProjectManagementService Service() => new(
-            _repo.Object, _blocksSecret.Object, _messageClient.Object, _configuration,
+        private ProjectManagementService Service(IConfiguration? configuration = null) => new(
+            _repo.Object, _blocksSecret.Object, _messageClient.Object, configuration ?? _configuration,
             _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object);
+
+        // The environment's CNAME label, which the shared API host is built from.
+        private static IConfiguration WithCnameRecordDomain(string label) =>
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { { "CnameRecordDomain", label } })
+                .Build();
 
         [Fact]
         public async Task SaveProjectAsync_NewGroup_InsertsProjectsAndReturnsGroupId()
@@ -325,6 +332,278 @@ namespace XUnitTest.Services
             tenant.Applications.Should().BeEmpty();
         }
 
+        private static Tenant TenantWith(params Applications[] applications) => new()
+        {
+            DbConnectionString = "mongodb://x",
+            JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+            TenantId = "t1",
+            Applications = new List<Applications>(applications)
+        };
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteProvisionedApplication_UnbindsItsOwnHost()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            ConsumerMessage<DisableDomainBindingRequest>? sent = null;
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent = m)
+                .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Should().NotBeNull();
+            // The application's own host — never the shared blocksapi one, which
+            // still serves every other app under example.com.
+            sent!.Payload.Domain.Should().Be("https://del.example.com");
+            // The tenant id, which is what the consumer looks the project up by.
+            sent.Payload.ProjectId.Should().Be("t1");
+            // Delete means delete: the certificate goes with the vhost.
+            sent.Payload.DeleteCertificate.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteApplication_LeavesTheSharedApiHostAloneByDefault()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var sent = new List<DisableDomainBindingRequest>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
+                .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://del.example.com");
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteApplication_ReleasesTheSharedApiHostWhenAsked()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var sent = new List<DisableDomainBindingRequest>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
+                .Returns(Task.CompletedTask);
+
+            var response = await Service(WithCnameRecordDomain("blocksapi")).UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com",
+                DeleteSharedApiHost = true
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            // The API host is built from the cookie domain captured before the
+            // record was removed — the worker can no longer look it up.
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://del.example.com", "blocksapi.example.com");
+            sent.Should().OnlyContain(p => p.DeleteCertificate);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteApplication_SkipsTheSharedApiHostWithoutACnameLabel()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://del.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var sent = new List<DisableDomainBindingRequest>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
+                .Returns(Task.CompletedTask);
+
+            // No CnameRecordDomain configured would build ".example.com".
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com",
+                DeleteSharedApiHost = true
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://del.example.com");
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_RenameApplication_KeepsTheCertificate()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://old.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            ConsumerMessage<DisableDomainBindingRequest>? sent = null;
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent = m)
+                .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://old.example.com",
+                Application = new Application { Domain = "https://new.example.com", CookieDomain = "example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            // A rename is a move, not a removal — the lineage survives.
+            sent.Should().NotBeNull();
+            sent!.Payload.DeleteCertificate.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeletePlatformHostedApplication_IgnoresTheCertificateChoice()
+        {
+            using var _ = new BlocksTestContext();
+            // Served by shared platform infrastructure, so its certificate is not
+            // this project's to remove no matter what the caller asks for.
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://xyz.slsblx.com",
+                CookieDomain = "slsblx.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://xyz.slsblx.com",
+                DeleteSharedApiHost = true
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_DeleteUnprovisionedApplication_DoesNotUnbind()
+        {
+            using var _ = new BlocksTestContext();
+            // Never verified, so nothing was ever written to the proxy for it.
+            var tenant = TenantWith(new Applications { Domain = "https://del.example.com", IsDomainVerified = false });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Delete,
+                ApplicationDomain = "https://del.example.com"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_EditMovesHost_UnbindsPreviousHost()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://old.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            ConsumerMessage<DisableDomainBindingRequest>? sent = null;
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent = m)
+                .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://old.example.com",
+                Application = new Application { Domain = "https://new.example.com", CookieDomain = "example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            // The record has already been rewritten in place; the unbind still has
+            // to name the host the application answered on before the edit.
+            sent.Should().NotBeNull();
+            sent!.Payload.Domain.Should().Be("https://old.example.com");
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_EditKeepsHost_DoesNotUnbind()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://app.example.com",
+                CookieDomain = "example.com",
+                IsDomainVerified = true
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://app.example.com",
+                // Only the cookie domain moves — the vhost stays in use.
+                Application = new Application { Domain = "https://app.example.com", CookieDomain = "sub.example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()), Times.Never);
+        }
+
         [Fact]
         public async Task DisableProjectAsync_NotFound_ReturnsError()
         {
@@ -338,23 +617,34 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public async Task DisableProjectAsync_Found_DisablesAndNotifies()
+        public async Task DisableProjectAsync_Found_DisablesAndUnbindsEveryProvisionedHost()
         {
             using var _ = new BlocksTestContext();
-            var tenant = new Tenant
-            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
-                TenantId = "t1",
-                Applications = new List<Applications> { new() { CookieDomain = "example.com" } }
-            };
+            var tenant = TenantWith(
+                new Applications { Domain = "https://app.example.com", CookieDomain = "example.com", IsDomainVerified = true },
+                new Applications { Domain = "https://admin.example.com", CookieDomain = "example.com", IsDomainVerified = true },
+                // Platform-hosted and never provisioned by this project — both stay put.
+                new Applications { Domain = "https://xyz.slsblx.com", CookieDomain = "slsblx.com", IsDomainVerified = true },
+                new Applications { Domain = "https://unverified.example.com", CookieDomain = "example.com" });
             _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
             _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var sent = new List<DisableDomainBindingRequest>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                .Callback<ConsumerMessage<DisableDomainBindingRequest>>(m => sent.Add(m.Payload))
+                .Returns(Task.CompletedTask);
 
             var response = await Service().DisableProjectAsync("t1");
 
             response.IsSuccess.Should().BeTrue();
             tenant.IsDisabled.Should().BeTrue();
             _repo.Verify(r => r.DeletePrjectPeopleAsync("t1"), Times.Once);
-            _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()), Times.Once);
+            // Each application's own host, not just the first one, and never the
+            // shared blocksapi host that other projects under example.com rely on.
+            sent.Select(p => p.Domain).Should().BeEquivalentTo("https://app.example.com", "https://admin.example.com");
+            // Disabling is reversible, so the certificates are left for a restore.
+            sent.Should().OnlyContain(p => !p.DeleteCertificate);
         }
 
         [Fact]
@@ -547,6 +837,135 @@ namespace XUnitTest.Services
 
             response.IsSuccess.Should().BeFalse();
             response.Errors.Should().ContainKey("resource_not_found");
+        }
+
+        private List<ConsumerMessage<ProjectDeleteQueue>> CaptureTeardownMessages()
+        {
+            var sent = new List<ConsumerMessage<ProjectDeleteQueue>>();
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<ProjectDeleteQueue>>()))
+                .Callback<ConsumerMessage<ProjectDeleteQueue>>(sent.Add)
+                .Returns(Task.CompletedTask);
+            return sent;
+        }
+
+        /// <summary>
+        /// Group + resource and nothing else. A ProjectId here would narrow blocks-release to one
+        /// project, leaving the same repository deployed in every other project of the group.
+        /// </summary>
+        [Fact]
+        public async Task DeleteAssetAsync_AsksReleaseToTearTheResourceDownAcrossTheGroup()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", Name = "repo" } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            var sent = CaptureTeardownMessages();
+
+            var response = await Service().DeleteAssetAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = "r1"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Should().ContainSingle();
+            sent[0].ConsumerName.Should().Be("blocks_release_project_delete_listener");
+            sent[0].Payload.TenantGroupId.Should().Be("g");
+            sent[0].Payload.ResourceId.Should().Be("r1");
+            sent[0].Payload.ProjectId.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData("missing")]
+        [InlineData("r1")]
+        public async Task DeleteAssetAsync_NothingWasDeleted_AsksReleaseForNothing(string resourceId)
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", IsArchived = true } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            var sent = CaptureTeardownMessages();
+
+            await Service().DeleteAssetAsync(new DeleteAssetRequest { TenantGroupId = "g", ResourceId = resourceId });
+
+            sent.Should().BeEmpty();
+        }
+
+        /// <summary>
+        /// The rows are already written by the time the message goes out, so a broker that is down must
+        /// not report a completed delete back to the user as a failure.
+        /// </summary>
+        [Fact]
+        public async Task DeleteAssetAsync_ReleaseUnreachable_StillReportsTheDeleteAsDone()
+        {
+            using var _ = new BlocksTestContext();
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "g",
+                Resources = new List<Resource> { new() { ResourceId = "r1", Name = "repo" } }
+            };
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("g")).ReturnsAsync(asset);
+            _messageClient
+                .Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<ProjectDeleteQueue>>()))
+                .ThrowsAsync(new System.InvalidOperationException("broker down"));
+
+            var response = await Service().DeleteAssetAsync(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = "r1"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            asset.Resources[0].IsArchived.Should().BeTrue();
+            _repo.Verify(r => r.ArchiveRepoResourceAsync(It.IsAny<DeleteAssetRequest>()), Times.Once);
+        }
+
+        /// <summary>
+        /// Group + project and no ResourceId: every repository of this project goes, and naming one
+        /// would instead single that repository out across every project in the group.
+        /// </summary>
+        [Fact]
+        public async Task DisableProjectAsync_AsksReleaseToTearDownEveryRepoOfThatProject()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith();
+            tenant.TenantGroupId = "g";
+            _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+            var sent = CaptureTeardownMessages();
+
+            var response = await Service().DisableProjectAsync("t1");
+
+            response.IsSuccess.Should().BeTrue();
+            sent.Should().ContainSingle();
+            sent[0].ConsumerName.Should().Be("blocks_release_project_delete_listener");
+            sent[0].Payload.TenantGroupId.Should().Be("g");
+            sent[0].Payload.ProjectId.Should().Be("t1");
+            sent[0].Payload.ResourceId.Should().BeNull();
+        }
+
+        /// <summary>
+        /// A message with no group is dropped by the consumer, so it is not worth the round trip.
+        /// </summary>
+        [Fact]
+        public async Task DisableProjectAsync_ProjectWithoutAGroup_AsksReleaseForNothing()
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith();
+            _tenants.Setup(t => t.GetTenantByID("t1")).Returns(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+            var sent = CaptureTeardownMessages();
+
+            await Service().DisableProjectAsync("t1");
+
+            sent.Should().BeEmpty();
         }
 
         [Fact]
