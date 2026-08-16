@@ -143,6 +143,33 @@ describe("Organizations", () => {
     expect(screen.getByTestId("sidebar")).toBeTruthy();
   });
 
+  it("requests the first page of ten organizations", () => {
+    render(<Organizations />);
+    expect(h.organizationsQueryArgs).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 0, pageSize: 10 }),
+    );
+  });
+
+  it("reports nothing more to load when the first page covers the whole list", () => {
+    h.orgsResult = {
+      data: {
+        isSuccess: true,
+        organizations: [
+          { itemId: "o1", name: "Acme" },
+          { itemId: "o2", name: "Globex" },
+          { itemId: "o3", name: "Initech" },
+        ],
+        totalCount: 3,
+      },
+      isLoading: false,
+      isFetching: false,
+    };
+    render(<Organizations />);
+    expect(screen.getByTestId("sidebar").textContent).toContain("sidebar:3");
+    expect(screen.getByTestId("sidebar-total").textContent).toBe("3");
+    expect(screen.getByTestId("sidebar-flags").textContent).toBe("false|false|false");
+  });
+
   it("queries with an empty project key when no project is selected", () => {
     h.selectedProject = null;
     render(<Organizations />);
