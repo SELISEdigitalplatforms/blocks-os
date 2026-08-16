@@ -1,6 +1,8 @@
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetAssets, useAddAssets } from "@/hooks/use-project";
-import { Plus, Github, FolderGit2 } from "lucide-react";
+import { useGetAssets, useAddAssets, useDeleteAsset } from "@/hooks/use-project";
+import { Plus, Github, FolderGit2, Trash2 } from "lucide-react";
+import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
+import { formatDate } from "@/lib/utils";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -25,12 +27,26 @@ import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Input } from "@/components/ui-kits/input/input";
-import { IResource } from "@blocks-identifier/models/project.model";
+import { AssetMutationStatus, IResource } from "@blocks-identifier/models/project.model";
 import { IRepository } from "@/cross-modules/devops/models/github-info";
 import { useDebounce } from "@seliseblocks/genesis-os/hooks";
 import { useValidateAuthorization } from "@/cross-modules/devops/hooks/github-info";
 import { RepositorySelectionModal } from "@/components/repository-selection-modal/repository-selection-modal";
 import ProviderButtons from "@/cross-modules/devops/components/deployment-steps/render-repos/render-provider";
+// Repositories linked before the field existed carry .NET's DateTime.MinValue, which is not a
+// real creation date, so those read as unknown rather than 01/01/0001.
+const formatCreatedDate = (value?: string) => {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime()) || parsed.getUTCFullYear() <= 1) return "—";
+  return formatDate(parsed, true);
+};
+const ADD_REPOSITORY_MESSAGES: Record<AssetMutationStatus, string> = {
+  Added: "Repository added successfully",
+  Updated: "Repository details updated successfully",
+  Unchanged: "Repository is already up to date",
+  Restored: "Repository restored successfully",
+};
 const RepositoriesLoading = () => (
   <main className="p-6">
     <div className="flex flex-row justify-between md:items-center">
@@ -62,15 +78,18 @@ export const RepositoriesPage = () => {
   const {
     data: resourcesResponse,
     isLoading: isLoadingAssets,
+    isFetching: isFetchingAssets,
     refetch,
-  } = useGetAssets(groupId ?? "");
+  } = useGetAssets(groupId ?? "", pageNumber, pageSize, debouncedSearchText);
   useEffect(() => {
     setPageNumber(0);
   }, [debouncedSearchText]);
   const [repositoryModalOpen, setRepositoryModalOpen] = useState(false);
   const [selectRepositoryModalOpen, setSelectRepositoryModalOpen] = useState(false);
+  const [repositoryToRemove, setRepositoryToRemove] = useState<IResource | null>(null);
   const { data: _isAuthenticated, refetch: refetchAuthorization } = useValidateAuthorization();
   const { mutateAsync } = useAddAssets();
+  const { mutateAsync: deleteAsset, isPending: isRemoving } = useDeleteAsset();
   // Handler for Add Repository button click
   const handleAddRepositoryClick = async () => {
     try {
@@ -94,7 +113,9 @@ export const RepositoriesPage = () => {
   const onAddRepo = async (repo: IRepository) => {
     try {
       setSelectRepositoryModalOpen(false);
-      await mutateAsync({
+      // A repository keeps its id across a rename, so the server may have refreshed the stored
+      // name and link rather than linking a new repository. Say which one happened.
+      const result = await mutateAsync({
         tenantGroupId: groupId ?? "",
         resource: {
           resourceId: String(repo.id),
@@ -104,7 +125,7 @@ export const RepositoriesPage = () => {
       });
       toast({
         title: "Success",
-        description: "Repository added successfully",
+        description: ADD_REPOSITORY_MESSAGES[result?.status] ?? ADD_REPOSITORY_MESSAGES.Added,
         variant: "success",
       });
       refetch();
@@ -115,6 +136,32 @@ export const RepositoriesPage = () => {
         variant: "destructive",
       });
       setSelectRepositoryModalOpen(false);
+    }
+  };
+  const onRemoveRepo = async () => {
+    if (!repositoryToRemove) return;
+    try {
+      await deleteAsset({
+        tenantGroupId: groupId ?? "",
+        resourceId: repositoryToRemove.resourceId,
+      });
+      // Removing the only row on the last page would otherwise leave the table stranded past
+      // the end of the list.
+      if (pageResources.length === 1 && pageNumber > 0) setPageNumber(pageNumber - 1);
+      setRepositoryToRemove(null);
+      toast({
+        title: "Success",
+        description: "Repository removed successfully",
+        variant: "success",
+      });
+      refetch();
+    } catch (error) {
+      setRepositoryToRemove(null);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
     }
   };
   const columns = useMemo<ColumnDef<IResource>[]>(
@@ -163,37 +210,59 @@ export const RepositoriesPage = () => {
           </div>
         ),
       },
+      {
+        id: "created",
+        accessorFn: (row) => `${row.createdDate ?? ""}`,
+        header: () => (
+          <div className="flex items-center">
+            <span className="font-bold text-medium-emphasis">Created</span>
+          </div>
+        ),
+        cell: (repos) => (
+          <div className="truncate">{formatCreatedDate(repos.row.original.createdDate)}</div>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Actions</span>,
+        cell: (repos) => (
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              aria-label={`Remove ${repos.row.original.name}`}
+              onClick={() => setRepositoryToRemove(repos.row.original)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+      },
     ],
     [],
   );
-  const allResources = useMemo(
+  // The server returns one page of resources plus the count of everything the current search
+  // matches, so neither list is filtered or sliced again here.
+  const pageResources = useMemo(
     () => resourcesResponse?.assets?.resources ?? [],
     [resourcesResponse?.assets?.resources],
   );
-  const filteredResources = useMemo(() => {
-    const search = debouncedSearchText.trim().toLowerCase();
-    if (!search) return allResources;
-
-    return allResources.filter(
-      (resource) =>
-        resource.name.toLowerCase().includes(search) ||
-        resource.link.toLowerCase().includes(search),
-    );
-  }, [allResources, debouncedSearchText]);
-  const paginatedResources = useMemo(() => {
-    const start = pageNumber * pageSize;
-    return filteredResources.slice(start, start + pageSize);
-  }, [filteredResources, pageNumber, pageSize]);
+  const totalCount = resourcesResponse?.totalCount ?? 0;
   const table = useReactTable({
-    data: paginatedResources,
+    data: pageResources,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
   const onPageChangeHandler = (page: number) => {
     setPageNumber(page);
   };
-  const hasRepositories = allResources.length > 0;
-  const isEmptyWithoutSearch = !hasRepositories && !searchText.trim();
+  const isSearching = Boolean(searchText.trim());
+  // A search that matches nothing is not an empty project, so the search field has to stay.
+  // While a fetch is in flight the counts still describe the previous query, which would flash
+  // the empty state when a search is cleared.
+  const isEmptyWithoutSearch = totalCount === 0 && !isSearching && !isFetchingAssets;
+  const hasRepositories = totalCount > 0 || isSearching;
   const repositoryModals = (
     <>
       <Dialog open={repositoryModalOpen} onOpenChange={setRepositoryModalOpen}>
@@ -214,6 +283,29 @@ export const RepositoriesPage = () => {
         title="Select repository"
         description="Select the repositories you want to link to this project"
       />
+      <Dialog
+        open={Boolean(repositoryToRemove)}
+        onOpenChange={(open) => !open && setRepositoryToRemove(null)}
+      >
+        <ConfirmationModal
+          onCancel={() => setRepositoryToRemove(null)}
+          onConfirm={onRemoveRepo}
+          data={{
+            dialogTitle: "Remove this repository?",
+            dialogSubtitle: (
+              <>
+                <p>
+                  <span className="font-medium">{repositoryToRemove?.name}</span> will no longer be
+                  listed for this project.
+                </p>
+                <p>You can add it again later to bring it back.</p>
+              </>
+            ),
+            confirmButton: "Remove",
+          }}
+          buttonState={{ confirm: { disable: isRemoving } }}
+        />
+      </Dialog>
     </>
   );
 
@@ -276,13 +368,13 @@ export const RepositoriesPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!filteredResources.length ? (
+                  {!pageResources.length ? (
                     <TableRow>
                       <TableCell
                         colSpan={columns.length}
                         className="h-24 text-center text-sm text-muted-foreground md:text-base"
                       >
-                        No repositories found.
+                        {isFetchingAssets ? "Loading repositories..." : "No repositories found."}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -298,12 +390,12 @@ export const RepositoriesPage = () => {
                   )}
                 </TableBody>
               </Table>
-              {filteredResources.length > pageSize && (
+              {totalCount > pageSize && (
                 <div className="mt-5 flex flex-col items-center gap-4 md:flex-row md:justify-end">
                   <Pagination
                     page={pageNumber}
                     onChange={onPageChangeHandler}
-                    totalCount={filteredResources.length}
+                    totalCount={totalCount}
                     pageSize={pageSize}
                   />
                 </div>

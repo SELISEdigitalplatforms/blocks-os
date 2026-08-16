@@ -27,7 +27,16 @@ export interface IResource {
   name: string;
   link: string;
   resourceId: string;
+  createdDate?: string;
+  lastUpdatedDate?: string;
+  /** Deleted repositories are archived, not removed. Reads never return archived ones. */
+  isArchived?: boolean;
 }
+/**
+ * What AddAsset did with the resource: a first import, a rename applied, a previously deleted
+ * repository brought back, or nothing to change.
+ */
+export type AssetMutationStatus = "Added" | "Updated" | "Unchanged" | "Restored";
 export interface IProjectGroup {
   tenantGroupId: string;
   projects: IProject[];
@@ -110,6 +119,13 @@ export interface IUpdateProjectPayload {
   action: DomainAction;
   application: IDomain;
   applicationDomain?: string;
+  /**
+   * Also tear down the shared API host under the cookie domain. It serves every
+   * application under that domain — in this project and in others — so omitting
+   * it (the default) keeps it running. The server ignores it for platform-hosted
+   * domains and for anything other than a delete.
+   */
+  deleteSharedApiHost?: boolean;
 }
 
 export interface IUpdateTenantGroupPayload {

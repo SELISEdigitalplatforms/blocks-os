@@ -1,4 +1,6 @@
+using Blocks.Extensions.DependencyInjection;
 using Blocks.Genesis;
+using Blocks.Secrets;
 using BlocksOs.Api;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
@@ -6,7 +8,6 @@ using Configuration.DomainService.Shared.Utilities;
 using DomainService.Shared;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
-using Secrets.DomainService.Services;
 using SeliseBlocks.ConfigurationDriver;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +40,10 @@ ApplicationConfigurations.ConfigureApi(services, serviceName);
 builder.Services.Configure<MvcOptions>(options =>
 {
     options.Conventions.Insert(0, new GlobalApiRoutePrefixConvention("api"));
+
+    // Turns secret-domain exceptions into status codes. Registered here rather than inside
+    // Blocks.Secrets so the package stays usable from workers with no HTTP pipeline.
+    options.Filters.Add<SecretExceptionFilter>();
 });
 
 var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
@@ -50,8 +55,11 @@ services.AddApplicationServices();
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddConfigurationServices();
-services.AddSingleton<ISecretManagementService, SecretManagementService>();
-services.AddSingleton<ISecretRepository, SecretRepository>();
+
+// Scoped internally: these read the request-scoped BlocksContext, so the old singleton
+// registration would have served the first caller's tenant to everyone afterwards.
+services.AddBlocksSecrets();
+await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 
 var app = builder.Build();

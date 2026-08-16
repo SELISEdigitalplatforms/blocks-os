@@ -3,7 +3,7 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { Button } from "@/components/ui-kits/button/button";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav";
-import { AddSecretModal } from "@/cross-modules/secrets/components/add-secret-modal/add-secret-modal";
+import { CreateSecretButton } from "@/cross-modules/secrets/components/secret-form-modal/create-secret-button";
 import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential/create-client-credential";
 import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { toast } from "@/hooks/use-toast";
@@ -145,7 +145,7 @@ function SecretManagementHeaderActions({
           </span>
         </Button>
       )}
-      {currentPath === "my-secret" && <AddSecretModal />}
+      {currentPath === "secret" && <CreateSecretButton />}
       {currentPath === "external-idp" && (
         <>
           {externalIdpConfigured ? (
@@ -180,7 +180,7 @@ function SecretManagementHeaderActions({
 export default function SecretManagementLayout() {
   const { pathname } = useLocation();
   const scoped = useScopedPath();
-  const currentPath = pathname.split("/").pop() ?? "my-secret";
+  const currentPath = pathname.split("/").pop() ?? "secret";
   const oidcBrandingMatch = pathname.match(/\/oidc\/([^/]+)\/branding$/);
   const isOidcBranding = Boolean(oidcBrandingMatch);
   const oidcClientId = oidcBrandingMatch?.[1];

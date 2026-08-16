@@ -167,7 +167,7 @@ namespace XUnitTest.Controllers
         public async Task AddAsset_Valid_DelegatesToService()
         {
             _service.Setup(s => s.AddAssetAsync(It.IsAny<AddAssetRequest>()))
-                    .ReturnsAsync(new BaseResponse { IsSuccess = true });
+                    .ReturnsAsync(new AddAssetResponse { IsSuccess = true, Status = AssetMutationStatus.Updated });
 
             var response = await Controller().AddAsset(new AddAssetRequest
             {
@@ -176,7 +176,34 @@ namespace XUnitTest.Controllers
             });
 
             response.IsSuccess.Should().BeTrue();
+            response.Status.Should().Be(AssetMutationStatus.Updated);
             _service.Verify(s => s.AddAssetAsync(It.IsAny<AddAssetRequest>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteAsset_InvalidRequest_ReturnsError()
+        {
+            var response = await Controller().DeleteAsset(new DeleteAssetRequest { TenantGroupId = "g", ResourceId = "" });
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("invalid_asset");
+            _service.Verify(s => s.DeleteAssetAsync(It.IsAny<DeleteAssetRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeleteAsset_Valid_DelegatesToService()
+        {
+            _service.Setup(s => s.DeleteAssetAsync(It.IsAny<DeleteAssetRequest>()))
+                    .ReturnsAsync(new BaseResponse { IsSuccess = true });
+
+            var response = await Controller().DeleteAsset(new DeleteAssetRequest
+            {
+                TenantGroupId = "g",
+                ResourceId = "r1"
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            _service.Verify(s => s.DeleteAssetAsync(It.IsAny<DeleteAssetRequest>()), Times.Once);
         }
 
         [Fact]

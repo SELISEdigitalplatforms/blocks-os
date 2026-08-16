@@ -30,6 +30,14 @@ const trimTrailingSlash = (value: string) => value.replace(/\/$/, "")
  * NOT under the invited project's resource tenant. Validating against any other tenant
  * misses the keymap and fails with `Invalid_ActivationCode`. This is the same tenant the
  * People-list resend and the OS `/activate` page target.
+ *
+ * `clientId` / `redirect_uri` identify OS as the application the invitee is activating
+ * for. IAM carries them through activation and uses them on its "Account activated"
+ * screen to send the user back here — without them that screen falls back to IAM's own
+ * `/oidc/login`, which has no client to authorize against and strands the user on a
+ * login card with no form. They must match what OS itself uses to start a login
+ * (see `useOidcLogin` in genesis-os), or IAM's authorize endpoint rejects the redirect.
+ *
  * Returns null when the IAM base URL or the tenant key is unavailable.
  */
 const buildIamActivationUrl = (code: string): string | null => {
@@ -38,6 +46,13 @@ const buildIamActivationUrl = (code: string): string | null => {
   if (!iamBaseUrl || !tenant) return null
 
   const params = new URLSearchParams({ code, lang: "en-US" })
+
+  const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID")
+  if (clientId && typeof window !== "undefined") {
+    params.set("clientId", clientId)
+    params.set("redirect_uri", `${window.location.origin}/login/callback`)
+  }
+
   return `${trimTrailingSlash(iamBaseUrl)}/oidc/activate/${tenant}?${params.toString()}`
 }
 

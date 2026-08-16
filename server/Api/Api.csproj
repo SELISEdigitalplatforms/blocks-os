@@ -16,12 +16,13 @@
     <PackageReference Include="FluentValidation.AspNetCore" />
 	<PackageReference Include="SeliseBlocks.Genesis.OS" />
 	<PackageReference Include="SeliseBlocks.ConfigurationDriver" />
+	<PackageReference Include="SeliseBlocks.ReleaseDriver.OS" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Cloud.DomainService\Cloud.DomainService.csproj" />
     <ProjectReference Include="..\Cloud.LmtService\Cloud.LmtService.csproj" />
     <ProjectReference Include="..\Configuration.DomainService\Configuration.DomainService.csproj" />
     <ProjectReference Include="..\Identifier.DomainService\Identifier.DomainService.csproj" />
-    <ProjectReference Include="..\Secrets.DomainService\Secrets.DomainService.csproj" />
+    <ProjectReference Include="..\Blocks.Secrets\Blocks.Secrets.csproj" />
   </ItemGroup>
 </Project>
