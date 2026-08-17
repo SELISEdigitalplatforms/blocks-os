@@ -143,11 +143,15 @@ export class ProjectService {
   }
 
   // Data Migration Methods
-  initiateMigration(payload: IMigrationRequest): Promise<IMigrationInitiateResponse> {
+  initiateMigration(
+    payload: IMigrationRequest,
+  ): Promise<IMigrationInitiateResponse> {
     return http.post(MIGRATION_ENDPOINTS.MIGRATE, payload, undefined, { absoluteUrl: true });
   }
 
-  verifyMigration(payload: IVerifyMigrationRequest): Promise<IMigrationVerificationResponse> {
+  verifyMigration(
+    payload: IVerifyMigrationRequest,
+  ): Promise<IMigrationVerificationResponse> {
     return http.post(MIGRATION_ENDPOINTS.VERIFY, payload, undefined, { absoluteUrl: true });
   }
 
