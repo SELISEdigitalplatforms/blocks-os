@@ -22,6 +22,7 @@ import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { UserProfileSidebar } from "../user-profile-sidebar";
 import { UpdateUser } from "@blocks-idp/iam/modules/user-management/update-user";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
+import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 
 export type UserProfileTab = {
   value: string;
@@ -162,18 +163,21 @@ export const UserProfileShell = ({
 };
 
 const ProfileHeading = ({ id, projectKey }: { id: string; projectKey: string }) => {
-  const { data } = useGetUserById({ id, projectKey });
+  const { data, isLoading } = useGetUserById({ id, projectKey });
   const user = data?.data;
-  const firstName = user?.firstName?.trim() ?? "";
-  const lastName = user?.lastName?.trim() ?? "";
-  const displayName =
-    firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || "Profile";
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <div className="flex min-w-0 items-center gap-2">
-        <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
-          {displayName}
-        </h1>
+        {/* The name fallback resolves to a placeholder dash for a user with
+            neither a name nor an email, so it must not stand in for "still
+            loading" as well - show a skeleton until the query settles. */}
+        {isLoading ? (
+          <Skeleton className="h-8 w-48" />
+        ) : (
+          <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
+            {getUserDisplayName(user)}
+          </h1>
+        )}
         <UpdateUser id={id} projectKey={projectKey} iconOnly />
       </div>
       {user?.email && (

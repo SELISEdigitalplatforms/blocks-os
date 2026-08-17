@@ -53,6 +53,19 @@ describe("UserProfileSidebar", () => {
     expect(screen.getByText("Never")).toBeTruthy();
   });
 
+  it("still shows the name and email block for a user with no name", () => {
+    h.userByIdData = { data: { email: "john.doe@yopmail.com", active: true } };
+    render(<UserProfileSidebar id="u1" projectKey="p1" />);
+    expect(screen.getByText("john.doe")).toBeTruthy();
+    expect(screen.getByText("john.doe@yopmail.com")).toBeTruthy();
+  });
+
+  it("omits the name and email block until the user has loaded", () => {
+    h.userByIdData = undefined;
+    render(<UserProfileSidebar id="u1" projectKey="p1" />);
+    expect(screen.queryByText("-")).toBeNull();
+  });
+
   it("renders the avatar uploader", () => {
     h.userByIdData = { data: { firstName: "Ada", active: true } };
     render(<UserProfileSidebar id="u1" projectKey="p1" />);

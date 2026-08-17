@@ -2,6 +2,7 @@ import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { ProfileImageUploader } from "@blocks-idp/iam/components/profile-image-uploader";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 import { Activity, Calendar, Shield } from "lucide-react";
 
 type UserProfileSidebarProps = {
@@ -21,7 +22,9 @@ const InfoRow = ({ icon, label, value }: InfoRowProps) => (
       {icon}
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+        {label}
+      </p>
       <div className="mt-0.5 text-sm font-medium text-foreground">{value ?? "\u2014"}</div>
     </div>
   </div>
@@ -44,23 +47,18 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
   const { data } = useGetUserById({ id, projectKey });
   const user = data?.data;
 
-  const fullName =
-    user?.firstName || user?.lastName
-      ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
-      : null;
-
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 shadow-none mt-4">
-      {fullName && (
+      {/* Gated on the user having loaded, not on them having a name: a user with
+          no first/last name still has an email worth showing here. */}
+      {user && (
         <div className="flex flex-col items-start gap-1 px-2 text-left md:hidden">
           <p className="truncate text-base font-semibold leading-tight text-foreground">
-            {fullName}
+            {getUserDisplayName(user)}
           </p>
           {user?.email && (
             <CopyToClipboardButton textToCopy={user.email}>
-              <span className="truncate text-sm text-muted-foreground">
-                {user.email}
-              </span>
+              <span className="truncate text-sm text-muted-foreground">{user.email}</span>
             </CopyToClipboardButton>
           )}
         </div>
@@ -81,9 +79,7 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
 
       {/* Account details */}
       <CardContent className="mt-4 flex-1 overflow-y-auto w-full rounded-sm border bg-card p-5 shadow-sm">
-        <h3 className="mb-3 text-base font-semibold text-high-emphasis">
-          Account details
-        </h3>
+        <h3 className="mb-3 text-base font-semibold text-high-emphasis">Account details</h3>
         <InfoRow
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}
           label="Status"
