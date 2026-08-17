@@ -53,6 +53,10 @@ test.describe("Authentication", () => {
       }),
     ).toBeVisible({ timeout: 20_000 });
 
+    await page.getByRole("button", { name: "Open user menu" }).click();
+    await page.getByText("Log out").click();
+    await expect(page.getByRole("heading", { name: "blocks OS" })).toBeVisible({ timeout: 30_000 });
+
     // Persist the authenticated session for future specs to reuse.
     await page.context().storageState({ path: "fixtures/auth.json" });
 
