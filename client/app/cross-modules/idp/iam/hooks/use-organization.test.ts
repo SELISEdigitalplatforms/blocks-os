@@ -46,6 +46,53 @@ describe("use-organization hooks", () => {
         projectKey: mockGetOrganizationsPayload.projectKey,
       });
     });
+
+    it("does not fetch when the explicit enabled flag is false even if projectKey is set", async () => {
+      vi.mocked(iamService.organization.getOrganizations).mockClear();
+      const { result } = renderHook(
+        () =>
+          useGetOrganizations({
+            ...mockGetOrganizationsPayload,
+            enabled: false,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      expect(result.current.fetchStatus).toBe("idle");
+      expect(iamService.organization.getOrganizations).not.toHaveBeenCalled();
+    });
+
+    it("starts fetching when the explicit enabled flag flips to true", async () => {
+      vi.mocked(iamService.organization.getOrganizations).mockResolvedValue(
+        mockOrganizationsResponse,
+      );
+
+      const { result, rerender } = renderHook(
+        ({ enabled }: { enabled: boolean }) =>
+          useGetOrganizations({ ...mockGetOrganizationsPayload, enabled }),
+        {
+          wrapper: createWrapper(),
+          initialProps: { enabled: false },
+        },
+      );
+
+      expect(result.current.fetchStatus).toBe("idle");
+
+      rerender({ enabled: true });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(iamService.organization.getOrganizations).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to disabling the query when projectKey is empty and no enabled flag is supplied", () => {
+      vi.mocked(iamService.organization.getOrganizations).mockClear();
+      const { result } = renderHook(
+        () => useGetOrganizations({ ...mockGetOrganizationsPayload, projectKey: "" }),
+        { wrapper: createWrapper() },
+      );
+
+      expect(result.current.fetchStatus).toBe("idle");
+      expect(iamService.organization.getOrganizations).not.toHaveBeenCalled();
+    });
   });
 
   describe("useGetOrganizationById", () => {

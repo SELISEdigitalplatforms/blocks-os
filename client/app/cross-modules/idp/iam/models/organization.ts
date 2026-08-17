@@ -31,6 +31,12 @@ export interface IOrganizationFilter {
     property: string;
     isDescending: boolean;
   };
+  // Optional external gate. When omitted, the hook is enabled as soon as
+  // `projectKey` is set (existing behavior). When supplied, the hook is only
+  // enabled when this value is truthy — useful for call sites that should not
+  // fire on mount (e.g. an organization picker that only needs the list once
+  // the user actually opens it).
+  enabled?: boolean;
 }
 
 export interface IGetOrganizationsParams {

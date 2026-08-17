@@ -354,6 +354,16 @@ describe("OrganizationsSidebarList", () => {
     expect(container.querySelectorAll(".h-\\[62px\\]").length).toBe(1);
   });
 
+  it("renders the scrollable list inside a fixed-height container so infinite scroll has something to scroll", () => {
+    const { container } = render(<OrganizationsSidebarList {...baseProps()} />);
+    // The scrollable region sits directly inside the card; assert it carries
+    // the fixed-height class so existing IntersectionObserver/onLoadMore can
+    // actually trigger as the user scrolls within a bounded box.
+    const scrollContainer = container.querySelector(".h-\\[640px\\]");
+    expect(scrollContainer).toBeTruthy();
+    expect(scrollContainer!.className).toContain("overflow-y-auto");
+  });
+
   it("filters the list by status through the filter popover", async () => {
     const user = userEvent.setup();
     render(
