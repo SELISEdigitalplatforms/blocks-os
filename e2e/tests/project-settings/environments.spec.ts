@@ -1,18 +1,21 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-import { loginFresh } from "../../support/login-helper";
+import {
+  createProject,
+  deleteCreatedProject,
+  openProjectConfigure,
+} from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 test.describe("project settings", () => {
+  let projectName = "";
+
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
-    await deleteProject(page).catch(() => {});
+    await deleteCreatedProject(page, projectName).catch(() => {});
   });
 
   test("Environments page behavior", async ({ page }) => {
@@ -20,9 +23,7 @@ test.describe("project settings", () => {
 
     await test.step("Environments page behavior", async () => {
       await test.step("Open Environments", async () => {
-        const configureButton = page.getByTestId("project-card-configure").first();
-        await expect(configureButton).toBeVisible({ timeout: 15000 });
-        await configureButton.click();
+        await openProjectConfigure(page, projectName);
 
         const environmentsLink = page.getByRole("link", { name: "Environments" });
         await expect(environmentsLink).toBeVisible({ timeout: 15000 });

@@ -1,43 +1,52 @@
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
+import type { Page } from "@playwright/test";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 import { test, expect } from "../../support/test-base";
-// import { loginFresh } from "../../support/login-helper";
+
+const gotoEmailManagement = async (page: Page) => {
+  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
+  if (!match) {
+    throw new Error("Not inside a project route; cannot open Email Management");
+  }
+  await page.goto(`${new URL(page.url()).origin}${match[0]}/email-management`);
+  await expect(page.getByRole("heading", { name: "Email Templates" })).toBeVisible({
+    timeout: 30000,
+  });
+};
+
+const clickComboboxOption = async (page: Page, label: string | RegExp) => {
+  const trigger = page.getByRole("combobox").filter({ hasText: label }).first();
+  if (!(await trigger.isVisible({ timeout: 2000 }).catch(() => false))) {
+    return;
+  }
+
+  await trigger.click({ force: true });
+  const firstOption = page.getByRole("option").first();
+  if (await firstOption.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await firstOption.click();
+  } else {
+    await page.keyboard.press("Escape");
+  }
+};
 
 test.describe("email management", () => {
+  let projectName = "";
+
   test.beforeEach(async ({ page }) => {
-    page.goto("https://dev-os.blocksdevelopers.com");
-    await page.getByRole("button", { name: "Log in to your account" }).click();
-    await page.getByRole("textbox", { name: "Work Email" }).click();
-    await page.getByRole("textbox", { name: "Work Email" }).fill("meraz-zoarder13@yopmail.com");
-    await page.getByRole("textbox", { name: "Password" }).click();
-    await page.getByRole("textbox", { name: "Password" }).fill("Meraj2000@");
-    await page.getByRole("button", { name: "Login" }).click();
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
-    await page
-      .getByRole("button", { name: /Development/ })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/app\/[^/]+\/dashboard/, { timeout: 30000 });
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
-    await page.getByRole("button", { name: "Back to console" }).click();
-    await deleteProject(page);
+    await deleteCreatedProject(page, projectName);
   });
 
   test("Email Management — templates, clone/delete rules, and inbox/outgoing tabs", async ({
     page,
   }) => {
+    test.setTimeout(180_000);
     await test.step("Navigate to Email Management", async () => {
-      await page.getByRole("link", { name: "Email Management" }).first().click();
-      await expect(page.getByRole("heading", { name: "Email Templates" })).toBeVisible({
-        timeout: 30000,
-      });
+      await gotoEmailManagement(page);
     });
 
     await test.step("[Positive] Page defaults to the Templates tab, with tab-trigger and page-title text kept distinct", async () => {
@@ -97,42 +106,27 @@ test.describe("email management", () => {
     });
 
     await test.step("[Positive] Completing Basic Information advances to the 'Template design' step", async () => {
+      await page.keyboard.press("Escape");
+
       await page.getByPlaceholder("Enter name").fill(`Welcome Email ${Date.now()}`);
       await page.getByPlaceholder("Enter subject").fill("Welcome to our platform!");
 
-      const configSelect = page.getByText("Select Configuration");
-      if (await configSelect.isVisible().catch(() => false)) {
-        await configSelect.click();
-        const firstOption = page.getByRole("option").first();
-        if (await firstOption.isVisible().catch(() => false)) {
-          await firstOption.click();
-        }
-      }
-      const languageSelect = page.getByText("Select language");
-      if (await languageSelect.isVisible().catch(() => false)) {
-        await languageSelect.click();
-        const firstOption = page.getByRole("option").first();
-        if (await firstOption.isVisible().catch(() => false)) {
-          await firstOption.click();
-        }
-      }
+      await clickComboboxOption(page, /Select Configuration|Configuration/i);
+      await clickComboboxOption(page, /Select language|language/i);
 
-      const saveButton = page.getByRole("button", { name: /save|next|continue/i }).last();
+      const saveButton = page.getByRole("button", { name: "Save & continue" });
       if (await saveButton.isEnabled().catch(() => false)) {
         await saveButton.click();
-        await expect(page.getByText("Template design"))
+        await expect(page.getByText("Template", { exact: true }).first())
           .toBeVisible({
-            timeout: 15000,
+            timeout: 10000,
           })
           .catch(() => {});
       }
     });
 
     await test.step("Return to the Templates list", async () => {
-      await page.getByRole("link", { name: "Email Management" }).first().click();
-      await expect(page.getByRole("heading", { name: "Email Templates" })).toBeVisible({
-        timeout: 15000,
-      });
+      await gotoEmailManagement(page);
     });
 
     await test.step("[Security] A built-in (Tenant-generated) template offers no Delete action — only custom templates can be removed", async () => {
@@ -196,10 +190,7 @@ test.describe("email management", () => {
         }
       });
 
-      await page.getByRole("link", { name: "Email Management" }).first().click();
-      await expect(page.getByRole("heading", { name: "Email Templates" })).toBeVisible({
-        timeout: 15000,
-      });
+      await gotoEmailManagement(page);
 
       const rows = page.getByRole("row");
       const count = await rows.count();
@@ -268,7 +259,7 @@ test.describe("email management", () => {
     // Outgoing Mails
     // ============================================================
     await test.step("Navigate to the Outgoing Mails tab", async () => {
-      await page.getByRole("link", { name: "Email Management" }).first().click();
+      await gotoEmailManagement(page);
       await page.getByRole("tab", { name: "Outgoing Mails" }).click();
       await expect(page.getByRole("heading", { name: "Outgoing Mails" })).toBeVisible({
         timeout: 15000,

@@ -1,64 +1,36 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-import { loginFresh } from "../../support/login-helper";
+import {
+  createProject,
+  deleteCreatedProject,
+  openDashboardChildPage,
+} from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 test.describe("logs and traces", () => {
+  let projectName = "";
+  let itemId = "";
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
-    await page
-      .getByRole("button", { name: /Development/ })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/app\/[^/]+\/dashboard/, { timeout: 30000 });
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName, itemId } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
-    await page.getByRole("button", { name: "Back to console" }).click();
-    await deleteProject(page);
+    await deleteCreatedProject(page, projectName);
   });
 
   test("Logs & Traces — Tracing", async ({ page }) => {
-    let appBaseUrl = page.url().replace(/\/dashboard$/, "");
-
-    const gotoLogsTracesChild = async (linkName: "Usage" | "Tracing" | "Logs") => {
-      const link = page.getByRole("link", { name: linkName });
-      // The sidebar group can be collapsed, and the expand click sometimes
-      // needs a retry (e.g. it lands before the group's animation settles).
-      // Poll rather than relying on a single click + the default full-test
-      // actionability timeout, which previously caused 150s stalls here.
-      for (let attempt = 0; attempt < 5; attempt++) {
-        if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-          return link.click({ timeout: 10000 });
-        }
-        await page
-          .getByText("Logs & Traces", { exact: true })
-          .click({ timeout: 5000 })
-          .catch(() => {});
-      }
-      // Sidebar context was lost entirely (e.g. an earlier step's goto to an
-      // invalid deep link redirected away from the app) — recover by
-      // navigating straight to the target page instead of stalling on a
-      // sidebar link that will never appear.
-      const pathByLink: Record<typeof linkName, string> = {
-        Usage: "usage",
-        Tracing: "tracing",
-        Logs: "logs",
-      };
-      await page.goto(`${appBaseUrl}/lmt/${pathByLink[linkName]}`);
+    const gotoTracing = async () => {
+      await openDashboardChildPage(page, itemId, "lmt/tracing");
     };
 
-    // ============================================================
-    // Tracing
-    // ============================================================
     await test.step("Navigate to Tracing", async () => {
-      await gotoLogsTracesChild("Tracing");
+      await gotoTracing();
+      await expect(
+        page
+          .getByRole("heading", { name: "Tracing" })
+          .or(page.getByText("Select a project to load tracing data."))
+          .or(page.getByText("Hot", { exact: true })),
+      ).toBeVisible({ timeout: 30000 });
     });
 
     await test.step("[Negative] Without a selected project, Tracing shows 'Select a project to load tracing data.'", async () => {
@@ -127,9 +99,7 @@ test.describe("logs and traces", () => {
     });
 
     await test.step("[Negative] An unknown or expired trace ID shows 'Trace not found', distinct from a genuine load error", async () => {
-      const currentUrl = new URL(page.url());
-      const tracingBasePath = currentUrl.pathname.replace(/\/trace\/.*$/, "");
-      await page.goto(`${currentUrl.origin}${tracingBasePath}/trace/nonexistent-trace-id-xyz`);
+      await openDashboardChildPage(page, itemId, "lmt/tracing/nonexistent-trace-id-xyz");
 
       const notFound = page.getByText("Trace not found");
       const loadError = page.getByText("Unable to load trace");
@@ -137,11 +107,8 @@ test.describe("logs and traces", () => {
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
 
-      // Guard: an unknown trace path with no matching route can redirect the
-      // whole app back to the project list, losing the selected-project
-      // context that the remaining Logs steps depend on. Restore it directly.
-      if (!page.url().includes("/lmt/")) {
-        await page.goto(`${appBaseUrl}/lmt/tracing`);
+      if (!page.url().includes("/lmt/tracing")) {
+        await gotoTracing();
       }
     });
   });

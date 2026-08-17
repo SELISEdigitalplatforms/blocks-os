@@ -1,27 +1,16 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-import { loginFresh } from "../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 test.describe("overview", () => {
+  let projectName = "";
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
-    await page
-      .getByRole("button", { name: /Development/ })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/app\/[^/]+\/dashboard/, { timeout: 30000 });
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
-    await page.getByRole("button", { name: "Back to console" }).click();
-    await deleteProject(page);
+    await deleteCreatedProject(page, projectName);
   });
 
   test("Overview — header, delete confirmation, domains CRUD + CNAME validation, and repositories", async ({
@@ -29,7 +18,9 @@ test.describe("overview", () => {
     context,
   }) => {
     await test.step("Header renders the project name, environment badge, and masked X-Blocks-Key", async () => {
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expect(page.getByRole("heading", { name: projectName, level: 1 })).toBeVisible({
+        timeout: 30000,
+      });
       const keyValue = page.getByText("X-Blocks-Key:").locator("xpath=following-sibling::*[1]");
       const keyText = await keyValue.innerText().catch(() => "");
       if (keyText) {

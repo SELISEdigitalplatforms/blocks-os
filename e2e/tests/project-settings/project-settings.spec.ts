@@ -1,6 +1,10 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-import { loginFresh } from "../../support/login-helper";
+import {
+  createProject,
+  deleteCreatedProject,
+  openProjectOverviewPage,
+} from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 async function getProjectSaveButton(page: any) {
   const dialog = page.getByRole("dialog");
@@ -17,12 +21,12 @@ async function getProjectSaveButton(page: any) {
 }
 
 test.describe("project settings", () => {
+  let projectName = "";
+  let tenantGroupId = "";
+
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName, tenantGroupId } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
@@ -31,7 +35,7 @@ test.describe("project settings", () => {
       const backButton = page.getByRole("button", { name: "Back to console" });
       if (await backButton.isVisible({ timeout: 5000 }).catch(() => false))
         await backButton.click().catch(() => {});
-      if (!page.isClosed()) await deleteProject(page).catch(() => {});
+      if (!page.isClosed()) await deleteCreatedProject(page, projectName).catch(() => {});
     } catch {
       // Cleanup should not hide the actual test failure.
     }
@@ -42,18 +46,7 @@ test.describe("project settings", () => {
 
     await test.step("Project Settings page behavior", async () => {
       await test.step("Open Project Settings", async () => {
-        await page.goto("https://dev-os.blocksdevelopers.com/app/console", {
-          waitUntil: "domcontentloaded",
-        });
-        await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-          timeout: 50000,
-        });
-        const configureButton = page.getByTestId("project-card-configure").first();
-        await expect(configureButton).toBeVisible({ timeout: 15000 });
-        await configureButton.click();
-        const projectSettingsLink = page.getByRole("link", { name: "Project Settings" }).first();
-        await expect(projectSettingsLink).toBeVisible({ timeout: 15000 });
-        await projectSettingsLink.click();
+        await openProjectOverviewPage(page, tenantGroupId, "settings");
         await expect(page.getByRole("heading", { name: "Project Settings" })).toBeVisible({
           timeout: 30000,
         });

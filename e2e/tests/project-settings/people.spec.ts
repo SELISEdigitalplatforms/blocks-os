@@ -1,36 +1,21 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-import { loginFresh } from "../../support/login-helper";
+import {
+  createProject,
+  deleteCreatedProject,
+  openProjectOverviewPage,
+} from "../../support/create-and-delete-project";
+import { uniqueTestEmail } from "../../support/env";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 test.describe("project settings", () => {
+  let projectName = "";
+  let tenantGroupId = "";
+
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
+    await ensureAuthenticated(page);
 
-    await createProject(page);
-
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50_000,
-    });
-
-    // Open project configuration directly.
-    const configureButton = page.getByTestId("project-card-configure").first();
-
-    await expect(configureButton).toBeVisible({
-      timeout: 20_000,
-    });
-
-    await configureButton.click();
-
-    const peopleLink = page.getByRole("link", {
-      name: "People",
-      exact: true,
-    });
-
-    await expect(peopleLink).toBeVisible({
-      timeout: 20_000,
-    });
-
-    await peopleLink.click();
+    ({ projectName, tenantGroupId } = await createProject(page));
+    await openProjectOverviewPage(page, tenantGroupId, "people");
 
     await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
       timeout: 30_000,
@@ -53,7 +38,7 @@ test.describe("project settings", () => {
         await backButton.click().catch(() => {});
       }
 
-      await deleteProject(page).catch(() => {});
+      await deleteCreatedProject(page, projectName).catch(() => {});
     } catch {
       // Cleanup failure should not hide the actual test failure.
     }
@@ -189,7 +174,7 @@ test.describe("project settings", () => {
 
       const recipientsInput = page.getByPlaceholder(/email/i).first();
 
-      await recipientsInput.fill(`newuser${Date.now()}@example.com`);
+      await recipientsInput.fill(uniqueTestEmail("newuser"));
 
       await expect(page.getByText("Invalid email format", { exact: true })).toHaveCount(0);
 

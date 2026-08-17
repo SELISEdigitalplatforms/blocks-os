@@ -1,38 +1,21 @@
-import { test, expect, Page } from "@playwright/test";
-import { loginFresh } from "../../support/login-helper";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-
-// The Identity & Access sidebar submenu is a flyout, same as the Secrets &
-// Configs one, and proved just as unreliable to drive via click-to-expand
-// (races, no-ops, and gets left collapsed by unrelated interactions
-// elsewhere in the flow). Navigate straight to the section's URL instead.
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
-  }
-};
+import { test, expect } from "@playwright/test";
+import { ensureAuthenticated } from "../../support/login-helper";
+import {
+  createProject,
+  deleteCreatedProject,
+  openDashboardChildPage,
+} from "../../support/create-and-delete-project";
 
 test.describe("identity and access", () => {
+  let projectName = "";
+  let itemId = "";
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
-    await page
-      .getByRole("button", { name: /Development/ })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/app\/[^/]+\/dashboard/, { timeout: 30000 });
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName, itemId } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
-    await page.getByRole("button", { name: "Back to console" }).click();
-    await deleteProject(page);
+    await deleteCreatedProject(page, projectName);
   });
 
   test("Identity & Access — Permissions", async ({ page }) => {
@@ -40,8 +23,8 @@ test.describe("identity and access", () => {
     // Permissions
     // ============================================================
     await test.step("Navigate to Permissions", async () => {
-      await gotoIamPath(page, "permission");
-      await expect(page.getByText("Resource", { exact: true })).toBeVisible({
+      await openDashboardChildPage(page, itemId, "iam/permissions");
+      await expect(page.getByRole("button", { name: /add permission/i })).toBeVisible({
         timeout: 30000,
       });
     });

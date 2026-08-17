@@ -1,6 +1,7 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-import { loginFresh } from "../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { e2eCredentials, uniqueTestEmail } from "../../support/env";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Identity & Access sidebar submenu is a flyout, same as the Secrets &
 // Configs one, and proved just as unreliable to drive via click-to-expand
@@ -14,25 +15,14 @@ const gotoIamPath = async (page: Page, subpath: string) => {
 };
 
 test.describe("identity and access", () => {
+  let projectName = "";
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
-    await page
-      .getByRole("button", { name: /Development/ })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/app\/[^/]+\/dashboard/, { timeout: 30000 });
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
-    await page.getByRole("button", { name: "Back to console" }).click();
-    await deleteProject(page);
+    await deleteCreatedProject(page, projectName);
   });
 
   test("Identity & Access — Users", async ({ page }) => {
@@ -93,7 +83,7 @@ test.describe("identity and access", () => {
 
     await test.step("[Security] Inviting an email that already belongs to a user is surfaced, not silently duplicated", async () => {
       const emailInput = page.getByPlaceholder("name@company.com");
-      await emailInput.fill("meraz-zoarder4@yopmail.com");
+      await emailInput.fill(e2eCredentials().email);
       const existingUserNote = page.getByText(
         "A user with this email already exists in the system.",
       );
@@ -104,7 +94,7 @@ test.describe("identity and access", () => {
 
     await test.step("[Positive] Inviting a brand-new email sends an invitation", async () => {
       const emailInput = page.getByPlaceholder("name@company.com");
-      await emailInput.fill(`newuser${Date.now()}@example.com`);
+      await emailInput.fill(uniqueTestEmail("newuser"));
 
       const orgSelect = page.getByLabel("Organization");
       if (await orgSelect.isVisible().catch(() => false)) {

@@ -1,15 +1,19 @@
 import { test, expect } from "../../support/test-base";
 
-import { loginFresh } from "../../support/login-helper";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
+import {
+  createProject,
+  deleteCreatedProject,
+  openProjectOverviewPage,
+} from "../../support/create-and-delete-project";
 
 test.describe("project settings", () => {
+  let projectName = "";
+  let tenantGroupId = "";
+
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName, tenantGroupId } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
@@ -25,7 +29,7 @@ test.describe("project settings", () => {
       }
 
       if (!page.isClosed()) {
-        await deleteProject(page).catch(() => {});
+        await deleteCreatedProject(page, projectName).catch(() => {});
       }
     } catch {
       // Cleanup failure must not hide the original test failure.
@@ -33,16 +37,11 @@ test.describe("project settings", () => {
   });
 
   test("Repositories page behavior", async ({ page, context }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(180_000);
 
     await test.step("Repositories page behavior", async () => {
       await test.step("Open Repositories", async () => {
-        await page.goto("https://dev-os.blocksdevelopers.com/app/console");
-        await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-          timeout: 50000,
-        });
-        await page.getByTestId("project-card-configure").first().click();
-        await page.getByRole("link", { name: "Repositories" }).click();
+        await openProjectOverviewPage(page, tenantGroupId, "repositories");
         await expect(page.getByRole("heading", { name: "Repositories" })).toBeVisible({
           timeout: 30000,
         });

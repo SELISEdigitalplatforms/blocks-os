@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteProject } from "../../support/create-and-delete-project";
-import { loginFresh } from "../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link (races, gets
@@ -18,25 +18,14 @@ const gotoSecretManagementSection = async (page: Page, subpath: string, headingN
 };
 
 test.describe("secrets and configs", () => {
+  let projectName = "";
   test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-    await createProject(page);
-    await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible({
-      timeout: 50000,
-    });
-    await page
-      .getByRole("button", { name: /Development/ })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/app\/[^/]+\/dashboard/, { timeout: 30000 });
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    });
+    await ensureAuthenticated(page);
+    ({ projectName } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
-    await page.getByRole("button", { name: "Back to console" }).click();
-    await deleteProject(page);
+    await deleteCreatedProject(page, projectName);
   });
 
   test("Secrets & Configs — oidc", async ({
