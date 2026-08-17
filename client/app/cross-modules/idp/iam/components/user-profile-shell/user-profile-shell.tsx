@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { useQueryState } from "nuqs";
 import {
   Tabs,
@@ -41,10 +41,11 @@ type UserProfileShellProps = {
   skeleton?: ReactNode;
   isLoading?: boolean;
   /**
-   * Height (px) of the fixed header above this shell in the current layout.
-   * DashboardLayout's header (used by the admin user-detail page) differs
-   * from other layouts, so this must be passed per call site rather than
-   * assumed.
+   * Fallback height (px) of the fixed header above this shell when the real
+   * header height cannot be measured yet (first paint before layout settles),
+   * or for tests that render the shell without a real viewport. The live value
+   * is measured from the rendered shell's offsetTop on every resize, so this
+   * only acts as a safety net.
    */
   fixedHeaderOffsetPx?: number;
 };
@@ -82,14 +83,33 @@ export const UserProfileShell = ({
     [`/app/iam/user-detail/${id}`]: activeTab?.label || "",
   };
 
+  // The header above this shell is fixed and the page scrolls at the document
+  // level, so pin height to the viewport minus the header. Rather than trust
+  // a hardcoded offset that drifts when the header wraps/grows, measure the
+  // shell's own offsetTop on mount and on every resize — that distance equals
+  // the real rendered header height. Fall back to the prop until the first
+  // measurement settles so the very first paint isn't zero-height.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [headerOffset, setHeaderOffset] = useState<number>(fixedHeaderOffsetPx);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const node = rootRef.current;
+      if (!node) return;
+      const next = Math.max(0, Math.round(node.getBoundingClientRect().top));
+      setHeaderOffset((prev) => (prev === next ? prev : next));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   return (
-    // The header above this shell is fixed and the page scrolls at the document level
-    // (no ancestor establishes a definite content height), so `h-full` can't resolve,
-    // pin height explicitly to the viewport minus the fixed header instead. The header
-    // height differs by layout (DashboardLayout vs ConsoleLayout), hence the prop.
     <div
+      ref={rootRef}
+      data-testid="user-profile-shell"
       className="mx-auto flex w-full flex-col overflow-hidden  md:h-[calc(100vh-var(--profile-shell-header-offset))] md:min-h-0"
-      style={{ ["--profile-shell-header-offset" as string]: `${fixedHeaderOffsetPx}px` }}
+      style={{ ["--profile-shell-header-offset" as string]: `${headerOffset}px` }}
     >
       <div className="mb-4 hidden shrink-0 md:mb-4 md:block">
         <PageBreadcrumb breadcrumbIndex={4} customTitles={breadcrumbTitles} />

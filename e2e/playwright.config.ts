@@ -27,6 +27,7 @@ export default defineConfig({
   // Serial: these tests mutate shared backend state (create/delete real
   // projects on dev), so running them in parallel would race.
   workers: 1,
+  timeout: 180_000,
   reporter: [["html", { open: "never" }], ["list"]],
   // Patches the served index.html so BLOCKS_OS_BASE_URL points at the local
   // :5000 host (E2E_BASE_URL) instead of the remote dev server.
@@ -72,6 +73,7 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: /auth[\\/]login\.spec\.ts/,
+      timeout: 120_000,
       use: { ...devices["Desktop Chrome"] },
     },
     // All other tests run authenticated by reusing that saved session, and

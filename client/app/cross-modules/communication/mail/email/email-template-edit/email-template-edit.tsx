@@ -76,7 +76,6 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
         <PageBreadcrumb
           breadcrumbIndex={3}
           className="flex min-w-0"
-          listClassName="text-base sm:text-lg"
           customTitles={breadcrumbTitles}
         />
         <div className="flex shrink-0 gap-2">

@@ -45,12 +45,12 @@ const SEARCH_MIN_LENGTH = 3;
 const SEARCH_HINT = `Type at least ${SEARCH_MIN_LENGTH} characters to search`;
 const SEARCH_HINT_ID = "organizations-search-hint";
 
-// Fixed-height window for the scrollable list. Sized to roughly one page of
-// rows (PAGE_SIZE seats in the parent) so the existing IntersectionObserver
-// `onLoadMore` mechanism has something to scroll inside instead of the box
-// growing with every page. 62px matches the skeleton row height; rounding up
-// to keep the 10th row fully visible above the bottom edge.
-const SIDEBAR_LIST_HEIGHT = "h-[640px]";
+// The scroll container fills whatever height the parent grid cell hands it
+// (the grid is sized to `calc(100vh - --org-page-offset)` at lg+, so it tracks
+// the real viewport instead of a fixed px value). `flex-1` plus the card's
+// `h-full` is what makes the existing IntersectionObserver `onLoadMore` keep
+// working with the page-size accumulating in the parent.
+const SIDEBAR_LIST_HEIGHT = "flex-1";
 
 type OrganizationsSidebarListProps = {
   organizations: IOrganization[];

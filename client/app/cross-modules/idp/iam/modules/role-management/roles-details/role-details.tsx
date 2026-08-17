@@ -85,7 +85,6 @@ export function RoleDetailsContainer() {
         <PageBreadcrumb
           breadcrumbIndex={4}
           className="flex min-w-0 flex-1"
-          listClassName="text-base sm:text-lg"
           customTitles={breadcrumbTitles}
         />
         <div className="flex shrink-0 items-center gap-2">
