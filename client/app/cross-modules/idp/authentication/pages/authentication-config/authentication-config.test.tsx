@@ -110,4 +110,26 @@ it("shows the organization config and add actions on the organizations path", ()
     render(<AuthenticationConfigLayout />);
     expect(screen.getByTestId("email-config")).toBeTruthy();
   });
+
+  it("anchors its own height to the viewport minus the measured chrome above it", () => {
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    const reportedTop = 72;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      const result = original.call(this);
+      // The outer flex container is the one whose height pins to the viewport.
+      if (this.classList?.contains("flex") && this.classList?.contains("overflow-hidden")) {
+        return { ...result, top: reportedTop, left: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: reportedTop } as DOMRect;
+      }
+      return result;
+    };
+
+    try {
+      const { container } = render(<AuthenticationConfigLayout />);
+      const outer = container.querySelector(".flex.overflow-hidden") as HTMLElement | null;
+      expect(outer).toBeTruthy();
+      expect(outer!.style.height).toBe("calc(100vh - 72px)");
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = original;
+    }
+  });
 });

@@ -156,4 +156,22 @@ describe("UserProfileShell", () => {
       HTMLElement.prototype.getBoundingClientRect = original;
     }
   });
+
+  it("fills its parent with h-full so only the tab column scrolls, not the whole page", () => {
+    render(<UserProfileShell id="u1" projectKey="p1" tabs={tabs} />);
+    const root = screen.getByTestId("user-profile-shell");
+    // The shell must size to the parent's available height (not pin to
+    // calc(100vh - …) anymore) — otherwise it overruns the scroll container
+    // it sits inside and forces the entire user-detail page to scroll.
+    expect(root.className).toContain("h-full");
+    expect(root.className).not.toContain("h-[calc(100vh-");
+
+    // The active tab content must own its own vertical scroll so the page
+    // remains anchored to the viewport. Walk up from the tab body text to
+    // the TabsContent wrapper so we assert on the right element.
+    const activeText = screen.getByText("overview-content");
+    const tabsContent = activeText.closest('[role="tabpanel"]') ?? activeText.parentElement;
+    expect(tabsContent).toBeTruthy();
+    expect((tabsContent as HTMLElement).className).toContain("overflow-y-auto");
+  });
 });

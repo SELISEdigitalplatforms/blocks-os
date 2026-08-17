@@ -84,11 +84,11 @@ export const UserProfileShell = ({
   };
 
   // The header above this shell is fixed and the page scrolls at the document
-  // level, so pin height to the viewport minus the header. Rather than trust
-  // a hardcoded offset that drifts when the header wraps/grows, measure the
-  // shell's own offsetTop on mount and on every resize — that distance equals
-  // the real rendered header height. Fall back to the prop until the first
-  // measurement settles so the very first paint isn't zero-height.
+  // level, so the shell must fill whatever viewport-anchored height its parent
+  // shells settle on (the surrounding AuthenticationConfigLayout now measures
+  // and anchors itself to the viewport on mount/resize). The prop is still
+  // plumbed through as a fallback for the very first paint before those
+  // measurements settle, and for tests that render without a real viewport.
   const rootRef = useRef<HTMLDivElement>(null);
   const [headerOffset, setHeaderOffset] = useState<number>(fixedHeaderOffsetPx);
 
@@ -108,7 +108,7 @@ export const UserProfileShell = ({
     <div
       ref={rootRef}
       data-testid="user-profile-shell"
-      className="mx-auto flex w-full flex-col overflow-hidden  md:h-[calc(100vh-var(--profile-shell-header-offset))] md:min-h-0"
+      className="mx-auto flex h-full w-full flex-col overflow-hidden md:min-h-0"
       style={{ ["--profile-shell-header-offset" as string]: `${headerOffset}px` }}
     >
       <div className="mb-4 hidden shrink-0 md:mb-4 md:block">
@@ -161,15 +161,16 @@ export const UserProfileShell = ({
             <UserProfileSidebar id={id} projectKey={projectKey} />
           </div>
 
-          {/* Right column (col 2, row 2), fills the same row height; each tab
-              component manages its own internal scroll. */}
+          {/* Right column (col 2, row 2), fills the same row height. The tab
+              scroller owns its own vertical scroll so the user-detail screen
+              stays anchored to the viewport and only the active tab scrolls. */}
           <div className="flex h-full min-h-0 min-w-0 flex-col md:col-start-2 md:row-start-2">
             {tabs.map((tab) => (
               <TabsContent
                 key={tab.value}
                 value={tab.value}
                 forceMount
-                className="mt-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+                className="mt-0 flex h-full min-h-0 flex-1 flex-col overflow-y-auto data-[state=inactive]:hidden"
               >
                 {tab.render()}
               </TabsContent>
