@@ -85,34 +85,47 @@ test.describe("overview", () => {
       }
     });
 
-    await test.step("Add Domain shows 'required' messages when Domain and Cookie Domain are touched empty", async () => {
-      await page.getByRole("button", { name: "Add Domain" }).click();
-      await expect(page.getByRole("heading", { name: "Add Domain" })).toBeVisible();
+    const addDomainDialog = page.getByRole("dialog").filter({
+      has: page.getByRole("heading", { name: "Add Domain" }),
+    });
 
-      const domainInputs = page.getByPlaceholder("your-domain.com");
-      const addButton = page.getByRole("button", { name: "Add" });
+    const ensureAddDomainDialog = async () => {
+      if (!(await addDomainDialog.isVisible().catch(() => false))) {
+        await page.getByRole("button", { name: "Add Domain" }).click();
+      }
+      await expect(addDomainDialog).toBeVisible({ timeout: 15000 });
+      return addDomainDialog;
+    };
+
+    await test.step("Add Domain shows 'required' messages when Domain and Cookie Domain are touched empty", async () => {
+      const dialog = await ensureAddDomainDialog();
+      const addButton = dialog.getByRole("button", { name: "Add", exact: true });
       await expect(addButton).toBeDisabled();
 
-      // Form validates onChange, so type-then-clear each field to touch it and
-      // surface the "required" message rather than the format message.
-      await domainInputs.first().fill("x");
-      await domainInputs.first().fill("");
-      await expect(page.getByText("Domain is required", { exact: true })).toBeVisible();
+      const domainInput = dialog.getByPlaceholder("your-domain.com").first();
+      const cookieInput = dialog.getByRole("textbox", { name: /cookie domain/i });
 
-      await domainInputs.last().fill("x");
-      await domainInputs.last().fill("");
-      await expect(page.getByText("Cookie domain is required")).toBeVisible();
+      // Touch cookie first so domain auto-fill does not remount this input.
+      await cookieInput.fill("x");
+      await cookieInput.fill("");
+      await expect(dialog.getByText("Cookie domain is required")).toBeVisible();
+
+      await domainInput.fill("x");
+      await domainInput.fill("");
+      await expect(dialog.getByText("Domain is required", { exact: true })).toBeVisible();
       await expect(addButton).toBeDisabled();
     });
 
     await test.step("Add Domain rejects an invalid domain format for both fields", async () => {
-      const domainInputs = page.getByPlaceholder("your-domain.com");
-      const addButton = page.getByRole("button", { name: "Add" });
+      const dialog = await ensureAddDomainDialog();
+      const addButton = dialog.getByRole("button", { name: "Add", exact: true });
+      const domainInput = dialog.getByPlaceholder("your-domain.com").first();
+      const cookieInput = dialog.getByRole("textbox", { name: /cookie domain/i });
 
-      await domainInputs.first().fill("not a domain!");
-      await domainInputs.last().fill("also not a domain!");
+      await cookieInput.fill("also-not-a-domain");
+      await domainInput.fill("not-a-domain");
       await expect(
-        page.getByText("Please enter a valid domain (e.g. example.com)").first(),
+        dialog.getByText("Please enter a valid domain (e.g. example.com)").first(),
       ).toBeVisible();
       await expect(addButton).toBeDisabled();
     });
@@ -125,11 +138,11 @@ test.describe("overview", () => {
     const cookieDomainValue = "example.com";
 
     await test.step("Submitting a valid domain shows a success toast and adds it to the table", async () => {
-      const domainInputs = page.getByPlaceholder("your-domain.com");
-      await domainInputs.first().fill(domainValue);
-      await domainInputs.last().fill(cookieDomainValue);
+      const dialog = await ensureAddDomainDialog();
+      await dialog.getByRole("textbox", { name: /cookie domain/i }).fill(cookieDomainValue);
+      await dialog.getByPlaceholder("your-domain.com").first().fill(domainValue);
 
-      const addButton = page.getByRole("button", { name: "Add" });
+      const addButton = dialog.getByRole("button", { name: "Add", exact: true });
       await expect(addButton).toBeEnabled();
       await addButton.click();
 

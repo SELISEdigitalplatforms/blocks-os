@@ -2,16 +2,17 @@ import { test, expect } from "../../support/test-base";
 import {
   createProject,
   deleteCreatedProject,
-  openProjectConfigure,
+  openProjectOverviewPage,
 } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 test.describe("project settings", () => {
   let projectName = "";
+  let tenantGroupId = "";
 
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
+    ({ projectName, tenantGroupId } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
@@ -23,12 +24,7 @@ test.describe("project settings", () => {
 
     await test.step("Environments page behavior", async () => {
       await test.step("Open Environments", async () => {
-        await openProjectConfigure(page, projectName);
-
-        const environmentsLink = page.getByRole("link", { name: "Environments" });
-        await expect(environmentsLink).toBeVisible({ timeout: 15000 });
-        await environmentsLink.click();
-
+        await openProjectOverviewPage(page, tenantGroupId, "environments");
         await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
           timeout: 30000,
         });

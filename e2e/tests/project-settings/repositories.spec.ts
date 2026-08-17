@@ -1,4 +1,5 @@
 import { test, expect } from "../../support/test-base";
+import { type Page } from "@playwright/test";
 
 import { ensureAuthenticated } from "../../support/login-helper";
 import {
@@ -6,6 +7,45 @@ import {
   deleteCreatedProject,
   openProjectOverviewPage,
 } from "../../support/create-and-delete-project";
+
+const addRepositoryButton = (page: Page) =>
+  page.getByRole("button", { name: "Add", exact: true });
+
+const modalOverlay = (page: Page) =>
+  page.locator('div.fixed.inset-0.z-50[data-state="open"]');
+
+const dismissOpenDialog = async (page: Page) => {
+  const dialog = page.getByRole("dialog");
+  const overlay = modalOverlay(page);
+
+  if (await dialog.isVisible().catch(() => false)) {
+    const closeButton = dialog.getByRole("button", { name: "Close" });
+    if (await closeButton.isVisible().catch(() => false)) {
+      await closeButton.click();
+    } else {
+      await page.keyboard.press("Escape");
+    }
+  } else if ((await overlay.count()) > 0) {
+    await page.keyboard.press("Escape");
+  }
+
+  await expect(dialog).toBeHidden({ timeout: 10_000 });
+
+  if ((await overlay.count()) > 0) {
+    await overlay.first().click({ position: { x: 1, y: 1 } });
+  }
+
+  await expect(overlay).toHaveCount(0, { timeout: 10_000 });
+};
+
+const clickAddRepository = async (page: Page) => {
+  await dismissOpenDialog(page);
+  const button = addRepositoryButton(page);
+  await expect(button).toBeVisible({ timeout: 15000 });
+  await expect(button).toBeEnabled({ timeout: 5000 });
+  await button.click();
+  await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15000 });
+};
 
 test.describe("project settings", () => {
   let projectName = "";
@@ -51,7 +91,7 @@ test.describe("project settings", () => {
         await expect(page.getByRole("heading", { name: "Repositories" })).toBeVisible({
           timeout: 10000,
         });
-        await expect(page.getByRole("button", { name: "Add" })).toBeVisible({
+        await expect(addRepositoryButton(page)).toBeVisible({
           timeout: 10000,
         });
       });
@@ -61,13 +101,20 @@ test.describe("project settings", () => {
           await new Promise((resolve) => setTimeout(resolve, 1500));
           await route.continue();
         });
-        await page.reload({ waitUntil: "commit" });
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await expect(page).toHaveURL(/\/app\/project\/[^/]+\/repositories/, {
+          timeout: 30000,
+        });
+        await expect(page.getByRole("heading", { name: "Repositories" })).toBeVisible({
+          timeout: 30000,
+        });
 
         // The app can render from a cached/persisted state on reload even while a
         // background refetch is in flight, so a skeleton isn't guaranteed to appear.
         await expect(page.locator('[class*="skeleton"]').first())
           .toBeVisible({ timeout: 5000 })
           .catch(() => {});
+        await page.unroute("**/api/**asset**").catch(() => {});
       });
 
       await test.step("[Positive] True-empty state (no repos, no search) shows 'No repositories yet'", async () => {
@@ -136,19 +183,18 @@ test.describe("project settings", () => {
       // });
 
       await test.step("[Security] 'Add' checks GitHub authorization first and opens the repo-selection modal directly if already authorized", async () => {
-        await page.getByRole("button", { name: "Add" }).click();
+        await clickAddRepository(page);
         const selectHeading = page.getByRole("heading", {
           name: "Select repository",
         });
         if (await selectHeading.isVisible({ timeout: 8000 }).catch(() => false)) {
           await expect(selectHeading).toBeVisible({ timeout: 10000 });
-          await page.keyboard.press("Escape");
-          await expect(selectHeading).toBeHidden({ timeout: 10000 });
         }
+        await dismissOpenDialog(page);
       });
 
       await test.step("[Security] 'Add' shows the 'Connect repository' provider step first when GitHub is not yet authorized", async () => {
-        await page.getByRole("button", { name: "Add" }).click();
+        await clickAddRepository(page);
         const connectHeading = page.getByRole("heading", {
           name: "Connect repository",
         });
@@ -158,13 +204,12 @@ test.describe("project settings", () => {
               "Select a Git provider to import an existing project from a Git Repository.",
             ),
           ).toBeVisible({ timeout: 10000 });
-          await page.keyboard.press("Escape");
-          await expect(connectHeading).toBeHidden({ timeout: 10000 });
         }
+        await dismissOpenDialog(page);
       });
 
       await test.step("[Security] Completing provider authorization from the Connect step proceeds into repo selection", async () => {
-        await page.getByRole("button", { name: "Add" }).click();
+        await clickAddRepository(page);
         const connectHeading = page.getByRole("heading", {
           name: "Connect repository",
         });
@@ -180,7 +225,7 @@ test.describe("project settings", () => {
       });
 
       await test.step("[Positive] Selecting a repository from the picker adds it and shows a success toast", async () => {
-        await page.getByRole("button", { name: "Add" }).click();
+        await clickAddRepository(page);
         const selectHeading = page.getByRole("heading", {
           name: "Select repository",
         });
@@ -208,7 +253,7 @@ test.describe("project settings", () => {
           }
         });
 
-        await page.getByRole("button", { name: "Add" }).click();
+        await clickAddRepository(page);
         const selectHeading = page.getByRole("heading", {
           name: "Select repository",
         });

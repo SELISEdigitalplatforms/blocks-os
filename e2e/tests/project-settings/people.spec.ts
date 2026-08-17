@@ -1,4 +1,5 @@
 import { test, expect } from "../../support/test-base";
+import { type Page } from "@playwright/test";
 import {
   createProject,
   deleteCreatedProject,
@@ -6,6 +7,8 @@ import {
 } from "../../support/create-and-delete-project";
 import { uniqueTestEmail } from "../../support/env";
 import { ensureAuthenticated } from "../../support/login-helper";
+
+const inviteButton = (page: Page) => page.getByRole("button", { name: "Invite", exact: true });
 
 test.describe("project settings", () => {
   let projectName = "";
@@ -15,11 +18,19 @@ test.describe("project settings", () => {
     await ensureAuthenticated(page);
 
     ({ projectName, tenantGroupId } = await createProject(page));
-    await openProjectOverviewPage(page, tenantGroupId, "people");
+    // Hydrate selectedTenantGroup on the Environments page first, then open
+    // People in the same layout so getPeople runs as the owner.
+    await openProjectOverviewPage(page, tenantGroupId, "environments");
+    await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.getByRole("link", { name: "People", exact: true }).click();
+    await expect(page).toHaveURL(/\/people(?:\/)?$/);
 
     await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
       timeout: 30_000,
     });
+    await expect(inviteButton(page)).toBeVisible({ timeout: 30_000 });
   });
 
   test.afterEach(async ({ page }) => {
@@ -52,7 +63,7 @@ test.describe("project settings", () => {
         timeout: 15_000,
       });
 
-      await expect(page.getByRole("button", { name: "Invite", exact: true })).toBeVisible({
+      await expect(inviteButton(page)).toBeVisible({
         timeout: 15_000,
       });
     });
@@ -91,7 +102,7 @@ test.describe("project settings", () => {
     // ---------------------------------------------------------
 
     await test.step("[Negative] Invite requires recipient and environment", async () => {
-      await page.getByRole("button", { name: "Invite", exact: true }).click();
+      await inviteButton(page).click();
 
       const dialog = page.getByRole("dialog");
 
@@ -130,7 +141,7 @@ test.describe("project settings", () => {
     });
 
     await test.step("[Positive] Invite accepts multiple email addresses", async () => {
-      await page.getByRole("button", { name: "Invite", exact: true }).click();
+      await inviteButton(page).click();
 
       const recipientsInput = page.getByPlaceholder(/email/i).first();
 
@@ -146,7 +157,7 @@ test.describe("project settings", () => {
     });
 
     await test.step("[Positive] Invite dialog supports multiple invitation rows", async () => {
-      await page.getByRole("button", { name: "Invite", exact: true }).click();
+      await inviteButton(page).click();
 
       const addRowButton = page.getByRole("button", {
         name: /add (another|row)/i,
@@ -170,7 +181,7 @@ test.describe("project settings", () => {
     // ---------------------------------------------------------
 
     await test.step("[Positive] Invitation form accepts a valid recipient", async () => {
-      await page.getByRole("button", { name: "Invite", exact: true }).click();
+      await inviteButton(page).click();
 
       const recipientsInput = page.getByPlaceholder(/email/i).first();
 

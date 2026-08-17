@@ -25,12 +25,9 @@ test.describe("logs and traces", () => {
 
     await test.step("Navigate to Tracing", async () => {
       await gotoTracing();
-      await expect(
-        page
-          .getByRole("heading", { name: "Tracing" })
-          .or(page.getByText("Select a project to load tracing data."))
-          .or(page.getByText("Hot", { exact: true })),
-      ).toBeVisible({ timeout: 30000 });
+      await expect(page.getByRole("heading", { name: "Tracing" })).toBeVisible({
+        timeout: 30000,
+      });
     });
 
     await test.step("[Negative] Without a selected project, Tracing shows 'Select a project to load tracing data.'", async () => {

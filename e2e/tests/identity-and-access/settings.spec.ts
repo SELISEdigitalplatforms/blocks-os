@@ -1,23 +1,28 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import {
+  createProject,
+  deleteCreatedProject,
+  openDashboardChildPage,
+} from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
-// The Identity & Access sidebar submenu is a flyout, same as the Secrets &
-// Configs one, and proved just as unreliable to drive via click-to-expand
-// (races, no-ops, and gets left collapsed by unrelated interactions
-// elsewhere in the flow). Navigate straight to the section's URL instead.
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
+const saveButton = (page: Page) => page.getByRole("button", { name: /^save$/i });
+
+const clickSaveIfEnabled = async (page: Page) => {
+  const button = saveButton(page);
+  if (await button.isEnabled()) {
+    await button.click();
+    return;
   }
+  await expect(button).toBeDisabled();
 };
 
 test.describe("identity and access", () => {
   let projectName = "";
+  let itemId = "";
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
+    ({ projectName, itemId } = await createProject(page));
   });
 
   test.afterEach(async ({ page }) => {
@@ -29,7 +34,7 @@ test.describe("identity and access", () => {
     // Settings
     // ============================================================
     await test.step("Navigate to Settings", async () => {
-      await gotoIamPath(page, "settings");
+      await openDashboardChildPage(page, itemId, "iam/settings");
       await expect(page.getByRole("tab", { name: "Auth" })).toBeVisible({
         timeout: 30000,
       });
@@ -75,7 +80,10 @@ test.describe("identity and access", () => {
           await oidcToggle.click(); // turn OIDC off to exercise the rule
         }
         await baseUrlInput.fill("");
-        await page.getByRole("button", { name: /save/i }).first().click();
+        await baseUrlInput.blur();
+        // Save stays disabled while the IAM form is not dirty (empty fill is a
+        // no-op). Do not click a disabled control — Playwright waits until timeout.
+        await clickSaveIfEnabled(page);
         await expect(page.getByText("Account action base URL is required."))
           .toBeVisible({ timeout: 5000 })
           .catch(() => {});
@@ -108,7 +116,7 @@ test.describe("identity and access", () => {
     await test.step("[Positive] Saving Signup settings shows a success toast", async () => {
       const signupToggle = page.getByLabel("Sign Up Enabled");
       if (await signupToggle.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await page.getByRole("button", { name: /save/i }).first().click();
+        await clickSaveIfEnabled(page);
         await expect(page.getByText("Signup settings updated successfully", { exact: true }))
           .toBeVisible({ timeout: 15000 })
           .catch(() => {});

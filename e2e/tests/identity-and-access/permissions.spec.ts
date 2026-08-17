@@ -69,17 +69,28 @@ test.describe("identity and access", () => {
           await page.getByRole("option").first().click();
         }
 
-        const groupSelect = page.getByText("Select or create group...", {
-          exact: true,
+        const groupTrigger = page.getByRole("combobox").filter({
+          hasText: "Select or create group...",
         });
-        if (await groupSelect.isVisible().catch(() => false)) {
-          await groupSelect.click();
-          const groupOption = page.getByRole("option").first();
-          if (await groupOption.isVisible({ timeout: 5000 }).catch(() => false)) {
-            await groupOption.click();
+        await expect(groupTrigger).toBeVisible();
+        await groupTrigger.click();
+
+        const existingGroup = page
+          .getByRole("option")
+          .filter({ hasNotText: /clear selection|create group/i })
+          .first();
+        if (await existingGroup.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await existingGroup.click();
+        } else {
+          const groupName = `e2e-group-${Date.now()}`;
+          await page.getByPlaceholder("Search or create a group...").fill(groupName);
+          const createGroup = page.getByText(/Create group/);
+          if (await createGroup.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await createGroup.click();
           } else {
-            await page.keyboard.press("Escape");
+            await page.keyboard.press("Enter");
           }
+          await expect(page.getByRole("combobox").filter({ hasText: groupName })).toBeVisible();
         }
 
         const severitySelect = page.getByText("Select Severity", { exact: true });
