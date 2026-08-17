@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { User } from "@blocks-idp/iam/models/user";
 import { useRevokeAccess } from "@blocks-idp/iam/hooks/use-user";
 import { checkValidDate, formatDate, parseDateString } from "@/lib/utils";
+import { getUserDisplayName, getUserInitials } from "@blocks-idp/iam/utils/user-display-name";
 import { UserMinus, Users as UsersIcon } from "lucide-react";
 import { useOrganizationUsersSortQueryParams } from "./organization-users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
@@ -35,11 +36,6 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
-const getInitials = (firstName?: string, lastName?: string) => {
-  const initials = `${firstName?.trim()?.[0] ?? ""}${lastName?.trim()?.[0] ?? ""}`;
-  return initials.toUpperCase() || "?";
-};
 
 const RevokeConfirmDialog = ({
   open,
@@ -126,10 +122,7 @@ export const OrganizationUsersTable = ({
     );
   }
 
-  const confirmUserName = confirmRevoke
-    ? `${confirmRevoke.firstName || ""} ${confirmRevoke.lastName || ""}`.trim() ||
-      confirmRevoke.email
-    : "";
+  const confirmUserName = confirmRevoke ? getUserDisplayName(confirmRevoke) : "";
 
   return (
     <>
@@ -177,7 +170,7 @@ export const OrganizationUsersTable = ({
           </div>
 
           {users.map((user) => {
-            const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "-";
+            const fullName = getUserDisplayName(user);
             const hasLastLogin = checkValidDate(user.lastLoggedInTime);
 
             return (
@@ -194,7 +187,7 @@ export const OrganizationUsersTable = ({
                 {/* Avatar + name (+ inline revoke action on mobile) */}
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
-                    {getInitials(user.firstName, user.lastName)}
+                    {getUserInitials(user)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-semibold leading-tight text-high-emphasis">
@@ -228,16 +221,19 @@ export const OrganizationUsersTable = ({
                   </div>
                 </div>
 
-                {/* Email, desktop only */}
-                {user.email && (
-                  <div className="hidden min-w-0 md:block">
+                {/* Email, desktop only. The cell itself always renders:
+                    dropping it would pull the status and last-login columns one
+                    place left for a member with no email, breaking alignment
+                    with the header row. */}
+                <div className="hidden min-w-0 md:block">
+                  {user.email && (
                     <CopyToClipboardButton textToCopy={user.email} isHoverable>
                       <span className="truncate text-xs lowercase text-muted-foreground">
                         {user.email}
                       </span>
                     </CopyToClipboardButton>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Status + Last login: paired on one row on mobile; on md+ this
                     wrapper becomes `contents` so its children fall back into

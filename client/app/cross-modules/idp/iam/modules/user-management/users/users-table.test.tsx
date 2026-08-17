@@ -60,6 +60,40 @@ describe("UsersTable", () => {
     expect(screen.getByText("Inactive")).toBeTruthy();
   });
 
+  it("names a user with no first or last name after their email", () => {
+    renderTable({
+      users: [user({ firstName: null, lastName: null, email: "john.doe@yopmail.com" })],
+    });
+    expect(screen.getByText("john.doe")).toBeTruthy();
+    expect(screen.getByText("J")).toBeTruthy();
+  });
+
+  it("falls back to placeholders when a user has neither a name nor an email", () => {
+    // Real dates keep the date cells from rendering their own "-", so the only
+    // dash left on the row is the display name.
+    renderTable({
+      users: [
+        user({
+          firstName: null,
+          lastName: null,
+          email: null,
+          createdDate: "2022-01-01T00:00:00Z",
+          lastUpdatedDate: "2022-02-01T00:00:00Z",
+        }),
+      ],
+    });
+    expect(screen.getByText("-")).toBeTruthy();
+    expect(screen.getByText("?")).toBeTruthy();
+  });
+
+  it("keeps the desktop grid aligned when a user has no email", () => {
+    const { container: withEmail } = renderTable({ users: [user()] });
+    const withEmailCells = withEmail.querySelectorAll(".md\\:grid > *").length;
+    const { container: withoutEmail } = renderTable({ users: [user({ email: null })] });
+    const withoutEmailCells = withoutEmail.querySelectorAll(".md\\:grid > *").length;
+    expect(withoutEmailCells).toBe(withEmailCells);
+  });
+
   it("shows the empty state when there are no users", () => {
     renderTable({ users: [] });
     expect(screen.getByText("No users found.")).toBeTruthy();

@@ -67,8 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   intersect = null;
   disconnected = 0;
-  (globalThis as Record<string, unknown>).IntersectionObserver =
-    CapturingIntersectionObserver;
+  (globalThis as Record<string, unknown>).IntersectionObserver = CapturingIntersectionObserver;
 });
 
 afterEach(() => {
@@ -114,6 +113,99 @@ describe("OrganizationsSidebarList", () => {
     expect(props.onSearchChange).toHaveBeenCalledWith("");
   });
 
+  it("hints that the search needs more characters while it is too short", () => {
+    render(<OrganizationsSidebarList {...baseProps()} />);
+    const input = screen.getByPlaceholderText("Search organizations...");
+
+    expect(screen.queryByText("Type at least 3 characters to search")).toBeNull();
+
+    fireEvent.change(input, { target: { value: "a" } });
+    expect(screen.getByText("Type at least 3 characters to search")).toBeTruthy();
+
+    fireEvent.change(input, { target: { value: "ab" } });
+    expect(screen.getByText("Type at least 3 characters to search")).toBeTruthy();
+  });
+
+  it("hides the hint and runs the search from the third character", () => {
+    vi.useFakeTimers();
+    const props = baseProps();
+    render(<OrganizationsSidebarList {...props} />);
+    const input = screen.getByPlaceholderText("Search organizations...");
+
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(screen.queryByText("Type at least 3 characters to search")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(props.onSearchChange).toHaveBeenCalledWith("abc");
+  });
+
+  it("announces the hint and points the search box at it", () => {
+    render(<OrganizationsSidebarList {...baseProps()} />);
+    const input = screen.getByPlaceholderText("Search organizations...");
+    expect(input.getAttribute("aria-describedby")).toBeNull();
+
+    fireEvent.change(input, { target: { value: "ab" } });
+    const hint = screen.getByRole("status");
+    expect(hint.textContent).toBe("Type at least 3 characters to search");
+    expect(input.getAttribute("aria-describedby")).toBe(hint.id);
+  });
+
+  it("hides the hint again once the box is cleared", () => {
+    render(<OrganizationsSidebarList {...baseProps()} />);
+    const input = screen.getByPlaceholderText("Search organizations...");
+
+    fireEvent.change(input, { target: { value: "ab" } });
+    expect(screen.getByText("Type at least 3 characters to search")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Clear search"));
+    expect(screen.queryByText("Type at least 3 characters to search")).toBeNull();
+  });
+
+  it("drops the pending keystroke when the search is cleared", () => {
+    vi.useFakeTimers();
+    const props = baseProps();
+    render(<OrganizationsSidebarList {...props} />);
+    const input = screen.getByPlaceholderText("Search organizations...");
+
+    fireEvent.change(input, { target: { value: "acme" } });
+    fireEvent.click(screen.getByLabelText("Clear search"));
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // The debounced "acme" must not land after the clear and re-filter the list.
+    expect(props.onSearchChange).toHaveBeenCalledTimes(1);
+    expect(props.onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  it("marks disabled organizations and leaves active ones unmarked", () => {
+    render(
+      <OrganizationsSidebarList
+        {...baseProps()}
+        organizations={[
+          makeOrg({ itemId: "org-1", name: "Acme Inc", isDisabled: true }),
+          makeOrg({ itemId: "org-2", name: "Globex", isDisabled: false }),
+        ]}
+        totalCount={2}
+      />,
+    );
+    expect(screen.getAllByText("Disabled")).toHaveLength(1);
+  });
+
+  it("treats an organization with no disabled flag as active", () => {
+    render(
+      <OrganizationsSidebarList
+        {...baseProps()}
+        organizations={[makeOrg({ itemId: "org-1", name: "Acme Inc", isDisabled: undefined })]}
+        totalCount={1}
+      />,
+    );
+    expect(screen.getByText("Acme Inc")).toBeTruthy();
+    expect(screen.queryByText("Disabled")).toBeNull();
+  });
+
   it("debounces the search and reports only the final keystroke", () => {
     vi.useFakeTimers();
     const props = baseProps();
@@ -150,7 +242,9 @@ describe("OrganizationsSidebarList", () => {
     render(
       <OrganizationsSidebarList
         {...baseProps()}
-        organizations={[makeOrg({ itemId: "org-1", name: "Acme Inc", lastUpdatedDate: "not-a-date" })]}
+        organizations={[
+          makeOrg({ itemId: "org-1", name: "Acme Inc", lastUpdatedDate: "not-a-date" }),
+        ]}
         totalCount={1}
       />,
     );
@@ -234,7 +328,8 @@ describe("OrganizationsSidebarList", () => {
     );
 
     await user.click(screen.getByLabelText("Filter organizations"));
-    const activeCheckbox = (await screen.findByText("active")).previousElementSibling as HTMLElement;
+    const activeCheckbox = (await screen.findByText("active"))
+      .previousElementSibling as HTMLElement;
     await user.click(activeCheckbox);
 
     await waitFor(() => expect(screen.queryByText("Acme Inc")).toBeNull());
