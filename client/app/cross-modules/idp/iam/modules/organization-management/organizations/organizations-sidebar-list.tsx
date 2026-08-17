@@ -240,7 +240,7 @@ export const OrganizationsSidebarList = ({
                         {org.name}
                       </span>
                       {org.isDisabled && (
-                        <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">
+                        <Badge variant="error" className="shrink-0 px-1.5 py-0 text-[10px]">
                           Disabled
                         </Badge>
                       )}

@@ -191,7 +191,47 @@ describe("OrganizationsSidebarList", () => {
         totalCount={2}
       />,
     );
-    expect(screen.getAllByText("Disabled")).toHaveLength(1);
+    const disabledBadges = screen.getAllByText("Disabled");
+    expect(disabledBadges).toHaveLength(1);
+    expect(disabledBadges[0].className).toContain("bg-red-100");
+    expect(disabledBadges[0].className).toContain("text-red-800");
+  });
+
+  it("keeps the Disabled badge visible when the disabled org is the selected row", () => {
+    render(
+      <OrganizationsSidebarList
+        {...baseProps()}
+        organizations={[
+          makeOrg({ itemId: "org-1", name: "Acme Inc", isDisabled: true }),
+        ]}
+        totalCount={1}
+        selectedOrgId="org-1"
+      />,
+    );
+    const badge = screen.getByText("Disabled");
+    expect(badge.className).toContain("bg-red-100");
+    expect(badge.className).toContain("text-red-800");
+    expect(badge.className).not.toContain("bg-secondary");
+  });
+
+  it("applies the error badge variant to every disabled org regardless of filter/ordering", () => {
+    render(
+      <OrganizationsSidebarList
+        {...baseProps()}
+        organizations={[
+          makeOrg({ itemId: "org-1", name: "Acme Inc", isDisabled: true }),
+          makeOrg({ itemId: "org-2", name: "Globex", isDisabled: true }),
+          makeOrg({ itemId: "org-3", name: "Initech", isDisabled: false }),
+        ]}
+        totalCount={3}
+      />,
+    );
+    const disabledBadges = screen.getAllByText("Disabled");
+    expect(disabledBadges).toHaveLength(2);
+    disabledBadges.forEach((badge) => {
+      expect(badge.className).toContain("bg-red-100");
+      expect(badge.className).toContain("text-red-800");
+    });
   });
 
   it("treats an organization with no disabled flag as active", () => {
