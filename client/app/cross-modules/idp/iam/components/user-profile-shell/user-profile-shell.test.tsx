@@ -8,7 +8,10 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("nuqs", () => ({
-  useQueryState: (_key: string, opts: { defaultValue: string }) => [h.tabId || opts.defaultValue, h.setTabId],
+  useQueryState: (_key: string, opts: { defaultValue: string }) => [
+    h.tabId || opts.defaultValue,
+    h.setTabId,
+  ],
 }));
 vi.mock("../user-profile-sidebar", () => ({
   UserProfileSidebar: () => <div data-testid="sidebar" />,
@@ -16,7 +19,9 @@ vi.mock("../user-profile-sidebar", () => ({
 vi.mock("@blocks-idp/iam/modules/user-management/update-user", () => ({
   UpdateUser: () => <div data-testid="update-user" />,
 }));
-vi.mock("@/components/breadcrumb/breadcrumb", () => ({ default: () => <div data-testid="breadcrumb" /> }));
+vi.mock("@/components/breadcrumb/breadcrumb", () => ({
+  default: () => <div data-testid="breadcrumb" />,
+}));
 vi.mock("@/components/copy-to-clipboard-button", () => ({
   CopyToClipboardButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -51,10 +56,26 @@ describe("UserProfileShell", () => {
     expect(screen.getByText("overview-content")).toBeTruthy();
   });
 
-  it("falls back to the Profile heading when the user has no name", () => {
+  it("heads the page with the email local part when the user has no name", () => {
+    h.userById = {
+      data: { data: { firstName: "", lastName: "", email: "john.doe@yopmail.com" } },
+    };
+    render(<UserProfileShell id="u1" projectKey="p1" tabs={tabs} />);
+    expect(screen.getByText("john.doe")).toBeTruthy();
+  });
+
+  it("shows a skeleton instead of the placeholder heading while the user loads", () => {
+    h.userById = { data: undefined, isLoading: true };
+    render(<UserProfileShell id="u1" projectKey="p1" tabs={tabs} />);
+    expect(screen.queryByText("-")).toBeNull();
+    expect(screen.queryByRole("heading")).toBeNull();
+  });
+
+  it("falls back to a placeholder heading when there is no name and no email", () => {
     h.userById = { data: { data: { firstName: "", lastName: "", email: "" } } };
     render(<UserProfileShell id="u1" projectKey="p1" tabs={tabs} />);
-    expect(screen.getByText("Profile")).toBeTruthy();
+    expect(screen.getByText("-")).toBeTruthy();
+    expect(screen.queryByText("Profile")).toBeNull();
   });
 
   it("renders the edit-user trigger and the right slot", () => {
