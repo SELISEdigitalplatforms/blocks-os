@@ -11,14 +11,9 @@ type UserAccessTabProps = {
 
 export const UserAccessTab = ({ userId, projectKey }: UserAccessTabProps) => {
   const { data: configData, isLoading: isConfigLoading } = useGetOrganizationConfig(projectKey);
-  const { data: userData, isLoading: isUserLoading } = useGetUserById({ id: userId, projectKey });
+  const { isLoading: isUserLoading } = useGetUserById({ id: userId, projectKey });
 
   const isMultiOrgEnabled = configData?.isMultiOrgEnabled ?? false;
-  const userOrgs =
-    userData?.data?.organizationIds ?? (userData?.data as { OrganizationIds?: string[] })?.OrganizationIds ?? [];
-  const orgKeys = Object.keys(userData?.data?.OrganizationsRoles ?? {});
-  const orgCountFromRoles = orgKeys.filter((k) => k && k !== "undefined").length;
-  const hasMultipleOrgs = userOrgs.length > 1 || orgCountFromRoles > 1;
 
   if (isConfigLoading || isUserLoading) {
     return (
@@ -32,7 +27,7 @@ export const UserAccessTab = ({ userId, projectKey }: UserAccessTabProps) => {
     );
   }
 
-  if (isMultiOrgEnabled || hasMultipleOrgs || userOrgs.length > 0) {
+  if (isMultiOrgEnabled) {
     return <MultiOrgAccess userId={userId} projectKey={projectKey} />;
   }
 
