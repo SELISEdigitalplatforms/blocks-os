@@ -55,7 +55,6 @@ export function LmtServiceLogsRoute() {
       <div className="flex flex-col gap-5 sm:gap-4">
         <PageBreadcrumb
           breadcrumbIndex={4}
-          listClassName="text-base sm:text-lg"
           customTitles={breadcrumbTitles}
         />
         <Card>
@@ -71,7 +70,6 @@ export function LmtServiceLogsRoute() {
     <div className="flex flex-col gap-5 sm:gap-4">
       <PageBreadcrumb
         breadcrumbIndex={4}
-        listClassName="text-base sm:text-lg"
         customTitles={breadcrumbTitles}
       />
       <LogsViewer

@@ -134,7 +134,6 @@ export function EmailCommunicationDetails({
           <PageBreadcrumb
             breadcrumbIndex={3}
             className="flex min-w-0"
-            listClassName="text-base sm:text-lg"
             customTitles={breadcrumbTitles}
           />
           <h1 className="truncate text-lg font-semibold md:sr-only">{emailDetails.name}</h1>

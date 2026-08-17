@@ -285,7 +285,6 @@ export default function SecretManagementLayout() {
             <header className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
               <PageBreadcrumb
                 breadcrumbIndex={4}
-                listClassName="text-base sm:text-lg"
                 className="flex"
                 customTitles={breadcrumbTitles}
               />

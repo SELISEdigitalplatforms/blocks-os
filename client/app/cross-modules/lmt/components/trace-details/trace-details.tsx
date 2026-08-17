@@ -162,7 +162,6 @@ export const TraceDetails = ({
           <>
             <PageBreadcrumb
               breadcrumbIndex={breadcrumbIndex}
-              listClassName="text-base sm:text-lg"
               customTitles={resolvedBreadcrumbTitles}
             />
             {hasTrace ? (
