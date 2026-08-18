@@ -8,6 +8,12 @@ export interface IRole {
   canCreateOwn: boolean;
   count: number;
   createdFromDefault: boolean;
+  /**
+   * Soft-delete flag from the backend. Optional because the roles list endpoint already excludes
+   * archived roles, so the client never receives `true` today -- it documents the contract without
+   * forcing every fixture to carry a value that is always absent.
+   */
+  isArchived?: boolean;
   createdDate: string;
   lastUpdatedDate: string;
   createdBy: string;
