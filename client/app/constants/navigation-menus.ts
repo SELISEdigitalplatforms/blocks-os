@@ -95,7 +95,6 @@ export const navigationMenus: Menu[] = [
         path: "/app/secret-management/secret",
         icon: KeyRound,
         desc: "Securely manage API and service secrets for this environment",
-        //disabled: true, // Temporarily disabled
       },
       {
         id: "my-services",
