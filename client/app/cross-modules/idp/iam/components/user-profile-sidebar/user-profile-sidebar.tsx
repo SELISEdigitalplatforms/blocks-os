@@ -48,7 +48,7 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
   const user = data?.data;
 
   return (
-    <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 shadow-none mt-4">
+    <Card className="mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 shadow-none md:h-full md:min-h-0">
       {/* Gated on the user having loaded, not on them having a name: a user with
           no first/last name still has an email worth showing here. */}
       {user && (
@@ -78,7 +78,7 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
       </div>
 
       {/* Account details */}
-      <CardContent className="mt-4 flex-1 overflow-y-auto w-full rounded-sm border bg-card p-5 shadow-sm">
+      <CardContent className="mt-4 w-full rounded-sm border bg-card p-5 shadow-sm md:flex-1 md:overflow-y-auto">
         <h3 className="mb-3 text-base font-semibold text-high-emphasis">Account details</h3>
         <InfoRow
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}

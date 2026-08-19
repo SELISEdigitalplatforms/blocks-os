@@ -108,16 +108,17 @@ export const UserProfileShell = ({
     <div
       ref={rootRef}
       data-testid="user-profile-shell"
-      className="mx-auto flex h-full w-full flex-col overflow-hidden md:min-h-0"
+      className="mx-auto flex h-full w-full flex-col md:min-h-0 md:overflow-hidden"
       style={{ ["--profile-shell-header-offset" as string]: `${headerOffset}px` }}
     >
       <div className="mb-4 hidden shrink-0 md:mb-4 md:block">
         <PageBreadcrumb breadcrumbIndex={4} customTitles={breadcrumbTitles} />
       </div>
-      <Tabs value={tabId} className="flex flex-1 flex-col md:min-h-0">
-        {/* md:grid-rows-[auto_1fr] pins row 2 (sidebar + tab content) to the remaining
-            screen height so all cards share a common height regardless of tab. */}
-        <div className="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)] md:gap-x-6 md:gap-y-4 lg:gap-x-8">
+      <Tabs value={tabId} className="flex min-h-0 flex-1 flex-col">
+        {/* Mobile stacks 3 auto-flow rows (dropdown, sidebar, tab content) with the
+            last one flexible so only it scrolls; md:grid-rows-[auto_1fr] pins row 2
+            (sidebar + tab content) to the remaining screen height instead. */}
+        <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)] md:gap-x-6 md:gap-y-4 lg:gap-x-8">
           {/* Mobile header: tabs dropdown */}
           <div className="flex items-center justify-between gap-3 md:hidden">
             <Select value={tabId} onValueChange={(v) => setTabId(v)}>
@@ -156,8 +157,9 @@ export const UserProfileShell = ({
             {rightSlot}
           </div>
 
-          {/* Sidebar (col 1, row 2), fills the row's height at md+ */}
-          <div className="flex h-full min-h-0 w-full flex-col md:col-start-1 md:row-start-2">
+          {/* Sidebar (col 1, row 2). Sized to its own content on mobile (row 2 of the
+              mobile grid is auto); fills the row's height at md+. */}
+          <div className="flex w-full flex-col md:col-start-1 md:row-start-2 md:h-full md:min-h-0">
             <UserProfileSidebar id={id} projectKey={projectKey} />
           </div>
 
