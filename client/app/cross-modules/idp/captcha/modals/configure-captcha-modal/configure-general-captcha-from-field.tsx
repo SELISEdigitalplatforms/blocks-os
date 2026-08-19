@@ -7,11 +7,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
-import { ConfigureCaptchaFormDefaultValue } from "./utils";
+import { ConfigureCaptchaFormValues } from "./utils";
 type ConfigureGeneralCaptchaFormProps = {
-  form: UseFormReturn<typeof ConfigureCaptchaFormDefaultValue>;
+  form: UseFormReturn<ConfigureCaptchaFormValues>;
+  /** When true, the secret field is optional: leaving it blank keeps the existing secret. */
+  isEditing: boolean;
 };
-export const ConfigureGeneralCaptchaFormField = ({ form }: ConfigureGeneralCaptchaFormProps) => {
+export const ConfigureGeneralCaptchaFormField = ({
+  form,
+  isEditing,
+}: ConfigureGeneralCaptchaFormProps) => {
   return (
     <>
       <FormField
@@ -35,10 +40,13 @@ export const ConfigureGeneralCaptchaFormField = ({ form }: ConfigureGeneralCaptc
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Secret key <span className="text-destructive">*</span>
+              Secret key {!isEditing && <span className="text-destructive">*</span>}
             </FormLabel>
             <FormControl>
-              <Input placeholder="Enter secret key" {...field} />
+              <Input
+                placeholder={isEditing ? "Leave blank to keep the current secret" : "Enter secret key"}
+                {...field}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

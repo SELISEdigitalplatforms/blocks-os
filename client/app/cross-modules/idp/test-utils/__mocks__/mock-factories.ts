@@ -177,9 +177,10 @@ export const mockIamServiceFactory = () => ({
 
 export const mockCaptchaServiceFactory = () => ({
   captchaService: {
-    getCaptchaConfigs: vi.fn(),
+    getCaptchaConfig: vi.fn(),
     saveCaptcha: vi.fn(),
     updateCaptchaConfigStatus: vi.fn(),
+    deleteCaptchaConfig: vi.fn(),
   },
 });
 

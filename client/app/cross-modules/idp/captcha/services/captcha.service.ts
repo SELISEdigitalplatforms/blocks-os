@@ -1,84 +1,42 @@
 import { http } from "@/lib/http/http-client";
-import { secretsService } from "@/services/secrets.service";
-import type { IAPIResponse } from "@/models/api-response";
+import { isHttpErrorStatus } from "@/lib/http/http-error.util";
 import {
-  ICaptchaSecretResponse,
-  IEnableCaptchaConfigsStatusPayload,
-  IEnableCaptchaConfigsStatusResponse,
-  IGetCaptchaConfigsResponse,
-  ISaveCaptchaConfigsPayload,
-  ISaveCaptchaConfigsResponse,
+  ICaptchaConfig,
+  ISaveCaptchaConfigPayload,
+  IToggleCaptchaConfigStatusPayload,
 } from "@blocks-idp/captcha/models/captcha";
 import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class CaptchaService {
-  // The captcha secrets are fetched with a fixed query (secretKey=captcha, first page); nothing
-  // from the caller is sent, so this takes no arguments. Project scoping happens via the
-  // X-Blocks-Key header, and the hook gates the request on a selected project.
-  getCaptchaConfigs(): Promise<IGetCaptchaConfigsResponse> {
-    return http
-      .get<ICaptchaSecretResponse[] | IAPIResponse<ICaptchaSecretResponse[]>>(
-        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`,
-      )
-      .then((response) => {
-        const secrets = Array.isArray(response) ? response : (response.data ?? []);
-        if (!secrets?.length) return { configurations: [] };
-        return {
-          configurations: secrets.map((secret) => {
-            const kv = secret.keyValuePairs;
-            return {
-              itemId: secret.itemId,
-              createdDate: secret.createdDate,
-              lastUpdatedDate: secret.lastUpdatedDate,
-              createdBy: secret.createdBy,
-              lastUpdatedBy: secret.lastUpdatedBy,
-              organizationIds: secret.organizationIds,
-              tags: secret.tags,
-              captchaKey: kv.captchaKey,
-              captchaSecret: kv.captchaSecret,
-              provider: kv.provider as IGetCaptchaConfigsResponse["configurations"][0]["provider"],
-              captchaGenerator:
-                kv.captchaGenerator as IGetCaptchaConfigsResponse["configurations"][0]["captchaGenerator"],
-              isEnable:
-                typeof kv.isEnable === "string" ? kv.isEnable === "true" : Boolean(kv.isEnable),
-            };
-          }),
-        };
-      });
+  /**
+   * Reads the tenant's captcha configuration. Resolves to null rather than rejecting when
+   * nothing has been configured yet — the backend answers that case with a 404, which is a
+   * normal state here, not a failure.
+   */
+  getCaptchaConfig(): Promise<ICaptchaConfig | null> {
+    return http.get<ICaptchaConfig>(CAPTCHA_ENDPOINTS.GET).catch((error) => {
+      if (isHttpErrorStatus(error, 404)) return null;
+      throw error;
+    });
   }
 
-  saveCaptcha = (payload: ISaveCaptchaConfigsPayload): Promise<ISaveCaptchaConfigsResponse> => {
-    return secretsService
-      .save({
-        secretKey: "captcha",
-        keyValuePairs: {
-          isEnable: String(payload.isEnable),
-          provider: payload.provider,
-          captchaKey: payload.captchaKey,
-          captchaSecret: payload.captchaSecret,
-          captchaGenerator: payload.captchaGenerator,
-        },
-        ...(payload.itemId ? { itemId: payload.itemId } : {}),
-      })
-      .then((item) => ({ isSuccess: true, errors: null, itemId: item.itemId }));
+  /**
+   * Creates or updates the captcha configuration. `captchaSecret` may be omitted (or left
+   * empty) to leave a previously-set secret untouched.
+   */
+  saveCaptcha = (payload: ISaveCaptchaConfigPayload): Promise<ICaptchaConfig> => {
+    return http.post<ICaptchaConfig>(CAPTCHA_ENDPOINTS.SAVE, payload);
   };
 
+  /** Flips `isEnable` without touching the stored secret. */
   updateCaptchaConfigStatus = (
-    payload: IEnableCaptchaConfigsStatusPayload,
-  ): Promise<IEnableCaptchaConfigsStatusResponse> => {
-    return secretsService
-      .save({
-        secretKey: "captcha",
-        keyValuePairs: {
-          isEnable: String(payload.isEnable),
-          provider: payload.provider,
-          captchaKey: payload.captchaKey,
-          captchaSecret: payload.captchaSecret,
-          captchaGenerator: payload.captchaGenerator,
-        },
-        itemId: payload.itemId,
-      })
-      .then((item) => ({ isSuccess: true, errors: null, itemId: item.itemId }));
+    payload: IToggleCaptchaConfigStatusPayload,
+  ): Promise<ICaptchaConfig> => {
+    return http.post<ICaptchaConfig>(CAPTCHA_ENDPOINTS.SAVE, payload);
+  };
+
+  deleteCaptchaConfig = (): Promise<void> => {
+    return http.delete<void>(CAPTCHA_ENDPOINTS.DELETE);
   };
 }
 

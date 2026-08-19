@@ -9,71 +9,35 @@ export const CAPTCHA_GENERATOR_TYPE = {
 
 export type CAPTCHA_PROVIDERS_KEY = keyof typeof CAPTCHA_PROVIDERS;
 
+/**
+ * There is exactly one captcha configuration per tenant. The backend never returns the secret
+ * itself — only whether one is set (`secretId` present) — so the edit form must treat the
+ * secret field as write-only, never pre-filled with a real value.
+ */
 export interface ICaptchaConfig {
-  itemId: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  captchaKey: string;
-  captchaSecret: string;
   provider: CAPTCHA_PROVIDERS_KEY;
+  captchaKey: string;
   captchaGenerator: keyof typeof CAPTCHA_GENERATOR_TYPE;
   isEnable: boolean;
+  secretId: string | null;
 }
 
-export interface ICaptchaSecretKeyValuePairs {
-  captchaKey: string;
-  captchaSecret: string;
-  provider: string;
-  captchaGenerator: string;
-  isEnable: boolean | string;
-  itemId: string;
-}
-
-export interface ICaptchaSecretResponse {
-  secretKey: string;
-  keyValuePairs: ICaptchaSecretKeyValuePairs;
-  itemId: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-}
-
-export interface IGetCaptchaConfigsPayload {
+export interface IGetCaptchaConfigPayload {
   projectKey: string;
 }
-export interface IGetCaptchaConfigsResponse {
-  configurations: ICaptchaConfig[];
-}
 
-export interface ISaveCaptchaConfigsPayload {
-  itemId?: string;
-  captchaKey: string;
-  captchaSecret: string;
-  provider: string;
-  captchaGenerator: string;
-  isEnable: boolean;
-  projectKey: string;
-}
-export interface ISaveCaptchaConfigsResponse {
-  errors: null | unknown;
-  isSuccess: boolean;
-  itemId: string;
-}
-
-export interface IEnableCaptchaConfigsStatusPayload {
-  itemId: string;
-  isEnable: boolean;
+export interface ISaveCaptchaConfigPayload {
   provider: string;
   captchaKey: string;
-  captchaSecret: string;
   captchaGenerator: string;
+  isEnable: boolean;
+  /** Omit, or leave empty, to keep the previously-saved secret untouched. */
+  captchaSecret?: string;
 }
 
-export interface IEnableCaptchaConfigsStatusResponse extends ISaveCaptchaConfigsResponse {}
+export interface IToggleCaptchaConfigStatusPayload {
+  provider: string;
+  captchaKey: string;
+  captchaGenerator: string;
+  isEnable: boolean;
+}

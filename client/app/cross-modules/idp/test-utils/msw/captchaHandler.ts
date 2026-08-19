@@ -1,45 +1,40 @@
 import { http, HttpResponse, type JsonBodyType } from "msw";
-import { mockCaptchaConfigsResponse } from "../__mocks__/captcha.data.mock";
-import { mockSuccessResponseWithItemId } from "@/test-utils/__mocks__";
+import { mockCaptchaConfig } from "../__mocks__/captcha.data.mock";
 import { CAPTCHA_ENDPOINTS } from "../../captcha/constants/endpoint.constant";
 
 // ─── Endpoint Patterns ────────────────────────────────────────────────────────
 
-const GET_CAPTCHA_CONFIGS_PATTERN = new RegExp(`${CAPTCHA_ENDPOINTS.GETS}\\?`);
+const GET_CAPTCHA_CONFIG_PATTERN = new RegExp(`${CAPTCHA_ENDPOINTS.GET}$`);
 const SAVE_CAPTCHA_PATTERN = new RegExp(CAPTCHA_ENDPOINTS.SAVE);
-const UPDATE_CAPTCHA_STATUS_PATTERN = new RegExp(CAPTCHA_ENDPOINTS.UPDATE_STATUS);
+const DELETE_CAPTCHA_PATTERN = new RegExp(CAPTCHA_ENDPOINTS.DELETE);
 
 // ─── Default Handlers (happy-path) ───────────────────────────────────────────
 
 export const captchaHandlers = [
-  http.get(GET_CAPTCHA_CONFIGS_PATTERN, () => HttpResponse.json(mockCaptchaConfigsResponse)),
-  http.post(SAVE_CAPTCHA_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
-  http.post(UPDATE_CAPTCHA_STATUS_PATTERN, () => HttpResponse.json(mockSuccessResponseWithItemId)),
+  http.get(GET_CAPTCHA_CONFIG_PATTERN, () => HttpResponse.json(mockCaptchaConfig)),
+  http.post(SAVE_CAPTCHA_PATTERN, () => HttpResponse.json(mockCaptchaConfig)),
+  http.delete(DELETE_CAPTCHA_PATTERN, () => HttpResponse.json({ isSuccess: true })),
 ];
 
 // ─── Per-Test Override Factories ──────────────────────────────────────────────
 
-export const getCaptchaConfigsHandler = (response: JsonBodyType = mockCaptchaConfigsResponse) =>
-  http.get(GET_CAPTCHA_CONFIGS_PATTERN, () => HttpResponse.json(response));
+export const getCaptchaConfigHandler = (response: JsonBodyType = mockCaptchaConfig) =>
+  http.get(GET_CAPTCHA_CONFIG_PATTERN, () => HttpResponse.json(response));
 
-export const getCaptchaConfigsErrorHandler = (status = 500) =>
-  http.get(GET_CAPTCHA_CONFIGS_PATTERN, () =>
+export const getCaptchaConfigNotFoundHandler = () =>
+  http.get(GET_CAPTCHA_CONFIG_PATTERN, () =>
+    HttpResponse.json({ isSuccess: false, errors: { not_found: "No captcha configuration." } }, { status: 404 }),
+  );
+
+export const getCaptchaConfigErrorHandler = (status = 500) =>
+  http.get(GET_CAPTCHA_CONFIG_PATTERN, () =>
     HttpResponse.json({ message: "Internal server error" }, { status }),
   );
 
-export const saveCaptchaHandler = (response: JsonBodyType = mockSuccessResponseWithItemId) =>
+export const saveCaptchaHandler = (response: JsonBodyType = mockCaptchaConfig) =>
   http.post(SAVE_CAPTCHA_PATTERN, () => HttpResponse.json(response));
 
 export const saveCaptchaErrorHandler = (status = 500) =>
   http.post(SAVE_CAPTCHA_PATTERN, () =>
-    HttpResponse.json({ message: "Internal server error" }, { status }),
-  );
-
-export const updateCaptchaStatusHandler = (
-  response: JsonBodyType = mockSuccessResponseWithItemId,
-) => http.post(UPDATE_CAPTCHA_STATUS_PATTERN, () => HttpResponse.json(response));
-
-export const updateCaptchaStatusErrorHandler = (status = 500) =>
-  http.post(UPDATE_CAPTCHA_STATUS_PATTERN, () =>
     HttpResponse.json({ message: "Internal server error" }, { status }),
   );

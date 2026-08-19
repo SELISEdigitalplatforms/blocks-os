@@ -6,13 +6,11 @@ import { SECRET_MANAGEMENT_NAV_GROUPS } from "@/constants/secret-management-nav"
 import { CreateSecretButton } from "@/cross-modules/secrets/components/secret-form-modal/create-secret-button";
 import { CreateClientCredential } from "@blocks-idp/authentication/components/create-client-credential/create-client-credential";
 import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
-import { toast } from "@/hooks/use-toast";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
-import { useGetCaptchaConfigs } from "@blocks-idp/captcha/hooks/use-captcha-config";
+import { useGetCaptchaConfig } from "@blocks-idp/captcha/hooks/use-captcha-config";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
-import { CAPTCHA_PROVIDERS, CAPTCHA_PROVIDERS_KEY } from "@blocks-idp/captcha/models/captcha";
 import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
 import {
   OidcBrandingHeaderProvider,
@@ -22,14 +20,13 @@ import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { Pencil, Plus, Loader2, Notebook, Waypoints } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
-import { MouseEvent, useMemo } from "react";
 import { Outlet, useLocation } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 
 function SecretManagementHeaderActions({
   isOidcBranding,
   currentPath,
-  handleAddCaptchaConfig,
+  captchaConfigured,
   setIsAddIdpOpen,
   setIsEmailConfigOpen,
   setIsNotificationConfigOpen,
@@ -41,7 +38,7 @@ function SecretManagementHeaderActions({
 }: {
   isOidcBranding: boolean;
   currentPath: string;
-  handleAddCaptchaConfig: (e: MouseEvent) => void;
+  captchaConfigured: boolean;
   setIsAddIdpOpen: (value: boolean) => void;
   setIsEmailConfigOpen: (value: boolean) => void;
   setIsNotificationConfigOpen: (value: boolean) => void;
@@ -94,10 +91,10 @@ function SecretManagementHeaderActions({
           </span>
         </Button>
       )}
-      {currentPath === "captcha" && (
+      {currentPath === "captcha" && !captchaConfigured && (
         <ConfigureCaptchaModal>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={handleAddCaptchaConfig}>
+            <Button size="sm">
               <Plus className="h-5 w-5" />
               <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
                 Add Configuration
@@ -189,7 +186,7 @@ export default function SecretManagementLayout() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   // Each query drives header actions for its own page only, so gate it on the
   // active route to avoid fetching every page's data on every page.
-  const { data: captchaData } = useGetCaptchaConfigs(
+  const { data: captchaData } = useGetCaptchaConfig(
     { projectKey: tenantId },
     currentPath === "captcha",
   );
@@ -241,31 +238,11 @@ export default function SecretManagementLayout() {
         (item) => item.value === currentPath,
       );
 
-  const areAllProvidersConfigured = useMemo(() => {
-    if (!captchaData?.configurations) return false;
-    const allProviderKeys = Object.keys(CAPTCHA_PROVIDERS) as CAPTCHA_PROVIDERS_KEY[];
-    const configuredProviders = new Set(
-      captchaData.configurations.map((config: { provider: string }) => config.provider),
-    );
-    return allProviderKeys.every((key) => configuredProviders.has(key));
-  }, [captchaData]);
-
-  const handleAddCaptchaConfig = (e: MouseEvent) => {
-    if (areAllProvidersConfigured) {
-      toast({
-        variant: "info",
-        title: "Info",
-        description: "No additional captcha configurations can be added.",
-      });
-      e.preventDefault();
-    }
-  };
-
   const headerActions = (
     <SecretManagementHeaderActions
       isOidcBranding={isOidcBranding}
       currentPath={currentPath}
-      handleAddCaptchaConfig={handleAddCaptchaConfig}
+      captchaConfigured={!!captchaData}
       setIsAddIdpOpen={setIsAddIdpOpen}
       setIsEmailConfigOpen={setIsEmailConfigOpen}
       setIsNotificationConfigOpen={setIsNotificationConfigOpen}

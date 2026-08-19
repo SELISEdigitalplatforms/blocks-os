@@ -1,38 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http/http-client";
-import { secretsService } from "@/services/secrets.service";
 import { CaptchaService } from "./captcha.service";
 import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
 import {
-  mockGetCaptchaConfigsPayload,
+  mockCaptchaConfig,
   mockSaveCaptchaPayload,
-  mockUpdateCaptchaStatusPayload,
-  MOCK_CAPTCHA_ITEM_ID,
+  mockToggleCaptchaStatusPayload,
 } from "../../test-utils/__mocks__";
 
 vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
-vi.mock("@/services/secrets.service", () => ({
-  secretsService: { save: vi.fn() },
-}));
-
-// Raw secret record as returned by the Secrets API.
-const mockCaptchaSecret = {
-  itemId: MOCK_CAPTCHA_ITEM_ID,
-  createdDate: "2026-01-15T10:00:00Z",
-  lastUpdatedDate: "2026-01-15T10:00:00Z",
-  createdBy: "admin",
-  lastUpdatedBy: "admin",
-  organizationIds: [],
-  tags: [],
-  keyValuePairs: {
-    captchaKey: "6Le-mock-captcha-key",
-    captchaSecret: "6Le-mock-captcha-secret",
-    provider: "recaptcha",
-    captchaGenerator: "EasyCaptchaGenerator",
-    isEnable: "true",
-  },
-};
 
 describe("CaptchaService", () => {
   let service: CaptchaService;
@@ -46,105 +23,45 @@ describe("CaptchaService", () => {
     vi.clearAllMocks();
   });
 
-  // ─── getCaptchaConfigs ────────────────────────────────────────────────────
-  describe("getCaptchaConfigs", () => {
-    it("should GET the captcha secrets and map them into configurations", async () => {
-      vi.mocked(http.get).mockResolvedValue([mockCaptchaSecret]);
+  // ─── getCaptchaConfig ─────────────────────────────────────────────────────
+  describe("getCaptchaConfig", () => {
+    it("should GET the captcha configuration", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockCaptchaConfig);
 
-      const result = await service.getCaptchaConfigs();
+      const result = await service.getCaptchaConfig();
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${CAPTCHA_ENDPOINTS.GETS}?secretKey=captcha&PageNumber=0&PageSize=10`,
-      );
-      expect(result).toEqual({
-        configurations: [
-          {
-            itemId: MOCK_CAPTCHA_ITEM_ID,
-            createdDate: "2026-01-15T10:00:00Z",
-            lastUpdatedDate: "2026-01-15T10:00:00Z",
-            createdBy: "admin",
-            lastUpdatedBy: "admin",
-            organizationIds: [],
-            tags: [],
-            captchaKey: "6Le-mock-captcha-key",
-            captchaSecret: "6Le-mock-captcha-secret",
-            provider: "recaptcha",
-            captchaGenerator: "EasyCaptchaGenerator",
-            isEnable: true,
-          },
-        ],
-      });
+      expect(http.get).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.GET);
+      expect(result).toEqual(mockCaptchaConfig);
     });
 
-    it("should unwrap an IAPIResponse-wrapped secrets list", async () => {
-      vi.mocked(http.get).mockResolvedValue({ data: [mockCaptchaSecret] });
+    it("should resolve to null when nothing has been configured (404)", async () => {
+      vi.mocked(http.get).mockRejectedValue({ status: 404 });
 
-      const result = await service.getCaptchaConfigs();
+      const result = await service.getCaptchaConfig();
 
-      expect(result.configurations).toHaveLength(1);
-      expect(result.configurations[0].isEnable).toBe(true);
+      expect(result).toBeNull();
     });
 
-    it("should return an empty configurations list when there are no secrets", async () => {
-      vi.mocked(http.get).mockResolvedValue([]);
-
-      const result = await service.getCaptchaConfigs();
-
-      expect(result).toEqual({ configurations: [] });
-    });
-
-    it("should throw when the API call fails", async () => {
+    it("should rethrow any other failure", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getCaptchaConfigs()).rejects.toThrow(
-        "Network error",
-      );
+      await expect(service.getCaptchaConfig()).rejects.toThrow("Network error");
     });
   });
 
   // ─── saveCaptcha ──────────────────────────────────────────────────────────
   describe("saveCaptcha", () => {
-    it("should save the captcha secret and return the item id", async () => {
-      vi.mocked(secretsService.save).mockResolvedValue({
-        itemId: MOCK_CAPTCHA_ITEM_ID,
-      } as never);
+    it("should POST the payload and return the saved configuration", async () => {
+      vi.mocked(http.post).mockResolvedValue(mockCaptchaConfig);
 
       const result = await service.saveCaptcha(mockSaveCaptchaPayload);
 
-      expect(secretsService.save).toHaveBeenCalledWith({
-        secretKey: "captcha",
-        keyValuePairs: {
-          isEnable: "true",
-          provider: mockSaveCaptchaPayload.provider,
-          captchaKey: mockSaveCaptchaPayload.captchaKey,
-          captchaSecret: mockSaveCaptchaPayload.captchaSecret,
-          captchaGenerator: mockSaveCaptchaPayload.captchaGenerator,
-        },
-      });
-      expect(result).toEqual({
-        isSuccess: true,
-        errors: null,
-        itemId: MOCK_CAPTCHA_ITEM_ID,
-      });
-    });
-
-    it("should include the itemId when updating an existing secret", async () => {
-      vi.mocked(secretsService.save).mockResolvedValue({
-        itemId: MOCK_CAPTCHA_ITEM_ID,
-      } as never);
-
-      await service.saveCaptcha({
-        ...mockSaveCaptchaPayload,
-        itemId: MOCK_CAPTCHA_ITEM_ID,
-      });
-
-      expect(secretsService.save).toHaveBeenCalledWith(
-        expect.objectContaining({ itemId: MOCK_CAPTCHA_ITEM_ID }),
-      );
+      expect(http.post).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.SAVE, mockSaveCaptchaPayload);
+      expect(result).toEqual(mockCaptchaConfig);
     });
 
     it("should throw when the API call fails", async () => {
-      vi.mocked(secretsService.save).mockRejectedValue(new Error("Network error"));
+      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
       await expect(service.saveCaptcha(mockSaveCaptchaPayload)).rejects.toThrow("Network error");
     });
@@ -152,33 +69,32 @@ describe("CaptchaService", () => {
 
   // ─── updateCaptchaConfigStatus ────────────────────────────────────────────
   describe("updateCaptchaConfigStatus", () => {
-    it("should save the captcha secret with the toggled status", async () => {
-      vi.mocked(secretsService.save).mockResolvedValue({
-        itemId: MOCK_CAPTCHA_ITEM_ID,
-      } as never);
+    it("should POST the toggled status to the same save endpoint", async () => {
+      vi.mocked(http.post).mockResolvedValue({ ...mockCaptchaConfig, isEnable: false });
 
-      const result = await service.updateCaptchaConfigStatus(mockUpdateCaptchaStatusPayload);
+      const result = await service.updateCaptchaConfigStatus(mockToggleCaptchaStatusPayload);
 
-      expect(secretsService.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          secretKey: "captcha",
-          itemId: MOCK_CAPTCHA_ITEM_ID,
-          keyValuePairs: expect.objectContaining({ isEnable: "false" }),
-        }),
-      );
-      expect(result).toEqual({
-        isSuccess: true,
-        errors: null,
-        itemId: MOCK_CAPTCHA_ITEM_ID,
-      });
+      expect(http.post).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.SAVE, mockToggleCaptchaStatusPayload);
+      expect(result.isEnable).toBe(false);
     });
 
     it("should throw when the API call fails", async () => {
-      vi.mocked(secretsService.save).mockRejectedValue(new Error("Network error"));
+      vi.mocked(http.post).mockRejectedValue(new Error("Network error"));
 
       await expect(
-        service.updateCaptchaConfigStatus(mockUpdateCaptchaStatusPayload),
+        service.updateCaptchaConfigStatus(mockToggleCaptchaStatusPayload),
       ).rejects.toThrow("Network error");
+    });
+  });
+
+  // ─── deleteCaptchaConfig ──────────────────────────────────────────────────
+  describe("deleteCaptchaConfig", () => {
+    it("should DELETE the configuration", async () => {
+      vi.mocked(http.delete).mockResolvedValue(undefined);
+
+      await service.deleteCaptchaConfig();
+
+      expect(http.delete).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.DELETE);
     });
   });
 });

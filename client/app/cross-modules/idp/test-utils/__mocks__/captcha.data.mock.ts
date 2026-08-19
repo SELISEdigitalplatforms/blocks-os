@@ -1,57 +1,40 @@
 import { TEST_PROJECT_KEY, mockSuccessResponse, mockErrorResponse } from "@/test-utils/__mocks__";
 import type {
   ICaptchaConfig,
-  IGetCaptchaConfigsPayload,
-  ISaveCaptchaConfigsPayload,
-  IEnableCaptchaConfigsStatusPayload,
+  IGetCaptchaConfigPayload,
+  ISaveCaptchaConfigPayload,
+  IToggleCaptchaConfigStatusPayload,
 } from "../../captcha/models/captcha";
 
 export { mockSuccessResponse, mockErrorResponse };
 
-// ─── Mock IDs ─────────────────────────────────────────────────────────────────
-
-export const MOCK_CAPTCHA_ITEM_ID = "captcha-a1b2-c3d4";
-
 // ─── Captcha Mocks ───────────────────────────────────────────────────────────
 
 export const mockCaptchaConfig: ICaptchaConfig = {
-  itemId: MOCK_CAPTCHA_ITEM_ID,
-  createdDate: "2026-01-15T10:00:00Z",
-  lastUpdatedDate: "2026-01-15T10:00:00Z",
-  createdBy: "admin",
-  lastUpdatedBy: "admin",
-  organizationIds: [],
-  tags: [],
   captchaKey: "6Le-mock-captcha-key",
-  captchaSecret: "6Le-mock-captcha-secret",
   provider: "recaptcha",
   captchaGenerator: "EasyCaptchaGenerator",
   isEnable: true,
+  secretId: "sec-mock-1",
 };
 
-export const mockCaptchaConfigsResponse = {
-  configurations: [mockCaptchaConfig],
-};
+export const mockEmptyCaptchaConfigResponse = null;
 
-export const mockEmptyCaptchaConfigsResponse = {
-  configurations: [],
-};
-
-export const mockGetCaptchaConfigsPayload: IGetCaptchaConfigsPayload = {
+export const mockGetCaptchaConfigPayload: IGetCaptchaConfigPayload = {
   projectKey: TEST_PROJECT_KEY,
 };
 
-export const mockSaveCaptchaPayload: ISaveCaptchaConfigsPayload = {
+export const mockSaveCaptchaPayload: ISaveCaptchaConfigPayload = {
   captchaKey: "6Le-new-captcha-key",
   captchaSecret: "6Le-new-captcha-secret",
   provider: "recaptcha",
   captchaGenerator: "EasyCaptchaGenerator",
   isEnable: true,
-  projectKey: TEST_PROJECT_KEY,
 };
 
-export const mockUpdateCaptchaStatusPayload: IEnableCaptchaConfigsStatusPayload = {
-  itemId: MOCK_CAPTCHA_ITEM_ID,
+export const mockToggleCaptchaStatusPayload: IToggleCaptchaConfigStatusPayload = {
+  captchaKey: mockCaptchaConfig.captchaKey,
+  provider: mockCaptchaConfig.provider,
+  captchaGenerator: mockCaptchaConfig.captchaGenerator,
   isEnable: false,
-  projectKey: TEST_PROJECT_KEY,
 };

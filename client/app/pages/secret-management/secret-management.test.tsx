@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,7 +22,7 @@ vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
 }));
 vi.mock("@blocks-idp/captcha/hooks/use-captcha-config", () => ({
-  useGetCaptchaConfigs: () => ({ data: h.captchaData }),
+  useGetCaptchaConfig: () => ({ data: h.captchaData }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-identifier", () => ({
   useGetSavedPublicCertificates: () => ({ data: h.externalIdpData }),
@@ -131,22 +131,18 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByText("Add")).toBeTruthy();
   });
 
-  it("blocks adding a captcha config when every provider is already configured", () => {
+  it("shows the Add Configuration action when captcha is not yet configured", () => {
     h.pathname = "/app/proj/secret-management/captcha";
-    h.captchaData = {
-      configurations: [
-        { provider: "RECAPTCHA" },
-        { provider: "HCAPTCHA" },
-        { provider: "TURNSTILE" },
-      ],
-    };
+    h.captchaData = undefined;
     render(<SecretManagementLayout />);
-    const addBtn = screen.getByText("Add Configuration").closest("button") as HTMLButtonElement;
-    fireEvent.click(addBtn);
-    // When all providers are configured the click is intercepted with an info toast.
-    if (h.toast.mock.calls.length > 0) {
-      expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "info" }));
-    }
+    expect(screen.getByText("Add Configuration")).toBeTruthy();
+  });
+
+  it("hides the Add Configuration action once captcha is configured", () => {
+    h.pathname = "/app/proj/secret-management/captcha";
+    h.captchaData = { provider: "recaptcha", isEnable: true, captchaKey: "key", secretId: "sec-1" };
+    render(<SecretManagementLayout />);
+    expect(screen.queryByText("Add Configuration")).toBeNull();
   });
 
   it("renders the branding save/undo actions in branding mode", () => {
