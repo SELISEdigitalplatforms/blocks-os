@@ -1,4 +1,4 @@
-# SeliseBlocks.Secrets
+# SeliseBlocks.Secrets.OS
 
 ## Setup
 
