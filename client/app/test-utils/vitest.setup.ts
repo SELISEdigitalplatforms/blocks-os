@@ -159,3 +159,13 @@ if (typeof document !== "undefined") {
     doc.elementsFromPoint = (): Element[] => [];
   }
 }
+
+// `@seliseblocks/genesis-os` reassigns `window.process = { env: window.__BLOCKS_ENV__ }` at module
+// scope (that is how `getRuntimeEnv` reads runtime config in the browser). In jsdom `window` *is*
+// `globalThis`, so importing any of the package's barrels replaces Node's `process` — and anything
+// reading `process.env.NODE_ENV`, react-query included, then crashes on `undefined`. Seeding
+// `__BLOCKS_ENV__` with the real env keeps the replacement harmless.
+if (typeof window !== "undefined") {
+  const browserWindow = window as Window & { __BLOCKS_ENV__?: Record<string, string | undefined> };
+  browserWindow.__BLOCKS_ENV__ = { ...process.env, ...browserWindow.__BLOCKS_ENV__ };
+}

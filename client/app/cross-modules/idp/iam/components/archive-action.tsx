@@ -80,7 +80,7 @@ export const ArchiveAction = ({
           className="rounded-full"
           aria-label={`Archive ${entity} ${name}`}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[400px]">
