@@ -2,6 +2,7 @@ import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { ProfileImageUploader } from "@blocks-idp/iam/components/profile-image-uploader";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 import { Activity, Calendar, Shield } from "lucide-react";
 
@@ -44,24 +45,32 @@ const formatLastLogin = (value?: string) => {
 };
 
 export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) => {
-  const { data } = useGetUserById({ id, projectKey });
+  const { data, isLoading } = useGetUserById({ id, projectKey });
   const user = data?.data;
 
   return (
     <Card className="mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 shadow-none md:h-full md:min-h-0">
-      {/* Gated on the user having loaded, not on them having a name: a user with
-          no first/last name still has an email worth showing here. */}
-      {user && (
-        <div className="flex flex-col items-start gap-1 px-2 text-left md:hidden">
-          <p className="truncate text-base font-semibold leading-tight text-foreground">
-            {getUserDisplayName(user)}
-          </p>
-          {user?.email && (
-            <CopyToClipboardButton textToCopy={user.email}>
-              <span className="truncate text-sm text-muted-foreground">{user.email}</span>
-            </CopyToClipboardButton>
-          )}
+      {/* Reserves the same height while loading as once the name/email render, so
+          this block popping in doesn't shift the mobile grid's row sizes and
+          squeeze the tab-content row right after the user query resolves. */}
+      {isLoading ? (
+        <div className="flex w-full flex-col items-start gap-1 px-2 text-left md:hidden">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-40" />
         </div>
+      ) : (
+        user && (
+          <div className="flex flex-col items-start gap-1 px-2 text-left md:hidden">
+            <p className="truncate text-base font-semibold leading-tight text-foreground">
+              {getUserDisplayName(user)}
+            </p>
+            {user?.email && (
+              <CopyToClipboardButton textToCopy={user.email}>
+                <span className="truncate text-sm text-muted-foreground">{user.email}</span>
+              </CopyToClipboardButton>
+            )}
+          </div>
+        )
       )}
 
       {/* Avatar */}
