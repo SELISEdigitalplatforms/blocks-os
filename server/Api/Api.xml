@@ -4,6 +4,23 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="T:BlocksOs.Api.Controllers.CaptchaConfigController">
+            <summary>
+            Captcha configuration endpoints.
+            </summary>
+            <remarks>
+            Routing and request/response mapping only, mirroring <see cref="T:BlocksOs.Api.Controllers.SecretsController"/>. Every
+            domain rule lives in <see cref="T:Configuration.DomainService.Captcha.Services.ICaptchaConfigService"/>, which delegates any secret-value
+            handling to the existing, unmodified <c>ISecretService</c> — nothing here calls the vault
+            directly.
+            <para>
+            No action here ever returns a secret value. Reads carry <see cref="P:Configuration.DomainService.Captcha.ResponseModel.CaptchaConfigResult.SecretId"/>
+            instead — a pointer a caller with the right permission can resolve via
+            <c>GET /secrets/value</c> on <see cref="T:BlocksOs.Api.Controllers.SecretsController"/>, an endpoint this controller
+            neither calls nor duplicates.
+            </para>
+            </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>
             Initializes a new instance of the MigrationController.

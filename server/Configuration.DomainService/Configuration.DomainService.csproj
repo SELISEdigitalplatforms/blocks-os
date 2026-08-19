@@ -7,4 +7,9 @@
 		<PackageReference Include="SeliseBlocks.Genesis.OS" />
 		<PackageReference Include="FluentValidation" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Captcha configuration links to a secret value; ISecretService owns the vault. -->
+		<ProjectReference Include="..\Blocks.Secrets\Blocks.Secrets.csproj" />
+	</ItemGroup>
 </Project>
