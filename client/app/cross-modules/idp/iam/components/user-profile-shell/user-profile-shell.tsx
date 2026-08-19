@@ -115,10 +115,13 @@ export const UserProfileShell = ({
         <PageBreadcrumb breadcrumbIndex={4} customTitles={breadcrumbTitles} />
       </div>
       <Tabs value={tabId} className="flex min-h-0 flex-1 flex-col">
-        {/* Mobile stacks 3 auto-flow rows (dropdown, sidebar, tab content) with the
-            last one flexible so only it scrolls; md:grid-rows-[auto_1fr] pins row 2
-            (sidebar + tab content) to the remaining screen height instead. */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)] md:gap-x-6 md:gap-y-4 lg:gap-x-8">
+        {/* Mobile stacks 3 auto-flow rows (dropdown, sidebar, tab content). The sidebar
+            row is capped at 40vh so a tall account-details card can never crowd the
+            tab content out of the viewport - it scrolls internally past that cap
+            instead. The last row is flexible so only the tab content scrolls in the
+            normal case; md:grid-rows-[auto_1fr] pins row 2 (sidebar + tab content) to
+            the remaining screen height instead. */}
+        <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,40vh)_minmax(0,1fr)] gap-4 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)] md:gap-x-6 md:gap-y-4 lg:gap-x-8">
           {/* Mobile header: tabs dropdown */}
           <div className="flex items-center justify-between gap-3 md:hidden">
             <Select value={tabId} onValueChange={(v) => setTabId(v)}>
@@ -157,9 +160,12 @@ export const UserProfileShell = ({
             {rightSlot}
           </div>
 
-          {/* Sidebar (col 1, row 2). Sized to its own content on mobile (row 2 of the
-              mobile grid is auto); fills the row's height at md+. */}
-          <div className="flex w-full flex-col md:col-start-1 md:row-start-2 md:h-full md:min-h-0">
+          {/* Sidebar (col 1, row 2). Sized to its own content on mobile up to the
+              row's 40vh cap, scrolling internally past that; fills the row's height
+              at md+. min-h-0 is required even though the row already caps at 40vh -
+              without it this item's automatic minimum size (its content's min-content
+              height) overrides the track's max and defeats the cap. */}
+          <div className="flex min-h-0 w-full flex-col overflow-y-auto md:col-start-1 md:row-start-2 md:h-full">
             <UserProfileSidebar id={id} projectKey={projectKey} />
           </div>
 

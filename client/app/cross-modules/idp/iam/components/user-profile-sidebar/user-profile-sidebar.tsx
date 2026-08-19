@@ -73,9 +73,10 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
         )
       )}
 
-      {/* Avatar */}
+      {/* Avatar. Smaller on mobile so it doesn't dominate the limited viewport
+          height and crowd out the tab content below it; full size at md+. */}
       <div
-        className="relative mx-auto mt-6 w-full max-w-[220px] shrink-0 md:mt-0"
+        className="relative mx-auto mt-6 w-full max-w-[120px] shrink-0 md:mt-0 md:max-w-[220px]"
         style={{ aspectRatio: "1 / 1" }}
       >
         <ProfileImageUploader
