@@ -10,6 +10,8 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { useDeleteRole } from "@blocks-idp/iam/hooks/use-roles";
+import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
 import { Pencil } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { UpdateRole } from "../update-role/update-role";
@@ -29,6 +31,47 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
+/**
+ * Actions for one role row.
+ *
+ * The archive mutation is instantiated here rather than in the list so `isPending` is scoped to
+ * this row; a single hoisted hook would disable every other row's confirm button.
+ *
+ * stopPropagation sits on the wrapper, not just the buttons: the row navigates on click, and
+ * React events bubble through the component tree even though the dialog renders in a portal --
+ * so Cancel, Confirm and the overlay would otherwise navigate away too.
+ */
+const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => void }) => {
+  const { mutateAsync, isPending } = useDeleteRole();
+
+  return (
+    <div
+      className="flex"
+      role="presentation"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Button
+        size="icon"
+        className="rounded-full"
+        variant="ghost"
+        aria-label={`Edit role ${row.name}`}
+        onClick={() => onEdit(row)}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      {!row.createdFromDefault && (
+        <ArchiveAction
+          entity="role"
+          name={row.name}
+          itemId={row.itemId}
+          archive={mutateAsync}
+          isPending={isPending}
+        />
+      )}
+    </div>
+  );
+};
+
 export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
   const { sortQueryParams, setSortQueryParams } = useRolesSortQueryParams();
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
@@ -102,21 +145,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
       {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex">
-            <Button
-              size="icon"
-              className="rounded-full"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation();
-                setSelectedRole(row.original);
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </div>
-        ),
+        cell: ({ row }) => <RoleRowActions row={row.original} onEdit={setSelectedRole} />,
       },
     ],
     [sortHandler, sortQueryParams],
@@ -124,6 +153,11 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
   const table = useReactTable({
     data: roles,
     columns,
+    // Row identity by itemId rather than the default array index, so the React key on each
+    // TableRow tracks the role and not the position. Measured: an open Archive dialog closes when
+    // the data changes either way, so this is not fixing a live wrong-row bug -- it is the
+    // correct identity for anything TanStack keys per row.
+    getRowId: (row) => row.itemId,
     getCoreRowModel: getCoreRowModel(),
   });
   const onRowClickHandler = (itemId: number | string) => {

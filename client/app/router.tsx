@@ -7,8 +7,7 @@ import { navigationMenus } from "@/constants/navigation-menus";
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
 import { NotificationConfigurationListPage } from "@/cross-modules/communication/notification/components/notification-configuration-list";
-// Temporarily disabled
-// import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
+import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
 import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
 // Temporarily disabled
 // import { MagicUrls } from "@/cross-modules/utilities/pages/magic-urls/magic-urls";
@@ -217,10 +216,10 @@ export const router = createBrowserRouter([
                         index: true,
                         element: <Navigate to="my-services" replace />,
                       },
-                      // {
-                      //   path: "secret",
-                      //   element: <SecretList />,
-                      // },
+                      {
+                        path: "secret",
+                        element: <SecretList />,
+                      },
                       {
                         path: "my-services",
                         element: <MyServicesPage />,

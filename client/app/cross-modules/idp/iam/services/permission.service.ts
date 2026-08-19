@@ -14,6 +14,7 @@ import {
   UpdatePermissionResponse,
 } from "@blocks-idp/iam/models/permission";
 import { PERMISSION_ENDPOINTS } from "../constants/endpoint.constant";
+import { ArchiveResponse } from "../constants/archive-error-messages";
 
 export class PermissionService {
   getPermissions(
@@ -28,6 +29,17 @@ export class PermissionService {
   // via the X-Blocks-Key header, and the hook gates the request on a selected project.
   getPermissionsSeverity(): Promise<IGetPermissionsSeverityResponse> {
     return http.get(`${PERMISSION_ENDPOINTS.GET_PERMISSIONS_GROUP_BY_SEVERITY}`, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  /**
+   * Archives a permission. Soft delete on the backend. Note the caller must be in the default
+   * organization for this to succeed -- there is no client-side signal for that, so the rejection
+   * is surfaced as a mapped toast rather than the action being hidden.
+   */
+  deletePermission(id: string): Promise<ArchiveResponse> {
+    return http.delete(`${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${id}`, undefined, {
       absoluteUrl: true,
     });
   }
