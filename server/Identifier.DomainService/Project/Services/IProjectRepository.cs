@@ -18,6 +18,7 @@ namespace DomainService.Projects
         Task<List<ProjectStatusTracer>> GetAllUnfinishedProjectAsync();
         Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTrace, Tenant project);
         Task<long> GetProjectCountAsync();
+        Task<string?> GetOwnerUserIdAsync(string tenantId);
         Task InsertPeopleAsync(ProjectPeople projectPeople);
         Task<bool> SaveTenantCertificateAsync(TenantCertificate tenantCertificate);
         Task<Tenant> GetByTenantIdAsync(string tenantId);

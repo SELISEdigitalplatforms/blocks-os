@@ -1066,8 +1066,6 @@ namespace DomainService.People
             var ownerProjectPeoples = await _peopleRepository.GetProjectPeoplesAsync(bc.UserId, tenantids);
             await _peopleRepository.UpdateProjectPeopleOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.ItemId)], false);
 
-            await _peopleRepository.UpdateProjectOwnerShipAsync([.. ownerProjectPeoples.Select(p => p.TenantId)], user.ItemId);
-
             List<string> projectPeopleIds = [];
 
             foreach (var tenantdId in tenantids)

@@ -133,6 +133,7 @@ blocks auth oidc-clients save \\
   --scope "openid profile" \\
   --require-pkce \\
   --register-as-identity-provider \\
+  --auto-redirect \\
   --dry-run --json
 \`\`\`
 
@@ -146,6 +147,32 @@ it, and never put a secret in frontend code.
 hosted-login flow authenticates against - that part is automatic, nothing else
 to run. If login later redirects nowhere, check that provider with
 \`blocks auth idp list --json\` before assuming the client is wrong.
+
+\`--auto-redirect\` is not cosmetic either: the scaffolded login page already
+navigates straight to the provider itself (\`window.location.assign\` inside
+\`startLogin()\`), so without this flag IAM's hosted login page shows an extra
+manual "continue" click the app's own code has already made redundant.
+
+OIDC login also has to be switched on for the tenant itself, separately from
+the client - check it before moving on:
+
+\`\`\`bash
+blocks auth config get --json
+\`\`\`
+
+If \`isOidcEnabled\` is \`false\`, enable it. This endpoint replaces the whole
+config document rather than merging fields, so never hand-write a body with
+only \`isOidcEnabled\` in it - always read the current config first and change
+only that one field, which is exactly what this does:
+
+\`\`\`bash
+blocks auth config save --oidc-enabled --dry-run --json
+\`\`\`
+
+Show the user the dry-run output, then re-run with \`--yes\`. You can skip this
+manual check if step 5a (\`blocks new web\`) is about to run next with this same
+client id - it performs this exact check automatically once it resolves an
+OIDC client. It matters most here for step 5b, which never calls \`new web\`.
 
 ### 5a. New app - scaffold it with the CLI
 
