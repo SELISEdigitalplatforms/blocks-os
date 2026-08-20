@@ -15,3 +15,10 @@ export const useGetLiveLogs = (option: IGetLiveLogsPayload) => {
     queryFn: () => lmtService.log.getLiveLog(option),
   });
 };
+
+export const useGetBlocksServices = () => {
+  return useQuery({
+    queryKey: ["blocks-services"],
+    queryFn: () => lmtService.log.getBlocksServices(),
+  });
+};

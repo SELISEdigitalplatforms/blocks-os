@@ -10,6 +10,7 @@ import {
   IRequest,
   IResponse,
 } from "../models/trace.model";
+import { IBlocksServiceItem } from "../models/log.model";
 import { IAPIResponse } from "@/models/api-response";
 import { TRACE_ENDPOINTS } from "../constants/endpoint.constant";
 import { buildTraceTreeFromSpans, parseTraceEntryPoint } from "../utils/trace-tree.util";
@@ -73,5 +74,9 @@ export class TraceService {
       console.error("Failed to fetch trace:", error);
       throw error;
     }
+  }
+
+  async getBlocksServices(): Promise<IBlocksServiceItem[]> {
+    return http.get<IBlocksServiceItem[]>(TRACE_ENDPOINTS.GET_BLOCKS_SERVICES);
   }
 }

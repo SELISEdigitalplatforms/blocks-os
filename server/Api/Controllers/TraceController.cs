@@ -1,5 +1,7 @@
 using Blocks.Genesis;
+using Cloud.LmtService.Models.BlocksServices;
 using Cloud.LmtService.Models.Trace;
+using Cloud.LmtService.Services.BlocksServices;
 using Cloud.LmtService.Services.Trace;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,10 +15,12 @@ namespace BlocksOs.Api.Controllers
     public class TraceController : ControllerBase
     {
         private readonly ITraceService _traceService;
+  private readonly IBlocksServicesService _blocksServicesService;
 
-        public TraceController(ITraceService traceService)
+  public TraceController (ITraceService traceService, IBlocksServicesService blocksServicesService)
         {
             _traceService = traceService;
+            _blocksServicesService = blocksServicesService;
         }
 
 
@@ -48,5 +52,11 @@ namespace BlocksOs.Api.Controllers
             return await _traceService.GetServiceAnalytics(request);
         }
 
-    }
+        [HttpGet]
+        public async Task<List<BlocksServiceItem>> GetBlocksServices ( )
+        {
+         return await _blocksServicesService.GetBlocksServicesAsync();
+        }
+
+     }
 }

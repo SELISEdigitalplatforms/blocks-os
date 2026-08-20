@@ -72,4 +72,49 @@ describe("Radio", () => {
 
     expect(onChange).toHaveBeenCalledWith(null);
   });
+
+  const nestedOptions = [
+    {
+      label: "OS",
+      value: "os",
+      children: [
+        { label: "API", value: "os::api" },
+        { label: "Worker", value: "os::worker" },
+      ],
+    },
+    { label: "IAM", value: "iam" },
+  ];
+
+  it("does not show an expand toggle for options without children", async () => {
+    const user = userEvent.setup();
+    render(<Radio label="Service" options={nestedOptions} value="" onChange={vi.fn()} />);
+
+    await user.click(screen.getByRole("button"));
+
+    expect(screen.queryByRole("button", { name: "Expand IAM" })).toBeNull();
+  });
+
+  it("expands a service to reveal its child options and selects one", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Radio label="Service" options={nestedOptions} value="" onChange={onChange} />);
+
+    await user.click(screen.getByRole("button"));
+    expect(screen.queryByText("Worker")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Expand OS" }));
+    await user.click(await screen.findByText("Worker"));
+
+    expect(onChange).toHaveBeenCalledWith("os::worker");
+  });
+
+  it("auto-expands the parent of the currently selected child and shows a combined badge", async () => {
+    const user = userEvent.setup();
+    render(<Radio label="Service" options={nestedOptions} value="os::worker" onChange={vi.fn()} />);
+
+    expect(within(screen.getByRole("button")).getByText("OS · Worker")).toBeTruthy();
+
+    await user.click(screen.getByRole("button"));
+    expect(screen.getByText("Worker")).toBeTruthy();
+  });
 });
