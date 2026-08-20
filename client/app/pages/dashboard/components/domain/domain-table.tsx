@@ -5,10 +5,13 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Settings, ShieldCheck, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainAction } from "./domain.constant";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
@@ -170,7 +173,23 @@ export const DomainTable = ({ data }: DomainTableProps) => {
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: DASHBOARD_TABLE_PAGE_SIZE } },
+    // A data change otherwise queues a reset of the page index back to the first page.
+    // That reset would race the clamp below and win, throwing a reader back to page 1 on
+    // every background refetch, so the index is kept and corrected explicitly instead.
+    autoResetPageIndex: false,
   });
+
+  const { pageIndex } = table.getState().pagination;
+  const lastPageIndex = Math.max(0, table.getPageCount() - 1);
+
+  // Deleting the last row of the last page leaves the index past the end of the data,
+  // which renders an empty table body. Clamp in a layout effect so that blank frame is
+  // never painted.
+  useLayoutEffect(() => {
+    if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex);
+  }, [pageIndex, lastPageIndex, table]);
 
   return (
     <>
@@ -250,6 +269,20 @@ export const DomainTable = ({ data }: DomainTableProps) => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination — omitted entirely when there is nothing to page through, so the
+          empty state is not captioned "Page 1 of 1". No page-size selector: the size is
+          fixed at five. */}
+      {data.length > 0 && (
+        <nav aria-label="Domains pagination" className="mt-4 flex items-center md:justify-end">
+          <Pagination
+            page={pageIndex}
+            pageSize={DASHBOARD_TABLE_PAGE_SIZE}
+            totalCount={data.length}
+            onChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
+          />
+        </nav>
+      )}
     </>
   );
 };

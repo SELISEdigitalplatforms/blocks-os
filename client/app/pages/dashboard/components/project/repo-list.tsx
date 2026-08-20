@@ -2,6 +2,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { useGetEnvRepositories } from "@/hooks/use-project";
 import type { IProject } from "@seliseblocks/genesis-os/models";
+import { useState } from "react";
 import { ProjectRepoTable } from "./repo-table";
 
 export const ProjectRepoList = ({
@@ -12,6 +13,9 @@ export const ProjectRepoList = ({
   isLoading: boolean;
 }) => {
   const { applications } = project;
+  // Held here rather than in the table: the skeleton branch below unmounts the table on
+  // every background refetch, which would silently return a reader to the first page.
+  const [repoPageIndex, setRepoPageIndex] = useState(0);
   const {
     data: envRepositoriesResponse,
     isLoading: isLoadingEnvRepos,
@@ -44,6 +48,8 @@ export const ProjectRepoList = ({
         domains={applications}
         projectKey={project?.tenantId || ""}
         projectEnv={project?.environment || ""}
+        page={repoPageIndex}
+        onPageChange={setRepoPageIndex}
       />
     </DashboardSectionCard>
   );

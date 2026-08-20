@@ -6,10 +6,13 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
 import {
   Tooltip,
   TooltipContent,
@@ -99,6 +102,10 @@ interface ProjectRepoTableProps {
   domains: IDomain[];
   projectKey: string;
   projectEnv: string;
+  /** Page index is owned by the parent: this table is unmounted and remounted on every
+   *  background refetch (see repo-list.tsx), which would destroy state held here. */
+  page: number;
+  onPageChange: (pageIndex: number) => void;
 }
 
 export const ProjectRepoTable = ({
@@ -106,6 +113,8 @@ export const ProjectRepoTable = ({
   domains,
   projectKey,
   projectEnv,
+  page,
+  onPageChange,
 }: ProjectRepoTableProps) => {
   // ── Set custom domain dialog ────────────────────────────────────────────────
   const [setTarget, setSetTarget] = useState<IEnvRepository | null>(null);
@@ -122,7 +131,28 @@ export const ProjectRepoTable = ({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    // See `autoResetPageIndex` in domain-table.tsx: the queued reset would override the
+    // clamp below.
+    autoResetPageIndex: false,
+    state: { pagination: { pageIndex: page, pageSize: DASHBOARD_TABLE_PAGE_SIZE } },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === "function"
+          ? updater({ pageIndex: page, pageSize: DASHBOARD_TABLE_PAGE_SIZE })
+          : updater;
+      onPageChange(next.pageIndex);
+    },
   });
+
+  const lastPageIndex = Math.max(0, table.getPageCount() - 1);
+
+  // Clamp a now-out-of-range page back to the last one that exists, before paint.
+  // Routed through the table (not straight to onPageChange) so every page change
+  // takes the same path out through onPaginationChange.
+  useLayoutEffect(() => {
+    if (page > lastPageIndex) table.setPageIndex(lastPageIndex);
+  }, [page, lastPageIndex, table]);
 
   return (
     <>
@@ -183,6 +213,21 @@ export const ProjectRepoTable = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination — same component and same rules as the Domains section. */}
+      {data.length > 0 && (
+        <nav
+          aria-label="Repositories pagination"
+          className="mt-4 flex items-center md:justify-end"
+        >
+          <Pagination
+            page={page}
+            pageSize={DASHBOARD_TABLE_PAGE_SIZE}
+            totalCount={data.length}
+            onChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
+          />
+        </nav>
+      )}
     </>
   );
 };
