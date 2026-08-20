@@ -19,8 +19,13 @@ vi.mock("@seliseblocks/genesis-os/components", () => ({
     </button>
   ),
   CopyToClipboardButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  RenderConditionally: ({ condition, children }: { condition: boolean; children: React.ReactNode }) =>
-    condition ? <>{children}</> : null,
+  RenderConditionally: ({
+    condition,
+    children,
+  }: {
+    condition: boolean;
+    children: React.ReactNode;
+  }) => (condition ? <>{children}</> : null),
 }));
 vi.mock("./domain-form-dialog", () => ({
   DomainFormDialog: ({ open }: { open: boolean }) => (
@@ -55,6 +60,37 @@ describe("DomainTable", () => {
   it("renders an empty state when there are no domains", () => {
     render(<DomainTable data={[]} />);
     expect(screen.getByText("No domains configured yet.")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("Search domains...")).toBeNull();
+  });
+
+  it("filters domain names by case-insensitive substring without changing source data", async () => {
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+
+    await user.type(screen.getByPlaceholderText("Search domains..."), "VERIFIED");
+    await waitFor(() => expect(visibleDomains()).toEqual(["verified.com"]));
+    expect(domains).toHaveLength(2);
+    expect(pageIndicator().textContent).toBe("Page 1 of 1");
+  });
+
+  it("shows a distinct no-match state without pagination", async () => {
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+
+    await user.type(screen.getByPlaceholderText("Search domains..."), "missing");
+    expect(await screen.findByText("No domains match your search.")).toBeTruthy();
+    expect(screen.queryByText("No domains configured yet.")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: /pagination/i })).toBeNull();
+  });
+
+  it("keeps row actions attached to the filtered domain", async () => {
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+    await user.type(screen.getByPlaceholderText("Search domains..."), "pending");
+    await waitFor(() => expect(visibleDomains()).toEqual(["pending.com"]));
+
+    await user.click(screen.getByTitle("Validate CNAME"));
+    expect(screen.getByTestId("cname-dialog").getAttribute("data-domain")).toBe("pending.com");
   });
 
   it("only shows configure and CNAME actions for unverified domains", () => {
@@ -192,7 +228,6 @@ describe("DomainTable", () => {
   });
 });
 
-
 // ─── Pagination (#471) ────────────────────────────────────────────────────────
 
 const manyDomains = (count: number) =>
@@ -242,6 +277,23 @@ describe("DomainTable pagination", () => {
     await user.click(navButtons().next);
     expect(visibleDomains()).toEqual(names(5, 6));
     expect(pageIndicator().textContent).toBe("Page 2 of 3");
+  });
+
+  it("resets pagination on search and restores page one when cleared", async () => {
+    const user = userEvent.setup();
+    render(<DomainTable data={manyDomains(12)} />);
+    await user.click(navButtons().next);
+    expect(pageIndicator().textContent).toBe("Page 2 of 3");
+
+    const input = screen.getByPlaceholderText("Search domains...");
+    await user.type(input, "DOMAIN-12");
+    await waitFor(() => expect(visibleDomains()).toEqual(["domain-12.com"]));
+    expect(pageIndicator().textContent).toBe("Page 1 of 1");
+
+    const clearButton = within(input.parentElement as HTMLElement).getByRole("button");
+    await user.click(clearButton);
+    await waitFor(() => expect(visibleDomains()).toEqual(names(5)));
+    expect(pageIndicator().textContent).toBe("Page 1 of 3");
   });
 
   it("jumps to the last page, back one, and home again", async () => {

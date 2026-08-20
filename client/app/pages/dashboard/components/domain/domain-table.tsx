@@ -9,7 +9,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Settings, ShieldCheck, Trash2 } from "lucide-react";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
+import { FilterControls } from "@/components/filter-toolbar";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
 import { DomainFormDialog } from "./domain-form-dialog";
@@ -117,6 +118,7 @@ interface DomainTableProps {
 
 export const DomainTable = ({ data }: DomainTableProps) => {
   const { mutateAsync, isPending } = useUpdateProject();
+  const [search, setSearch] = useState("");
 
   // ── Edit dialog ────────────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<IDomain | null>(null);
@@ -169,8 +171,12 @@ export const DomainTable = ({ data }: DomainTableProps) => {
 
   // ── Table ──────────────────────────────────────────────────────────────────
   const columns = buildColumns(handleEdit, handleDeleteRequest, handleCname);
+  const filteredData = useMemo(() => {
+    const normalizedSearch = search.toLowerCase();
+    return data.filter((domain) => domain.domain.toLowerCase().includes(normalizedSearch));
+  }, [data, search]);
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -190,6 +196,11 @@ export const DomainTable = ({ data }: DomainTableProps) => {
   useLayoutEffect(() => {
     if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex);
   }, [pageIndex, lastPageIndex, table]);
+
+  const handleSearchChange = (value: string) => {
+    table.setPageIndex(0);
+    setSearch(value);
+  };
 
   return (
     <>
@@ -224,6 +235,16 @@ export const DomainTable = ({ data }: DomainTableProps) => {
         }}
       />
 
+      {data.length > 0 && (
+        <div className="mb-4 flex justify-end">
+          <FilterControls.SearchInput
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search domains..."
+          />
+        </div>
+      )}
+
       {/* Table — min width keeps columns readable and scrolls horizontally
           on narrow screens, matching the repo table's behavior */}
       <div className="relative w-full overflow-x-auto">
@@ -252,7 +273,9 @@ export const DomainTable = ({ data }: DomainTableProps) => {
                   colSpan={columns.length}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  No domains configured yet.
+                  {data.length === 0
+                    ? "No domains configured yet."
+                    : "No domains match your search."}
                 </td>
               </tr>
             ) : (
@@ -273,12 +296,12 @@ export const DomainTable = ({ data }: DomainTableProps) => {
       {/* Pagination — omitted entirely when there is nothing to page through, so the
           empty state is not captioned "Page 1 of 1". No page-size selector: the size is
           fixed at five. */}
-      {data.length > 0 && (
+      {filteredData.length > 0 && (
         <nav aria-label="Domains pagination" className="mt-4 flex items-center md:justify-end">
           <Pagination
             page={pageIndex}
             pageSize={DASHBOARD_TABLE_PAGE_SIZE}
-            totalCount={data.length}
+            totalCount={filteredData.length}
             onChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
           />
         </nav>

@@ -16,6 +16,11 @@ export const ProjectRepoList = ({
   // Held here rather than in the table: the skeleton branch below unmounts the table on
   // every background refetch, which would silently return a reader to the first page.
   const [repoPageIndex, setRepoPageIndex] = useState(0);
+  const [repoSearch, setRepoSearch] = useState("");
+  const handleRepoSearchChange = (value: string) => {
+    setRepoPageIndex(0);
+    setRepoSearch(value);
+  };
   const {
     data: envRepositoriesResponse,
     isLoading: isLoadingEnvRepos,
@@ -50,6 +55,8 @@ export const ProjectRepoList = ({
         projectEnv={project?.environment || ""}
         page={repoPageIndex}
         onPageChange={setRepoPageIndex}
+        search={repoSearch}
+        onSearchChange={handleRepoSearchChange}
       />
     </DashboardSectionCard>
   );
