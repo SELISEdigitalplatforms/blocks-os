@@ -5,6 +5,7 @@ import { CaptchaService } from "./captcha.service";
 import { CAPTCHA_ENDPOINTS } from "../constants/endpoint.constant";
 import {
   mockCaptchaConfig,
+  mockCaptchaConfigList,
   mockSaveCaptchaPayload,
   mockToggleCaptchaStatusPayload,
 } from "../../test-utils/__mocks__";
@@ -25,19 +26,19 @@ describe("CaptchaService", () => {
 
   // ─── getCaptchaConfig ─────────────────────────────────────────────────────
   describe("getCaptchaConfig", () => {
-    it("should GET the captcha configuration", async () => {
+    it("should GET the captcha configuration by id", async () => {
       vi.mocked(http.get).mockResolvedValue(mockCaptchaConfig);
 
-      const result = await service.getCaptchaConfig();
+      const result = await service.getCaptchaConfig(mockCaptchaConfig.id);
 
-      expect(http.get).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.GET);
+      expect(http.get).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.GET(mockCaptchaConfig.id));
       expect(result).toEqual(mockCaptchaConfig);
     });
 
-    it("should resolve to null when nothing has been configured (404)", async () => {
+    it("should resolve to null when the id does not exist (404)", async () => {
       vi.mocked(http.get).mockRejectedValue({ status: 404 });
 
-      const result = await service.getCaptchaConfig();
+      const result = await service.getCaptchaConfig("missing-id");
 
       expect(result).toBeNull();
     });
@@ -45,7 +46,27 @@ describe("CaptchaService", () => {
     it("should rethrow any other failure", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
 
-      await expect(service.getCaptchaConfig()).rejects.toThrow("Network error");
+      await expect(service.getCaptchaConfig(mockCaptchaConfig.id)).rejects.toThrow(
+        "Network error",
+      );
+    });
+  });
+
+  // ─── getCaptchaConfigList ─────────────────────────────────────────────────
+  describe("getCaptchaConfigList", () => {
+    it("should GET every captcha configuration", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockCaptchaConfigList);
+
+      const result = await service.getCaptchaConfigList();
+
+      expect(http.get).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.LIST);
+      expect(result).toEqual(mockCaptchaConfigList);
+    });
+
+    it("should throw when the API call fails", async () => {
+      vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
+
+      await expect(service.getCaptchaConfigList()).rejects.toThrow("Network error");
     });
   });
 
@@ -89,12 +110,12 @@ describe("CaptchaService", () => {
 
   // ─── deleteCaptchaConfig ──────────────────────────────────────────────────
   describe("deleteCaptchaConfig", () => {
-    it("should DELETE the configuration", async () => {
+    it("should DELETE the configuration by id", async () => {
       vi.mocked(http.delete).mockResolvedValue(undefined);
 
-      await service.deleteCaptchaConfig();
+      await service.deleteCaptchaConfig(mockCaptchaConfig.id);
 
-      expect(http.delete).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.DELETE);
+      expect(http.delete).toHaveBeenCalledWith(CAPTCHA_ENDPOINTS.DELETE(mockCaptchaConfig.id));
     });
   });
 });

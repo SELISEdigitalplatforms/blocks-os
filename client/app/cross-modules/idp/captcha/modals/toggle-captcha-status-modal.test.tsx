@@ -20,6 +20,7 @@ import { ToggleCaptchaStatusModal } from "./toggle-captcha-status-modal";
 import type { ICaptchaConfig } from "../models/captcha";
 
 const config = {
+  id: "cfg-1",
   provider: "recaptcha",
   isEnable: true,
   captchaKey: "key",
@@ -46,7 +47,12 @@ describe("ToggleCaptchaStatusModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Yes" }));
     await waitFor(() =>
       expect(h.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ isEnable: false, provider: "recaptcha", captchaKey: "key" }),
+        expect.objectContaining({
+          id: "cfg-1",
+          isEnable: false,
+          provider: "recaptcha",
+          captchaKey: "key",
+        }),
       ),
     );
     expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("captchaSecret");

@@ -9,7 +9,6 @@ import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/u
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
 import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
-import { useGetCaptchaConfig } from "@blocks-idp/captcha/hooks/use-captcha-config";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
 import {
@@ -26,7 +25,6 @@ import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 function SecretManagementHeaderActions({
   isOidcBranding,
   currentPath,
-  captchaConfigured,
   setIsAddIdpOpen,
   setIsEmailConfigOpen,
   setIsNotificationConfigOpen,
@@ -38,7 +36,6 @@ function SecretManagementHeaderActions({
 }: {
   isOidcBranding: boolean;
   currentPath: string;
-  captchaConfigured: boolean;
   setIsAddIdpOpen: (value: boolean) => void;
   setIsEmailConfigOpen: (value: boolean) => void;
   setIsNotificationConfigOpen: (value: boolean) => void;
@@ -91,7 +88,7 @@ function SecretManagementHeaderActions({
           </span>
         </Button>
       )}
-      {currentPath === "captcha" && !captchaConfigured && (
+      {currentPath === "captcha" && (
         <ConfigureCaptchaModal>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -186,10 +183,6 @@ export default function SecretManagementLayout() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   // Each query drives header actions for its own page only, so gate it on the
   // active route to avoid fetching every page's data on every page.
-  const { data: captchaData } = useGetCaptchaConfig(
-    { projectKey: tenantId },
-    currentPath === "captcha",
-  );
   const { data: externalIdpData } = useGetSavedPublicCertificates(
     currentPath === "external-idp" ? tenantId : "",
   );
@@ -242,7 +235,6 @@ export default function SecretManagementLayout() {
     <SecretManagementHeaderActions
       isOidcBranding={isOidcBranding}
       currentPath={currentPath}
-      captchaConfigured={!!captchaData}
       setIsAddIdpOpen={setIsAddIdpOpen}
       setIsEmailConfigOpen={setIsEmailConfigOpen}
       setIsNotificationConfigOpen={setIsNotificationConfigOpen}

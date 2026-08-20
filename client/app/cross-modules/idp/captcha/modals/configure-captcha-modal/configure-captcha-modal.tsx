@@ -64,6 +64,7 @@ export const ConfigureCaptchaModal = ({ configuration, children }: ConfigureCapt
   const onSubmitHandler = async (values: ConfigureCaptchaFormValues) => {
     try {
       await mutateAsync({
+        ...(configuration ? { id: configuration.id } : {}),
         isEnable: configuration ? configuration.isEnable : false,
         provider: values.provider,
         captchaKey: values.captchaKey,

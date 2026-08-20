@@ -70,6 +70,8 @@ describe("ConfigureCaptchaModal", () => {
     expect(payload.captchaKey).toBe("site-key-123");
     expect(payload.captchaSecret).toBe("secret-key-123");
     expect(payload.isEnable).toBe(false);
+    // A create must never send an id -- the backend generates one.
+    expect(payload).not.toHaveProperty("id");
     expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Captcha added successfully" });
   });
 
@@ -83,6 +85,7 @@ describe("ConfigureCaptchaModal", () => {
   it("edits an existing configuration and preserves its isEnable value", async () => {
     const user = userEvent.setup();
     const configuration = {
+      id: "cfg-1",
       provider: "recaptcha",
       isEnable: true,
       captchaKey: "existing-key",
@@ -101,6 +104,7 @@ describe("ConfigureCaptchaModal", () => {
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     const payload = h.mutateAsync.mock.calls[0][0];
+    expect(payload.id).toBe("cfg-1");
     expect(payload.isEnable).toBe(true);
     expect(payload.captchaKey).toBe("updated-key");
     // The secret field was left blank -- it must not be sent at all.
@@ -111,6 +115,7 @@ describe("ConfigureCaptchaModal", () => {
   it("allows saving an edit without touching the secret key", async () => {
     const user = userEvent.setup();
     const configuration = {
+      id: "cfg-1",
       provider: "recaptcha",
       isEnable: true,
       captchaKey: "existing-key",
@@ -129,6 +134,7 @@ describe("ConfigureCaptchaModal", () => {
   it("sends the new secret when one is entered while editing", async () => {
     const user = userEvent.setup();
     const configuration = {
+      id: "cfg-1",
       provider: "recaptcha",
       isEnable: true,
       captchaKey: "existing-key",

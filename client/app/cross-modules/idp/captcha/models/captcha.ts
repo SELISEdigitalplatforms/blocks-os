@@ -10,11 +10,12 @@ export const CAPTCHA_GENERATOR_TYPE = {
 export type CAPTCHA_PROVIDERS_KEY = keyof typeof CAPTCHA_PROVIDERS;
 
 /**
- * There is exactly one captcha configuration per tenant. The backend never returns the secret
- * itself — only whether one is set (`secretId` present) — so the edit form must treat the
- * secret field as write-only, never pre-filled with a real value.
+ * A tenant may have multiple captcha configurations, each identified by `id`. The backend never
+ * returns the secret itself — only whether one is set (`secretId` present) — so the edit form
+ * must treat the secret field as write-only, never pre-filled with a real value.
  */
 export interface ICaptchaConfig {
+  id: string;
   provider: CAPTCHA_PROVIDERS_KEY;
   captchaKey: string;
   captchaGenerator: keyof typeof CAPTCHA_GENERATOR_TYPE;
@@ -27,6 +28,8 @@ export interface IGetCaptchaConfigPayload {
 }
 
 export interface ISaveCaptchaConfigPayload {
+  /** Omit to create a new configuration; supply an existing `id` to update it instead. */
+  id?: string;
   provider: string;
   captchaKey: string;
   captchaGenerator: string;
@@ -36,6 +39,7 @@ export interface ISaveCaptchaConfigPayload {
 }
 
 export interface IToggleCaptchaConfigStatusPayload {
+  id: string;
   provider: string;
   captchaKey: string;
   captchaGenerator: string;

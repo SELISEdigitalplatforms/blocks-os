@@ -4,6 +4,7 @@ const BASE = "/api/captcha";
 
 export const CAPTCHA_ENDPOINTS = {
   SAVE: `${BASE}/save`,
-  GET: `${BASE}/get`,
-  DELETE: `${BASE}/delete`,
+  LIST: `${BASE}/list`,
+  GET: (id: string) => `${BASE}/get/${id}`,
+  DELETE: (id: string) => `${BASE}/delete/${id}`,
 } as const;

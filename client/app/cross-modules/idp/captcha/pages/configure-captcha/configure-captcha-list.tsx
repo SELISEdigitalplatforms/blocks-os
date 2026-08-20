@@ -4,12 +4,13 @@ import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../../models/captcha";
 import { ConfigureCaptchaModal } from "../../modals/configure-captcha-modal";
 import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { cn } from "@/lib/utils";
-import { Pencil, Power, PowerOff, Settings } from "lucide-react";
+import { Pencil, Power, PowerOff, Settings, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { EmptyState } from "@/components/ui-kits/empty-state";
 import { MaskedText } from "@/components/masked-text";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { ToggleCaptchaStatusModal } from "@blocks-idp/captcha/modals/toggle-captcha-status-modal";
+import { DeleteCaptchaModal } from "@blocks-idp/captcha/modals/delete-captcha-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { ReactNode } from "react";
 
@@ -41,20 +42,11 @@ const LoadingSkelton = () => (
 
 const EmptyCaptchaConfig = () => {
   return (
-    <div className="grid gap-4">
-      <EmptyState
-        icon={Settings}
-        title="Captcha is not configured"
-        description="Configure a captcha provider to protect your forms."
-      />
-      <div className="flex justify-center">
-        <ConfigureCaptchaModal configuration={null}>
-          <DialogTrigger asChild>
-            <Button size="sm">Configure Captcha</Button>
-          </DialogTrigger>
-        </ConfigureCaptchaModal>
-      </div>
-    </div>
+    <EmptyState
+      icon={Settings}
+      title="Captcha is not configured"
+      description="Configure a captcha provider to protect your forms."
+    />
   );
 };
 
@@ -70,16 +62,9 @@ const Item = ({ label, children }: { label: string; children: ReactNode }) => {
 const CaptchaSwitcher = ({ enabled }: { enabled: boolean }) =>
   enabled ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />;
 
-type ConfigureCaptchaListProps = {
-  isLoading: boolean;
-  configuration: ICaptchaConfig | null;
-};
-export const ConfigureCaptchaList = ({ isLoading, configuration }: ConfigureCaptchaListProps) => {
-  if (isLoading) return <LoadingSkelton />;
-  if (!configuration) return <EmptyCaptchaConfig />;
-
+const CaptchaConfigCard = ({ configuration }: { configuration: ICaptchaConfig }) => {
   const provider = CAPTCHA_PROVIDERS[configuration.provider];
-  if (!provider) return <EmptyCaptchaConfig />;
+  if (!provider) return null;
 
   const enabled = !!configuration.isEnable;
   return (
@@ -128,6 +113,23 @@ export const ConfigureCaptchaList = ({ isLoading, configuration }: ConfigureCapt
             </TooltipTrigger>
             <TooltipContent>{enabled ? "Disable" : "Enable"}</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DeleteCaptchaModal configuration={configuration}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </DialogTrigger>
+              </DeleteCaptchaModal>
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
         </div>
       </CardHeader>
       <CardContent className="border-t pt-4">
@@ -146,5 +148,22 @@ export const ConfigureCaptchaList = ({ isLoading, configuration }: ConfigureCapt
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+type ConfigureCaptchaListProps = {
+  isLoading: boolean;
+  configurations: ICaptchaConfig[];
+};
+export const ConfigureCaptchaList = ({ isLoading, configurations }: ConfigureCaptchaListProps) => {
+  if (isLoading) return <LoadingSkelton />;
+  if (!configurations.length) return <EmptyCaptchaConfig />;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {configurations.map((configuration) => (
+        <CaptchaConfigCard key={configuration.id} configuration={configuration} />
+      ))}
+    </div>
   );
 };

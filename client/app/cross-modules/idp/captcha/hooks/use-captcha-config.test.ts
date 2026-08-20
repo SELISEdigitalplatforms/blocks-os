@@ -5,14 +5,16 @@ import {
   mockCaptchaServiceFactory,
   mockGetCaptchaConfigPayload,
   mockCaptchaConfig,
+  mockCaptchaConfigList,
   mockSaveCaptchaPayload,
   mockToggleCaptchaStatusPayload,
 } from "../../test-utils/__mocks__";
 import { captchaService } from "../services/captcha.service";
 import {
-  useGetCaptchaConfig,
+  useGetCaptchaConfigList,
   useSaveCaptcha,
   useToggleCaptchaConfigStatus,
+  useDeleteCaptcha,
 } from "./use-captcha-config";
 
 vi.mock("@blocks-idp/captcha/services/captcha.service", () => mockCaptchaServiceFactory());
@@ -22,25 +24,25 @@ describe("use-captcha-config hooks", () => {
     vi.resetAllMocks();
   });
 
-  describe("useGetCaptchaConfig", () => {
-    it("should fetch the captcha config successfully", async () => {
-      vi.mocked(captchaService.getCaptchaConfig).mockResolvedValue(mockCaptchaConfig);
+  describe("useGetCaptchaConfigList", () => {
+    it("should fetch the captcha config list successfully", async () => {
+      vi.mocked(captchaService.getCaptchaConfigList).mockResolvedValue(mockCaptchaConfigList);
 
-      const { result } = renderHook(() => useGetCaptchaConfig(mockGetCaptchaConfigPayload), {
+      const { result } = renderHook(() => useGetCaptchaConfigList(mockGetCaptchaConfigPayload), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data).toEqual(mockCaptchaConfig);
-      expect(captchaService.getCaptchaConfig).toHaveBeenCalledWith();
+      expect(result.current.data).toEqual(mockCaptchaConfigList);
+      expect(captchaService.getCaptchaConfigList).toHaveBeenCalledWith();
     });
 
     it("should not fetch when no project is selected", () => {
-      renderHook(() => useGetCaptchaConfig({ projectKey: "" }), {
+      renderHook(() => useGetCaptchaConfigList({ projectKey: "" }), {
         wrapper: createWrapper(),
       });
 
-      expect(captchaService.getCaptchaConfig).not.toHaveBeenCalled();
+      expect(captchaService.getCaptchaConfigList).not.toHaveBeenCalled();
     });
   });
 
@@ -76,6 +78,23 @@ describe("use-captcha-config hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(captchaService.updateCaptchaConfigStatus).toHaveBeenCalledWith(
         mockToggleCaptchaStatusPayload,
+        expect.anything(),
+      );
+    });
+  });
+
+  describe("useDeleteCaptcha", () => {
+    it("should delete a captcha config successfully", async () => {
+      vi.mocked(captchaService.deleteCaptchaConfig).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useDeleteCaptcha(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(mockCaptchaConfig.id);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(captchaService.deleteCaptchaConfig).toHaveBeenCalledWith(
+        mockCaptchaConfig.id,
         expect.anything(),
       );
     });

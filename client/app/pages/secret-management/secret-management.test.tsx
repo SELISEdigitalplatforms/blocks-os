@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   pathname: "/app/proj/secret-management/secret",
-  captchaData: undefined as unknown,
   externalIdpData: undefined as unknown,
   clientsData: [] as unknown[],
   brandingActions: undefined as unknown,
@@ -20,9 +19,6 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
-}));
-vi.mock("@blocks-idp/captcha/hooks/use-captcha-config", () => ({
-  useGetCaptchaConfig: () => ({ data: h.captchaData }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-identifier", () => ({
   useGetSavedPublicCertificates: () => ({ data: h.externalIdpData }),
@@ -83,7 +79,6 @@ describe("SecretManagementLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.pathname = "/app/proj/secret-management/secret";
-    h.captchaData = undefined;
     h.externalIdpData = undefined;
     h.clientsData = [];
     h.brandingActions = undefined;
@@ -131,18 +126,10 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByText("Add")).toBeTruthy();
   });
 
-  it("shows the Add Configuration action when captcha is not yet configured", () => {
+  it("always shows the Add Configuration action on the captcha page, since a tenant may configure more than one", () => {
     h.pathname = "/app/proj/secret-management/captcha";
-    h.captchaData = undefined;
     render(<SecretManagementLayout />);
     expect(screen.getByText("Add Configuration")).toBeTruthy();
-  });
-
-  it("hides the Add Configuration action once captcha is configured", () => {
-    h.pathname = "/app/proj/secret-management/captcha";
-    h.captchaData = { provider: "recaptcha", isEnable: true, captchaKey: "key", secretId: "sec-1" };
-    render(<SecretManagementLayout />);
-    expect(screen.queryByText("Add Configuration")).toBeNull();
   });
 
   it("renders the branding save/undo actions in branding mode", () => {
