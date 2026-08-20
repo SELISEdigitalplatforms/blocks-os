@@ -53,6 +53,23 @@ vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: (...a: unknown[]) => errorToast(...a),
 }));
 
+// ArchiveAction now previews the archive's blast radius. These list tests are about the list, not
+// the preview, so it is stubbed to "loaded, nothing affected" -- the shape that yields a plain
+// one-click confirm with no consent checkbox, exactly as before impact counts existed.
+const impactData = { value: undefined as unknown, isLoading: false, isError: false };
+vi.mock("@blocks-idp/iam/hooks/use-archive-impact", () => ({
+  useRoleArchiveImpact: () => ({
+    data: impactData.value,
+    isLoading: impactData.isLoading,
+    isError: impactData.isError,
+  }),
+  usePermissionArchiveImpact: () => ({
+    data: impactData.value,
+    isLoading: impactData.isLoading,
+    isError: impactData.isError,
+  }),
+}));
+
 const archiveRole = vi.fn();
 const archivePending = { value: false, perCall: [] as boolean[] };
 const useDeleteRoleSpy = vi.fn();
@@ -194,7 +211,7 @@ describe("RolesList archive action", () => {
     await user.click(trash());
     await user.click(screen.getByRole("button", { name: "Archive" }));
 
-    expect(archiveRole).toHaveBeenCalledWith("role-1");
+    expect(archiveRole).toHaveBeenCalledWith(expect.objectContaining({ id: "role-1" }));
     expect(successToast).toHaveBeenCalled();
     expect(errorToast).not.toHaveBeenCalled();
     expect(screen.queryByText("Archive this role?")).toBeNull();

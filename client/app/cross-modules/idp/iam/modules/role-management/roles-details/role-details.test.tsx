@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   isPending: false,
   showSuccessToast: vi.fn(),
   showErrorToast: vi.fn(),
+  isMultiOrgEnabled: false,
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -39,6 +40,11 @@ vi.mock("./role-details-state", () => ({
 }));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
   useSetRoles: () => ({ isPending: h.isPending, mutateAsync: h.mutateAsync }),
+}));
+// The propagation consent control is gated on this: single-org tenants must never see it, and
+// must never send the field. Defaults to disabled so the existing tests describe that tenant.
+vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
+  useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: h.isMultiOrgEnabled } }),
 }));
 
 import { RoleDetailsContainer } from "./role-details";
@@ -127,5 +133,55 @@ describe("RoleDetailsContainer", () => {
     await userEvent.click(screen.getByText("Save Changes"));
     await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledTimes(1));
     expect(store.commitChanges).not.toHaveBeenCalled();
+  });
+
+  describe("cross-organization propagation consent", () => {
+    const label = "Apply this change to all organizations";
+
+    it("is not offered to a single-organization tenant", async () => {
+      h.isMultiOrgEnabled = false;
+      h.store = baseStore({ isEditMode: true });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+
+      expect(screen.queryByLabelText(label)).toBeNull();
+
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      // The field must be absent, not false: a single-org tenant's payload stays byte-for-byte
+      // what it was before this feature existed.
+      const payload = h.mutateAsync.mock.calls[0][0];
+      expect(payload).not.toHaveProperty("propagateToAllOrganizations");
+    });
+
+    it("is offered unchecked to a multi-organization tenant and omitted until ticked", async () => {
+      h.isMultiOrgEnabled = true;
+      h.store = baseStore({ isEditMode: true });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+
+      const checkbox = screen.getByLabelText(label);
+      expect(checkbox.getAttribute("data-state")).toBe("unchecked");
+
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("propagateToAllOrganizations");
+    });
+
+    it("sends the flag once the box is ticked", async () => {
+      h.isMultiOrgEnabled = true;
+      h.store = baseStore({ isEditMode: true });
+      h.mutateAsync = vi.fn().mockResolvedValue({});
+
+      render(<RoleDetailsContainer />);
+      await userEvent.click(screen.getByLabelText(label));
+      await userEvent.click(screen.getByText("Save Changes"));
+
+      expect(h.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ propagateToAllOrganizations: true }),
+      );
+    });
   });
 });

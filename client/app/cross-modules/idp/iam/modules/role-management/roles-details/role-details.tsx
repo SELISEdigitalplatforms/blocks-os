@@ -4,11 +4,14 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
+import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 // import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
 // import { PermissionSeverity } from "@blocks-idp/iam/components/permission-severity/permission-severity";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { useState } from "react";
 import { PermissionsSelectionPanel } from "./permissions-selection-panel";
 
 const RoleDetailsPageSkeleton = () => (
@@ -36,6 +39,12 @@ export function RoleDetailsContainer() {
   const isInitialized = useRoleDetailsStore((state) => state.isInitialized);
   const permissionMap = useRoleDetailsStore((state) => state.permissionMap);
   const { isPending, mutateAsync } = useSetRoles();
+  const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  // Only offered when the tenant actually has other organizations to propagate to. Single-org
+  // tenants never see the control and never send the field.
+  const isMultiOrgEnabled = orgConfig?.isMultiOrgEnabled ?? false;
+  const [propagateToAllOrganizations, setPropagateToAllOrganizations] = useState(false);
 
   const onSaveClick = async () => {
     const changedPermissions = Array.from(permissionMap.values()).reduce(
@@ -61,8 +70,14 @@ export function RoleDetailsContainer() {
         removePermissions: changedPermissions.removed,
         slug: role.slug,
         organizationId: role.organizationId,
+        // Omitted entirely unless the tenant is multi-org AND the box is ticked, so a single-org
+        // tenant's payload is byte-for-byte what it was before this existed.
+        ...(isMultiOrgEnabled && propagateToAllOrganizations
+          ? { propagateToAllOrganizations: true }
+          : {}),
       });
       commitChanges();
+      setPropagateToAllOrganizations(false);
       showSuccessToast({ description: "Role permissions updated successfully" });
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
@@ -94,6 +109,21 @@ export function RoleDetailsContainer() {
             </Button>
           ) : (
             <>
+              {isMultiOrgEnabled && (
+                <label className="mr-2 flex items-start gap-2 text-sm">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={propagateToAllOrganizations}
+                    onCheckedChange={(checked) =>
+                      setPropagateToAllOrganizations(checked === true)
+                    }
+                    aria-label="Apply this change to all organizations"
+                  />
+                  <span title="This applies only the permissions you add or remove here. It does not otherwise change other organizations' settings.">
+                    Apply this change to all organizations
+                  </span>
+                </label>
+              )}
               <Button variant="outline" disabled={isPending} onClick={() => discardChanges()}>
                 <span>Discard</span>
               </Button>

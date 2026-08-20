@@ -69,8 +69,14 @@ export const useDeletePermission = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["permission", "delete"],
-    mutationFn: async (id: string) => {
-      const response = await iamService.permission.deletePermission(id);
+    mutationFn: async ({
+      id,
+      confirmRevokeFromUsers = false,
+    }: {
+      id: string;
+      confirmRevokeFromUsers?: boolean;
+    }) => {
+      const response = await iamService.permission.deletePermission(id, confirmRevokeFromUsers);
       if (response?.isSuccess === false) {
         throw Object.assign(new Error("Archive failed"), {
           errors: normalizeArchiveErrors(response) ?? { general: "Archive failed" },
@@ -78,8 +84,9 @@ export const useDeletePermission = () => {
       }
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["permissions"] });
+      queryClient.invalidateQueries({ queryKey: ["permission-archive-impact", variables.id] });
     },
   });
 };

@@ -1,5 +1,6 @@
 import { http } from "@/lib/http/http-client";
 import { IAPIResponse } from "@/models/api-response";
+import { IPermissionArchiveImpact } from "@blocks-idp/iam/models/archive-impact.model";
 import {
   CreatePermissionPayload,
   CreatePermissionResponse,
@@ -38,8 +39,19 @@ export class PermissionService {
    * organization for this to succeed -- there is no client-side signal for that, so the rejection
    * is surfaced as a mapped toast rather than the action being hidden.
    */
-  deletePermission(id: string): Promise<ArchiveResponse> {
-    return http.delete(`${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${id}`, undefined, {
+  deletePermission(id: string, confirmRevokeFromUsers = false): Promise<ArchiveResponse> {
+    const query = confirmRevokeFromUsers ? "?confirmRevokeFromUsers=true" : "";
+    return http.delete(`${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${id}${query}`, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  /**
+   * What archiving this permission would affect. Reports direct per-user grants and role
+   * references separately -- they are different populations and only the first grants access.
+   */
+  getPermissionArchiveImpact(id: string): Promise<IPermissionArchiveImpact> {
+    return http.get(`${PERMISSION_ENDPOINTS.GET_PERMISSIONS}/${id}/archive-impact`, undefined, {
       absoluteUrl: true,
     });
   }

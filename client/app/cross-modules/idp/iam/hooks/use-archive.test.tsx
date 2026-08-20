@@ -55,9 +55,11 @@ describe("archive mutation hooks", () => {
     c.service.mockResolvedValue({ isSuccess: true, itemId: c.id });
     const { result } = renderHook(() => c.hook(), { wrapper });
 
-    await result.current.mutateAsync(c.id);
+    await result.current.mutateAsync({ id: c.id });
 
-    expect(c.service).toHaveBeenCalledWith(c.id);
+    // Consent defaults to false, so an archive nobody consented to is indistinguishable from
+    // one sent by a client that predates the flag.
+    expect(c.service).toHaveBeenCalledWith(c.id, false);
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({ queryKey: [c.key] }),
     );
@@ -71,7 +73,7 @@ describe("archive mutation hooks", () => {
     );
     const { result } = renderHook(() => c.hook(), { wrapper });
 
-    await expect(result.current.mutateAsync(c.id)).rejects.toBeDefined();
+    await expect(result.current.mutateAsync({ id: c.id })).rejects.toBeDefined();
     expect(invalidate).not.toHaveBeenCalled();
   });
 
@@ -86,7 +88,7 @@ describe("archive mutation hooks", () => {
     });
     const { result } = renderHook(() => c.hook(), { wrapper });
 
-    const error = await result.current.mutateAsync(c.id).catch((e) => e);
+    const error = await result.current.mutateAsync({ id: c.id }).catch((e) => e);
 
     expect((error as { errors: unknown }).errors).toEqual({
       archived: "Role_Already_Archived",

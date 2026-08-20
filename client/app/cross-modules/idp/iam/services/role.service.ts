@@ -11,6 +11,7 @@ import {
 } from "@blocks-idp/iam/models/role";
 import { ROLE_ENDPOINTS } from "../constants/endpoint.constant";
 import { ArchiveResponse } from "../constants/archive-error-messages";
+import { IRoleArchiveImpact } from "@blocks-idp/iam/models/archive-impact.model";
 
 export class RoleService {
   getRoles(payload: GetRolesPayload): Promise<GetRolesResponse> {
@@ -44,8 +45,20 @@ export class RoleService {
    * expose from the list. Rejections arrive as a thrown HttpError carrying the reason code; see
    * ARCHIVE_ERROR_MESSAGES.
    */
-  deleteRole(id: string): Promise<ArchiveResponse> {
-    return http.delete(`${ROLE_ENDPOINTS.GET_ROLES}/${id}`, undefined, {
+  deleteRole(id: string, confirmRevokeFromUsers = false): Promise<ArchiveResponse> {
+    // The flag is omitted entirely when false rather than sent as "false": an absent parameter is
+    // exactly what a client predating consent sends, so the two are indistinguishable server-side.
+    const query = confirmRevokeFromUsers ? "?confirmRevokeFromUsers=true" : "";
+    return http.delete(`${ROLE_ENDPOINTS.GET_ROLES}/${id}${query}`, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  /**
+   * What archiving this role would affect. Read-only; drives the confirmation dialog's counts.
+   */
+  getRoleArchiveImpact(id: string): Promise<IRoleArchiveImpact> {
+    return http.get(`${ROLE_ENDPOINTS.GET_ROLES}/${id}/archive-impact`, undefined, {
       absoluteUrl: true,
     });
   }

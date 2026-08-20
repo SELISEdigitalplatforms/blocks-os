@@ -29,8 +29,11 @@ export const ARCHIVE_ERROR_MESSAGES: Record<string, string> = {
     "This role belongs to another organization.",
   Role_Already_Archived: "This role is already archived.",
   Role_Has_Child_Roles: "Archive or reassign this role's child roles first.",
+  // No longer a dead end: the archive dialog can now show who is affected and take explicit
+  // consent. This copy only surfaces when the confirmation was sent without that consent -- for
+  // example when the impact preview failed to load -- so it points back at the dialog.
   Role_Has_Active_User_Assignments:
-    "This role is still assigned to active users. Remove those assignments first.",
+    "This role is still assigned to active users. Reopen the archive dialog to see who is affected and confirm the removal.",
 };
 
 /**
