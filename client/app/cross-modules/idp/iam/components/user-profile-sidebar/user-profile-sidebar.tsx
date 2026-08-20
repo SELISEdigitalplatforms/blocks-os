@@ -2,8 +2,10 @@ import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { ProfileImageUploader } from "@blocks-idp/iam/components/profile-image-uploader";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
+import { formatFullDate } from "@/lib/utils";
 import { Activity, Calendar, Shield } from "lucide-react";
 
 type UserProfileSidebarProps = {
@@ -44,9 +46,18 @@ const formatLastLogin = (value?: string) => {
   });
 };
 
+const formatUtcLockoutTime = (value: string): string | null => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${formatFullDate(date, false, true)} UTC`;
+};
+
 export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) => {
   const { data, isLoading } = useGetUserById({ id, projectKey });
   const user = data?.data;
+  const formattedLockoutTime = user?.lockoutUntilUtc
+    ? formatUtcLockoutTime(user.lockoutUntilUtc)
+    : null;
 
   return (
     <Card className="mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 shadow-none md:h-full md:min-h-0">
@@ -94,20 +105,30 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}
           label="Status"
           value={
-            <span
-              className={`mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                user?.active
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                  : "bg-red-500/15 text-red-600 dark:text-red-400"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  user?.active ? "bg-emerald-500" : "bg-red-500"
-                }`}
-              />
-              {user?.active ? "Active" : "Inactive"}
-            </span>
+            <div className="flex flex-col items-start gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className={`mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    user?.active
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      : "bg-red-500/15 text-red-600 dark:text-red-400"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      user?.active ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                  />
+                  {user?.active ? "Active" : "Inactive"}
+                </span>
+                {user?.isLockedOut === true && <Badge variant="error">Locked out</Badge>}
+              </div>
+              {user?.isLockedOut === true && formattedLockoutTime && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  Locked out until {formattedLockoutTime}
+                </span>
+              )}
+            </div>
           }
         />
         <InfoRow
