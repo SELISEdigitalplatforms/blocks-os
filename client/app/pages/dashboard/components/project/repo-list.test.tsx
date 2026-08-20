@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IEnvRepository, IProject } from "@seliseblocks/genesis-os/models";
@@ -68,6 +68,7 @@ describe("ProjectRepoList", () => {
   beforeEach(() => {
     h.isFetching = false;
     h.isLoading = false;
+    (h as unknown as { repositories: IEnvRepository[] }).repositories = repositories;
     vi.clearAllMocks();
   });
 
@@ -98,5 +99,29 @@ describe("ProjectRepoList", () => {
     render(<ProjectRepoList project={project} isLoading={false} />);
     expect(pageIndicator().textContent).toBe("Page 1 of 3");
     expect(screen.getByText("repo-1")).toBeTruthy();
+  });
+
+  it("preserves repository search across the table's background-refetch remount", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<ProjectRepoList project={project} isLoading={false} />);
+
+    const input = screen.getByPlaceholderText("Search repositories...") as HTMLInputElement;
+    await user.type(input, "REPO-12");
+    await waitFor(() => expect(screen.getByText("repo-12")).toBeTruthy());
+    expect(screen.queryByText("repo-1")).toBeNull();
+
+    h.isFetching = true;
+    rerender(<ProjectRepoList project={project} isLoading={false} />);
+    expect(screen.queryByPlaceholderText("Search repositories...")).toBeNull();
+
+    h.isFetching = false;
+    rerender(<ProjectRepoList project={project} isLoading={false} />);
+
+    const remountedInput = screen.getByPlaceholderText(
+      "Search repositories...",
+    ) as HTMLInputElement;
+    expect(remountedInput.value).toBe("REPO-12");
+    expect(screen.getByText("repo-12")).toBeTruthy();
+    expect(screen.queryByText("repo-1")).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
@@ -19,13 +19,8 @@ vi.mock("@/components/ui-kits/tooltip/tooltip", () => {
 });
 
 vi.mock("../custom-domain/dialog", () => ({
-  SetCustomDomainDialog: ({
-    open,
-    repo,
-  }: {
-    open: boolean;
-    repo: IEnvRepository | null;
-  }) => (open ? <div data-testid="domain-dialog">dialog:{repo?.repoName}</div> : null),
+  SetCustomDomainDialog: ({ open, repo }: { open: boolean; repo: IEnvRepository | null }) =>
+    open ? <div data-testid="domain-dialog">dialog:{repo?.repoName}</div> : null,
 }));
 
 import { ProjectRepoTable } from "./repo-table";
@@ -43,6 +38,11 @@ const repo = (over: Partial<IEnvRepository> = {}): IEnvRepository =>
  *  table itself is unmounted and remounted on every background refetch. */
 const RepoTableHarness = ({ data }: { data: IEnvRepository[] }) => {
   const [page, setPage] = useState(0);
+  const [search, setSearch] = useState("");
+  const handleSearchChange = (value: string) => {
+    setPage(0);
+    setSearch(value);
+  };
   return (
     <ProjectRepoTable
       data={data}
@@ -51,6 +51,8 @@ const RepoTableHarness = ({ data }: { data: IEnvRepository[] }) => {
       projectEnv="dev"
       page={page}
       onPageChange={setPage}
+      search={search}
+      onSearchChange={handleSearchChange}
     />
   );
 };
@@ -102,8 +104,60 @@ describe("ProjectRepoTable", () => {
     const editButton = screen.getByRole("button", { name: /edit custom domain/i });
     expect((editButton as HTMLButtonElement).disabled).toBe(true);
   });
-});
 
+  it("hides search when there are no repositories", () => {
+    renderTable([]);
+    expect(screen.queryByPlaceholderText("Search repositories...")).toBeNull();
+  });
+
+  it("filters repository names by case-insensitive substring without changing source data", async () => {
+    const user = userEvent.setup();
+    const data = [repo({ repoName: "Web-App" }), repo({ repoName: "api-service" })];
+    renderTable(data);
+
+    await user.type(screen.getByPlaceholderText("Search repositories..."), "WEB");
+    await waitFor(() => expect(visibleRepos()).toEqual(["Web-App"]));
+    expect(data).toHaveLength(2);
+    expect(pageIndicator().textContent).toBe("Page 1 of 1");
+  });
+
+  it("shows a distinct no-match state without pagination", async () => {
+    const user = userEvent.setup();
+    renderTable([repo()]);
+
+    await user.type(screen.getByPlaceholderText("Search repositories..."), "missing");
+    expect(await screen.findByText("No repositories match your search.")).toBeTruthy();
+    expect(screen.queryByText("No repositories found for this project.")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: /pagination/i })).toBeNull();
+  });
+
+  it("resets pagination on search and restores page one when cleared", async () => {
+    const user = userEvent.setup();
+    renderTable(manyRepos(12));
+    await user.click(navButtons().next);
+    expect(pageIndicator().textContent).toBe("Page 2 of 3");
+
+    const input = screen.getByPlaceholderText("Search repositories...");
+    await user.type(input, "REPO-12");
+    await waitFor(() => expect(visibleRepos()).toEqual(["repo-12"]));
+    expect(pageIndicator().textContent).toBe("Page 1 of 1");
+
+    const clearButton = within(input.parentElement as HTMLElement).getByRole("button");
+    await user.click(clearButton);
+    await waitFor(() => expect(visibleRepos()).toEqual(repoNames(5)));
+    expect(pageIndicator().textContent).toBe("Page 1 of 3");
+  });
+
+  it("keeps row actions attached to the filtered repository", async () => {
+    const user = userEvent.setup();
+    renderTable(manyRepos(12));
+    await user.type(screen.getByPlaceholderText("Search repositories..."), "repo-12");
+    await waitFor(() => expect(visibleRepos()).toEqual(["repo-12"]));
+
+    await user.click(screen.getByRole("button", { name: "Set" }));
+    expect(screen.getByTestId("domain-dialog").textContent).toContain("repo-12");
+  });
+});
 
 // --- Pagination (#471) ------------------------------------------------------
 
@@ -258,6 +312,7 @@ describe("ProjectRepoTable pagination", () => {
     const user = userEvent.setup();
     const Parent = ({ hidden, data }: { hidden: boolean; data: IEnvRepository[] }) => {
       const [page, setPage] = useState(0);
+      const [search, setSearch] = useState("");
       if (hidden) return <div data-testid="skeleton" />;
       return (
         <ProjectRepoTable
@@ -267,6 +322,8 @@ describe("ProjectRepoTable pagination", () => {
           projectEnv="dev"
           page={page}
           onPageChange={setPage}
+          search={search}
+          onSearchChange={setSearch}
         />
       );
     };

@@ -10,14 +10,11 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
+import { FilterControls } from "@/components/filter-toolbar";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui-kits/tooltip/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { SetCustomDomainDialog } from "../custom-domain/dialog";
 
 // ─── Column helper ────────────────────────────────────────────────────────────
@@ -106,6 +103,8 @@ interface ProjectRepoTableProps {
    *  background refetch (see repo-list.tsx), which would destroy state held here. */
   page: number;
   onPageChange: (pageIndex: number) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
 }
 
 export const ProjectRepoTable = ({
@@ -115,6 +114,8 @@ export const ProjectRepoTable = ({
   projectEnv,
   page,
   onPageChange,
+  search,
+  onSearchChange,
 }: ProjectRepoTableProps) => {
   // ── Set custom domain dialog ────────────────────────────────────────────────
   const [setTarget, setSetTarget] = useState<IEnvRepository | null>(null);
@@ -127,8 +128,12 @@ export const ProjectRepoTable = ({
 
   // ── Table ──────────────────────────────────────────────────────────────────
   const columns = buildColumns(handleSet);
+  const filteredData = useMemo(() => {
+    const normalizedSearch = search.toLowerCase();
+    return data.filter((repo) => repo.repoName.toLowerCase().includes(normalizedSearch));
+  }, [data, search]);
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -169,6 +174,16 @@ export const ProjectRepoTable = ({
         projectEnv={projectEnv}
       />
 
+      {data.length > 0 && (
+        <div className="mb-4 flex justify-end">
+          <FilterControls.SearchInput
+            value={search}
+            onChange={onSearchChange}
+            placeholder="Search repositories..."
+          />
+        </div>
+      )}
+
       {/* Table */}
       <div className="relative w-full overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
@@ -196,7 +211,9 @@ export const ProjectRepoTable = ({
                   colSpan={columns.length}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  No repositories found for this project.
+                  {data.length === 0
+                    ? "No repositories found for this project."
+                    : "No repositories match your search."}
                 </td>
               </tr>
             ) : (
@@ -215,15 +232,12 @@ export const ProjectRepoTable = ({
       </div>
 
       {/* Pagination — same component and same rules as the Domains section. */}
-      {data.length > 0 && (
-        <nav
-          aria-label="Repositories pagination"
-          className="mt-4 flex items-center md:justify-end"
-        >
+      {filteredData.length > 0 && (
+        <nav aria-label="Repositories pagination" className="mt-4 flex items-center md:justify-end">
           <Pagination
             page={page}
             pageSize={DASHBOARD_TABLE_PAGE_SIZE}
-            totalCount={data.length}
+            totalCount={filteredData.length}
             onChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
           />
         </nav>

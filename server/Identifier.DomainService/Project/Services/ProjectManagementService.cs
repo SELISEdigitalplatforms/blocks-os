@@ -448,6 +448,11 @@ namespace DomainService.Projects
             var blocksContext = BlocksContext.GetContext();
             var project = await _projectRepository.GetByTenantIdAsync(blocksContext.TenantId);
 
+            if(project.IsRootTenant)
+            {
+             return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "root_tenant", $"Root tenant cannot be updated" } } };
+            }
+
             if (project == null)
             {
                 return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
