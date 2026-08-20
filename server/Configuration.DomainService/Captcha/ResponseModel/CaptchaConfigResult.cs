@@ -11,6 +11,13 @@ namespace Configuration.DomainService.Captcha.ResponseModel
     /// </remarks>
     public class CaptchaConfigResult
     {
+        /// <summary>
+        /// Unique identifier for this configuration record. Generated on create; callers must
+        /// send it back on <see cref="RequestModel.SaveCaptchaConfigRequest.Id"/> to update this
+        /// record instead of creating a new one, and to address it on get/delete.
+        /// </summary>
+        public string Id { get; set; } = string.Empty;
+
         public bool IsEnable { get; set; }
 
         public string Provider { get; set; } = string.Empty;

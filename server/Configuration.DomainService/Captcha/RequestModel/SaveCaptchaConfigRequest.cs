@@ -2,6 +2,13 @@ namespace Configuration.DomainService.Captcha.RequestModel
 {
     public class SaveCaptchaConfigRequest
     {
+        /// <summary>
+        /// Identifies which configuration record to update. Null or empty creates a new record
+        /// instead; the generated <see cref="ResponseModel.CaptchaConfigResult.Id"/> is returned
+        /// so the caller can update the same record on a later call.
+        /// </summary>
+        public string? Id { get; set; }
+
         public bool IsEnable { get; set; }
 
         public string Provider { get; set; } = string.Empty;

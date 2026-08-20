@@ -8,7 +8,7 @@ namespace Configuration.DomainService.Captcha.Services
 {
     public class CaptchaConfigService : ICaptchaConfigService
     {
-        private const string StoreKey = "captcha";
+        private const string KeyPrefix = "captcha_";
 
         private readonly IKeyValueStore _store;
         private readonly ISecretService _secretService;
@@ -43,7 +43,20 @@ namespace Configuration.DomainService.Captcha.Services
             }
 
             var caller = _authorization.ResolveContext();
-            var existing = await _store.GetAsync<CaptchaConfigResult>(StoreKey,true, cancellationToken).ConfigureAwait(false);
+            var isUpdate = !string.IsNullOrWhiteSpace(request.Id);
+            var key = isUpdate ? request.Id! : Guid.NewGuid().ToString("N");
+            var storeKey = KeyPrefix + key;
+
+            CaptchaConfigResult? existing = null;
+            if (isUpdate)
+            {
+                existing = await _store.GetAsync<CaptchaConfigResult>(storeKey, true, cancellationToken).ConfigureAwait(false);
+                if (existing is null)
+                {
+                    throw new SecretValidationException($"Captcha configuration '{key}' was not found.", "NOT_FOUND");
+                }
+            }
+
             var secretId = existing?.SecretId;
 
             // Empty is treated the same as omitted: a masked secret field a caller leaves
@@ -55,7 +68,7 @@ namespace Configuration.DomainService.Captcha.Services
                 {
                     secretId = await _secretService.SetAsync(new SetSecretRequest
                     {
-                        Name = "captcha",
+                        Name = storeKey,
                         Type = SecretTypes.Service,
                         Value = request.CaptchaSecret,
                         Description=$"{request.Provider} configuration"
@@ -69,6 +82,7 @@ namespace Configuration.DomainService.Captcha.Services
 
             var result = new CaptchaConfigResult
             {
+                Id = key,
                 IsEnable = request.IsEnable,
                 Provider = request.Provider,
                 CaptchaKey = request.CaptchaKey,
@@ -76,21 +90,25 @@ namespace Configuration.DomainService.Captcha.Services
                 SecretId = secretId
             };
 
-            await _store.SetAsync(StoreKey, result,true, cancellationToken).ConfigureAwait(false);
+            await _store.SetAsync(storeKey, result,true, cancellationToken).ConfigureAwait(false);
 
-            var auditAction = existing is null ? SecretAuditActions.ConfigSet : SecretAuditActions.ConfigUpdate;
+            var auditAction = isUpdate ? SecretAuditActions.ConfigUpdate : SecretAuditActions.ConfigSet;
             await RecordAuditAsync(caller, auditAction, secretId, cancellationToken).ConfigureAwait(false);
 
             return result;
         }
 
-        public Task<CaptchaConfigResult?> GetAsync(CancellationToken cancellationToken = default) =>
-            _store.GetAsync<CaptchaConfigResult>(StoreKey,true, cancellationToken);
+        public Task<CaptchaConfigResult?> GetAsync(string key, CancellationToken cancellationToken = default) =>
+            _store.GetAsync<CaptchaConfigResult>(KeyPrefix + key, true, cancellationToken);
 
-        public async Task DeleteAsync(CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<CaptchaConfigResult>> GetListAsync(CancellationToken cancellationToken = default) =>
+            await _store.GetByPrefixAsync<CaptchaConfigResult>(KeyPrefix, true, cancellationToken).ConfigureAwait(false);
+
+        public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
         {
             var caller = _authorization.ResolveContext();
-            var existing = await _store.GetAsync<CaptchaConfigResult>(StoreKey,true, cancellationToken).ConfigureAwait(false);
+            var storeKey = KeyPrefix + key;
+            var existing = await _store.GetAsync<CaptchaConfigResult>(storeKey,true, cancellationToken).ConfigureAwait(false);
 
             if (existing is null)
             {
@@ -107,7 +125,7 @@ namespace Configuration.DomainService.Captcha.Services
                 await _secretService.DeleteAsync(existing.SecretId, cancellationToken).ConfigureAwait(false);
             }
 
-            await _store.DeleteAsync(StoreKey,true, cancellationToken).ConfigureAwait(false);
+            await _store.DeleteAsync(storeKey,true, cancellationToken).ConfigureAwait(false);
 
             await RecordAuditAsync(caller, SecretAuditActions.ConfigDelete, existing.SecretId, cancellationToken).ConfigureAwait(false);
         }

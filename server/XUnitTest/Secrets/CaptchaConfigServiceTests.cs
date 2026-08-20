@@ -63,8 +63,9 @@ namespace XUnitTest.Secrets
                 .Setup(s => s.GetAsync<CaptchaConfigResult>(It.IsAny<string>(),true, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(existing);
 
-        private static SaveCaptchaConfigRequest NewRequest(string? secretValue = null) => new()
+        private static SaveCaptchaConfigRequest NewRequest(string? secretValue = null, string? key = null) => new()
         {
+            Id = key,
             IsEnable = true,
             Provider = "recaptcha",
             CaptchaKey = "site-key",
@@ -85,7 +86,7 @@ namespace XUnitTest.Secrets
             CaptchaConfigResult? stored = null;
             _store
                 .Setup(s => s.SetAsync(It.IsAny<string>(), It.IsAny<CaptchaConfigResult>(),true, It.IsAny<CancellationToken>()))
-                .Callback<string, CaptchaConfigResult, CancellationToken>((_, v, _) => stored = v)
+                .Callback<string, CaptchaConfigResult, bool, CancellationToken>((_, v, _, _) => stored = v)
                 .Returns(Task.CompletedTask);
 
             var service = CreateService();
@@ -100,8 +101,10 @@ namespace XUnitTest.Secrets
             stored.Should().NotBeNull();
             stored!.SecretId.Should().Be("sec-1");
             stored.Provider.Should().Be("recaptcha");
+            stored.Id.Should().NotBeNullOrEmpty();
 
             result.SecretId.Should().Be("sec-1");
+            result.Id.Should().Be(stored.Id);
 
             _auditLog.Should().ContainSingle(a => a.Action == SecretAuditActions.ConfigSet && a.SecretId == "sec-1");
         }
@@ -120,6 +123,7 @@ namespace XUnitTest.Secrets
             _secretService.Verify(s => s.RotateAsync(It.IsAny<string>(), It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
 
             result.SecretId.Should().BeNull();
+            result.Id.Should().NotBeNullOrEmpty();
             _auditLog.Should().ContainSingle(a => a.Action == SecretAuditActions.ConfigSet && a.SecretId == null);
         }
 
@@ -130,12 +134,12 @@ namespace XUnitTest.Secrets
         [Fact]
         public async Task SaveAsync_Existing_WithSecretValue_RotatesInsteadOfCreating()
         {
-            GivenExisting(new CaptchaConfigResult { Provider = "recaptcha", SecretId = "sec-1" });
+            GivenExisting(new CaptchaConfigResult { Id = "cfg-1", Provider = "recaptcha", SecretId = "sec-1" });
             _store.Setup(s => s.SetAsync(It.IsAny<string>(), It.IsAny<CaptchaConfigResult>(),true, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
             var service = CreateService();
 
-            await service.SaveAsync(NewRequest(secretValue: "new-secret"));
+            var result = await service.SaveAsync(NewRequest(secretValue: "new-secret", key: "cfg-1"));
 
             _secretService.Verify(s => s.RotateAsync(
                 "sec-1",
@@ -143,36 +147,51 @@ namespace XUnitTest.Secrets
                 It.IsAny<CancellationToken>()), Times.Once);
             _secretService.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
 
+            result.Id.Should().Be("cfg-1");
             _auditLog.Should().ContainSingle(a => a.Action == SecretAuditActions.ConfigUpdate && a.SecretId == "sec-1");
         }
 
         [Fact]
         public async Task SaveAsync_Existing_SecretValueOmitted_NeverTouchesTheVault()
         {
-            GivenExisting(new CaptchaConfigResult { Provider = "recaptcha", SecretId = "sec-1" });
+            GivenExisting(new CaptchaConfigResult { Id = "cfg-1", Provider = "recaptcha", SecretId = "sec-1" });
             _store.Setup(s => s.SetAsync(It.IsAny<string>(), It.IsAny<CaptchaConfigResult>(),true, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
             var service = CreateService();
 
-            var result = await service.SaveAsync(NewRequest());
+            var result = await service.SaveAsync(NewRequest(key: "cfg-1"));
 
             _secretService.Verify(s => s.RotateAsync(It.IsAny<string>(), It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
             _secretService.Verify(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
 
             result.SecretId.Should().Be("sec-1");
+            result.Id.Should().Be("cfg-1");
         }
 
         [Fact]
         public async Task SaveAsync_Existing_EmptySecretValue_IsTreatedAsOmitted()
         {
-            GivenExisting(new CaptchaConfigResult { Provider = "recaptcha", SecretId = "sec-1" });
+            GivenExisting(new CaptchaConfigResult { Id = "cfg-1", Provider = "recaptcha", SecretId = "sec-1" });
             _store.Setup(s => s.SetAsync(It.IsAny<string>(), It.IsAny<CaptchaConfigResult>(),true, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
             var service = CreateService();
 
-            await service.SaveAsync(NewRequest(secretValue: string.Empty));
+            await service.SaveAsync(NewRequest(secretValue: string.Empty, key: "cfg-1"));
 
             _secretService.Verify(s => s.RotateAsync(It.IsAny<string>(), It.IsAny<RotateSecretRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SaveAsync_UnknownKey_Throws()
+        {
+            GivenExisting(null);
+
+            var service = CreateService();
+
+            var act = () => service.SaveAsync(NewRequest(key: "missing"));
+
+            await act.Should().ThrowAsync<SecretValidationException>();
+            _store.Verify(s => s.SetAsync(It.IsAny<string>(), It.IsAny<CaptchaConfigResult>(), true, It.IsAny<CancellationToken>()), Times.Never);
         }
 
         #endregion
@@ -186,7 +205,7 @@ namespace XUnitTest.Secrets
 
             var service = CreateService();
 
-            var result = await service.GetAsync();
+            var result = await service.GetAsync("cfg-1");
 
             result.Should().BeNull();
             _secretService.VerifyNoOtherCalls();
@@ -196,16 +215,35 @@ namespace XUnitTest.Secrets
         [Fact]
         public async Task GetAsync_NeverTouchesTheVaultOrAudit()
         {
-            GivenExisting(new CaptchaConfigResult { Provider = "recaptcha", SecretId = "sec-1" });
+            GivenExisting(new CaptchaConfigResult { Id = "cfg-1", Provider = "recaptcha", SecretId = "sec-1" });
 
             var service = CreateService();
 
-            var result = await service.GetAsync();
+            var result = await service.GetAsync("cfg-1");
 
             result.Should().NotBeNull();
             result!.SecretId.Should().Be("sec-1");
             _secretService.VerifyNoOtherCalls();
             _auditLog.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetListAsync_ReturnsEveryRecord()
+        {
+            var records = new List<CaptchaConfigResult>
+            {
+                new() { Id = "cfg-1", Provider = "recaptcha" },
+                new() { Id = "cfg-2", Provider = "hcaptcha" }
+            };
+            _store
+                .Setup(s => s.GetByPrefixAsync<CaptchaConfigResult>(It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(records);
+
+            var service = CreateService();
+
+            var result = await service.GetListAsync();
+
+            result.Should().BeEquivalentTo(records);
         }
 
         #endregion
@@ -215,7 +253,7 @@ namespace XUnitTest.Secrets
         [Fact]
         public async Task DeleteAsync_WhenALinkedSecretExists_DeletesTheSecretFirstThenTheConfig()
         {
-            GivenExisting(new CaptchaConfigResult { Provider = "recaptcha", SecretId = "sec-1" });
+            GivenExisting(new CaptchaConfigResult { Id = "cfg-1", Provider = "recaptcha", SecretId = "sec-1" });
 
             var order = new List<string>();
             _secretService
@@ -228,7 +266,7 @@ namespace XUnitTest.Secrets
                 .ReturnsAsync(true);
 
             var service = CreateService();
-            await service.DeleteAsync();
+            await service.DeleteAsync("cfg-1");
 
             order.Should().Equal("secret", "config");
             _auditLog.Should().ContainSingle(a => a.Action == SecretAuditActions.ConfigDelete && a.SecretId == "sec-1");
@@ -237,11 +275,11 @@ namespace XUnitTest.Secrets
         [Fact]
         public async Task DeleteAsync_WhenNoLinkedSecret_NeverCallsTheSecretService()
         {
-            GivenExisting(new CaptchaConfigResult { Provider = "recaptcha", SecretId = null });
+            GivenExisting(new CaptchaConfigResult { Id = "cfg-1", Provider = "recaptcha", SecretId = null });
             _store.Setup(s => s.DeleteAsync(It.IsAny<string>(),true, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
             var service = CreateService();
-            await service.DeleteAsync();
+            await service.DeleteAsync("cfg-1");
 
             _secretService.Verify(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
             _store.Verify(s => s.DeleteAsync(It.IsAny<string>(), true,It.IsAny<CancellationToken>()), Times.Once);
@@ -255,7 +293,7 @@ namespace XUnitTest.Secrets
             var service = CreateService();
 
             // Idempotent delete: nothing to remove is success, not an error.
-            await service.DeleteAsync();
+            await service.DeleteAsync("cfg-1");
 
             _secretService.Verify(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
             _store.Verify(s => s.DeleteAsync(It.IsAny<string>(),true , It.IsAny<CancellationToken>()), Times.Never);
