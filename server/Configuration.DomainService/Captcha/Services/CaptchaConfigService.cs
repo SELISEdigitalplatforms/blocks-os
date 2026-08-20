@@ -43,7 +43,7 @@ namespace Configuration.DomainService.Captcha.Services
             }
 
             var caller = _authorization.ResolveContext();
-            var existing = await _store.GetAsync<CaptchaConfigResult>(StoreKey, cancellationToken).ConfigureAwait(false);
+            var existing = await _store.GetAsync<CaptchaConfigResult>(StoreKey,true, cancellationToken).ConfigureAwait(false);
             var secretId = existing?.SecretId;
 
             // Empty is treated the same as omitted: a masked secret field a caller leaves
@@ -76,7 +76,7 @@ namespace Configuration.DomainService.Captcha.Services
                 SecretId = secretId
             };
 
-            await _store.SetAsync(StoreKey, result, cancellationToken).ConfigureAwait(false);
+            await _store.SetAsync(StoreKey, result,true, cancellationToken).ConfigureAwait(false);
 
             var auditAction = existing is null ? SecretAuditActions.ConfigSet : SecretAuditActions.ConfigUpdate;
             await RecordAuditAsync(caller, auditAction, secretId, cancellationToken).ConfigureAwait(false);
@@ -85,12 +85,12 @@ namespace Configuration.DomainService.Captcha.Services
         }
 
         public Task<CaptchaConfigResult?> GetAsync(CancellationToken cancellationToken = default) =>
-            _store.GetAsync<CaptchaConfigResult>(StoreKey, cancellationToken);
+            _store.GetAsync<CaptchaConfigResult>(StoreKey,true, cancellationToken);
 
         public async Task DeleteAsync(CancellationToken cancellationToken = default)
         {
             var caller = _authorization.ResolveContext();
-            var existing = await _store.GetAsync<CaptchaConfigResult>(StoreKey, cancellationToken).ConfigureAwait(false);
+            var existing = await _store.GetAsync<CaptchaConfigResult>(StoreKey,true, cancellationToken).ConfigureAwait(false);
 
             if (existing is null)
             {
@@ -107,7 +107,7 @@ namespace Configuration.DomainService.Captcha.Services
                 await _secretService.DeleteAsync(existing.SecretId, cancellationToken).ConfigureAwait(false);
             }
 
-            await _store.DeleteAsync(StoreKey, cancellationToken).ConfigureAwait(false);
+            await _store.DeleteAsync(StoreKey,true, cancellationToken).ConfigureAwait(false);
 
             await RecordAuditAsync(caller, SecretAuditActions.ConfigDelete, existing.SecretId, cancellationToken).ConfigureAwait(false);
         }

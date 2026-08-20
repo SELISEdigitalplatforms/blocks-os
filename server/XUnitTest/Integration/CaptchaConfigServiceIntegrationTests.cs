@@ -21,16 +21,17 @@ namespace XUnitTest.Integration
     public class CaptchaConfigServiceIntegrationTests
     {
         private readonly MongoIntegrationFixture _fixture;
-
-        public CaptchaConfigServiceIntegrationTests(MongoIntegrationFixture fixture)
+  private readonly IBlocksSecret _blocksSecret;
+        public CaptchaConfigServiceIntegrationTests(MongoIntegrationFixture fixture, IBlocksSecret blocksSecret)
         {
             _fixture = fixture;
+            _blocksSecret = blocksSecret;
         }
 
         [Fact]
         public async Task SaveGetDelete_RoundTripsThroughRealMongoViaGenesissKeyValueStore()
         {
-            var store = new MongoKeyValueStore(_fixture.DbContextProvider);
+            var store = new MongoKeyValueStore(_fixture.DbContextProvider, _blocksSecret);
             var secretService = new Mock<ISecretService>();
             var audit = new Mock<ISecretAuditService>();
             var authorization = new Mock<ISecretAuthorizationService>();
