@@ -1,10 +1,9 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   pathname: "/app/proj/secret-management/secret",
-  captchaData: undefined as unknown,
   externalIdpData: undefined as unknown,
   clientsData: [] as unknown[],
   brandingActions: undefined as unknown,
@@ -20,9 +19,6 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
-}));
-vi.mock("@blocks-idp/captcha/hooks/use-captcha-config", () => ({
-  useGetCaptchaConfigs: () => ({ data: h.captchaData }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-identifier", () => ({
   useGetSavedPublicCertificates: () => ({ data: h.externalIdpData }),
@@ -83,7 +79,6 @@ describe("SecretManagementLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.pathname = "/app/proj/secret-management/secret";
-    h.captchaData = undefined;
     h.externalIdpData = undefined;
     h.clientsData = [];
     h.brandingActions = undefined;
@@ -131,22 +126,10 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByText("Add")).toBeTruthy();
   });
 
-  it("blocks adding a captcha config when every provider is already configured", () => {
+  it("always shows the Add Configuration action on the captcha page, since a tenant may configure more than one", () => {
     h.pathname = "/app/proj/secret-management/captcha";
-    h.captchaData = {
-      configurations: [
-        { provider: "RECAPTCHA" },
-        { provider: "HCAPTCHA" },
-        { provider: "TURNSTILE" },
-      ],
-    };
     render(<SecretManagementLayout />);
-    const addBtn = screen.getByText("Add Configuration").closest("button") as HTMLButtonElement;
-    fireEvent.click(addBtn);
-    // When all providers are configured the click is intercepted with an info toast.
-    if (h.toast.mock.calls.length > 0) {
-      expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "info" }));
-    }
+    expect(screen.getByText("Add Configuration")).toBeTruthy();
   });
 
   it("renders the branding save/undo actions in branding mode", () => {

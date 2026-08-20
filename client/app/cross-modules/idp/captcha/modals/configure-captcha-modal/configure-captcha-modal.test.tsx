@@ -5,25 +5,19 @@ import { DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import type { ICaptchaConfig } from "../../models/captcha";
 
 const h = vi.hoisted(() => ({
-  getConfigs: vi.fn(),
   mutateAsync: vi.fn(),
   isPending: false,
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
-  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
-}));
 vi.mock("../../hooks/use-captcha-config", () => ({
-  useGetCaptchaConfigs: () => h.getConfigs(),
   useSaveCaptcha: () => ({ mutateAsync: h.mutateAsync, isPending: h.isPending }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,
 }));
-vi.mock("uuid", () => ({ v4: () => "generated-uuid" }));
 
 import { ConfigureCaptchaModal } from "./configure-captcha-modal";
 
@@ -31,17 +25,15 @@ const renderModal = (props: Partial<React.ComponentProps<typeof ConfigureCaptcha
   render(
     <ConfigureCaptchaModal {...props}>
       <DialogTrigger asChild>
-        <button type="button">Add Configuration</button>
+        <button type="button">Configure Captcha</button>
       </DialogTrigger>
     </ConfigureCaptchaModal>,
   );
 
 const openDialog = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole("button", { name: "Add Configuration" }));
+  await user.click(screen.getByRole("button", { name: "Configure Captcha" }));
 };
 
-// Opening the modal resets the form (clearing the auto-picked provider), so the
-// provider must be chosen explicitly before the form can become valid.
 const selectProvider = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
   await user.click(screen.getAllByRole("combobox")[0]);
   await user.click(await screen.findByRole("option", { name: label }));
@@ -56,11 +48,10 @@ describe("ConfigureCaptchaModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.isPending = false;
-    h.getConfigs.mockReturnValue({ isLoading: false, isFetching: false, data: { configurations: [] } });
-    h.mutateAsync.mockResolvedValue({ isSuccess: true });
+    h.mutateAsync.mockResolvedValue({ isEnable: false, provider: "recaptcha" });
   });
 
-  it("adds a new captcha configuration with the first unconfigured provider", async () => {
+  it("creates a new captcha configuration, requiring the secret key", async () => {
     const user = userEvent.setup();
     renderModal();
     await openDialog(user);
@@ -77,42 +68,29 @@ describe("ConfigureCaptchaModal", () => {
     const payload = h.mutateAsync.mock.calls[0][0];
     expect(payload.provider).toBe("recaptcha");
     expect(payload.captchaKey).toBe("site-key-123");
-    expect(payload.itemId).toBe("generated-uuid");
+    expect(payload.captchaSecret).toBe("secret-key-123");
     expect(payload.isEnable).toBe(false);
-    expect(payload.projectKey).toBe("tenant-1");
+    // A create must never send an id -- the backend generates one.
+    expect(payload).not.toHaveProperty("id");
     expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Captcha added successfully" });
   });
 
-  it("only offers the unconfigured provider when one is already configured", async () => {
+  it("keeps Save disabled until the required keys are provided on create", async () => {
     const user = userEvent.setup();
-    h.getConfigs.mockReturnValue({
-      isLoading: false,
-      isFetching: false,
-      data: { configurations: [{ provider: "recaptcha" }] },
-    });
     renderModal();
     await openDialog(user);
-
-    await user.click(screen.getAllByRole("combobox")[0]);
-    expect(await screen.findByRole("option", { name: "hCAPTCHA" })).toBeTruthy();
-    expect(screen.queryByRole("option", { name: "Google reCAPTCHA" })).toBeNull();
-    await user.click(screen.getByRole("option", { name: "hCAPTCHA" }));
-
-    await fillKeys(user);
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(h.mutateAsync.mock.calls[0][0].provider).toBe("hcaptcha");
+    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("renders the edit heading and reuses the existing item id", async () => {
+  it("edits an existing configuration and preserves its isEnable value", async () => {
     const user = userEvent.setup();
     const configuration = {
-      itemId: "captcha-9",
+      id: "cfg-1",
       provider: "recaptcha",
       isEnable: true,
       captchaKey: "existing-key",
-      captchaSecret: "existing-secret",
       captchaGenerator: "EasyCaptchaGenerator",
+      secretId: "sec-1",
     } as unknown as ICaptchaConfig;
     renderModal({ configuration });
     await openDialog(user);
@@ -126,21 +104,56 @@ describe("ConfigureCaptchaModal", () => {
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     const payload = h.mutateAsync.mock.calls[0][0];
-    expect(payload.itemId).toBe("captcha-9");
+    expect(payload.id).toBe("cfg-1");
     expect(payload.isEnable).toBe(true);
+    expect(payload.captchaKey).toBe("updated-key");
+    // The secret field was left blank -- it must not be sent at all.
+    expect(payload).not.toHaveProperty("captchaSecret");
     expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Captcha updated successfully" });
   });
 
-  it("keeps Save disabled until the required keys are provided", async () => {
+  it("allows saving an edit without touching the secret key", async () => {
     const user = userEvent.setup();
-    renderModal();
+    const configuration = {
+      id: "cfg-1",
+      provider: "recaptcha",
+      isEnable: true,
+      captchaKey: "existing-key",
+      captchaGenerator: "EasyCaptchaGenerator",
+      secretId: "sec-1",
+    } as unknown as ICaptchaConfig;
+    renderModal({ configuration });
     await openDialog(user);
-    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+
+    const siteKey = screen.getByPlaceholderText("Enter site key");
+    await user.type(siteKey, "!");
+    const save = screen.getByRole("button", { name: "Update Changes" }) as HTMLButtonElement;
+    await waitFor(() => expect(save.disabled).toBe(false));
   });
 
-  it("surfaces a backend error when the save is unsuccessful", async () => {
+  it("sends the new secret when one is entered while editing", async () => {
     const user = userEvent.setup();
-    h.mutateAsync.mockResolvedValue({ isSuccess: false, errors: { captchaKey: "invalid" } });
+    const configuration = {
+      id: "cfg-1",
+      provider: "recaptcha",
+      isEnable: true,
+      captchaKey: "existing-key",
+      captchaGenerator: "EasyCaptchaGenerator",
+      secretId: "sec-1",
+    } as unknown as ICaptchaConfig;
+    renderModal({ configuration });
+    await openDialog(user);
+
+    await user.type(screen.getByPlaceholderText("Leave blank to keep the current secret"), "new-secret");
+    await user.click(screen.getByRole("button", { name: "Update Changes" }));
+
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync.mock.calls[0][0].captchaSecret).toBe("new-secret");
+  });
+
+  it("surfaces a backend error when the save is rejected", async () => {
+    const user = userEvent.setup();
+    h.mutateAsync.mockRejectedValue({ errors: { captchaKey: "invalid" } });
     renderModal();
     await openDialog(user);
     await selectProvider(user, "Google reCAPTCHA");
@@ -149,20 +162,6 @@ describe("ConfigureCaptchaModal", () => {
 
     await waitFor(() =>
       expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { captchaKey: "invalid" } }),
-    );
-  });
-
-  it("maps structured errors from a thrown save", async () => {
-    const user = userEvent.setup();
-    h.mutateAsync.mockRejectedValue({ errors: { captchaSecret: "bad" } });
-    renderModal();
-    await openDialog(user);
-    await selectProvider(user, "Google reCAPTCHA");
-    await fillKeys(user);
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() =>
-      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { captchaSecret: "bad" } }),
     );
   });
 });

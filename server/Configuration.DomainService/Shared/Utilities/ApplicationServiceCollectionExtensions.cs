@@ -13,6 +13,9 @@ using Configuration.DomainService.Mail.Template.Validators;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
+using Configuration.DomainService.Captcha.RequestModel;
+using Configuration.DomainService.Captcha.Services;
+using Configuration.DomainService.Captcha.Validators;
 
 namespace Configuration.DomainService.Shared.Utilities
 {
@@ -27,10 +30,17 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IMailboxService, MailboxService>();
             serviceCollection.AddSingleton<IMailboxRepository, MailboxRepository>();
 
+            // Scoped, unlike the services above: it depends on Blocks.Secrets' ISecretService/
+            // ISecretAuditService/ISecretAuthorizationService, which are themselves Scoped
+            // because they read the request-scoped BlocksContext. A Singleton here would either
+            // fail to resolve (scope validation) or capture the first request's identity forever.
+            serviceCollection.AddScoped<ICaptchaConfigService, CaptchaConfigService>();
+
             serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
+            serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();
         }
     }
 }

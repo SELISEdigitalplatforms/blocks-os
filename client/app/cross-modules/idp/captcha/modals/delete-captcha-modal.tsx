@@ -9,36 +9,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
-import { useToggleCaptchaConfigStatus } from "../hooks/use-captcha-config";
+import { useDeleteCaptcha } from "../hooks/use-captcha-config";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { CAPTCHA_PROVIDERS, ICaptchaConfig } from "../models/captcha";
 import { isErrorWithErrors } from "@/lib/error";
-import { Check, X } from "lucide-react";
-type ToggleCaptchaStatusModalProps = {
+import { Trash2 } from "lucide-react";
+
+type DeleteCaptchaModalProps = {
   configuration: ICaptchaConfig;
   children?: React.ReactNode;
 };
-export const ToggleCaptchaStatusModal = ({
-  configuration,
-  children,
-}: ToggleCaptchaStatusModalProps) => {
+
+export const DeleteCaptchaModal = ({ configuration, children }: DeleteCaptchaModalProps) => {
   const [open, setOpen] = useState<boolean>(false);
-  const { isPending, mutateAsync } = useToggleCaptchaConfigStatus();
+  const { isPending, mutateAsync } = useDeleteCaptcha();
   const providerType = CAPTCHA_PROVIDERS[configuration.provider];
+
   const onConfirm = async () => {
     try {
-      if (!configuration) return showErrorToast({ errors: "Something went wrong" });
-      // No captchaSecret here: omitting it tells the backend to leave the stored secret
-      // untouched, which is exactly what a pure enable/disable toggle should do.
-      await mutateAsync({
-        id: configuration.id,
-        isEnable: !configuration.isEnable,
-        provider: configuration.provider,
-        captchaKey: configuration.captchaKey,
-        captchaGenerator: configuration.captchaGenerator,
-      });
+      await mutateAsync(configuration.id);
       showSuccessToast({
-        description: `${providerType.label} is ${configuration.isEnable ? "disabled" : "enabled"} successfully`,
+        description: `${providerType.label} configuration deleted successfully`,
       });
       setOpen(false);
     } catch (error) {
@@ -47,23 +38,23 @@ export const ToggleCaptchaStatusModal = ({
       }
     }
   };
-  const IconComponent = configuration?.isEnable ? X : Check;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children ?? (
           <Button size="sm" variant="outline">
-            <IconComponent className="h-4 w-4" />
-            <span className="ml-2.5">{configuration?.isEnable ? "Disable" : "Enable"}</span>
+            <Trash2 className="h-4 w-4" />
+            <span className="ml-2.5">Delete</span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{configuration?.isEnable ? "Disable" : "Enable"} CAPTCHA?</DialogTitle>
+          <DialogTitle>Delete CAPTCHA configuration?</DialogTitle>
           <DialogDescription>
-            Are you sure you want to {configuration?.isEnable ? "disable" : "enable"}{" "}
-            {providerType.label}
+            Are you sure you want to delete the {providerType.label} configuration? This action
+            cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -72,8 +63,8 @@ export const ToggleCaptchaStatusModal = ({
               Cancel
             </Button>
           </DialogTrigger>
-          <Button size="sm" onClick={onConfirm} disabled={isPending}>
-            Yes
+          <Button size="sm" variant="destructive" onClick={onConfirm} disabled={isPending}>
+            Yes, delete
           </Button>
         </DialogFooter>
       </DialogContent>
