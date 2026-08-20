@@ -244,17 +244,6 @@ namespace DomainService.People
             return result.IsAcknowledged;
         }
 
-        public async Task<bool> UpdateProjectOwnerShipAsync(List<string> tenantIds, string userId)
-        {
-            var filter = Builders<Tenant>.Filter.In(x => x.TenantId, tenantIds);
-            var update = Builders<Tenant>.Update.Set(x => x.CreatedBy, userId)
-                                                       .Set(x => x.LastUpdatedBy, BlocksContext.GetContext()?.UserId)
-                                                       .Set(x => x.LastUpdatedDate, DateTime.UtcNow);
-
-            var result = await _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName).UpdateManyAsync(filter, update);
-            return result.IsAcknowledged;
-        }
-
         public async Task<ProjectPeople> GetProjectPeopleByTenantIdAndUserIdAsync(string tenantId, string userId)
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.TenantId, tenantId) & Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId);
