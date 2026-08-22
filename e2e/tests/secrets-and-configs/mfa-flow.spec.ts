@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -65,7 +65,7 @@ test.describe("flows", () => {
       await expect(page.getByRole("heading", { name: "Confirmation" })).toBeVisible({
         timeout: 8000,
       });
-      await page.getByRole("button", { name: expectedAction, exact: true }).last().click();
+      await page.getByRole("button", { name: "Yes", exact: true }).click();
 
       await expect(page.getByText(new RegExp(`Email MFA ${expectedAction.toLowerCase()}d successfully`)))
         .toBeVisible({ timeout: 15000 })

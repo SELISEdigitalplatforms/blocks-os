@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
-import { test, expect } from "../../../support/test-base";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
 
 const gotoEmailManagement = async (page: Page) => {
   const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);

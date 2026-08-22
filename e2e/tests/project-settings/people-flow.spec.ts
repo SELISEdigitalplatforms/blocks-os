@@ -1,11 +1,11 @@
-import { test, expect } from "../../../support/test-base";
+import { test, expect } from "../../support/test-base";
 import {
   createProject,
   deleteCreatedProject,
   openProjectOverviewPage,
-} from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
-import { uniqueTestEmail } from "../../../support/env";
+} from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
+import { uniqueTestEmail } from "../../support/env";
 
 // People flow: strict validation on Invite, invite a fresh person into the
 // Development environment, open their details page, and remove their access

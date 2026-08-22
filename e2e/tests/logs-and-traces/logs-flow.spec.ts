@@ -1,6 +1,6 @@
-import { test, expect } from "../../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // Logs flow: navigate into the sub-section under Logs & Traces, toggle its
 // log source tabs, follow a service card into its details view, then
@@ -24,7 +24,7 @@ test.describe("flows", () => {
 
     const appBaseUrl = page.url().replace(/\/dashboard$/, "");
     const gotoLmtChild = async (linkName: "Logs") => {
-      const link = page.getByRole("link", { name: linkName });
+      const link = page.getByRole("link", { name: linkName, exact: true });
       for (let attempt = 0; attempt < 5; attempt++) {
         if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
           await link.click({ timeout: 10000 });

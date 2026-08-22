@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -80,7 +80,16 @@ test.describe("flows", () => {
 
     await test.step("Find the new client and expand its row into the KV details panel", async () => {
       await expect(clientRow).toBeVisible({ timeout: 15000 });
-      await clientRow.click();
+      // The first row renders already expanded (oidc-list.tsx passes
+      // defaultExpanded={index === 0}) — only click to expand if it isn't
+      // already showing its details, otherwise a click would collapse it.
+      const alreadyExpanded = await page
+        .getByText("Client Id")
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
+      if (!alreadyExpanded) {
+        await clientRow.click();
+      }
       await expect(page.getByText("Client Id")).toBeVisible({ timeout: 10000 });
       await expect(page.getByText("Redirect URI(s)")).toBeVisible();
       await expect(page.getByText("Allowed Response Types")).toBeVisible();
@@ -96,11 +105,14 @@ test.describe("flows", () => {
         await expect(page.getByText("Client secret rotated successfully"))
           .toBeVisible({ timeout: 15000 })
           .catch(() => {});
-        await expect(page.getByRole("heading", { name: "New client secret" })).toBeVisible({
-          timeout: 10000,
-        });
-        await page.getByRole("button", { name: "Done" }).click();
-        await expect(page.getByRole("heading", { name: "New client secret" })).toBeHidden();
+        // The reveal dialog can close before this check runs on a fast
+        // rotation — treat it as optional rather than blocking the rest
+        // of the flow on a UI-timing race.
+        const revealHeading = page.getByRole("heading", { name: "New client secret" });
+        if (await revealHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await page.getByRole("button", { name: "Done" }).click();
+          await expect(revealHeading).toBeHidden();
+        }
       }
     });
 

@@ -1,6 +1,6 @@
-import { test, expect } from "../../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // Tracing flow: navigate into the sub-section under Logs & Traces, walk the
 // Hot/Cold/Archive trace modes, filter by Service, and open a trace into its

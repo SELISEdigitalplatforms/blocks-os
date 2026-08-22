@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -93,7 +93,7 @@ test.describe("flows", () => {
       if (await editButton.isVisible({ timeout: 8000 }).catch(() => false)) {
         await editButton.click();
         await expect(page.getByRole("heading", { name: "Edit provider" })).toBeVisible();
-        await page.getByRole("button", { name: "Cancel" }).click();
+        await page.getByRole("button", { name: "Cancel" }).last().click();
       }
     });
   });

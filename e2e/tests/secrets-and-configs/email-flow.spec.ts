@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -79,9 +79,13 @@ test.describe("flows", () => {
     await test.step("Find the new configuration and expand its accordion row", async () => {
       await expect(configTrigger).toBeVisible({ timeout: 15000 });
       await configTrigger.click();
-      await expect(page.getByText("smtp.example.com")).toBeVisible({ timeout: 10000 });
-      await expect(page.getByText("587")).toBeVisible();
-      await expect(page.getByText("Outbound")).toBeVisible();
+      // Another pre-existing "Default" configuration row can also be
+      // expanded at the same time and renders the same "Outbound" label —
+      // scope checks to this row's own expanded panel.
+      const panel = page.getByLabel(configName);
+      await expect(panel.getByText("smtp.example.com")).toBeVisible({ timeout: 10000 });
+      await expect(panel.getByText("587")).toBeVisible();
+      await expect(panel.getByText("Outbound")).toBeVisible();
     });
 
     await test.step("Reopen the configuration for editing and close without changes", async () => {

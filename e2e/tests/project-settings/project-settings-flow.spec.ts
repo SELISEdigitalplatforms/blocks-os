@@ -1,10 +1,10 @@
-import { test, expect } from "../../../support/test-base";
+import { test, expect } from "../../support/test-base";
 import {
   createProject,
   deleteCreatedProject,
   openProjectOverviewPage,
-} from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+} from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // Project Settings flow: General Information card (name/created on/
 // environments/plan) -> strict validation on Edit Project -> rename the
@@ -36,8 +36,12 @@ test.describe("flows", () => {
 
     await test.step("General Information shows the current project name", async () => {
       await expect(page.getByText("General Information")).toBeVisible({ timeout: 15000 });
-      await expect(page.getByText(projectName, { exact: true })).toBeVisible();
-      await expect(page.getByText("Created On")).toBeVisible();
+      // The project name also appears in the sidebar project switcher, so
+      // scope to the exact-match nodes and require at least one.
+      await expect(page.getByText(projectName, { exact: true }).first()).toBeVisible();
+      // "Created On" also appears as an Environments-table column header
+      // further down the page, so take the first (General Information) match.
+      await expect(page.getByText("Created On").first()).toBeVisible();
       await expect(page.getByText("Plan")).toBeVisible();
       await expect(page.getByText("Free")).toBeVisible();
     });
@@ -82,7 +86,12 @@ test.describe("flows", () => {
       await expect(updateButton).toBeEnabled();
       await updateButton.click();
 
-      await expect(page.getByText("Project name updated successfully")).toBeVisible({
+      // The toast text also gets echoed inside an aria-live status region
+      // ("Notification SuccessProject name updated successf…"), so scope to
+      // the exact toast body node.
+      await expect(
+        page.getByText("Project name updated successfully", { exact: true }),
+      ).toBeVisible({
         timeout: 15000,
       });
       await expect(page.getByRole("heading", { name: "Edit Project" })).toBeHidden({
@@ -91,13 +100,15 @@ test.describe("flows", () => {
     });
 
     await test.step("The renamed project name is now shown", async () => {
-      await expect(page.getByText(renamedProject, { exact: true })).toBeVisible({
+      await expect(page.getByText(renamedProject, { exact: true }).first()).toBeVisible({
         timeout: 15000,
       });
     });
 
     await test.step("Environments table lists the provisioned Development environment", async () => {
-      await expect(page.getByText("Environments", { exact: true })).toBeVisible();
+      // "Environments" exact-text also matches the sidebar nav link and a
+      // paragraph elsewhere on the page — the card heading role is unique.
+      await expect(page.getByRole("heading", { name: "Environments", exact: true })).toBeVisible();
       await expect(
         page.getByText("Environments provisioned for this project and their public domains"),
       ).toBeVisible();

@@ -1,10 +1,10 @@
-import { test, expect } from "../../../support/test-base";
+import { test, expect } from "../../support/test-base";
 import {
   createProject,
   deleteCreatedProject,
   openProjectOverviewPage,
-} from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+} from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // Repositories flow: a freshly created project has no linked repositories,
 // so this walks the empty state, opens 'Add' -> 'Connect repository' (which

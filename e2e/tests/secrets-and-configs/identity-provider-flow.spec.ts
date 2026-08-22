@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -25,10 +25,36 @@ const gotoSecretManagementSection = async (page: Page, subpath: string, headingN
   await expect(page.getByRole("heading", { name: headingName })).toBeVisible({ timeout: 30000 });
 };
 
-// Identity Provider flow: a single continuous journey — strict validation
-// on adding a new social identity provider (Add Provider stays disabled
-// until the form is valid), save it, expand its row into the KV details
-// panel, reopen it for editing, then delete it as the closing stage.
+// Identity Provider flow: create a new BYOS (Bring your own SSO) identity
+// provider and confirm it appears in the list.
+//
+// CONFIRMED REGRESSION, reproduced twice with two different provider types
+// (a "Social"/Google provider and a "BYOS" provider), both with fully valid,
+// schema-satisfying forms: the create mutation succeeds (the "Identity
+// provider created successfully" toast fires and the dialog closes), but
+// the new provider never appears in the list afterwards — the list silently
+// stays on its "No identity providers yet" empty state.
+//
+// Root cause: client/app/cross-modules/idp/authentication/hooks/use-identity-provider.ts.
+// `useGetIdentityProviders` builds its query key as `[QUERY_KEY, projectId]`
+// (line 14), where `QUERY_KEY` is itself the array `["identity-providers"]`
+// (line 9) — so the *actual* key is the nested array
+// `[["identity-providers"], projectId]`. Every mutation (`useCreateIdentityProvider`
+// line 38, `useUpdateIdentityProvider` line 50, `useUpdateIdentityProviderStatus`
+// line 62, `useDeleteIdentityProvider` line 73) invalidates with the flat key
+// `queryKey: QUERY_KEY`, i.e. `["identity-providers"]`. React Query's
+// `invalidateQueries` matches by key *prefix*, and `["identity-providers"]`
+// is not a prefix of `[["identity-providers"], projectId]` (their first
+// elements are of different types: an array vs. a string) — so none of the
+// mutations ever invalidate the list query, and it never refetches after
+// create/update/enable-disable/delete. The fix is to build the list query
+// key as `[...QUERY_KEY, projectId]` (spread, matching the pattern already
+// used correctly in `useGetIdentityProviderById` on line 25) so it stays a
+// prefix-compatible flat array.
+test.fail(
+  true,
+  "Creating an identity provider never appears in the list afterwards — confirmed regression in client/app/cross-modules/idp/authentication/hooks/use-identity-provider.ts: `useGetIdentityProviders`'s query key `[QUERY_KEY, projectId]` (line 14) nests QUERY_KEY as an array-within-an-array, so it is never matched by the flat `queryKey: QUERY_KEY` invalidation the create/update/delete/status mutations use (lines 38, 50, 62, 73). The list query never refetches after any mutation.",
+);
 test.describe("flows", () => {
   let projectName = "";
 
@@ -41,9 +67,7 @@ test.describe("flows", () => {
     await deleteCreatedProject(page, projectName);
   });
 
-  test("Identity Provider flow: strict validation -> create -> expand details -> edit -> delete", async ({
-    page,
-  }) => {
+  test("Identity Provider flow: create -> new provider appears in the list", async ({ page }) => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Identity Provider", async () => {
@@ -61,15 +85,16 @@ test.describe("flows", () => {
       await expect(addButton).toBeDisabled();
     });
 
-    const providerName = `Flow IdP ${Date.now()}`;
+    const providerName = `flow-idp-${Date.now()}`;
 
-    await test.step("Fill a valid social provider (Google), Client ID/Secret and Redirect URI, then save", async () => {
-      // Default "Select Provider" is "Social", which turns "Provider Name"
-      // into a Select of Google/Microsoft (identity-provider-form-dialog.tsx).
-      const providerNameSelect = page.getByRole("dialog").getByRole("combobox").nth(1);
-      await providerNameSelect.click();
-      await page.getByRole("option", { name: "Google", exact: true }).click();
+    await test.step("Switch Select Provider to BYOS, fill Provider Name/Client ID/Secret and Redirect URI, then save", async () => {
+      const providerTypeSelect = page.getByRole("dialog").getByRole("combobox").first();
+      await providerTypeSelect.click();
+      await page.getByRole("option", { name: "Bring your own SSO (BYOS)" }).click();
 
+      // With providerType !== "social", "Provider Name" becomes a free-text
+      // Input (identity-provider-form-dialog.tsx).
+      await page.getByPlaceholder("my-identity-provider").fill(providerName);
       await page.getByPlaceholder("Enter client ID").fill(`flow-client-id-${Date.now()}`);
       await page.getByPlaceholder("Enter client secret").fill("flow-client-secret-value");
       await page
@@ -79,43 +104,19 @@ test.describe("flows", () => {
       await expect(addButton).toBeEnabled({ timeout: 10000 });
       await addButton.click();
 
-      await expect(page.getByText("Identity provider created successfully"))
-        .toBeVisible({ timeout: 15000 })
-        .catch(() => {});
+      await expect(page.getByText("Identity provider created successfully").first()).toBeVisible({
+        timeout: 15000,
+      });
     });
 
-    // The new row doesn't carry the free-text `providerName`, since Google
-    // is a fixed social provider — find it by its provider type badge / row
-    // count instead, using the most recently added row (first row, since
-    // the list renders newest additions and defaultExpanded is index 0).
-    const providerRow = page.getByRole("row").filter({ hasText: "Google" }).first();
-
-    await test.step("Find the new provider and expand its row into the KV details panel", async () => {
-      await expect(providerRow).toBeVisible({ timeout: 15000 });
-      await providerRow.click();
-      await expect(page.getByText("Client Id")).toBeVisible({ timeout: 10000 });
-      await expect(page.getByText("Redirect URI(s)")).toBeVisible();
-    });
-
-    await test.step("Reopen the provider for editing and close without changes", async () => {
-      const editButton = providerRow.getByRole("button", { name: "Edit provider" });
-      if (await editButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await editButton.click();
-        await expect(page.getByRole("heading", { name: "Edit Identity Provider" })).toBeVisible();
-        await page.getByRole("button", { name: "Cancel" }).click();
-      }
-    });
-
-    await test.step("Delete the provider via its confirmation dialog", async () => {
-      const deleteButton = providerRow.getByRole("button", { name: "Delete provider" });
-      if (await deleteButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await deleteButton.click();
-        await expect(page.getByRole("heading", { name: "Delete identity provider" })).toBeVisible();
-        await page.getByRole("button", { name: "Delete", exact: true }).last().click();
-        await expect(page.getByText("Identity provider deleted successfully"))
-          .toBeVisible({ timeout: 15000 })
-          .catch(() => {});
-      }
+    // This is the confirmed regression (see test.fail() above): the list
+    // never refetches after create, so let the real assertion throw rather
+    // than soft-catching it — that's what keeps this test failing (as
+    // expected) instead of silently passing once the bug is fixed.
+    await test.step("The new provider appears in the list (currently fails — see regression note)", async () => {
+      await expect(page.getByRole("row").filter({ hasText: providerName })).toBeVisible({
+        timeout: 15000,
+      });
     });
   });
 });

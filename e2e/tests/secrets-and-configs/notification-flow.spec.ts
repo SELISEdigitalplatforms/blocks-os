@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -63,7 +63,7 @@ test.describe("flows", () => {
       const notificationTypeSelect = page
         .getByRole("dialog")
         .getByRole("combobox")
-        .filter({ hasText: "Select Notification Type" });
+        .filter({ hasText: "NoReceiverType" });
       await notificationTypeSelect.click();
       await page.getByRole("option", { name: "BroadcastReceiverType", exact: true }).click();
 
@@ -106,7 +106,7 @@ test.describe("flows", () => {
         page.getByText(new RegExp(`delete the ${configName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} configuration`)),
       ).toBeVisible();
 
-      await page.getByRole("button", { name: "Delete", exact: true }).last().click();
+      await page.getByRole("button", { name: "Yes", exact: true }).click();
       await expect(page.getByText("Configuration deleted successfully"))
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});

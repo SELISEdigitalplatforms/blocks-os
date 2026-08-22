@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../../support/login-helper";
+import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { ensureAuthenticated } from "../../support/login-helper";
 
 // Overview flow: the dashboard page a reader lands on right after opening a
 // project's Development environment (pages/dashboard/dashboard-overview.tsx).
@@ -31,28 +31,46 @@ test.describe("flows", () => {
     });
 
     await test.step("Onboard action opens the AI-agent onboarding brief", async () => {
-      await page.getByRole("button", { name: "Onboard" }).click();
-      await expect(
-        page.getByRole("heading", { name: "Onboard with an AI agent" }),
-      ).toBeVisible({ timeout: 10000 });
+      const onboardButton = page.getByRole("button", { name: "Onboard" });
+      const onboardHeading = page.getByRole("heading", { name: "Onboard with an AI agent" });
+
+      // The button is visible right as the dashboard finishes its own layout
+      // shift (header/actions/domains/repos sections mounting in sequence),
+      // so a click landing in that window can miss — wait for it to be stable
+      // first, and retry once if the dialog still didn't open.
+      await expect(onboardButton).toBeVisible({ timeout: 10000 });
+      await onboardButton.click();
+      if (!(await onboardHeading.isVisible({ timeout: 8000 }).catch(() => false))) {
+        await onboardButton.click();
+      }
+      await expect(onboardHeading).toBeVisible({ timeout: 10000 });
       await page.keyboard.press("Escape");
-      await expect(
-        page.getByRole("heading", { name: "Onboard with an AI agent" }),
-      ).toBeHidden();
+      await expect(onboardHeading).toBeHidden();
     });
 
     await test.step("Delete action (project owner) is visible on Overview", async () => {
       await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
     });
 
-    await test.step("Domains section is present, empty by default", async () => {
+    await test.step("Domains section is present", async () => {
       await expect(page.getByText("Domains", { exact: true })).toBeVisible();
-      await expect(page.getByText("No domains configured yet.")).toBeVisible({ timeout: 20000 });
+      // New projects come pre-seeded with at least one platform domain
+      // (e.g. "<tenant>.dev.slsblx.com"), so the table's Domain column
+      // header — not the empty state — is the reliable "loaded" signal.
+      await expect(page.getByRole("columnheader", { name: "Domain", exact: true })).toBeVisible({
+        timeout: 20000,
+      });
     });
 
     await test.step("Open 'Add Domain' dialog", async () => {
-      await page.getByRole("button", { name: "Add Domain" }).click();
-      await expect(page.getByRole("heading", { name: "Add Domain" })).toBeVisible();
+      const addDomainHeading = page.getByRole("heading", { name: "Add Domain" });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await page.getByRole("button", { name: "Add Domain" }).click();
+        if (await addDomainHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
+          break;
+        }
+      }
+      await expect(addDomainHeading).toBeVisible();
     });
 
     await test.step("'Add' stays disabled until Domain and Cookie Domain are valid", async () => {
@@ -105,17 +123,15 @@ test.describe("flows", () => {
       await expect(
         page.getByText("Are you sure you want to delete the following domain?"),
       ).toBeVisible();
-      await expect(page.getByText(domainName)).toBeVisible();
+      // The dialog's domain preview is a titled <p>, unlike the table's row
+      // (a plain span) — scope to that to avoid matching both.
+      await expect(page.getByTitle(`https://${domainName}`)).toBeVisible();
 
       await page.getByRole("button", { name: "Delete", exact: true }).last().click();
       await expect(page.getByText("Domain deleted successfully"))
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
       await expect(domainRow).toHaveCount(0, { timeout: 10000 });
-    });
-
-    await test.step("Domains section is empty again", async () => {
-      await expect(page.getByText("No domains configured yet.")).toBeVisible({ timeout: 10000 });
     });
   });
 });
