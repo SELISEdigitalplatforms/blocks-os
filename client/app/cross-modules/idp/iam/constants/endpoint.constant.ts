@@ -60,6 +60,8 @@ export const ROLE_ENDPOINTS = {
   CREATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/create`,
   UPDATE_ROLE: `${API_BASES.IAM}${IAM_SUBPATH}/roles/update`,
   SET_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assign-permissions`,
+  // POST despite being a read: the diff it previews is two id lists.
+  PERMISSION_CHANGE_IMPACT: `${API_BASES.IAM}${IAM_SUBPATH}/roles/permission-change-impact`,
   GET_ALL_ASSIGNED_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/roles/assignable`,
 } as const;
 

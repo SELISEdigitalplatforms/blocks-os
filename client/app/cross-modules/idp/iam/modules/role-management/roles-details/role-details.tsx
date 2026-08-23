@@ -5,7 +5,6 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useSetRoles } from "@blocks-idp/iam/hooks/use-roles";
 import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 // import { IPermission, PermissionSeverityLevel } from "@blocks-idp/iam/models/permission";
 import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
@@ -13,6 +12,14 @@ import { RoleDetailsProvider, useRoleDetailsStore } from "./role-details-state";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { useState } from "react";
 import { PermissionsSelectionPanel } from "./permissions-selection-panel";
+import { ApplyPermissionChangesDialog } from "./apply-permission-changes-dialog";
+
+/**
+ * Roles in this organization are the source every other organization's copy is created from, which
+ * is what makes propagating a permission change from here meaningful at all. Matches
+ * IdpConstants.DefaultOrganizationId on the backend.
+ */
+const DEFAULT_ORGANIZATION_ID = "default";
 
 const RoleDetailsPageSkeleton = () => (
   <>
@@ -30,6 +37,8 @@ const RoleDetailsPageSkeleton = () => (
   </>
 );
 
+type PendingChange = { added: string[]; removed: string[] };
+
 export function RoleDetailsContainer() {
   const role = useRoleDetailsStore((state) => state.role);
   const isEditMode = useRoleDetailsStore((state) => state.isEditMode);
@@ -41,13 +50,20 @@ export function RoleDetailsContainer() {
   const { isPending, mutateAsync } = useSetRoles();
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { data: orgConfig } = useGetOrganizationConfig(tenantId);
-  // Only offered when the tenant actually has other organizations to propagate to. Single-org
-  // tenants never see the control and never send the field.
-  const isMultiOrgEnabled = orgConfig?.isMultiOrgEnabled ?? false;
-  const [propagateToAllOrganizations, setPropagateToAllOrganizations] = useState(false);
 
-  const onSaveClick = async () => {
-    const changedPermissions = Array.from(permissionMap.values()).reduce(
+  // Both halves of the gate the backend enforces on the write. Multi-org alone is not enough: an
+  // organization-scoped administrator's propagation flag is ignored server-side, so confirming it
+  // here would promise something that never happens.
+  const canOfferPropagation =
+    (orgConfig?.isMultiOrgEnabled ?? false) && role?.organizationId === DEFAULT_ORGANIZATION_ID;
+
+  // Captured when Save is pressed, not read live inside the dialog. The confirmation has to be
+  // about the diff the user was shown; a selection edited behind an open dialog must not silently
+  // become what gets applied.
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
+
+  const collectChanges = (): PendingChange =>
+    Array.from(permissionMap.values()).reduce<PendingChange>(
       (acc, item) => {
         if (!item.modified) return acc;
         if (item.changeState === "added") {
@@ -60,31 +76,49 @@ export function RoleDetailsContainer() {
         }
         return acc;
       },
-      { added: [] as string[], removed: [] as string[] },
+      { added: [], removed: [] },
     );
-    if (!role?.slug || (!changedPermissions.added.length && !changedPermissions.removed.length))
-      return null;
+
+  const save = async (changes: PendingChange, propagateToAllOrganizations: boolean) => {
+    if (!role?.slug) return;
     try {
       await mutateAsync({
-        addPermissions: changedPermissions.added,
-        removePermissions: changedPermissions.removed,
+        addPermissions: changes.added,
+        removePermissions: changes.removed,
         slug: role.slug,
         organizationId: role.organizationId,
-        // Omitted entirely unless the tenant is multi-org AND the box is ticked, so a single-org
-        // tenant's payload is byte-for-byte what it was before this existed.
-        ...(isMultiOrgEnabled && propagateToAllOrganizations
-          ? { propagateToAllOrganizations: true }
-          : {}),
+        // Omitted entirely rather than sent as false, so a single-organization tenant's payload is
+        // byte-for-byte what it was before propagation existed.
+        ...(propagateToAllOrganizations ? { propagateToAllOrganizations: true } : {}),
       });
       commitChanges();
-      setPropagateToAllOrganizations(false);
-      showSuccessToast({ description: "Role permissions updated successfully" });
+      showSuccessToast({
+        description: propagateToAllOrganizations
+          ? "Role permissions updated across all organizations"
+          : "Role permissions updated successfully",
+      });
     } catch (error) {
       if (error && typeof error === "object" && "errors" in error) {
         const { errors } = error;
         showErrorToast({ errors });
       }
+      // Rethrown so the dialog knows the save failed and stays open on the user's selection.
+      throw error;
     }
+  };
+
+  const onSaveClick = async () => {
+    const changes = collectChanges();
+    if (!role?.slug || (!changes.added.length && !changes.removed.length)) return;
+
+    // The dialog is shown only where it has a decision to offer. Everywhere else -- single-org
+    // tenants, organization-scoped administrators -- saving stays the one click it has always been.
+    if (!canOfferPropagation) {
+      await save(changes, false).catch(() => undefined);
+      return;
+    }
+
+    setPendingChange(changes);
   };
 
   if (!isInitialized || !role?.slug) {
@@ -109,21 +143,6 @@ export function RoleDetailsContainer() {
             </Button>
           ) : (
             <>
-              {isMultiOrgEnabled && (
-                <label className="mr-2 flex items-start gap-2 text-sm">
-                  <Checkbox
-                    className="mt-0.5"
-                    checked={propagateToAllOrganizations}
-                    onCheckedChange={(checked) =>
-                      setPropagateToAllOrganizations(checked === true)
-                    }
-                    aria-label="Apply this change to all organizations"
-                  />
-                  <span title="This applies only the permissions you add or remove here. It does not otherwise change other organizations' settings.">
-                    Apply this change to all organizations
-                  </span>
-                </label>
-              )}
               <Button variant="outline" disabled={isPending} onClick={() => discardChanges()}>
                 <span>Discard</span>
               </Button>
@@ -137,6 +156,24 @@ export function RoleDetailsContainer() {
       <div className="grid gap-4">
         <PermissionsSelectionPanel />
       </div>
+
+      {pendingChange && (
+        <ApplyPermissionChangesDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) setPendingChange(null);
+          }}
+          roleName={role.name}
+          slug={role.slug}
+          organizationId={role.organizationId}
+          addPermissions={pendingChange.added}
+          removePermissions={pendingChange.removed}
+          isPending={isPending}
+          onConfirm={(propagateToAllOrganizations) =>
+            save(pendingChange, propagateToAllOrganizations)
+          }
+        />
+      )}
     </>
   );
 }
