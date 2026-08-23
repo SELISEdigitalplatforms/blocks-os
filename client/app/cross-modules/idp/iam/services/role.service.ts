@@ -10,6 +10,12 @@ import {
   UpdateRolePayload,
 } from "@blocks-idp/iam/models/role";
 import { ROLE_ENDPOINTS } from "../constants/endpoint.constant";
+import { ArchiveResponse } from "../constants/archive-error-messages";
+import { IRoleArchiveImpact } from "@blocks-idp/iam/models/archive-impact.model";
+import {
+  IRolePermissionChangeImpact,
+  IRolePermissionChangeImpactPayload,
+} from "@blocks-idp/iam/models/role-permission-change-impact.model";
 
 export class RoleService {
   getRoles(payload: GetRolesPayload): Promise<GetRolesResponse> {
@@ -36,6 +42,46 @@ export class RoleService {
       isSuccess: boolean;
       itemId: string;
     }>(ROLE_ENDPOINTS.UPDATE_ROLE, payload, undefined, { absoluteUrl: true });
+  }
+
+  /**
+   * Archives a role. Soft delete on the backend -- the document survives, so this is safe to
+   * expose from the list. Rejections arrive as a thrown HttpError carrying the reason code; see
+   * ARCHIVE_ERROR_MESSAGES.
+   */
+  deleteRole(id: string, confirmRevokeFromUsers = false): Promise<ArchiveResponse> {
+    // The flag is omitted entirely when false rather than sent as "false": an absent parameter is
+    // exactly what a client predating consent sends, so the two are indistinguishable server-side.
+    const query = confirmRevokeFromUsers ? "?confirmRevokeFromUsers=true" : "";
+    return http.delete(`${ROLE_ENDPOINTS.GET_ROLES}/${id}${query}`, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  /**
+   * What archiving this role would affect. Read-only; drives the confirmation dialog's counts.
+   */
+  getRoleArchiveImpact(id: string): Promise<IRoleArchiveImpact> {
+    return http.get(`${ROLE_ENDPOINTS.GET_ROLES}/${id}/archive-impact`, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  /**
+   * What assigning or unassigning the given permissions would affect, before it is applied.
+   *
+   * POST for a read because the diff is two id lists; a query string would not survive a role with
+   * many permissions changed at once.
+   */
+  getRolePermissionChangeImpact(
+    payload: IRolePermissionChangeImpactPayload,
+  ): Promise<IRolePermissionChangeImpact> {
+    return http.post<IRolePermissionChangeImpact>(
+      ROLE_ENDPOINTS.PERMISSION_CHANGE_IMPACT,
+      payload,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   setRoles(addSetRolesPayload: SetRoles): Promise<SetRoles> {

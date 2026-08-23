@@ -153,33 +153,48 @@ describe("SecretFormModal — create", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("sends access: null for a service secret and hides the picker", async () => {
-    const user = userEvent.setup();
+  it("offers Application as the only category", () => {
+    // Creating a service secret is not accepted from the UI for now; the card is commented
+    // out in CREATE_TYPE_OPTIONS, so nothing but Application can be chosen.
     renderCreate();
 
-    await user.click(screen.getByRole("radio", { name: /Platform service/ }));
-    expect(screen.queryByTestId("access-summary")).toBeNull();
-
-    await fillCreate(user);
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() =>
-      expect(hoisted.create).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "service", access: null }),
-      ),
-    );
+    expect(screen.getByRole("radio", { name: /Application/ })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: /Platform service/ })).toBeNull();
   });
 
-  it("maps NAME_TAKEN onto the name field rather than a generic banner", async () => {
+  // Restore alongside SECRET_TYPE.Service in CREATE_TYPE_OPTIONS — the submit path still sends
+  // access: null for a service secret, it is just unreachable from the form.
+  // it("sends access: null for a service secret and hides the picker", async () => {
+  //   const user = userEvent.setup();
+  //   renderCreate();
+  //
+  //   await user.click(screen.getByRole("radio", { name: /Platform service/ }));
+  //   expect(screen.queryByTestId("access-summary")).toBeNull();
+  //
+  //   await fillCreate(user);
+  //   await user.click(screen.getByRole("button", { name: "Save" }));
+  //
+  //   await waitFor(() =>
+  //     expect(hoisted.create).toHaveBeenCalledWith(
+  //       expect.objectContaining({ type: "service", access: null }),
+  //     ),
+  //   );
+  // });
+
+  it("maps a field reason code onto the name field rather than a generic banner", async () => {
     const user = userEvent.setup();
     const { onOpenChange } = renderCreate();
-    hoisted.create.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_TAKEN" }));
+    hoisted.create.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_INVALID" }));
 
     await fillCreate(user);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(screen.getByText("A secret with this name already exists.")).toBeTruthy(),
+      expect(
+        screen.getByText(
+          "Use letters, digits, dot, underscore or hyphen, starting with a letter or digit.",
+        ),
+      ).toBeTruthy(),
     );
     expect(screen.queryByRole("alert")).toBeNull();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
@@ -304,12 +319,16 @@ describe("SecretFormModal — edit", () => {
   it("keeps the modal open when the metadata call itself fails", async () => {
     const user = userEvent.setup();
     const { onOpenChange } = renderEdit();
-    hoisted.update.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_TAKEN" }));
+    hoisted.update.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_INVALID" }));
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(screen.getByText("A secret with this name already exists.")).toBeTruthy(),
+      expect(
+        screen.getByText(
+          "Use letters, digits, dot, underscore or hyphen, starting with a letter or digit.",
+        ),
+      ).toBeTruthy(),
     );
     expect(hoisted.updateAccess).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);

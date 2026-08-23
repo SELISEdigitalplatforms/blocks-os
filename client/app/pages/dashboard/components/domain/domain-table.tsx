@@ -5,10 +5,14 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Settings, ShieldCheck, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
+import { FilterControls } from "@/components/filter-toolbar";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainAction } from "./domain.constant";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
@@ -114,6 +118,7 @@ interface DomainTableProps {
 
 export const DomainTable = ({ data }: DomainTableProps) => {
   const { mutateAsync, isPending } = useUpdateProject();
+  const [search, setSearch] = useState("");
 
   // ── Edit dialog ────────────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<IDomain | null>(null);
@@ -166,11 +171,36 @@ export const DomainTable = ({ data }: DomainTableProps) => {
 
   // ── Table ──────────────────────────────────────────────────────────────────
   const columns = buildColumns(handleEdit, handleDeleteRequest, handleCname);
+  const filteredData = useMemo(() => {
+    const normalizedSearch = search.toLowerCase();
+    return data.filter((domain) => domain.domain.toLowerCase().includes(normalizedSearch));
+  }, [data, search]);
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: DASHBOARD_TABLE_PAGE_SIZE } },
+    // A data change otherwise queues a reset of the page index back to the first page.
+    // That reset would race the clamp below and win, throwing a reader back to page 1 on
+    // every background refetch, so the index is kept and corrected explicitly instead.
+    autoResetPageIndex: false,
   });
+
+  const { pageIndex } = table.getState().pagination;
+  const lastPageIndex = Math.max(0, table.getPageCount() - 1);
+
+  // Deleting the last row of the last page leaves the index past the end of the data,
+  // which renders an empty table body. Clamp in a layout effect so that blank frame is
+  // never painted.
+  useLayoutEffect(() => {
+    if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex);
+  }, [pageIndex, lastPageIndex, table]);
+
+  const handleSearchChange = (value: string) => {
+    table.setPageIndex(0);
+    setSearch(value);
+  };
 
   return (
     <>
@@ -205,6 +235,17 @@ export const DomainTable = ({ data }: DomainTableProps) => {
         }}
       />
 
+      {data.length > 0 && (
+        <div className="mb-4 flex justify-start">
+          <FilterControls.SearchInput
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search domains..."
+            className="w-64"
+          />
+        </div>
+      )}
+
       {/* Table — min width keeps columns readable and scrolls horizontally
           on narrow screens, matching the repo table's behavior */}
       <div className="relative w-full overflow-x-auto">
@@ -233,7 +274,9 @@ export const DomainTable = ({ data }: DomainTableProps) => {
                   colSpan={columns.length}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  No domains configured yet.
+                  {data.length === 0
+                    ? "No domains configured yet."
+                    : "No domains match your search."}
                 </td>
               </tr>
             ) : (
@@ -250,6 +293,20 @@ export const DomainTable = ({ data }: DomainTableProps) => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination — omitted entirely when there is nothing to page through, so the
+          empty state is not captioned "Page 1 of 1". No page-size selector: the size is
+          fixed at five. */}
+      {filteredData.length > 0 && (
+        <nav aria-label="Domains pagination" className="mt-4 flex items-center md:justify-end">
+          <Pagination
+            page={pageIndex}
+            pageSize={DASHBOARD_TABLE_PAGE_SIZE}
+            totalCount={filteredData.length}
+            onChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
+          />
+        </nav>
+      )}
     </>
   );
 };

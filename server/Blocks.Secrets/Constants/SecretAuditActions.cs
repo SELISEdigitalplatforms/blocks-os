@@ -23,6 +23,13 @@ public static class SecretAuditActions
     /// compensating delete also failed. Records the unreferenced vault key for reconciliation.
     /// </summary>
     public const string VaultOrphan = "VaultOrphan";
+
+    // The three below are recorded by KeyValueEntryService, not SecretService: they audit a
+    // change to a configuration group's non-secret fields, distinct from Set/Rotate/Delete,
+    // which audit the linked secret's own value.
+    public const string ConfigSet = "ConfigSet";
+    public const string ConfigUpdate = "ConfigUpdate";
+    public const string ConfigDelete = "ConfigDelete";
 }
 
 /// <summary>

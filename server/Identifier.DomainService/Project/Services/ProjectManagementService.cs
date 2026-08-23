@@ -419,6 +419,11 @@ namespace DomainService.Projects
                 tenantSlug = $"{IdentifierHelper.EnvironmentMapper(tenant.Environment)}{blocksGuid.EncodedValue}";
             }
 
+            // The owner can change via People/TransferOwnerShip, which only updates
+            // ProjectPeople.IsCreator — CreatedBy is a creation-time audit stamp, not the
+            // current owner. See docs/specs/transfer-ownership-createdby-decoupling.md.
+            var ownerUserId = await _projectRepository.GetOwnerUserIdAsync(tenant.TenantId);
+
             var project = new GetProjectResponseData
             {
                 Name = tenant.Name,
@@ -428,7 +433,7 @@ namespace DomainService.Projects
                 LastUpdatedDate = tenant.LastUpdatedDate,
                 LastUpdatedBy = tenant.LastUpdatedBy,
               //  OrganizationIds = tenant.OrganizationIds,
-                CreatedBy = tenant.CreatedBy,
+                CreatedBy = ownerUserId ?? tenant.CreatedBy,
                 Tags = tenant.Tags,
                 TenantId = tenant.TenantId,
                 IsDomainVerified = tenant.Applications.FirstOrDefault()?.IsDomainVerified ?? false,
@@ -447,6 +452,11 @@ namespace DomainService.Projects
         {
             var blocksContext = BlocksContext.GetContext();
             var project = await _projectRepository.GetByTenantIdAsync(blocksContext.TenantId);
+
+            if(project.IsRootTenant)
+            {
+             return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "root_tenant", $"Root tenant cannot be updated" } } };
+            }
 
             if (project == null)
             {

@@ -1,5 +1,7 @@
 using Blocks.Genesis;
+using Cloud.LmtService.Models.BlocksServices;
 using Cloud.LmtService.Models.Logs;
+using Cloud.LmtService.Services.BlocksServices;
 using Cloud.LmtService.Services.Logs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,11 +14,14 @@ namespace BlocksOs.Api.Controllers
     public class LogController : ControllerBase
     {
         private readonly ILogService _logService;
+        private readonly IBlocksServicesService _blocksServicesService;
 
         public LogController(
-            ILogService logService)
+            ILogService logService,
+            IBlocksServicesService blocksServicesService)
         {
             _logService = logService;
+            _blocksServicesService = blocksServicesService;
         }
 
 
@@ -47,6 +52,12 @@ namespace BlocksOs.Api.Controllers
         {
             var result = await _logService.GetLiveLogsAsync(request);
             return Ok(result);
+        }
+
+        [HttpGet]
+        public async Task<List<BlocksServiceItem>> GetBlocksServices()
+        {
+            return await _blocksServicesService.GetBlocksServicesAsync();
         }
 
     }

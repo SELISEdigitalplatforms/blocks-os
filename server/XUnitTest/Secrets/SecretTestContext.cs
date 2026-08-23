@@ -43,10 +43,6 @@ namespace XUnitTest.Secrets
                 .Callback<SecretAuditLog, CancellationToken>((log, _) => AuditLog.Add(log))
                 .Returns(Task.CompletedTask);
 
-            Repository
-                .Setup(r => r.NameExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(false);
-
             // Without this, Moq's default for the tuple return hands back a null list rather
             // than an empty one, which no real repository ever does.
             Repository

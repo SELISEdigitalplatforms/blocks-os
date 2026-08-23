@@ -86,6 +86,19 @@ const editSchema = z.object({
 
 type FormValues = { name: string; description?: string; value?: string };
 
+/**
+ * Categories offered when creating a secret.
+ *
+ * Only `Application` is accepted from the UI for now — `Service` stays commented out rather
+ * than deleted because the backend still accepts it and the card is meant to come back.
+ * Existing service secrets are unaffected: edit mode reads the category off the secret and
+ * renders it read-only, so this list is never consulted there.
+ */
+const CREATE_TYPE_OPTIONS: SecretType[] = [
+  SECRET_TYPE.Api,
+  // SECRET_TYPE.Service,
+];
+
 const emptyAccess = (): SecretAccess => ({ userIds: [], roles: [] });
 
 // Order is not significant in an access list, so compare as sets — elementwise rather than by
@@ -148,7 +161,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
 
   const isApi = type === SECRET_TYPE.Api;
 
-  /** Routes a backend reason code onto the field it belongs to, e.g. NAME_TAKEN onto `name`. */
+  /** Routes a backend reason code onto the field it belongs to, e.g. NAME_INVALID onto `name`. */
   const applyError = (error: unknown, fallback: string) => {
     const info = describeSecretError(error, fallback);
     if (info.field === "name" || info.field === "description") {
@@ -266,8 +279,15 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                 ) : (
                   // Cards rather than a segmented toggle: the choice is not obvious from a
                   // one-word label, so each option carries the sentence that explains it.
-                  <div role="radiogroup" aria-label="Category" className="grid gap-2 sm:grid-cols-2">
-                    {[SECRET_TYPE.Api, SECRET_TYPE.Service].map((option) => (
+                  <div
+                    role="radiogroup"
+                    aria-label="Category"
+                    className={cn(
+                      "grid gap-2",
+                      CREATE_TYPE_OPTIONS.length > 1 && "sm:grid-cols-2",
+                    )}
+                  >
+                    {CREATE_TYPE_OPTIONS.map((option) => (
                       <button
                         key={option}
                         type="button"

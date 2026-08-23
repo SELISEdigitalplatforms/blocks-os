@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { normalizeArchiveErrors } from "../constants/archive-error-messages";
 import { useMemo } from "react";
 import {
   IGetPermissionByIdPayload,
@@ -56,6 +57,36 @@ export const useAddPermission = () => {
     mutationFn: iamService.permission.addPermission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["permissions"] });
+    },
+  });
+};
+
+/**
+ * Archives a permission. Same reasoning as useDeleteRole for why the resolved-failure guard lives
+ * in mutationFn rather than in the component.
+ */
+export const useDeletePermission = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["permission", "delete"],
+    mutationFn: async ({
+      id,
+      confirmRevokeFromUsers = false,
+    }: {
+      id: string;
+      confirmRevokeFromUsers?: boolean;
+    }) => {
+      const response = await iamService.permission.deletePermission(id, confirmRevokeFromUsers);
+      if (response?.isSuccess === false) {
+        throw Object.assign(new Error("Archive failed"), {
+          errors: normalizeArchiveErrors(response) ?? { general: "Archive failed" },
+        });
+      }
+      return response;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["permissions"] });
+      queryClient.invalidateQueries({ queryKey: ["permission-archive-impact", variables.id] });
     },
   });
 };

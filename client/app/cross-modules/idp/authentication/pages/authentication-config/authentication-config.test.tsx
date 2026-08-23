@@ -17,7 +17,11 @@ vi.mock("@blocks-idp/iam/modules/role-management", () => ({
 }));
 vi.mock("@blocks-idp/iam/modules/organization-management", () => ({
   AddOrganization: () => <div data-testid="add-organization" />,
-  OrganizationConfig: () => <div data-testid="organization-config" />,
+  OrganizationConfig: () => (
+    <button data-testid="organization-config" className="border border-input bg-background hover:bg-accent hover:text-accent-foreground">
+      Configure Organization
+    </button>
+  ),
 }));
 vi.mock("@blocks-idp/iam/modules/user-management", () => ({
   InviteUser: () => <div data-testid="invite-user" />,
@@ -62,11 +66,28 @@ describe("AuthenticationConfigLayout", () => {
     expect(screen.getByTestId("invite-user")).toBeTruthy();
   });
 
-  it("shows the organization config and add actions on the organizations path", () => {
+it("shows the organization config and add actions on the organizations path", () => {
     h.pathname = "/app/auth/organizations";
     render(<AuthenticationConfigLayout />);
-    expect(screen.getByTestId("organization-config")).toBeTruthy();
     expect(screen.getByTestId("add-organization")).toBeTruthy();
+    const configure = screen.getByTestId("organization-config");
+    expect(configure).toBeTruthy();
+    // Contract check: Configure organization must use the outline variant so it
+    // does not visually outrank the primary Add organization button (regression
+    // guard for the variant change in organization-config.tsx).
+    expect(configure.className).toContain("border");
+    expect(configure.className).toContain("border-input");
+    expect(configure.className).toContain("bg-background");
+  });
+
+  it("renders Configure organization with the outline variant so it does not outrank the primary Add organization button", () => {
+    h.pathname = "/app/auth/organizations";
+    render(<AuthenticationConfigLayout />);
+    const configure = screen.getByTestId("organization-config");
+    expect(configure).toBeTruthy();
+    expect(configure.className).toContain("border");
+    expect(configure.className).toContain("border-input");
+    expect(configure.className).toContain("bg-background");
   });
 
   it("keeps the organization actions off the roles path", () => {
@@ -88,5 +109,27 @@ describe("AuthenticationConfigLayout", () => {
     h.open = true;
     render(<AuthenticationConfigLayout />);
     expect(screen.getByTestId("email-config")).toBeTruthy();
+  });
+
+  it("anchors its own height to the viewport minus the measured chrome above it", () => {
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    const reportedTop = 72;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      const result = original.call(this);
+      // The outer flex container is the one whose height pins to the viewport.
+      if (this.classList?.contains("flex") && this.classList?.contains("overflow-hidden")) {
+        return { ...result, top: reportedTop, left: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: reportedTop } as DOMRect;
+      }
+      return result;
+    };
+
+    try {
+      const { container } = render(<AuthenticationConfigLayout />);
+      const outer = container.querySelector(".flex.overflow-hidden") as HTMLElement | null;
+      expect(outer).toBeTruthy();
+      expect(outer!.style.height).toBe("calc(100vh - 72px)");
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = original;
+    }
   });
 });

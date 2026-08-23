@@ -2,6 +2,7 @@ import { ArchiveProject } from "./archive";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { RenderConditionally } from "@seliseblocks/genesis-os/components";
 import { useAuthStore } from "@seliseblocks/genesis-os/store";
+import { OnboardProject } from "../onboard";
 
 type ProjectActionsProps = {
   itemId: string;
@@ -23,10 +24,15 @@ export const ProjectActions = ({
   }
 
   return (
-    <RenderConditionally condition={isOwner && !isDisabled}>
+    // Onboarding instructions are useful to every member, so they sit outside
+    // the owner-only guard that gates deletion.
+    <RenderConditionally condition={!isDisabled}>
       <div className="flex items-center gap-2">
         {/* <EditProject /> */}
-        <ArchiveProject />
+        <OnboardProject />
+        <RenderConditionally condition={isOwner}>
+          <ArchiveProject />
+        </RenderConditionally>
       </div>
     </RenderConditionally>
   );
@@ -36,6 +42,7 @@ const ProjectActionsSkeleton = () => {
   return (
     <div className="flex items-center gap-2">
       {/* <Skeleton className="h-10 w-20 rounded-md" /> */}
+      <Skeleton className="h-10 w-28 rounded-md" />
       <Skeleton className="h-10 w-32 rounded-md" />
     </div>
   );

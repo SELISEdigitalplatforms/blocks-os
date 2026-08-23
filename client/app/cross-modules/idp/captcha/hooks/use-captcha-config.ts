@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { captchaService } from "../services/captcha.service";
-import { IGetCaptchaConfigsPayload } from "../models/captcha";
+import { IGetCaptchaConfigPayload } from "../models/captcha";
 
-export const useGetCaptchaConfigs = (
-  options: IGetCaptchaConfigsPayload,
+export const useGetCaptchaConfigList = (
+  options: IGetCaptchaConfigPayload,
   enabled: boolean = true,
 ) => {
   return useQuery({
-    queryKey: ["captcha-configs", options.projectKey],
-    queryFn: () => captchaService.getCaptchaConfigs(),
+    queryKey: ["captcha-config", "list", options.projectKey],
+    queryFn: () => captchaService.getCaptchaConfigList(),
     enabled: !!options.projectKey && enabled,
   });
 };
@@ -19,7 +19,7 @@ export const useSaveCaptcha = () => {
     mutationKey: ["captcha-config", "save"],
     mutationFn: captchaService.saveCaptcha,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["captcha-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["captcha-config"] });
     },
   });
 };
@@ -30,7 +30,18 @@ export const useToggleCaptchaConfigStatus = () => {
     mutationKey: ["captcha-config", "status-update"],
     mutationFn: captchaService.updateCaptchaConfigStatus,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["captcha-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["captcha-config"] });
+    },
+  });
+};
+
+export const useDeleteCaptcha = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["captcha-config", "delete"],
+    mutationFn: captchaService.deleteCaptchaConfig,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["captcha-config"] });
     },
   });
 };

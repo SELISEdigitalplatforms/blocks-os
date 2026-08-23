@@ -60,6 +60,73 @@ describe("UsersTable", () => {
     expect(screen.getByText("Inactive")).toBeTruthy();
   });
 
+  it("adds a lockout badge without replacing an active user's status", () => {
+    renderTable({ users: [user({ active: true, isLockedOut: true })] });
+    expect(screen.getByText("Active")).toBeTruthy();
+    expect(screen.getByText("Locked out").className).toContain("bg-red-100");
+  });
+
+  it("does not show a lockout badge when isLockedOut is false or omitted", () => {
+    renderTable({
+      users: [user({ itemId: "false", isLockedOut: false }), user({ itemId: "omitted" })],
+    });
+    expect(screen.queryByText("Locked out")).toBeNull();
+  });
+
+  it("shows inactive and locked-out states together", () => {
+    renderTable({ users: [user({ active: false, isLockedOut: true })] });
+    expect(screen.getByText("Inactive")).toBeTruthy();
+    expect(screen.getByText("Locked out")).toBeTruthy();
+  });
+
+  it("derives lockout only from isLockedOut, even when the timestamp is null or elapsed", () => {
+    renderTable({
+      users: [
+        user({ itemId: "null", isLockedOut: true, lockoutUntilUtc: null }),
+        user({
+          itemId: "elapsed",
+          isLockedOut: true,
+          lockoutUntilUtc: "2000-01-01T00:00:00Z",
+        }),
+      ],
+    });
+    expect(screen.getAllByText("Locked out")).toHaveLength(2);
+  });
+
+  it("names a user with no first or last name after their email", () => {
+    renderTable({
+      users: [user({ firstName: null, lastName: null, email: "john.doe@yopmail.com" })],
+    });
+    expect(screen.getByText("john.doe")).toBeTruthy();
+    expect(screen.getByText("J")).toBeTruthy();
+  });
+
+  it("falls back to placeholders when a user has neither a name nor an email", () => {
+    // Real dates keep the date cells from rendering their own "-", so the only
+    // dash left on the row is the display name.
+    renderTable({
+      users: [
+        user({
+          firstName: null,
+          lastName: null,
+          email: null,
+          createdDate: "2022-01-01T00:00:00Z",
+          lastUpdatedDate: "2022-02-01T00:00:00Z",
+        }),
+      ],
+    });
+    expect(screen.getByText("-")).toBeTruthy();
+    expect(screen.getByText("?")).toBeTruthy();
+  });
+
+  it("keeps the desktop grid aligned when a user has no email", () => {
+    const { container: withEmail } = renderTable({ users: [user()] });
+    const withEmailCells = withEmail.querySelectorAll(".md\\:grid > *").length;
+    const { container: withoutEmail } = renderTable({ users: [user({ email: null })] });
+    const withoutEmailCells = withoutEmail.querySelectorAll(".md\\:grid > *").length;
+    expect(withoutEmailCells).toBe(withEmailCells);
+  });
+
   it("shows the empty state when there are no users", () => {
     renderTable({ users: [] });
     expect(screen.getByText("No users found.")).toBeTruthy();

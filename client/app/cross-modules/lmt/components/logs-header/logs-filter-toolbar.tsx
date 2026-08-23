@@ -3,32 +3,16 @@ import { useContext, useMemo } from "react";
 import { LogsViewerContext } from "../logs-viewer";
 import { LOG_LEVEL } from "../../utils";
 
-const SUB_SERVICE_OPTIONS = [
-  { label: "All", value: "all" },
-  { label: "API", value: "api" },
-  { label: "Worker", value: "worker" },
-];
-
 type LogsFilterValues = {
   search?: string;
   level?: string;
   service: string;
-  subService: string;
   date: { from?: Date; to?: Date } | null;
 };
 
 export const LogsFilterToolbar = () => {
-  const {
-    services,
-    selectedService,
-    changeService,
-    filter,
-    setFilter,
-    resetFilter,
-    isSourceBlocks,
-    subService,
-    setSubService,
-  } = useContext(LogsViewerContext);
+  const { services, serviceFilterValue, changeService, filter, setFilter, resetFilter } =
+    useContext(LogsViewerContext);
   const { level, startDate, endDate, search } = filter || {
     level: "",
     startDate: "",
@@ -39,7 +23,11 @@ export const LogsFilterToolbar = () => {
     label: item[0],
     value: item[1],
   }));
-  const serviceOptions = services.map((s) => ({ label: s.label, value: s.id }));
+  const serviceOptions = services.map((s) => ({
+    label: s.label,
+    value: s.id,
+    children: s.components?.map((c) => ({ label: c.label, value: `${s.id}::${c.value}` })),
+  }));
   const updateFilter = (key: keyof typeof filter, value: unknown) => {
     setFilter((filter) => ({
       ...filter,
@@ -54,21 +42,18 @@ export const LogsFilterToolbar = () => {
       endDate: to ? to.toISOString() : "",
     }));
   };
-  const handleServiceChange = (serviceId: string) => {
+  const handleServiceChange = (serviceKey: string) => {
+    const [serviceId, componentValue] = serviceKey.split("::");
     const service = services.find((s) => s.id === serviceId);
     if (service) {
-      changeService(service);
+      changeService(service, componentValue ?? null);
     }
-  };
-  const handleSubServiceChange = (value: string) => {
-    setSubService(value);
   };
   const onChange = (
     key: keyof LogsFilterValues,
     value: LogsFilterValues[keyof LogsFilterValues],
   ) => {
     if (key === "service") return handleServiceChange(value as string);
-    if (key === "subService") return handleSubServiceChange(value as string);
     if (key === "date") return updateDate(value as { from?: Date; to?: Date } | null);
     return updateFilter(key as keyof typeof filter, value);
   };
@@ -78,7 +63,6 @@ export const LogsFilterToolbar = () => {
       search: "",
       level: "",
       service: "",
-      subService: "all",
       date: null,
     }),
     [], // static — never changes
@@ -88,8 +72,7 @@ export const LogsFilterToolbar = () => {
     () => ({
       search,
       level,
-      service: selectedService?.id || "",
-      subService,
+      service: serviceFilterValue,
       date:
         startDate || endDate
           ? {
@@ -98,10 +81,10 @@ export const LogsFilterToolbar = () => {
             }
           : null,
     }),
-    [search, level, selectedService?.id, subService, startDate, endDate], // re-compute only when these change
+    [search, level, serviceFilterValue, startDate, endDate], // re-compute only when these change
   );
 
-  // Check if only service or subService are changed from defaults
+  // Check if only the service is changed from defaults
   const isOnlyServiceChanged = useMemo(() => {
     const searchChanged = currentValues.search !== defaultValues.search;
     const levelChanged = currentValues.level !== defaultValues.level;
@@ -123,15 +106,6 @@ export const LogsFilterToolbar = () => {
     },
   ];
 
-  if (isSourceBlocks) {
-    filters.push({
-      key: "subService",
-      type: "Radio",
-      label: "Sub-Service",
-      props: { options: SUB_SERVICE_OPTIONS },
-    });
-  }
-
   filters.push({
     key: "level",
     type: "Radio",
@@ -144,10 +118,7 @@ export const LogsFilterToolbar = () => {
       values={currentValues}
       defaultValues={defaultValues}
       onChange={onChange}
-      onReset={() => {
-        resetFilter();
-        setSubService("all");
-      }}
+      onReset={resetFilter}
       hideGlobalResetButton={isOnlyServiceChanged}
     />
   );

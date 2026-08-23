@@ -21,8 +21,9 @@ public class Secret : BaseEntity
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Lowercase projection of <see cref="Name"/>, maintained by the repository.
-    /// Backs the case-insensitive uniqueness index.
+    /// Lowercase projection of <see cref="Name"/>, maintained on write.
+    /// Names are not unique; this is kept as a stable canonical form so a case-insensitive
+    /// lookup or index can be added later without backfilling.
     /// </summary>
     public string NameLower { get; set; } = string.Empty;
 

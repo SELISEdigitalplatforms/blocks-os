@@ -16,7 +16,7 @@ import { OrganizationsSidebarList } from "./organizations-sidebar-list";
 import { OrganizationWorkspacePanel } from "./organization-workspace-panel";
 import { Building2, Settings2 } from "lucide-react";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export function Organizations() {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
@@ -24,6 +24,9 @@ export function Organizations() {
 
   const [search, setSearch] = useQueryState("search", { defaultValue: "" });
   const [selectedOrgId, setSelectedOrgId] = useQueryState("orgId", { defaultValue: "" });
+  // `page` is component state that starts at 0 and is reset to 0 whenever the
+  // normalized search term changes (below), so a change to PAGE_SIZE can never
+  // strand the user on a page number that no longer exists.
   const [page, setPage] = useState(0);
   const [loadedOrgs, setLoadedOrgs] = useState<IOrganization[]>([]);
   // On small screens only one pane is visible at a time (list or workspace),
@@ -128,7 +131,7 @@ export function Organizations() {
   const showSidebarMobile = showListOnMobile || !selectedOrgId;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:h-[calc(100vh-var(--org-page-offset,180px))] lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
       <div
         className={cn(
           "min-h-0 flex-1 flex-col lg:flex lg:h-full",

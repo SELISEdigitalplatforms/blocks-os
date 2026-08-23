@@ -1,6 +1,7 @@
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -32,11 +33,13 @@ export const TracingListBreadCrumb = () => {
           <Fragment key={item.root.spanId}>
             <BreadcrumbItem>
               {index === history.length - 1 ? (
-                <BreadcrumbPage className="text-low-emphasis">{item?.root.spanId}</BreadcrumbPage>
+                <BreadcrumbPage>{item?.root.spanId}</BreadcrumbPage>
               ) : (
-                <BreadcrumbPage className="cursor-pointer" onClick={() => onChange(index)}>
-                  {item?.root.spanId}
-                </BreadcrumbPage>
+                <BreadcrumbLink asChild>
+                  <button type="button" onClick={() => onChange(index)}>
+                    {item?.root.spanId}
+                  </button>
+                </BreadcrumbLink>
               )}
             </BreadcrumbItem>
             {index < history.length - 1 && <BreadcrumbSeparator />}

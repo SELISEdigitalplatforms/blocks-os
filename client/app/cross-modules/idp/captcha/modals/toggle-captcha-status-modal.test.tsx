@@ -20,19 +20,19 @@ import { ToggleCaptchaStatusModal } from "./toggle-captcha-status-modal";
 import type { ICaptchaConfig } from "../models/captcha";
 
 const config = {
-  itemId: "c1",
+  id: "cfg-1",
   provider: "recaptcha",
   isEnable: true,
   captchaKey: "key",
-  captchaSecret: "secret",
   captchaGenerator: "EasyCaptchaGenerator",
+  secretId: "sec-1",
 } as unknown as ICaptchaConfig;
 
 describe("ToggleCaptchaStatusModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.isPending = false;
-    h.mutateAsync.mockResolvedValue({ isSuccess: true });
+    h.mutateAsync.mockResolvedValue({ ...config, isEnable: false });
   });
 
   it("shows a Disable trigger for an enabled config", () => {
@@ -40,16 +40,22 @@ describe("ToggleCaptchaStatusModal", () => {
     expect(screen.getByRole("button", { name: /Disable/ })).toBeTruthy();
   });
 
-  it("opens the confirmation and toggles the status on confirm", async () => {
+  it("opens the confirmation and toggles the status on confirm, without sending a secret", async () => {
     render(<ToggleCaptchaStatusModal configuration={config} />);
     fireEvent.click(screen.getByRole("button", { name: /Disable/ }));
     expect(await screen.findByText("Disable CAPTCHA?")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Yes" }));
     await waitFor(() =>
       expect(h.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ itemId: "c1", isEnable: false }),
+        expect.objectContaining({
+          id: "cfg-1",
+          isEnable: false,
+          provider: "recaptcha",
+          captchaKey: "key",
+        }),
       ),
     );
+    expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty("captchaSecret");
     expect(h.showSuccessToast).toHaveBeenCalled();
   });
 
@@ -58,11 +64,11 @@ describe("ToggleCaptchaStatusModal", () => {
     expect(screen.getByRole("button", { name: /Enable/ })).toBeTruthy();
   });
 
-  it("shows an error toast when the toggle fails", async () => {
-    h.mutateAsync.mockResolvedValueOnce({ isSuccess: false, errors: { general: "x" } });
+  it("shows an error toast when the toggle is rejected", async () => {
+    h.mutateAsync.mockRejectedValueOnce({ errors: { general: "x" } });
     render(<ToggleCaptchaStatusModal configuration={config} />);
     fireEvent.click(screen.getByRole("button", { name: /Disable/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
-    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalled());
+    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: { general: "x" } }));
   });
 });

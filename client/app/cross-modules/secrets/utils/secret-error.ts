@@ -12,7 +12,7 @@ import { SECRET_ERROR_REASON } from "@/cross-modules/secrets/models/secret.model
  */
 export interface SecretErrorInfo {
   status?: number;
-  /** Machine-readable code from `errors.reason`, e.g. `NAME_TAKEN`. */
+  /** Machine-readable code from `errors.reason`, e.g. `NAME_INVALID`. */
   reason?: string;
   /** Message safe to show a user. */
   message: string;
@@ -33,7 +33,6 @@ const REASON_FIELDS: Record<string, SecretErrorInfo["field"]> = {
   [SECRET_ERROR_REASON.NameRequired]: "name",
   [SECRET_ERROR_REASON.NameTooLong]: "name",
   [SECRET_ERROR_REASON.NameInvalid]: "name",
-  [SECRET_ERROR_REASON.NameTaken]: "name",
   [SECRET_ERROR_REASON.DescriptionTooLong]: "description",
   [SECRET_ERROR_REASON.ValueRequired]: "value",
   [SECRET_ERROR_REASON.ValueTooLarge]: "value",
@@ -41,7 +40,6 @@ const REASON_FIELDS: Record<string, SecretErrorInfo["field"]> = {
 };
 
 const REASON_MESSAGES: Record<string, string> = {
-  [SECRET_ERROR_REASON.NameTaken]: "A secret with this name already exists.",
   [SECRET_ERROR_REASON.NameInvalid]:
     "Use letters, digits, dot, underscore or hyphen, starting with a letter or digit.",
   [SECRET_ERROR_REASON.NameTooLong]: "The name is too long.",

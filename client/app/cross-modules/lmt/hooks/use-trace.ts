@@ -18,3 +18,10 @@ export const useGetTraceById = (option: IGetTraceByTraceIdPayload) => {
     enabled,
   });
 };
+
+export const useGetBlocksServices = () => {
+  return useQuery({
+    queryKey: ["blocks-services"],
+    queryFn: () => lmtService.trace.getBlocksServices(),
+  });
+};

@@ -10,7 +10,7 @@ import {
 import type { IAPIResponse } from "@/models/api-response";
 import type { TraceTree } from "../models/trace.model";
 import { lmtService } from "../services/lmt.service";
-import { useGetTraces, useGetTraceById } from "./use-trace";
+import { useGetTraces, useGetTraceById, useGetBlocksServices } from "./use-trace";
 
 vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
@@ -53,6 +53,30 @@ describe("use-trace hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockResponse);
       expect(lmtService.trace.getTraceByTraceId).toHaveBeenCalledWith(mockGetTraceByIdPayload);
+    });
+  });
+
+  // ─── useGetBlocksServices ─────────────────────────────────────────────────
+  describe("useGetBlocksServices", () => {
+    it("should fetch the blocks services list successfully", async () => {
+      const blocksServices = [
+        {
+          key: "os",
+          label: "OS",
+          sortOrder: 1,
+          apiServiceName: "blocks-os",
+          workerServiceNames: ["blocks-os-worker"],
+        },
+      ];
+      vi.mocked(lmtService.trace.getBlocksServices).mockResolvedValue(blocksServices);
+
+      const { result } = renderHook(() => useGetBlocksServices(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(blocksServices);
+      expect(lmtService.trace.getBlocksServices).toHaveBeenCalled();
     });
   });
 });

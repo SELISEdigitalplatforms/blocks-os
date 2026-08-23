@@ -2,6 +2,10 @@ import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { ProfileImageUploader } from "@blocks-idp/iam/components/profile-image-uploader";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
+import { formatFullDate } from "@/lib/utils";
 import { Activity, Calendar, Shield } from "lucide-react";
 
 type UserProfileSidebarProps = {
@@ -21,7 +25,9 @@ const InfoRow = ({ icon, label, value }: InfoRowProps) => (
       {icon}
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+        {label}
+      </p>
       <div className="mt-0.5 text-sm font-medium text-foreground">{value ?? "\u2014"}</div>
     </div>
   </div>
@@ -40,35 +46,48 @@ const formatLastLogin = (value?: string) => {
   });
 };
 
-export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) => {
-  const { data } = useGetUserById({ id, projectKey });
-  const user = data?.data;
+const formatUtcLockoutTime = (value: string): string | null => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${formatFullDate(date, false, true)} UTC`;
+};
 
-  const fullName =
-    user?.firstName || user?.lastName
-      ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
-      : null;
+export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) => {
+  const { data, isLoading } = useGetUserById({ id, projectKey });
+  const user = data?.data;
+  const formattedLockoutTime = user?.lockoutUntilUtc
+    ? formatUtcLockoutTime(user.lockoutUntilUtc)
+    : null;
 
   return (
-    <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 shadow-none mt-4">
-      {fullName && (
-        <div className="flex flex-col items-start gap-1 px-2 text-left md:hidden">
-          <p className="truncate text-base font-semibold leading-tight text-foreground">
-            {fullName}
-          </p>
-          {user?.email && (
-            <CopyToClipboardButton textToCopy={user.email}>
-              <span className="truncate text-sm text-muted-foreground">
-                {user.email}
-              </span>
-            </CopyToClipboardButton>
-          )}
+    <Card className="mt-4 flex flex-col overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 shadow-none md:h-full md:min-h-0">
+      {/* Reserves the same height while loading as once the name/email render, so
+          this block popping in doesn't shift the mobile grid's row sizes and
+          squeeze the tab-content row right after the user query resolves. */}
+      {isLoading ? (
+        <div className="flex w-full flex-col items-start gap-1 px-2 text-left md:hidden">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-40" />
         </div>
+      ) : (
+        user && (
+          <div className="flex flex-col items-start gap-1 px-2 text-left md:hidden">
+            <p className="truncate text-base font-semibold leading-tight text-foreground">
+              {getUserDisplayName(user)}
+            </p>
+            {user?.email && (
+              <CopyToClipboardButton textToCopy={user.email}>
+                <span className="truncate text-sm text-muted-foreground">{user.email}</span>
+              </CopyToClipboardButton>
+            )}
+          </div>
+        )
       )}
 
-      {/* Avatar */}
+      {/* Avatar. Smaller on mobile so it doesn't dominate the limited viewport
+          height and crowd out the tab content below it; full size at md+. */}
       <div
-        className="relative mx-auto mt-6 w-full max-w-[220px] shrink-0 md:mt-0"
+        className="relative mx-auto mt-6 w-full max-w-[120px] shrink-0 md:mt-0 md:max-w-[220px]"
         style={{ aspectRatio: "1 / 1" }}
       >
         <ProfileImageUploader
@@ -80,28 +99,36 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
       </div>
 
       {/* Account details */}
-      <CardContent className="mt-4 flex-1 overflow-y-auto w-full rounded-sm border bg-card p-5 shadow-sm">
-        <h3 className="mb-3 text-base font-semibold text-high-emphasis">
-          Account details
-        </h3>
+      <CardContent className="mt-4 w-full rounded-sm border bg-card p-5 shadow-sm md:flex-1 md:overflow-y-auto">
+        <h3 className="mb-3 text-base font-semibold text-high-emphasis">Account details</h3>
         <InfoRow
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}
           label="Status"
           value={
-            <span
-              className={`mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                user?.active
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                  : "bg-red-500/15 text-red-600 dark:text-red-400"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  user?.active ? "bg-emerald-500" : "bg-red-500"
-                }`}
-              />
-              {user?.active ? "Active" : "Inactive"}
-            </span>
+            <div className="flex flex-col items-start gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className={`inline-flex w-fit items-center gap-1.5 rounded border border-transparent px-2 py-1 text-xs font-semibold ${
+                    user?.active
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      : "bg-red-500/15 text-red-600 dark:text-red-400"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      user?.active ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                  />
+                  {user?.active ? "Active" : "Inactive"}
+                </span>
+                {user?.isLockedOut === true && <Badge variant="error">Locked out</Badge>}
+              </div>
+              {user?.isLockedOut === true && formattedLockoutTime && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  Locked out until {formattedLockoutTime}
+                </span>
+              )}
+            </div>
           }
         />
         <InfoRow

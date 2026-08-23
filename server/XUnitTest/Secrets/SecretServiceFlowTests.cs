@@ -100,16 +100,16 @@ namespace XUnitTest.Secrets
         }
 
         [Fact]
-        public async Task Set_RejectsADuplicateName()
+        public async Task Set_AllowsADuplicateName()
         {
-            _context.Repository
-                .Setup(r => r.NameExistsAsync(It.IsAny<string>(), It.IsAny<string>(), "api-key", null, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+            // Names are deliberately not unique. Two secrets may share one; the id keeps them apart.
+            var first = await _context.Service.SetAsync(NewRequest("api-key"));
+            var second = await _context.Service.SetAsync(NewRequest("api-key"));
 
-            var act = () => _context.Service.SetAsync(NewRequest());
+            second.Should().NotBe(first);
 
-            (await act.Should().ThrowAsync<SecretValidationException>())
-                .Which.ReasonCode.Should().Be("NAME_TAKEN");
+            _context.Repository.Verify(
+                r => r.InsertAsync(It.IsAny<Secret>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         }
 
         [Theory]
@@ -321,17 +321,13 @@ namespace XUnitTest.Secrets
         }
 
         [Fact]
-        public async Task Restore_FailsWhenSomethingElseTookTheName()
+        public async Task Restore_SucceedsEvenWhenAnotherSecretUsesTheName()
         {
-            _context.GivenSecret(status: SecretStatuses.Deleted);
-            _context.Repository
-                .Setup(r => r.NameExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), "secret-1", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+            var secret = _context.GivenSecret(status: SecretStatuses.Deleted);
 
-            var act = () => _context.Service.RestoreAsync("secret-1");
+            await _context.Service.RestoreAsync("secret-1");
 
-            (await act.Should().ThrowAsync<SecretValidationException>())
-                .Which.ReasonCode.Should().Be("NAME_TAKEN");
+            secret.Status.Should().Be(SecretStatuses.Active);
         }
 
         [Theory]

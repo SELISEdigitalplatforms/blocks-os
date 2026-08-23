@@ -320,7 +320,7 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
               </TooltipProvider>
             )}
           </div>
-          <div className="scrollbar-slim flex min-h-0 flex-1 flex-col pt-4 pr-1">
+          <div className="scrollbar-slim flex min-h-0 flex-1 flex-col overflow-y-auto pt-4 pr-1">
           {selectedOrgRow ? (
             <RolesPermissionsPillEditor
               roles={selectedRoles}

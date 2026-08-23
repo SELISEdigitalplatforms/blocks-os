@@ -7,6 +7,7 @@ import { useUsersSortQueryParams } from "./users-filter-toolbar";
 import { FilterControls } from "@/components/filter-toolbar";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { checkValidDate, formatDate, parseDateString } from "@/lib/utils";
+import { getUserDisplayName, getUserInitials } from "@blocks-idp/iam/utils/user-display-name";
 import { Users as UsersIcon } from "lucide-react";
 
 type UserTableProps = {
@@ -21,12 +22,6 @@ const LoadingSkelton = () => (
     ))}
   </div>
 );
-
-const getInitials = (firstName?: string, lastName?: string, email?: string) => {
-  const initials = `${firstName?.trim()?.[0] ?? ""}${lastName?.trim()?.[0] ?? ""}`;
-  // A pending (not-yet-activated) user has no name; fall back to the email's first letter.
-  return initials.toUpperCase() || email?.trim()?.[0]?.toUpperCase() || "?";
-};
 
 export const UsersTable = ({ users, isLoading }: UserTableProps) => {
   const navigate = useNavigate();
@@ -53,32 +48,57 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
       <div className="flex flex-col gap-3 md:min-w-[1080px]">
         <div className="hidden grid-cols-[200px_minmax(0,1fr)_90px_130px_130px_140px] items-center gap-4 px-4 md:grid">
           <div className="min-w-0">
-            <FilterControls.SortHeader id="FirstName" label="Name" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="FirstName"
+              label="Name"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="min-w-0">
-            <FilterControls.SortHeader id="Email" label="Email" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="Email"
+              label="Email"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="shrink-0">
-            <FilterControls.SortHeader id="Active" label="Status" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="Active"
+              label="Status"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="shrink-0">
-            <FilterControls.SortHeader id="CreatedDate" label="Created on" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="CreatedDate"
+              label="Created on"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="shrink-0">
-            <FilterControls.SortHeader id="LastUpdatedDate" label="Last updated" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="LastUpdatedDate"
+              label="Last updated"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
           <div className="shrink-0">
-            <FilterControls.SortHeader id="LastLoggedInTime" label="Last login" value={sortQueryParams} onChange={setSortQueryParams} />
+            <FilterControls.SortHeader
+              id="LastLoggedInTime"
+              label="Last login"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
         </div>
 
         {users.map((user) => {
-          // Before activation a user has no name, so show the email's local part
-          // (the text before "@"), matching the project-people list.
-          const fullName =
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-            user.email?.split("@")[0] ||
-            "-";
+          const fullName = getUserDisplayName(user);
           const hasLastLogin = checkValidDate(user.lastLoggedInTime);
           const hasCreated = checkValidDate(user.createdDate);
           const hasUpdated = checkValidDate(user.lastUpdatedDate);
@@ -96,7 +116,7 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {getInitials(user.firstName, user.lastName, user.email)}
+                  {getUserInitials(user)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-high-emphasis">{fullName}</p>
@@ -112,24 +132,32 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
                 </div>
               </div>
 
-              {user.email && (
-                <div className="hidden min-w-0 md:block">
+              {/* The cell itself always renders: dropping it would pull the
+                  status and date columns one place left for a user with no
+                  email, breaking alignment with the header row. */}
+              <div className="hidden min-w-0 md:block">
+                {user.email && (
                   <CopyToClipboardButton textToCopy={user.email} isHoverable>
                     <span className="truncate text-sm lowercase text-muted-foreground">
                       {user.email}
                     </span>
                   </CopyToClipboardButton>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Status + dates: paired on one row on mobile; on md+ this
                   wrapper becomes `contents` so its children fall back into
                   their own grid columns (3-6), matching the header. */}
               <div className="flex flex-wrap items-center justify-between gap-3 md:contents">
-                <div className="md:shrink-0">
+                <div className="flex flex-wrap items-center gap-1 md:shrink-0">
                   <Badge variant={user.active ? "success" : "error"} className="w-fit">
                     {user.active ? "Active" : "Inactive"}
                   </Badge>
+                  {user.isLockedOut === true && (
+                    <Badge variant="error" className="w-fit">
+                      Locked out
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
@@ -138,13 +166,17 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
-                  <span className="block text-xs text-muted-foreground md:hidden">Last updated</span>
+                  <span className="block text-xs text-muted-foreground md:hidden">
+                    Last updated
+                  </span>
                   {hasUpdated ? formatDate(parseDateString(user.lastUpdatedDate)) : "-"}
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
                   <span className="block text-xs text-muted-foreground md:hidden">Last login</span>
-                  {hasLastLogin ? formatDate(parseDateString(user.lastLoggedInTime)) : "Never logged in"}
+                  {hasLastLogin
+                    ? formatDate(parseDateString(user.lastLoggedInTime))
+                    : "Never logged in"}
                 </div>
               </div>
             </div>

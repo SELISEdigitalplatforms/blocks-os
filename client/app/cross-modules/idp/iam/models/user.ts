@@ -17,6 +17,8 @@ export interface User {
   roles: Record<string, string[]>;
   permissions: Record<string, string[]>;
   active: boolean;
+  lockoutUntilUtc: string | null;
+  isLockedOut: boolean;
   status: number;
   statusReason: string | null;
   deactivatedAtUtc: string | null;
