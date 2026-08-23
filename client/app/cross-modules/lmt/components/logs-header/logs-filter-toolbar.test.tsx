@@ -2,9 +2,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LogsViewerContext } from "../logs-viewer";
 
+type CapturedFilter = {
+  key: string;
+  props?: { options?: { label: string; value: string; children?: { label: string; value: string }[] }[] };
+};
+
 const h = vi.hoisted(() => ({
   captured: null as {
-    filters: { key: string }[];
+    filters: { key: string; props?: unknown }[];
     onChange: (key: string, value: unknown) => void;
     onReset: () => void;
     hideGlobalResetButton?: boolean;
@@ -18,7 +23,7 @@ vi.mock("../logs-list", () => ({ LogsList: () => null }));
 
 vi.mock("@/components/filter-toolbar", () => ({
   FilterToolbar: (props: {
-    filters: { key: string }[];
+    filters: { key: string; props?: unknown }[];
     onChange: (key: string, value: unknown) => void;
     onReset: () => void;
     hideGlobalResetButton?: boolean;
@@ -42,18 +47,25 @@ const makeCtx = (over: Partial<Ctx> = {}): Ctx =>
   ({
     pageSize: 20,
     services: [
-      { id: "s1", label: "Svc One", serviceName: "s1" },
+      {
+        id: "s1",
+        label: "Svc One",
+        serviceName: "s1",
+        components: [
+          { label: "API", value: "s1-api" },
+          { label: "Worker", value: "s1-worker" },
+        ],
+      },
       { id: "s2", label: "Svc Two", serviceName: "s2" },
     ],
     selectedService: { id: "s1", label: "Svc One", serviceName: "s1" },
+    serviceFilterValue: "s1",
     changeService: vi.fn(),
     filter: { level: "", startDate: "", endDate: "", search: "" },
     setFilter: vi.fn(),
     resetFilter: vi.fn(),
     isSourceBlocks: true,
-    subService: "all",
-    setSubService: vi.fn(),
-    isManagedLoading: false,
+    isServicesLoading: false,
     ...over,
   }) as unknown as Ctx;
 
@@ -66,16 +78,6 @@ const renderToolbar = (ctx: Ctx) =>
 
 describe("LogsFilterToolbar", () => {
   afterEach(() => cleanup());
-
-  it("includes the sub-service filter for blocks sources", () => {
-    renderToolbar(makeCtx({ isSourceBlocks: true }));
-    expect(screen.getByText("filter:subService")).toBeTruthy();
-  });
-
-  it("omits the sub-service filter for non-blocks sources", () => {
-    renderToolbar(makeCtx({ isSourceBlocks: false }));
-    expect(screen.queryByText("filter:subService")).toBeNull();
-  });
 
   it("hides the global reset button when only the service differs from defaults", () => {
     renderToolbar(makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "" } }));
@@ -91,9 +93,7 @@ describe("LogsFilterToolbar", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
     h.captured?.onChange("service", "s2");
-    expect(ctx.changeService).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "s2" }),
-    );
+    expect(ctx.changeService).toHaveBeenCalledWith(expect.objectContaining({ id: "s2" }), null);
   });
 
   it("ignores a service change for an unknown service id", () => {
@@ -103,11 +103,32 @@ describe("LogsFilterToolbar", () => {
     expect(ctx.changeService).not.toHaveBeenCalled();
   });
 
-  it("routes a sub-service change to setSubService", () => {
+  it("builds nested Radio children from each service's components", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
-    h.captured?.onChange("subService", "worker");
-    expect(ctx.setSubService).toHaveBeenCalledWith("worker");
+    const filters = h.captured?.filters as unknown as CapturedFilter[];
+    const serviceFilter = filters.find((f) => f.key === "service");
+    expect(serviceFilter?.props?.options).toEqual([
+      {
+        label: "Svc One",
+        value: "s1",
+        children: [
+          { label: "API", value: "s1::s1-api" },
+          { label: "Worker", value: "s1::s1-worker" },
+        ],
+      },
+      { label: "Svc Two", value: "s2", children: undefined },
+    ]);
+  });
+
+  it("routes a composite service::component change to changeService with both parts", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    h.captured?.onChange("service", "s1::s1-worker");
+    expect(ctx.changeService).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "s1" }),
+      "s1-worker",
+    );
   });
 
   it("converts a date range into ISO start and end dates", () => {
@@ -139,11 +160,10 @@ describe("LogsFilterToolbar", () => {
     expect(updater({ level: "" })).toEqual({ level: "", search: "hello" });
   });
 
-  it("resets the filter and the sub-service together", () => {
+  it("resets the filter", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
     h.captured?.onReset();
     expect(ctx.resetFilter).toHaveBeenCalledTimes(1);
-    expect(ctx.setSubService).toHaveBeenCalledWith("all");
   });
 });

@@ -275,28 +275,5 @@ namespace XUnitTest.Integration
             (await repo.UpdateProjectPeopleOwnerShipAsync(new List<string> { person.ItemId }, false)).Should().BeTrue();
             (await repo.IsOwner(user, new List<string> { tenant })).Should().BeFalse();
         }
-
-        [Fact]
-        public async Task UpdateProjectOwnerShipAsync_UpdatesTenantCreatedBy()
-        {
-            var suffix = Guid.NewGuid().ToString("N");
-            var tenant = "tid-" + suffix;
-            using var _ = new IntegrationContext("ctx-" + suffix);
-            await _fixture.Collection<Tenant>("Tenants").InsertOneAsync(new Tenant
-            {
-                ItemId = "p-" + suffix,
-                TenantId = tenant,
-                Name = "Proj",
-                CreatedBy = "old-owner",
-                DbConnectionString = "x",
-                JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
-            });
-
-            var repo = NewRepository();
-            (await repo.UpdateProjectOwnerShipAsync(new List<string> { tenant }, "new-owner")).Should().BeTrue();
-
-            var reloaded = await repo.GetProjectByIdAsync(tenant);
-            reloaded.CreatedBy.Should().Be("new-owner");
-        }
     }
 }

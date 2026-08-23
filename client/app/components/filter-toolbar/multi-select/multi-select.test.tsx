@@ -71,4 +71,56 @@ describe("MultiSelect", () => {
 
     expect(onChange).toHaveBeenCalledWith(["active", "archived"]);
   });
+
+  const nestedOptions = [
+    {
+      label: "OS",
+      value: "blocks-os",
+      children: [{ label: "blocks-os-worker", value: "blocks-os-worker" }],
+    },
+    { label: "IAM", value: "blocks-iam" },
+  ];
+
+  it("does not show an expand toggle for options without children", async () => {
+    const user = userEvent.setup();
+    render(<MultiSelect label="Service" options={nestedOptions} value={[]} onChange={vi.fn()} />);
+
+    await user.click(screen.getByRole("button"));
+
+    expect(screen.queryByRole("button", { name: "Expand IAM" })).toBeNull();
+  });
+
+  it("expands a service to reveal and select a worker without deselecting the API entry", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MultiSelect
+        label="Service"
+        options={nestedOptions}
+        value={["blocks-os"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("button"));
+    expect(screen.queryByText("blocks-os-worker")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Expand OS" }));
+    await user.click(await screen.findByText("blocks-os-worker"));
+
+    expect(onChange).toHaveBeenCalledWith(["blocks-os", "blocks-os-worker"]);
+  });
+
+  it("resolves a selected child's label in the trigger badge", () => {
+    render(
+      <MultiSelect
+        label="Service"
+        options={nestedOptions}
+        value={["blocks-os-worker"]}
+        onChange={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByRole("button");
+    expect(within(trigger).getByText("blocks-os-worker")).toBeTruthy();
+  });
 });

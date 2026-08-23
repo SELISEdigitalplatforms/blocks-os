@@ -1,6 +1,6 @@
 /**
  * The onboarding brief handed to a coding agent, still carrying its
- * `{{PLACEHOLDER}}` tokens — `resolveOnboardingGuide` fills them in from the
+ * `{{PLACEHOLDER}}` tokens - `resolveOnboardingGuide` fills them in from the
  * selected project.
  *
  * Held as a plain string constant rather than a raw file import, so it travels
@@ -10,10 +10,9 @@
  */
 export const ONBOARDING_GUIDE_TEMPLATE = `# Starting a project on SELISE Blocks
 
-You are starting work on an existing SELISE Blocks project. Everything needed
-to begin is in this message. Nothing else has to be obtained first - there is
-no API key to request, no portal step left to complete, and no credential to
-collect from the user.
+You are starting work on an existing SELISE Blocks project. The portal already
+provided the project values below. Use them exactly; do not ask the user for a
+project key, domain, API URL, OIDC client id, token, or secret.
 
 ## Project context
 
@@ -23,107 +22,67 @@ x-blocks-key:
 App domain:
 {{APP_DOMAIN}}
 
-Both values are fixed and already correct for this project. Use them exactly as
-given. Do not invent or substitute a project key, domain, OIDC client id, API
-URL, token, or secret at any point.
+Local host mapping:
+\`127.0.0.1  {{APP_HOST}}\`
 
-## Before you start
+Default Blocks API URL for browser app config:
+\`{{BLOCKS_API_URL}}\`
 
-- Node.js 20 or newer, with npm on the PATH.
-- The Blocks CLI, installed globally and on the latest published version:
-  \`npm install -g @seliseblocks/cli-os@latest\`
-- A hosts-file entry mapping the app host to localhost, so the local HTTPS dev
-  server matches the redirect URI the OIDC client expects:
-  \`127.0.0.1  {{APP_HOST}}\`
-  The scaffolded project prints the exact line in its own \`README.md\` - use
-  that as the source of truth if the two ever disagree.
-
-## What you have to build with
-
-**The Blocks CLI - \`@seliseblocks/cli-os\`.** Every project and admin operation
-runs through it: login, project selection, OIDC clients, app scaffolding, data
-schemas and rules, IAM, localization, release, secrets, mail, notifications and
-storage. It also carries the task skills (step 6) and can print the SDK client
-config without writing anything (step 5b). Never call the Blocks API with raw
-\`fetch\`/\`curl\` when a CLI command already covers the work.
-
-**The Blocks client SDK - \`@seliseblocks/client\`.** Everything the app itself
-does at runtime in the browser: authentication, data and GraphQL, file storage,
-localization and notifications. Configure it with \`xBlocksKey\`; it sends the
-\`x-blocks-key\` header. Never use \`ProjectKey\` or \`projectKey\`, never put a
-client secret in frontend code, and do not add \`/api\` after \`/v4\` in SDK routes.
-
-That pair is the whole surface. If a task looks like it needs something else,
-check \`blocks --help\` and the skills before reaching outside them.
-
-## How to proceed
-
-### 1. Find out what to build
-
-If the user has not said what they want yet, ask - **once, in a single message,
-as one short list**. Do not spread these over several turns, and do not run
-anything that creates or changes something until they answer:
-
-- App name, and what the app is for
-- The main pages or screens
-- The data it stores - entities and their fields
-- Whether end users log in, and whether roles or permissions matter
-- Anything involving languages, notifications, files, or deployment
-
-Take whatever they give. Fill the gaps with sensible defaults, say which
-defaults you chose, and continue - do not re-ask for what they skipped.
-
-If they already described the app, do not ask again. Restate the scope in a few
-lines with the defaults you are assuming, and get one confirmation before
-scaffolding. Never assume a scope silently and start generating.
-
-The app name and the feature work are the only open questions. The project key
-and domain above are settled - do not ask the user for those.
-
-### 2. Check the CLI version
+## Start safely
 
 \`\`\`bash
 blocks --version
 npm view @seliseblocks/cli-os version
+blocks auth status --json
+blocks doctor --json
+blocks skill list --json
 \`\`\`
 
-Run both - installed versus published. Never skip the second one.
-
-- Not installed - ask the user first, then
-  \`npm install -g @seliseblocks/cli-os@latest\`.
-- Installed older than published - stop, name both versions, recommend the
-  update, and ask before running the same command. Re-check \`blocks --version\`
-  after.
-- Never install or update without approval. If they decline, say which version
-  they are on: a missing command or flag later is probably that gap.
-
-### 3. Log in and select this project
+If the CLI is missing or older than the published version, stop and ask before
+installing or updating with \`npm install -g @seliseblocks/cli-os@latest\`:
 
 \`\`\`bash
-blocks login
-blocks auth status --json
-blocks projects list --json
+npm install -g @seliseblocks/cli-os@latest
+\`\`\`
+
+If login is needed, run \`blocks login\`, show the verification URL/code, then
+verify with \`blocks auth status --json\`. Never read CLI token/config/secret
+files directly.
+
+Select and verify this project:
+
+\`\`\`bash
 blocks use {{X_BLOCKS_KEY}}
 blocks projects get --json
 \`\`\`
 
-\`blocks login\` is a device-code flow: it prints a verification URL and user
-code and opens the browser. There is nothing to register and no client id or
-secret to collect for it. Run it yourself so you can read the printed code,
-then verify with \`auth status --json\` rather than assuming it worked.
+## Use Blocks skills
 
-After every login, show the user the \`projects list\` output and ask which
-project to use - {{X_BLOCKS_KEY}} is the expected answer. Run \`blocks use\` on
-what they pick, and confirm the selection before mutating anything.
+Before feature work, load the relevant skill and follow it as the source of
+truth. Use onboarding whenever login, project, app, or OIDC state is unclear.
 
-### 4. Resolve the public OIDC client
+\`\`\`bash
+blocks skill show blocks-onboarding
+blocks skill add blocks-onboarding
+blocks skill show <matching-skill>
+blocks skill add <matching-skill>
+\`\`\`
+
+Use \`blocks\` CLI for project/admin work and \`@seliseblocks/client\` for app
+code. Do not use raw API calls when the CLI or SDK supports the work. Configure
+SDK app code with \`xBlocksKey\`; it sends \`x-blocks-key\`. Never use
+\`ProjectKey\` or \`projectKey\`, and do not add \`/api\` after \`/v4\` routes.
+
+## Resolve app login
+
+Check for an existing public OIDC client:
 
 \`\`\`bash
 blocks auth oidc-clients list --json
 \`\`\`
 
-If none fits, create one through the CLI - no portal visit needed. Dry-run
-first, show the user the output, then re-run with \`--yes\` once they approve:
+If no suitable public client exists, create one through the CLI. Show the
+dry-run output and wait for approval before using \`--yes\`:
 
 \`\`\`bash
 blocks auth oidc-clients save \\
@@ -133,45 +92,52 @@ blocks auth oidc-clients save \\
   --scope "openid profile" \\
   --require-pkce \\
   --register-as-identity-provider \\
+  --auto-redirect \\
   --dry-run --json
 \`\`\`
 
-\`--client-type public\` is required, not cosmetic: IAM derives
-\`tokenEndpointAuthMethod\` from it, so omitting it stores a browser client as
-confidential and lets it ask for the \`client_credentials\` grant. A create
-response can contain a \`client_secret\` shown once - never print, log, or commit
-it, and never put a secret in frontend code.
+A create/rotate response can show a \`client_secret\` once. Treat that output as
+sensitive: do not print, log, commit, or put it in frontend code. Use only the
+public OIDC client id for the web app.
 
-\`--register-as-identity-provider\` also creates the linked identity provider the
-hosted-login flow authenticates against - that part is automatic, nothing else
-to run. If login later redirects nowhere, check that provider with
-\`blocks auth idp list --json\` before assuming the client is wrong.
+## New web app
 
-### 5a. New app - scaffold it with the CLI
+Scaffold with explicit values so an agent run does not hang on interactive
+prompts. Leave \`--blocks-api-url\` off unless the project uses a non-default
+gateway; \`blocks new web\` derives \`{{BLOCKS_API_URL}}\` from the app domain.
 
 \`\`\`bash
 blocks new web <appName> \\
   --x-blocks-key {{X_BLOCKS_KEY}} \\
   --app-domain {{APP_DOMAIN}} \\
   --client-id <publicOidcClientId>
-\`\`\`
-
-\`--app-domain\` and \`--client-id\` are both mandatory in a scripted run: omitting
-either drops the command into an interactive pick-list with no non-interactive
-escape, which hangs the session. Leave \`--blocks-api-url\` off - the scaffold
-derives it from the app domain as \`{{BLOCKS_API_URL}}\`.
-
-\`\`\`bash
 cd <appName>
 npm install
+\`\`\`
+
+Now work only inside \`<appName>\`. If the app needs data schemas/rules or other
+project-local Blocks files, run \`blocks init\` here, not in the parent folder:
+
+\`\`\`bash
+blocks init
+\`\`\`
+
+This keeps \`blocks.json\` and \`blocks/\` inside the generated app. Add any
+feature skills from inside the app as well.
+
+For local HTTPS login:
+
+\`\`\`bash
 npm run cert
 npm run dev
 \`\`\`
 
-\`npm run cert\` provisions the local HTTPS certificate for {{APP_HOST}}. Read the
-generated \`README.md\` for the hosts-file entry and the redirect URI the app expects.
+Open \`https://{{APP_HOST}}:5173\`. If needed, add the hosts-file line shown at
+the top; the generated app README is the final source of truth for local dev.
 
-### 5b. Existing app - wire the client SDK
+## Existing app
+
+From the existing app root, install/update the SDK and print the client config:
 
 \`\`\`bash
 npm install @seliseblocks/client@latest
@@ -182,64 +148,20 @@ blocks sdk client \\
   --blocks-api-url {{BLOCKS_API_URL}}
 \`\`\`
 
-Use this path when the user already has an app instead of scaffolding a new
-one. \`sdk client\` is read-only: it prints a \`createBlocksClient(...)\` config
-and never writes a file or mutates anything. Passing both \`--app-domain\` and
-\`--client-id\` skips the project lookup entirely, so it needs no login. Add
-\`--json\` for the resolved values instead of the snippet.
+\`blocks sdk client\` is read-only and writes no files. Pass \`--blocks-api-url\`
+for existing apps so browser SDK config uses the same gateway that \`new web\`
+would derive.
 
-\`--blocks-api-url\` is mandatory here. Unlike \`new web\`, \`sdk client\` does not
-derive the API URL from the app domain - it falls back to the CLI's own
-\`https://api.seliseblocks.com\`, which is a CLI-only URL and must never appear
-in client SDK config. Pass the same value \`new web\` would have derived, already
-resolved for this project: \`{{BLOCKS_API_URL}}\`. If the printed snippet ever
-shows \`api.seliseblocks.com\`, the flag was missed - fix it before pasting.
+## Rules throughout
 
-Configure the client with \`xBlocksKey\`; the SDK sends the \`x-blocks-key\`
-header. Never use \`ProjectKey\` or \`projectKey\`, and do not add \`/api\` after
-\`/v4\` in SDK routes.
-
-### 6. Load the matching skill before building any feature
-
-\`\`\`bash
-blocks skill list --json
-blocks skill show <skill-name>
-blocks skill add <skill-name>
-\`\`\`
-
-Run \`skill list\` before any feature work and pick by the printed descriptions -
-each one states what it covers and when to use it, including which sibling
-skill owns the adjacent concern. Do not guess a skill name; if nothing fits,
-check the full catalog link the command prints.
-
-\`skill add\` copies the skill's whole directory into \`./blocks-skills/<name>\` so
-it stays available in the project. Skills own the task workflow; this guide and
-\`blocks --help\` own the command names - verify any command a skill mentions.
-
-### 7. Data work
-
-\`\`\`bash
-blocks init
-\`\`\`
-
-Run once in the project directory when the work involves data schemas or rules.
-It creates \`blocks.json\`, \`blocks/data/schemas/\`, \`blocks/data/rules.json\` and
-\`.env.example\`, is safe to re-run, and never overwrites existing files.
-
-### 8. Rules that apply throughout
-
-- Run \`--dry-run --json\` first on every mutating command, show the user the
-  output, and ask before re-running with \`--yes\`.
-- Treat a GraphQL response carrying an \`errors\` array as a failure even when
-  the HTTP status is 200.
-- Never read, print, or expose the CLI's token or config storage files.
-- Known fixes: \`not_logged_in\` -> \`blocks login\`; \`project_not_selected\` ->
-  \`blocks use {{X_BLOCKS_KEY}}\`; a stuck project token -> \`blocks deselect\` then
-  \`blocks use {{X_BLOCKS_KEY}}\`.
-- Any token error those do not clear (\`auth_repair_required\`, \`api_auth_failed\`,
-  or the same auth failure twice): start over with \`blocks logout\`, then
-  \`blocks login\`, then \`blocks projects list\` - show the list, ask which project,
-  and \`blocks use <tenantId>\`. Never loop on the failing command.
-- An unknown command or unrecognized flag means an outdated CLI before anything
-  else - re-check step 2 before working around it.
+- Ask the user what to build if they have not described it yet.
+- Before cloud-mutating commands, show the exact action, run \`--dry-run --json\`
+  if supported, and wait for approval before \`--yes\`.
+- Never expose tokens, secrets, cookies, passwords, JWTs, client secrets, or
+  private credentials.
+- Never invent project keys, domains, API URLs, or client ids.
+- Treat GraphQL \`errors\` as failure even when HTTP status is 200.
+- Unknown command or flag usually means the CLI is outdated; re-check the
+  installed and published versions before working around it.
+- Verify with build/tests before handoff.
 `;

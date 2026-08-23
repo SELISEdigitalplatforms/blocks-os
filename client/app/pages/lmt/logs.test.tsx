@@ -6,11 +6,21 @@ const h = vi.hoisted(() => ({
   data: undefined as unknown,
   isLoading: false,
   isFetching: false,
+  blocksServicesData: [
+    { key: "os", label: "OS", sortOrder: 1, apiServiceName: "blocks-os", workerServiceNames: ["blocks-os-worker"] },
+  ] as unknown,
+  isBlocksServicesLoading: false,
   viewerProps: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock("@blocks-identifier/hooks/use-services", () => ({
   useGetAllServices: () => ({ data: h.data, isLoading: h.isLoading, isFetching: h.isFetching }),
+}));
+vi.mock("@blocks-lmt/hooks/use-log", () => ({
+  useGetBlocksServices: () => ({
+    data: h.blocksServicesData,
+    isLoading: h.isBlocksServicesLoading,
+  }),
 }));
 vi.mock("@blocks-lmt/components", () => ({
   LogsViewer: (props: Record<string, unknown>) => {
@@ -18,7 +28,7 @@ vi.mock("@blocks-lmt/components", () => ({
     return (
       <div data-testid="logs-viewer">
         <span data-testid="service-count">{(props.services as unknown[]).length}</span>
-        <span data-testid="managed-loading">{String(props.isManagedLoading)}</span>
+        <span data-testid="services-loading">{String(props.isServicesLoading)}</span>
         <span data-testid="is-blocks">{String(props.isSourceBlocks)}</span>
       </div>
     );
@@ -38,13 +48,23 @@ describe("LogsRoute", () => {
     h.data = { data: [] };
     h.isLoading = false;
     h.isFetching = false;
+    h.blocksServicesData = [
+      {
+        key: "os",
+        label: "OS",
+        sortOrder: 1,
+        apiServiceName: "blocks-os",
+        workerServiceNames: ["blocks-os-worker"],
+      },
+    ];
+    h.isBlocksServicesLoading = false;
   });
 
   it("renders the blocks services source by default", () => {
     render(<LogsRoute />);
     expect(screen.getByTestId("logs-viewer")).toBeTruthy();
     expect(screen.getByTestId("is-blocks").textContent).toBe("true");
-    // Blocks source uses the predefined blocks service list (non-empty).
+    // Blocks source uses the fetched blocks service list (non-empty).
     expect(Number(screen.getByTestId("service-count").textContent)).toBeGreaterThan(0);
   });
 
@@ -56,10 +76,17 @@ describe("LogsRoute", () => {
     expect(screen.getByTestId("service-count").textContent).toBe("1");
   });
 
-  it("marks managed loading while services are being fetched", () => {
+  it("marks services loading while managed services are being fetched", () => {
     h.source = "managed";
     h.isLoading = true;
     render(<LogsRoute />);
-    expect(screen.getByTestId("managed-loading").textContent).toBe("true");
+    expect(screen.getByTestId("services-loading").textContent).toBe("true");
+  });
+
+  it("marks services loading while blocks services are being fetched", () => {
+    h.source = "blocks";
+    h.isBlocksServicesLoading = true;
+    render(<LogsRoute />);
+    expect(screen.getByTestId("services-loading").textContent).toBe("true");
   });
 });

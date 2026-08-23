@@ -15,10 +15,10 @@ export const LogsListHeader = () => {
       <Tabs value={source} onValueChange={setSource}>
         <TabsList className="h-[42px] bg-blocks-primary-shades-300">
           <TabsTrigger value="blocks" className="h-8 w-fit">
-            Blocks services
+            Managed Service
           </TabsTrigger>
           <TabsTrigger value="managed" className="h-8 w-fit">
-            Managed services
+            My Service
           </TabsTrigger>
         </TabsList>
       </Tabs>

@@ -26,8 +26,8 @@ import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { formatDate, parseDateString } from "@/lib/utils";
 import { TraceProviderSetupGuideLine } from "@blocks-lmt/components/trace-guideline/trace-provider-guideline";
-import { CLOUD_BUILTIN_SERVICES, TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
-import { useGetTraces } from "@blocks-lmt/hooks/use-trace";
+import { TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
+import { useGetBlocksServices, useGetTraces } from "@blocks-lmt/hooks/use-trace";
 import { TraceTree, getTypeColor } from "@blocks-lmt/models/trace.model";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
@@ -241,6 +241,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       }),
     enabled: !!projectKey,
   });
+  const { data: blocksServicesData } = useGetBlocksServices();
   const { data, isLoading, isFetching } = useGetTraces({
     page: queryParams.page,
     pageSize: queryParams.pageSize,
@@ -254,9 +255,20 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
   });
   const loading = isLoading || isFetching;
   const allServices = useMemo(() => {
+    const blocksServices = (blocksServicesData ?? []).map((service) => ({
+      label: service.label,
+      value: service.apiServiceName,
+      // A raw technical name is used instead of a guessed friendly label
+      // whenever a service has more than one worker (only "OS" does today),
+      // since there's no reliable way to tell them apart otherwise.
+      children: service.workerServiceNames.map((name) => ({
+        label: service.workerServiceNames.length > 1 ? name : `${service.label} Worker`,
+        value: name,
+      })),
+    }));
     const registered = registeredServices?.data || [];
-    const merged = [
-      ...CLOUD_BUILTIN_SERVICES,
+    const merged: { label: string; value: string; children?: { label: string; value: string }[] }[] = [
+      ...blocksServices,
       ...registered.map((service) => ({
         label: service.name,
         value: service.serviceId,
@@ -265,7 +277,17 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     return merged.filter(
       (item, index, array) => array.findIndex((value) => value.value === item.value) === index,
     );
-  }, [registeredServices?.data]);
+  }, [blocksServicesData, registeredServices?.data]);
+  // Flattened for label lookups (the trace table's Service column), since a
+  // trace row's serviceName can be a worker's raw name, not just the api one.
+  const flatServices = useMemo(
+    () =>
+      allServices.flatMap((service) => [
+        { label: service.label, value: service.value },
+        ...(service.children ?? []),
+      ]),
+    [allServices],
+  );
   const pageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
@@ -399,7 +421,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
               <TracesList
               data={data?.data || []}
               isLoading={loading}
-              services={allServices}
+              services={flatServices}
               hasActiveFilter={hasActiveFilter}
             />
               {!loading && data && data.totalCount > queryParams.pageSize && (

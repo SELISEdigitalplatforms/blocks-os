@@ -14,11 +14,16 @@ import type { LogServiceIconKey } from "../../models/log-entry.model";
 import { useQueryState } from "nuqs";
 import type { RegisteredService } from "@/cross-modules/identifier/models/service.model";
 
+export interface ServiceComponent {
+  label: string;
+  value: string;
+}
 export interface Service {
   id: string;
   label: string;
   serviceName: string;
   serviceNames?: string[];
+  components?: ServiceComponent[];
   icon?: LogServiceIconKey;
   _raw?: RegisteredService;
 }
@@ -28,13 +33,13 @@ export interface LogFilter {
   endDate: string;
   level: string;
   service: string;
-  subService: string;
 }
 interface LogsViewerContextType {
   pageSize: number;
   services: Service[];
   selectedService: Service | null;
-  changeService: (service: Service) => void;
+  serviceFilterValue: string;
+  changeService: (service: Service, componentValue?: string | null) => void;
   filter: Partial<LogFilter> | null;
   setFilter: Dispatch<SetStateAction<Partial<LogFilter> | null>>;
   resetFilter: () => void;
@@ -44,13 +49,12 @@ interface LogsViewerContextType {
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks: boolean;
-  subService: string;
-  setSubService: (value: string | null) => Promise<URLSearchParams>;
-  isManagedLoading: boolean;
+  isServicesLoading: boolean;
 }
 const initialContextValue: LogsViewerContextType = {
   services: [],
   selectedService: null,
+  serviceFilterValue: "",
   changeService: () => {},
   pageSize: 0,
   filter: null,
@@ -62,10 +66,7 @@ const initialContextValue: LogsViewerContextType = {
   logsRouteServiceName: undefined,
   useGenericTraceLinks: false,
   isSourceBlocks: true,
-  subService: "all",
-  setSubService: (value: string | null) =>
-    Promise.resolve(new URLSearchParams({ subService: value || "" })),
-  isManagedLoading: false,
+  isServicesLoading: false,
 };
 // Create context with the initial value
 export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
@@ -81,7 +82,7 @@ interface LogsViewerProps {
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks?: boolean;
-  isManagedLoading?: boolean;
+  isServicesLoading?: boolean;
 }
 export const LogsViewer = ({
   pageSize = 20,
@@ -93,43 +94,30 @@ export const LogsViewer = ({
   logsRouteServiceName,
   useGenericTraceLinks = false,
   isSourceBlocks = true,
-  isManagedLoading = false,
+  isServicesLoading = false,
 }: LogsViewerProps) => {
   const defaultServiceId = services.length > 0 ? services[0].id : "";
-  const [serviceId, setServiceId] = useQueryState("service", {
+  // Encodes both the selected service and an optional narrowed component (e.g. its
+  // worker) as "<serviceId>" or "<serviceId>::<componentValue>", so picking a
+  // component doesn't need a second query param or a separate filter control.
+  const [serviceKey, setServiceKey] = useQueryState("service", {
     defaultValue: defaultServiceId,
   });
-  const [subService, setSubService] = useQueryState("subService", {
-    defaultValue: "all",
-  });
+  const [serviceId, componentValue] = useMemo(() => {
+    const [id, component] = serviceKey.split("::");
+    return [id, component || null];
+  }, [serviceKey]);
 
-  const selectedService = useMemo(() => {
+  const baseSelectedService = useMemo(() => {
     return services.find((s) => s.id === serviceId) || (services.length > 0 ? services[0] : null);
   }, [services, serviceId]);
 
-  // Compute the effective selected service with serviceNames based on subService
-  const effectiveSelectedService = useMemo(() => {
-    if (!selectedService) return null;
-    if (!isSourceBlocks) return selectedService;
-
-    // For blocks services, filter serviceNames based on subService
-    const allServiceNames = selectedService.serviceNames || [selectedService.serviceName];
-    let filteredServiceNames: string[];
-    if (subService === "all") {
-      filteredServiceNames = allServiceNames;
-    } else if (subService === "api") {
-      filteredServiceNames = allServiceNames.filter((name) => !name.includes("worker"));
-    } else if (subService === "worker") {
-      filteredServiceNames = allServiceNames.filter((name) => name.includes("worker"));
-    } else {
-      filteredServiceNames = allServiceNames;
-    }
-
-    return {
-      ...selectedService,
-      serviceNames: filteredServiceNames,
-    };
-  }, [selectedService, isSourceBlocks, subService]);
+  const selectedService = useMemo(() => {
+    if (!baseSelectedService) return null;
+    const isValidComponent = baseSelectedService.components?.some((c) => c.value === componentValue);
+    if (!isValidComponent) return baseSelectedService;
+    return { ...baseSelectedService, serviceNames: [componentValue as string] };
+  }, [baseSelectedService, componentValue]);
 
   const [filter, setFilter] = useState<Partial<LogFilter> | null>(null);
 
@@ -137,15 +125,15 @@ export const LogsViewer = ({
   useEffect(() => {
     const newDefaultServiceId = services.length > 0 ? services[0].id : "";
     if (newDefaultServiceId && !services.find((s) => s.id === serviceId)) {
-      setServiceId(newDefaultServiceId);
+      setServiceKey(newDefaultServiceId);
     }
-  }, [services, serviceId, setServiceId]);
+  }, [services, serviceId, setServiceKey]);
 
   const changeService = useCallback(
-    (service: Service) => {
-      setServiceId(service.id);
+    (service: Service, componentValue?: string | null) => {
+      setServiceKey(componentValue ? `${service.id}::${componentValue}` : service.id);
     },
-    [setServiceId],
+    [setServiceKey],
   );
 
   const resetFilter = () => {
@@ -156,7 +144,8 @@ export const LogsViewer = ({
       value={{
         pageSize,
         services,
-        selectedService: effectiveSelectedService,
+        selectedService,
+        serviceFilterValue: serviceKey,
         changeService,
         filter,
         setFilter,
@@ -167,14 +156,12 @@ export const LogsViewer = ({
         logsRouteServiceName,
         useGenericTraceLinks,
         isSourceBlocks,
-        subService,
-        setSubService,
-        isManagedLoading,
+        isServicesLoading,
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
-        <LogsList key={effectiveSelectedService?.id ?? "none"} />
+        <LogsList key={selectedService?.id ?? "none"} />
       </div>
     </LogsViewerContext.Provider>
   );

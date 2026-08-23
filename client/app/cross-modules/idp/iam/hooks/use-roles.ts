@@ -47,8 +47,14 @@ export const useDeleteRole = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: ["role", "delete"],
-    mutationFn: async (id: string) => {
-      const response = await roleService.deleteRole(id);
+    mutationFn: async ({
+      id,
+      confirmRevokeFromUsers = false,
+    }: {
+      id: string;
+      confirmRevokeFromUsers?: boolean;
+    }) => {
+      const response = await roleService.deleteRole(id, confirmRevokeFromUsers);
       if (response?.isSuccess === false) {
         throw Object.assign(new Error("Archive failed"), {
           errors: normalizeArchiveErrors(response) ?? { general: "Archive failed" },
@@ -56,8 +62,11 @@ export const useDeleteRole = () => {
       }
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["roles"] });
+      // The impact counts describe a role that no longer exists in the list; leaving them cached
+      // would show stale numbers if the dialog were reopened for the same id.
+      queryClient.invalidateQueries({ queryKey: ["role-archive-impact", variables.id] });
     },
   });
 };

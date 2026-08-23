@@ -68,3 +68,11 @@ export interface IGetLogsByDatePayload {
   serviceName: string;
   serviceNames?: string[];
 }
+
+export interface IBlocksServiceItem {
+  key: string;
+  label: string;
+  sortOrder: number;
+  apiServiceName: string;
+  workerServiceNames: string[];
+}
