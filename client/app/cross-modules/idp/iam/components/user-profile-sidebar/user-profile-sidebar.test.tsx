@@ -44,7 +44,9 @@ describe("UserProfileSidebar", () => {
   it("marks an inactive user as Inactive", () => {
     h.userByIdData = { data: { firstName: "Bob", active: false } };
     render(<UserProfileSidebar id="u2" projectKey="p1" />);
-    expect(screen.getByText("Inactive")).toBeTruthy();
+    const inactiveBadge = screen.getByText("Inactive");
+    expect(inactiveBadge.className).toContain("rounded");
+    expect(inactiveBadge.className).not.toContain("rounded-full");
   });
 
   it("shows the lockout badge and UTC unlock time without replacing active status", () => {
