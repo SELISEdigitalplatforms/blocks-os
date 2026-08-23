@@ -1,3 +1,5 @@
+using Cloud.LmtService.Services.BlocksServices;
+using Cloud.LmtService.Services.BlocksServices;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlocksOs.Api.Controllers;
@@ -108,7 +110,8 @@ namespace XUnitTest.Controllers
     public class LogControllerTests
     {
         private readonly Mock<ILogService> _service = new();
-        private LogController Controller() => new(_service.Object);
+        private readonly Mock<IBlocksServicesService> _bs = new();
+        private LogController Controller() => new(_service.Object, _bs.Object);
 
         // NOTE: All LogController endpoints are gated behind "blocks-os::log::gets".
         // These tests assert delegation behavior only; the attribute is not
@@ -151,7 +154,8 @@ namespace XUnitTest.Controllers
     public class TraceControllerTests
     {
         private readonly Mock<ITraceService> _service = new();
-        private TraceController Controller() => new(_service.Object);
+        private readonly Mock<IBlocksServicesService> _bs = new();
+        private TraceController Controller() => new(_service.Object, _bs.Object);
 
         [Fact]
         public async Task GetTraces_DelegatesToService()

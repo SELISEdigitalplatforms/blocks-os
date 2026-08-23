@@ -39,12 +39,12 @@ public class CaptchaConfigController : ControllerBase
     public Task<CaptchaConfigResult> Save([FromBody] SaveCaptchaConfigRequest request, CancellationToken cancellationToken) =>
         _service.SaveAsync(request, cancellationToken);
 
-    [HttpGet("get/{key}")]
+    [HttpGet("get/{id}")]
     [Authorize]
     //[ProtectedEndPoint("blocks-os::secret-config::get")]
- public async Task<ActionResult<CaptchaConfigResult>> Get(string key, CancellationToken cancellationToken)
+ public async Task<ActionResult<CaptchaConfigResult>> Get(string id, CancellationToken cancellationToken)
     {
-        var result = await _service.GetAsync(key, cancellationToken);
+        var result = await _service.GetAsync(id, cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
 
@@ -54,12 +54,12 @@ public class CaptchaConfigController : ControllerBase
     public Task<IReadOnlyList<CaptchaConfigResult>> List(CancellationToken cancellationToken) =>
         _service.GetListAsync(cancellationToken);
 
-    [HttpDelete("delete/{key}")]
+    [HttpDelete("delete/{id}")]
     [Authorize]
     //[ProtectedEndPoint("blocks-os::secret-config::delete")]
- public async Task<BaseResponse> Delete(string key, CancellationToken cancellationToken)
+ public async Task<BaseResponse> Delete(string id, CancellationToken cancellationToken)
     {
-        await _service.DeleteAsync(key, cancellationToken);
+        await _service.DeleteAsync(id, cancellationToken);
         return new BaseResponse { IsSuccess = true };
     }
 }

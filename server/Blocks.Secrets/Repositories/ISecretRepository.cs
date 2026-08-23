@@ -11,12 +11,6 @@ public interface ISecretRepository
 
     Task<(IReadOnlyList<Secret> Items, long TotalCount)> FindAsync(string tenantId, SecretFilter filter, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Whether a non-deleted secret already uses this name in the tenant/organization.
-    /// </summary>
-    /// <param name="excludeSecretId">Ignore this secret, so renaming to its own name is allowed.</param>
-    Task<bool> NameExistsAsync(string tenantId, string organizationId, string name, string? excludeSecretId = null, CancellationToken cancellationToken = default);
-
     /// <summary>Hard-deletes metadata. Used only to compensate a failed create.</summary>
     Task HardDeleteAsync(string tenantId, string secretId, CancellationToken cancellationToken = default);
 }
