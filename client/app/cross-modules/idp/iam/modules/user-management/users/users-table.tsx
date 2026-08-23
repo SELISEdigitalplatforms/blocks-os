@@ -149,10 +149,15 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
                   wrapper becomes `contents` so its children fall back into
                   their own grid columns (3-6), matching the header. */}
               <div className="flex flex-wrap items-center justify-between gap-3 md:contents">
-                <div className="md:shrink-0">
+                <div className="flex flex-wrap items-center gap-1 md:shrink-0">
                   <Badge variant={user.active ? "success" : "error"} className="w-fit">
                     {user.active ? "Active" : "Inactive"}
                   </Badge>
+                  {user.isLockedOut === true && (
+                    <Badge variant="error" className="w-fit">
+                      Locked out
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">

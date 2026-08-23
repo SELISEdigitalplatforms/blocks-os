@@ -20,6 +20,8 @@ import {
   ResourceType,
 } from "@blocks-idp/iam/models/permission";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { useDeletePermission } from "@blocks-idp/iam/hooks/use-permission";
+import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
 import { Pencil } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router";
@@ -42,6 +44,52 @@ export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeve
     <Badge variant={config.variant} className={cn(config.className, config.bg)}>
       {config.label}
     </Badge>
+  );
+};
+/**
+ * Actions for one permission row.
+ *
+ * Same reasoning as the roles list: the mutation lives here so `isPending` is per row, and
+ * stopPropagation is on the wrapper because the row navigates on click and the dialog's own
+ * clicks bubble through the component tree despite rendering in a portal.
+ *
+ * The Archive action is shown for every row. Archiving a permission requires the caller to be
+ * in the default organization, but no client-side signal for that exists, so a rejection is
+ * surfaced as a mapped toast rather than the action being hidden.
+ */
+const PermissionRowActions = ({ row }: { row: IPermission }) => {
+  const { mutateAsync, isPending } = useDeletePermission();
+  const scoped = useScopedPath();
+
+  return (
+    <div
+      className="flex"
+      role="presentation"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {/* The Link is scoped, not the hard-coded /app/iam path it used to carry: the row's own
+          onClick navigated via scoped() and picked up the tenant prefix, and the wrapper above
+          now stops that click from ever reaching the row. */}
+      {!row.isBuiltIn && (
+        <Link to={scoped(`iam/permission-detail/${row.itemId}`)}>
+          <Button
+            size="icon"
+            className="rounded-full"
+            variant="ghost"
+            aria-label={`Edit permission ${row.name}`}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </Link>
+      )}
+      <ArchiveAction
+        entity="permission"
+        name={row.name}
+        itemId={row.itemId}
+        archive={mutateAsync}
+        isPending={isPending}
+      />
+    </div>
   );
 };
 export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps) => {
@@ -217,17 +265,7 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
       {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex">
-            {!row.original.isBuiltIn && (
-              <Link to={`/app/iam/permission-detail/${row.original.itemId}`}>
-                <Button size="icon" className="rounded-full" variant="ghost">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </Link>
-            )}
-          </div>
-        ),
+        cell: ({ row }) => <PermissionRowActions row={row.original} />,
       },
     ],
     [setSortQueryParams, sortQueryParams],
@@ -235,6 +273,9 @@ export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps
   const table = useReactTable({
     data: permissions,
     columns,
+    // Row identity by itemId rather than the default array index -- see the note on the roles
+    // table: correct per-row identity, not a fix for an observed wrong-row bug.
+    getRowId: (row) => row.itemId,
     getCoreRowModel: getCoreRowModel(),
   });
   if (isLoading) return <LoadingSkelton />;

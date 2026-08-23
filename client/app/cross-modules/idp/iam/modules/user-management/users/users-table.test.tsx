@@ -60,6 +60,39 @@ describe("UsersTable", () => {
     expect(screen.getByText("Inactive")).toBeTruthy();
   });
 
+  it("adds a lockout badge without replacing an active user's status", () => {
+    renderTable({ users: [user({ active: true, isLockedOut: true })] });
+    expect(screen.getByText("Active")).toBeTruthy();
+    expect(screen.getByText("Locked out").className).toContain("bg-red-100");
+  });
+
+  it("does not show a lockout badge when isLockedOut is false or omitted", () => {
+    renderTable({
+      users: [user({ itemId: "false", isLockedOut: false }), user({ itemId: "omitted" })],
+    });
+    expect(screen.queryByText("Locked out")).toBeNull();
+  });
+
+  it("shows inactive and locked-out states together", () => {
+    renderTable({ users: [user({ active: false, isLockedOut: true })] });
+    expect(screen.getByText("Inactive")).toBeTruthy();
+    expect(screen.getByText("Locked out")).toBeTruthy();
+  });
+
+  it("derives lockout only from isLockedOut, even when the timestamp is null or elapsed", () => {
+    renderTable({
+      users: [
+        user({ itemId: "null", isLockedOut: true, lockoutUntilUtc: null }),
+        user({
+          itemId: "elapsed",
+          isLockedOut: true,
+          lockoutUntilUtc: "2000-01-01T00:00:00Z",
+        }),
+      ],
+    });
+    expect(screen.getAllByText("Locked out")).toHaveLength(2);
+  });
+
   it("names a user with no first or last name after their email", () => {
     renderTable({
       users: [user({ firstName: null, lastName: null, email: "john.doe@yopmail.com" })],

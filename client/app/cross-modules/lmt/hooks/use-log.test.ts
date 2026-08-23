@@ -8,7 +8,7 @@ import {
   mockGetLogsPayload,
 } from "../test-utils/__mocks__";
 import { lmtService } from "../services/lmt.service";
-import { useGetLogs, useGetLiveLogs } from "./use-log";
+import { useGetLogs, useGetLiveLogs, useGetBlocksServices } from "./use-log";
 
 vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
@@ -50,6 +50,30 @@ describe("use-log hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockLogsResponse);
       expect(lmtService.log.getLiveLog).toHaveBeenCalledWith(livePayload);
+    });
+  });
+
+  // ─── useGetBlocksServices ─────────────────────────────────────────────────
+  describe("useGetBlocksServices", () => {
+    it("should fetch the blocks services list successfully", async () => {
+      const blocksServices = [
+        {
+          key: "os",
+          label: "OS",
+          sortOrder: 1,
+          apiServiceName: "blocks-os",
+          workerServiceNames: ["blocks-os-worker"],
+        },
+      ];
+      vi.mocked(lmtService.log.getBlocksServices).mockResolvedValue(blocksServices);
+
+      const { result } = renderHook(() => useGetBlocksServices(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(blocksServices);
+      expect(lmtService.log.getBlocksServices).toHaveBeenCalled();
     });
   });
 });

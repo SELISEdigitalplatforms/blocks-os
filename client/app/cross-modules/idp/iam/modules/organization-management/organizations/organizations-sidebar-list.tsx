@@ -45,6 +45,13 @@ const SEARCH_MIN_LENGTH = 3;
 const SEARCH_HINT = `Type at least ${SEARCH_MIN_LENGTH} characters to search`;
 const SEARCH_HINT_ID = "organizations-search-hint";
 
+// The scroll container fills whatever height the parent grid cell hands it
+// (the grid is sized to `calc(100vh - --org-page-offset)` at lg+, so it tracks
+// the real viewport instead of a fixed px value). `flex-1` plus the card's
+// `h-full` is what makes the existing IntersectionObserver `onLoadMore` keep
+// working with the page-size accumulating in the parent.
+const SIDEBAR_LIST_HEIGHT = "flex-1";
+
 type OrganizationsSidebarListProps = {
   organizations: IOrganization[];
   totalCount: number;
@@ -188,7 +195,7 @@ export const OrganizationsSidebarList = ({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className={cn("overflow-y-auto p-2", SIDEBAR_LIST_HEIGHT)}>
         {isLoading ? (
           <div className="space-y-2 p-1">
             {Array.from({ length: 5 }).map((_, index) => (
@@ -240,7 +247,7 @@ export const OrganizationsSidebarList = ({
                         {org.name}
                       </span>
                       {org.isDisabled && (
-                        <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">
+                        <Badge variant="error" className="shrink-0 px-1.5 py-0 text-[10px]">
                           Disabled
                         </Badge>
                       )}

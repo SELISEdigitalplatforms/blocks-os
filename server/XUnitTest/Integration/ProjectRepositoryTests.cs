@@ -176,9 +176,12 @@ namespace XUnitTest.Integration
             using var _ = new IntegrationContext(tenant);
             var repo = NewRepository();
             await InsertProjectsAsync(
-                new Project { ItemId = "p1-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g", TenantId = "t1" },
-                new Project { ItemId = "p2-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g", TenantId = "t2" },
-                new Project { ItemId = "p3-" + tenant, CreatedBy = user, IsDisabled = true, TenantGroupId = "g", TenantId = "t3" });
+                new Project { ItemId = "p1-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g", TenantId = "t1-" + tenant },
+                new Project { ItemId = "p2-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g", TenantId = "t2-" + tenant },
+                new Project { ItemId = "p3-" + tenant, CreatedBy = user, IsDisabled = true, TenantGroupId = "g", TenantId = "t3-" + tenant });
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp1-" + tenant, UserId = user, TenantId = "t1-" + tenant, IsCreator = true });
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp2-" + tenant, UserId = user, TenantId = "t2-" + tenant, IsCreator = true });
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp3-" + tenant, UserId = user, TenantId = "t3-" + tenant, IsCreator = true });
 
             var count = await repo.GetProjectCountAsync();
 
@@ -763,6 +766,8 @@ namespace XUnitTest.Integration
             await InsertProjectsAsync(
                 new Project { ItemId = "s1-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = group, TenantId = "st1-" + tenant },
                 new Project { ItemId = "s2-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = group, TenantId = "st2-" + tenant });
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "spp1-" + tenant, UserId = user, TenantId = "st1-" + tenant, IsCreator = true });
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "spp2-" + tenant, UserId = user, TenantId = "st2-" + tenant, IsCreator = true });
 
             var grouped = await repo.GetAllByLastModifiedDateAsync(new GetProjectsRequest
             {

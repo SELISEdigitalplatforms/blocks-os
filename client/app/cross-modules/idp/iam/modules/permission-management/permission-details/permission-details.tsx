@@ -75,7 +75,6 @@ export const PermissionDetails = ({ id }: PermissionDetailsProps) => {
         <PageBreadcrumb
           breadcrumbIndex={4}
           className="flex min-w-0"
-          listClassName="text-base sm:text-lg"
           customTitles={breadcrumbTitles}
         />
         <Badge

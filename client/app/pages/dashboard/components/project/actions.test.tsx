@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ user: { sub: "user-1" } as { sub: string } | undefined }));
 
 vi.mock("./archive", () => ({ ArchiveProject: () => <div data-testid="archive" /> }));
+vi.mock("../onboard", () => ({ OnboardProject: () => <div data-testid="onboard" /> }));
 vi.mock("@seliseblocks/genesis-os/components", () => ({
   RenderConditionally: ({ condition, children }: { condition: boolean; children: React.ReactNode }) =>
     condition ? <>{children}</> : null,
@@ -21,16 +22,19 @@ describe("ProjectActions", () => {
   it("renders the archive action for the owner when the project is enabled", () => {
     render(<ProjectActions itemId="item-1" isDisabled={false} createdBy="user-1" />);
     expect(screen.getByTestId("archive")).toBeTruthy();
+    expect(screen.getByTestId("onboard")).toBeTruthy();
   });
 
-  it("hides the actions for a non-owner", () => {
+  it("hides the archive action for a non-owner but keeps onboarding available", () => {
     render(<ProjectActions itemId="item-1" isDisabled={false} createdBy="someone-else" />);
     expect(screen.queryByTestId("archive")).toBeNull();
+    expect(screen.getByTestId("onboard")).toBeTruthy();
   });
 
   it("hides the actions when the project is disabled", () => {
     render(<ProjectActions itemId="item-1" isDisabled createdBy="user-1" />);
     expect(screen.queryByTestId("archive")).toBeNull();
+    expect(screen.queryByTestId("onboard")).toBeNull();
   });
 
   it("renders a skeleton while fetching", () => {
@@ -39,5 +43,6 @@ describe("ProjectActions", () => {
     );
     expect(container.querySelector("[class*='rounded']")).toBeTruthy();
     expect(screen.queryByTestId("archive")).toBeNull();
+    expect(screen.queryByTestId("onboard")).toBeNull();
   });
 });

@@ -44,9 +44,9 @@ const renderWithContext = (value: Partial<React.ContextType<typeof LogsViewerCon
           selectedService: { serviceName: "svc", serviceNames: ["svc"] },
           filter: { level: "", startDate: "", endDate: "", search: "" },
           pageSize: 20,
-          isManagedLoading: false,
+          isServicesLoading: false,
           isSourceBlocks: true,
-          services: [],
+          services: [{ id: "svc", label: "Svc", serviceName: "svc" }],
           ...value,
         } as React.ContextType<typeof LogsViewerContext>
       }
@@ -63,14 +63,14 @@ describe("LogsList", () => {
     h.hasTopMore = false;
   });
 
-  it("shows the managed-services loading state", () => {
-    renderWithContext({ isManagedLoading: true });
-    expect(screen.getByText("Loading managed services...")).toBeTruthy();
+  it("shows the services loading state", () => {
+    renderWithContext({ isServicesLoading: true });
+    expect(screen.getByText("Loading services...")).toBeTruthy();
   });
 
-  it("shows an empty state when a managed source has no services", () => {
-    renderWithContext({ isSourceBlocks: false, services: [] });
-    expect(screen.getByText("No managed services found.")).toBeTruthy();
+  it("shows an empty state when there are no services", () => {
+    renderWithContext({ services: [] });
+    expect(screen.getByText("No services found.")).toBeTruthy();
   });
 
   it("shows skeletons while logs are loading", () => {

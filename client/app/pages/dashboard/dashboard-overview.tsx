@@ -23,8 +23,17 @@ export const DashboardOverview = () => {
           isFetching={isFetching}
         />
       </div>
-      <DomainsSection applications={data?.data.applications || []} />
-      <ProjectRepoList project={data?.data} isLoading={isFetching} />
+      {/* Keyed on the project: both sections now hold a page index, and switching
+          projects must not land the reader on page 2 of a project they just left. */}
+      <DomainsSection
+        key={`domains-${data.data.tenantId}`}
+        applications={data?.data.applications || []}
+      />
+      <ProjectRepoList
+        key={`repos-${data.data.tenantId}`}
+        project={data?.data}
+        isLoading={isFetching}
+      />
     </main>
   );
 };

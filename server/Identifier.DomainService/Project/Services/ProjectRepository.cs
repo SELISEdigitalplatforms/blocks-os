@@ -38,7 +38,7 @@ namespace DomainService.Projects
         {
             var blocksContext = BlocksContext.GetContext();
 
-            if(blocksContext?.Impersonated ?? true)
+            if (blocksContext?.Impersonated ?? true)
             {
                 return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
             }
@@ -173,17 +173,40 @@ namespace DomainService.Projects
             await collection.ReplaceOneAsync(filter, project);
         }
 
+        // ProjectPeople.IsCreator is the single source of truth for project ownership — see
+        // docs/specs/transfer-ownership-createdby-decoupling.md. Project.CreatedBy is a
+        // creation-time audit stamp only and must not be read here.
+        private async Task<List<string>> GetOwnedTenantIdsAsync(string? userId)
+        {
+            var projectPeopleCollection = _clientDb.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
+            var filter = Builders<ProjectPeople>.Filter.Eq(p => p.UserId, userId) &
+                         Builders<ProjectPeople>.Filter.Eq(p => p.IsCreator, true);
+
+            return await projectPeopleCollection.Find(filter).Project(p => p.TenantId).ToListAsync();
+        }
+
+        public async Task<string?> GetOwnerUserIdAsync(string tenantId)
+        {
+            var projectPeopleCollection = _clientDb.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
+            var filter = Builders<ProjectPeople>.Filter.Eq(p => p.TenantId, tenantId) &
+                         Builders<ProjectPeople>.Filter.Eq(p => p.IsCreator, true);
+
+            var owner = await projectPeopleCollection.Find(filter).FirstOrDefaultAsync();
+            return owner?.UserId;
+        }
+
         public async Task<List<GroupedProjectsDto>> GetAllByLastModifiedDateAsync(GetProjectsRequest request)
         {
             var collection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
+            var ownedTenantIds = await GetOwnedTenantIdsAsync(BlocksContext.GetContext()?.UserId);
 
             var filter = !string.IsNullOrEmpty(request.TenantGroupId) ?
 
-                          Builders<Project>.Filter.And(Builders<Project>.Filter.Eq(mc => mc.CreatedBy, BlocksContext.GetContext()?.UserId),
+                          Builders<Project>.Filter.And(Builders<Project>.Filter.In(mc => mc.TenantId, ownedTenantIds),
                                                        Builders<Project>.Filter.Eq(mc => mc.IsDisabled, false),
                                                        Builders<Project>.Filter.Eq(mc => mc.TenantGroupId, request.TenantGroupId)) :
 
-                          Builders<Project>.Filter.And(Builders<Project>.Filter.Eq(mc => mc.CreatedBy, BlocksContext.GetContext()?.UserId),
+                          Builders<Project>.Filter.And(Builders<Project>.Filter.In(mc => mc.TenantId, ownedTenantIds),
                                                        Builders<Project>.Filter.Eq(mc => mc.IsDisabled, false));
 
             var option = new FindOptions<Project>
@@ -237,10 +260,13 @@ namespace DomainService.Projects
 
         public async Task<List<Project>> GetSharedProjectsAsync(string? tenantGroupId = null)
         {
+            var userId = BlocksContext.GetContext()?.UserId;
+            var ownedTenantIds = await GetOwnedTenantIdsAsync(userId);
+
             var projectPeopleCollection = _clientDb.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
 
             var projectPeopleFilter = Builders<ProjectPeople>.Filter.And(
-                Builders<ProjectPeople>.Filter.Eq(mc => mc.UserId, BlocksContext.GetContext()?.UserId),
+                Builders<ProjectPeople>.Filter.Eq(mc => mc.UserId, userId),
                 Builders<ProjectPeople>.Filter.Or(
                     Builders<ProjectPeople>.Filter.Eq(mc => mc.IsInvitationConfirmed, true),
                     Builders<ProjectPeople>.Filter.Eq(mc => mc.IsCreator, true)));
@@ -251,7 +277,7 @@ namespace DomainService.Projects
             var projectCollection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Project>.Filter.In(p => p.TenantId, documents?.Select(doc => doc?.TenantId)) &
                          Builders<Project>.Filter.Where(p => p.IsDisabled == false) &
-                         Builders<Project>.Filter.Ne(p => p.CreatedBy, BlocksContext.GetContext()?.UserId ?? string.Empty);
+                         Builders<Project>.Filter.Nin(p => p.TenantId, ownedTenantIds);
 
             if (!string.IsNullOrEmpty(tenantGroupId))
             {
@@ -312,12 +338,12 @@ namespace DomainService.Projects
 
         public async Task<ProjectStatusTracer?> GetUnfinishedProjectByIdAsync(string itemId)
         {
-           var collection = _clientDb.GetCollection<ProjectStatusTracer>(_projectStatusTraceCollectionName);
+            var collection = _clientDb.GetCollection<ProjectStatusTracer>(_projectStatusTraceCollectionName);
 
-           var filter = Builders<ProjectStatusTracer>.Filter.Eq(mc => mc.ProjectId, itemId);
-           var unfinishedList = await collection.FindAsync(filter);
-           return await unfinishedList.FirstOrDefaultAsync();
-        }      
+            var filter = Builders<ProjectStatusTracer>.Filter.Eq(mc => mc.ProjectId, itemId);
+            var unfinishedList = await collection.FindAsync(filter);
+            return await unfinishedList.FirstOrDefaultAsync();
+        }
 
         public async Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTracer, Tenant project)
         {
@@ -350,17 +376,18 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "LinkBasedActionConfigs", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "TemplatePluginConfigs", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "FileDirectories", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project));
-                
+                CopyDocumentAsync(sourceDatabase, consumerDb, "ObjectItems", project),
+                CopyDocumentAsync(sourceDatabase, consumerDb, "DataServiceConfigurations", project));
+
         }
 
         private async Task CopyDocumentAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, string collectionName, Tenant project)
         {
-            var collectionExists = await targetDb.ListCollectionNames(new ListCollectionNamesOptions{ Filter = new BsonDocument("name", collectionName)}).AnyAsync();
+            var collectionExists = await targetDb.ListCollectionNames(new ListCollectionNamesOptions { Filter = new BsonDocument("name", collectionName) }).AnyAsync();
 
-            if(collectionExists)
+            if (collectionExists)
             {
-              return;
+                return;
             }
 
             var sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
@@ -385,19 +412,19 @@ namespace DomainService.Projects
             if (identityConfiguration != null)
             {
 
-               var collectionExists = await targetDb.ListCollectionNames(new ListCollectionNamesOptions{Filter = new BsonDocument("name", "IdentityConfigurations") }).AnyAsync();
+                var collectionExists = await targetDb.ListCollectionNames(new ListCollectionNamesOptions { Filter = new BsonDocument("name", "IdentityConfigurations") }).AnyAsync();
 
-               if (collectionExists)
-               {
-                  await targetDb.DropCollectionAsync("IdentityConfigurations");
-               }
+                if (collectionExists)
+                {
+                    await targetDb.DropCollectionAsync("IdentityConfigurations");
+                }
 
-               identityConfiguration["AccountActionBaseUrl"] = $"{project.Applications.FirstOrDefault().Domain}";
-               identityConfiguration["CreatedBy"] = userId;
-               identityConfiguration["LastUpdatedBy"] = userId;
+                identityConfiguration["AccountActionBaseUrl"] = $"{project.Applications.FirstOrDefault().Domain}";
+                identityConfiguration["CreatedBy"] = userId;
+                identityConfiguration["LastUpdatedBy"] = userId;
 
-               var targetCollection = targetDb.GetCollection<BsonDocument>("IdentityConfigurations");
-               await targetCollection.InsertOneAsync(identityConfiguration);
+                var targetCollection = targetDb.GetCollection<BsonDocument>("IdentityConfigurations");
+                await targetCollection.InsertOneAsync(identityConfiguration);
             }
         }
 
@@ -553,9 +580,11 @@ namespace DomainService.Projects
 
         public async Task<long> GetProjectCountAsync()
         {
+            var ownedTenantIds = await GetOwnedTenantIdsAsync(BlocksContext.GetContext()?.UserId);
+
             var collection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
 
-            var filter = Builders<Project>.Filter.And(Builders<Project>.Filter.Eq(mc => mc.CreatedBy, BlocksContext.GetContext()?.UserId),
+            var filter = Builders<Project>.Filter.And(Builders<Project>.Filter.In(mc => mc.TenantId, ownedTenantIds),
                                                       Builders<Project>.Filter.Eq(mc => mc.IsDisabled, false));
 
             return await collection.CountDocumentsAsync(filter);

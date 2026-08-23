@@ -542,7 +542,6 @@ namespace XUnitTest.Services
             _peopleRepo.Setup(r => r.GetProjectPeoplesAsync("owner-id", It.IsAny<List<string>>()))
                        .ReturnsAsync(new List<ProjectPeople> { new() { ItemId = "p1", TenantId = "t1" } });
             _peopleRepo.Setup(r => r.UpdateProjectPeopleOwnerShipAsync(It.IsAny<List<string>>(), It.IsAny<bool>())).ReturnsAsync(true);
-            _peopleRepo.Setup(r => r.UpdateProjectOwnerShipAsync(It.IsAny<List<string>>(), "u2")).ReturnsAsync(true);
             _peopleRepo.Setup(r => r.GetProjectPeopleByTenantIdAndUserIdAsync("t1", "u2")).ReturnsAsync((ProjectPeople?)null);
             _peopleRepo.Setup(r => r.InsertPeoplesAsync(It.IsAny<List<ProjectPeople>>())).ReturnsAsync(true);
             _tenants.Setup(t => t.GetTenantByID(It.IsAny<string>())).Returns(NewTenant());
@@ -782,7 +781,6 @@ namespace XUnitTest.Services
             _peopleRepo.Setup(r => r.GetProjectPeoplesAsync("owner-id", It.IsAny<List<string>>()))
                        .ReturnsAsync(new List<ProjectPeople> { new() { ItemId = "p1", TenantId = "t1" } });
             _peopleRepo.Setup(r => r.UpdateProjectPeopleOwnerShipAsync(It.IsAny<List<string>>(), It.IsAny<bool>())).ReturnsAsync(true);
-            _peopleRepo.Setup(r => r.UpdateProjectOwnerShipAsync(It.IsAny<List<string>>(), "u2")).ReturnsAsync(true);
             // Target already has a ProjectPeople record for t1 -> goes into projectPeopleIds branch.
             _peopleRepo.Setup(r => r.GetProjectPeopleByTenantIdAndUserIdAsync("t1", "u2"))
                        .ReturnsAsync(new ProjectPeople { ItemId = "pp-existing", TenantId = "t1", UserId = "u2" });

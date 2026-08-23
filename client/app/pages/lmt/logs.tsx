@@ -1,5 +1,5 @@
-import { BLOCKS_LOG_SERVICES } from "@/cross-modules/lmt/constants/logs.constant";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
+import { useGetBlocksServices } from "@blocks-lmt/hooks/use-log";
 import { LogsViewer, type Service } from "@blocks-lmt/components";
 import {
   LOG_SERVICE_AI_DESCRIPTION,
@@ -10,17 +10,9 @@ import { useMemo } from "react";
 
 type LogSource = "blocks" | "managed";
 
-const BLOCKS_SERVICES: Service[] = BLOCKS_LOG_SERVICES.map((service) => ({
-  id: service.id,
-  label: service.label,
-  serviceName: service.id,
-  serviceNames: service.serviceNames,
-  icon: service.icon,
-}));
-
 const SOURCE_OPTIONS: { label: string; value: LogSource }[] = [
-  { label: "Blocks services", value: "blocks" },
-  { label: "Managed services", value: "managed" },
+  { label: "Managed Service", value: "blocks" },
+  { label: "My Service", value: "managed" },
 ];
 
 export const parseAsLogSource = createParser({
@@ -36,26 +28,53 @@ export const parseAsLogSource = createParser({
 });
 export function LogsRoute() {
   const [source] = useQueryState<LogSource>("source", parseAsLogSource.withDefault("blocks"));
-  const { data, isLoading, isFetching } = useGetAllServices({
+  const { data: managedServicesData, isLoading, isFetching } = useGetAllServices({
     page: 0,
     pageSize: 1000,
   });
+  const { data: blocksServicesData, isLoading: isBlocksServicesLoading } = useGetBlocksServices();
 
   const managedServices = useMemo<Service[]>(
     () =>
-      data?.data.map((service) => ({
+      managedServicesData?.data.map((service) => ({
         id: service.serviceId,
-        label: service.name,
+        // The service id suffix disambiguates same-named services registered
+        // by different projects/environments.
+        label: `${service.name} (${service.serviceId.slice(0, 10)})`,
         serviceName: service.serviceId,
         serviceNames: [service.serviceId],
         // Store the RegisteredService data so we can use it later for name mapping
         _raw: service,
       })) ?? [],
-    [data?.data],
+    [managedServicesData?.data],
   );
 
-  const services = source === "blocks" ? BLOCKS_SERVICES : managedServices;
-  const isManagedLoading = source === "managed" && (isLoading || isFetching);
+  const blocksServices = useMemo<Service[]>(
+    () =>
+      [...(blocksServicesData ?? [])]
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((service) => ({
+          id: service.key,
+          label: service.label,
+          serviceName: service.apiServiceName,
+          serviceNames: [service.apiServiceName, ...service.workerServiceNames],
+          components: [
+            { label: "API", value: service.apiServiceName },
+            // A raw technical name is used instead of a guessed friendly label
+            // whenever a service has more than one worker (only "OS" does today),
+            // since there's no reliable way to tell them apart otherwise.
+            ...service.workerServiceNames.map((name) => ({
+              label: service.workerServiceNames.length > 1 ? name : "Worker",
+              value: name,
+            })),
+          ],
+        })),
+    [blocksServicesData],
+  );
+
+  const services = source === "blocks" ? blocksServices : managedServices;
+  const isServicesLoading =
+    source === "blocks" ? isBlocksServicesLoading : isLoading || isFetching;
   const predefinedQueries = source === "blocks" ? Object.values(LOG_SERVICE_AI_QUERIES).flat() : [];
 
   return (
@@ -68,7 +87,7 @@ export function LogsRoute() {
         agentName="Ask AI"
         useGenericTraceLinks
         isSourceBlocks={source === "blocks"}
-        isManagedLoading={isManagedLoading}
+        isServicesLoading={isServicesLoading}
       />
     </div>
   );

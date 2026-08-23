@@ -1,5 +1,6 @@
 import { http } from "@/lib/http/http-client";
 import {
+  IBlocksServiceItem,
   IGetLiveLogsPayload,
   IGetLogsByDatePayload,
   IGetLogsPayload,
@@ -30,5 +31,9 @@ export class LogService {
 
     const url = `${LOG_ENDPOINTS.LIVE}?${params.toString()}`;
     return http.get<IAPIResponse<ILog[]>>(url);
+  }
+
+  async getBlocksServices(): Promise<IBlocksServiceItem[]> {
+    return http.get<IBlocksServiceItem[]>(LOG_ENDPOINTS.GET_BLOCKS_SERVICES);
   }
 }

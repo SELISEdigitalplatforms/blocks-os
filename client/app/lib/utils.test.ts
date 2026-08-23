@@ -50,6 +50,12 @@ describe("lib/utils", () => {
     it("omits the time when withoutTime is true", () => {
       expect(formatFullDate(date, true)).toBe("Jan 15, 2026");
     });
+
+    it("can format an ISO timestamp using its UTC date and time", () => {
+      expect(formatFullDate(new Date("2026-08-09T14:30:00Z"), false, true)).toBe(
+        "Aug 09, 2026 at 14:30",
+      );
+    });
   });
 
   describe("parseDateString", () => {

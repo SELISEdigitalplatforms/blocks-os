@@ -242,7 +242,6 @@ export default function NewCommunication() {
       <header className="w-full space-y-4">
         <PageBreadcrumb
           breadcrumbIndex={3}
-          listClassName="text-sm sm:text-base md:text-lg"
           className="flex"
           customTitles={breadcrumbTitles}
         />
