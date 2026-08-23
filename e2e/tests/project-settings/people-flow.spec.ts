@@ -1,7 +1,6 @@
 import { test, expect } from "../../support/test-base";
 import {
-  createProject,
-  deleteCreatedProject,
+  openSharedProjectDashboard,
   openProjectOverviewPage,
 } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
@@ -11,16 +10,11 @@ import { uniqueTestEmail } from "../../support/env";
 // Development environment, open their details page, and remove their access
 // from the Environments tab.
 test.describe("flows", () => {
-  let projectName = "";
   let tenantGroupId = "";
 
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    ({ tenantGroupId } = await openSharedProjectDashboard(page));
   });
 
   test("People flow: strict validation -> invite -> open details -> remove environment access", async ({

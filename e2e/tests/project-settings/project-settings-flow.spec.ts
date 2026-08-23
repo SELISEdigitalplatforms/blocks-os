@@ -1,31 +1,29 @@
 import { test, expect } from "../../support/test-base";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard, openProjectOverviewPage } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // Project Settings flow: General Information card (name/created on/
 // environments/plan) -> strict validation on Edit Project -> rename the
 // project -> confirm the rename sticks -> the Environments table below it.
+//
+// This runs against the project shared by the whole suite, so the rename is
+// undone at the end of the test (back to the original shared name) — every
+// other spec file looks that project up by its original name.
 test.describe("flows", () => {
   let projectName = "";
   let tenantGroupId = "";
 
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    ({ projectName, tenantGroupId } = await openSharedProjectDashboard(page));
   });
 
   test("Project Settings flow: strict validation -> rename project -> Environments table", async ({
     page,
   }) => {
     test.setTimeout(180_000);
+
+    const originalProjectName = projectName;
 
     await test.step("Open Project Settings", async () => {
       await openProjectOverviewPage(page, tenantGroupId, "settings");
@@ -115,8 +113,29 @@ test.describe("flows", () => {
       await expect(page.getByText("X-Blocks-Key")).toBeVisible();
     });
 
-    // Track the renamed project so teardown can find and delete it by its
-    // current (post-rename) name.
-    projectName = renamedProject;
+    await test.step("Rename the project back to its original (shared) name", async () => {
+      await page.getByRole("button", { name: "Edit project name" }).click();
+      await expect(page.getByRole("heading", { name: "Edit Project" })).toBeVisible({
+        timeout: 10000,
+      });
+
+      const nameInput = page.locator("#name");
+      await nameInput.fill(originalProjectName);
+      const updateButton = page.getByRole("button", { name: "Update" });
+      await expect(updateButton).toBeEnabled();
+      await updateButton.click();
+
+      await expect(
+        page.getByText("Project name updated successfully", { exact: true }),
+      ).toBeVisible({
+        timeout: 15000,
+      });
+      await expect(page.getByRole("heading", { name: "Edit Project" })).toBeHidden({
+        timeout: 10000,
+      });
+      await expect(page.getByText(originalProjectName, { exact: true }).first()).toBeVisible({
+        timeout: 15000,
+      });
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 const gotoIamPath = async (page: Page, subpath: string) => {
@@ -12,15 +12,9 @@ const gotoIamPath = async (page: Page, subpath: string) => {
 // Settings flow: the default Auth tab, strict numeric validation, a valid
 // save, then a walk across the IAM / Signup / Organization tabs.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Settings flow: Auth tab strict validation -> save -> IAM/Signup/Organization tabs", async ({

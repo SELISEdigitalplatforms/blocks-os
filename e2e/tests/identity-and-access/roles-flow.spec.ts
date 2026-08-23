@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 const gotoIamPath = async (page: Page, subpath: string) => {
@@ -12,15 +12,9 @@ const gotoIamPath = async (page: Page, subpath: string) => {
 // Roles flow: strict validation on Add Role, create a role, open its
 // details page, and toggle Edit Permissions.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Roles flow: strict validation -> create -> open details -> edit permissions", async ({

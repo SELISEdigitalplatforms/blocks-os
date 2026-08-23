@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
@@ -31,15 +31,9 @@ const gotoSecretManagementSection = async (page: Page, subpath: string, headingN
 // well-known public JWKS endpoint (Google's) to get a real, stable pass
 // rather than a fabricated URL that would always fail validation.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("External IdP flow: empty state -> strict validation -> create -> view -> edit", async ({

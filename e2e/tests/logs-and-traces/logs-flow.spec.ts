@@ -1,20 +1,14 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // Logs flow: navigate into the sub-section under Logs & Traces, toggle its
 // log source tabs, follow a service card into its details view, then
 // exercise the log stream's Search and Type (level) filters.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Logs flow: navigate to Logs -> toggle source -> open a service's details", async ({

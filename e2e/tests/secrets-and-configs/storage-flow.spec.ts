@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
@@ -100,15 +100,9 @@ const saveDialogAndConfirmClosed = async (page: Page, providerLabel: string) => 
 // fully valid configuration and save it, before finally opening a saved
 // card into its file browser ("details" view).
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Storage flow: strict validation and successful save for every provider -> open a card's file browser", async ({

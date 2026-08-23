@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 import { uniqueTestEmail } from "../../support/env";
 
@@ -13,15 +13,9 @@ const gotoIamPath = async (page: Page, subpath: string) => {
 // Users flow: strict validation on Invite User, invite a fresh user, open
 // their details page, and walk its Access -> Sessions -> History tabs.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Users flow: strict validation -> invite -> open details -> Access/Sessions/History tabs", async ({

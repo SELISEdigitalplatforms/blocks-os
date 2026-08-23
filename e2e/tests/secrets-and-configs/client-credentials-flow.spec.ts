@@ -1,7 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
 import {
-  createProject,
-  deleteCreatedProject,
+  openSharedProjectDashboard,
   openProjectOverviewPage,
 } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
@@ -26,12 +25,11 @@ const gotoIamPath = async (page: Page, subpath: string) => {
 // stays disabled until the form is both dirty and valid — then reopen it
 // for editing.
 test.describe("flows", () => {
-  let projectName = "";
   let tenantGroupId = "";
 
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
+    ({ tenantGroupId } = await openSharedProjectDashboard(page));
     // Hydrate the project store's tenantId on Environments first (same
     // convention as people-flow.spec.ts) — the Add Client Credential
     // dialog's Assign Role/Permissions pickers gate their own data fetch
@@ -60,10 +58,6 @@ test.describe("flows", () => {
     await expect(page.getByText("Role added successfully"))
       .toBeVisible({ timeout: 15000 })
       .catch(() => {});
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
   });
 
   test.fail(

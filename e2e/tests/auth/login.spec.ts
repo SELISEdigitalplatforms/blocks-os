@@ -24,12 +24,13 @@ test.describe("Authentication", () => {
       }),
     ).toBeVisible({ timeout: 20_000 });
 
+    // Persist the authenticated session for future specs to reuse — saved
+    // right after confirming login, before the logout below touches it.
+    await page.context().storageState({ path: "fixtures/auth.json" });
+
     await page.getByRole("button", { name: "Open user menu" }).click();
     await page.getByText("Log out").click();
     await expect(page.getByRole("heading", { name: "blocks OS" })).toBeVisible({ timeout: 30_000 });
-
-    // Persist the authenticated session for future specs to reuse.
-    await page.context().storageState({ path: "fixtures/auth.json" });
 
     // Optionally keep the browser open to inspect the result before it closes.
     // e.g. E2E_HOLD_MS=120000 npm run test:headed

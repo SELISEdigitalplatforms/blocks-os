@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 const gotoSecretManagementSection = async (page: Page, subpath: string, headingName: string) => {
@@ -11,15 +11,9 @@ const gotoSecretManagementSection = async (page: Page, subpath: string, headingN
 };
 
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Captcha flow: strict validation -> add -> edit -> disable -> delete", async ({ page }) => {

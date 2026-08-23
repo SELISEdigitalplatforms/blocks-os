@@ -1,4 +1,5 @@
 import { test as base, expect } from "@playwright/test";
+import { markSharedTestFailed } from "./run-outcome";
 
 // Shared `test` for the whole suite. Specs import from here instead of
 // "@playwright/test" so the pause below applies everywhere automatically.
@@ -33,6 +34,15 @@ export const test = base.extend<{ pauseAfterEachTest: void }>({
       if (ms > 0) testInfo.setTimeout(testInfo.timeout + ms);
 
       await use();
+
+      // Every feature spec runs against the one project shared for the whole
+      // suite — if any of them fails, keep that project around afterward
+      // (skip teardown's delete) so it can be inspected.
+      if (testInfo.project.name === "chromium") {
+        if (testInfo.status !== "passed" && testInfo.status !== "skipped") {
+          markSharedTestFailed();
+        }
+      }
 
       // Teardown: runs after the test body, before `page` is disposed.
       if (ms > 0 && !page.isClosed()) {

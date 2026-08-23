@@ -1,7 +1,6 @@
 import { test, expect } from "../../support/test-base";
 import {
-  createProject,
-  deleteCreatedProject,
+  openSharedProjectDashboard,
   openProjectOverviewPage,
 } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
@@ -12,16 +11,11 @@ import { ensureAuthenticated } from "../../support/login-helper";
 // render-provider.tsx's handleContinue), and confirms the search box only
 // shows up once repositories exist (repositories.tsx: hasRepositories).
 test.describe("flows", () => {
-  let projectName = "";
   let tenantGroupId = "";
 
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    ({ tenantGroupId } = await openSharedProjectDashboard(page));
   });
 
   test("Repositories flow: empty state -> open 'Connect repository' -> GitHub provider option", async ({

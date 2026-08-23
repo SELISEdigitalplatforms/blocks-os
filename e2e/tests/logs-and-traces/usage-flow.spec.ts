@@ -1,20 +1,14 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // Usage flow: navigate into the sub-section under Logs & Traces, then walk
 // its real interactive surface — the time-range selector and the per-service
 // API/Worker metric switch.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Usage flow: navigate to Usage", async ({ page }) => {

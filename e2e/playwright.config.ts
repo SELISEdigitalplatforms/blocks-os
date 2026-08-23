@@ -76,12 +76,39 @@ export default defineConfig({
       timeout: 120_000,
       use: { ...devices["Desktop Chrome"] },
     },
-    // All other tests run authenticated by reusing that saved session, and
-    // only after "setup" (login) has succeeded.
+    // Project setup: creates the single project every feature spec below
+    // reuses, and records its identity to fixtures/shared-project.json.
+    {
+      name: "project-setup",
+      testMatch: /setup[\\/]project\.setup\.spec\.ts/,
+      dependencies: ["setup"],
+      timeout: 180_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "fixtures/auth.json",
+      },
+    },
+    // All feature specs run authenticated by reusing the saved session, and
+    // only after the shared project exists.
     {
       name: "chromium",
-      testIgnore: /auth[\\/]login\.spec\.ts/,
-      dependencies: ["setup"],
+      testIgnore: [
+        /auth[\\/]login\.spec\.ts/,
+        /setup[\\/]project\.(setup|teardown)\.spec\.ts/,
+      ],
+      dependencies: ["project-setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "fixtures/auth.json",
+      },
+    },
+    // Project teardown: deletes the shared project once every feature spec
+    // has finished, but only if all of them passed (see support/run-outcome.ts).
+    {
+      name: "project-teardown",
+      testMatch: /setup[\\/]project\.teardown\.spec\.ts/,
+      dependencies: ["chromium"],
+      timeout: 120_000,
       use: {
         ...devices["Desktop Chrome"],
         storageState: "fixtures/auth.json",

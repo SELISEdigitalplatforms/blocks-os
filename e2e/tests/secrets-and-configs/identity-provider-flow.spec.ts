@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
@@ -56,15 +56,9 @@ test.fail(
   "Creating an identity provider never appears in the list afterwards — confirmed regression in client/app/cross-modules/idp/authentication/hooks/use-identity-provider.ts: `useGetIdentityProviders`'s query key `[QUERY_KEY, projectId]` (line 14) nests QUERY_KEY as an array-within-an-array, so it is never matched by the flat `queryKey: QUERY_KEY` invalidation the create/update/delete/status mutations use (lines 38, 50, 62, 73). The list query never refetches after any mutation.",
 );
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Identity Provider flow: create -> new provider appears in the list", async ({ page }) => {

@@ -1,4 +1,5 @@
 import { Page, expect, test } from "@playwright/test";
+import { readSharedProject } from "./shared-project";
 
 const ORPHAN_PROJECT_PATTERN = /Test Project \d+/g;
 
@@ -141,24 +142,33 @@ export async function createProject(page: Page) {
       await expect(setupPending).toHaveCount(0, { timeout: 60_000 });
     }
 
+    let onDashboard = false;
     for (let attempt = 0; attempt < 3; attempt++) {
-      await developmentCard.click({ force: true });
+      await developmentCard.click({ force: true, timeout: 10_000 }).catch(() => {});
       try {
         await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 15_000 });
+        onDashboard = true;
         break;
-      } catch (error) {
-        if (attempt === 2) {
-          throw error;
-        }
+      } catch {
+        // Card click didn't land — fall through to the next attempt (or the
+        // console-based fallback below once attempts are exhausted).
       }
     }
 
-    await expect(page).toHaveURL(/\/app\/(?!project\/)[^/]+\/dashboard/, {
-      timeout: 15000,
-    });
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    });
+    if (!onDashboard) {
+      // The in-page card click can end up unreliable (observed hanging
+      // indefinitely against a stale/obscured element) — fall back to the
+      // same proven path openSharedProjectDashboard already uses: go back to
+      // the console and open the project by its name-card "Development" button.
+      await openNamedProjectDashboard(page, projectName);
+    } else {
+      await expect(page).toHaveURL(/\/app\/(?!project\/)[^/]+\/dashboard/, {
+        timeout: 15000,
+      });
+      await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
+        timeout: 15000,
+      });
+    }
   });
 
   const itemId = new URL(page.url()).pathname.split("/")[2] ?? "";
@@ -168,6 +178,30 @@ export async function createProject(page: Page) {
     );
   }
   return { projectName, tenantGroupId, itemId };
+}
+
+/**
+ * Navigate straight into the one project shared by the whole suite (created
+ * once by tests/setup/project.setup.spec.ts) by its known itemId, instead of
+ * creating a fresh throwaway project per test/file.
+ */
+export async function openSharedProjectDashboard(page: Page) {
+  const fixture = readSharedProject();
+  if (!fixture) {
+    throw new Error(
+      "Shared project fixture not found (fixtures/shared-project.json). " +
+        "Did the 'project-setup' project run first?",
+    );
+  }
+
+  // A raw page.goto() straight to /app/<itemId>/dashboard is unreliable on a
+  // fresh page load — it can bounce to /app/console or even /login instead
+  // of rendering the dashboard. Navigating from the console via the
+  // project's card click (same as createProject's own flow) is the proven
+  // reliable path, so use that instead of trusting the direct URL.
+  await openNamedProjectDashboard(page, fixture.projectName);
+
+  return fixture;
 }
 
 export function namedProjectCard(page: Page, projectName: string) {
@@ -216,26 +250,38 @@ export async function ensureConsole(page: Page) {
 }
 
 export async function openNamedProjectDashboard(page: Page, projectName: string) {
-  await ensureConsole(page);
-  const card = namedProjectCard(page, projectName);
-  await expect(card).toBeVisible({ timeout: 30000 });
-  const development = card.getByRole("button", { name: /Development/ });
-  await expect(development).toBeVisible({ timeout: 15000 });
+  // A just-created environment can still be provisioning ("Setup pending" —
+  // its console card renders greyed out and its click is a no-op while
+  // that's true), so this polls with real waits in between rather than
+  // failing the first time the dashboard doesn't render immediately.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await ensureConsole(page);
+    const card = namedProjectCard(page, projectName);
+    await expect(card).toBeVisible({ timeout: 30000 });
+    const development = card.getByRole("button", { name: /Development/ });
+    await expect(development).toBeVisible({ timeout: 15000 });
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await development.click({ force: true });
-    try {
-      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 15_000 });
-      break;
-    } catch (error) {
-      if (attempt === 2) {
-        throw error;
-      }
+    await development.click({ force: true }).catch(() => {});
+    const onDashboard = await page
+      .waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (onDashboard) {
+      const ready = await page
+        .getByText("X-Blocks-Key:")
+        .isVisible({ timeout: 15_000 })
+        .catch(() => false);
+      if (ready) return;
     }
+
+    if (attempt === 5) {
+      await expect(page.getByText("X-Blocks-Key:")).toBeVisible({ timeout: 15_000 });
+      return;
+    }
+
+    await page.waitForTimeout(10_000);
   }
-  await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-    timeout: 15000,
-  });
 }
 
 export async function openProjectConfigure(page: Page, projectName: string) {
@@ -246,15 +292,17 @@ export async function openProjectConfigure(page: Page, projectName: string) {
   await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 30000 });
 }
 
-export async function deleteCreatedProject(page: Page, projectName: string) {
+export async function deleteCreatedProject(page: Page, projectName: string): Promise<boolean> {
   if (!projectName) {
-    return;
+    return false;
   }
 
   try {
     await deleteProject(page, projectName);
+    return true;
   } catch {
     // Teardown must not mask the test failure that triggered it.
+    return false;
   }
 }
 

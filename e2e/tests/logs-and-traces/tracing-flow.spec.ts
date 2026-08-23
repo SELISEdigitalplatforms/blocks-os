@@ -1,20 +1,14 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // Tracing flow: navigate into the sub-section under Logs & Traces, walk the
 // Hot/Cold/Archive trace modes, filter by Service, and open a trace into its
 // span breakdown before closing with an invalid-trace-ID check.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("Tracing flow: navigate to Tracing", async ({ page }) => {

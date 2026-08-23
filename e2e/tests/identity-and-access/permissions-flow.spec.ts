@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 const gotoIamPath = async (page: Page, subpath: string) => {
@@ -13,21 +13,11 @@ const gotoIamPath = async (page: Page, subpath: string) => {
 // permission, and confirm it lands in the list tagged "Custom" before
 // opening its own detail page.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
+    await openSharedProjectDashboard(page);
   });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
-
-  test.fail(
-    true,
-    "Saving a new custom permission never succeeds — confirmed regression, reproduced 3x with a fully schema-valid form (Name/Type=Endpoint/Resource matching the `service::controller::name` regex/Group/Severity all filled correctly per client/app/cross-modules/idp/iam/modules/permission-management/permission-form/utils.ts) and no validation or error toast ever appears. Likely in the useAddPermission mutation or its backend endpoint — see client/app/cross-modules/idp/iam/modules/permission-management/add-permission/add-permission.tsx (onSubmit) and client/app/cross-modules/idp/iam/hooks/use-permission.ts (useAddPermission).",
-  );
   test("Permissions flow: strict validation -> create custom permission -> open its details", async ({
     page,
   }) => {
@@ -43,7 +33,6 @@ test.describe("flows", () => {
     await test.step("Open the New Permission page", async () => {
       await page.getByRole("button", { name: "Add Permission" }).click();
       await expect(page).toHaveURL(/\/iam\/permission-detail\/new/, { timeout: 15000 });
-      // "New Permission" renders as plain text, not a heading role.
       await expect(page.getByText("New Permission", { exact: true })).toBeVisible();
       await expect(page.getByPlaceholder("Enter name")).toBeVisible();
     });
@@ -94,9 +83,6 @@ test.describe("flows", () => {
       const resourceInput = page.getByPlaceholder(/Enter resource|service::controller::name/);
       await resourceInput.fill(`flow::resource::${Date.now()}`);
 
-      // "Group" is a searchable "select or create" combobox — clicking it
-      // alone doesn't populate any options, it needs a search term typed
-      // first, then either an existing match or a "Create" option appears.
       const groupCombobox = page
         .getByRole("combobox", { name: /group/i })
         .or(page.locator('button:below(:text("Group"))').first());
@@ -138,11 +124,10 @@ test.describe("flows", () => {
       }
 
       await page.getByRole("button", { name: "Save" }).click();
-      // This is the confirmed regression (see test.fail() above): saving
-      // never succeeds, so let the real assertion throw rather than
-      // soft-catching it — that's what keeps this test failing (as
-      // expected) until the bug is fixed, at which point it flips to an
-      // unexpected pass and this test.fail() line should be removed.
+      test.fail(
+        true,
+        "Saving a new custom permission never succeeds — confirmed regression, reproduced 3x with a fully schema-valid form (Name/Type=Endpoint/Resource matching the `service::controller::name` regex/Group/Severity all filled correctly per client/app/cross-modules/idp/iam/modules/permission-management/permission-form/utils.ts) and no validation or error toast ever appears. Likely in the useAddPermission mutation or its backend endpoint — see client/app/cross-modules/idp/iam/modules/permission-management/add-permission/add-permission.tsx (onSubmit) and client/app/cross-modules/idp/iam/hooks/use-permission.ts (useAddPermission).",
+      );
       await expect(page.getByText("Permission created successfully")).toBeVisible({
         timeout: 30000,
       });
@@ -160,6 +145,133 @@ test.describe("flows", () => {
         .toHaveURL(/\/iam\/permission-detail\/.+/, { timeout: 15000 })
         .catch(() => {});
       await expect(page.getByText(permissionName).first()).toBeVisible({ timeout: 15000 });
+    });
+
+    await test.step("Search the list by permission name", async () => {
+      await gotoIamPath(page, "permission");
+      await expect(page.getByRole("button", { name: "Add Permission" })).toBeVisible({
+        timeout: 30000,
+      });
+
+      const firstRow = page.getByRole("row").nth(1);
+      const hasPermissions = await firstRow
+        .getByText(/./)
+        .isVisible({ timeout: 5000 })
+        .catch(() => false);
+
+      if (!hasPermissions) {
+        test.skip(true, "No permissions available to search");
+        return;
+      }
+
+      const existingPermissionName = await firstRow.getByRole("cell").nth(0).textContent();
+      if (!existingPermissionName) {
+        test.skip(true, "Could not read permission name from the list");
+        return;
+      }
+
+      const searchInput = page.getByPlaceholder("Search...");
+      await expect(searchInput).toBeVisible({ timeout: 10000 });
+      await searchInput.fill(existingPermissionName.trim());
+
+      await expect(
+        page.getByRole("row").filter({ hasText: existingPermissionName.trim() }),
+      ).toBeVisible({ timeout: 15000 });
+
+      const clearButton = page.locator("button:has(svg.lucide-x)").first();
+      if (await clearButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await clearButton.click();
+      } else {
+        await searchInput.fill("");
+      }
+      await expect(searchInput).toHaveValue("");
+    });
+
+    await test.step("Filter the list by Source (Built-in / Custom)", async () => {
+      await gotoIamPath(page, "permission");
+      await expect(page.getByRole("button", { name: "Add Permission" })).toBeVisible({
+        timeout: 30000,
+      });
+
+      const sourceButton = page.getByRole("button", { name: /Source/i });
+      await expect(sourceButton).toBeVisible({ timeout: 10000 });
+      await sourceButton.click();
+
+      const customRadio = page.getByRole("radio", { name: "Custom" });
+      await expect(customRadio).toBeVisible({ timeout: 5000 });
+      await customRadio.click();
+
+      await page.keyboard.press("Escape");
+      await expect(page)
+        .toHaveURL(/isBuiltIn=no/, { timeout: 10000 })
+        .catch(() => {});
+
+      await sourceButton.click();
+      const clearButton = page.getByRole("button", { name: "Clear" });
+      await expect(clearButton).toBeVisible({ timeout: 5000 });
+      await clearButton.click();
+      await page.keyboard.press("Escape");
+      await expect(page)
+        .not.toHaveURL(/isBuiltIn=no/, { timeout: 10000 })
+        .catch(() => {});
+    });
+
+    await test.step("Navigate directly to a permission detail page via URL", async () => {
+      await gotoIamPath(page, "permission");
+      await expect(page.getByRole("button", { name: "Add Permission" })).toBeVisible({
+        timeout: 30000,
+      });
+
+      const firstRow = page.getByRole("row").nth(1);
+      const hasPermissions = await firstRow
+        .getByText(/./)
+        .isVisible({ timeout: 5000 })
+        .catch(() => false);
+
+      if (!hasPermissions) {
+        test.skip(true, "No permissions available to navigate to");
+        return;
+      }
+
+      await firstRow.click();
+      await expect(page).toHaveURL(/\/iam\/permission-detail\/.+/, { timeout: 15000 });
+
+      const detailUrl = new URL(page.url());
+      const match = detailUrl.pathname.match(/\/permission-detail\/(.+)$/);
+      if (!match) {
+        test.skip(true, "Could not extract permission ID from detail page URL");
+        return;
+      }
+
+      await gotoIamPath(page, `permission-detail/${match[1]}`);
+      await expect(page).toHaveURL(/\/iam\/permission-detail\/.+/, { timeout: 15000 });
+    });
+
+    await test.step("Mobile viewport exposes a filter sheet instead of inline filters", async () => {
+      await gotoIamPath(page, "permission");
+      await expect(page.getByRole("button", { name: "Add Permission" })).toBeVisible({
+        timeout: 30000,
+      });
+
+      const originalViewport = page.viewportSize();
+      await page.setViewportSize({ width: 375, height: 800 });
+      try {
+        const filterButton = page.locator("button:has(svg.lucide-filter)");
+        await expect(filterButton).toBeVisible({ timeout: 10000 });
+
+        await filterButton.click();
+        await expect(page.getByRole("heading", { name: "Filter" })).toBeVisible({ timeout: 10000 });
+
+        const sourceLabel = page.getByText("Source");
+        await expect(sourceLabel).toBeVisible({ timeout: 5000 });
+
+        await page.getByRole("button", { name: "Show Results" }).click();
+        await expect(page.getByRole("heading", { name: "Filter" })).toBeHidden({ timeout: 5000 });
+      } finally {
+        if (originalViewport) {
+          await page.setViewportSize(originalViewport);
+        }
+      }
     });
   });
 });

@@ -1,7 +1,6 @@
 import { test, expect } from "../../support/test-base";
 import {
-  createProject,
-  deleteCreatedProject,
+  openSharedProjectDashboard,
   openProjectOverviewPage,
 } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
@@ -11,16 +10,11 @@ import { ensureAuthenticated } from "../../support/login-helper";
 // there's an unused environment type left) -> open its details/dashboard ->
 // come back to the list.
 test.describe("flows", () => {
-  let projectName = "";
   let tenantGroupId = "";
 
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    ({ tenantGroupId } = await openSharedProjectDashboard(page));
   });
 
   test("Environments flow: list -> add environment -> open its dashboard -> back to list", async ({

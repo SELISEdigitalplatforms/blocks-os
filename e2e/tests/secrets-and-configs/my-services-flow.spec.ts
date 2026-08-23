@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
+import { openSharedProjectDashboard } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
@@ -21,15 +21,9 @@ const gotoSecretManagementSection = async (page: Page, subpath: string, headingN
 // delete action for a registered service (only Logs/Traces/Swagger/Docs
 // links), so there is no closing "delete" stage for this section.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openSharedProjectDashboard(page);
   });
 
   test("My Services flow: strict validation -> register -> expand details -> setup guide", async ({
