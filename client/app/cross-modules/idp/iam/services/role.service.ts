@@ -12,6 +12,10 @@ import {
 import { ROLE_ENDPOINTS } from "../constants/endpoint.constant";
 import { ArchiveResponse } from "../constants/archive-error-messages";
 import { IRoleArchiveImpact } from "@blocks-idp/iam/models/archive-impact.model";
+import {
+  IRolePermissionChangeImpact,
+  IRolePermissionChangeImpactPayload,
+} from "@blocks-idp/iam/models/role-permission-change-impact.model";
 
 export class RoleService {
   getRoles(payload: GetRolesPayload): Promise<GetRolesResponse> {
@@ -61,6 +65,23 @@ export class RoleService {
     return http.get(`${ROLE_ENDPOINTS.GET_ROLES}/${id}/archive-impact`, undefined, {
       absoluteUrl: true,
     });
+  }
+
+  /**
+   * What assigning or unassigning the given permissions would affect, before it is applied.
+   *
+   * POST for a read because the diff is two id lists; a query string would not survive a role with
+   * many permissions changed at once.
+   */
+  getRolePermissionChangeImpact(
+    payload: IRolePermissionChangeImpactPayload,
+  ): Promise<IRolePermissionChangeImpact> {
+    return http.post<IRolePermissionChangeImpact>(
+      ROLE_ENDPOINTS.PERMISSION_CHANGE_IMPACT,
+      payload,
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   setRoles(addSetRolesPayload: SetRoles): Promise<SetRoles> {
