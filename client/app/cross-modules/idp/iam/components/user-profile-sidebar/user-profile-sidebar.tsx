@@ -108,7 +108,7 @@ export const UserProfileSidebar = ({ id, projectKey }: UserProfileSidebarProps) 
             <div className="flex flex-col items-start gap-1.5">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span
-                  className={`mt-0.5 inline-flex w-fit items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold ${
+                  className={`inline-flex w-fit items-center gap-1.5 rounded border border-transparent px-2 py-1 text-xs font-semibold ${
                     user?.active
                       ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                       : "bg-red-500/15 text-red-600 dark:text-red-400"

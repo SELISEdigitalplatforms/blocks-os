@@ -241,6 +241,7 @@ export const DomainTable = ({ data }: DomainTableProps) => {
             value={search}
             onChange={handleSearchChange}
             placeholder="Search domains..."
+            className="w-64"
           />
         </div>
       )}

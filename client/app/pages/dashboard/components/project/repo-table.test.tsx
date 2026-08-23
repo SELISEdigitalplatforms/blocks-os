@@ -114,6 +114,7 @@ describe("ProjectRepoTable", () => {
     renderTable([repo()]);
     const search = screen.getByPlaceholderText("Search repositories...");
     expect(search.parentElement?.parentElement?.className).toContain("justify-start");
+    expect(search.className).toContain("w-64");
   });
 
   it("filters repository names by case-insensitive substring without changing source data", async () => {

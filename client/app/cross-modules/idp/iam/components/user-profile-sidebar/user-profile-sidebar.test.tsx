@@ -47,6 +47,8 @@ describe("UserProfileSidebar", () => {
     const inactiveBadge = screen.getByText("Inactive");
     expect(inactiveBadge.className).toContain("rounded");
     expect(inactiveBadge.className).not.toContain("rounded-full");
+    expect(inactiveBadge.className).toContain("border-transparent");
+    expect(inactiveBadge.className).toContain("text-xs");
   });
 
   it("shows the lockout badge and UTC unlock time without replacing active status", () => {

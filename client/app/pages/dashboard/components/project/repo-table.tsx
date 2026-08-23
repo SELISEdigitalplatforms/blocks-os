@@ -180,6 +180,7 @@ export const ProjectRepoTable = ({
             value={search}
             onChange={onSearchChange}
             placeholder="Search repositories..."
+            className="w-64"
           />
         </div>
       )}

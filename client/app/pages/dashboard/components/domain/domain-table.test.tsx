@@ -61,6 +61,7 @@ describe("DomainTable", () => {
     render(<DomainTable data={domains} />);
     const search = screen.getByPlaceholderText("Search domains...");
     expect(search.parentElement?.parentElement?.className).toContain("justify-start");
+    expect(search.className).toContain("w-64");
   });
 
   it("renders an empty state when there are no domains", () => {
