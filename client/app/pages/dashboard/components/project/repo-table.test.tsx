@@ -110,6 +110,12 @@ describe("ProjectRepoTable", () => {
     expect(screen.queryByPlaceholderText("Search repositories...")).toBeNull();
   });
 
+  it("aligns the search field to the left of the table", () => {
+    renderTable([repo()]);
+    const search = screen.getByPlaceholderText("Search repositories...");
+    expect(search.parentElement?.parentElement?.className).toContain("justify-start");
+  });
+
   it("filters repository names by case-insensitive substring without changing source data", async () => {
     const user = userEvent.setup();
     const data = [repo({ repoName: "Web-App" }), repo({ repoName: "api-service" })];

@@ -57,6 +57,12 @@ describe("DomainTable", () => {
     expect(screen.getByText("Unverified")).toBeTruthy();
   });
 
+  it("aligns the search field to the left of the table", () => {
+    render(<DomainTable data={domains} />);
+    const search = screen.getByPlaceholderText("Search domains...");
+    expect(search.parentElement?.parentElement?.className).toContain("justify-start");
+  });
+
   it("renders an empty state when there are no domains", () => {
     render(<DomainTable data={[]} />);
     expect(screen.getByText("No domains configured yet.")).toBeTruthy();

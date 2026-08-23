@@ -236,7 +236,7 @@ export const DomainTable = ({ data }: DomainTableProps) => {
       />
 
       {data.length > 0 && (
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex justify-start">
           <FilterControls.SearchInput
             value={search}
             onChange={handleSearchChange}
