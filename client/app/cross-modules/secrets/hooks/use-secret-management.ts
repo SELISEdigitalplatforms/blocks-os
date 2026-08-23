@@ -132,7 +132,7 @@ export const useSetSecret = () => {
       invalidateList();
       showSuccessToast({ description: "Secret created." });
     },
-    // Errors surface as inline field messages in the form (NAME_TAKEN maps onto the name
+    // Errors surface as inline field messages in the form (NAME_INVALID maps onto the name
     // input), so no toast here — it would duplicate the field error.
   });
 };

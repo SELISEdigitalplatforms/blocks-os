@@ -181,16 +181,20 @@ describe("SecretFormModal — create", () => {
   //   );
   // });
 
-  it("maps NAME_TAKEN onto the name field rather than a generic banner", async () => {
+  it("maps a field reason code onto the name field rather than a generic banner", async () => {
     const user = userEvent.setup();
     const { onOpenChange } = renderCreate();
-    hoisted.create.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_TAKEN" }));
+    hoisted.create.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_INVALID" }));
 
     await fillCreate(user);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(screen.getByText("A secret with this name already exists.")).toBeTruthy(),
+      expect(
+        screen.getByText(
+          "Use letters, digits, dot, underscore or hyphen, starting with a letter or digit.",
+        ),
+      ).toBeTruthy(),
     );
     expect(screen.queryByRole("alert")).toBeNull();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
@@ -315,12 +319,16 @@ describe("SecretFormModal — edit", () => {
   it("keeps the modal open when the metadata call itself fails", async () => {
     const user = userEvent.setup();
     const { onOpenChange } = renderEdit();
-    hoisted.update.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_TAKEN" }));
+    hoisted.update.mockRejectedValue(new FakeHttpError(400, { reason: "NAME_INVALID" }));
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(screen.getByText("A secret with this name already exists.")).toBeTruthy(),
+      expect(
+        screen.getByText(
+          "Use letters, digits, dot, underscore or hyphen, starting with a letter or digit.",
+        ),
+      ).toBeTruthy(),
     );
     expect(hoisted.updateAccess).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);

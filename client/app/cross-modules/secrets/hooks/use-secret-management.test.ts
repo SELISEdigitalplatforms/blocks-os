@@ -209,7 +209,7 @@ describe("mutations", () => {
 
   it("does not toast on create failure — the form shows a field error instead", async () => {
     vi.mocked(secretManagementService.set).mockRejectedValue(
-      new FakeHttpError(400, { reason: "NAME_TAKEN" }),
+      new FakeHttpError(400, { reason: "NAME_INVALID" }),
     );
     const { result } = renderHook(() => useSetSecret(), { wrapper: createWrapper() });
 
