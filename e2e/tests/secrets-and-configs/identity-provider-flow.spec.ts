@@ -74,6 +74,12 @@ test.describe("flows", () => {
       await gotoSecretManagementSection(page, "identity-providers", "Identity Provider");
     });
 
+    await test.step("A fresh project starts with no identity providers", async () => {
+      await expect(page.getByText("No identity providers yet"))
+        .toBeVisible({ timeout: 10000 })
+        .catch(() => {});
+    });
+
     await test.step("Open the Add Identity Provider dialog", async () => {
       await page.getByRole("button", { name: "Add", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
@@ -83,6 +89,54 @@ test.describe("flows", () => {
 
     await test.step("'Add Provider' stays disabled until the form is valid", async () => {
       await expect(addButton).toBeDisabled();
+    });
+
+    await test.step("Social provider type shows a provider Select (Google/Microsoft)", async () => {
+      const providerTypeSelect = page.getByRole("dialog").getByRole("combobox").first();
+      // Social is the default providerType, so the second combobox is
+      // already the provider picker.
+      const providerPickSelect = page.getByRole("dialog").getByRole("combobox").nth(1);
+      await providerPickSelect.click();
+      await expect(page.getByRole("option", { name: "Google" })).toBeVisible();
+      await expect(page.getByRole("option", { name: "Microsoft" })).toBeVisible();
+      await page.keyboard.press("Escape");
+      void providerTypeSelect;
+    });
+
+    await test.step("Blocks OIDC type shows an auto-generated, read-only Well Known URL", async () => {
+      const providerTypeSelect = page.getByRole("dialog").getByRole("combobox").first();
+      await providerTypeSelect.click();
+      await page.getByRole("option", { name: "Blocks OIDC" }).click();
+
+      const wellKnownInput = page.locator("#generatedWellKnownUrl");
+      await expect(wellKnownInput).toBeVisible();
+      await expect(wellKnownInput).toHaveAttribute("readonly", "");
+      await expect(wellKnownInput).not.toHaveValue("");
+    });
+
+    await test.step("Redirect URI: add and remove extra rows", async () => {
+      await page.getByRole("button", { name: "Add Redirect URI" }).click();
+      const uriInputs = page.getByPlaceholder("https://your-app.com/callback");
+      await expect(uriInputs).toHaveCount(2);
+
+      // Remove icon buttons only render once there's more than one row —
+      // scope to the second row's own container so this doesn't hit the
+      // dialog's unrelated close (×) button, which also uses a lucide-x icon.
+      const secondRow = uriInputs.nth(1).locator("xpath=..");
+      await secondRow.getByRole("button").click();
+      await expect(uriInputs).toHaveCount(1);
+    });
+
+    await test.step("Cancel discards entered data", async () => {
+      await page.getByPlaceholder("https://your-app.com/callback").fill("https://discarded.example.com");
+      await page.getByRole("button", { name: "Cancel" }).click();
+      await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeHidden({
+        timeout: 10000,
+      });
+
+      await page.getByRole("button", { name: "Add", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
+      await expect(page.getByPlaceholder("https://your-app.com/callback")).toHaveValue("");
     });
 
     const providerName = `flow-idp-${Date.now()}`;
@@ -109,12 +163,103 @@ test.describe("flows", () => {
       });
     });
 
+    // A hard reload mounts a brand-new query instead of relying on the
+    // broken invalidateQueries call, so it sidesteps the regression — use it
+    // to reach a real row and exercise Edit/Enable-Disable/Delete/expand,
+    // none of which the same-session bug otherwise lets us test.
+    await test.step("Reload the page — the new provider becomes visible via a fresh query", async () => {
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { name: "Identity Provider" })).toBeVisible({
+        timeout: 30000,
+      });
+    });
+
+    const providerRow = page.getByRole("row").filter({ hasText: providerName });
+
+    await test.step("Expand the row to see its KV details", async () => {
+      if (await providerRow.isVisible({ timeout: 10000 }).catch(() => false)) {
+        await providerRow.click();
+        await expect(page.getByText("Client Id").or(page.getByText("Client ID")))
+          .toBeVisible({ timeout: 10000 })
+          .catch(() => {});
+      }
+    });
+
+    await test.step("Edit the provider: Provider Type/Name/Client ID are locked, Secret is blank", async () => {
+      const editButton = providerRow.getByRole("button", { name: "Edit" });
+      if (await editButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await editButton.click();
+        await expect(page.getByRole("heading", { name: "Edit Identity Provider" })).toBeVisible({
+          timeout: 10000,
+        });
+        await expect(page.getByRole("dialog").getByRole("combobox").first()).toBeDisabled();
+        await expect(page.getByPlaceholder("my-identity-provider")).toBeDisabled();
+        await expect(page.getByPlaceholder("Enter client ID")).toBeDisabled();
+        await expect(page.getByPlaceholder("••••••••••••")).toHaveValue("");
+        await page.getByRole("button", { name: "Cancel" }).click();
+      }
+    });
+
+    await test.step("Disable then re-enable the provider via its status action", async () => {
+      const disableButton = providerRow.getByRole("button", { name: "Disable provider" });
+      if (await disableButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await disableButton.click();
+        await expect(page.getByRole("heading", { name: "Disable identity provider" })).toBeVisible();
+        await page.getByRole("button", { name: "Disable", exact: true }).click();
+        await expect(page.getByText(/no longer be able to sign in|disabled/i))
+          .toBeVisible({ timeout: 10000 })
+          .catch(() => {});
+
+        const enableButton = providerRow.getByRole("button", { name: "Enable provider" });
+        if (await enableButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await enableButton.click();
+          await expect(page.getByRole("heading", { name: "Enable identity provider" })).toBeVisible();
+          await page.getByRole("button", { name: "Enable", exact: true }).click();
+        }
+      }
+    });
+
+    await test.step("Delete the provider via its confirmation dialog", async () => {
+      const deleteButton = providerRow.getByRole("button", { name: "Delete provider" });
+      if (await deleteButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await deleteButton.click();
+        await expect(page.getByRole("heading", { name: "Delete identity provider" })).toBeVisible();
+        await page.getByRole("button", { name: "Delete", exact: true }).click();
+      }
+    });
+
     // This is the confirmed regression (see test.fail() above): the list
-    // never refetches after create, so let the real assertion throw rather
-    // than soft-catching it — that's what keeps this test failing (as
-    // expected) instead of silently passing once the bug is fixed.
+    // never refetches within the same session after a mutation. Create a
+    // second provider without reloading and confirm it never appears — let
+    // the real assertion throw rather than soft-catching it, which is what
+    // keeps this test failing (as expected) instead of silently passing
+    // once the bug is fixed.
+    const secondProviderName = `flow-idp-2-${Date.now()}`;
+    await test.step("Create a second provider without reloading — it never appears (regression)", async () => {
+      await page.getByRole("button", { name: "Add", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
+
+      const providerTypeSelect = page.getByRole("dialog").getByRole("combobox").first();
+      await providerTypeSelect.click();
+      await page.getByRole("option", { name: "Bring your own SSO (BYOS)" }).click();
+
+      await page.getByPlaceholder("my-identity-provider").fill(secondProviderName);
+      await page.getByPlaceholder("Enter client ID").fill(`flow-client-id-2-${Date.now()}`);
+      await page.getByPlaceholder("Enter client secret").fill("flow-client-secret-value-2");
+      await page
+        .getByPlaceholder("https://your-app.com/callback")
+        .fill("https://example.com/callback");
+
+      await expect(addButton).toBeEnabled({ timeout: 10000 });
+      await addButton.click();
+
+      await expect(page.getByText("Identity provider created successfully").first()).toBeVisible({
+        timeout: 15000,
+      });
+    });
+
     await test.step("The new provider appears in the list (currently fails — see regression note)", async () => {
-      await expect(page.getByRole("row").filter({ hasText: providerName })).toBeVisible({
+      await expect(page.getByRole("row").filter({ hasText: secondProviderName })).toBeVisible({
         timeout: 15000,
       });
     });

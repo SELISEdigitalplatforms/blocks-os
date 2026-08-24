@@ -68,11 +68,42 @@ test.describe("flows", () => {
       await expect(saveButton).toBeDisabled();
     });
 
+    await test.step("Provider offers Keycloak, Okta, Auth0, Azure, and Others", async () => {
+      await expect(page.getByLabel("Keycloak")).toBeVisible();
+      await expect(page.getByLabel("Okta")).toBeVisible();
+      await expect(page.getByLabel("Auth0")).toBeVisible();
+      await expect(page.getByLabel("Azure")).toBeVisible();
+      await expect(page.getByLabel("Others")).toBeVisible();
+    });
+
+    await test.step("Strict validation: JWKS URL is required", async () => {
+      // URL must stay empty but the form still needs to be dirty for Save to
+      // even be clickable — dirty it via the Issuer field instead.
+      const urlInput = page.getByPlaceholder("Enter JWKS (JSON Web Key Set) url");
+      await urlInput.fill("");
+      await page.getByLabel("Issuer (Optional)").fill("temp-issuer");
+      await expect(saveButton).toBeEnabled({ timeout: 5000 });
+      await saveButton.click();
+      await expect(page.getByText("JWKS URL is required")).toBeVisible({ timeout: 5000 });
+      await page.getByLabel("Issuer (Optional)").fill("");
+    });
+
+    await test.step("Strict validation: an unreachable/invalid JWKS URL is rejected", async () => {
+      const urlInput = page.getByPlaceholder("Enter JWKS (JSON Web Key Set) url");
+      await urlInput.fill("https://example.com/not-a-jwks-endpoint");
+      await saveButton.click();
+      await expect(
+        page.getByText(/Invalid, provide a valid jwks URL|jwks/i),
+      ).toBeVisible({ timeout: 20000 });
+      await urlInput.fill("");
+    });
+
     await test.step("Fill a valid JWKS URL for the default Keycloak provider and save", async () => {
       await page
         .getByPlaceholder("Enter JWKS (JSON Web Key Set) url")
         .fill("https://www.googleapis.com/oauth2/v3/certs");
       await page.getByLabel("Issuer (Optional)").fill("https://example.com/issuer");
+      await page.getByLabel("Audience (Optional)").fill("audience-one, audience-two");
 
       await expect(saveButton).toBeEnabled({ timeout: 10000 });
       await saveButton.click();
@@ -86,6 +117,7 @@ test.describe("flows", () => {
       await expect(page.getByText("Provider", { exact: true })).toBeVisible({ timeout: 15000 });
       await expect(page.getByText("https://www.googleapis.com/oauth2/v3/certs")).toBeVisible();
       await expect(page.getByText("https://example.com/issuer")).toBeVisible();
+      await expect(page.getByText(/audience-one/)).toBeVisible();
     });
 
     await test.step("Reopen the provider for editing and close without changes", async () => {
@@ -94,6 +126,26 @@ test.describe("flows", () => {
         await editButton.click();
         await expect(page.getByRole("heading", { name: "Edit provider" })).toBeVisible();
         await page.getByRole("button", { name: "Cancel" }).last().click();
+      }
+    });
+
+    await test.step("Edit the provider and actually save the change", async () => {
+      const editButton = page.getByRole("button", { name: "Edit" });
+      if (await editButton.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await editButton.click();
+        await expect(page.getByRole("heading", { name: "Edit provider" })).toBeVisible();
+
+        await page.getByLabel("Issuer (Optional)").fill("https://example.com/issuer-updated");
+        const updateButton = page.getByRole("button", { name: "Save", exact: true });
+        await expect(updateButton).toBeEnabled({ timeout: 10000 });
+        await updateButton.click();
+
+        await expect(page.getByText("Public certificate saved successfully."))
+          .toBeVisible({ timeout: 20000 })
+          .catch(() => {});
+        await expect(page.getByText("https://example.com/issuer-updated")).toBeVisible({
+          timeout: 15000,
+        });
       }
     });
   });

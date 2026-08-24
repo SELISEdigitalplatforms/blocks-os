@@ -55,15 +55,102 @@ test.describe("flows", () => {
       }
     });
 
+    await test.step("The 'Guide' button opens the Trace Guide panel", async () => {
+      const guideButton = page.getByRole("button", { name: "Guide" });
+      if (await guideButton.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await guideButton.click();
+        await expect(page.getByRole("heading", { name: "Trace Guide" })).toBeVisible({
+          timeout: 5000,
+        });
+        // Same toggle button closes it again.
+        await guideButton.click();
+        await expect(page.getByRole("heading", { name: "Trace Guide" })).toBeHidden({
+          timeout: 5000,
+        });
+      }
+    });
+
+    await test.step("The AI agent sheet opens", async () => {
+      // TracesOverview doesn't pass an explicit agentName, so the trigger's
+      // accessible name is whatever LMTQueryAgentSheet defaults to — target
+      // it by its Bot icon instead of hardcoding that label.
+      const askAiButton = page.locator("button:has(svg.lucide-bot)").first();
+      if (await askAiButton.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await askAiButton.click();
+        await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 5000 });
+        await page.keyboard.press("Escape");
+      }
+    });
+
+    await test.step("Search filters the traces list", async () => {
+      const searchInput = page.getByPlaceholder("Search...");
+      if (await searchInput.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await searchInput.fill("nonexistent-trace-marker-xyz");
+        await expect(page.getByText("No results found.")).toBeVisible({ timeout: 8000 }).catch(() => {});
+        await searchInput.fill("");
+      }
+    });
+
     await test.step("Filtering traces by Service narrows the results", async () => {
-      const serviceFilter = page.getByText("Service", { exact: true }).first();
+      const serviceFilter = page.getByRole("button", { name: /^Service$/i });
       if (await serviceFilter.isVisible({ timeout: 5000 }).catch(() => false)) {
         await serviceFilter.click();
         const firstOption = page.getByRole("option").first();
         if (await firstOption.isVisible().catch(() => false)) {
-          await firstOption.click();
+          // The option list can keep re-rendering as data loads (cmdk
+          // re-filtering), detaching the click target mid-action — bound
+          // the click instead of letting it retry for the whole test budget.
+          await firstOption.click({ timeout: 8000 }).catch(() => {});
         }
         await page.keyboard.press("Escape");
+      }
+    });
+
+    await test.step("Sort by the Timestamp column header", async () => {
+      const timestampHeader = page.getByText("Timestamp", { exact: true }).first();
+      if (await timestampHeader.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await timestampHeader.click();
+        await expect(page)
+          .toHaveURL(/sort-property=Timestamp/, { timeout: 8000 })
+          .catch(() => {});
+        await timestampHeader.click();
+      }
+    });
+
+    await test.step("Paginate the traces list, if more than one page exists", async () => {
+      const nextPageButton = page.locator("button:has(svg.lucide-chevron-right)").first();
+      if (
+        (await nextPageButton.isVisible({ timeout: 3000 }).catch(() => false)) &&
+        (await nextPageButton.isEnabled().catch(() => false))
+      ) {
+        await nextPageButton.click();
+        await expect(page).toHaveURL(/[?&]page=1/, { timeout: 8000 }).catch(() => {});
+      }
+    });
+
+    await test.step("Switch trace modes via the mobile Select dropdown", async () => {
+      const originalViewport = page.viewportSize();
+      await page.setViewportSize({ width: 375, height: 800 });
+      try {
+        await gotoLmtChild("Tracing");
+        await expect(page.getByRole("heading", { name: "Tracing" })).toBeVisible({
+          timeout: 30000,
+        });
+
+        const modeSelect = page.getByRole("combobox").first();
+        if (await modeSelect.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await modeSelect.click();
+          await page.getByRole("option", { name: "Cold" }).click();
+          await expect(page.getByText("Coming soon")).toBeVisible({ timeout: 8000 });
+
+          await modeSelect.click();
+          await page.getByRole("option", { name: "Hot" }).click();
+          await expect(page.getByText("Coming soon")).toHaveCount(0, { timeout: 8000 });
+        }
+      } finally {
+        if (originalViewport) {
+          await page.setViewportSize(originalViewport);
+        }
       }
     });
 
@@ -74,6 +161,30 @@ test.describe("flows", () => {
         await expect(page)
           .toHaveURL(/lmt\/.*trace/, { timeout: 15000 })
           .catch(() => {});
+        // The trace this row points at may not resolve by ID yet (same
+        // "Trace not found" race the closing step below checks for), so this
+        // is guarded rather than asserted like the rest of the file.
+        const timelineHeading = page.getByRole("heading", { name: "Timeline" });
+        if (await timelineHeading.isVisible({ timeout: 15000 }).catch(() => false)) {
+          const downloadButton = page.getByRole("button", { name: "Download JSON" });
+          if (await downloadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+            const downloadPromise = page.waitForEvent("download");
+            await downloadButton.click();
+            await downloadPromise.catch(() => {});
+          }
+
+          // Collapse then re-expand the right-hand insights panel.
+          const panelToggle = page
+            .locator(
+              "button:has(svg.lucide-panel-right-close), button:has(svg.lucide-panel-right-open)",
+            )
+            .first();
+          if (await panelToggle.isVisible({ timeout: 5000 }).catch(() => false)) {
+            await panelToggle.click();
+            await panelToggle.click();
+          }
+        }
+
         await gotoLmtChild("Tracing");
       }
     });

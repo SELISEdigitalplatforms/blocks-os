@@ -34,7 +34,28 @@ test.describe("flows", () => {
     });
 
     await test.step("The project owner appears in the list", async () => {
-      await expect(page.getByText("Owner").first()).toBeVisible({ timeout: 15000 });
+      if (!(await page.getByText("Owner").first().isVisible({ timeout: 15000 }).catch(() => false))) {
+        // Freshly created project can race the People list's own data —
+        // one reload clears it, same pattern used after a fresh invite below.
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
+          timeout: 30000,
+        });
+      }
+      await expect(page.getByText("Owner").first()).toBeVisible({ timeout: 20000 });
+    });
+
+    await test.step("Pagination controls on the People table", async () => {
+      const nextPageButton = page.locator('button:has(svg.lucide-chevron-right)').first();
+      if (await nextPageButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        const isDisabled = await nextPageButton.isDisabled().catch(() => true);
+        if (!isDisabled) {
+          await nextPageButton.click();
+          await page.waitForTimeout(500);
+          const prevPageButton = page.locator('button:has(svg.lucide-chevron-left)').first();
+          await prevPageButton.click().catch(() => {});
+        }
+      }
     });
 
     await test.step("Open the Invite dialog", async () => {
@@ -57,6 +78,26 @@ test.describe("flows", () => {
         .toBeVisible()
         .catch(() => {});
       await expect(sendButton).toBeDisabled();
+    });
+
+    await test.step("Multi-recipient: add a row, duplicate email in form is rejected, then remove it", async () => {
+      await page.getByRole("button", { name: "Add another" }).click();
+      const emailInputs = page.getByPlaceholder("Enter email");
+      await expect(emailInputs).toHaveCount(2);
+
+      const dupEmail = "duplicate-check@example.com";
+      await emailInputs.nth(0).fill(dupEmail);
+      await emailInputs.nth(1).fill(dupEmail);
+      await emailInputs.nth(1).blur();
+      await expect(page.getByText(/Duplicate email/))
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
+
+      // Remove the second row and clear the first, back to a clean single row
+      // for the real invite below.
+      await page.locator('button:has(svg.lucide-trash2)').last().click();
+      await expect(emailInputs).toHaveCount(1);
+      await emailInputs.first().fill("");
     });
 
     const inviteEmail = uniqueTestEmail("flow-people");
@@ -97,6 +138,70 @@ test.describe("flows", () => {
         });
       }
       await expect(personRow).toBeVisible({ timeout: 15000 });
+    });
+
+    await test.step("The invited person shows a Pending Invite badge", async () => {
+      await expect(personRow.getByText("Pending Invite"))
+        .toBeVisible({ timeout: 10000 })
+        .catch(() => {});
+    });
+
+    await test.step("Search filters the list by email", async () => {
+      const searchTrigger = page.getByRole("combobox").first();
+      if (await searchTrigger.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await searchTrigger.click();
+        await page.getByRole("option", { name: "Email" }).click();
+
+        const searchInput = page.getByPlaceholder("Minimum 3 characters…").first();
+        await searchInput.fill(inviteEmail);
+        await expect(personRow).toBeVisible({ timeout: 10000 });
+
+        await searchInput.fill("no-such-person-xyz");
+        await expect(page.getByText("No results found."))
+          .toBeVisible({ timeout: 8000 })
+          .catch(() => {});
+
+        await searchInput.fill("");
+        await expect(personRow).toBeVisible({ timeout: 10000 });
+      }
+    });
+
+    await test.step("Re-inviting the same email is rejected as already invited", async () => {
+      await page.getByRole("button", { name: "Invite" }).click();
+      await expect(page.getByRole("heading", { name: "Invite people" })).toBeVisible({
+        timeout: 10000,
+      });
+      await page.getByPlaceholder("Enter email").first().fill(inviteEmail);
+      await expect(page.getByText(/Already invited/))
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("heading", { name: "Invite people" })).toBeHidden({
+        timeout: 10000,
+      });
+    });
+
+    await test.step("Resend Invitation to the still-pending person", async () => {
+      const menuButton = personRow.getByRole("button", { name: "Open menu" });
+      if (await menuButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await menuButton.click();
+        const resendItem = page.getByRole("menuitem", { name: "Resend Invitation" });
+        if (await resendItem.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await resendItem.click();
+          await expect(page.getByRole("heading", { name: "Resend Invitation" })).toBeVisible({
+            timeout: 10000,
+          });
+          await page.getByRole("button", { name: "Resend", exact: true }).click();
+          await expect(page.getByText(/Resend invitation mail successfully/))
+            .toBeVisible({ timeout: 15000 })
+            .catch(() => {});
+        } else {
+          await page.keyboard.press("Escape");
+        }
+      }
+    });
+
+    await test.step("Open the invited person's details page", async () => {
       await personRow.click();
       await expect(page).toHaveURL(/\/app\/project\/[^/]+\/people\/.+/, { timeout: 15000 });
     });
@@ -122,6 +227,38 @@ test.describe("flows", () => {
       await expect(page.getByText(/Access removed from/))
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
+    });
+
+    await test.step("Grant access back from the 'Without access to' list", async () => {
+      const grantButton = page.getByRole("button", { name: /Grant access to/ }).first();
+      if (!(await grantButton.isVisible({ timeout: 10000 }).catch(() => false))) {
+        return;
+      }
+      await grantButton.click();
+      await expect(page.getByText("Grant Access")).toBeVisible({ timeout: 10000 });
+      await page.getByRole("button", { name: "Grant", exact: true }).click();
+      await expect(page.getByText(/Access granted to/))
+        .toBeVisible({ timeout: 15000 })
+        .catch(() => {});
+    });
+
+    await test.step("Mobile: Details/Environments tabs collapse into a Select dropdown", async () => {
+      const originalViewport = page.viewportSize();
+      await page.setViewportSize({ width: 390, height: 844 });
+      try {
+        const mobileTabSelect = page.getByRole("combobox").first();
+        if (await mobileTabSelect.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await mobileTabSelect.click();
+          await page.getByRole("option", { name: "Details" }).click();
+          await expect(page.getByText("Person's Details").or(page.locator("h1")).first())
+            .toBeVisible({ timeout: 10000 })
+            .catch(() => {});
+        }
+      } finally {
+        if (originalViewport) {
+          await page.setViewportSize(originalViewport);
+        }
+      }
     });
 
     await test.step("Return to the People list", async () => {

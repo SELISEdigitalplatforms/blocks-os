@@ -41,23 +41,27 @@ test.describe("flows", () => {
     });
 
     const emailRow = page.getByRole("row").filter({ hasText: "Email" });
+    const authenticatorRow = page.getByRole("row").filter({ hasText: "Authenticator app" });
 
     await test.step("The fixed MFA method table shows Email and Authenticator app", async () => {
       await expect(emailRow).toBeVisible({ timeout: 15000 });
-      await expect(page.getByRole("row").filter({ hasText: "Authenticator app" })).toBeVisible();
+      await expect(authenticatorRow).toBeVisible();
     });
 
-    const openRowMenu = async () => {
-      await emailRow.getByRole("button").last().click();
-    };
+    const readStatus = async (row: typeof emailRow) =>
+      (
+        await row
+          .getByText(/Enabled|Disabled/)
+          .first()
+          .textContent()
+      )?.trim();
 
-    const readStatus = async () =>
-      (await emailRow.getByText(/Enabled|Disabled/).first().textContent())?.trim();
-
-    const initialStatus = await readStatus();
-
-    const toggleAndConfirm = async (expectedAction: "Enable" | "Disable") => {
-      await openRowMenu();
+    const toggleAndConfirm = async (
+      row: typeof emailRow,
+      methodName: string,
+      expectedAction: "Enable" | "Disable",
+    ) => {
+      await row.getByRole("button").last().click();
       const actionItem = page.getByRole("menuitem", { name: expectedAction, exact: true });
       await expect(actionItem).toBeVisible({ timeout: 8000 });
       await actionItem.click();
@@ -65,25 +69,77 @@ test.describe("flows", () => {
       await expect(page.getByRole("heading", { name: "Confirmation" })).toBeVisible({
         timeout: 8000,
       });
+      await expect(
+        page.getByText(
+          new RegExp(
+            `Are you sure you want to ${expectedAction.toLowerCase()} ${methodName} MFA\\??`,
+            "i",
+          ),
+        ),
+      )
+        .toBeVisible()
+        .catch(() => {});
       await page.getByRole("button", { name: "Yes", exact: true }).click();
 
-      await expect(page.getByText(new RegExp(`Email MFA ${expectedAction.toLowerCase()}d successfully`)))
+      await expect(
+        page.getByText(
+          new RegExp(`${methodName} MFA ${expectedAction.toLowerCase()}d successfully`),
+        ),
+      )
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
     };
 
+    const initialEmailStatus = await readStatus(emailRow);
+
+    await test.step("Cancel on the confirmation dialog leaves status unchanged", async () => {
+      await emailRow.getByRole("button").last().click();
+      const nextAction = initialEmailStatus === "Enabled" ? "Disable" : "Enable";
+      await page.getByRole("menuitem", { name: nextAction, exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Confirmation" })).toBeVisible({
+        timeout: 8000,
+      });
+      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Confirmation" })).toBeHidden({
+        timeout: 8000,
+      });
+      await expect(emailRow.getByText(initialEmailStatus ?? "Disabled")).toBeVisible();
+    });
+
     await test.step("Toggle Email MFA to the opposite of its current state", async () => {
-      const nextAction = initialStatus === "Enabled" ? "Disable" : "Enable";
-      await toggleAndConfirm(nextAction);
-      await expect(emailRow.getByText(nextAction === "Enable" ? "Enabled" : "Disabled")).toBeVisible(
-        { timeout: 10000 },
-      );
+      const nextAction = initialEmailStatus === "Enabled" ? "Disable" : "Enable";
+      await toggleAndConfirm(emailRow, "Email", nextAction);
+      await expect(
+        emailRow.getByText(nextAction === "Enable" ? "Enabled" : "Disabled"),
+      ).toBeVisible({ timeout: 10000 });
+    });
+
+    const initialAuthenticatorStatus = await readStatus(authenticatorRow);
+
+    await test.step("Toggle Authenticator app MFA to the opposite of its current state", async () => {
+      const nextAction = initialAuthenticatorStatus === "Enabled" ? "Disable" : "Enable";
+      await toggleAndConfirm(authenticatorRow, "Authenticator app", nextAction);
+      await expect(
+        authenticatorRow.getByText(nextAction === "Enable" ? "Enabled" : "Disabled"),
+      ).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step("Toggle Authenticator app MFA back to its original state", async () => {
+      const restoreAction = initialAuthenticatorStatus === "Enabled" ? "Enable" : "Disable";
+      await toggleAndConfirm(authenticatorRow, "Authenticator app", restoreAction);
+      await expect(
+        authenticatorRow.getByText(initialAuthenticatorStatus ?? "Disabled"),
+      ).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     await test.step("Toggle Email MFA back to its original state", async () => {
-      const restoreAction = initialStatus === "Enabled" ? "Enable" : "Disable";
-      await toggleAndConfirm(restoreAction);
-      await expect(emailRow.getByText(initialStatus ?? "Disabled")).toBeVisible({ timeout: 10000 });
+      const restoreAction = initialEmailStatus === "Enabled" ? "Enable" : "Disable";
+      await toggleAndConfirm(emailRow, "Email", restoreAction);
+      await expect(emailRow.getByText(initialEmailStatus ?? "Disabled")).toBeVisible({
+        timeout: 10000,
+      });
     });
   });
 });

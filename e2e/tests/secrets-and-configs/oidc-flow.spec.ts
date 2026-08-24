@@ -1,3 +1,4 @@
+import path from "path";
 import { test, expect, Page } from "@playwright/test";
 import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
 import { ensureAuthenticated } from "../../support/login-helper";
@@ -38,6 +39,12 @@ test.describe("flows", () => {
       await gotoSecretManagementSection(page, "oidc", "OIDC");
     });
 
+    await test.step("A fresh project starts with no OIDC clients", async () => {
+      await expect(page.getByText("No OIDC clients yet"))
+        .toBeVisible({ timeout: 10000 })
+        .catch(() => {});
+    });
+
     await test.step("Open the New OIDC Client dialog", async () => {
       await page.getByRole("button", { name: "Create" }).click();
       await expect(page.getByRole("heading", { name: "New OIDC Client" })).toBeVisible();
@@ -61,11 +68,39 @@ test.describe("flows", () => {
       await expect(addButton).toBeDisabled();
     });
 
+    await test.step("Device Flow toggle hides Redirect URI/PKCE/Auto-Redirect/Identity-Provider fields", async () => {
+      const deviceFlowCheckbox = page.locator("#isDeviceFlowClient");
+      await deviceFlowCheckbox.click();
+      await expect(page.getByPlaceholder("https://example.com/oidc")).toHaveCount(0);
+      await expect(page.locator("#requirePkce")).toHaveCount(0);
+      await expect(page.locator("#isAutoRedirect")).toHaveCount(0);
+      await expect(page.locator("#registerAsIdentityProvider")).toHaveCount(0);
+      // Switch back to a normal (non-device-flow) client for the rest of the flow.
+      await deviceFlowCheckbox.click();
+      await expect(page.getByPlaceholder("https://example.com/oidc")).toBeVisible();
+    });
+
+    await test.step("Multi Redirect URI: add a second row, then remove it", async () => {
+      await page.getByPlaceholder("https://example.com/oidc").first().fill("https://example.com/callback");
+      await page.getByRole("button", { name: "Add Redirect URI" }).click();
+      const uriInputs = page.getByPlaceholder("https://example.com/oidc");
+      await expect(uriInputs).toHaveCount(2);
+      await uriInputs.nth(1).fill("https://example.com/callback-2");
+
+      const secondRow = uriInputs.nth(1).locator("xpath=../..");
+      await secondRow.getByRole("button").click();
+      await expect(uriInputs).toHaveCount(1);
+      await expect(uriInputs.first()).toHaveValue("https://example.com/callback");
+    });
+
     const clientName = `Flow OIDC Client ${Date.now()}`;
 
-    await test.step("Fill a valid Client Name and HTTPS Redirect URI, then save", async () => {
+    await test.step("Fill a valid Client Name, toggle PKCE/Auto-Redirect/Identity-Provider, then save", async () => {
       await page.getByPlaceholder("Enter client name").fill(clientName);
-      await page.getByPlaceholder("https://example.com/oidc").fill("https://example.com/callback");
+
+      await page.locator("#requirePkce").click();
+      await page.locator("#isAutoRedirect").click();
+      await page.locator("#registerAsIdentityProvider").click();
 
       const addButton = page.getByRole("button", { name: "Add", exact: true });
       await expect(addButton).toBeEnabled({ timeout: 10000 });
@@ -95,11 +130,109 @@ test.describe("flows", () => {
       await expect(page.getByText("Allowed Response Types")).toBeVisible();
     });
 
+    let onBrandingPage = false;
+
+    await test.step("'Template' opens the branding page", async () => {
+      const templateButton = clientRow.getByRole("button", { name: "Template" });
+      if (await templateButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await templateButton.click();
+        onBrandingPage = await page
+          .getByRole("heading", { name: "Configuration" })
+          .isVisible({ timeout: 15000 })
+          .catch(() => false);
+        if (onBrandingPage) {
+          await expect(
+            page.getByText("Upload a client logo and set a brand color."),
+          ).toBeVisible();
+          await expect(page.getByRole("heading", { name: "Live Preview" })).toBeVisible();
+        }
+      }
+    });
+
+    const brandingSaveButton = page.getByRole("button", { name: "Save", exact: true });
+    const brandingUndoButton = page.getByRole("button", { name: "Undo", exact: true });
+    const brandingLogoInput = page.locator("#client-logo-upload");
+
+    await test.step("Logo upload rejects a non-image file", async () => {
+      if (!onBrandingPage) return;
+      await brandingLogoInput.setInputFiles({
+        name: "not-an-image.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("not an image"),
+      });
+      await expect(page.getByText("Only PNG, JPG, SVG, and WebP images are allowed"))
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
+      await expect(brandingSaveButton).toBeDisabled();
+    });
+
+    await test.step("Logo upload rejects an oversized image", async () => {
+      if (!onBrandingPage) return;
+      await brandingLogoInput.setInputFiles({
+        name: "oversized.png",
+        mimeType: "image/png",
+        buffer: Buffer.alloc(3 * 1024 * 1024),
+      });
+      await expect(page.getByText("Logo must be smaller than 2MB"))
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
+      await expect(brandingSaveButton).toBeDisabled();
+    });
+
+    await test.step("Upload a valid logo — preview updates and Save enables", async () => {
+      if (!onBrandingPage) return;
+      await brandingLogoInput.setInputFiles(path.resolve(__dirname, "../../fixtures/test-avatar.png"));
+      await expect(page.getByAltText("Logo preview")).toBeVisible({ timeout: 10000 });
+      await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+    });
+
+    await test.step("Undo reverts unsaved logo/color changes", async () => {
+      if (!onBrandingPage) return;
+      await brandingUndoButton.click();
+      await expect(page.getByAltText("Logo preview")).toHaveCount(0);
+      await expect(brandingSaveButton).toBeDisabled();
+    });
+
+    await test.step("Change and save the brand color", async () => {
+      if (!onBrandingPage) return;
+      const colorPicker = page.locator("#brand-color");
+      const colorHexInput = colorPicker.locator("xpath=following-sibling::input").first();
+      await colorHexInput.fill("#FF0000");
+
+      await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+      await brandingSaveButton.click();
+
+      await expect(page.getByText("Template saved successfully"))
+        .toBeVisible({ timeout: 15000 })
+        .catch(() => {});
+
+      await page.goBack();
+      await expect(page.getByRole("heading", { name: "OIDC" })).toBeVisible({ timeout: 15000 });
+    });
+
+    await test.step("Reveal and copy the Client Secret, copy the Client Id", async () => {
+      const showButton = clientRow.getByRole("button", { name: "Show value" }).first();
+      if (await showButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await showButton.click();
+        await expect(clientRow.getByRole("button", { name: "Hide value" }).first()).toBeVisible();
+      }
+      const copyButtons = clientRow.getByRole("button", { name: "Copy value" });
+      const count = await copyButtons.count();
+      if (count > 0) {
+        await copyButtons.first().click();
+      }
+    });
+
     await test.step("Rotate the client's secret and view the new value", async () => {
       const rotateButton = clientRow.getByRole("button", { name: "Rotate client secret" });
       if (await rotateButton.isVisible({ timeout: 8000 }).catch(() => false)) {
         await rotateButton.click();
         await expect(page.getByRole("heading", { name: "Rotate client secret" })).toBeVisible();
+        await expect(
+          page.getByText(new RegExp(`Do you want to rotate the client secret for.*${clientName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`)),
+        )
+          .toBeVisible()
+          .catch(() => {});
         await page.getByRole("button", { name: "Rotate Secret" }).click();
 
         await expect(page.getByText("Client secret rotated successfully"))
@@ -110,6 +243,9 @@ test.describe("flows", () => {
         // of the flow on a UI-timing race.
         const revealHeading = page.getByRole("heading", { name: "New client secret" });
         if (await revealHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await expect(page.getByText("The previous secret no longer works"))
+            .toBeVisible()
+            .catch(() => {});
           await page.getByRole("button", { name: "Done" }).click();
           await expect(revealHeading).toBeHidden();
         }
@@ -122,6 +258,24 @@ test.describe("flows", () => {
         await editButton.click();
         await expect(page.getByRole("heading", { name: "Edit OIDC Client" })).toBeVisible();
         await page.getByRole("button", { name: "Cancel" }).click();
+      }
+    });
+
+    await test.step("Edit the client and actually save a change", async () => {
+      const editButton = clientRow.getByRole("button", { name: "Edit" });
+      if (await editButton.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await editButton.click();
+        await expect(page.getByRole("heading", { name: "Edit OIDC Client" })).toBeVisible();
+
+        // Toggle Status (Active) off as a real, verifiable change.
+        await page.locator("#isActive").click();
+        const updateButton = page.getByRole("button", { name: "Update", exact: true });
+        await expect(updateButton).toBeEnabled({ timeout: 10000 });
+        await updateButton.click();
+
+        await expect(page.getByText("OIDC Client updated successfully"))
+          .toBeVisible({ timeout: 15000 })
+          .catch(() => {});
       }
     });
 

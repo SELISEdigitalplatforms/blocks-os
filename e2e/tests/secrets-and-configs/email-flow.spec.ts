@@ -39,6 +39,25 @@ test.describe("flows", () => {
       await gotoSecretManagementSection(page, "email", "Email");
     });
 
+    await test.step("Empty state shows if no configuration exists yet", async () => {
+      // A pre-existing "Default" configuration may already be seeded on this
+      // project, so this is best-effort rather than a hard requirement.
+      await expect(page.getByText("No email configurations found"))
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
+    });
+
+    await test.step("The pre-existing Default configuration hides its Edit/Delete actions", async () => {
+      const defaultTrigger = page.getByRole("button", { name: "Default" });
+      if (await defaultTrigger.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await defaultTrigger.click();
+        const defaultPanel = page.getByLabel("Default");
+        await expect(defaultPanel.getByRole("button", { name: "Edit" })).toHaveCount(0);
+        await expect(defaultPanel.getByRole("button", { name: "Delete" })).toHaveCount(0);
+        await defaultTrigger.click();
+      }
+    });
+
     await test.step("Open the Add Configuration dialog", async () => {
       await page.getByRole("button", { name: "Add Configuration" }).click();
       await expect(page.getByRole("heading", { name: "Add Configuration" })).toBeVisible();
@@ -53,6 +72,63 @@ test.describe("flows", () => {
       // schema's host regex in new-configuration.tsx.
       await page.getByPlaceholder("Enter Host").fill("not-a-domain");
       await expect(saveButton).toBeDisabled();
+
+      // Configuration name too short.
+      await page.getByPlaceholder("Enter name").fill("ab");
+      await expect(page.getByText("Configuration name must be at least 3 characters"))
+        .toBeVisible()
+        .catch(() => {});
+
+      // Port out of range.
+      await page.getByPlaceholder("Enter port").fill("99999");
+      await expect(page.getByText("Port must be between 1 and 65535"))
+        .toBeVisible()
+        .catch(() => {});
+
+      // Invalid sender address (outbound is the default Type).
+      await page.getByPlaceholder("Enter sender address").fill("not-an-email");
+      await expect(page.getByText("Sender Address must be a valid email"))
+        .toBeVisible()
+        .catch(() => {});
+
+      // Password too short.
+      await page.getByPlaceholder("Enter password").fill("abc");
+      await expect(page.getByText("Password must be at least 6 characters long"))
+        .toBeVisible()
+        .catch(() => {});
+
+      await expect(saveButton).toBeDisabled();
+    });
+
+    await test.step("Provider offers Amazon SES and Zoho for Outbound", async () => {
+      const providerSelect = page.getByRole("dialog").getByRole("combobox").nth(1);
+      await providerSelect.click();
+      await expect(page.getByRole("option", { name: "Amazon SES" })).toBeVisible();
+      await expect(page.getByRole("option", { name: "Zoho" })).toBeVisible();
+      await page.getByRole("option", { name: "Amazon SES" }).click();
+    });
+
+    await test.step("Switching Type to Inbound restricts Provider to Zoho and hides sender fields", async () => {
+      const typeSelect = page.getByRole("dialog").getByRole("combobox").first();
+      await typeSelect.click();
+      await page.getByRole("option", { name: "Inbound" }).click();
+
+      // Amazon SES isn't valid for inbound — the form auto-switches to Zoho.
+      const providerSelect = page.getByRole("dialog").getByRole("combobox").nth(1);
+      await expect(providerSelect).toHaveText(/Zoho/);
+      await providerSelect.click();
+      await expect(page.getByRole("option", { name: "Amazon SES" })).toHaveCount(0);
+      await page.keyboard.press("Escape");
+
+      await expect(page.getByPlaceholder("Enter sender name")).toHaveCount(0);
+      await expect(page.getByPlaceholder("Enter sender address")).toHaveCount(0);
+      await expect(page.getByPlaceholder("Enter Server Name")).toBeVisible();
+      await expect(page.getByPlaceholder("Enter username")).toBeVisible();
+
+      // Switch back to Outbound for the real save below.
+      await typeSelect.click();
+      await page.getByRole("option", { name: "Outbound" }).click();
+      await expect(page.getByPlaceholder("Enter sender name")).toBeVisible();
     });
 
     const configName = `Flow Email Config ${Date.now()}`;
@@ -62,14 +138,24 @@ test.describe("flows", () => {
       await page.getByPlaceholder("Enter Host").fill("smtp.example.com");
       await page.getByPlaceholder("Enter port").fill("587");
       await page.getByPlaceholder("Enter sender name").fill("Flow Sender");
-      await page.getByPlaceholder("Enter sender address").fill(`flow-sender-${Date.now()}@example.com`);
+      await page
+        .getByPlaceholder("Enter sender address")
+        .fill(`flow-sender-${Date.now()}@example.com`);
       await page.getByPlaceholder("Enter sender username").fill("flow-sender-user");
       await page.getByPlaceholder("Enter password").fill("SuperSecret123");
+
+      // Enable SSL while we're here — write-only in the UI, but the save
+      // path should still accept it.
+      await page.getByRole("checkbox").click();
 
       await expect(saveButton).toBeEnabled({ timeout: 10000 });
       await saveButton.click();
 
-      await expect(page.getByText("Configuration created successfully.").or(page.getByText("New configuration added successfully.")))
+      await expect(
+        page
+          .getByText("Configuration created successfully.")
+          .or(page.getByText("New configuration added successfully.")),
+      )
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
     });
@@ -97,14 +183,33 @@ test.describe("flows", () => {
       }
     });
 
+    await test.step("Edit the configuration and actually save the change", async () => {
+      const editButton = page.getByRole("button", { name: "Edit" });
+      if (await editButton.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await editButton.click();
+        await expect(page.getByRole("heading", { name: "Edit Configuration" })).toBeVisible();
+
+        // The password field is never pre-filled on edit — it must be
+        // re-entered to satisfy the min-length-6 validation rule.
+        await page.getByPlaceholder("Enter sender name").fill("Flow Sender Updated");
+        await page.getByPlaceholder("Enter password").fill("SuperSecret123");
+
+        const updateButton = page.getByRole("button", { name: "Update Changes" });
+        await expect(updateButton).toBeEnabled({ timeout: 10000 });
+        await updateButton.click();
+
+        await expect(page.getByText("Configuration updated successfully."))
+          .toBeVisible({ timeout: 15000 })
+          .catch(() => {});
+      }
+    });
+
     await test.step("Delete the configuration via its confirmation dialog", async () => {
       const deleteButton = page.getByRole("button", { name: "Delete" });
       if (await deleteButton.isVisible({ timeout: 8000 }).catch(() => false)) {
         await deleteButton.click();
         await expect(page.getByRole("heading", { name: "Delete configuration" })).toBeVisible();
-        await expect(
-          page.getByText("Are you sure you'd like to delete this configuration?"),
-        )
+        await expect(page.getByText("Are you sure you'd like to delete this configuration?"))
           .toBeVisible()
           .catch(() => {});
 

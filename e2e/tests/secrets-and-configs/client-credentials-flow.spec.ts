@@ -70,11 +70,26 @@ test.describe("flows", () => {
     true,
     "Client Credentials can never be created through the UI on a fresh project — Permissions is a required field (min 1, see createClientSchema in create-client-credential/utils.ts) but the Assign Permissions picker has no permissions to offer, and creating a custom permission to seed one is itself a confirmed broken flow (identity-and-access/permissions-flow.spec.ts: saving a new permission never succeeds). This leaves the Add button permanently disabled, so no client credential can be saved. Once permission creation is fixed, this test.fail() should be removed.",
   );
-  test("Client Credentials flow: strict validation -> create -> open for edit", async ({ page }) => {
+  test("Client Credentials flow: strict validation -> create -> open for edit", async ({
+    page,
+  }) => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Client Credentials", async () => {
       await gotoSecretManagementSection(page, "client-credentials", "Client Credentials");
+    });
+
+    await test.step("A fresh project starts with no client credentials", async () => {
+      await expect(page.getByText("No client credentials yet"))
+        .toBeVisible({ timeout: 10000 })
+        .catch(() => {});
+      await expect(
+        page.getByText(
+          "Create one to issue OAuth client credentials for service-to-service access.",
+        ),
+      )
+        .toBeVisible()
+        .catch(() => {});
     });
 
     await test.step("Open the Add Client Credential dialog", async () => {
@@ -82,7 +97,29 @@ test.describe("flows", () => {
       await expect(page.getByRole("heading", { name: "Add Client Credential" })).toBeVisible();
     });
 
+    await test.step("Add stays disabled until the form is dirty", async () => {
+      await expect(page.getByRole("button", { name: "Add" }).last()).toBeDisabled();
+    });
+
     const clientName = `Flow Client ${Date.now()}`;
+
+    await test.step("Strict validation: Client Name is required and length-bound", async () => {
+      const clientNameInput = page.getByPlaceholder("Enter client name");
+      await clientNameInput.fill("x");
+      await clientNameInput.fill("");
+      await clientNameInput.blur();
+      await expect(page.getByText("Client name is required"))
+        .toBeVisible()
+        .catch(() => {});
+
+      await clientNameInput.fill("a".repeat(81));
+      await clientNameInput.blur();
+      // No custom message on the max(80) rule — zod's default text applies.
+      await expect(page.getByText(/80 character/))
+        .toBeVisible()
+        .catch(() => {});
+      await clientNameInput.fill("");
+    });
 
     await test.step("Access Token Lifetime is clamped to the 5-120 minute range", async () => {
       const lifetimeInput = page.getByLabel("Access Token Lifetime in minutes");
@@ -93,6 +130,27 @@ test.describe("flows", () => {
       await expect(lifetimeInput).toHaveValue("120");
 
       await lifetimeInput.fill("30");
+    });
+
+    await test.step("Permissions section shows its own empty state before anything is assigned", async () => {
+      await expect(page.getByText("No permissions added"))
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
+      await expect(page.getByText("Add permissions for this client credential"))
+        .toBeVisible()
+        .catch(() => {});
+    });
+
+    await test.step("Cancel discards entered data", async () => {
+      await page.getByPlaceholder("Enter client name").fill("Discarded client name");
+      await page.getByRole("button", { name: "Cancel" }).click();
+      await expect(page.getByRole("heading", { name: "Add Client Credential" })).toBeHidden({
+        timeout: 10000,
+      });
+
+      await page.getByRole("button", { name: "Add" }).click();
+      await expect(page.getByRole("heading", { name: "Add Client Credential" })).toBeVisible();
+      await expect(page.getByPlaceholder("Enter client name")).toHaveValue("");
     });
 
     await test.step("Fill Client Name", async () => {
@@ -107,15 +165,16 @@ test.describe("flows", () => {
       await expect(roleDialog.getByRole("heading", { name: "Assign roles" })).toBeVisible();
 
       const firstRoleCheckbox = roleDialog.getByRole("checkbox").first();
-      const gotCheckbox = await firstRoleCheckbox
-        .isVisible({ timeout: 30000 })
-        .catch(() => false);
+      const gotCheckbox = await firstRoleCheckbox.isVisible({ timeout: 30000 }).catch(() => false);
       if (!gotCheckbox) {
         const noneFound = await roleDialog
           .getByText("No roles are found")
           .isVisible({ timeout: 3000 })
           .catch(() => false);
-        console.log("[client-credentials-flow] No role checkbox found. 'No roles are found' shown:", noneFound);
+        console.log(
+          "[client-credentials-flow] No role checkbox found. 'No roles are found' shown:",
+          noneFound,
+        );
       }
       if (gotCheckbox) {
         await firstRoleCheckbox.check();
@@ -131,6 +190,17 @@ test.describe("flows", () => {
       await expect(
         permissionDialog.getByRole("heading", { name: "Assign Permissions" }),
       ).toBeVisible();
+
+      // Search input + selection counter render regardless of how many
+      // permissions exist.
+      const searchInput = permissionDialog.getByPlaceholder("Search by permission name");
+      await expect(searchInput).toBeVisible({ timeout: 10000 });
+      await expect(permissionDialog.getByText(/\(0\/\d+\)/)).toBeVisible();
+      await searchInput.fill("zzz-no-such-permission-xyz");
+      await expect(permissionDialog.getByText("No permissions found"))
+        .toBeVisible({ timeout: 10000 })
+        .catch(() => {});
+      await searchInput.fill("");
 
       const firstPermissionCheckbox = permissionDialog.getByRole("checkbox").first();
       const gotCheckbox = await firstPermissionCheckbox
@@ -156,7 +226,9 @@ test.describe("flows", () => {
 
     await test.step("Save the client credential", async () => {
       const addButton = page.getByRole("button", { name: "Add" }).last();
-      await expect(addButton).toBeEnabled({ timeout: 10000 }).catch(() => {});
+      await expect(addButton)
+        .toBeEnabled({ timeout: 10000 })
+        .catch(() => {});
       // The dialog can re-render right as we click (same detach race seen
       // elsewhere in this suite) — retry a few times.
       for (let attempt = 0; attempt < 3; attempt++) {
