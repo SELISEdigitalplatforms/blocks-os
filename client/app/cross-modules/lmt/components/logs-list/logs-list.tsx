@@ -27,7 +27,7 @@ const OldDataFetchingIndicator = () => (
   </div>
 );
 export const LogsList = () => {
-  const { selectedService, filter, pageSize, isServicesLoading, services } =
+  const { selectedService, selectedServiceNames, filter, pageSize, isServicesLoading, services } =
     useContext(LogsViewerContext);
   const { level, startDate, endDate, search } = filter || {
     level: "",
@@ -35,10 +35,10 @@ export const LogsList = () => {
     endDate: "",
     search: "",
   };
-  const { serviceName, serviceNames } = selectedService || {
-    serviceName: "",
-    serviceNames: [],
-  };
+  // serviceNames spans every selected service; serviceName stays the primary one so the
+  // API keeps a single-collection fallback when nothing is narrowed.
+  const serviceName = selectedService?.serviceName ?? "";
+  const serviceNames = selectedServiceNames;
   const initialTimeStamp = useMemo(() => (endDate ? endDate : new Date().toISOString()), [endDate]);
   const { initialLogs, isLoading, hasTopMore, fetchOldLogs, fetchNewLogs } = useLogs({
     serviceName,
@@ -78,6 +78,9 @@ export const LogsList = () => {
           </div>
         ) : (
           <InfiniteScroll<ILog>
+            // InfiniteScroll seeds its rows from initialData once, so changing the
+            // queried collections needs a fresh instance to drop the previous logs.
+            key={serviceNames.join("|")}
             loadingIndicator={<OldDataFetchingIndicator />}
             initialData={initialLogs}
             hasTopMore={hasTopMore}

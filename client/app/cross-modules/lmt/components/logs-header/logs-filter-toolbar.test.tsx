@@ -4,7 +4,9 @@ import { LogsViewerContext } from "../logs-viewer";
 
 type CapturedFilter = {
   key: string;
-  props?: { options?: { label: string; value: string; children?: { label: string; value: string }[] }[] };
+  props?: {
+    options?: { label: string; value: string; children?: { label: string; value: string }[] }[];
+  };
 };
 
 const h = vi.hoisted(() => ({
@@ -61,6 +63,7 @@ const makeCtx = (over: Partial<Ctx> = {}): Ctx =>
     selectedService: { id: "s1", label: "Svc One", serviceName: "s1" },
     serviceFilterValue: "s1",
     changeService: vi.fn(),
+    changeServices: vi.fn(),
     filter: { level: "", startDate: "", endDate: "", search: "" },
     setFilter: vi.fn(),
     resetFilter: vi.fn(),
@@ -79,31 +82,65 @@ const renderToolbar = (ctx: Ctx) =>
 describe("LogsFilterToolbar", () => {
   afterEach(() => cleanup());
 
-  it("hides the global reset button when only the service differs from defaults", () => {
+  it("hides the reset button while every filter is at its default", () => {
     renderToolbar(makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "" } }));
     expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("true");
   });
 
-  it("shows the global reset button once a real filter is applied", () => {
+  it("shows the reset button once a non-default service is selected", () => {
+    renderToolbar(makeCtx({ serviceFilterValue: "s2" }));
+    expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("false");
+  });
+
+  it("shows the reset button once the default service is narrowed to a component", () => {
+    renderToolbar(makeCtx({ serviceFilterValue: "s1::s1-api" }));
+    expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("false");
+  });
+
+  it("shows the reset button once a real filter is applied", () => {
     renderToolbar(makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "abc" } }));
     expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("false");
   });
 
-  it("routes a service change to changeService with the matched service", () => {
+  it("routes a service change to changeServices", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
-    h.captured?.onChange("service", "s2");
-    expect(ctx.changeService).toHaveBeenCalledWith(expect.objectContaining({ id: "s2" }), null);
+    h.captured?.onChange("service", ["s2"]);
+    expect(ctx.changeServices).toHaveBeenCalledWith(["s2"]);
   });
 
-  it("ignores a service change for an unknown service id", () => {
+  it("drops values for unknown service ids", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
-    h.captured?.onChange("service", "missing");
-    expect(ctx.changeService).not.toHaveBeenCalled();
+    h.captured?.onChange("service", ["missing", "s2"]);
+    expect(ctx.changeServices).toHaveBeenCalledWith(["s2"]);
   });
 
-  it("builds nested Radio children from each service's components", () => {
+  it("passes an empty selection through so the viewer can fall back", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    h.captured?.onChange("service", []);
+    expect(ctx.changeServices).toHaveBeenCalledWith([]);
+  });
+
+  it("keeps several services and components in one selection", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    h.captured?.onChange("service", ["s1::s1-worker", "s2"]);
+    expect(ctx.changeServices).toHaveBeenCalledWith(["s1::s1-worker", "s2"]);
+  });
+
+  it("maps the service key back to a checkbox selection across services", () => {
+    const ctx = makeCtx({ serviceFilterValue: "s1::s1-api,s1-worker;s2" });
+    renderToolbar(ctx);
+    expect((h.captured as unknown as { values: { service: string[] } }).values.service).toEqual([
+      "s1::s1-api",
+      "s1::s1-worker",
+      "s2",
+    ]);
+  });
+
+  it("builds nested checkbox-tree children from each service's components", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
     const filters = h.captured?.filters as unknown as CapturedFilter[];
@@ -119,16 +156,6 @@ describe("LogsFilterToolbar", () => {
       },
       { label: "Svc Two", value: "s2", children: undefined },
     ]);
-  });
-
-  it("routes a composite service::component change to changeService with both parts", () => {
-    const ctx = makeCtx();
-    renderToolbar(ctx);
-    h.captured?.onChange("service", "s1::s1-worker");
-    expect(ctx.changeService).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "s1" }),
-      "s1-worker",
-    );
   });
 
   it("converts a date range into ISO start and end dates", () => {
@@ -160,10 +187,11 @@ describe("LogsFilterToolbar", () => {
     expect(updater({ level: "" })).toEqual({ level: "", search: "hello" });
   });
 
-  it("resets the filter", () => {
-    const ctx = makeCtx();
+  it("resets the filters and puts the service back to the default", () => {
+    const ctx = makeCtx({ serviceFilterValue: "s2" });
     renderToolbar(ctx);
     h.captured?.onReset();
     expect(ctx.resetFilter).toHaveBeenCalledTimes(1);
+    expect(ctx.changeServices).toHaveBeenCalledWith([]);
   });
 });

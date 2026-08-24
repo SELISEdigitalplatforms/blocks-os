@@ -167,6 +167,46 @@ describe("TracesOverview", () => {
     );
   });
 
+  it("filters services with a checkbox tree whose blocks services expand into API and Worker", async () => {
+    const user = userEvent.setup();
+    renderOverview();
+    await user.click(screen.getByRole("button", { name: /Service/i }));
+    await user.click(await screen.findByRole("button", { name: "Expand OS" }));
+    expect(screen.getByLabelText("API")).toBeTruthy();
+    expect(screen.getByLabelText("Worker")).toBeTruthy();
+    // Registered services sit in the same list, without children.
+    expect(screen.getByLabelText("Service One")).toBeTruthy();
+  });
+
+  it("queries every collection of a service when its parent is checked", async () => {
+    const user = userEvent.setup();
+    renderOverview();
+    await user.click(screen.getByRole("button", { name: /Service/i }));
+    await user.click(await screen.findByLabelText("OS"));
+    await waitFor(() =>
+      expect(h.useGetTraces).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          filter: { services: ["blocks-os", "blocks-os-worker"], excepts: ["blocks-lmt-api"] },
+        }),
+      ),
+    );
+  });
+
+  it("queries only the checked collection when a child is picked", async () => {
+    const user = userEvent.setup();
+    renderOverview();
+    await user.click(screen.getByRole("button", { name: /Service/i }));
+    await user.click(await screen.findByRole("button", { name: "Expand OS" }));
+    await user.click(screen.getByLabelText("Worker"));
+    await waitFor(() =>
+      expect(h.useGetTraces).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          filter: { services: ["blocks-os-worker"], excepts: ["blocks-lmt-api"] },
+        }),
+      ),
+    );
+  });
+
   it("renders a mode dropdown instead of cards on mobile", () => {
     h.isMobile = true;
     renderOverview();

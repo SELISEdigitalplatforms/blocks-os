@@ -7,10 +7,14 @@ const h = vi.hoisted(() => ({
   data: { data: [], totalCount: 0 } as { data: unknown[]; totalCount: number },
   setQueryParams: vi.fn(),
   tableProps: null as Record<string, unknown> | null,
+  lastPayload: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
-  useGetUsers: () => ({ isLoading: h.isLoading, isFetching: h.isFetching, data: h.data }),
+  useGetUsers: (payload: Record<string, unknown>) => {
+    h.lastPayload = payload;
+    return { isLoading: h.isLoading, isFetching: h.isFetching, data: h.data };
+  },
 }));
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
@@ -37,6 +41,7 @@ beforeEach(() => {
   h.isLoading = false;
   h.isFetching = false;
   h.data = { data: [], totalCount: 0 };
+  h.lastPayload = undefined;
 });
 
 describe("OrganizationUsers", () => {
@@ -63,5 +68,14 @@ describe("OrganizationUsers", () => {
     h.isFetching = true;
     render(<OrganizationUsers organizationId="o1" />);
     expect(h.tableProps?.isLoading).toBe(true);
+  });
+
+  // The API takes an array of organization ids. The old singular `organizationId` binds to
+  // nothing server-side, so the filter is dropped and the table lists every user in the tenant
+  // instead of the organization's members -- a fail-open on an org-scoped view.
+  it("scopes the query with an organizationIds array", () => {
+    render(<OrganizationUsers organizationId="o1" />);
+    expect((h.lastPayload as { filter: { organizationIds: string[] } }).filter.organizationIds).toEqual(["o1"]);
+    expect(h.lastPayload).not.toHaveProperty("filter.organizationId");
   });
 });

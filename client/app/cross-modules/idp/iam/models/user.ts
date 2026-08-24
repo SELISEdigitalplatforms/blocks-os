@@ -69,7 +69,7 @@ export interface IGetUsersPayload {
     joinedOn?: string;
     lastLogin?: string;
     lastUpdatedDate?: string;
-    organizationId?: string;
+    organizationIds?: string[];
   };
   projectKey: string;
 }

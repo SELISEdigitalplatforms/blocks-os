@@ -5,6 +5,7 @@ export const LOG_LEVEL = {
 };
 
 export * from "./usage.util";
+export * from "./service-selection.util";
 
 export const getLogFormatTimestamp = (timestamp: string) => {
   const date = new Date(timestamp);
