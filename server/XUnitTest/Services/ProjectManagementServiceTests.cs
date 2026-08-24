@@ -1215,6 +1215,48 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task ConfigureProjectAsync_AnnouncesTenantUpdate_SoCachedCopiesAreReplaced()
+        {
+            using var _ = new BlocksTestContext();
+            SetupCertificatePipeline();
+
+            var project = NewTenantForConfigure();
+
+            await Service().ConfigureProjectAsync(project);
+
+            // Provisioning is the only write that sets PublicCertificatePath. Without this
+            // broadcast, any service that cached the tenant while the certificate was being
+            // generated keeps a copy that cannot validate the tenant's tokens.
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.Is<TenantCacheUpdateMessage>(m =>
+                m.Action == "upsert" &&
+                m.TenantId == "t1" &&
+                m.Tenant!.JwtTokenParameters!.PublicCertificatePath == "https://download/cert")), Times.Once);
+        }
+
+        [Fact]
+        public async Task ConfigureProjectAsync_DoesNotAnnounce_WhenResumedRunHasNoCertificatePath()
+        {
+            using var _ = new BlocksTestContext();
+            SetupCertificatePipeline();
+
+            var project = NewTenantForConfigure();
+
+            // A resumed run: the certificates are already marked uploaded, so the upload step
+            // short-circuits and never re-assigns the path. Broadcasting the blank project here
+            // would replace good cached copies with a useless one.
+            var tracer = new ProjectStatusTracer
+            {
+                ProjectId = project.ItemId,
+                IsCertificatesUploaded = true
+            };
+
+            await Service().ConfigureProjectAsync(project, tracer);
+
+            project.JwtTokenParameters.PublicCertificatePath.Should().BeNullOrEmpty();
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()), Times.Never);
+        }
+
+        [Fact]
         public async Task ConfigureProjectAsync_WhenCertificateGenerationThrows_RecordsError()
         {
             using var _ = new BlocksTestContext();
