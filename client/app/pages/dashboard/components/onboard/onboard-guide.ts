@@ -3,8 +3,6 @@ import { ONBOARDING_GUIDE_TEMPLATE } from "./onboarding-guide.constant";
 
 export { ONBOARDING_GUIDE_TEMPLATE };
 
-export const BLOCKS_DOCS_URL = "https://docs.seliseblocks.com/";
-
 /**
  * Stands in for a value this project hasn't configured yet. Angle brackets match
  * how the brief already marks the parts a human has to supply (`<appName>`,
@@ -102,11 +100,3 @@ export const resolveOnboardingGuide = ({
  */
 export const revealKey = (text: string, maskedKey: string, realKey: string): string =>
   maskedKey && realKey ? text.split(maskedKey).join(realKey) : text;
-
-export const onboardingFileName = (projectName: string): string => {
-  const slug = projectName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return `blocks-onboarding-${slug || "project"}.md`;
-};

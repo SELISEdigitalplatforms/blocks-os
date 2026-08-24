@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   maskValue,
-  onboardingFileName,
   resolveOnboardingGuide,
   revealKey,
   toHost,
@@ -30,24 +29,12 @@ describe("resolveOnboardingGuide", () => {
     expect(missing).toEqual([]);
   });
 
-  it("substitutes the key into every command that needs it", () => {
+  it("substitutes the key into the brief", () => {
     const { markdown } = resolveOnboardingGuide({ tenantId: "tenant-key-123", domain });
-    expect(markdown).toContain("blocks use tenant-key-123");
-    expect(markdown).toContain("--x-blocks-key tenant-key-123");
+    expect(markdown).toContain("project tenant-key-123");
     expect(markdown).toContain(
-      "--redirect-uris https://stg-a1b2c.seliseblocks.com:5173/login/callback",
+      "https://raw.githubusercontent.com/SELISEdigitalplatforms/blocks-skills/main/BOOTSTRAP.md",
     );
-    expect(markdown).toContain("--blocks-api-url https://blocksapi.seliseblocks.com");
-  });
-
-  it("keeps the markdown syntax that has to be escaped inside the template literal", () => {
-    const { markdown } = resolveOnboardingGuide({ tenantId: "tenant-key-123", domain });
-    // Backticks: inline code and fenced blocks.
-    expect(markdown).toContain("`npm install -g @seliseblocks/cli-os@latest`");
-    expect(markdown).toContain("```bash");
-    // Backslashes: shell line continuations must stay a backslash + newline.
-    expect(markdown).toContain("blocks auth oidc-clients save \\\n");
-    expect(markdown).toContain("blocks new web <appName> \\\n");
   });
 
   it("normalizes a domain stored without a protocol or with a trailing slash", () => {
@@ -67,14 +54,13 @@ describe("resolveOnboardingGuide", () => {
     expect(values.BLOCKS_API_URL).toBe("https://blocksapi.slsblx.com");
   });
 
-  it("reports what is missing and marks it in the markdown when no domain exists", () => {
-    const { markdown, values, missing } = resolveOnboardingGuide({
+  it("reports what is missing when no domain exists", () => {
+    const { values, missing } = resolveOnboardingGuide({
       tenantId: "tenant-key-123",
       domain: null,
     });
     expect(missing).toEqual(["APP_DOMAIN", "APP_HOST", "BLOCKS_API_URL"]);
     expect(values.X_BLOCKS_KEY).toBe("tenant-key-123");
-    expect(markdown).toContain("<not configured>");
   });
 
   it("masks the key in the markdown only, never in the returned values", () => {
@@ -117,15 +103,5 @@ describe("toHost", () => {
     expect(toHost(" https://example.com/ ")).toBe("example.com");
     expect(toHost("http://example.com")).toBe("example.com");
     expect(toHost("example.com")).toBe("example.com");
-  });
-});
-
-describe("onboardingFileName", () => {
-  it("slugs the project name", () => {
-    expect(onboardingFileName("My Great App")).toBe("blocks-onboarding-my-great-app.md");
-  });
-
-  it("falls back when the name has nothing usable", () => {
-    expect(onboardingFileName("  ")).toBe("blocks-onboarding-project.md");
   });
 });

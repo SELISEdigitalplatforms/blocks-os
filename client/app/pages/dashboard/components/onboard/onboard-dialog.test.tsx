@@ -67,13 +67,14 @@ describe("OnboardDialog", () => {
     Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
   });
 
-  it("renders the resolved values in the brief, with the key masked by default", () => {
+  it("renders the brief, with the key masked by default", () => {
     renderDialog();
     const rendered = () => document.body.textContent ?? "";
     expect(rendered()).toContain(MASKED_KEY);
     expect(rendered()).not.toContain(TENANT_ID);
-    expect(rendered()).toContain("https://stg-a1b2c.seliseblocks.com");
-    expect(rendered()).toContain("https://blocksapi.seliseblocks.com");
+    expect(rendered()).toContain(
+      "https://raw.githubusercontent.com/SELISEdigitalplatforms/blocks-skills/main/BOOTSTRAP.md",
+    );
   });
 
   it("reveals the key on demand", async () => {
@@ -129,25 +130,5 @@ describe("OnboardDialog", () => {
       ],
     });
     expect(screen.getByRole("combobox", { name: "Select domain" })).toBeTruthy();
-  });
-
-  it("downloads the brief as a markdown file named after the project", async () => {
-    const user = setupUser();
-    const createObjectURL = vi.fn().mockReturnValue("blob:onboarding");
-    const revokeObjectURL = vi.fn();
-    Object.defineProperty(URL, "createObjectURL", { value: createObjectURL, configurable: true });
-    Object.defineProperty(URL, "revokeObjectURL", { value: revokeObjectURL, configurable: true });
-    const clickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(function mockClick(this: HTMLAnchorElement) {
-        expect(this.download).toBe("blocks-onboarding-acme-app.md");
-      });
-
-    renderDialog();
-    await user.click(screen.getByRole("button", { name: /Download \.md/ }));
-
-    expect(clickSpy).toHaveBeenCalled();
-    expect(createObjectURL).toHaveBeenCalled();
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:onboarding");
   });
 });

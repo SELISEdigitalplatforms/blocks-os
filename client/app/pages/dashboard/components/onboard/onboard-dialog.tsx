@@ -17,16 +17,10 @@ import {
 } from "@/components/ui-kits/select/select";
 import type { IProject } from "@seliseblocks/genesis-os/models";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
-import { Download, ExternalLink, Eye, EyeOff, Rocket } from "lucide-react";
+import { Eye, EyeOff, Rocket } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CopyButton } from "./copy-button";
-import {
-  BLOCKS_DOCS_URL,
-  maskValue,
-  onboardingFileName,
-  resolveOnboardingGuide,
-  revealKey,
-} from "./onboard-guide";
+import { maskValue, resolveOnboardingGuide, revealKey } from "./onboard-guide";
 import { OnboardMarkdown } from "./onboard-markdown";
 
 type OnboardDialogProps = {
@@ -71,18 +65,6 @@ export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProp
       return;
     }
     showErrorToast({ errors: { clipboard: "Could not copy the instructions." } });
-  };
-
-  const handleDownload = () => {
-    const blob = new Blob([resolved.markdown], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = onboardingFileName(project?.name ?? "");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -148,29 +130,14 @@ export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProp
           <OnboardMarkdown markdown={displayed.markdown} toCopyText={toCopyText} />
         </div>
 
-        <DialogFooter className="items-center border-t border-border-default px-6 py-4 sm:justify-between">
-          <a
-            href={BLOCKS_DOCS_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
-          >
-            Blocks CLI documentation
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-          </a>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-            <Button type="button" variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-              Download .md
-            </Button>
-            <CopyButton
-              text={resolved.markdown}
-              label="Copy instructions"
-              showLabel
-              variant="default"
-              onCopied={handleCopied}
-            />
-          </div>
+        <DialogFooter className="items-center border-t border-border-default px-6 py-4 sm:justify-end">
+          <CopyButton
+            text={resolved.markdown}
+            label="Copy instructions"
+            showLabel
+            variant="default"
+            onCopied={handleCopied}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>
