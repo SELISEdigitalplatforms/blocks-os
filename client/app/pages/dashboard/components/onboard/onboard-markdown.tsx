@@ -7,17 +7,15 @@ import { CopyButton } from "./copy-button";
 type GuideCodeBlockProps = {
   language: string;
   code: string;
-  /** Maps what is displayed to what is copied (the masked key becomes the real one). */
-  toCopyText: (code: string) => string;
 };
 
-const GuideCodeBlock = ({ language, code, toCopyText }: GuideCodeBlockProps) => (
+const GuideCodeBlock = ({ language, code }: GuideCodeBlockProps) => (
   <div className="my-3 overflow-hidden rounded-md border border-border-default">
     <div className="flex items-center justify-between gap-2 border-b border-border-default bg-muted px-3 py-1">
       <span className="font-mono text-xs uppercase tracking-wide text-medium-emphasis">
         {language}
       </span>
-      <CopyButton text={toCopyText(code)} label={`Copy ${language} command`} />
+      <CopyButton text={code} label={`Copy ${language} command`} />
     </div>
     <pre className="overflow-x-auto bg-surface-app p-3">
       <code className="font-mono text-[13px] leading-6 text-high-emphasis">{code}</code>
@@ -30,7 +28,7 @@ const GuideCodeBlock = ({ language, code, toCopyText }: GuideCodeBlockProps) => 
  * on `prose` utilities, but `@tailwindcss/typography` isn't installed here, so a
  * structured document needs its headings, lists and emphasis styled explicitly.
  */
-const createGuideComponents = (toCopyText: (code: string) => string): Components => ({
+const createGuideComponents = (): Components => ({
   h1: ({ children }) => (
     <h1 className="mb-3 mt-0 text-xl font-bold text-high-emphasis">{children}</h1>
   ),
@@ -80,28 +78,19 @@ const createGuideComponents = (toCopyText: (code: string) => string): Components
       );
     }
     return (
-      <GuideCodeBlock
-        language={language}
-        code={String(children).replace(/\n$/, "")}
-        toCopyText={toCopyText}
-      />
+      <GuideCodeBlock language={language} code={String(children).replace(/\n$/, "")} />
     );
   },
 });
 
 type OnboardMarkdownProps = {
   markdown: string;
-  toCopyText?: (code: string) => string;
   className?: string;
 };
 
-export const OnboardMarkdown = ({
-  markdown,
-  toCopyText = (code) => code,
-  className,
-}: OnboardMarkdownProps) => (
+export const OnboardMarkdown = ({ markdown, className }: OnboardMarkdownProps) => (
   <div className={cn("text-sm", className)}>
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={createGuideComponents(toCopyText)}>
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={createGuideComponents()}>
       {markdown}
     </ReactMarkdown>
   </div>

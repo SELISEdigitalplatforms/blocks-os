@@ -15,10 +15,8 @@ vi.mock("@seliseblocks/genesis-os/utils", () => ({
 }));
 
 import { OnboardDialog } from "./onboard-dialog";
-import { maskValue } from "./onboard-guide";
 
 const TENANT_ID = "tenant-key-123456";
-const MASKED_KEY = maskValue(TENANT_ID);
 
 const project = {
   name: "Acme App",
@@ -58,26 +56,16 @@ describe("OnboardDialog", () => {
     Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
   });
 
-  it("renders the brief, with the key masked by default", () => {
+  it("renders the brief with the project key filled in", () => {
     renderDialog();
     const rendered = () => document.body.textContent ?? "";
-    expect(rendered()).toContain(MASKED_KEY);
-    expect(rendered()).not.toContain(TENANT_ID);
+    expect(rendered()).toContain(TENANT_ID);
     expect(rendered()).toContain(
       "https://raw.githubusercontent.com/SELISEdigitalplatforms/blocks-skills/main/BOOTSTRAP.md",
     );
   });
 
-  it("reveals the key on demand", async () => {
-    const user = setupUser();
-    renderDialog();
-    await user.click(screen.getByRole("button", { name: "Show project key" }));
-    expect(document.body.textContent).toContain(TENANT_ID);
-    await user.click(screen.getByRole("button", { name: "Hide project key" }));
-    expect(document.body.textContent).not.toContain(TENANT_ID);
-  });
-
-  it("copies the fully resolved brief, with the real key, while it is masked on screen", async () => {
+  it("copies the fully resolved brief with the real key", async () => {
     const user = setupUser();
     renderDialog();
 
@@ -89,7 +77,6 @@ describe("OnboardDialog", () => {
     expect(copied).toContain(
       "https://raw.githubusercontent.com/SELISEdigitalplatforms/blocks-skills/main/BOOTSTRAP.md",
     );
-    expect(copied).not.toContain(MASKED_KEY);
     expect(h.showSuccessToast).toHaveBeenCalled();
   });
 });
