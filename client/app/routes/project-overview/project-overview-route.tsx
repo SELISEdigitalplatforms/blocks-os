@@ -1,11 +1,11 @@
+import { useGetProjects } from "@/hooks/use-project";
+import { ProjectOverviewLayout } from "@/layouts/project-overview/project-overview-layout";
 import { AppLoadingSpinner } from "@seliseblocks/genesis-os/components";
 import type { LayoutProps } from "@seliseblocks/genesis-os/layouts";
+import { useProjectStore } from "@seliseblocks/genesis-os/store";
 import type { Menu } from "@seliseblocks/genesis-os/types";
 import { useEffect } from "react";
 import { Navigate, Outlet, useParams } from "react-router";
-import { ProjectOverviewLayout } from "@/layouts/project-overview/project-overview-layout";
-import { useGetProjects } from "@/hooks/use-project";
-import { useAuthStore, useProjectStore } from "@seliseblocks/genesis-os/store";
 
 export type ProjectOverviewRouteProps = LayoutProps & {
   /** Base path the project-overview routes live under. */
@@ -55,7 +55,6 @@ export function ProjectOverviewRoute({
 }: ProjectOverviewRouteProps) {
   const params = useParams();
   const tenantGroupId = params[paramName];
-  const { user } = useAuthStore();
 
   const { data, isLoading, isError } = useGetProjects({
     tenantGroupId: tenantGroupId,
@@ -88,8 +87,7 @@ export function ProjectOverviewRoute({
   // never sets it, so reading the store here would reject the real owner. The
   // fetched `data` is scoped to this `tenantGroupId`, so its project is the one
   // being opened.
-  const resolvedProject = data[0]?.projects?.[0];
-  const isOwner = user?.sub === resolvedProject?.createdBy;
+  const isOwner = !data[0]?.isShared;
   if (!isOwner) return <Navigate to={consolePath} replace />;
 
   return (
