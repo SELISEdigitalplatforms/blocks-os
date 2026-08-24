@@ -3,17 +3,19 @@ import { FakeHttpError } from "@/cross-modules/secrets/test-utils/secret.fixture
 import { describeSecretError, isSecretPermissionError, isStaleSecretError } from "./secret-error";
 
 describe("describeSecretError", () => {
-  it("maps NAME_TAKEN onto the name field with its own copy", () => {
+  it("maps a field reason code onto its field with its own copy", () => {
     const info = describeSecretError(
       new FakeHttpError(400, {
-        invalid_request: "A secret named 'x' already exists.",
-        reason: "NAME_TAKEN",
+        invalid_request: "'x y' is not a valid name.",
+        reason: "NAME_INVALID",
       }),
     );
     expect(info.status).toBe(400);
-    expect(info.reason).toBe("NAME_TAKEN");
+    expect(info.reason).toBe("NAME_INVALID");
     expect(info.field).toBe("name");
-    expect(info.message).toBe("A secret with this name already exists.");
+    expect(info.message).toBe(
+      "Use letters, digits, dot, underscore or hyphen, starting with a letter or digit.",
+    );
   });
 
   it.each([

@@ -131,7 +131,7 @@ export function Organizations() {
   const showSidebarMobile = showListOnMobile || !selectedOrgId;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:h-[calc(100vh-var(--org-page-offset,180px))] lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
       <div
         className={cn(
           "min-h-0 flex-1 flex-col lg:flex lg:h-full",

@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   useGetTraces: vi.fn(),
+  useGetBlocksServices: vi.fn(),
   isMobile: false,
   navigate: vi.fn(),
   getAllServices: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock("@seliseblocks/genesis-os/hooks", async (importOriginal) => {
 });
 vi.mock("@blocks-lmt/hooks/use-trace", () => ({
   useGetTraces: (opt: unknown) => h.useGetTraces(opt),
+  useGetBlocksServices: () => h.useGetBlocksServices(),
 }));
 vi.mock("@/cross-modules/identifier/services/service-registry.service", () => ({
   serviceRegistryService: { getAllServices: (args: unknown) => h.getAllServices(args) },
@@ -65,6 +67,18 @@ describe("TracesOverview", () => {
     h.getAllServices.mockResolvedValue({
       data: [{ name: "Service One", serviceId: "svc-1" }],
     });
+    h.useGetBlocksServices.mockReturnValue({
+      data: [
+        {
+          key: "os",
+          label: "OS",
+          sortOrder: 1,
+          apiServiceName: "blocks-os",
+          workerServiceNames: ["blocks-os-worker"],
+        },
+      ],
+      isLoading: false,
+    });
     h.useGetTraces.mockReturnValue({
       data: { data: [trace], totalCount: 1 },
       isLoading: false,
@@ -93,6 +107,16 @@ describe("TracesOverview", () => {
     expect(screen.getByText("125ms")).toBeTruthy();
     // Registered service name resolves from the serviceId.
     await waitFor(() => expect(screen.getByText("Service One")).toBeTruthy());
+  });
+
+  it("resolves a blocks service label from the fetched blocks services list", async () => {
+    h.useGetTraces.mockReturnValue({
+      data: { data: [{ ...trace, traceId: "trace-2", serviceName: "blocks-os" }], totalCount: 1 },
+      isLoading: false,
+      isFetching: false,
+    });
+    renderOverview();
+    await waitFor(() => expect(screen.getByText("OS")).toBeTruthy());
   });
 
   it("shows the no-data state when there are no traces and no filter", () => {

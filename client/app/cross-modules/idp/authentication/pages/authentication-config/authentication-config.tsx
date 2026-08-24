@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { AUTHENTICATION_NAV_GROUPS } from "@/constants/authentication-nav";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -36,6 +37,28 @@ export const AuthenticationConfigLayout = () => {
 
   const isSettingsPath = currentPath === "config";
 
+  // The shell above this layout (e.g. DashboardLayout/ConsoleLayout) doesn't
+  // always give us a definite height to resolve `h-full` against, which left
+  // the inner scroll container free to grow with the Outlet content and push
+  // the whole page into document-level scroll. Measure the distance from the
+  // top of the viewport to this layout's root on mount and on every resize —
+  // that distance is whatever fixed chrome (global header, breadcrumbs, etc.)
+  // sits above the auth shell, and the layout should hug the remaining viewport.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [topOffset, setTopOffset] = useState(0);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const node = rootRef.current;
+      if (!node) return;
+      const next = Math.max(0, Math.round(node.getBoundingClientRect().top));
+      setTopOffset((prev) => (prev === next ? prev : next));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   const headerActions = (
     <>
       {currentPath === "users" && <InviteUser />}
@@ -67,7 +90,15 @@ export const AuthenticationConfigLayout = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div
+        ref={rootRef}
+        className="flex min-h-0 flex-col overflow-hidden"
+        style={
+          topOffset
+            ? { height: `calc(100vh - ${topOffset}px)` }
+            : undefined
+        }
+      >
         <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
           {!isSettingsPath && currentItem && (
             <header className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">

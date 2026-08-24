@@ -20,7 +20,7 @@ vi.mock("../logs-list", async () => {
       return React.createElement(
         "div",
         { "data-testid": "logs-list" },
-        `svc:${ctx.selectedService?.id ?? "none"}|names:${(ctx.selectedService?.serviceNames || []).join(",")}|sub:${ctx.subService}|src:${String(ctx.isSourceBlocks)}`,
+        `svc:${ctx.selectedService?.id ?? "none"}|names:${(ctx.selectedService?.serviceNames || []).join(",")}|src:${String(ctx.isSourceBlocks)}`,
       );
     },
   };
@@ -43,8 +43,30 @@ vi.mock("../logs-header/logs-header", async () => {
           },
           "change",
         ),
-        React.createElement("button", { onClick: () => ctx.setSubService("worker") }, "worker"),
-        React.createElement("button", { onClick: () => ctx.setSubService("api") }, "api"),
+        React.createElement(
+          "button",
+          {
+            onClick: () =>
+              ctx.changeService(
+                { id: "a", label: "A", serviceName: "a-api", serviceNames: ["a-api", "a-worker"] },
+                "a-worker",
+              ),
+          },
+          "narrow-to-worker",
+        ),
+        React.createElement(
+          "button",
+          {
+            onClick: () =>
+              ctx.changeService({
+                id: "a",
+                label: "A",
+                serviceName: "a-api",
+                serviceNames: ["a-api", "a-worker"],
+              }),
+          },
+          "clear-narrowing",
+        ),
       );
     },
   };
@@ -53,7 +75,16 @@ vi.mock("../logs-header/logs-header", async () => {
 import { LogsViewer } from "./logs-viewer";
 
 const services: Service[] = [
-  { id: "a", label: "A", serviceName: "a-api", serviceNames: ["a-api", "a-worker"] },
+  {
+    id: "a",
+    label: "A",
+    serviceName: "a-api",
+    serviceNames: ["a-api", "a-worker"],
+    components: [
+      { label: "API", value: "a-api" },
+      { label: "Worker", value: "a-worker" },
+    ],
+  },
   { id: "b", label: "B", serviceName: "b-api", serviceNames: ["b-api"] },
 ];
 
@@ -64,23 +95,7 @@ describe("LogsViewer", () => {
     render(<LogsViewer services={services} />);
     expect(line()).toContain("svc:a");
     expect(line()).toContain("names:a-api,a-worker");
-    expect(line()).toContain("sub:all");
     expect(line()).toContain("src:true");
-  });
-
-  it("filters service names to workers when the sub-service is worker", async () => {
-    const user = userEvent.setup();
-    render(<LogsViewer services={services} />);
-    await user.click(screen.getByText("worker"));
-    expect(line()).toContain("names:a-worker");
-  });
-
-  it("filters service names to non-workers when the sub-service is api", async () => {
-    const user = userEvent.setup();
-    render(<LogsViewer services={services} />);
-    await user.click(screen.getByText("api"));
-    expect(line()).toContain("names:a-api");
-    expect(line()).not.toContain("a-worker");
   });
 
   it("leaves service names untouched for non-blocks sources", () => {
@@ -95,6 +110,22 @@ describe("LogsViewer", () => {
     await user.click(screen.getByText("change"));
     expect(line()).toContain("svc:b");
     expect(line()).toContain("names:b-api");
+  });
+
+  it("narrows service names to a single component when one is selected", async () => {
+    const user = userEvent.setup();
+    render(<LogsViewer services={services} />);
+    await user.click(screen.getByText("narrow-to-worker"));
+    expect(line()).toContain("svc:a");
+    expect(line()).toContain("names:a-worker");
+  });
+
+  it("reverts to the full service name list when narrowing is cleared", async () => {
+    const user = userEvent.setup();
+    render(<LogsViewer services={services} />);
+    await user.click(screen.getByText("narrow-to-worker"));
+    await user.click(screen.getByText("clear-narrowing"));
+    expect(line()).toContain("names:a-api,a-worker");
   });
 
   it("renders no selected service when the list is empty", () => {

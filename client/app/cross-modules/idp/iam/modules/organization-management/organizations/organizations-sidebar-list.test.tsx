@@ -191,7 +191,47 @@ describe("OrganizationsSidebarList", () => {
         totalCount={2}
       />,
     );
-    expect(screen.getAllByText("Disabled")).toHaveLength(1);
+    const disabledBadges = screen.getAllByText("Disabled");
+    expect(disabledBadges).toHaveLength(1);
+    expect(disabledBadges[0].className).toContain("bg-red-100");
+    expect(disabledBadges[0].className).toContain("text-red-800");
+  });
+
+  it("keeps the Disabled badge visible when the disabled org is the selected row", () => {
+    render(
+      <OrganizationsSidebarList
+        {...baseProps()}
+        organizations={[
+          makeOrg({ itemId: "org-1", name: "Acme Inc", isDisabled: true }),
+        ]}
+        totalCount={1}
+        selectedOrgId="org-1"
+      />,
+    );
+    const badge = screen.getByText("Disabled");
+    expect(badge.className).toContain("bg-red-100");
+    expect(badge.className).toContain("text-red-800");
+    expect(badge.className).not.toContain("bg-secondary");
+  });
+
+  it("applies the error badge variant to every disabled org regardless of filter/ordering", () => {
+    render(
+      <OrganizationsSidebarList
+        {...baseProps()}
+        organizations={[
+          makeOrg({ itemId: "org-1", name: "Acme Inc", isDisabled: true }),
+          makeOrg({ itemId: "org-2", name: "Globex", isDisabled: true }),
+          makeOrg({ itemId: "org-3", name: "Initech", isDisabled: false }),
+        ]}
+        totalCount={3}
+      />,
+    );
+    const disabledBadges = screen.getAllByText("Disabled");
+    expect(disabledBadges).toHaveLength(2);
+    disabledBadges.forEach((badge) => {
+      expect(badge.className).toContain("bg-red-100");
+      expect(badge.className).toContain("text-red-800");
+    });
   });
 
   it("treats an organization with no disabled flag as active", () => {
@@ -312,6 +352,18 @@ describe("OrganizationsSidebarList", () => {
     const { container } = render(<OrganizationsSidebarList {...baseProps()} isLoadingMore />);
     expect(screen.getByText("Acme Inc")).toBeTruthy();
     expect(container.querySelectorAll(".h-\\[62px\\]").length).toBe(1);
+  });
+
+  it("renders the scrollable list inside a viewport-relative container so infinite scroll has something to scroll", () => {
+    const { container } = render(<OrganizationsSidebarList {...baseProps()} />);
+    // The scrollable region sits inside the card; assert it fills the parent
+    // (flex-1) instead of a fixed px value, so its height tracks the real
+    // viewport via the parent grid's calc(100vh - offset) sizing.
+    const scrollContainer = container.querySelector(".overflow-y-auto");
+    expect(scrollContainer).toBeTruthy();
+    expect(scrollContainer!.className).toContain("overflow-y-auto");
+    expect(scrollContainer!.className).toContain("flex-1");
+    expect(scrollContainer!.className).not.toContain("h-[640px]");
   });
 
   it("filters the list by status through the filter popover", async () => {

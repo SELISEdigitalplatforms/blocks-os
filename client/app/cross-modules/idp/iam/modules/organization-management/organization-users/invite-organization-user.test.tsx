@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   config: { data: { isMultiOrgEnabled: false }, isLoading: false },
   showSuccessToast: vi.fn(),
   showErrorToast: vi.fn(),
+  orgQueryOptions: undefined as undefined | { enabled?: boolean },
 }));
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
@@ -19,7 +20,16 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useUpdateUserAccessControl: () => ({ mutateAsync: h.updateUserAccess, isPending: false }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
-  useGetOrganizations: () => h.orgs,
+  // Mirrors the real hook's `enabled` gate: when the call site passes
+  // enabled:false the query is idle (no data, not loading); once enabled
+  // returns to true the real h.orgs data is exposed.
+  useGetOrganizations: (options: { enabled?: boolean }) => {
+    h.orgQueryOptions = options;
+    if (options && options.enabled === false) {
+      return { data: undefined, isLoading: false };
+    }
+    return h.orgs;
+  },
   useGetOrganizationConfig: () => h.config,
 }));
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -40,6 +50,7 @@ beforeEach(() => {
   h.checkExists = { data: undefined, isFetching: false };
   h.orgs = { data: { organizations: [] as unknown[] }, isLoading: false };
   h.config = { data: { isMultiOrgEnabled: false }, isLoading: false };
+  h.orgQueryOptions = undefined;
 });
 
 describe("InviteOrganizationUser", () => {
@@ -270,5 +281,28 @@ describe("InviteOrganizationUser", () => {
 
     const combobox = await screen.findByRole("combobox");
     await waitFor(() => expect(combobox.textContent).toContain("Select organization"));
+  });
+
+  it("does not enable the org-picker organizations query until the dialog is opened", async () => {
+    renderInvite();
+    // On mount the dialog is closed and the query must be gated off so the
+    // Organizations page does not see an extra PageSize=1000 fetch on load.
+    expect(h.orgQueryOptions).toBeDefined();
+    expect(h.orgQueryOptions?.enabled).toBe(false);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    // Once the dialog opens, the picker's ready to fetch.
+    await waitFor(() => expect(h.orgQueryOptions?.enabled).toBe(true));
+  });
+
+  it("returns the picker to a gated (idle) state after the dialog is closed", async () => {
+    const user = userEvent.setup();
+    renderInvite();
+    await user.click(screen.getByRole("button", { name: /invite member/i }));
+    await waitFor(() => expect(h.orgQueryOptions?.enabled).toBe(true));
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    await waitFor(() => expect(h.orgQueryOptions?.enabled).toBe(false));
   });
 });

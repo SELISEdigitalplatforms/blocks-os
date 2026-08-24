@@ -8,6 +8,12 @@ export interface IRole {
   canCreateOwn: boolean;
   count: number;
   createdFromDefault: boolean;
+  /**
+   * Soft-delete flag from the backend. Optional because the roles list endpoint already excludes
+   * archived roles, so the client never receives `true` today -- it documents the contract without
+   * forcing every fixture to carry a value that is always absent.
+   */
+  isArchived?: boolean;
   createdDate: string;
   lastUpdatedDate: string;
   createdBy: string;
@@ -88,6 +94,12 @@ export interface SetRoles {
   removePermissions: string[];
   slug: string;
   organizationId: string;
+  /**
+   * Apply this change to every organization's copy of the role. Delta only -- it applies exactly
+   * the permissions added or removed here and does not otherwise reconcile an organization that
+   * had already diverged. Omitted for single-organization tenants.
+   */
+  propagateToAllOrganizations?: boolean;
 }
 
 export interface GroupsData {

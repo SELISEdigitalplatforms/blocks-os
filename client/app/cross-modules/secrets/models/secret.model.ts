@@ -234,7 +234,6 @@ export const SECRET_ERROR_REASON = {
   NameRequired: "NAME_REQUIRED",
   NameTooLong: "NAME_TOO_LONG",
   NameInvalid: "NAME_INVALID",
-  NameTaken: "NAME_TAKEN",
   DescriptionTooLong: "DESCRIPTION_TOO_LONG",
   ValueRequired: "VALUE_REQUIRED",
   ValueTooLarge: "VALUE_TOO_LARGE",

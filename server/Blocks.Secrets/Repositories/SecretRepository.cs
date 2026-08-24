@@ -115,30 +115,6 @@ public sealed class SecretRepository : ISecretRepository
         return (await itemsTask.ConfigureAwait(false), await countTask.ConfigureAwait(false));
     }
 
-    public async Task<bool> NameExistsAsync(
-        string tenantId,
-        string organizationId,
-        string name,
-        string? excludeSecretId = null,
-        CancellationToken cancellationToken = default)
-    {
-        var collection = await GetCollectionAsync().ConfigureAwait(false);
-        var builder = Builders<Secret>.Filter;
-
-        var filter = builder.And(
-            builder.Eq(s => s.TenantId, tenantId),
-            builder.Eq(s => s.OrganizationId, organizationId),
-            builder.Eq(s => s.NameLower, SecretName.Normalize(name)),
-            builder.Ne(s => s.Status, SecretStatuses.Deleted));
-
-        if (!string.IsNullOrWhiteSpace(excludeSecretId))
-        {
-            filter = builder.And(filter, builder.Ne(s => s.ItemId, excludeSecretId));
-        }
-
-        return await collection.Find(filter).Limit(1).AnyAsync(cancellationToken).ConfigureAwait(false);
-    }
-
     public async Task HardDeleteAsync(string tenantId, string secretId, CancellationToken cancellationToken = default)
     {
         var collection = await GetCollectionAsync().ConfigureAwait(false);
@@ -173,16 +149,6 @@ public sealed class SecretRepository : ISecretRepository
                 new CreateIndexModel<Secret>(
                     keys.Ascending(s => s.TenantId).Ascending(s => s.ItemId),
                     new CreateIndexOptions { Name = "ix_tenant_item", Unique = true }),
-
-                // Partial, so a name frees up once its secret is deleted.
-                new CreateIndexModel<Secret>(
-                    keys.Ascending(s => s.TenantId).Ascending(s => s.OrganizationId).Ascending(s => s.NameLower),
-                    new CreateIndexOptions<Secret>
-                    {
-                        Name = "ux_tenant_org_name_active",
-                        Unique = true,
-                        PartialFilterExpression = Builders<Secret>.Filter.Ne(s => s.Status, SecretStatuses.Deleted)
-                    }),
 
                 new CreateIndexModel<Secret>(
                     keys.Ascending(s => s.TenantId).Ascending(s => s.Type).Ascending(s => s.Status),

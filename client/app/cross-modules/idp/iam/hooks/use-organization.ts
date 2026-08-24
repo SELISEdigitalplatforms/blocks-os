@@ -8,8 +8,9 @@ import { IOrganizationConfigPayload } from "@blocks-idp/iam/models/organization-
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 
 export const useGetOrganizations = (options: IOrganizationFilter) => {
+  const { enabled: _enabled, ...queryKeyOptions } = options;
   return useQuery({
-    queryKey: ["organizations", options],
+    queryKey: ["organizations", queryKeyOptions],
     queryFn: () =>
       iamService.organization.getOrganizations({
         page: options.page,
@@ -18,7 +19,7 @@ export const useGetOrganizations = (options: IOrganizationFilter) => {
         searchText: options.search,
       }),
     placeholderData: keepPreviousData,
-    enabled: !!options.projectKey,
+    enabled: options.enabled !== undefined ? options.enabled : !!options.projectKey,
   });
 };
 

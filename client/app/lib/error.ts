@@ -30,15 +30,31 @@ export const getErrorMessage = (
   for (const key in error) {
     const value = error[key];
 
+    // Value before key. Server errors that carry a reason code put it in the value and reuse a
+    // small set of category keys, so a key lookup cannot tell those reasons apart -- "forbidden"
+    // alone covers five different ones on the IAM archive endpoints. Key lookup is kept as the
+    // fallback so callers that map by key are unaffected.
+    if (typeof value === "string" && messageMap[value]) {
+      messages.push(messageMap[value]);
+      continue;
+    }
+
     if (messageMap[key]) {
       messages.push(messageMap[key]);
       continue;
     }
 
     if (typeof value === "string") {
-      messages.push(value);
+      // A blank value used to be pushed verbatim, which rendered an empty toast line. Skipping it
+      // lets the "Something went wrong." fallback below take over.
+      if (value.trim().length > 0) messages.push(value);
     } else if (Array.isArray(value) && value.length > 0) {
-      messages.push(value.join(", "));
+      // Map each element, not the joined string: ASP.NET dictionaries can carry the reason codes
+      // as a string[], and joining first meant the map never saw them.
+      const mapped = value
+        .filter((item) => typeof item === "string" && item.trim().length > 0)
+        .map((item) => messageMap[item] ?? item);
+      if (mapped.length) messages.push(mapped.join(", "));
     }
   }
 

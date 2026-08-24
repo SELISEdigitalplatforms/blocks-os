@@ -44,7 +44,69 @@ describe("UserProfileSidebar", () => {
   it("marks an inactive user as Inactive", () => {
     h.userByIdData = { data: { firstName: "Bob", active: false } };
     render(<UserProfileSidebar id="u2" projectKey="p1" />);
+    const inactiveBadge = screen.getByText("Inactive");
+    expect(inactiveBadge.className).toContain("rounded");
+    expect(inactiveBadge.className).not.toContain("rounded-full");
+    expect(inactiveBadge.className).toContain("border-transparent");
+    expect(inactiveBadge.className).toContain("text-xs");
+  });
+
+  it("shows the lockout badge and UTC unlock time without replacing active status", () => {
+    h.userByIdData = {
+      data: {
+        firstName: "Ada",
+        active: true,
+        isLockedOut: true,
+        lockoutUntilUtc: "2026-08-09T14:30:00Z",
+      },
+    };
+    render(<UserProfileSidebar id="u1" projectKey="p1" />);
+    expect(screen.getByText("Active")).toBeTruthy();
+    expect(screen.getByText("Locked out").className).toContain("bg-red-100");
+    expect(screen.getByText("Locked out until Aug 09, 2026 at 14:30 UTC")).toBeTruthy();
+  });
+
+  it("does not show lockout UI when isLockedOut is false or omitted", () => {
+    h.userByIdData = { data: { firstName: "Ada", active: true, isLockedOut: false } };
+    const { rerender } = render(<UserProfileSidebar id="u1" projectKey="p1" />);
+    expect(screen.queryByText("Locked out")).toBeNull();
+    expect(screen.queryByText(/Locked out until/)).toBeNull();
+
+    h.userByIdData = { data: { firstName: "Ada", active: true } };
+    rerender(<UserProfileSidebar id="u1" projectKey="p1" />);
+    expect(screen.queryByText("Locked out")).toBeNull();
+  });
+
+  it("shows inactive and locked-out states together", () => {
+    h.userByIdData = {
+      data: { firstName: "Bob", active: false, isLockedOut: true, lockoutUntilUtc: null },
+    };
+    render(<UserProfileSidebar id="u2" projectKey="p1" />);
     expect(screen.getByText("Inactive")).toBeTruthy();
+    expect(screen.getByText("Locked out")).toBeTruthy();
+  });
+
+  it("omits unlock-time text when a locked-out user's timestamp is null", () => {
+    h.userByIdData = {
+      data: { firstName: "Ada", active: true, isLockedOut: true, lockoutUntilUtc: null },
+    };
+    render(<UserProfileSidebar id="u1" projectKey="p1" />);
+    expect(screen.getByText("Locked out")).toBeTruthy();
+    expect(screen.queryByText(/Locked out until/)).toBeNull();
+  });
+
+  it("keeps an elapsed lockout visible until refetched data changes isLockedOut", () => {
+    h.userByIdData = {
+      data: {
+        firstName: "Ada",
+        active: true,
+        isLockedOut: true,
+        lockoutUntilUtc: "2000-01-01T00:00:00Z",
+      },
+    };
+    render(<UserProfileSidebar id="u1" projectKey="p1" />);
+    expect(screen.getByText("Locked out")).toBeTruthy();
+    expect(screen.getByText("Locked out until Jan 01, 2000 at 00:00 UTC")).toBeTruthy();
   });
 
   it("shows Never when there is no valid last login", () => {

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Secrets;
+using Configuration.DomainService.Captcha.ResponseModel;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -124,7 +125,8 @@ namespace XUnitTest.Secrets
         [
             typeof(Secret), typeof(SecretAuditLog), typeof(SecretAccess),
             typeof(SecretResult), typeof(SecretListResult),
-            typeof(SecretAuditLogResult), typeof(SecretAuditListResult)
+            typeof(SecretAuditLogResult), typeof(SecretAuditListResult),
+            typeof(CaptchaConfigResult)
         ];
 
         [Theory]

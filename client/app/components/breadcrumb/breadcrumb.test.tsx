@@ -49,6 +49,41 @@ describe("PageBreadcrumb", () => {
     expect(current.getAttribute("aria-current")).toBe("page");
   });
 
+  it("uses the standard 14px (text-sm) size on the list and current segment, current segment is font-medium", () => {
+    renderCrumb();
+    const list = document.querySelector("ol");
+    expect(list?.className).toContain("text-sm");
+    expect(list?.className).not.toContain("text-base");
+    expect(list?.className).not.toContain("text-lg");
+    const current = screen.getByText("Dashboard");
+    expect(current.className).toContain("font-medium");
+    expect(current.className).not.toContain("text-low-emphasis");
+  });
+
+  it("renders non-current links in muted-foreground with hover/focus styling", () => {
+    renderCrumb();
+    const rolesLink = screen.getByRole("link", { name: "Roles" });
+    expect(rolesLink.className).toContain("text-muted-foreground");
+    expect(rolesLink.className).toContain("hover:text-foreground");
+    expect(rolesLink.className).toContain("focus-visible:ring-ring");
+  });
+
+  it("renders the separator chevron at size-4 (16px)", () => {
+    renderCrumb();
+    const separators = document.querySelectorAll('[role="presentation"]');
+    expect(separators.length).toBeGreaterThan(0);
+    separators.forEach((sep) => {
+      expect(sep.className).toContain("[&>svg]:size-4");
+    });
+  });
+
+  it("keeps the breadcrumb hidden on small viewports (hidden md:flex)", () => {
+    renderCrumb();
+    const nav = screen.getByLabelText("breadcrumb");
+    expect(nav.className).toContain("hidden");
+    expect(nav.className).toContain("md:flex");
+  });
+
   it("renders a disabled segment as a page instead of a link", () => {
     renderCrumb({ disabledHrefs: ["/app/p1/iam/permission-detail"] });
     // The disabled middle segment renders as a BreadcrumbPage span, not an anchor.

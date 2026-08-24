@@ -19,7 +19,7 @@ export const OrganizationConfig = ({ trigger }: OrganizationConfigProps) => {
   const to = `${scoped("iam/settings")}?settingsTab=organization-config`;
 
   const defaultTrigger = (
-    <Button size="sm" variant="secondary" className="gap-2">
+    <Button size="sm" variant="outline" className="gap-2">
       <Settings2 className="h-4 w-4" />
       <span className="sr-only sm:not-sr-only">Configure Organization</span>
     </Button>

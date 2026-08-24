@@ -82,6 +82,7 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
     page: 0,
     pageSize: 1000,
     projectKey: tenantId,
+    enabled: open,
   });
   const { data: configData, isLoading: isConfigLoading } = useGetOrganizationConfig(tenantId);
   const isMultiOrgEnabled = configData?.isMultiOrgEnabled ?? true;
