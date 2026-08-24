@@ -1,3 +1,4 @@
+import { CheckboxTree } from "./checkbox-tree/checkbox-tree";
 import { DateRange } from "./date-range/date-range";
 import { DropdownSearchInput } from "./dropdown-search-input/dropdown-search-input";
 import { MultiSelect } from "./multi-select/multi-select";
@@ -8,6 +9,7 @@ import { SortHeader } from "./sort-header/sort-header";
 
 export const FilterControls = {
   Radio,
+  CheckboxTree,
   MultiSelect,
   SearchInput,
   DropdownSearchInput,
