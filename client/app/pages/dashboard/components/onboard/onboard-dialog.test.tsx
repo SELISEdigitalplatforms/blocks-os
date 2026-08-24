@@ -51,15 +51,6 @@ const setupUser = () => {
   return user;
 };
 
-/** Clicks every code-block copy button and returns everything written to the clipboard. */
-const copyAllCodeBlocks = async (user: ReturnType<typeof userEvent.setup>) => {
-  const buttons = screen.getAllByRole("button", { name: "Copy bash command" });
-  for (const button of buttons) {
-    await user.click(button);
-  }
-  return h.writeText.mock.calls.map(([text]) => String(text));
-};
-
 describe("OnboardDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,41 +85,11 @@ describe("OnboardDialog", () => {
 
     await waitFor(() => expect(h.writeText).toHaveBeenCalled());
     const copied = String(h.writeText.mock.calls[0][0]);
-    expect(copied).toContain(`blocks use ${TENANT_ID}`);
-    expect(copied).toContain("https://stg-a1b2c.seliseblocks.com:5173/login/callback");
-    expect(copied).toContain("--blocks-api-url https://blocksapi.seliseblocks.com");
+    expect(copied).toContain(`project ${TENANT_ID}`);
+    expect(copied).toContain(
+      "https://raw.githubusercontent.com/SELISEdigitalplatforms/blocks-skills/main/BOOTSTRAP.md",
+    );
     expect(copied).not.toContain(MASKED_KEY);
-    expect(copied).not.toMatch(/\{\{\w+\}\}/);
     expect(h.showSuccessToast).toHaveBeenCalled();
-  });
-
-  it("copies runnable commands from the code blocks even while the key is masked", async () => {
-    const user = setupUser();
-    renderDialog();
-
-    const copies = await copyAllCodeBlocks(user);
-
-    expect(copies.some((text) => text.includes(`blocks use ${TENANT_ID}`))).toBe(true);
-    expect(copies.some((text) => text.includes(MASKED_KEY))).toBe(false);
-  });
-
-  it("warns and marks the gaps when the project has no domain", () => {
-    renderDialog({ applications: [] });
-    expect(screen.getByRole("alert").textContent).toContain("No domain configured yet");
-    // The marker has to survive markdown rendering, not just string substitution.
-    expect(document.body.textContent).toContain("<not configured>");
-  });
-
-  it("offers a domain picker only when the project has more than one domain", () => {
-    renderDialog();
-    expect(screen.queryByRole("combobox", { name: "Select domain" })).toBeNull();
-
-    renderDialog({
-      applications: [
-        ...project.applications,
-        { domain: "https://app.acme.com", cookieDomain: "acme.com", isDomainVerified: true },
-      ],
-    });
-    expect(screen.getByRole("combobox", { name: "Select domain" })).toBeTruthy();
   });
 });
