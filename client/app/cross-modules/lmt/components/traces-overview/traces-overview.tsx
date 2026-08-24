@@ -40,6 +40,32 @@ type TracesOverviewProps = {
   projectKey: string;
 };
 type TraceFilter = { search: string; services: string[] };
+/**
+ * The service filter renders the same checkbox tree the logs page uses: a blocks
+ * service is a parent (its key) and its API/worker collections are the children,
+ * keyed "<serviceKey>::<collectionName>". A registered service has no children, so
+ * its own value is already the collection name.
+ */
+type ServiceOption = {
+  label: string;
+  value: string;
+  children?: { label: string; value: string }[];
+};
+const COMPONENT_PREFIX = "::";
+/** Checkbox-tree option values -> the collection names the traces API filters on. */
+const treeValuesToServiceNames = (treeValues: string[], options: ServiceOption[]) => {
+  const names = treeValues.flatMap((treeValue) => {
+    const [parent, component] = treeValue.split(COMPONENT_PREFIX);
+    if (component) return [component];
+    const option = options.find((item) => item.value === parent);
+    // Values whose service is not (yet) in the list are dropped rather than sent as-is.
+    if (!option) return [];
+    return option.children?.length
+      ? option.children.map((child) => child.value.split(COMPONENT_PREFIX)[1])
+      : [option.value];
+  });
+  return [...new Set(names)];
+};
 const useTracesFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
     search: parseAsString.withDefault(""),
@@ -83,12 +109,12 @@ const LoadingSkelton = () => (
 function TracesList({
   data,
   isLoading,
-  services,
+  serviceLabels,
   hasActiveFilter,
 }: {
   data: TraceTree[];
   isLoading: boolean;
-  services: { label: string; value: string }[];
+  serviceLabels: Map<string, string>;
   hasActiveFilter: boolean;
 }) {
   const { sortQueryParams, setSortQueryParams } = useTraceSortQueryParams();
@@ -128,14 +154,11 @@ function TracesList({
             onChange={setSortQueryParams}
           />
         ),
-        cell: ({ row }) => {
-          const service = services.find((item) => item.value === row.original.serviceName);
-          return (
-            <div className="ml-2 flex items-center sm:ml-0 sm:w-[180px]">
-              {service?.label || row.original.serviceName}
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <div className="ml-2 flex items-center sm:ml-0 sm:w-[180px]">
+            {serviceLabels.get(row.original.serviceName) || row.original.serviceName}
+          </div>
+        ),
       },
       {
         accessorKey: "duration",
@@ -169,7 +192,7 @@ function TracesList({
         },
       },
     ],
-    [services, setSortQueryParams, sortQueryParams],
+    [serviceLabels, setSortQueryParams, sortQueryParams],
   );
   const table = useReactTable({
     data,
@@ -242,6 +265,53 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     enabled: !!projectKey,
   });
   const { data: blocksServicesData } = useGetBlocksServices();
+  const serviceOptions = useMemo<ServiceOption[]>(() => {
+    const blocksServices = [...(blocksServicesData ?? [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((service) => ({
+        label: service.label,
+        value: service.key,
+        children: [
+          { label: "API", value: `${service.key}${COMPONENT_PREFIX}${service.apiServiceName}` },
+          // A raw technical name is used instead of a guessed friendly label
+          // whenever a service has more than one worker (only "OS" does today),
+          // since there's no reliable way to tell them apart otherwise.
+          ...service.workerServiceNames.map((name) => ({
+            label: service.workerServiceNames.length > 1 ? name : "Worker",
+            value: `${service.key}${COMPONENT_PREFIX}${name}`,
+          })),
+        ],
+      }));
+    const registered = (registeredServices?.data ?? []).map((service) => ({
+      label: service.name,
+      value: service.serviceId,
+    }));
+    const merged: ServiceOption[] = [...blocksServices, ...registered];
+    return merged.filter(
+      (item, index, array) => array.findIndex((value) => value.value === item.value) === index,
+    );
+  }, [blocksServicesData, registeredServices?.data]);
+  // The trace table's Service column shows a raw collection name (an api or a worker
+  // one), so labels are resolved from a name -> label map rather than from the tree
+  // options, whose child labels are only meaningful inside their own group.
+  const serviceLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const service of registeredServices?.data ?? []) {
+      labels.set(service.serviceId, service.name);
+    }
+    // Blocks services are written last so they win a name collision, as before.
+    for (const service of blocksServicesData ?? []) {
+      labels.set(service.apiServiceName, service.label);
+      for (const name of service.workerServiceNames) {
+        labels.set(name, service.workerServiceNames.length > 1 ? name : `${service.label} Worker`);
+      }
+    }
+    return labels;
+  }, [blocksServicesData, registeredServices?.data]);
+  const selectedServiceNames = useMemo(
+    () => treeValuesToServiceNames(queryParams.services, serviceOptions),
+    [queryParams.services, serviceOptions],
+  );
   const { data, isLoading, isFetching } = useGetTraces({
     page: queryParams.page,
     pageSize: queryParams.pageSize,
@@ -249,45 +319,11 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     search: queryParams.search,
     sort: sortQueryParams,
     filter: {
-      services: queryParams.services,
+      services: selectedServiceNames,
       excepts: ["blocks-lmt-api"],
     },
   });
   const loading = isLoading || isFetching;
-  const allServices = useMemo(() => {
-    const blocksServices = (blocksServicesData ?? []).map((service) => ({
-      label: service.label,
-      value: service.apiServiceName,
-      // A raw technical name is used instead of a guessed friendly label
-      // whenever a service has more than one worker (only "OS" does today),
-      // since there's no reliable way to tell them apart otherwise.
-      children: service.workerServiceNames.map((name) => ({
-        label: service.workerServiceNames.length > 1 ? name : `${service.label} Worker`,
-        value: name,
-      })),
-    }));
-    const registered = registeredServices?.data || [];
-    const merged: { label: string; value: string; children?: { label: string; value: string }[] }[] = [
-      ...blocksServices,
-      ...registered.map((service) => ({
-        label: service.name,
-        value: service.serviceId,
-      })),
-    ];
-    return merged.filter(
-      (item, index, array) => array.findIndex((value) => value.value === item.value) === index,
-    );
-  }, [blocksServicesData, registeredServices?.data]);
-  // Flattened for label lookups (the trace table's Service column), since a
-  // trace row's serviceName can be a worker's raw name, not just the api one.
-  const flatServices = useMemo(
-    () =>
-      allServices.flatMap((service) => [
-        { label: service.label, value: service.value },
-        ...(service.children ?? []),
-      ]),
-    [allServices],
-  );
   const pageChangeHandler = (page: number) => {
     setQueryParams((params) => ({ ...params, page }));
   };
@@ -307,8 +343,7 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     }));
   };
   const resetHandler = () => setQueryParams(null);
-  const hasActiveFilter =
-    queryParams.search.trim().length > 0 || queryParams.services.length > 0;
+  const hasActiveFilter = queryParams.search.trim().length > 0 || queryParams.services.length > 0;
   return (
     <main>
       <Tabs
@@ -403,9 +438,9 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
                   { key: "search", type: "SearchInput", label: "" },
                   {
                     key: "services",
-                    type: "MultiSelect",
+                    type: "CheckboxTree",
                     label: "Service",
-                    props: { options: allServices },
+                    props: { options: serviceOptions },
                   },
                 ]}
                 values={{
@@ -419,11 +454,11 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
             </CardHeader>
             <CardContent>
               <TracesList
-              data={data?.data || []}
-              isLoading={loading}
-              services={flatServices}
-              hasActiveFilter={hasActiveFilter}
-            />
+                data={data?.data || []}
+                isLoading={loading}
+                serviceLabels={serviceLabels}
+                hasActiveFilter={hasActiveFilter}
+              />
               {!loading && data && data.totalCount > queryParams.pageSize && (
                 <div className="mt-5 flex items-center md:justify-end">
                   <Pagination

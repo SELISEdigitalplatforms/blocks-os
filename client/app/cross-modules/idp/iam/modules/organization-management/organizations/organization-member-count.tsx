@@ -8,7 +8,7 @@ export const useOrganizationMemberCount = (organizationId: string) => {
     page: 0,
     pageSize: 1,
     projectKey: tenantId,
-    filter: { email: "", name: "", organizationId },
+    filter: { email: "", name: "", organizationIds: [organizationId] },
   });
   return { count: data?.totalCount ?? 0, isLoading: isLoading || isFetching };
 };

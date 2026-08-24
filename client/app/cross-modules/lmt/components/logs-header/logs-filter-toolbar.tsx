@@ -1,17 +1,17 @@
 import { FilterItem, FilterToolbar } from "@/components/filter-toolbar";
 import { useContext, useMemo } from "react";
 import { LogsViewerContext } from "../logs-viewer";
-import { LOG_LEVEL } from "../../utils";
+import { LOG_LEVEL, serviceKeyToTreeValues } from "../../utils";
 
 type LogsFilterValues = {
   search?: string;
   level?: string;
-  service: string;
+  service: string[];
   date: { from?: Date; to?: Date } | null;
 };
 
 export const LogsFilterToolbar = () => {
-  const { services, serviceFilterValue, changeService, filter, setFilter, resetFilter } =
+  const { services, serviceFilterValue, changeServices, filter, setFilter, resetFilter } =
     useContext(LogsViewerContext);
   const { level, startDate, endDate, search } = filter || {
     level: "",
@@ -42,18 +42,19 @@ export const LogsFilterToolbar = () => {
       endDate: to ? to.toISOString() : "",
     }));
   };
-  const handleServiceChange = (serviceKey: string) => {
-    const [serviceId, componentValue] = serviceKey.split("::");
-    const service = services.find((s) => s.id === serviceId);
-    if (service) {
-      changeService(service, componentValue ?? null);
-    }
+  const handleServiceChange = (serviceKeys: string[] | null) => {
+    // Values for services that are no longer registered are dropped rather than
+    // written back into the URL.
+    const knownKeys = (serviceKeys ?? []).filter((key) =>
+      services.some((service) => service.id === key.split("::")[0]),
+    );
+    changeServices(knownKeys);
   };
   const onChange = (
     key: keyof LogsFilterValues,
     value: LogsFilterValues[keyof LogsFilterValues],
   ) => {
-    if (key === "service") return handleServiceChange(value as string);
+    if (key === "service") return handleServiceChange(value as string[] | null);
     if (key === "date") return updateDate(value as { from?: Date; to?: Date } | null);
     return updateFilter(key as keyof typeof filter, value);
   };
@@ -62,7 +63,7 @@ export const LogsFilterToolbar = () => {
     () => ({
       search: "",
       level: "",
-      service: "",
+      service: [],
       date: null,
     }),
     [], // static — never changes
@@ -72,7 +73,7 @@ export const LogsFilterToolbar = () => {
     () => ({
       search,
       level,
-      service: serviceFilterValue,
+      service: serviceKeyToTreeValues(serviceFilterValue),
       date:
         startDate || endDate
           ? {
@@ -84,15 +85,32 @@ export const LogsFilterToolbar = () => {
     [search, level, serviceFilterValue, startDate, endDate], // re-compute only when these change
   );
 
-  // Check if only the service is changed from defaults
-  const isOnlyServiceChanged = useMemo(() => {
+  // The whole first service is what the page starts on, so that selection counts as
+  // "no service filter applied" for the Reset button.
+  const defaultServiceSelection = useMemo(
+    () => (services.length > 0 ? [services[0].id] : []),
+    [services],
+  );
+
+  // The Reset button is offered as soon as anything — the service selection included —
+  // differs from what the page opens with.
+  const isPristine = useMemo(() => {
     const searchChanged = currentValues.search !== defaultValues.search;
     const levelChanged = currentValues.level !== defaultValues.level;
     const dateChanged =
       (currentValues.date?.from?.getTime() ?? 0) !== (defaultValues.date?.from?.getTime() ?? 0) ||
       (currentValues.date?.to?.getTime() ?? 0) !== (defaultValues.date?.to?.getTime() ?? 0);
-    return !searchChanged && !levelChanged && !dateChanged;
-  }, [currentValues, defaultValues]);
+    const serviceChanged =
+      currentValues.service.length !== defaultServiceSelection.length ||
+      currentValues.service.some((value, index) => value !== defaultServiceSelection[index]);
+    return !searchChanged && !levelChanged && !dateChanged && !serviceChanged;
+  }, [currentValues, defaultValues, defaultServiceSelection]);
+
+  const handleReset = () => {
+    resetFilter();
+    // An empty selection puts the service filter back on the whole first service.
+    changeServices([]);
+  };
 
   // ✅ Use FilterItem<LogsFilterValues> directly — it's already the right discriminated union
   const filters: FilterItem<LogsFilterValues>[] = [
@@ -100,7 +118,7 @@ export const LogsFilterToolbar = () => {
     { key: "date", type: "DateRange", label: "Date", props: {} },
     {
       key: "service",
-      type: "Radio",
+      type: "CheckboxTree",
       label: "Service",
       props: { options: serviceOptions },
     },
@@ -118,8 +136,8 @@ export const LogsFilterToolbar = () => {
       values={currentValues}
       defaultValues={defaultValues}
       onChange={onChange}
-      onReset={resetFilter}
-      hideGlobalResetButton={isOnlyServiceChanged}
+      onReset={handleReset}
+      hideGlobalResetButton={isPristine}
     />
   );
 };
