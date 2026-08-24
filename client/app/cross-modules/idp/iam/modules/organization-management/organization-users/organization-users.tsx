@@ -33,7 +33,7 @@ export const OrganizationUsers = ({
     filter: {
       email: queryParams.email,
       name: queryParams.name,
-      organizationId: organizationId,
+      organizationIds: [organizationId],
     },
     sort: sortQueryParams,
   });
