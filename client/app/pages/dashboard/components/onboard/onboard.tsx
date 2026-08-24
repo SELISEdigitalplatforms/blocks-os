@@ -22,7 +22,7 @@ export const OnboardProject = () => {
         onClick={() => setOpen(true)}
       >
         <Rocket className="h-4 w-4" />
-        <span className="sr-only sm:not-sr-only">Onboard</span>
+        <span className="sr-only sm:not-sr-only">Bootstrap</span>
       </Button>
       <OnboardDialog open={open} onOpenChange={setOpen} project={data?.data} />
     </>

@@ -15,10 +15,8 @@ vi.mock("@seliseblocks/genesis-os/utils", () => ({
 }));
 
 import { OnboardDialog } from "./onboard-dialog";
-import { maskValue } from "./onboard-guide";
 
 const TENANT_ID = "tenant-key-123456";
-const MASKED_KEY = maskValue(TENANT_ID);
 
 const project = {
   name: "Acme App",
@@ -51,15 +49,6 @@ const setupUser = () => {
   return user;
 };
 
-/** Clicks every code-block copy button and returns everything written to the clipboard. */
-const copyAllCodeBlocks = async (user: ReturnType<typeof userEvent.setup>) => {
-  const buttons = screen.getAllByRole("button", { name: "Copy bash command" });
-  for (const button of buttons) {
-    await user.click(button);
-  }
-  return h.writeText.mock.calls.map(([text]) => String(text));
-};
-
 describe("OnboardDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -67,25 +56,16 @@ describe("OnboardDialog", () => {
     Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
   });
 
-  it("renders the resolved values in the brief, with the key masked by default", () => {
+  it("renders the brief with the project key filled in", () => {
     renderDialog();
     const rendered = () => document.body.textContent ?? "";
-    expect(rendered()).toContain(MASKED_KEY);
-    expect(rendered()).not.toContain(TENANT_ID);
-    expect(rendered()).toContain("https://stg-a1b2c.seliseblocks.com");
-    expect(rendered()).toContain("https://blocksapi.seliseblocks.com");
+    expect(rendered()).toContain(TENANT_ID);
+    expect(rendered()).toContain(
+      "https://raw.githubusercontent.com/SELISEdigitalplatforms/blocks-skills/main/BOOTSTRAP.md",
+    );
   });
 
-  it("reveals the key on demand", async () => {
-    const user = setupUser();
-    renderDialog();
-    await user.click(screen.getByRole("button", { name: "Show project key" }));
-    expect(document.body.textContent).toContain(TENANT_ID);
-    await user.click(screen.getByRole("button", { name: "Hide project key" }));
-    expect(document.body.textContent).not.toContain(TENANT_ID);
-  });
-
-  it("copies the fully resolved brief, with the real key, while it is masked on screen", async () => {
+  it("copies the fully resolved brief with the real key", async () => {
     const user = setupUser();
     renderDialog();
 
@@ -93,61 +73,10 @@ describe("OnboardDialog", () => {
 
     await waitFor(() => expect(h.writeText).toHaveBeenCalled());
     const copied = String(h.writeText.mock.calls[0][0]);
-    expect(copied).toContain(`blocks use ${TENANT_ID}`);
-    expect(copied).toContain("https://stg-a1b2c.seliseblocks.com:5173/login/callback");
-    expect(copied).toContain("--blocks-api-url https://blocksapi.seliseblocks.com");
-    expect(copied).not.toContain(MASKED_KEY);
-    expect(copied).not.toMatch(/\{\{\w+\}\}/);
+    expect(copied).toContain(`project ${TENANT_ID}`);
+    expect(copied).toContain(
+      "https://raw.githubusercontent.com/SELISEdigitalplatforms/blocks-skills/main/BOOTSTRAP.md",
+    );
     expect(h.showSuccessToast).toHaveBeenCalled();
-  });
-
-  it("copies runnable commands from the code blocks even while the key is masked", async () => {
-    const user = setupUser();
-    renderDialog();
-
-    const copies = await copyAllCodeBlocks(user);
-
-    expect(copies.some((text) => text.includes(`blocks use ${TENANT_ID}`))).toBe(true);
-    expect(copies.some((text) => text.includes(MASKED_KEY))).toBe(false);
-  });
-
-  it("warns and marks the gaps when the project has no domain", () => {
-    renderDialog({ applications: [] });
-    expect(screen.getByRole("alert").textContent).toContain("No domain configured yet");
-    // The marker has to survive markdown rendering, not just string substitution.
-    expect(document.body.textContent).toContain("<not configured>");
-  });
-
-  it("offers a domain picker only when the project has more than one domain", () => {
-    renderDialog();
-    expect(screen.queryByRole("combobox", { name: "Select domain" })).toBeNull();
-
-    renderDialog({
-      applications: [
-        ...project.applications,
-        { domain: "https://app.acme.com", cookieDomain: "acme.com", isDomainVerified: true },
-      ],
-    });
-    expect(screen.getByRole("combobox", { name: "Select domain" })).toBeTruthy();
-  });
-
-  it("downloads the brief as a markdown file named after the project", async () => {
-    const user = setupUser();
-    const createObjectURL = vi.fn().mockReturnValue("blob:onboarding");
-    const revokeObjectURL = vi.fn();
-    Object.defineProperty(URL, "createObjectURL", { value: createObjectURL, configurable: true });
-    Object.defineProperty(URL, "revokeObjectURL", { value: revokeObjectURL, configurable: true });
-    const clickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(function mockClick(this: HTMLAnchorElement) {
-        expect(this.download).toBe("blocks-onboarding-acme-app.md");
-      });
-
-    renderDialog();
-    await user.click(screen.getByRole("button", { name: /Download \.md/ }));
-
-    expect(clickSpy).toHaveBeenCalled();
-    expect(createObjectURL).toHaveBeenCalled();
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:onboarding");
   });
 });
