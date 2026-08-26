@@ -17,6 +17,7 @@
 	<PackageReference Include="SeliseBlocks.Genesis.OS" />
 	<PackageReference Include="SeliseBlocks.ConfigurationDriver" />
 	<PackageReference Include="SeliseBlocks.ReleaseDriver.OS" />
+	<PackageReference Include="Rollbar.NetCore.AspNet" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Cloud.DomainService\Cloud.DomainService.csproj" />

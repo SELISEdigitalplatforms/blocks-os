@@ -40,7 +40,9 @@ export type RuntimeKey =
   | "BLOCKS_MONITOR_CLIENT_ID"
   | "BLOCKS_RELEASE_CLIENT_ID"
   | "BLOCKS_STUDIO_CLIENT_ID"
-  | "BLOCKS_CNAME_BASE_URL";
+  | "BLOCKS_CNAME_BASE_URL"
+  | "BLOCKS_ROLLBAR_CLIENT_TOKEN"
+  | "BLOCKS_ROLLBAR_ENV";
 
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");

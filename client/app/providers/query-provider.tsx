@@ -2,6 +2,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { getQueryClient as getGenesisQueryClient } from "@seliseblocks/genesis-os/providers";
 import type * as React from "react";
+import { getRollbar } from "@/lib/rollbar";
+import { attachQueryErrorReporting } from "@/lib/query/report-query-errors";
 import { tenantScopedQueryKeyHashFn } from "@/lib/query/tenant-query-scope";
 import { TenantCacheBoundary } from "./tenant-cache-boundary";
 
@@ -32,6 +34,10 @@ export const getQueryClient = () => {
         queryKeyHashFn: tenantScopedQueryKeyHashFn,
       },
     });
+
+    // Subscribed once, alongside the defaults, and never detached: the client is an
+    // app-lifetime singleton, so there is nothing to clean up.
+    attachQueryErrorReporting(queryClient, getRollbar());
   }
   return queryClient;
 };

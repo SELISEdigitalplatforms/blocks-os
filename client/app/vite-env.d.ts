@@ -30,6 +30,8 @@ interface ImportMetaEnv {
   readonly BLOCKS_STUDIO_BASE_URL: string;
   readonly BLOCKS_STUDIO_CALLBACK_URL: string;
   readonly BLOCKS_CLOUD_DASHBOARD_URL: string;
+  readonly BLOCKS_ROLLBAR_CLIENT_TOKEN: string;
+  readonly BLOCKS_ROLLBAR_ENV: string;
 }
 
 interface ImportMeta {

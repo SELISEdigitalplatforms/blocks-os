@@ -26,6 +26,11 @@ builder.Configuration.AddMongoDbConfiguration(options =>
     options.CollectionName = "Secrets";
     options.SecretKey = "blocks-secret-os";
 });
+
+// After AddMongoDbConfiguration, so the access token can be seeded into the same "Secrets"
+// document as everything else. A missing token leaves Rollbar off rather than failing startup.
+RollbarSetup.Initialize(builder.Configuration, builder.Environment);
+
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 15 * 1024 * 1024; // 15 MB
@@ -37,6 +42,8 @@ services.AddHealthChecks();
 
 ApplicationConfigurations.ConfigureApi(services, serviceName);
 
+RollbarSetup.AddLogCapture(services, builder.Configuration);
+
 builder.Services.Configure<MvcOptions>(options =>
 {
     options.Conventions.Insert(0, new GlobalApiRoutePrefixConvention("api"));
@@ -44,6 +51,11 @@ builder.Services.Configure<MvcOptions>(options =>
     // Turns secret-domain exceptions into status codes. Registered here rather than inside
     // Blocks.Secrets so the package stays usable from workers with no HTTP pipeline.
     options.Filters.Add<SecretExceptionFilter>();
+
+    if (RollbarSetup.IsEnabled)
+    {
+        options.Filters.Add<RollbarExceptionFilter>();
+    }
 });
 
 var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
@@ -63,6 +75,9 @@ await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 
 var app = builder.Build();
+
+// Reports whether Rollbar came up, and surfaces its background delivery failures.
+RollbarSetup.AttachDiagnostics(app.Logger);
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -150,6 +165,8 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
         ["__BLOCKS_STUDIO_CLIENT_ID__"] = section["BLOCKS_STUDIO_CLIENT_ID"],
         ["__BLOCKS_CNAME_BASE_URL__"] = section["BLOCKS_CNAME_BASE_URL"],
         ["__BLOCKS_ALLOWED_SERVICES__"] = section["BLOCKS_ALLOWED_SERVICES"],
+        ["__BLOCKS_ROLLBAR_CLIENT_TOKEN__"] = section["BLOCKS_ROLLBAR_CLIENT_TOKEN"],
+        ["__BLOCKS_ROLLBAR_ENV__"] = section["BLOCKS_ROLLBAR_ENV"],
     };
 
     var files = Directory.EnumerateFiles(webRootPath, "*", SearchOption.AllDirectories)

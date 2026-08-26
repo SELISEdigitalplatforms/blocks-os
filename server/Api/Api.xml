@@ -98,6 +98,115 @@
         <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
         </member>
+        <member name="T:BlocksOs.Api.RollbarExceptionFilter">
+            <summary>
+            Reports controller faults to Rollbar. Never alters the response.
+            </summary>
+            <remarks>
+            A filter rather than middleware, because Genesis registers
+            <c>GlobalExceptionHandlerMiddleware</c> from <c>ConfigureMiddleware</c> -- the last middleware
+            in the pipeline, and therefore the innermost. It turns the exception into a response, so
+            nothing outside it ever sees the throw and Rollbar's own middleware would report almost
+            nothing. The MVC filter stage runs inside all of that, where the exception is still an
+            exception and the request-scoped <see cref="T:Blocks.Genesis.BlocksContext"/> is still resolvable.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.RollbarExceptionFilter.#ctor(Microsoft.Extensions.Logging.ILogger{BlocksOs.Api.RollbarExceptionFilter})">
+            <summary>Initializes a new instance of the <see cref="T:BlocksOs.Api.RollbarExceptionFilter"/> class.</summary>
+            <param name="logger">Used only to record a failure to reach Rollbar.</param>
+        </member>
+        <member name="P:BlocksOs.Api.RollbarExceptionFilter.Order">
+            <summary>
+            Runs as the outermost exception filter. Exception filters execute from the innermost
+            outward, so the lowest <c>Order</c> runs last -- which is what lets
+            <see cref="M:BlocksOs.Api.RollbarExceptionFilter.ShouldReport(Microsoft.AspNetCore.Mvc.Filters.ExceptionContext)"/> see whether another filter (e.g. <c>SecretExceptionFilter</c>)
+            already turned this exception into a deliberate status code.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.RollbarExceptionFilter.OnException(Microsoft.AspNetCore.Mvc.Filters.ExceptionContext)">
+            <summary>Reports the exception, then leaves the response exactly as it found it.</summary>
+            <param name="context">The exception context supplied by the MVC filter pipeline.</param>
+        </member>
+        <member name="M:BlocksOs.Api.RollbarExceptionFilter.ShouldReport(Microsoft.AspNetCore.Mvc.Filters.ExceptionContext)">
+            <summary>
+            Skips what would only be noise: client disconnects, and business rules another filter
+            deliberately answered with a 4xx. A handled exception that still resolves to 5xx -- a vault
+            outage surfaced as 502, say -- is a real fault and is reported.
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.RollbarSetup">
+            <summary>
+            Wires Rollbar error reporting into the host.
+            </summary>
+            <remarks>
+            Reporting is opt-in. With no <c>Rollbar:AccessToken</c> in configuration every member here is
+            a no-op, so developer machines and any environment that has not been seeded stay silent
+            instead of failing at startup. The token is expected to arrive from the Mongo "Secrets"
+            document (SecretKey "blocks-secret-os") like every other deploy-time value; see
+            <see cref="T:Program"/>.
+            <para>
+            Rollbar sits alongside the Genesis log pipeline (console/Mongo/LMT) rather than replacing it:
+            Genesis owns Serilog and it is the log store of record. Rollbar exists for alerting and
+            grouping, so it only ever receives faults.
+            </para>
+            </remarks>
+        </member>
+        <member name="F:BlocksOs.Api.RollbarSetup.ScrubFields">
+            <summary>
+            Header and payload names never sent to Rollbar. Rollbar scrubs a default set already;
+            these are the ones specific to this platform, and getting them wrong would ship tenant
+            credentials to a third party.
+            </summary>
+        </member>
+        <member name="P:BlocksOs.Api.RollbarSetup.IsEnabled">
+            <summary>
+            True once <see cref="M:BlocksOs.Api.RollbarSetup.Initialize(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Hosting.IHostEnvironment)"/> has found a token and brought Rollbar up. Callers must
+            check this before touching <see cref="T:Rollbar.RollbarLocator"/>, which throws when the
+            infrastructure was never initialised.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.RollbarSetup._environmentName">
+            <summary>The environment name reports are filed under, recorded so startup can log it.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.RollbarSetup.Initialize(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Hosting.IHostEnvironment)">
+            <summary>
+            Brings up the Rollbar singleton. Safe to call when unconfigured (does nothing) and safe to
+            call twice (the second call is ignored) -- the underlying infrastructure throws on
+            re-initialisation.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.RollbarSetup.AttachDiagnostics(Microsoft.Extensions.Logging.ILogger)">
+            <summary>
+            Says in the log whether reporting is on, and surfaces Rollbar's own delivery failures.
+            </summary>
+            <remarks>
+            Without this, a token with the wrong scope, a suspended token or a blocked egress route all
+            look identical from the outside: no items, no explanation. Rollbar transmits on a background
+            queue and swallows its own failures by design, so its internal event stream is the only
+            place those show up.
+            <para>
+            Call after the host is built, so this uses the real logger and lands in the Genesis
+            pipeline (console plus Mongo/LMT) rather than bypassing it.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.RollbarSetup.AddLogCapture(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Optionally forwards <see cref="F:Microsoft.Extensions.Logging.LogLevel.Error"/> and above from <c>ILogger</c> to Rollbar.
+            </summary>
+            <remarks>
+            Off unless <c>Rollbar:CaptureLogs</c> is true. <see cref="T:BlocksOs.Api.RollbarExceptionFilter"/> already
+            reports controller faults with a real exception and tenant context, and Genesis's
+            <c>GlobalExceptionHandlerMiddleware</c> logs those same faults -- so enabling both means two
+            Rollbar items per error. Turn this on to reach faults raised outside the MVC pipeline
+            (middleware, hosted services), accepting the duplicates.
+            <para>
+            Must be called after <c>ApplicationConfigurations.ConfigureApi</c>: Genesis calls
+            <c>ClearProviders()</c> when it installs Serilog, and logging-builder callbacks run in
+            registration order, so a provider added before that call would be dropped.
+            </para>
+            </remarks>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.
