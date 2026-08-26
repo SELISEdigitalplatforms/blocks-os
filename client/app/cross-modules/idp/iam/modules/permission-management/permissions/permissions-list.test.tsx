@@ -177,6 +177,33 @@ describe("PermissionsList", () => {
     await user.click(screen.getByText("Manage Billing"));
     expect(navigate).toHaveBeenCalledWith("/scoped/iam/permission-detail/perm-custom");
   });
+
+  it("renders an accessible card row and activates it with Enter and Space", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <PermissionsList permissions={[customPermission]} isLoading={false} />,
+    );
+    const row = screen.getByRole("button", { name: "Open permission Manage Billing" });
+
+    expect(row.getAttribute("tabindex")).toBe("0");
+    expect(row.className).toContain("rounded-xl");
+    expect(row.className).toContain("hover:border-primary/30");
+    expect(container.querySelector("table")).toBeNull();
+
+    row.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    expect(navigate).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses Badge variants for source without hardcoded color overrides", () => {
+    render(
+      <PermissionsList permissions={[customPermission, builtInPermission]} isLoading={false} />,
+    );
+    expect(screen.getByText("Custom").className).toContain("bg-primary");
+    expect(screen.getByText("Built In").className).toContain("bg-secondary");
+    expect(screen.getByText("Custom").className).not.toContain("!bg-");
+  });
 });
 
 describe("PermissionsList archive action", () => {
@@ -218,7 +245,7 @@ describe("PermissionsList archive action", () => {
     expect(archivePermission).not.toHaveBeenCalled();
   });
 
-  it("drops the open dialog rather than retargeting it when the list changes underneath", async () => {
+  it("keeps the open dialog targeted to the same permission when the list changes underneath", async () => {
     // See the roles-list counterpart: the row remounts and the confirmation closes, so Confirm can
     // never land on a permission the user did not choose.
     const other: IPermission = { ...customPermission, itemId: "perm-other", name: "Manage Users" };
@@ -232,7 +259,8 @@ describe("PermissionsList archive action", () => {
 
     rerender(<PermissionsList permissions={[customPermission]} isLoading={false} />);
 
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText(/Manage Billing will be archived/)).toBeTruthy();
     expect(archivePermission).not.toHaveBeenCalled();
   });
 
@@ -270,9 +298,7 @@ describe("PermissionsList archive action", () => {
     await user.click(trash());
     await user.click(screen.getByRole("button", { name: "Archive" }));
 
-    expect(archivePermission).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "perm-custom" }),
-    );
+    expect(archivePermission).toHaveBeenCalledWith(expect.objectContaining({ id: "perm-custom" }));
     expect(successToast).toHaveBeenCalled();
     expect(errorToast).not.toHaveBeenCalled();
     expect(screen.queryByText("Archive this permission?")).toBeNull();

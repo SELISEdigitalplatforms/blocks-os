@@ -119,7 +119,14 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   } = useGetIdentityProviderById(editId ?? "", open && isEditing);
 
   const editedProvider = providerResponse?.isSuccess ? providerResponse.data : undefined;
-  const isFormLoading = isEditing && isLoadingProvider;
+
+  // Tracks whether the form has actually been populated (via `reset()`) for the
+  // current open/edit target - not just whether the network request finished.
+  // Gating the skeleton on `isLoadingProvider` alone leaves a render in between
+  // (data arrived, but `reset()` hasn't run yet) where the form mounts with its
+  // still-blank defaults, which is what made "Provider Name" flash empty.
+  const [isFormReady, setIsFormReady] = useState(false);
+  const isFormLoading = isEditing && !isFormReady;
 
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
   const [showClientId, setShowClientId] = useState(false);
@@ -152,7 +159,10 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   }, [providerType, blocksOidcWellKnownUrl, setValue]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setIsFormReady(false);
+      return;
+    }
 
     if (!isEditing) {
       reset(BLANK_FORM);
@@ -161,10 +171,14 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
       setSelectedPermissions([]);
       setRequirePkce(false);
       setRedirectUrisError(null);
+      setIsFormReady(true);
       return;
     }
 
-    if (isLoadingProvider) return;
+    if (isLoadingProvider) {
+      setIsFormReady(false);
+      return;
+    }
 
     if (!providerResponse?.isSuccess || !editedProvider) {
       showErrorToast({
@@ -180,6 +194,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     setSelectedPermissions(toPermissionStubs(editedProvider.initialPermissions ?? []));
     setRequirePkce(!!editedProvider.requirePkce);
     setRedirectUrisError(null);
+    setIsFormReady(true);
   }, [open, isEditing, isLoadingProvider, providerResponse, editedProvider, reset, onOpenChange]);
 
   useEffect(() => {

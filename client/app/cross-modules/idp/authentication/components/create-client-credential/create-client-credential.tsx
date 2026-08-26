@@ -185,10 +185,7 @@ export const CreateClientCredential = ({
           >
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
-                  <KeyRound className="h-4 w-4" />
-                  General
-                </div>
+              
                 <FormField
                   control={form.control}
                   name="clientNameService"
@@ -302,7 +299,7 @@ export const CreateClientCredential = ({
                 )}
               />
             </div>
-            <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4 pr-12">
+            <DialogFooter className="shrink-0 px-6 py-4 pr-12">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel

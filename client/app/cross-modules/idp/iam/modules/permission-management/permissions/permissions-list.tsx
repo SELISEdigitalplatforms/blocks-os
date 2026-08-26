@@ -1,42 +1,31 @@
 import { FilterControls } from "@/components/filter-toolbar";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui-kits/table/table";
-import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { cn } from "@/lib/utils";
+import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
+import { useDeletePermission } from "@blocks-idp/iam/hooks/use-permission";
 import {
   IPermission,
   PERMISSION_SEVERITY_OPTIONS,
   PermissionSeverityLevel,
   ResourceType,
 } from "@blocks-idp/iam/models/permission";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useDeletePermission } from "@blocks-idp/iam/hooks/use-permission";
-import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
-import { Pencil } from "lucide-react";
-import { useMemo } from "react";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { KeyRound, Pencil } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
-type PermissionTableProps = {
-  permissions: IPermission[];
-  isLoading: boolean;
-};
+
+type PermissionTableProps = { permissions: IPermission[]; isLoading: boolean };
+
 const LoadingSkelton = () => (
-  <div className="grid w-full gap-2">
+  <div className="flex flex-col gap-3">
     {Array.from({ length: 5 }).map((_, index) => (
-      <Skeleton key={index} className="h-12 w-full rounded-xl" />
+      <Skeleton key={index} className="h-[72px] w-full rounded-xl" />
     ))}
   </div>
 );
+
 export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeverityLevel }) => {
   const config = PERMISSION_SEVERITY_OPTIONS.find((option) => option.value === severity);
   if (!config) return null;
@@ -46,30 +35,17 @@ export const PermissionSeverityBadge = ({ severity }: { severity: PermissionSeve
     </Badge>
   );
 };
-/**
- * Actions for one permission row.
- *
- * Same reasoning as the roles list: the mutation lives here so `isPending` is per row, and
- * stopPropagation is on the wrapper because the row navigates on click and the dialog's own
- * clicks bubble through the component tree despite rendering in a portal.
- *
- * The Archive action is shown for every row. Archiving a permission requires the caller to be
- * in the default organization, but no client-side signal for that exists, so a rejection is
- * surfaced as a mapped toast rather than the action being hidden.
- */
+
 const PermissionRowActions = ({ row }: { row: IPermission }) => {
   const { mutateAsync, isPending } = useDeletePermission();
   const scoped = useScopedPath();
-
   return (
     <div
-      className="flex"
+      className="flex justify-end"
       role="presentation"
       onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
     >
-      {/* The Link is scoped, not the hard-coded /app/iam path it used to carry: the row's own
-          onClick navigated via scoped() and picked up the tenant prefix, and the wrapper above
-          now stops that click from ever reaching the row. */}
       {!row.isBuiltIn && (
         <Link to={scoped(`iam/permission-detail/${row.itemId}`)}>
           <Button
@@ -92,240 +68,112 @@ const PermissionRowActions = ({ row }: { row: IPermission }) => {
     </div>
   );
 };
+
 export const PermissionsList = ({ permissions, isLoading }: PermissionTableProps) => {
   const { sortQueryParams, setSortQueryParams } = usePermissionsSortQuaryParams();
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  const columns = useMemo<ColumnDef<IPermission>[]>(
-    () => [
-      {
-        id: "name",
-        accessorFn: (row) => `${row.name}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            label="Name"
-            id="Name"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: (permission) => (
-          <div
-            className="flex w-[200px] items-center break-all"
-            title={permission.row.original.name}
-          >
-            <span>{permission.row.original.name}</span>
+  const openPermission = (itemId: string) => navigate(scoped(`iam/permission-detail/${itemId}`));
+
+  if (isLoading) return <LoadingSkelton />;
+  if (!permissions.length) {
+    return (
+      <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-xl py-16 text-center text-sm text-muted-foreground">
+        <KeyRound className="h-6 w-6" />
+        No permission found. Please create new permission.
+      </div>
+    );
+  }
+
+  return (
+    <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
+      <div className="flex flex-col gap-3 md:min-w-[980px]">
+        <div className="hidden grid-cols-[minmax(220px,1fr)_110px_110px_110px_110px_88px] items-center gap-4 px-4 md:grid">
+          <div className="flex min-w-0 items-center gap-4">
+            <FilterControls.SortHeader
+              label="Name"
+              id="Name"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
+            <FilterControls.SortHeader
+              label="Resource"
+              id="Resource"
+              value={sortQueryParams}
+              onChange={setSortQueryParams}
+            />
           </div>
-        ),
-      },
-      {
-        id: "resource",
-        accessorFn: (row) => `${row.resource}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            label="Resource"
-            id="Resource"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: (permission) => (
-          <div className="flex w-[180px] items-center break-all">
-            <span>{permission.row.original.resource}</span>
-          </div>
-        ),
-      },
-      {
-        id: "isBuiltIn",
-        accessorFn: (row) => `${row.isBuiltIn}`.trim(),
-        header: () => {
-          return (
-            <div className="flex items-center">
-              <span className="font-bold text-medium-emphasis">Source</span>
-            </div>
-          );
-        },
-        cell: (permission) => (
-          <div className="flex w-[180px] items-center break-all">
-            <Badge
-              className={cn(
-                permission.row.original.isBuiltIn
-                  ? "!bg-gray-300 !text-gray-800"
-                  : "!bg-purple-100 !text-purple-700",
-              )}
-            >
-              {permission.row.original.isBuiltIn ? "Built In" : "Custom"}
-            </Badge>
-          </div>
-        ),
-      },
-      {
-        id: "Type",
-        accessorFn: (row) => `${row.type}`.trim(),
-        header: () => (
+          <span className="font-bold text-medium-emphasis">Source</span>
           <FilterControls.SortHeader
             label="Type"
             id="Type"
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
-        ),
-        cell: (permission) => {
-          const resourceTypeKey = permission.row.original.type as number;
-          const resourceName = ResourceType[resourceTypeKey] as string;
+          <span className="font-bold text-medium-emphasis">Severity</span>
+          <span className="font-bold text-medium-emphasis">No of Roles</span>
+          <span />
+        </div>
+
+        {permissions.map((permission) => {
+          const resourceName = ResourceType[permission.type] as string;
           return (
-            <div className="flex w-[150px] items-center">
-              <span>{resourceName}</span>
+            <div
+              key={permission.itemId}
+              role="button"
+              aria-label={`Open permission ${permission.name}`}
+              tabIndex={0}
+              onClick={() => openPermission(permission.itemId)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openPermission(permission.itemId);
+                }
+              }}
+              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-none transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:grid-cols-[minmax(220px,1fr)_110px_110px_110px_110px_88px] md:items-center md:gap-4"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <KeyRound className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="truncate text-sm font-semibold text-high-emphasis"
+                    title={permission.name}
+                  >
+                    {permission.name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground" title={permission.resource}>
+                    {permission.resource}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 md:block">
+                <span className="text-xs text-muted-foreground md:hidden">Source</span>
+                <Badge variant={permission.isBuiltIn ? "secondary" : "default"} className="w-fit">
+                  {permission.isBuiltIn ? "Built In" : "Custom"}
+                </Badge>
+              </div>
+              <div className="flex min-w-0 items-center justify-between gap-3 text-sm text-muted-foreground md:block">
+                <span className="text-xs md:hidden">Type</span>
+                <span className="block truncate">{resourceName}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 md:block">
+                <span className="text-xs text-muted-foreground md:hidden">Severity</span>
+                <PermissionSeverityBadge severity={permission.permissionSeverity} />
+              </div>
+              <div className="flex items-center justify-between gap-3 md:block">
+                <span className="text-xs text-muted-foreground md:hidden">No of Roles</span>
+                <Badge variant="secondary" className="w-fit">
+                  <span>{permission.roles.length}</span>&nbsp;
+                  {permission.roles.length === 1 ? "role" : "roles"}
+                </Badge>
+              </div>
+              <PermissionRowActions row={permission} />
             </div>
           );
-        },
-      },
-      {
-        id: "permissionSeverity",
-        accessorFn: (row) => `${row.permissionSeverity}`.trim(),
-        header: () => {
-          return (
-            <div className="flex items-center">
-              <span className="font-bold text-medium-emphasis">Severity</span>
-            </div>
-          );
-        },
-        cell: (permission) => {
-          return (
-            <div className="flex w-[70px] items-center justify-center">
-              <PermissionSeverityBadge severity={permission.row.original.permissionSeverity} />
-            </div>
-          );
-        },
-      },
-      {
-        id: "rolesCount",
-        accessorFn: (row) => `${row.roles.length}`.trim(),
-        header: () => {
-          return (
-            <div className="flex items-center">
-              <span className="font-bold text-medium-emphasis">No of Roles</span>
-            </div>
-          );
-        },
-        cell: (permission) => {
-          return (
-            <div className="flex w-[70px] items-center justify-end">
-              <span>{permission.row.original.roles.length}</span>
-            </div>
-          );
-        },
-      },
-      // {
-      //   id: "tags",
-      //   accessorFn: (row) => `${row.description}`.trim(),
-      //   header: () => {
-      //     return <div>Tags</div>;
-      //   },
-      //   cell: (tags) => (
-      //     <div className="flex max-w-[150px] flex-wrap gap-1">
-      //       {tags.row.original.tags.length > 0 && <Badge variant="secondary">{tags.row.original.tags[0]}</Badge>}
-      //       {tags.row.original.tags.length - 1 > 0 && (
-      //         <TooltipProvider>
-      //           <Tooltip>
-      //             <TooltipTrigger>
-      //               <Badge>{tags.row.original.tags.length - 1}+</Badge>
-      //             </TooltipTrigger>
-      //             <TooltipContent className="flex max-w-[200px] flex-wrap gap-2 p-1">
-      //               {tags.row.original.tags.slice(1).map((item, index) => (
-      //                 <Badge key={index} variant="secondary">
-      //                   {item}
-      //                 </Badge>
-      //               ))}
-      //             </TooltipContent>
-      //           </Tooltip>
-      //         </TooltipProvider>
-      //       )}
-      //     </div>
-      //   ),
-      // },
-      // {
-      //   id: "description",
-      //   accessorFn: (row) => `${row.description}`.trim(),
-      //   header: () => {
-      //     return (
-      //       <div className="flex items-center">
-      //         <span className="font-bold text-medium-emphasis">Description</span>
-      //       </div>
-      //     );
-      //   },
-      //   cell: (permission) => (
-      //     <div className="flex w-[200px]">
-      //       <span className="truncate text-sm lowercase text-medium-emphasis">
-      //         {permission.row.original.description}
-      //       </span>
-      //     </div>
-      //   ),
-      // },
-      {
-        id: "actions",
-        enableHiding: false,
-        cell: ({ row }) => <PermissionRowActions row={row.original} />,
-      },
-    ],
-    [setSortQueryParams, sortQueryParams],
-  );
-  const table = useReactTable({
-    data: permissions,
-    columns,
-    // Row identity by itemId rather than the default array index -- see the note on the roles
-    // table: correct per-row identity, not a fix for an observed wrong-row bug.
-    getRowId: (row) => row.itemId,
-    getCoreRowModel: getCoreRowModel(),
-  });
-  if (isLoading) return <LoadingSkelton />;
-  return (
-    <ScrollArea className="w-full">
-      <Table className="text-sm ">
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="px-4 py-3 hover:bg-transparent">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="font-bold text-medium-emphasis">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table?.getRowModel()?.rows?.length ? (
-            table?.getRowModel()?.rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && "selected"}
-                onClick={() => {
-                  navigate(scoped(`iam/permission-detail/${row.original.itemId}`));
-                }}
-                isHoverable
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No permission found. Please create new permission.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      <ScrollBar orientation="horizontal" />
-    </ScrollArea>
+        })}
+      </div>
+    </div>
   );
 };
