@@ -1,18 +1,8 @@
-import type { Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
 import { test, expect } from "../../support/test-base";
+import { openEmailManagement } from "../../support/os-helpers";
 
-const gotoEmailManagement = async (page: Page) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (!match) {
-    throw new Error("Not inside a project route; cannot open Email Management");
-  }
-  await page.goto(`${new URL(page.url()).origin}${match[0]}/email-management`);
-  await expect(page.getByRole("heading", { name: "Email Templates" })).toBeVisible({
-    timeout: 30000,
-  });
-};
+import type { Page } from "@playwright/test";
+
 
 const clickComboboxOption = async (page: Page, label: string | RegExp) => {
   const trigger = page.getByRole("combobox").filter({ hasText: label }).first();
@@ -34,16 +24,6 @@ const clickComboboxOption = async (page: Page, label: string | RegExp) => {
 // list -> clone a template (its own details flow) -> Incoming Mails -> open
 // a message's details -> Outgoing Mails.
 test.describe("flows", () => {
-  let projectName = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Email Management flow: view a template's details -> clone it -> incoming mail details -> outgoing tab", async ({
     page,
@@ -51,7 +31,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Email Management (Templates tab)", async () => {
-      await gotoEmailManagement(page);
+      await openEmailManagement(page);
       await expect(page.getByRole("tab", { name: "Templates" })).toHaveAttribute(
         "data-state",
         "active",
@@ -115,7 +95,7 @@ test.describe("flows", () => {
             await page.goBack();
           }
 
-          await gotoEmailManagement(page);
+          await openEmailManagement(page);
         } else {
           await page.keyboard.press("Escape");
         }
@@ -160,7 +140,7 @@ test.describe("flows", () => {
 
     await test.step("Delete the cloned template (clones, unlike built-ins, allow Delete)", async () => {
       if (!clonedTemplateName) return;
-      await gotoEmailManagement(page);
+      await openEmailManagement(page);
       const clonedRow = page.getByRole("row").filter({ hasText: clonedTemplateName });
       if (await clonedRow.isVisible({ timeout: 8000 }).catch(() => false)) {
         await clonedRow.getByRole("button").last().click();
@@ -183,7 +163,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Start the Add Template wizard, fill the basics, then abandon it (do not create a duplicate)", async () => {
-      await gotoEmailManagement(page);
+      await openEmailManagement(page);
       await page.getByRole("button", { name: "Add Template" }).click();
       await expect(page).toHaveURL(/email-management\/new-communication$/, { timeout: 15000 });
 
@@ -210,7 +190,7 @@ test.describe("flows", () => {
 
       // Navigate away instead of submitting — mirrors the caution the
       // existing per-feature spec takes around real mutations here.
-      await gotoEmailManagement(page);
+      await openEmailManagement(page);
     });
 
     await test.step("Navigate to Incoming Mails and open a message's details", async () => {
@@ -255,7 +235,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Navigate to Outgoing Mails", async () => {
-      await gotoEmailManagement(page);
+      await openEmailManagement(page);
       await page.getByRole("tab", { name: "Outgoing Mails" }).click();
       await expect(page.getByRole("heading", { name: "Outgoing Mails" })).toBeVisible({
         timeout: 15000,

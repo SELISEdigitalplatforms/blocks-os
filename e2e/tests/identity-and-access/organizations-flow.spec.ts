@@ -1,13 +1,5 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
-
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
-  }
-};
+import { test, expect } from "../../support/test-base";
+import { openIam } from "../../support/os-helpers";
 
 // Organizations flow: strict validation on Add Organization, create one,
 // then select it in the sidebar to open its workspace panel. A brand-new
@@ -16,16 +8,6 @@ const gotoIamPath = async (page: Page, subpath: string) => {
 // enabled, same as settings-flow.spec.ts), otherwise the create steps below
 // would just silently no-op against the disabled notice.
 test.describe("flows", () => {
-  let projectName = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Organizations flow: strict validation -> create -> select in sidebar -> workspace panel", async ({
     page,
@@ -33,7 +15,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Enable Multi-Organization via IAM Settings", async () => {
-      await gotoIamPath(page, "settings");
+      await openIam(page, "settings", "Auth Configuration");
       await expect(page.getByRole("heading", { name: "Auth Configuration" })).toBeVisible({
         timeout: 30000,
       });
@@ -84,7 +66,7 @@ test.describe("flows", () => {
     await test.step("Navigate to Organizations", async () => {
       // "organization" (singular) is just a client-side redirect to the
       // canonical "organizations" route (router.tsx) — go straight there.
-      await gotoIamPath(page, "organizations");
+      await openIam(page, "organization", "Organizations");
       const searchInput = page.getByPlaceholder("Search organizations...").first();
       const disabledNotice = page.getByText("Multiple Organizations is not enabled").first();
       await expect(searchInput.or(disabledNotice)).toBeVisible({ timeout: 30000 });

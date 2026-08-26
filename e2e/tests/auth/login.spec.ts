@@ -1,19 +1,19 @@
-import { test, expect } from "../../support/test-base";
-import { e2eCredentials } from "../../support/env";
-import { loginThroughOidc } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base"
+import { e2eCredentials } from "../../support/env"
+import { loginThroughOidc } from "../../support/login-helper"
 
 test.describe("Authentication", () => {
   test.beforeAll(() => {
-    e2eCredentials();
-  });
+    e2eCredentials()
+  })
 
   test("logs in through dev-iam and lands on the console", async ({ page }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(120_000)
 
-    const holdMs = Number(process.env.E2E_HOLD_MS ?? 0);
-    if (holdMs > 0) test.setTimeout(holdMs + 120_000);
+    const holdMs = Number(process.env.E2E_HOLD_MS ?? 0)
+    if (holdMs > 0) test.setTimeout(holdMs + 120_000)
 
-    await loginThroughOidc(page);
+    await loginThroughOidc(page)
 
     // Assert the console actually rendered — not just that the route changed.
     // The page shows "Your Blocks Projects" (has projects) or the empty-state
@@ -22,19 +22,16 @@ test.describe("Authentication", () => {
       page.getByRole("heading", {
         name: /Your Blocks Projects|Welcome to SELISE Blocks/,
       }),
-    ).toBeVisible({ timeout: 20_000 });
+    ).toBeVisible({ timeout: 20_000 })
 
-    await page.getByRole("button", { name: "Open user menu" }).click();
-    await page.getByText("Log out").click();
-    await expect(page.getByRole("heading", { name: "blocks OS" })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Open user menu" }).click()
+    await page.getByText("Log out").click()
+    await expect(page.getByRole("heading", { name: "blocks OS" })).toBeVisible({ timeout: 30_000 })
 
-    // Persist the authenticated session for future specs to reuse.
-    await page.context().storageState({ path: "fixtures/auth.json" });
+    // Session for feature tests comes from os-setup (after shared project open).
 
-    // Optionally keep the browser open to inspect the result before it closes.
-    // e.g. E2E_HOLD_MS=120000 npm run test:headed
     if (holdMs > 0) {
-      await page.waitForTimeout(holdMs);
+      await page.waitForTimeout(holdMs)
     }
-  });
-});
+  })
+})

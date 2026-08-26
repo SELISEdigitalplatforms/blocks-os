@@ -1,6 +1,5 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openSecretManagement } from "../../support/os-helpers";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -13,13 +12,6 @@ import { ensureAuthenticated } from "../../support/login-helper";
 // is distinct from "Identity Provider" (route: secret-management/identity-providers),
 // which registers login providers instead. See identity-provider-flow.spec.ts
 // for that separate section.
-const gotoSecretManagementSection = async (page: Page, subpath: string, headingName: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/secret-management/${subpath}`);
-  }
-  await expect(page.getByRole("heading", { name: headingName })).toBeVisible({ timeout: 30000 });
-};
 
 // External IdP flow: a single continuous journey — the section starts empty,
 // "Save" stays disabled until the form is dirty, fill a Keycloak JWKS URL
@@ -31,16 +23,6 @@ const gotoSecretManagementSection = async (page: Page, subpath: string, headingN
 // well-known public JWKS endpoint (Google's) to get a real, stable pass
 // rather than a fabricated URL that would always fail validation.
 test.describe("flows", () => {
-  let projectName = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("External IdP flow: empty state -> strict validation -> create -> view -> edit", async ({
     page,
@@ -48,7 +30,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to External IdP", async () => {
-      await gotoSecretManagementSection(page, "external-idp", "External IdP");
+      await openSecretManagement(page, "external-idp", "External IdP");
     });
 
     await test.step("Empty state is shown before any provider is configured", async () => {

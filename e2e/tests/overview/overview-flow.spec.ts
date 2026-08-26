@@ -1,27 +1,15 @@
-import { test, expect } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openOsDashboard } from "../../support/os-helpers";
 
-// Overview flow: the dashboard page a reader lands on right after opening a
-// project's Development environment (pages/dashboard/dashboard-overview.tsx).
-// It shows the project name/env badge/X-Blocks-Key (ProjectOverview), the
-// Onboard/Delete actions (ProjectActions), a Domains section with strict
-// add-domain validation (domain-form.schema.ts), and a Repositories section.
-// createProject already leaves the page on this exact dashboard, so this
-// flow drives it in place rather than navigating again.
+// Overview flow: dashboard after opening the shared project's Development environment.
+// openOsDashboard leaves the page on this exact dashboard.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
+    await openOsDashboard(page);
   });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
-  test("Overview flow: project header -> onboard -> strict domain validation -> add -> delete domain", async ({
+  test("Overview flow: project header -> bootstrap -> strict domain validation -> add -> delete domain", async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -129,22 +117,22 @@ test.describe("flows", () => {
       await expect(page.getByText("X-Blocks-Key:")).toBeVisible({ timeout: 15000 });
     });
 
-    await test.step("Onboard action opens the AI-agent onboarding brief", async () => {
-      const onboardButton = page.getByRole("button", { name: "Onboard" });
-      const onboardHeading = page.getByRole("heading", { name: "Onboard with an AI agent" });
+    await test.step("Bootstrap action opens the AI-agent bootstrap brief", async () => {
+      const bootstrapButton = page.getByRole("button", { name: "Bootstrap" });
+      const bootstrapHeading = page.getByRole("heading", { name: "Bootstrap with an AI agent" });
 
       // The button is visible right as the dashboard finishes its own layout
       // shift (header/actions/domains/repos sections mounting in sequence),
       // so a click landing in that window can miss — wait for it to be stable
       // first, and retry once if the dialog still didn't open.
-      await expect(onboardButton).toBeVisible({ timeout: 10000 });
-      await onboardButton.click();
-      if (!(await onboardHeading.isVisible({ timeout: 8000 }).catch(() => false))) {
-        await onboardButton.click();
+      await expect(bootstrapButton).toBeVisible({ timeout: 10000 });
+      await bootstrapButton.click();
+      if (!(await bootstrapHeading.isVisible({ timeout: 8000 }).catch(() => false))) {
+        await bootstrapButton.click();
       }
-      await expect(onboardHeading).toBeVisible({ timeout: 10000 });
+      await expect(bootstrapHeading).toBeVisible({ timeout: 10000 });
       await page.keyboard.press("Escape");
-      await expect(onboardHeading).toBeHidden();
+      await expect(bootstrapHeading).toBeHidden();
     });
 
     await test.step("Delete action (project owner) is visible on Overview", async () => {

@@ -1,17 +1,9 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openSecretManagement } from "../../support/os-helpers";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
 // straight to the section's URL instead.
-const gotoSecretManagementSection = async (page: Page, subpath: string, headingName: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/secret-management/${subpath}`);
-  }
-  await expect(page.getByRole("heading", { name: headingName })).toBeVisible({ timeout: 30000 });
-};
 
 const openAddStorageDialog = async (page: Page) => {
   // The previous dialog's own submit button is also labeled "Add" (see
@@ -112,16 +104,6 @@ const saveDialogAndConfirmClosed = async (page: Page, providerLabel: string) => 
 // storage-contents.tsx ever triggers it — dead/unreachable code, not
 // something this e2e flow can exercise through the UI as it stands today.
 test.describe("flows", () => {
-  let projectName = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Storage flow: strict validation and successful save for every provider -> open a card's View Details drawer", async ({
     page,
@@ -129,7 +111,7 @@ test.describe("flows", () => {
     test.setTimeout(240_000);
 
     await test.step("Navigate to Storage", async () => {
-      await gotoSecretManagementSection(page, "storage", "Storage");
+      await openSecretManagement(page, "storage", "Storage");
       await expect(page.getByRole("button", { name: /add/i })).toBeVisible();
     });
 

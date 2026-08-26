@@ -1,27 +1,11 @@
 import { test, expect } from "../../support/test-base";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openProjectOverview } from "../../support/os-helpers";
 import { uniqueTestEmail } from "../../support/env";
 
 // People flow: strict validation on Invite, invite a fresh person into the
 // Development environment, open their details page, and remove their access
 // from the Environments tab.
 test.describe("flows", () => {
-  let projectName = "";
-  let tenantGroupId = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("People flow: strict validation -> invite -> open details -> remove environment access", async ({
     page,
@@ -29,8 +13,12 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Open People", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "people");
-      await expect(page.getByRole("heading", { name: "People" })).toBeVisible({ timeout: 30000 });
+      await openProjectOverview(page, "people");
+      // Invite only renders when the people API reports isOwner — wait for it
+      // (not just the heading) so a cold store / late fetch doesn't race Owner.
+      await expect(page.getByRole("button", { name: "Invite" })).toBeVisible({
+        timeout: 30000,
+      });
     });
 
     await test.step("The project owner appears in the list", async () => {
@@ -39,6 +27,9 @@ test.describe("flows", () => {
         // one reload clears it, same pattern used after a fresh invite below.
         await page.reload({ waitUntil: "domcontentloaded" });
         await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
+          timeout: 30000,
+        });
+        await expect(page.getByRole("button", { name: "Invite" })).toBeVisible({
           timeout: 30000,
         });
       }
@@ -262,7 +253,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Return to the People list", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "people");
+      await openProjectOverview(page, "people");
       await expect(page.getByRole("heading", { name: "People" })).toBeVisible({ timeout: 30000 });
     });
   });

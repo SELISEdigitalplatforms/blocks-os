@@ -1,70 +1,31 @@
-import { test, expect, Page } from "@playwright/test";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
-
-const gotoSecretManagementSection = async (page: Page, subpath: string, headingName: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/secret-management/${subpath}`);
-  }
-  await expect(page.getByRole("heading", { name: headingName })).toBeVisible({ timeout: 30000 });
-};
-
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
-  }
-};
+import { test, expect } from "../../support/test-base";
+import { openProjectOverview, openIam, openSecretManagement } from "../../support/os-helpers";
 
 // Client Credentials flow: create a credential with a bounded (5-120 min)
 // access-token lifetime and at least one role/permission — the Add button
 // stays disabled until the form is both dirty and valid — then reopen it
 // for editing.
 test.describe("flows", () => {
-  let projectName = "";
-  let tenantGroupId = "";
 
   test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-    // Hydrate the project store's tenantId on Environments first (same
-    // convention as people-flow.spec.ts) — the Add Client Credential
-    // dialog's Assign Role/Permissions pickers gate their own data fetch
-    // on tenantId being ready, and a direct page.goto() straight into
-    // Client Credentials can otherwise race that hydration.
-    await openProjectOverviewPage(page, tenantGroupId, "environments");
+    // Hydrate tenant store via Environments, then seed a role for Assign Role picker.
+    await openProjectOverview(page, "environments")
     await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
       timeout: 30000,
-    });
+    })
 
-    // A freshly created project has zero roles and zero permissions, and
-    // both are required (min 1) by createClientSchema in
-    // create-client-credential/utils.ts — create a role up front so the
-    // "Assign Role" picker has something to pick. (Permissions can't be
-    // pre-seeded the same way: creating a custom permission is a confirmed
-    // broken flow, see the test.fail() note below and
-    // identity-and-access/permissions-flow.spec.ts.)
-    await gotoIamPath(page, "role");
-    await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30000 });
-    await page.getByRole("button", { name: "Add Role" }).click();
-    await expect(page.getByRole("heading", { name: "Add Role" })).toBeVisible();
-    const roleSuffix = Date.now();
-    await page.getByPlaceholder("Enter name").fill(`Flow CC Role ${roleSuffix}`);
-    await page.getByPlaceholder("Enter slug").fill(`flow-cc-role-${roleSuffix}`);
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await openIam(page, "role", "Roles")
+    await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30000 })
+    await page.getByRole("button", { name: "Add Role" }).click()
+    await expect(page.getByRole("heading", { name: "Add Role" })).toBeVisible()
+    const roleSuffix = Date.now()
+    await page.getByPlaceholder("Enter name").fill(`Flow CC Role ${roleSuffix}`)
+    await page.getByPlaceholder("Enter slug").fill(`flow-cc-role-${roleSuffix}`)
+    await page.getByRole("button", { name: "Add", exact: true }).click()
     await expect(page.getByText("Role added successfully"))
       .toBeVisible({ timeout: 15000 })
-      .catch(() => {});
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
+      .catch(() => {})
+  })
 
   test.fail(
     true,
@@ -76,7 +37,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Client Credentials", async () => {
-      await gotoSecretManagementSection(page, "client-credentials", "Client Credentials");
+      await openSecretManagement(page, "client-credentials", "Client Credentials");
     });
 
     await test.step("A fresh project starts with no client credentials", async () => {

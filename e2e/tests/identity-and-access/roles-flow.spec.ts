@@ -1,27 +1,9 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
-
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
-  }
-};
+import { test, expect } from "../../support/test-base";
+import { openIam } from "../../support/os-helpers";
 
 // Roles flow: strict validation on Add Role, create a role, open its
 // details page, and toggle Edit Permissions.
 test.describe("flows", () => {
-  let projectName = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Roles flow: strict validation -> create -> open details -> edit permissions", async ({
     page,
@@ -29,7 +11,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Roles", async () => {
-      await gotoIamPath(page, "role");
+      await openIam(page, "role", "Roles");
       await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30000 });
     });
 
@@ -80,7 +62,7 @@ test.describe("flows", () => {
       const searchInput = page.getByPlaceholder("Search...");
       if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await searchInput.fill(roleName);
-        await expect(page.getByRole("row").filter({ hasText: roleName }).first())
+        await expect(page.getByRole("button", { name: `Edit role ${roleName}` }))
           .toBeVisible({ timeout: 8000 })
           .catch(() => {});
         await searchInput.fill("");
@@ -129,17 +111,19 @@ test.describe("flows", () => {
         await expect(page).toHaveURL(/[?&]page=1/, { timeout: 8000 }).catch(() => {});
         // Reset back to page 0 so the later steps (which locate the new role
         // by name without re-searching) still find it regardless of sort order.
-        await gotoIamPath(page, "role");
+        await openIam(page, "role", "Roles");
         await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30000 });
       }
     });
 
-    const roleRow = page.getByRole("row").filter({ hasText: roleName });
     const updatedRoleName = `${roleName} Updated`;
 
     await test.step("Edit the role's name and description via the row's Edit action", async () => {
-      await expect(roleRow).toBeVisible({ timeout: 15000 });
-      await roleRow.getByRole("button", { name: `Edit role ${roleName}` }).click();
+      // Roles list exposes each role as an "Open role …" control (not a table
+      // row) with nested Edit/Archive actions — match those aria-labels.
+      const editRoleButton = page.getByRole("button", { name: `Edit role ${roleName}` });
+      await expect(editRoleButton).toBeVisible({ timeout: 15000 });
+      await editRoleButton.click();
       await expect(page.getByRole("heading", { name: "Update Role" })).toBeVisible();
 
       const nameInput = page.getByPlaceholder("Enter name");
@@ -151,18 +135,20 @@ test.describe("flows", () => {
       await expect(page.getByText("Role updated successfully"))
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
-      await expect(page.getByRole("row").filter({ hasText: updatedRoleName }).first()).toBeVisible({
+      await expect(page.getByRole("button", { name: `Edit role ${updatedRoleName}` })).toBeVisible({
         timeout: 15000,
       });
     });
 
     await test.step("Find the new role and open its details page", async () => {
-      await expect(roleRow).toBeVisible({ timeout: 15000 });
-      await roleRow.click();
+      const openRoleButton = page.getByRole("button", { name: `Open role ${updatedRoleName}` });
+      await expect(openRoleButton).toBeVisible({ timeout: 15000 });
+      // Click the name text so the nested Edit/Archive icon buttons are not hit.
+      await openRoleButton.locator("p").first().click();
       await expect(page)
         .toHaveURL(/\/iam\/role-detail\/.+/, { timeout: 15000 })
         .catch(() => {});
-      await expect(page.getByText(roleName).first()).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText(updatedRoleName).first()).toBeVisible({ timeout: 15000 });
     });
 
     await test.step("Toggle 'Edit Permissions' and discard without saving", async () => {
@@ -225,7 +211,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Archive the role via its row action", async () => {
-      await gotoIamPath(page, "role");
+      await openIam(page, "role", "Roles");
       await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30000 });
 
       const searchInput = page.getByPlaceholder("Search...");
@@ -233,9 +219,9 @@ test.describe("flows", () => {
         await searchInput.fill(updatedRoleName);
       }
 
-      const row = page.getByRole("row").filter({ hasText: updatedRoleName });
-      await expect(row).toBeVisible({ timeout: 15000 });
-      await row.getByRole("button", { name: `Archive role ${updatedRoleName}` }).click();
+      const archiveButton = page.getByRole("button", { name: `Archive role ${updatedRoleName}` });
+      await expect(archiveButton).toBeVisible({ timeout: 15000 });
+      await archiveButton.click();
 
       await expect(page.getByRole("heading", { name: "Archive this role?" })).toBeVisible();
       const consentCheckbox = page.getByRole("checkbox", { name: /Confirm removing this role/i });
@@ -250,7 +236,9 @@ test.describe("flows", () => {
       await expect(page.getByText("Role archived successfully"))
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
-      await expect(row).toHaveCount(0, { timeout: 15000 });
+      await expect(page.getByRole("button", { name: `Open role ${updatedRoleName}` })).toHaveCount(0, {
+        timeout: 15000,
+      });
     });
   });
 });
