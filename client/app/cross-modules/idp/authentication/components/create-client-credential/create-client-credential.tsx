@@ -185,10 +185,7 @@ export const CreateClientCredential = ({
           >
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
-                  <KeyRound className="h-4 w-4" />
-                  General
-                </div>
+              
                 <FormField
                   control={form.control}
                   name="clientNameService"
