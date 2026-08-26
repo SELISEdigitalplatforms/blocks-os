@@ -13,6 +13,7 @@ import { LogsList } from "../logs-list";
 import type { LogServiceIconKey } from "../../models/log-entry.model";
 import { useQueryState } from "nuqs";
 import type { RegisteredService } from "@/cross-modules/identifier/models/service.model";
+import { buildServiceKey, parseServiceKey, treeValuesToServiceKey } from "../../utils";
 
 export interface ServiceComponent {
   label: string;
@@ -37,9 +38,16 @@ export interface LogFilter {
 interface LogsViewerContextType {
   pageSize: number;
   services: Service[];
+  /** First entry of {@link selectedServices}; kept for consumers that need one service. */
   selectedService: Service | null;
+  /** Every checked service, each narrowed to its checked components. */
+  selectedServices: Service[];
+  /** Flat list of log collections to query across all selected services. */
+  selectedServiceNames: string[];
   serviceFilterValue: string;
-  changeService: (service: Service, componentValue?: string | null) => void;
+  changeService: (service: Service, componentValues?: string | string[] | null) => void;
+  /** Replaces the whole selection from checkbox-tree option values. */
+  changeServices: (treeValues: string[]) => void;
   filter: Partial<LogFilter> | null;
   setFilter: Dispatch<SetStateAction<Partial<LogFilter> | null>>;
   resetFilter: () => void;
@@ -54,8 +62,11 @@ interface LogsViewerContextType {
 const initialContextValue: LogsViewerContextType = {
   services: [],
   selectedService: null,
+  selectedServices: [],
+  selectedServiceNames: [],
   serviceFilterValue: "",
   changeService: () => {},
+  changeServices: () => {},
   pageSize: 0,
   filter: null,
   setFilter: () => {},
@@ -84,6 +95,14 @@ interface LogsViewerProps {
   isSourceBlocks?: boolean;
   isServicesLoading?: boolean;
 }
+// The collections a service covers: its checked components, or everything it owns.
+const serviceNamesOf = (service: Service) =>
+  service.serviceNames?.length
+    ? service.serviceNames
+    : service.serviceName
+      ? [service.serviceName]
+      : [];
+
 export const LogsViewer = ({
   pageSize = 20,
   services,
@@ -97,43 +116,71 @@ export const LogsViewer = ({
   isServicesLoading = false,
 }: LogsViewerProps) => {
   const defaultServiceId = services.length > 0 ? services[0].id : "";
-  // Encodes both the selected service and an optional narrowed component (e.g. its
-  // worker) as "<serviceId>" or "<serviceId>::<componentValue>", so picking a
-  // component doesn't need a second query param or a separate filter control.
+  // Encodes every selected service and its narrowed components in one param — see
+  // service-selection.util for the format — so picking services doesn't need extra
+  // query params or a separate filter control.
   const [serviceKey, setServiceKey] = useQueryState("service", {
     defaultValue: defaultServiceId,
   });
-  const [serviceId, componentValue] = useMemo(() => {
-    const [id, component] = serviceKey.split("::");
-    return [id, component || null];
-  }, [serviceKey]);
+  const selections = useMemo(() => parseServiceKey(serviceKey), [serviceKey]);
 
-  const baseSelectedService = useMemo(() => {
-    return services.find((s) => s.id === serviceId) || (services.length > 0 ? services[0] : null);
-  }, [services, serviceId]);
+  const selectedServices = useMemo(() => {
+    const resolved = selections
+      .map(({ serviceId, components }) => {
+        const service = services.find((s) => s.id === serviceId);
+        if (!service) return null;
+        const validComponents = (service.components ?? [])
+          .filter((component) => components.includes(component.value))
+          .map((component) => component.value);
+        return validComponents.length ? { ...service, serviceNames: validComponents } : service;
+      })
+      .filter((service): service is Service => service !== null);
+    // The list always needs at least one service to query.
+    if (resolved.length === 0) return services.length > 0 ? [services[0]] : [];
+    return resolved;
+  }, [selections, services]);
 
-  const selectedService = useMemo(() => {
-    if (!baseSelectedService) return null;
-    const isValidComponent = baseSelectedService.components?.some((c) => c.value === componentValue);
-    if (!isValidComponent) return baseSelectedService;
-    return { ...baseSelectedService, serviceNames: [componentValue as string] };
-  }, [baseSelectedService, componentValue]);
+  const selectedService = selectedServices[0] ?? null;
+  const selectedServiceNames = useMemo(
+    () => [...new Set(selectedServices.flatMap(serviceNamesOf))],
+    [selectedServices],
+  );
 
   const [filter, setFilter] = useState<Partial<LogFilter> | null>(null);
 
-  // Update serviceId when services change
+  // Drop services that no longer exist once the service list loads or changes.
   useEffect(() => {
     const newDefaultServiceId = services.length > 0 ? services[0].id : "";
-    if (newDefaultServiceId && !services.find((s) => s.id === serviceId)) {
+    if (!newDefaultServiceId) return;
+    const knownSelections = selections.filter((selection) =>
+      services.some((service) => service.id === selection.serviceId),
+    );
+    if (knownSelections.length === 0) {
       setServiceKey(newDefaultServiceId);
+      return;
     }
-  }, [services, serviceId, setServiceKey]);
+    if (knownSelections.length !== selections.length) {
+      setServiceKey(buildServiceKey(knownSelections));
+    }
+  }, [services, selections, setServiceKey]);
 
   const changeService = useCallback(
-    (service: Service, componentValue?: string | null) => {
-      setServiceKey(componentValue ? `${service.id}::${componentValue}` : service.id);
+    (service: Service, componentValues?: string | string[] | null) => {
+      const components = (
+        Array.isArray(componentValues) ? componentValues : [componentValues]
+      ).filter((component): component is string => !!component);
+      setServiceKey(buildServiceKey([{ serviceId: service.id, components }]));
     },
     [setServiceKey],
+  );
+
+  const changeServices = useCallback(
+    (treeValues: string[]) => {
+      // An empty selection falls back to the whole first service — the list always
+      // needs one service to query.
+      setServiceKey(treeValuesToServiceKey(treeValues) || defaultServiceId);
+    },
+    [defaultServiceId, setServiceKey],
   );
 
   const resetFilter = () => {
@@ -145,8 +192,11 @@ export const LogsViewer = ({
         pageSize,
         services,
         selectedService,
+        selectedServices,
+        selectedServiceNames,
         serviceFilterValue: serviceKey,
         changeService,
+        changeServices,
         filter,
         setFilter,
         resetFilter,
@@ -161,7 +211,10 @@ export const LogsViewer = ({
     >
       <div className={cn("flex flex-col gap-6", className)}>
         <LogsListHeader />
-        <LogsList key={selectedService?.id ?? "none"} />
+        {/* Deliberately not keyed on the selection: LogsList also renders the filter
+            toolbar, and remounting it would tear down an open filter popover on every
+            checkbox click. LogsList resets its own scroll list instead. */}
+        <LogsList />
       </div>
     </LogsViewerContext.Provider>
   );

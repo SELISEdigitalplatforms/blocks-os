@@ -27,7 +27,7 @@ describe("OnboardProject", () => {
     render(<OnboardProject />);
 
     expect(screen.queryByTestId("onboard-dialog")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Onboard" }));
+    await user.click(screen.getByRole("button", { name: "Bootstrap" }));
 
     expect(screen.getByTestId("onboard-dialog").textContent).toBe("tenant-1");
   });
@@ -35,6 +35,6 @@ describe("OnboardProject", () => {
   it("still renders while the project is unavailable", () => {
     h.project = undefined;
     render(<OnboardProject />);
-    expect(screen.getByRole("button", { name: "Onboard" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Bootstrap" })).toBeTruthy();
   });
 });

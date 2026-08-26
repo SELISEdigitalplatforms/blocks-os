@@ -67,11 +67,41 @@ namespace DomainService.Projects
 
                 await Task.WhenAll(UpdateProjectIfNeeded(projectStatus, project),
                                    _projectRepository.CreateDefaultConfigurationAsync(projectStatus, project));
+
+                await AnnounceTenantUpdateIfNeeded(project);
             }
             catch (Exception ex)
             {
                 await HandleConfigurationErrorAsync(projectStatus, ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Broadcasts the provisioned tenant so every service replaces the copy it may have
+        /// cached while the certificate was still being generated.
+        /// </summary>
+        /// <remarks>
+        /// Provisioning is the only write that sets <c>JwtTokenParameters.PublicCertificatePath</c>,
+        /// and it was the only project write that never announced itself. Any service that read
+        /// this tenant between <c>InsertProjectAsync</c> and here holds a copy with no certificate
+        /// path, and cannot validate tokens for the tenant until that process restarts.
+        /// </remarks>
+        private async Task AnnounceTenantUpdateIfNeeded(Tenant project)
+        {
+            // A resumed run whose certificates were already marked uploaded never re-assigns the
+            // path, so the in-memory project can still be blank here. Broadcasting that would
+            // replace good cached copies with a useless one, which is worse than staying quiet.
+            if (string.IsNullOrWhiteSpace(project.JwtTokenParameters?.PublicCertificatePath))
+            {
+                return;
+            }
+
+            await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+            {
+                Action = "upsert",
+                TenantId = project.TenantId,
+                Tenant = project
+            });
         }
 
         private async Task InsertIntoProjectPeopleAsync(ProjectStatusTracer statusTracer, Tenant project)

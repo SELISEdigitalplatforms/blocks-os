@@ -45,11 +45,6 @@ public sealed partial class SecretService : ISecretService
             ? caller.OrganizationId
             : request.OrganizationId;
 
-        if (await _repository.NameExistsAsync(caller.TenantId, organizationId, request.Name, null, cancellationToken).ConfigureAwait(false))
-        {
-            throw new SecretValidationException($"A secret named '{request.Name}' already exists.", "NAME_TAKEN");
-        }
-
         var secret = BuildSecret(caller, request, organizationId);
 
         await CreateAsync(caller, secret, request.Value, cancellationToken).ConfigureAwait(false);
@@ -103,11 +98,6 @@ public sealed partial class SecretService : ISecretService
                 var organizationId = string.IsNullOrWhiteSpace(request.OrganizationId)
                     ? caller.OrganizationId
                     : request.OrganizationId;
-
-                if (await _repository.NameExistsAsync(caller.TenantId, organizationId, request.Name, null, cancellationToken).ConfigureAwait(false))
-                {
-                    throw new SecretValidationException($"A secret named '{request.Name}' already exists.", "NAME_TAKEN");
-                }
 
                 var secret = BuildSecret(caller, request, organizationId);
                 await CreateAsync(caller, secret, request.Value, cancellationToken).ConfigureAwait(false);
@@ -369,12 +359,6 @@ public sealed partial class SecretService : ISecretService
         {
             ValidateName(request.Name);
 
-            if (!string.Equals(request.Name, secret.Name, StringComparison.OrdinalIgnoreCase)
-                && await _repository.NameExistsAsync(caller.TenantId, secret.OrganizationId, request.Name, secret.ItemId, cancellationToken).ConfigureAwait(false))
-            {
-                throw new SecretValidationException($"A secret named '{request.Name}' already exists.", "NAME_TAKEN");
-            }
-
             secret.Name = request.Name;
             secret.NameLower = SecretName.Normalize(request.Name);
         }
@@ -462,13 +446,6 @@ public sealed partial class SecretService : ISecretService
         var secret = await LoadAsync(caller, secretId, cancellationToken).ConfigureAwait(false);
 
         EnsureTransitionAllowed(secret, "restore", [SecretStatuses.Deleted]);
-
-        // The name freed up when this was deleted, so something else may have taken it.
-        if (await _repository.NameExistsAsync(caller.TenantId, secret.OrganizationId, secret.Name, secret.ItemId, cancellationToken).ConfigureAwait(false))
-        {
-            throw new SecretValidationException(
-                $"Cannot restore: a secret named '{secret.Name}' already exists.", "NAME_TAKEN");
-        }
 
         secret.Status = SecretStatuses.Active;
         secret.DeletedBy = null;

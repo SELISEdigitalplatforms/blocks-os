@@ -21,7 +21,7 @@ namespace Blocks.Secrets;
 public interface ISecretService
 {
     /// <summary>Creates a secret and returns its id.</summary>
-    /// <exception cref="SecretValidationException">The request is invalid or the name is taken.</exception>
+    /// <exception cref="SecretValidationException">The request is invalid.</exception>
     /// <exception cref="SecretVaultException">The vault write failed; no metadata was written.</exception>
     Task<string> SetAsync(SetSecretRequest request, CancellationToken cancellationToken = default);
 
@@ -70,7 +70,7 @@ public interface ISecretService
     /// </summary>
     Task DeleteAsync(string secretId, CancellationToken cancellationToken = default);
 
-    /// <summary>Restores a soft-deleted secret, re-checking name uniqueness.</summary>
+    /// <summary>Restores a soft-deleted secret.</summary>
     Task RestoreAsync(string secretId, CancellationToken cancellationToken = default);
 
     /// <summary>Replaces the access list of an <see cref="SecretTypes.Api"/> secret.</summary>

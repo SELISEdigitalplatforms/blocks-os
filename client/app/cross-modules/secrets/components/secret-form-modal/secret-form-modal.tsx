@@ -161,7 +161,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
 
   const isApi = type === SECRET_TYPE.Api;
 
-  /** Routes a backend reason code onto the field it belongs to, e.g. NAME_TAKEN onto `name`. */
+  /** Routes a backend reason code onto the field it belongs to, e.g. NAME_INVALID onto `name`. */
   const applyError = (error: unknown, fallback: string) => {
     const info = describeSecretError(error, fallback);
     if (info.field === "name" || info.field === "description") {
