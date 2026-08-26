@@ -13,6 +13,8 @@
     <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.0" />
     <PackageVersion Include="SeliseBlocks.ReleaseDriver.OS" Version="4.0.1" />
     <PackageVersion Include="SeliseBlocks.StorageDriver.OS" Version="4.0.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.22.2" />
+    <PackageVersion Include="Parquet.Net" Version="5.3.0" />
     <PackageVersion Include="SSH.NET" Version="2024.2.0" />
     <PackageVersion Include="SeliseBlocks.MailDriver.OS" Version="4.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.2" />

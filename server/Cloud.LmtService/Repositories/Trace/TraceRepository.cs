@@ -1,5 +1,7 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
+using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Models.Trace;
+using Cloud.LmtService.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -15,6 +17,14 @@ namespace Cloud.LmtService.Repositories.Trace
         private readonly IMongoDatabase _database;
         private readonly IMongoDatabase _archiveDatabase;
         private readonly ILogger<TraceRepository> _logger;
+        private const string FailedArchiveTracesCollection = "FailedArchiveTraces";
+        private const string TracesArchiveDatabaseName = "TracesArchive";
+        private const string TraceIdField = "TraceId";
+        private const string ParentIdField = "ParentId";
+        private const string OperationNameField = "OperationName";
+        private const string ServiceNameField = "ServiceName";
+        private const string TimestampField = "Timestamp";
+
         public TraceRepository(
             IBlocksSecret blocksSecret,
             IDbContextProvider dbContextProvider,
@@ -22,6 +32,7 @@ namespace Cloud.LmtService.Repositories.Trace
             IConfiguration configuration)
         {
             _database = dbContextProvider.GetDatabase(blocksSecret.TraceConnectionString, blocksSecret.TraceDatabaseName);
+            _archiveDatabase = dbContextProvider.GetDatabase(blocksSecret.TraceConnectionString, TracesArchiveDatabaseName);
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
         public async Task<IQueryable<SingleTraceProjection>> GetTraces(GetTraceRequest query)
@@ -218,5 +229,246 @@ namespace Cloud.LmtService.Repositories.Trace
             return _database.GetCollection<BsonDocument>(bc.TenantId);
         }
 
+        // ── Archive/backup methods ───────────────────────────────────────────────
+
+        public async Task<List<string>> GetDistinctTracesCollectionNamesAsync(DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                // Optimization: Filter system collections and archive failure collection at the DB level
+                var collectionFilter = new BsonDocument("name", new BsonDocument
+                {
+                    { "$nin", new BsonArray { FailedArchiveTracesCollection } },
+                    { "$not", new BsonRegularExpression("^system\\.", "i") }
+                });
+
+                var names = await _database.GetCollectionNamesWithDataAsync(collectionFilter, startDate, endDate);
+
+                return names
+                    .Where(n => !Constants.IgnoredTenants.Contains(n, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get distinct traces collection names");
+                return [];
+            }
+        }
+
+        public async Task<List<StoredTrace>> GetTracesByCollectionAsync(
+            string collectionName,
+            TenantLogsRequest query,
+            int pageNumber,
+            int pageSize)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName))
+                return [];
+
+            try
+            {
+                var collection = _database.GetCollection<BsonDocument>(collectionName);
+
+                var filter = BuildDateFilter(query);
+                var sort = Builders<BsonDocument>.Sort.Descending(Constants.Timestamp);
+                var projection = BuildStoredTraceProjection();
+
+                var aggregateOptions = new AggregateOptions { AllowDiskUse = true };
+
+                var docs = await collection.Aggregate(aggregateOptions)
+                    .Match(filter)
+                    .Sort(sort)
+                    .Skip(pageNumber * pageSize)
+                    .Limit(pageSize)
+                    .Project(projection)
+                    .ToListAsync();
+
+                return [.. docs.Select(doc => MapStoredTrace(doc))];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get traces for collection {CollectionName}", collectionName);
+                return [];
+            }
+        }
+        public async Task DeleteMiscellaneousTracesCollectionAsync(string collectionName)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName))
+                return;
+
+            try
+            {
+                var collections = await _database.ListCollectionNames().ToListAsync();
+                if (!collections.Contains(collectionName))
+                    return;
+
+                await _database.DropCollectionAsync(collectionName);
+
+                _logger.LogInformation(
+                    "Successfully deleted collection {CollectionName}",
+                    collectionName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to delete traces for collection {CollectionName}",
+                    collectionName);
+            }
+        }
+
+        public async Task<long> DeleteTracesByCollectionAsync(TenantLogsRequest query, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(query.ProjectKey))
+                return 0;
+
+            try
+            {
+                var collection = _database.GetCollection<BsonDocument>(query.ProjectKey);
+                var filter = BuildDateFilter(query);
+
+                var deleteResult = await collection.DeleteManyAsync(filter, ct);
+                return deleteResult.DeletedCount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete traces for collection {CollectionName}", query.ProjectKey);
+                return 0;
+            }
+        }
+
+        public async Task ArchiveTracesAsync(List<StoredTrace> traces, TenantLogsRequest query)
+        {
+            if (traces == null || traces.Count == 0 || string.IsNullOrWhiteSpace(query.ProjectKey)) return;
+
+            var startDate = query.Filter?.StartDate ?? DateTime.MinValue;
+            var endDate = query.Filter?.EndDate ?? DateTime.MinValue;
+            var collectionName = $"{query.ProjectKey}_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}";
+
+            try
+            {
+                var collection = _archiveDatabase.GetCollection<StoredTrace>(collectionName);
+                await collection.InsertManyAsync(traces);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to archive traces for tenant {TenantId} to collection {CollectionName}", query.ProjectKey, collectionName);
+                throw new InvalidOperationException(
+                    $"Failed to archive traces for tenant {query.ProjectKey} to collection {collectionName}",
+                    ex);
+            }
+        }
+
+        public async Task<List<string>> GetArchiveCollectionsAsync()
+        {
+            try
+            {
+                return await _archiveDatabase.GetArchiveCollectionsAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to list collections from TracesArchive database");
+                return [];
+            }
+        }
+
+        public async Task<List<StoredTrace>> GetTracesFromArchiveCollectionAsync(string collectionName)
+        {
+            try
+            {
+                var collection = _archiveDatabase.GetCollection<StoredTrace>(collectionName);
+                return await collection
+                    .Find(FilterDefinition<StoredTrace>.Empty)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get traces from archive collection {CollectionName}", collectionName);
+                return [];
+            }
+        }
+
+        public async Task DeleteArchiveCollectionAsync(string collectionName)
+        {
+            try
+            {
+                await _archiveDatabase.DropCollectionAsync(collectionName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to drop archive collection {CollectionName}", collectionName);
+            }
+        }
+
+        private static FilterDefinition<BsonDocument> BuildDateFilter(TenantLogsRequest query)
+        {
+            var filter = Builders<BsonDocument>.Filter.Empty;
+
+            if (query.Filter?.StartDate != null)
+                filter &= Builders<BsonDocument>.Filter.Gt(Constants.Timestamp, query.Filter.StartDate);
+
+            if (query.Filter?.EndDate != null)
+                filter &= Builders<BsonDocument>.Filter.Lte(Constants.Timestamp, query.Filter.EndDate);
+
+            return filter;
+        }
+
+        private static ProjectionDefinition<BsonDocument> BuildStoredTraceProjection()
+        {
+            return Builders<BsonDocument>.Projection
+                .Include(TimestampField)
+                .Include(TraceIdField)
+                .Include("SpanId")
+                .Include("ParentSpanId")
+                .Include(ParentIdField)
+                .Include(OperationNameField)
+                .Include("Kind")
+                .Include("StartTime")
+                .Include("EndTime")
+                .Include("Duration")
+                .Include("Attributes")
+                .Include("Baggage")
+                .Include("Status")
+                .Include("StatusDescription")
+                .Include("TenantId")
+                .Include(ServiceNameField);
+        }
+
+        private static StoredTrace MapStoredTrace(BsonDocument doc)
+        {
+            return new StoredTrace
+            {
+                Timestamp = GetBsonValueAsString(doc, TimestampField),
+                StartTime = GetBsonValueAsString(doc, "StartTime"),
+                EndTime = GetBsonValueAsString(doc, "EndTime"),
+                TraceId = doc.GetValue(TraceIdField, BsonNull.Value).IsBsonNull ? string.Empty : doc[TraceIdField].AsString,
+                SpanId = doc.GetValue("SpanId", BsonNull.Value).IsBsonNull ? string.Empty : doc["SpanId"].AsString,
+                ParentSpanId = doc.GetValue("ParentSpanId", BsonNull.Value).IsBsonNull ? string.Empty : doc["ParentSpanId"].AsString,
+                ParentId = doc.GetValue(ParentIdField, BsonNull.Value).IsBsonNull ? string.Empty : doc[ParentIdField].AsString,
+                OperationName = doc.GetValue(OperationNameField, BsonNull.Value).IsBsonNull ? string.Empty : doc[OperationNameField].AsString,
+                Kind = doc.GetValue("Kind", BsonNull.Value).IsBsonNull ? string.Empty : doc["Kind"].AsString,
+                Duration = doc.GetValue("Duration", BsonNull.Value).IsBsonNull ? 0.0 : doc["Duration"].ToDouble(),
+                Attributes = doc.GetValue("Attributes", BsonNull.Value).IsBsonNull ? string.Empty : doc["Attributes"].ToJson(),
+                Baggage = doc.GetValue("Baggage", BsonNull.Value).IsBsonNull ? string.Empty : doc["Baggage"].ToJson(),
+                Status = doc.GetValue("Status", BsonNull.Value).IsBsonNull ? string.Empty : doc["Status"].AsString,
+                StatusDescription = doc.GetValue("StatusDescription", BsonNull.Value).IsBsonNull ? string.Empty : doc["StatusDescription"].AsString,
+                TenantId = doc.GetValue("TenantId", BsonNull.Value).IsBsonNull ? string.Empty : doc["TenantId"].AsString,
+                ServiceName = doc.GetValue(ServiceNameField, BsonNull.Value).IsBsonNull ? string.Empty : doc[ServiceNameField].AsString,
+            };
+        }
+
+        private static string GetBsonValueAsString(BsonDocument doc, string fieldName)
+        {
+            var value = doc.GetValue(fieldName, BsonNull.Value);
+
+            if (value.IsBsonNull)
+                return string.Empty;
+
+            if (value.IsBsonDateTime)
+                return value.ToUniversalTime().ToString("O");
+
+            return value.AsString;
+        }
     }
 }

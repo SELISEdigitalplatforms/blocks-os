@@ -3,6 +3,10 @@
 	<ItemGroup>
 		<!--<PackageReference Include="MongoDB.Driver" />-->
 		<PackageReference Include="SeliseBlocks.Genesis.OS" />
+		<PackageReference Include="SeliseBlocks.MailDriver.OS" />
+		<PackageReference Include="Azure.Storage.Blobs" />
+		<PackageReference Include="Parquet.Net" />
+  <PackageReference Include="FluentValidation" />
 	</ItemGroup>
 
 </Project>
