@@ -27,7 +27,10 @@ import {
   useGetIdentityProviderById,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
-import { SOCIAL_AUTH_PROVIDERS_CONFIG } from "@blocks-idp/authentication/constants/sso-providers.constant";
+import {
+  SOCIAL_AUTH_PROVIDERS_CONFIG,
+  SSO_PROVIDERS,
+} from "@blocks-idp/authentication/constants/sso-providers.constant";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
@@ -140,6 +143,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
 
   const providerType = watch("providerType");
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
+  const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
 
   useEffect(() => {
     if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
@@ -291,7 +295,23 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                     onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
                   >
                     <SelectTrigger id="provider">
-                      <SelectValue placeholder="Select a provider" />
+                      {/* Radix only knows an item's label once SelectContent has mounted at
+                          least once, which never happens for a value set programmatically
+                          (e.g. via `reset()` when editing) before the user opens it - so the
+                          trigger renders blank the first time. Passing the label in ourselves
+                          sidesteps that. */}
+                      <SelectValue placeholder="Select a provider">
+                        {selectedSocialProvider && (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={selectedSocialProvider.imageSrc}
+                              alt={selectedSocialProvider.label}
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span>{selectedSocialProvider.label}</span>
+                          </div>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
