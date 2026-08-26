@@ -237,6 +237,7 @@ export interface IGetTracesPayload {
   };
   search: string;
   projectKey: string;
+  requestId?: string;
 }
 export interface IGetTracesResponse {
   totalCount: number;
@@ -245,4 +246,40 @@ export interface IGetTracesResponse {
 }
 export interface IGetTraceByTraceIdPayload {
   traceId: string;
+  projectKey?: string;
+  requestId?: string;
+}
+
+export interface ITraceRequestPayload {
+  startDate: string;
+  endDate: string;
+  projectKey: string;
+  usermail: string;
+}
+
+export interface IGetRequestIdPayload {
+  SourceType: string;
+  ProjectKey: string;
+}
+
+export interface IGetTraceStatusPayload {
+  RequestId: string;
+  SourceType: string;
+}
+
+export interface IGetRequestIdResponse {
+  requestId: string;
+}
+
+export interface IGetTraceStatusResponse {
+  requestId: string;
+  status: string;
+  totalFiles: number;
+  processedFiles: number;
+  failedFiles: number;
+}
+
+export interface IGetRestoredDataRetentionDaysResponse {
+  coldDataSelectionDays: number;
+  archiveDataSelectionDays: number;
 }

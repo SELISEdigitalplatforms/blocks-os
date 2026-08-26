@@ -5,13 +5,14 @@ import { Download, GitBranch, PanelRightClose, PanelRightOpen } from "lucide-rea
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
-import { useGetTraceById } from "@blocks-lmt/hooks/use-trace";
+import { useGetRestoredTraceById, useGetTraceById } from "@blocks-lmt/hooks/use-trace";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { TracingListBreadCrumb } from "./tracing-list-breadcrum/tracing-list-breadcrum";
 import { TracingInsights } from "./tracing-insights/tracing-insights";
 import { TracingDistributedTimeline } from "./tracing-distributed-timeline/tracing-distributed-timeline";
 import { ActivityLogs } from "./activity-logs/activity-logs";
 import { TraceTree } from "@blocks-lmt/models/trace.model";
+import { useSearchParams } from "react-router";
 export const timelineContext = createContext<{
   traceHistory: {
     rootId: string;
@@ -86,6 +87,8 @@ export const TraceDetails = ({
   breadcrumbTitles?: BreadcrumbTitles;
 }) => {
   const lmtBase = useLmtBasePath();
+  const [searchParams] = useSearchParams();
+  const requestId = searchParams.get("requestId");
   const isMobile = useIsMobile();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [traceHistory, setTraceHistory] = useState<
@@ -95,9 +98,12 @@ export const TraceDetails = ({
       root: TraceTree;
     }[]
   >([]);
-  const { isLoading, isFetching, isError, data } = useGetTraceById({
-    traceId: id,
-  });
+  const normalTrace = useGetTraceById({ traceId: id }, { enabled: !requestId && Boolean(id) });
+  const restoredTrace = useGetRestoredTraceById(
+    { traceId: id, requestId: requestId || "" },
+    { enabled: Boolean(requestId && id) },
+  );
+  const { isLoading, isFetching, isError, data } = requestId ? restoredTrace : normalTrace;
   const [selectedTrace, setSelectedTrace] = useState<TraceTree | null>(null);
   useEffect(() => {
     if (!data?.data) {
