@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -23,6 +24,13 @@ import { useRolesSortQueryParams } from "./roles-filter-toolbar";
 type RolesTableProps = {
   roles: IRole[];
   isLoading: boolean;
+  /**
+   * Whether to mark roles that came from the default organization. Only meaningful in a
+   * multi-organization tenant -- with one organization every role is local and the badge would
+   * label every row. Pairs with the row actions below, which already hide the archive action for
+   * a default-derived copy because the backend refuses to archive one directly.
+   */
+  showDefaultOriginBadge?: boolean;
 };
 const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
@@ -72,7 +80,11 @@ const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => 
   );
 };
 
-export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
+export const RolesList = ({
+  roles,
+  isLoading,
+  showDefaultOriginBadge = false,
+}: RolesTableProps) => {
   const { sortQueryParams, setSortQueryParams } = useRolesSortQueryParams();
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
   const navigate = useNavigate();
@@ -96,7 +108,16 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
             onChange={sortHandler}
           />
         ),
-        cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
+        cell: (roles) => (
+          <div className="flex w-[130px] items-center gap-1.5">
+            <span className="truncate">{roles.row.original.name}</span>
+            {showDefaultOriginBadge && roles.row.original.createdFromDefault && (
+              <Badge variant="secondary" className="shrink-0 font-normal">
+                Default
+              </Badge>
+            )}
+          </div>
+        ),
       },
       {
         id: "slug",
@@ -148,7 +169,7 @@ export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
         cell: ({ row }) => <RoleRowActions row={row.original} onEdit={setSelectedRole} />,
       },
     ],
-    [sortHandler, sortQueryParams],
+    [sortHandler, sortQueryParams, showDefaultOriginBadge],
   );
   const table = useReactTable({
     data: roles,
