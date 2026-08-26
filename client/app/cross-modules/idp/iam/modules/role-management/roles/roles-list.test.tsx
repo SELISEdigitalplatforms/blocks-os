@@ -119,6 +119,42 @@ describe("RolesList", () => {
     vi.clearAllMocks();
   });
 
+  describe("default-origin badge", () => {
+    const copy = { ...role, itemId: "role-copy", createdFromDefault: true } as IRole;
+    const own = { ...role, itemId: "role-own", slug: "administrator_f47ac10b" } as IRole;
+
+    it("marks a role that came from the default organization", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getByText("Default")).toBeTruthy();
+    });
+
+    it("leaves the organization's own role unmarked", () => {
+      render(<RolesList roles={[own]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("marks only the copy when both are listed together", () => {
+      render(<RolesList roles={[copy, own]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getAllByText("Default")).toHaveLength(1);
+    });
+
+    it("renders no badge in a single-organization tenant", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge={false} />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("defaults to no badge when the flag is not passed", () => {
+      render(<RolesList roles={[copy]} isLoading={false} />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("still shows the name and slug next to the badge", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getByText("Administrator")).toBeTruthy();
+      expect(screen.getByText("administrator")).toBeTruthy();
+    });
+  });
+
   it("renders loading skeletons and no table while loading", () => {
     // C5. "No table" alone is satisfied by `return null`; the skeleton and its row count are what
     // actually say the loading state renders as it does today.

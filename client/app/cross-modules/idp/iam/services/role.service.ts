@@ -1,6 +1,7 @@
 import { http } from "@/lib/http/http-client";
 import {
   CreateRolePayload,
+  CreateRoleResponse,
   GetRolesPayload,
   GetRolesResponse,
   IGetRolePayload,
@@ -30,7 +31,7 @@ export class RoleService {
     });
   }
 
-  addRole(payload: CreateRolePayload): Promise<IRole> {
+  addRole(payload: CreateRolePayload): Promise<CreateRoleResponse> {
     return http.post(ROLE_ENDPOINTS.CREATE_ROLE, payload, undefined, {
       absoluteUrl: true,
     });
