@@ -150,6 +150,8 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
         ["__BLOCKS_STUDIO_CLIENT_ID__"] = section["BLOCKS_STUDIO_CLIENT_ID"],
         ["__BLOCKS_CNAME_BASE_URL__"] = section["BLOCKS_CNAME_BASE_URL"],
         ["__BLOCKS_ALLOWED_SERVICES__"] = section["BLOCKS_ALLOWED_SERVICES"],
+        ["__BLOCKS_ROLLBAR_CLIENT_TOKEN__"] = section["BLOCKS_ROLLBAR_CLIENT_TOKEN"],
+        ["__BLOCKS_ROLLBAR_ENV__"] = section["BLOCKS_ROLLBAR_ENV"],
     };
 
     var files = Directory.EnumerateFiles(webRootPath, "*", SearchOption.AllDirectories)
