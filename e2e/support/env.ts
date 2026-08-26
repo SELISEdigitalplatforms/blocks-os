@@ -10,6 +10,11 @@ export function e2eBaseUrl(): string {
   return requireEnv("E2E_BASE_URL");
 }
 
+export function e2eProjectId(): string | undefined {
+  const value = process.env.E2E_PROJECT_ID?.trim();
+  return value || undefined;
+}
+
 export function e2eCredentials(): { email: string; password: string } {
   return {
     email: requireEnv("E2E_USERNAME"),

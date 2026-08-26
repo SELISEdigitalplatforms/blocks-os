@@ -1,27 +1,13 @@
 import { test, expect } from "../../support/test-base";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 
 // Environments flow: open the Environments list -> add a new environment
 // (guarded: only if the project isn't already at the 8-environment cap and
 // there's an unused environment type left) -> open its details/dashboard ->
 // come back to the list.
 test.describe("flows", () => {
-  let projectName = "";
-  let tenantGroupId = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Environments flow: list -> add environment -> open its dashboard -> back to list", async ({
     page,
@@ -29,7 +15,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Open Environments", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "environments");
+      await openProjectOverview(page, "environments");
       await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
         timeout: 30000,
       });
@@ -98,7 +84,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Return to the Environments list", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "environments");
+      await openProjectOverview(page, "environments");
       await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
         timeout: 30000,
       });

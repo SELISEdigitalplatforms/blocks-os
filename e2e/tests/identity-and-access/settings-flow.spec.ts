@@ -1,27 +1,9 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
-  }
-};
-
-// Settings flow: the default Auth tab, strict numeric validation, a valid
-// save, then a walk across the IAM / Signup / Organization tabs.
 test.describe("flows", () => {
-  let projectName = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Settings flow: Auth tab strict validation -> save -> IAM/Signup/Organization tabs", async ({
     page,
@@ -29,7 +11,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Settings (renders as Auth Configuration)", async () => {
-      await gotoIamPath(page, "settings");
+      await openIam(page, "settings", "Settings");
       await expect(page.getByRole("heading", { name: "Auth Configuration" })).toBeVisible({
         timeout: 30000,
       });

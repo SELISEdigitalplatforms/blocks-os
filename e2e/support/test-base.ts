@@ -1,4 +1,5 @@
 import { test as base, expect } from "@playwright/test";
+import { markSuiteTestFailed } from "./run-outcome";
 
 // Shared `test` for the whole suite. Specs import from here instead of
 // "@playwright/test" so the pause below applies everywhere automatically.
@@ -33,6 +34,12 @@ export const test = base.extend<{ pauseAfterEachTest: void }>({
       if (ms > 0) testInfo.setTimeout(testInfo.timeout + ms);
 
       await use();
+
+      if (testInfo.project.name === "os") {
+        if (testInfo.status !== "passed" && testInfo.status !== "skipped") {
+          markSuiteTestFailed();
+        }
+      }
 
       // Teardown: runs after the test body, before `page` is disposed.
       if (ms > 0 && !page.isClosed()) {

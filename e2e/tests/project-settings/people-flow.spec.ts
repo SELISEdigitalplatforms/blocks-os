@@ -1,27 +1,13 @@
 import { test, expect } from "../../support/test-base";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 import { uniqueTestEmail } from "../../support/env";
 
 // People flow: strict validation on Invite, invite a fresh person into the
 // Development environment, open their details page, and remove their access
 // from the Environments tab.
 test.describe("flows", () => {
-  let projectName = "";
-  let tenantGroupId = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("People flow: strict validation -> invite -> open details -> remove environment access", async ({
     page,
@@ -29,7 +15,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Open People", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "people");
+      await openProjectOverview(page, "people");
       await expect(page.getByRole("heading", { name: "People" })).toBeVisible({ timeout: 30000 });
     });
 
@@ -125,7 +111,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Return to the People list", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "people");
+      await openProjectOverview(page, "people");
       await expect(page.getByRole("heading", { name: "People" })).toBeVisible({ timeout: 30000 });
     });
   });

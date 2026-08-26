@@ -1,29 +1,9 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
-  }
-};
-
-// Organizations flow: strict validation on Add Organization, create one,
-// then select it in the sidebar to open its workspace panel. A brand-new
-// project may not have "Multiple Organizations" enabled yet, in which case
-// the page shows a disabled notice instead and the create steps are skipped.
 test.describe("flows", () => {
-  let projectName = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Organizations flow: strict validation -> create -> select in sidebar -> workspace panel", async ({
     page,
@@ -33,7 +13,7 @@ test.describe("flows", () => {
     let organizationsEnabled = false;
 
     await test.step("Navigate to Organizations", async () => {
-      await gotoIamPath(page, "organization");
+      await openIam(page, "organization", "Organizations");
       const searchInput = page.getByPlaceholder("Search organizations...").first();
       const disabledNotice = page.getByText("Multiple Organizations is not enabled").first();
       await expect(searchInput.or(disabledNotice)).toBeVisible({ timeout: 30000 });
