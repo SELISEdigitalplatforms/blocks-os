@@ -1,43 +1,28 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openLmt, openOsDashboard } from "../../support/os-helpers";
 
 // Tracing flow: navigate into the sub-section under Logs & Traces, walk the
 // Hot/Cold/Archive trace modes, filter by Service, and open a trace into its
 // span breakdown before closing with an invalid-trace-ID check.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openOsDashboard(page);
   });
 
   test("Tracing flow: navigate to Tracing", async ({ page }) => {
     test.setTimeout(180_000);
 
-    const appBaseUrl = page.url().replace(/\/dashboard$/, "");
-    const gotoLmtChild = async (linkName: "Tracing") => {
-      const link = page.getByRole("link", { name: linkName });
-      for (let attempt = 0; attempt < 5; attempt++) {
-        if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await link.click({ timeout: 10000 });
-          return;
-        }
-        await page
-          .getByText("Logs & Traces", { exact: true })
-          .click({ timeout: 5000 })
-          .catch(() => {});
+    const gotoLmtChild = async () => {
+      const link = page.getByRole("link", { name: "Tracing" });
+      if (await link.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await link.click({ timeout: 10_000 });
+        return;
       }
-      await page.goto(`${appBaseUrl}/lmt/tracing`);
+      await openLmt(page, "tracing");
     };
 
     await test.step("Navigate to Tracing", async () => {
-      await gotoLmtChild("Tracing");
+      await gotoLmtChild();
       await expect(page.getByRole("heading", { name: "Tracing" })).toBeVisible({ timeout: 30000 });
     });
 

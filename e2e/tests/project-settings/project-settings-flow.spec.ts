@@ -1,26 +1,12 @@
 import { test, expect } from "../../support/test-base";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 
 // Project Settings flow: General Information card (name/created on/
 // environments/plan) -> strict validation on Edit Project -> rename the
 // project -> confirm the rename sticks -> the Environments table below it.
 test.describe("flows", () => {
-  let projectName = "";
-  let tenantGroupId = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Project Settings flow: strict validation -> rename project -> Environments table", async ({
     page,
@@ -28,7 +14,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Open Project Settings", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "settings");
+      await openProjectOverview(page, "settings");
       await expect(page.getByRole("heading", { name: "Project Settings" })).toBeVisible({
         timeout: 30000,
       });

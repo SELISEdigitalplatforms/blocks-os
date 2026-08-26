@@ -1,10 +1,5 @@
 import { test, expect } from "../../support/test-base";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 
 // Repositories flow: a freshly created project has no linked repositories,
 // so this walks the empty state, opens 'Add' -> 'Connect repository' (which
@@ -12,17 +7,8 @@ import { ensureAuthenticated } from "../../support/login-helper";
 // render-provider.tsx's handleContinue), and confirms the search box only
 // shows up once repositories exist (repositories.tsx: hasRepositories).
 test.describe("flows", () => {
-  let projectName = "";
-  let tenantGroupId = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Repositories flow: empty state -> open 'Connect repository' -> GitHub provider option", async ({
     page,
@@ -30,7 +16,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Open Repositories", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "repositories");
+      await openProjectOverview(page, "repositories");
       await expect(page.getByRole("heading", { name: "Repositories" })).toBeVisible({
         timeout: 30000,
       });

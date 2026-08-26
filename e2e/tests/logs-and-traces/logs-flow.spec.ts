@@ -1,20 +1,12 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openLmt, openOsDashboard } from "../../support/os-helpers";
 
 // Logs flow: navigate into the sub-section under Logs & Traces, toggle its
 // log source tabs, follow a service card into its details view, then
 // exercise the log stream's Search and Type (level) filters.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openOsDashboard(page);
   });
 
   test("Logs flow: navigate to Logs -> toggle source -> open a service's details", async ({
@@ -22,24 +14,17 @@ test.describe("flows", () => {
   }) => {
     test.setTimeout(180_000);
 
-    const appBaseUrl = page.url().replace(/\/dashboard$/, "");
-    const gotoLmtChild = async (linkName: "Logs") => {
-      const link = page.getByRole("link", { name: linkName, exact: true });
-      for (let attempt = 0; attempt < 5; attempt++) {
-        if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await link.click({ timeout: 10000 });
-          return;
-        }
-        await page
-          .getByText("Logs & Traces", { exact: true })
-          .click({ timeout: 5000 })
-          .catch(() => {});
+    const gotoLmtChild = async () => {
+      const link = page.getByRole("link", { name: "Logs", exact: true });
+      if (await link.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await link.click({ timeout: 10_000 });
+        return;
       }
-      await page.goto(`${appBaseUrl}/lmt/logs`);
+      await openLmt(page, "logs");
     };
 
     await test.step("Navigate to Logs", async () => {
-      await gotoLmtChild("Logs");
+      await gotoLmtChild();
       // The tab strip renders after the page's own data fetch settles, so
       // wait for a heading first before asserting on the "Managed Service" tab.
       await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 20000 });

@@ -1,7 +1,10 @@
-# Blocks OS; End-to-End Tests (Playwright)
+# Blocks OS — End-to-End Tests (Playwright)
 
-E2E tests that drive the real app through the browser, including the dev-iam
-login redirect flow.
+Follows the shared Blocks product e2e suite template,
+same shape as `blocks-utilities/e2e` and `blocks-localization/e2e`.
+
+**OS difference:** create, reuse, and delete all happen **natively on Blocks OS**
+in suite setup/teardown — no cross-app hop to another product.
 
 ## One-time setup
 
@@ -17,98 +20,134 @@ login redirect flow.
    credentials.
 
 2. **Install** Playwright + the browser:
+
    ```bash
    cd e2e
    npm install
    npx playwright install chromium
    ```
 
-## Run (single command)
+## Run
+
+From the repo root:
+
+```bash
+./run.sh -te          # or: .\run.ps1 -te
+```
+
+or directly:
 
 ```bash
 cd e2e
-npm test
+npm test              # os-setup + feature specs + os-teardown
 ```
 
-That's it. `npm test` will:
+### Against remote dev (default)
 
-1. start the app via `run.sh -a` from the repo root (builds the FE, syncs to
-   `server/Api/wwwroot`, runs API + Worker),
-2. wait until `E2E_BASE_URL` responds (up to 10 min for the first build),
-3. run the tests, then
-4. shut the server down.
+```
+E2E_BASE_URL=https://dev-os.blocksdevelopers.com
+E2E_NO_WEBSERVER=1
+```
 
-If the app is **already** running at `E2E_BASE_URL`, it is reused (no rebuild).
+Reuse an existing project (recommended when console slots are limited):
 
-> Auto-start uses `bash run.sh -a`, so **Git Bash's `bash` must be on PATH**
-> (`run.ps1 -a` can't be automated). To manage the server yourself instead, run
-> it manually and start tests with auto-start disabled:
->
-> ```bash
-> E2E_NO_WEBSERVER=1 npm test
-> ```
+```
+E2E_REUSE_PROJECT_NAME=test
+# or
+E2E_PROJECT_ID=<uuid>
+E2E_KEEP_PROJECT=1
+```
+
+When reusing a non-ephemeral project, set `E2E_KEEP_PROJECT=1` so teardown does
+not delete it after a green run.
+
+### Against a local build
+
+```
+E2E_BASE_URL=https://dev-os.blocksdevelopers.com:5000
+# E2E_NO_WEBSERVER left unset / not 1
+```
+
+Hosts entry:
+
+```
+127.0.0.1 dev-os.blocksdevelopers.com
+```
 
 ### Other run modes
 
 ```bash
 npm run test:headed   # watch it in a real browser
 npm run test:ui       # Playwright UI mode
-npm run report        # open the last HTML report
+npm run report        # open the last HTML report (from e2e/)
 ```
 
-## Discovering / updating selectors
+## Knobs in `.env.e2e`
 
-The username/password fields live on the dev-iam page. To capture or verify
-selectors against the live page:
+| Variable | Effect |
+|---|---|
+| `E2E_BASE_URL` | Blocks **OS** host. Dev: `https://dev-os.blocksdevelopers.com`. Prod: `https://os.seliseblocks.com`. |
+| `E2E_USERNAME` / `E2E_PASSWORD` | OIDC test account. |
+| `PROJECT_NAME` | Optional create prefix (`${PROJECT_NAME} ${Date.now()}`). |
+| `E2E_REUSE_PROJECT_NAME` | Reuse named project instead of creating. |
+| `E2E_PROJECT_NAME` | Legacy alias for `E2E_REUSE_PROJECT_NAME`. |
+| `E2E_PROJECT_ID` | Open project by UUID — skips console card search. |
+| `E2E_KEEP_PROJECT=1` | Never delete shared project after run. |
+| `E2E_NO_WEBSERVER=1` | Don't auto-start the app (required for remote host). |
+| `E2E_PAUSE_MS` | Hold browser after each test (headed debugging). |
+| `E2E_SLOWMO` | Slow motion ms per Playwright action. |
 
-```bash
-npm run codegen -- <E2E_BASE_URL>/login
-```
+## Lifecycle
 
-## The flow suite; one project per run
+Playwright projects: **`os-setup` → `os` → `os-teardown`**
 
-`tests/flow/*` is a **single sequential scenario**, not independent tests. Step 01
-creates one project and records its name + `tenantGroupId` in
-`fixtures/flow-state.json`; every later step reads that id, so they all act on the
-**same** project. Step 06 deletes it again.
+### Previously vs now (important)
 
-```
-01 create project (Development + Testing)
-02 add environment  (Staging)
-03 invite a person  (Development)
-04 grant that person access to Testing
-05 add an application domain
-06 delete the project   <- teardown
-```
+**Before:** every feature spec had its own `beforeEach` → `createProject()` and
+`afterEach` → `deleteCreatedProject()`. A full run created and deleted **one
+project per test** (~25 projects per run).
 
-Because they share state they must run in order, which is why `workers: 1` and the
-numeric filename prefixes exist. Running one step alone fails fast with
-"run 01-create-project first".
+**Now:** **one shared project** for the whole suite — created (or reused) once in
+`os-setup`, used by all feature tests via direct URLs + `os-helpers`, deleted once
+in `os-teardown` when every test passes.
 
-Knobs in `.env.e2e`:
+Feature specs must **not** call `createProject` / `deleteCreatedProject`. Only
+`suite.setup.spec.ts` and `suite.teardown.spec.ts` manage project lifecycle.
 
-| Variable             | Effect                                                                                                                                                                             |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `E2E_PROJECT_NAME`   | Name for the run's project. **Blank = `e2e-<random>` per run** (recommended; repeated runs never collide). Set a value when you want a predictable project to inspect.            |
-| `E2E_KEEP_PROJECT=1` | Skip step 06, leaving the project behind.                                                                                                                                          |
-| `E2E_NO_WEBSERVER=1` | Don't auto-start the app; you manage the server.                                                                                                                                   |
-| `E2E_PAUSE_MS`       | How long the browser holds after **each** test so you can see the result. Defaults to **10 s in headed mode**, 0 when headless. Set a number to override either way; `0` disables. |
-| `E2E_SLOWMO`         | Milliseconds of delay per action, to watch the steps themselves.                                                                                                                   |
-
-```bash
-E2E_PROJECT_NAME=e2e-demo E2E_KEEP_PROJECT=1 npm run test:headed
-```
-
-> Nothing in the suite scans the console for "some `e2e-*` project" any more; a run
-> only ever touches the project it created itself.
+1. **Suite setup** (`tests/suite/suite.setup.spec.ts`) — OIDC login on OS, reuse or create one shared project **on OS**, write `os-project.json`, then save `os-session.json` **after** the dashboard is open (so localStorage keeps project/env).
+2. **Features** (`tests/overview`, `tests/identity-and-access`, …) — use session; open routes with direct `goto` to `/app/{itemId}/...` via `os-helpers`.
+3. **Session / context recovery** — login gate or console bounce → re-auth if needed, one env-chip open to reseed localStorage, persist session (never create a new project).
+4. **Suite teardown** (`tests/suite/suite.teardown.spec.ts`) — delete on **Blocks OS** only when every `os` test passed (unless `E2E_KEEP_PROJECT=1`).
 
 ## Layout
 
 ```
 e2e/
-  tests/auth/login.spec.ts   # login through dev-iam -> /app/console
-  tests/flow/01..06          # the sequential scenario above
-  support/flow-state.ts      # shared project reference between steps
-  fixtures/                  # auth storage state + flow state (gitignored)
-  playwright.config.ts       # baseURL + creds from .env.e2e
+  tests/
+    auth/login.spec.ts            # standalone auth smoke (project "setup")
+    suite/
+      suite.setup.spec.ts         # login + shared project (native OS create)
+      suite.teardown.spec.ts      # OS delete when suite passed
+    overview/
+    identity-and-access/
+    secrets-and-configs/
+    project-settings/
+    logs-and-traces/
+    email-management/
+  support/
+    os-project.ts                 # fixtures/os-session.json + os-project.json
+    suite-helpers.ts              # openSharedProjectDashboard
+    os-helpers.ts                 # openIam, openSecretManagement, openLmt, …
+    create-and-delete-project.ts  # native OS create/delete + reuse
+    run-outcome.ts                # markSuiteTestFailed / shouldDeleteSharedProject
+    test-base.ts
+  fixtures/                       # gitignored session + project JSON
+  playwright.config.ts
+  SPEC-multi-env.md
+```
+
+## Discovering / updating selectors
+
+```bash
+npm run codegen -- <E2E_BASE_URL>/login
 ```

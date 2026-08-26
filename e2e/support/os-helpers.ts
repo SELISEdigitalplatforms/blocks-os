@@ -1,0 +1,129 @@
+import fs from "fs"
+import path from "path"
+import { expect, type Page } from "@playwright/test"
+import {
+  openNamedProjectDashboard,
+} from "./create-and-delete-project"
+import { e2eBaseUrl } from "./env"
+import { ensureAuthenticated, isLoginSurface } from "./login-helper"
+import { OS_SESSION_PATH, readOsProject } from "./os-project"
+import { openSharedProjectDashboard } from "./suite-helpers"
+
+/**
+ * OS in-app routes:
+ * - Overview → /app/{itemId}/dashboard
+ * - IAM → /app/{itemId}/iam/{subpath}
+ * - Secret management → /app/{itemId}/secret-management/{subpath}
+ * - Logs & traces → /app/{itemId}/lmt/{subpath}
+ * - Email → /app/{itemId}/email-management
+ * - Project overview → /app/project/{tenantGroupId}/{subpath}
+ */
+export function buildProjectRouteUrl(itemId: string, route: string) {
+  const normalizedRoute = route.replace(/^\//, "")
+  return `${e2eBaseUrl()}/app/${itemId}/${normalizedRoute}`
+}
+
+async function persistSuiteSession(page: Page) {
+  fs.mkdirSync(path.dirname(OS_SESSION_PATH), { recursive: true })
+  await page.context().storageState({ path: OS_SESSION_PATH })
+}
+
+async function reseedThenGoto(
+  page: Page,
+  targetUrl: string,
+  projectName: string,
+  dashboardUrl?: string,
+) {
+  await openNamedProjectDashboard(page, projectName, { dashboardUrl })
+  await persistSuiteSession(page)
+  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+}
+
+function requireFixture() {
+  const fixture = readOsProject()
+  if (!fixture?.itemId) {
+    throw new Error(
+      "Missing fixtures/os-project.json — run os-setup first (suite.setup.spec.ts).",
+    )
+  }
+  return fixture
+}
+
+async function gotoItemRoute(page: Page, route: string, ready?: { heading: string | RegExp }) {
+  const fixture = requireFixture()
+  const targetUrl = buildProjectRouteUrl(fixture.itemId, route)
+  const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
+
+  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+
+  if (await isLoginSurface(page)) {
+    await ensureAuthenticated(page)
+    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+  } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
+    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+  }
+
+  if (ready) {
+    await expect(page.getByRole("heading", { name: ready.heading })).toBeVisible({
+      timeout: 30_000,
+    })
+  }
+
+  await persistSuiteSession(page)
+  return fixture
+}
+
+export async function openOsConsole(page: Page) {
+  await ensureAuthenticated(page)
+  await expect(
+    page.getByRole("heading", { name: /Your Blocks Projects|Welcome to SELISE Blocks/ }),
+  ).toBeVisible({ timeout: 30_000 })
+}
+
+export async function openOsDashboard(page: Page) {
+  await openSharedProjectDashboard(page)
+}
+
+export async function openProjectOverview(
+  page: Page,
+  subpath: "people" | "settings" | "repositories" | "environments",
+) {
+  const fixture = requireFixture()
+  const targetUrl = `${e2eBaseUrl()}/app/project/${fixture.tenantGroupId}/${subpath}`
+  const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
+
+  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+
+  if (await isLoginSurface(page)) {
+    await ensureAuthenticated(page)
+    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+  } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
+    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+  }
+
+  await expect(page).toHaveURL(new RegExp(`/app/project/${fixture.tenantGroupId}/${subpath}`), {
+    timeout: 30_000,
+  })
+
+  await persistSuiteSession(page)
+}
+
+export async function openIam(page: Page, subpath: string, headingName: string | RegExp) {
+  await gotoItemRoute(page, `iam/${subpath}`, { heading: headingName })
+}
+
+export async function openSecretManagement(
+  page: Page,
+  subpath: string,
+  headingName: string | RegExp,
+) {
+  await gotoItemRoute(page, `secret-management/${subpath}`, { heading: headingName })
+}
+
+export async function openLmt(page: Page, subpath: "logs" | "tracing" | "usage") {
+  await gotoItemRoute(page, `lmt/${subpath}`)
+}
+
+export async function openEmailManagement(page: Page) {
+  await gotoItemRoute(page, "email-management", { heading: "Email Templates" })
+}

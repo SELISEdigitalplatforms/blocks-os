@@ -1,24 +1,10 @@
-import { test, expect } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openOsDashboard } from "../../support/os-helpers";
 
-// Overview flow: the dashboard page a reader lands on right after opening a
-// project's Development environment (pages/dashboard/dashboard-overview.tsx).
-// It shows the project name/env badge/X-Blocks-Key (ProjectOverview), the
-// Onboard/Delete actions (ProjectActions), a Domains section with strict
-// add-domain validation (domain-form.schema.ts), and a Repositories section.
-// createProject already leaves the page on this exact dashboard, so this
-// flow drives it in place rather than navigating again.
+// Overview flow: dashboard after opening the shared project's Development environment.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openOsDashboard(page);
   });
 
   test("Overview flow: project header -> onboard -> strict domain validation -> add -> delete domain", async ({

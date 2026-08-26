@@ -1,36 +1,13 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
 // straight to the section's URL instead (same convention as the existing
 // per-sub-feature specs in "secrets and configs/").
-const gotoSecretManagementSection = async (page: Page, subpath: string, headingName: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/secret-management/${subpath}`);
-  }
-  await expect(page.getByRole("heading", { name: headingName })).toBeVisible({ timeout: 30000 });
-};
-
-// My Services flow: a single continuous journey — strict validation on
-// registering a new service (Save stays disabled until dirty), save it,
-// expand its accordion row to see the generated Service ID and X-Blocks-Key,
-// then open the "Setup Guide" side panel. NOTE: service-card.tsx exposes no
-// delete action for a registered service (only Logs/Traces/Swagger/Docs
-// links), so there is no closing "delete" stage for this section.
 test.describe("flows", () => {
-  let projectName = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("My Services flow: strict validation -> register -> expand details -> setup guide", async ({
     page,
@@ -38,7 +15,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to My Services", async () => {
-      await gotoSecretManagementSection(page, "my-services", "My Services");
+      await openSecretManagement(page, "my-services", "My Services");
     });
 
     await test.step("Open the Register Service dialog", async () => {

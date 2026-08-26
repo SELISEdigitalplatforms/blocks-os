@@ -1,43 +1,28 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openLmt, openOsDashboard } from "../../support/os-helpers";
 
 // Usage flow: navigate into the sub-section under Logs & Traces, then walk
 // its real interactive surface — the time-range selector and the per-service
 // API/Worker metric switch.
 test.describe("flows", () => {
-  let projectName = "";
-
   test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
+    await openOsDashboard(page);
   });
 
   test("Usage flow: navigate to Usage", async ({ page }) => {
     test.setTimeout(180_000);
 
-    const appBaseUrl = page.url().replace(/\/dashboard$/, "");
-    const gotoLmtChild = async (linkName: "Usage") => {
-      const link = page.getByRole("link", { name: linkName });
-      for (let attempt = 0; attempt < 5; attempt++) {
-        if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await link.click({ timeout: 10000 });
-          return;
-        }
-        await page
-          .getByText("Logs & Traces", { exact: true })
-          .click({ timeout: 5000 })
-          .catch(() => {});
+    const gotoLmtChild = async () => {
+      const link = page.getByRole("link", { name: "Usage" });
+      if (await link.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await link.click({ timeout: 10_000 });
+        return;
       }
-      await page.goto(`${appBaseUrl}/lmt/usage`);
+      await openLmt(page, "usage");
     };
 
     await test.step("Navigate to Usage", async () => {
-      await gotoLmtChild("Usage");
+      await gotoLmtChild();
       await expect(page.getByText("Global overview")).toBeVisible({ timeout: 30000 });
     });
 

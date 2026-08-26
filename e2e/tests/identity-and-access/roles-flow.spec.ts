@@ -1,27 +1,9 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
 
-const gotoIamPath = async (page: Page, subpath: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/iam/${subpath}`);
-  }
-};
-
-// Roles flow: strict validation on Add Role, create a role, open its
-// details page, and toggle Edit Permissions.
 test.describe("flows", () => {
-  let projectName = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
 
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Roles flow: strict validation -> create -> open details -> edit permissions", async ({
     page,
@@ -29,7 +11,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Roles", async () => {
-      await gotoIamPath(page, "role");
+      await openIam(page, "role", "Roles");
       await expect(page.getByRole("button", { name: "Add Role" })).toBeVisible({ timeout: 30000 });
     });
 
