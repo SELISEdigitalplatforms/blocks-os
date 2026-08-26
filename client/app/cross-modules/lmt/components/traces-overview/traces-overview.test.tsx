@@ -8,6 +8,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   useGetTraces: vi.fn(),
   useGetBlocksServices: vi.fn(),
+  useGetRequestId: vi.fn(),
+  useGetTraceStatus: vi.fn(),
+  useStartColdTrace: vi.fn(),
+  useStartArchiveTrace: vi.fn(),
+  useGetRestoredTraces: vi.fn(),
+  useGetRestoredDataRetentionDays: vi.fn(),
   isMobile: false,
   navigate: vi.fn(),
   getAllServices: vi.fn(),
@@ -25,6 +31,17 @@ vi.mock("@seliseblocks/genesis-os/hooks", async (importOriginal) => {
 vi.mock("@blocks-lmt/hooks/use-trace", () => ({
   useGetTraces: (opt: unknown) => h.useGetTraces(opt),
   useGetBlocksServices: () => h.useGetBlocksServices(),
+  useGetRequestId: () => ({ mutateAsync: h.useGetRequestId }),
+  useGetTraceStatus: () => ({ mutateAsync: h.useGetTraceStatus }),
+  useStartColdTrace: () => ({ mutateAsync: h.useStartColdTrace, isPending: false }),
+  useStartArchiveTrace: () => ({ mutateAsync: h.useStartArchiveTrace, isPending: false }),
+  useGetRestoredTraces: (opt: unknown, queryOptions: unknown) =>
+    h.useGetRestoredTraces(opt, queryOptions),
+  useGetRestoredDataRetentionDays: (queryOptions: unknown) =>
+    h.useGetRestoredDataRetentionDays(queryOptions),
+}));
+vi.mock("@seliseblocks/genesis-os/store", () => ({
+  useAuthStore: () => ({ user: { email: "tester@example.com" } }),
 }));
 vi.mock("@/cross-modules/identifier/services/service-registry.service", () => ({
   serviceRegistryService: { getAllServices: (args: unknown) => h.getAllServices(args) },
@@ -84,6 +101,16 @@ describe("TracesOverview", () => {
       isLoading: false,
       isFetching: false,
     });
+    h.useGetRequestId.mockResolvedValue({ requestId: "" });
+    h.useGetTraceStatus.mockResolvedValue({ status: "NoRequest" });
+    h.useStartColdTrace.mockResolvedValue({});
+    h.useStartArchiveTrace.mockResolvedValue({});
+    h.useGetRestoredTraces.mockReturnValue({
+      data: { data: [], totalCount: 0 },
+      isLoading: false,
+      isFetching: false,
+    });
+    h.useGetRestoredDataRetentionDays.mockReturnValue({ data: undefined });
   });
 
   it("renders the page header and the three trace mode cards", () => {
@@ -150,11 +177,12 @@ describe("TracesOverview", () => {
     expect(h.navigate).toHaveBeenCalledWith("/lmt-base/lmt/tracing/trace-1");
   });
 
-  it("switches to the cold tab and shows the coming-soon placeholder", async () => {
+  it("switches to the cold tab and shows the restored trace request state", async () => {
     const user = userEvent.setup();
     renderOverview();
     await user.click(screen.getByText("Cold"));
-    expect(await screen.findAllByText("Coming soon")).toBeTruthy();
+    expect(await screen.findByText("No Request Found")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Request Cold Traces" })).toBeTruthy();
   });
 
   it("toggles the setup guideline open when the guide button is pressed", async () => {
