@@ -1,9 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { expect, type Page } from "@playwright/test"
-import {
-  openNamedProjectDashboard,
-} from "./create-and-delete-project"
+import { openNamedProjectDashboard } from "./create-and-delete-project"
 import { e2eBaseUrl } from "./env"
 import { ensureAuthenticated, isLoginSurface } from "./login-helper"
 import { OS_SESSION_PATH, readOsProject } from "./os-project"
@@ -84,13 +82,40 @@ export async function openOsDashboard(page: Page) {
   await openSharedProjectDashboard(page)
 }
 
+const PROJECT_OVERVIEW_HEADING: Record<
+  "people" | "settings" | "repositories" | "environments",
+  string
+> = {
+  people: "People",
+  settings: "Project Settings",
+  repositories: "Repositories",
+  environments: "Environments",
+}
+
 export async function openProjectOverview(
   page: Page,
   subpath: "people" | "settings" | "repositories" | "environments",
 ) {
   const fixture = requireFixture()
+  if (!fixture.tenantGroupId) {
+    throw new Error(
+      "Missing tenantGroupId in fixtures/os-project.json — run os-setup first.",
+    )
+  }
+
   const targetUrl = `${e2eBaseUrl()}/app/project/${fixture.tenantGroupId}/${subpath}`
   const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
+
+  // Project-overview pages read selectedTenantGroup from the store (not only the
+  // URL). Seed that by opening the shared env dashboard first when localStorage
+  // is cold, otherwise People/Settings can render empty after a bare deep-link.
+  await page.goto(dashboardUrl, { waitUntil: "domcontentloaded" })
+  if (await isLoginSurface(page)) {
+    await ensureAuthenticated(page)
+    await reseedThenGoto(page, dashboardUrl, fixture.projectName, dashboardUrl)
+  } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
+    await reseedThenGoto(page, dashboardUrl, fixture.projectName, dashboardUrl)
+  }
 
   await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
 
@@ -104,6 +129,9 @@ export async function openProjectOverview(
   await expect(page).toHaveURL(new RegExp(`/app/project/${fixture.tenantGroupId}/${subpath}`), {
     timeout: 30_000,
   })
+  await expect(
+    page.getByRole("heading", { name: PROJECT_OVERVIEW_HEADING[subpath] }),
+  ).toBeVisible({ timeout: 30_000 })
 
   await persistSuiteSession(page)
 }

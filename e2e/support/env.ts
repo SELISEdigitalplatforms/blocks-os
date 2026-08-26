@@ -1,13 +1,23 @@
-export function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is not set. Fill it in e2e/.env.e2e.`);
-  }
-  return value;
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/$/, "")
 }
 
+export function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`${name} is not set. Fill it in e2e/.env.e2e.`)
+  }
+  return value
+}
+
+/** Blocks OS app under test (`E2E_BASE_URL`). */
 export function e2eBaseUrl(): string {
-  return requireEnv("E2E_BASE_URL");
+  return stripTrailingSlash(requireEnv("E2E_BASE_URL"))
+}
+
+export function e2eProjectId(): string | undefined {
+  const value = process.env.E2E_PROJECT_ID?.trim()
+  return value || undefined
 }
 
 export function e2eProjectId(): string | undefined {
@@ -19,14 +29,14 @@ export function e2eCredentials(): { email: string; password: string } {
   return {
     email: requireEnv("E2E_USERNAME"),
     password: requireEnv("E2E_PASSWORD"),
-  };
+  }
 }
 
 /** Domain for synthetic addresses created during tests (invites, new users). */
 export function e2eTestEmailDomain(): string {
-  return process.env.E2E_TEST_EMAIL_DOMAIN ?? "example.com";
+  return process.env.E2E_TEST_EMAIL_DOMAIN ?? "example.com"
 }
 
 export function uniqueTestEmail(localPart = "e2e"): string {
-  return `${localPart}.${Date.now()}@${e2eTestEmailDomain()}`;
+  return `${localPart}.${Date.now()}@${e2eTestEmailDomain()}`
 }

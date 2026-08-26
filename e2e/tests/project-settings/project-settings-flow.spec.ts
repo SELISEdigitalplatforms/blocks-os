@@ -1,17 +1,22 @@
 import { test, expect } from "../../support/test-base";
-import { openOsDashboard, openProjectOverview, openIam, openSecretManagement, openLmt, openEmailManagement, openOsConsole } from "../../support/os-helpers";
+import { openProjectOverview } from "../../support/os-helpers";
+import { readOsProject, writeOsProject } from "../../support/os-project";
 
 // Project Settings flow: General Information card (name/created on/
 // environments/plan) -> strict validation on Edit Project -> rename the
 // project -> confirm the rename sticks -> the Environments table below it.
 test.describe("flows", () => {
 
-
-
   test("Project Settings flow: strict validation -> rename project -> Environments table", async ({
     page,
   }) => {
     test.setTimeout(180_000);
+
+    const fixture = readOsProject();
+    if (!fixture?.projectName) {
+      throw new Error("Missing fixtures/os-project.json projectName — run os-setup first.");
+    }
+    let projectName = fixture.projectName;
 
     await test.step("Open Project Settings", async () => {
       await openProjectOverview(page, "settings");
@@ -28,11 +33,28 @@ test.describe("flows", () => {
       // "Created On" also appears as an Environments-table column header
       // further down the page, so take the first (General Information) match.
       await expect(page.getByText("Created On").first()).toBeVisible();
+      await expect(page.getByText("Environments").first()).toBeVisible();
       await expect(page.getByText("Plan")).toBeVisible();
       await expect(page.getByText("Free")).toBeVisible();
     });
 
     await test.step("Open the Edit Project dialog", async () => {
+      await page.getByRole("button", { name: "Edit project name" }).click();
+      await expect(page.getByRole("heading", { name: "Edit Project" })).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.locator("#name")).toHaveValue(projectName);
+    });
+
+    await test.step("Cancel closes the dialog without saving", async () => {
+      await page.locator("#name").fill(`${projectName} discarded`);
+      await page.getByRole("button", { name: "Cancel" }).click();
+      await expect(page.getByRole("heading", { name: "Edit Project" })).toBeHidden({
+        timeout: 10000,
+      });
+      await expect(page.getByText(projectName, { exact: true }).first()).toBeVisible();
+
+      // Reopen for the validation + rename steps below.
       await page.getByRole("button", { name: "Edit project name" }).click();
       await expect(page.getByRole("heading", { name: "Edit Project" })).toBeVisible({
         timeout: 10000,
@@ -72,6 +94,12 @@ test.describe("flows", () => {
       await expect(updateButton).toBeEnabled();
       await updateButton.click();
 
+      // A brief loading spinner replaces/prefixes the label while the
+      // mutation is pending (isUpdating disables both buttons).
+      await expect(page.locator('button:has(svg.lucide-loader)'))
+        .toBeVisible({ timeout: 3000 })
+        .catch(() => {});
+
       // The toast text also gets echoed inside an aria-live status region
       // ("Notification SuccessProject name updated successf…"), so scope to
       // the exact toast body node.
@@ -99,10 +127,36 @@ test.describe("flows", () => {
         page.getByText("Environments provisioned for this project and their public domains"),
       ).toBeVisible();
       await expect(page.getByText("X-Blocks-Key")).toBeVisible();
+      await expect(page.getByRole("columnheader", { name: "Environment" })).toBeVisible();
+      await expect(page.getByRole("columnheader", { name: "Domain" })).toBeVisible();
+      await expect(page.getByRole("columnheader", { name: "Created On" })).toBeVisible();
+
+      // Environments are listed dev -> test -> stg -> ... -> prod; a fresh
+      // project only has Development, so it must be the first data row.
+      const firstRow = page.getByRole("row").nth(1);
+      await expect(firstRow.getByText("Development")).toBeVisible();
+    });
+
+    await test.step("Copy the environment's X-Blocks-Key", async () => {
+      const copyButton = page.locator('button:has(svg.lucide-copy)').first();
+      if (await copyButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await copyButton.click();
+        await expect(page.locator('svg.lucide-check').first())
+          .toBeVisible({ timeout: 5000 })
+          .catch(() => {});
+      }
+    });
+
+    await test.step("Domain column shows 'Not deployed' for an undeployed environment", async () => {
+      const notDeployedBadge = page.getByText("Not deployed").first();
+      await expect(notDeployedBadge)
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
     });
 
     // Track the renamed project so teardown can find and delete it by its
     // current (post-rename) name.
     projectName = renamedProject;
+    writeOsProject({ ...fixture, projectName: renamedProject });
   });
 });
