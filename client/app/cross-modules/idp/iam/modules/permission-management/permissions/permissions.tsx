@@ -49,6 +49,7 @@ export function Permissions() {
           {!loading && (
             <div className="mt-5 flex items-center md:justify-end">
               <Pagination
+                compact
                 page={queryParams.page}
                 onChange={onPageChangeHandler}
                 totalCount={totalCount}

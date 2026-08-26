@@ -36,12 +36,15 @@ vi.mock("./roles-list", () => ({
 }));
 vi.mock("./roles-filter-toolbar", () => ({
   RolesFilterToolBar: () => <div data-testid="toolbar" />,
-  useRolesFilterQueryParams: () => ({ queryParams: h.queryParams, setQueryParams: h.setQueryParams }),
+  useRolesFilterQueryParams: () => ({
+    queryParams: h.queryParams,
+    setQueryParams: h.setQueryParams,
+  }),
   useRolesSortQueryParams: () => ({ sortQueryParams: { property: "Name", isDescending: false } }),
 }));
 vi.mock("@/components/ui-kits/pagination/pagination", () => ({
-  Pagination: ({ onChange }: { onChange: (p: number) => void }) => (
-    <button data-testid="page" onClick={() => onChange(4)}>
+  Pagination: ({ onChange, compact }: { onChange: (p: number) => void; compact?: boolean }) => (
+    <button data-testid="page" data-compact={String(compact)} onClick={() => onChange(4)}>
       page
     </button>
   ),
@@ -61,6 +64,7 @@ describe("Roles", () => {
     render(<Roles />);
     expect(screen.getByTestId("list").textContent).toBe("count:2");
     expect(screen.getByTestId("page")).toBeTruthy();
+    expect(screen.getByTestId("page").getAttribute("data-compact")).toBe("true");
   });
 
   it("hides pagination while fetching", () => {

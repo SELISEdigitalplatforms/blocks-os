@@ -185,6 +185,22 @@ describe("RolesList", () => {
     expect(navigate).toHaveBeenCalledWith("/scoped/iam/role-detail/role-1");
   });
 
+  it("renders an accessible card row and activates it with Enter and Space", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<RolesList roles={[role]} isLoading={false} />);
+    const row = screen.getByRole("button", { name: "Open role Administrator" });
+
+    expect(row.getAttribute("tabindex")).toBe("0");
+    expect(row.className).toContain("rounded-xl");
+    expect(row.className).toContain("hover:border-primary/30");
+    expect(container.querySelector("table")).toBeNull();
+
+    row.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    expect(navigate).toHaveBeenCalledTimes(2);
+  });
+
   it("opens the update-role dialog when the edit button is clicked", async () => {
     const user = userEvent.setup();
     render(<RolesList roles={[role]} isLoading={false} />);
@@ -309,7 +325,7 @@ describe("RolesList archive action", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("drops the open dialog rather than retargeting it when the list changes underneath", async () => {
+  it("keeps the open dialog targeted to the same role when the list changes underneath", async () => {
     // The dangerous shape here would be a row component reused with a stale open=true and a new
     // itemId, so Confirm archives a role the user never picked. Measured behaviour is the safe
     // one: the row remounts and the dialog closes with no archive call. Asserted so that a
@@ -324,11 +340,12 @@ describe("RolesList archive action", () => {
     // A refetch drops the other row.
     rerender(<RolesList roles={[role]} isLoading={false} />);
 
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText(/Administrator will be archived/)).toBeTruthy();
     expect(archiveRole).not.toHaveBeenCalled();
   });
 
-  it("closes the confirmation on any parent re-render (known limitation)", async () => {
+  it("keeps the confirmation open on a parent re-render", async () => {
     // Documents real behaviour rather than desired behaviour, so it fails loudly if either
     // changes. Root cause is outside this ticket: useSortQueryParams returns a fresh
     // sortQueryParams object every render, which invalidates the columns useMemo, which gives
@@ -344,7 +361,7 @@ describe("RolesList archive action", () => {
 
     rerender(<RolesList roles={[role]} isLoading={false} />);
 
-    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.querySelector('[role="dialog"]')).toBeTruthy();
     expect(archiveRole).not.toHaveBeenCalled();
   });
 
@@ -354,6 +371,7 @@ describe("RolesList archive action", () => {
     const user = userEvent.setup();
     renderList([role]);
 
+    await user.tab();
     await user.tab();
     await user.tab();
     await user.keyboard("{Enter}");
@@ -389,7 +407,9 @@ describe("RolesList archive action", () => {
     const user = userEvent.setup();
     renderList([role]);
     await user.click(trash());
-    expect((screen.getByRole("button", { name: "Archiving..." }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Archiving..." }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it("renders no archive actions in the empty state", () => {
