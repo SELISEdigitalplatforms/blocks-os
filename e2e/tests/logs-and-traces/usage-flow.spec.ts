@@ -78,7 +78,14 @@ test.describe("flows", () => {
       if (await viewLogsLink.isVisible({ timeout: 8000 }).catch(() => false)) {
         await viewLogsLink.click();
         await expect(page).toHaveURL(/lmt\/logs\/.+/, { timeout: 15000 });
-        await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 15000 });
+        // Service log stream has no page heading — source tabs are the ready signal.
+        // (Search has mobile+desktop duplicates, so don't assert on placeholder alone.)
+        await expect(page.getByRole("tab", { name: "Managed Service" })).toBeVisible({
+          timeout: 15000,
+        });
+        await expect(page.getByRole("navigation", { name: "breadcrumb" })).toBeVisible({
+          timeout: 10000,
+        });
       }
     });
   });

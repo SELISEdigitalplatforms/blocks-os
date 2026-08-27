@@ -77,40 +77,72 @@ test.describe("flows", () => {
         .catch(() => {});
     });
 
-    const inviteEmail = uniqueTestEmail("flow-user");
+    const inviteEmail = uniqueTestEmail("flow-user")
 
     await test.step("Fill a valid, fresh email and send the invite", async () => {
-      await page.getByPlaceholder("name@company.com").fill(inviteEmail);
+      await page.getByPlaceholder("name@company.com").fill(inviteEmail)
 
-      await page.getByRole("button", { name: /Send invite|Grant access/ }).click();
-      await expect(page.getByText(/Invitation is sent|User granted access to the organization/))
-        .toBeVisible({ timeout: 15000 })
-        .catch(() => {});
-    });
+      // Multi-org workspaces require an organization before the invite can succeed.
+      const inviteDialog = page.getByRole("dialog").filter({ hasText: "Invite User" })
+      const orgTrigger = inviteDialog.getByRole("combobox")
+      if (await orgTrigger.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await orgTrigger.click()
+        const defaultOrg = page.getByRole("button", { name: /^Default$/i })
+        if (await defaultOrg.isVisible({ timeout: 3000 }).catch(() => false)) {
+          await defaultOrg.click()
+        } else {
+          await page
+            .locator(
+              '[data-radix-popper-content-wrapper] button[type="button"], [data-slot="popover-content"] button[type="button"]',
+            )
+            .first()
+            .click()
+        }
+        await expect(orgTrigger).not.toContainText("Select organization", { timeout: 5000 })
+      }
 
-    // Each row renders as a single button whose accessible name includes
-    // the email — the raw email text itself appears twice inside that
-    // button (a hidden vs. visible responsive span), so match the row via
-    // its button role instead of the ambiguous/partly-hidden text nodes.
-    const userRow = page.getByRole("button", {
-      name: new RegExp(inviteEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-    });
+      const sendButton = inviteDialog.getByRole("button", { name: /Send invite|Grant access/ })
+      await expect(sendButton).toBeEnabled({ timeout: 10000 })
+      await sendButton.click()
+      // Toast body + aria-live status both contain the message — use exact text
+      // so Playwright does not hit a strict-mode double match.
+      await expect(
+        page
+          .getByText("Invitation is sent", { exact: true })
+          .or(page.getByText("User granted access to the organization", { exact: true })),
+      ).toBeVisible({ timeout: 20000 })
+      await expect(page.getByRole("heading", { name: "Invite User" })).toBeHidden({
+        timeout: 15000,
+      })
+    })
+
+    // Row is role=button; full email sits inside a nested copy button so it is
+    // often excluded from the accessible name. Fresh invites have no profile
+    // name — display text is the email local part.
+    const emailLocalPart = inviteEmail.split("@")[0] ?? inviteEmail
+    const escapedLocal = emailLocalPart.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const userRow = page
+      .locator('[role="button"]')
+      .filter({ has: page.locator("p", { hasText: new RegExp(`^${escapedLocal}$`) }) })
+      .first()
 
     await test.step("Find the new user and open their details page", async () => {
-      if (!(await userRow.isVisible({ timeout: 15000 }).catch(() => false))) {
-        // The Users list can race its own refetch right after a fresh
-        // invite — one reload clears it, same pattern as people-flow.
-        await page.reload({ waitUntil: "domcontentloaded" });
-        await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({ timeout: 30000 });
+      const searchInput = page.getByPlaceholder("Minimum 3 characters…")
+      if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await searchInput.fill(emailLocalPart)
       }
-      await expect(userRow).toBeVisible({ timeout: 15000 });
-      // Click the row's own name paragraph rather than the outer button —
-      // the outer button's bounding box also contains a nested "Copy"
-      // icon button, and a plain click can land there instead of
-      // triggering the row's navigation.
-      await userRow.locator("p").first().click();
-      await expect(page).toHaveURL(/\/iam\/user-detail\/.+/, { timeout: 15000 });
-    });
+
+      if (!(await userRow.isVisible({ timeout: 15000 }).catch(() => false))) {
+        await page.reload({ waitUntil: "domcontentloaded" })
+        await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({ timeout: 30000 })
+        if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await searchInput.fill(emailLocalPart)
+        }
+      }
+      await expect(userRow).toBeVisible({ timeout: 20000 })
+      await userRow.locator("p").first().click()
+      await expect(page).toHaveURL(/\/iam\/user-detail\/.+/, { timeout: 15000 })
+    })
 
     await test.step("Access tab is the default landing tab", async () => {
       await expect(page.getByRole("tab", { name: "Access" })).toBeVisible({ timeout: 15000 });

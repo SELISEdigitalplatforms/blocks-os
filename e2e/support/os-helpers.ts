@@ -52,13 +52,24 @@ async function gotoItemRoute(page: Page, route: string, ready?: { heading: strin
   const targetUrl = buildProjectRouteUrl(fixture.itemId, route)
   const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
 
-  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
 
-  if (await isLoginSurface(page)) {
-    await ensureAuthenticated(page)
-    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
-  } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
-    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+    if (await isLoginSurface(page)) {
+      await ensureAuthenticated(page)
+      await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+    } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
+      await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+    }
+
+    const pathname = new URL(page.url()).pathname
+    if (!/\/app\/console\/?$/i.test(pathname)) {
+      break
+    }
+  }
+
+  if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
+    throw new Error(`Could not reach ${targetUrl} — still on console after reseed`)
   }
 
   if (ready) {
@@ -92,6 +103,138 @@ const PROJECT_OVERVIEW_HEADING: Record<
   environments: "Environments",
 }
 
+async function waitForProjectsGets(page: Page) {
+  await page
+    .waitForResponse(
+      (response) =>
+        /\/Projects\/Gets/i.test(response.url()) &&
+        response.request().method() === "GET" &&
+        response.ok(),
+      { timeout: 30_000 },
+    )
+    .catch(() => null)
+}
+
+/** ImpersonationTerminator runs on project-overview mount — give it a beat to finish. */
+async function waitForImpersonationToClear(page: Page) {
+  await page
+    .waitForResponse(
+      (response) => /impersonation/i.test(response.url()) && /stop/i.test(response.url()),
+      { timeout: 20_000 },
+    )
+    .catch(() => null)
+}
+
+function parsePeopleGetsBody(body: unknown): { isOwner: boolean } {
+  const payload = body as
+    | { isOwner?: boolean; data?: { isOwner?: boolean } }
+    | null
+    | undefined
+  return {
+    isOwner: payload?.isOwner ?? payload?.data?.isOwner ?? false,
+  }
+}
+
+async function clickPeopleNavAndWaitForGets(page: Page) {
+  const peopleGetsPromise = page.waitForResponse(
+    (response) =>
+      /\/People\/Gets$/i.test(response.url()) && response.request().method() === "POST",
+    { timeout: 30_000 },
+  )
+
+  await page.getByRole("link", { name: "People", exact: true }).click()
+  await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
+    timeout: 30_000,
+  })
+
+  const response = await peopleGetsPromise.catch(() => null)
+  if (!response?.ok()) {
+    return { isOwner: false }
+  }
+
+  const body = await response.json().catch(() => null)
+  return parsePeopleGetsBody(body)
+}
+
+async function ensureEnvironmentsSeedReady(page: Page) {
+  await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
+    timeout: 30_000,
+  })
+  await expect(page.getByText("X-Blocks-Key:").first()).toBeVisible({ timeout: 30_000 })
+}
+
+/** Seed project-overview store from URL (ProjectOverviewRoute) before sub-pages load. */
+async function seedProjectOverviewStore(page: Page, tenantGroupId: string) {
+  const seedUrl = `${e2eBaseUrl()}/app/project/${tenantGroupId}/environments`
+  const projectsGetsPromise = waitForProjectsGets(page)
+  await page.goto(seedUrl, { waitUntil: "domcontentloaded" })
+
+  if (await isLoginSurface(page)) {
+    const fixture = requireFixture()
+    const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
+    await ensureAuthenticated(page)
+    await reseedThenGoto(page, seedUrl, fixture.projectName, dashboardUrl)
+  } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
+    const fixture = requireFixture()
+    const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
+    await reseedThenGoto(page, seedUrl, fixture.projectName, dashboardUrl)
+  }
+
+  await projectsGetsPromise
+  await ensureEnvironmentsSeedReady(page)
+  await waitForImpersonationToClear(page)
+}
+
+/**
+ * People Invite only renders when useGetPeople runs with selectedTenantGroup set and
+ * API returns isOwner. Never reload People — that remounts Zustand empty and keeps
+ * the query disabled. Recover via Environments in-app nav, then console re-seed.
+ */
+export async function waitForPeoplePageReady(page: Page, tenantGroupId: string) {
+  const inviteButton = page.getByRole("button", { name: "Invite" })
+
+  if (await inviteButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    return
+  }
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const onEnvironments = await page
+      .getByRole("heading", { name: "Environments" })
+      .isVisible({ timeout: 2_000 })
+      .catch(() => false)
+
+    if (!onEnvironments) {
+      const environmentsNav = page.getByRole("link", { name: "Environments", exact: true })
+      if (await environmentsNav.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await environmentsNav.click()
+        await ensureEnvironmentsSeedReady(page)
+      } else {
+        await seedProjectOverviewStore(page, tenantGroupId)
+      }
+    }
+
+    const peopleGets = await clickPeopleNavAndWaitForGets(page)
+
+    if (
+      peopleGets.isOwner &&
+      (await inviteButton.isVisible({ timeout: 10_000 }).catch(() => false))
+    ) {
+      return
+    }
+
+    await page.goto(`${e2eBaseUrl()}/app/console`, { waitUntil: "domcontentloaded" })
+    if (await isLoginSurface(page)) {
+      await ensureAuthenticated(page)
+    }
+    await expect(
+      page.getByRole("heading", { name: /Your Blocks Projects|Welcome to SELISE Blocks/ }),
+    ).toBeVisible({ timeout: 30_000 })
+    await seedProjectOverviewStore(page, tenantGroupId)
+  }
+
+  await expect(inviteButton).toBeVisible({ timeout: 30_000 })
+}
+
 export async function openProjectOverview(
   page: Page,
   subpath: "people" | "settings" | "repositories" | "environments",
@@ -103,28 +246,41 @@ export async function openProjectOverview(
     )
   }
 
-  const targetUrl = `${e2eBaseUrl()}/app/project/${fixture.tenantGroupId}/${subpath}`
-  const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
-
-  // Project-overview pages read selectedTenantGroup from the store (not only the
-  // URL). Seed that by opening the shared env dashboard first when localStorage
-  // is cold, otherwise People/Settings can render empty after a bare deep-link.
-  await page.goto(dashboardUrl, { waitUntil: "domcontentloaded" })
-  if (await isLoginSurface(page)) {
-    await ensureAuthenticated(page)
-    await reseedThenGoto(page, dashboardUrl, fixture.projectName, dashboardUrl)
-  } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
-    await reseedThenGoto(page, dashboardUrl, fixture.projectName, dashboardUrl)
+  // After env-dashboard specs, impersonation tokens can linger and make People/Gets
+  // return isOwner=false with an empty list. Bounce through console first so
+  // ImpersonationTerminator + a fresh project-overview mount reset tenant context.
+  if (subpath === "people") {
+    await page.goto(`${e2eBaseUrl()}/app/console`, { waitUntil: "domcontentloaded" })
+    if (await isLoginSurface(page)) {
+      await ensureAuthenticated(page)
+    }
+    await expect(
+      page.getByRole("heading", { name: /Your Blocks Projects|Welcome to SELISE Blocks/ }),
+    ).toBeVisible({ timeout: 30_000 })
   }
 
-  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+  // ProjectOverviewRoute hydrates selectedTenantGroup from the URL — seed via
+  // Environments first so People/Settings APIs query the correct group.
+  await seedProjectOverviewStore(page, fixture.tenantGroupId)
 
-  if (await isLoginSurface(page)) {
-    await ensureAuthenticated(page)
-    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
-  } else if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
-    await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
+  if (subpath === "environments") {
+    await persistSuiteSession(page)
+    return
   }
+
+  if (subpath === "people") {
+    await waitForPeoplePageReady(page, fixture.tenantGroupId)
+    await persistSuiteSession(page)
+    return
+  }
+
+  // In-app sidebar navigation preserves Zustand; page.goto would remount empty.
+  const navLink = page.getByRole("link", {
+    name: PROJECT_OVERVIEW_HEADING[subpath],
+    exact: true,
+  })
+  await expect(navLink).toBeVisible({ timeout: 15_000 })
+  await navLink.click()
 
   await expect(page).toHaveURL(new RegExp(`/app/project/${fixture.tenantGroupId}/${subpath}`), {
     timeout: 30_000,

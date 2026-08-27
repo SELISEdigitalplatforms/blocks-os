@@ -3,6 +3,8 @@ import dotenv from "dotenv"
 import fs from "fs"
 import path from "path"
 
+const { resolveEnabledFeatures, toTestDirMatch } = require("./features.cjs")
+
 dotenv.config({ path: path.resolve(__dirname, ".env.e2e") })
 
 const baseURL = process.env.E2E_BASE_URL
@@ -12,6 +14,15 @@ if (!baseURL) {
     "E2E_BASE_URL is not set. Copy e2e/.env.e2e.example to e2e/.env.e2e and set E2E_BASE_URL to your named domain.",
   )
 }
+
+const enabledFeatures = resolveEnabledFeatures()
+if (enabledFeatures.length === 0) {
+  throw new Error(
+    "No e2e features enabled. Edit features.cjs (enabled: true) or set E2E_FEATURES=overview,users",
+  )
+}
+
+const osFeatureTestMatch = enabledFeatures.map((feature) => toTestDirMatch(feature.spec))
 
 const autoStartServer = process.env.E2E_NO_WEBSERVER !== "1"
 const osSessionPath = path.resolve(__dirname, "fixtures/os-session.json")
@@ -66,8 +77,8 @@ export default defineConfig({
     },
     {
       name: "os",
-      testMatch: /.*\.spec\.ts/,
-      testIgnore: [/auth[\\/]login\.spec\.ts/, /suite\.(setup|teardown)\.spec\.ts/],
+      // Only enabled features — keeps suite setup/teardown wired via project deps.
+      testMatch: osFeatureTestMatch,
       dependencies: ["os-setup"],
       use: {
         ...devices["Desktop Chrome"],

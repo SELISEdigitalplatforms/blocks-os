@@ -32,15 +32,17 @@ in suite setup/teardown — no cross-app hop to another product.
 
 ```bash
 cd e2e
-npm test              # os-setup + feature specs + os-teardown
-npm run test:features # ordered subset from features.mjs
+npm test              # create new project → full suite from features.cjs → teardown
+npm run test:features # respects features.cjs `enabled` flags / E2E_FEATURES subset
+npm run test:auth     # standalone login smoke only
 ```
 
-Select features:
+With `E2E_REUSE_PROJECT_NAME` set in `.env.e2e`, setup opens that project instead of creating.
+
+Subset (via `test:features` or by overriding env):
 
 ```bash
 E2E_FEATURES=overview,users npm run test:features
-E2E_FEATURES=all npm run test:features
 ```
 
 ### Against remote (prod/dev)
@@ -50,7 +52,9 @@ E2E_BASE_URL=https://os.seliseblocks.com
 E2E_NO_WEBSERVER=1
 ```
 
-Reuse an existing project (recommended when console slots are limited):
+By default `npm test` **creates** a new project (`PROJECT_NAME` + timestamp, or `Test Project` + timestamp).
+
+Reuse an existing project instead:
 
 ```
 E2E_REUSE_PROJECT_NAME=test
@@ -79,6 +83,7 @@ npm run report        # from e2e/
 | `E2E_PROJECT_ID` | Open project by UUID — skips console card search |
 | `E2E_KEEP_PROJECT=1` | Never delete shared project after run |
 | `E2E_NO_WEBSERVER=1` | Don't auto-start the app |
+| `E2E_FEATURES` | `all` (default via `npm test`), feature ids, or omit for `enabled` flags (`test:features`) |
 | `E2E_PAUSE_MS` | Hold browser after each test (headed debugging) |
 | `E2E_SLOWMO` | Slow motion ms per Playwright action |
 
@@ -104,7 +109,7 @@ in `os-teardown` when every test passes.
 
 ```
 e2e/
-  features.mjs / run-e2e.mjs  # npm run test:features
+  features.cjs / run-e2e.mjs  # feature registry + npm test entry
   tests/
     auth/login.spec.ts
     suite/
@@ -122,7 +127,7 @@ e2e/
     os-helpers.ts
     create-and-delete-project.ts
     run-outcome.ts
-    features.ts               # TS mirror of features.mjs
+    features.ts               # OsFeature type only (list lives in features.cjs)
     test-base.ts
   fixtures/                 # gitignored session + project JSON
   playwright.config.ts

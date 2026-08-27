@@ -70,26 +70,37 @@ test.describe("flows", () => {
     });
 
     await test.step("Organization filter narrows the roles list", async () => {
-      const orgFilterButton = page.getByRole("button", { name: /^Organization$/i });
+      // Accessible name is "Organization" when idle, and
+      // "Organization <selected org name>" after a pick — match the prefix.
+      const orgFilterButton = page.getByRole("button", { name: /^Organization\b/i })
       if (await orgFilterButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await orgFilterButton.click();
-        const firstOption = page.getByRole("radio").first();
+        await orgFilterButton.click()
+        const firstOption = page.getByRole("radio").first()
         if (await firstOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await firstOption.click();
-          await expect(page.getByRole("table")).toBeVisible({ timeout: 8000 }).catch(() => {});
-          // Restore the default org scope so the new role stays visible below.
-          await orgFilterButton.click();
-          const clearButton = page.getByRole("button", { name: /clear/i });
-          if (await clearButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await clearButton.click();
+          await firstOption.click()
+          await expect(page.getByRole("button", { name: /^Organization\b/i })).toBeVisible({
+            timeout: 8000,
+          })
+
+          // Prefer Reset — re-clicking the trigger after selection used to hang
+          // on /^Organization$/ which no longer matches the expanded name.
+          const resetButton = page.getByRole("button", { name: /^Reset$/i })
+          if (await resetButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await resetButton.click()
           } else {
-            await page.keyboard.press("Escape");
+            await page.getByRole("button", { name: /^Organization\b/i }).click()
+            const clearButton = page.getByRole("button", { name: /^Clear$/i })
+            if (await clearButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+              await clearButton.click()
+            } else {
+              await page.keyboard.press("Escape")
+            }
           }
         } else {
-          await page.keyboard.press("Escape");
+          await page.keyboard.press("Escape")
         }
       }
-    });
+    })
 
     await test.step("Sort by the Name column header", async () => {
       const nameHeader = page.getByText("Name", { exact: true }).first();

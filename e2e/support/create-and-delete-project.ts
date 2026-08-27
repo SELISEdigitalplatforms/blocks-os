@@ -15,6 +15,7 @@ function orphanProjectPatterns(): RegExp[] {
   const prefixes = new Set(["Test Project"])
   const configured = process.env.PROJECT_NAME?.trim()
   if (configured) prefixes.add(configured)
+  // Suite names only: `${PROJECT_NAME|Test Project} ${Date.now()}`
   return [...prefixes].map((prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+`, "g"))
 }
 
@@ -77,7 +78,7 @@ export async function freeProjectSlotIfNeeded(page: Page) {
     return
   }
 
-  for (let attempt = 0; attempt < 8; attempt++) {
+  for (let attempt = 0; attempt < 12; attempt++) {
     const orphanNames = await listOrphanProjectNames(page)
     if (orphanNames.length === 0) {
       break
@@ -88,11 +89,54 @@ export async function freeProjectSlotIfNeeded(page: Page) {
     await waitForConsoleProjectsReady(page)
 
     if (await isVisibleNow(addProjectButton)) {
-      return
+      // Keep clearing orphans while slots are tight — a single delete may not
+      // free Add Project if non-orphan projects also fill the quota.
+      if (orphanNames.length <= 1) return
     }
   }
 
   await expect(addProjectButton).toBeVisible({ timeout: 15_000 })
+}
+
+/** Try opening Development from the post-create environments page. Returns false if not usable. */
+async function openDevelopmentEnvCardIfPresent(page: Page): Promise<boolean> {
+  const developmentCard = page
+    .locator('[class*="cursor-pointer"]')
+    .filter({ has: page.getByText("Development", { exact: true }) })
+    .first()
+
+  if (!(await developmentCard.isVisible({ timeout: 8_000 }).catch(() => false))) {
+    return false
+  }
+
+  // Key hydrates after create; do not require it to click, but wait briefly if present.
+  await developmentCard
+    .getByText("X-Blocks-Key:")
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .catch(() => {})
+
+  const setupPending = developmentCard.locator('[aria-label="Setup pending"]')
+  if (await isVisibleNow(setupPending)) {
+    const repairButton = developmentCard.locator('[aria-label="Repair environment"]')
+    if (await isVisibleNow(repairButton)) {
+      await repairButton.click()
+      await page.getByRole("button", { name: "Repair" }).last().click()
+    }
+    await expect(setupPending).toHaveCount(0, { timeout: 60_000 })
+  }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await developmentCard.click({ force: true })
+    try {
+      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 15_000 })
+      await expect(page.getByText("X-Blocks-Key:")).toBeVisible({ timeout: 15_000 })
+      return true
+    } catch {
+      if (attempt === 2) return false
+    }
+  }
+
+  return false
 }
 
 export async function createProject(page: Page) {
@@ -167,47 +211,21 @@ export async function createProject(page: Page) {
     new URL(page.url()).pathname.match(/\/app\/project\/([^/]+)\/environments/)?.[1] ?? ""
 
   await test.step("Open the new project's Development dashboard", async () => {
-    if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
-      await openNamedProjectDashboard(page, projectName)
-      return
+    // After create, OS may land on /project/{id}/environments or redirect to
+    // /app/console. The environments card (Development + X-Blocks-Key) is easy
+    // to miss during that hop. Console → named card → Development button is the
+    // stable path on both outcomes.
+    const onEnvironments = /\/app\/project\/[^/]+\/environments\/?$/i.test(
+      new URL(page.url()).pathname,
+    )
+
+    if (onEnvironments) {
+      const openedFromEnvironments = await openDevelopmentEnvCardIfPresent(page)
+      if (openedFromEnvironments) return
     }
 
-    const developmentCard = page
-      .locator('[class*="cursor-pointer"]')
-      .filter({ has: page.getByText("Development", { exact: true }) })
-      .filter({ hasText: "X-Blocks-Key:" })
-      .first()
-
-    await expect(developmentCard).toBeVisible({ timeout: 30000 })
-
-    const setupPending = developmentCard.locator('[aria-label="Setup pending"]')
-    if (await isVisibleNow(setupPending)) {
-      const repairButton = developmentCard.locator('[aria-label="Repair environment"]')
-      if (await isVisibleNow(repairButton)) {
-        await repairButton.click()
-        await page.getByRole("button", { name: "Repair" }).last().click()
-      }
-      await expect(setupPending).toHaveCount(0, { timeout: 60_000 })
-    }
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await developmentCard.click({ force: true })
-      try {
-        await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 15_000 })
-        break
-      } catch (error) {
-        if (attempt === 2) {
-          throw error
-        }
-      }
-    }
-
-    await expect(page).toHaveURL(/\/app\/(?!project\/)[^/]+\/dashboard/, {
-      timeout: 15000,
-    })
-    await expect(page.getByText("X-Blocks-Key:")).toBeVisible({
-      timeout: 15000,
-    })
+    await ensureConsole(page)
+    await openNamedProjectDashboard(page, projectName)
   })
 
   const itemId = new URL(page.url()).pathname.split("/")[2] ?? ""
@@ -450,7 +468,12 @@ async function openProjectById(page: Page, projectId: string) {
   }
 }
 
-/** Reuse an existing OS project, or create one natively on Blocks OS. */
+/**
+ * Suite shared project:
+ * - `E2E_PROJECT_ID` → open by id
+ * - `E2E_REUSE_PROJECT_NAME` → open that exact console name
+ * - otherwise always create `${PROJECT_NAME|Test Project} ${Date.now()}`
+ */
 export async function reuseOrCreateSharedProject(page: Page): Promise<{
   projectName: string
   dashboardUrl: string
@@ -476,22 +499,6 @@ export async function reuseOrCreateSharedProject(page: Page): Promise<{
     return { projectName: reuseName, dashboardUrl: page.url(), itemId, tenantGroupId }
   }
 
-  const testProjects = await listOrphanProjectNames(page)
-  if (testProjects.length > 0) {
-    const projectName = testProjects[testProjects.length - 1]!
-    try {
-      await openNamedProjectDashboard(page, projectName)
-      const itemId = new URL(page.url()).pathname.split("/")[2] ?? ""
-      const tenantGroupId = await resolveTenantGroupId(page)
-      return { projectName, dashboardUrl: page.url(), itemId, tenantGroupId }
-    } catch (error) {
-      console.warn(
-        `[e2e] Could not reopen orphan "${projectName}" — creating a new project instead.`,
-        error,
-      )
-    }
-  }
-
   try {
     const created = await createProject(page)
     return { ...created, dashboardUrl: page.url() }
@@ -499,7 +506,7 @@ export async function reuseOrCreateSharedProject(page: Page): Promise<{
     const detail = error instanceof Error ? error.message : String(error)
     throw new Error(
       "Could not create a shared project on Blocks OS (Add Project missing or create failed). " +
-        "Set E2E_REUSE_PROJECT_NAME (e.g. test) or E2E_PROJECT_ID, or free a console slot. " +
+        "Set E2E_REUSE_PROJECT_NAME to an existing project, or E2E_PROJECT_ID, or free a console slot. " +
         `Cause: ${detail}`,
     )
   }

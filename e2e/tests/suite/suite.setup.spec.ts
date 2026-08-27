@@ -7,7 +7,7 @@ import { OS_SESSION_PATH, writeOsProject } from "../../support/os-project"
 import { resetRunOutcome } from "../../support/run-outcome"
 
 test.describe("os suite setup", () => {
-  test("login, reuse or create one shared project on Blocks OS", async ({ page }) => {
+  test("login, then create (or reuse) one shared project on Blocks OS", async ({ page }) => {
     test.setTimeout(300_000)
     resetRunOutcome()
 

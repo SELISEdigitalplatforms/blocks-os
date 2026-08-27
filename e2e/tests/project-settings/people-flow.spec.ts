@@ -13,28 +13,25 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Open People", async () => {
-      await openProjectOverview(page, "people");
-      // Invite only renders when the people API reports isOwner — wait for it
-      // (not just the heading) so a cold store / late fetch doesn't race Owner.
-      await expect(page.getByRole("button", { name: "Invite" })).toBeVisible({
+      await openProjectOverview(page, "people")
+      await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
         timeout: 30000,
-      });
-    });
+      })
+      await expect(page.getByRole("button", { name: "Invite" })).toBeVisible({ timeout: 30000 })
+    })
 
     await test.step("The project owner appears in the list", async () => {
       if (!(await page.getByText("Owner").first().isVisible({ timeout: 15000 }).catch(() => false))) {
-        // Freshly created project can race the People list's own data —
-        // one reload clears it, same pattern used after a fresh invite below.
-        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.reload({ waitUntil: "domcontentloaded" })
         await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
           timeout: 30000,
-        });
+        })
         await expect(page.getByRole("button", { name: "Invite" })).toBeVisible({
           timeout: 30000,
-        });
+        })
       }
-      await expect(page.getByText("Owner").first()).toBeVisible({ timeout: 20000 });
-    });
+      await expect(page.getByText("Owner").first()).toBeVisible({ timeout: 20000 })
+    })
 
     await test.step("Pagination controls on the People table", async () => {
       const nextPageButton = page.locator('button:has(svg.lucide-chevron-right)').first();
@@ -109,7 +106,7 @@ test.describe("flows", () => {
       await expect(sendButton).toBeEnabled();
       await sendButton.click();
 
-      await expect(page.getByText(/Invitation is sent/))
+      await expect(page.getByText(/Invitation is sent/i))
         .toBeVisible({ timeout: 20000 })
         .catch(() => {});
       await expect(page.getByRole("heading", { name: "Invite people" })).toBeHidden({

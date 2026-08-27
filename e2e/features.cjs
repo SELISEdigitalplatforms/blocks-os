@@ -1,12 +1,15 @@
 /**
- * Blocks OS E2E feature list — edit `enabled` and order here.
- * Run: npm run test:features
+ * Blocks OS E2E feature list — single source of truth.
+ * Edit `enabled` / order here. Loaded by playwright.config.ts and run-e2e.mjs.
  *
- * Env: E2E_FEATURES=overview,users  or  E2E_FEATURES=all
+ * Env:
+ *   E2E_FEATURES=all              → every suite in this file (`npm test`)
+ *   E2E_FEATURES=overview,users   → subset
+ *   (unset)                       → only `enabled: true` (`npm run test:features`)
  */
 
 /** @type {{ id: string, name: string, enabled: boolean, spec: string }[]} */
-export const OS_FEATURES = [
+const OS_FEATURES = [
   {
     id: "overview",
     name: "Overview — dashboard / domains",
@@ -159,10 +162,16 @@ export const OS_FEATURES = [
   },
 ]
 
-export function resolveEnabledFeatures() {
+function resolveEnabledFeatures() {
   const override = process.env.E2E_FEATURES?.trim()
 
-  if (!override || override === "all") {
+  // Full registry — every suite in OS_FEATURES (used by `npm test`).
+  if (override === "all") {
+    return [...OS_FEATURES]
+  }
+
+  // Default: only entries with enabled: true.
+  if (!override) {
     return OS_FEATURES.filter((feature) => feature.enabled)
   }
 
@@ -181,4 +190,15 @@ export function resolveEnabledFeatures() {
   }
 
   return selected
+}
+
+/** Spec paths relative to `testDir` (`./tests`). */
+function toTestDirMatch(spec) {
+  return spec.replace(/^tests\//, "")
+}
+
+module.exports = {
+  OS_FEATURES,
+  resolveEnabledFeatures,
+  toTestDirMatch,
 }
