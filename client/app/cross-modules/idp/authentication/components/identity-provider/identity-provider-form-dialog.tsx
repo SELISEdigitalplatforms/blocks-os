@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Select,
   SelectContent,
@@ -35,6 +34,7 @@ import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
+import { ScopeMultiSelect } from "./scope-multi-select";
 import {
   toPermissionStubs,
   toRoleStubs,
@@ -79,6 +79,11 @@ const BLANK_FORM: FormValues = {
   clientSecret: "",
   wellKnownUrl: "",
   audience: "",
+};
+
+const parseScopes = (scope?: string): string[] => {
+  const scopes = (scope ?? "").split(/[\s,]+/).filter(Boolean);
+  return scopes.includes("openid") ? scopes : ["openid", ...scopes];
 };
 
 const parseRedirectUris = (provider: IdentityProvider): string[] => {
@@ -133,6 +138,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
+  const [scopes, setScopes] = useState<string[]>(["openid"]);
   const [requirePkce, setRequirePkce] = useState(false);
   const [redirectUrisError, setRedirectUrisError] = useState<string | null>(null);
 
@@ -169,6 +175,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
+      setScopes(["openid"]);
       setRequirePkce(false);
       setRedirectUrisError(null);
       setIsFormReady(true);
@@ -192,6 +199,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     setRedirectUris(parseRedirectUris(editedProvider));
     setSelectedRoles(toRoleStubs(editedProvider.initialRoles ?? []));
     setSelectedPermissions(toPermissionStubs(editedProvider.initialPermissions ?? []));
+    setScopes(parseScopes(editedProvider.scope));
     setRequirePkce(!!editedProvider.requirePkce);
     setRedirectUrisError(null);
     setIsFormReady(true);
@@ -224,6 +232,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
         cleanedUris,
         selectedRoles,
         selectedPermissions,
+        scopes,
         requirePkce,
         blocksOidcWellKnownUrl,
         editedProvider,
@@ -531,14 +540,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
               />
 
               {/* Scope(s) + PKCE */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <Label>Scope(s)</Label>
-                  <div className="flex items-center gap-2">
-                    <Checkbox checked disabled />
-                    <span className="text-sm text-muted-foreground">openid</span>
-                  </div>
-                </div>
+              <div className="space-y-1.5">
+                <Label>Scope(s)</Label>
+                <ScopeMultiSelect value={scopes} onChange={setScopes} />
                 {/* <div className="flex items-center gap-2">
               <Checkbox
                 id="requirePkce"

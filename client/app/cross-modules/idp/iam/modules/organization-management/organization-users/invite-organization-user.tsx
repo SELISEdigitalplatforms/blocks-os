@@ -317,7 +317,7 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
               {isValidEmailFormat && !isConfigLoading && isMultiOrgEnabled && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Organization</label>
-                  <Popover open={orgPopoverOpen} onOpenChange={setOrgPopoverOpen}>
+                  <Popover open={orgPopoverOpen} onOpenChange={setOrgPopoverOpen} modal>
                     <PopoverTrigger asChild>
                       <Button
                         type="button"
@@ -335,7 +335,7 @@ export const InviteOrganizationUser = ({ organizationId }: InviteOrganizationUse
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <div className="max-h-[260px] overflow-y-auto p-1">
+                      <div className="max-h-[168px] overflow-y-auto p-1">
                         {orgOptions.length === 0 && !isOrgsLoading && (
                           <div className="px-2 py-1.5 text-sm text-muted-foreground">
                             {exists

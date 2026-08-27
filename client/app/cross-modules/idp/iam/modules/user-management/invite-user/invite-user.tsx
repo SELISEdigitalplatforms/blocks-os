@@ -315,7 +315,7 @@ export const InviteUser = () => {
                   render={() => (
                     <FormItem>
                       <FormLabel>Organization</FormLabel>
-                      <Popover open={orgPopoverOpen} onOpenChange={setOrgPopoverOpen}>
+                      <Popover open={orgPopoverOpen} onOpenChange={setOrgPopoverOpen} modal>
                         <PopoverTrigger asChild>
                           <Button
                             type="button"
@@ -336,7 +336,7 @@ export const InviteUser = () => {
                           className="w-[--radix-popover-trigger-width] p-0"
                           align="start"
                         >
-                          <div className="max-h-[260px] overflow-y-auto p-1">
+                          <div className="max-h-[168px] overflow-y-auto p-1">
                             {orgOptions.length === 0 && !isOrgsLoading && (
                               <div className="px-2 py-1.5 text-sm text-muted-foreground">
                                 {exists

@@ -299,7 +299,7 @@ export const CreateClientCredential = ({
                 )}
               />
             </div>
-            <DialogFooter className="shrink-0 px-6 py-4 pr-12">
+            <DialogFooter className="shrink-0 px-6 py-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel

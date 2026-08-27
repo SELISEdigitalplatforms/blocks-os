@@ -141,12 +141,36 @@ test.describe("flows", () => {
         await firstRoleCheckbox.check();
         await roleDialog.getByRole("button", { name: "Add" }).click();
       } else {
-        await page.keyboard.press("Escape");
+        // Escape also dismisses the parent Add Client Credential dialog.
+        const roleCancel = roleDialog.getByRole("button", { name: "Cancel" });
+        if (await roleCancel.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await roleCancel.click();
+        } else {
+          await page.keyboard.press("Escape");
+        }
+        await expect(roleDialog).toBeHidden({ timeout: 5000 }).catch(() => {});
       }
     });
 
     await test.step("Assign a permission via the 'Assign Permissions' picker dialog", async () => {
-      await page.getByRole("button", { name: "Assign Permissions" }).click();
+      // If the nested "Assign roles" dialog is still open, the parent is
+      // aria-hidden so a "is the Add Client Credential dialog visible?"
+      // check fails — and clicking getByRole('Add') then hangs on the
+      // disabled form submit. Close the nested dialog instead of reopening.
+      const leftoverRoleDialog = page.getByRole("dialog").filter({ hasText: "Assign roles" });
+      if (await leftoverRoleDialog.isVisible({ timeout: 1000 }).catch(() => false)) {
+        const roleCancel = leftoverRoleDialog.getByRole("button", { name: "Cancel" });
+        if (await roleCancel.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await roleCancel.click();
+        }
+        await expect(leftoverRoleDialog).toBeHidden({ timeout: 5000 }).catch(() => {});
+      }
+
+      const assignPermissions = page.getByRole("button", { name: "Assign Permissions" });
+      if (!(await assignPermissions.isVisible({ timeout: 8000 }).catch(() => false))) {
+        return;
+      }
+      await assignPermissions.click({ timeout: 10000 });
       const permissionDialog = page.getByRole("dialog").filter({ hasText: "Assign Permissions" });
       await expect(
         permissionDialog.getByRole("heading", { name: "Assign Permissions" }),

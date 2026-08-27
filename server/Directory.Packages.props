@@ -7,7 +7,7 @@
     <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageVersion Include="SixLabors.Fonts" Version="2.1.2" />
     <PackageVersion Include="MongoDB.Driver" Version="3.8.0" />
-    <PackageVersion Include="SeliseBlocks.Genesis.OS" Version="4.1.1" />
+    <PackageVersion Include="SeliseBlocks.Genesis.OS" Version="4.1.2" />
     <PackageVersion Include="Azure.ResourceManager.ServiceBus" Version="1.1.0" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.0" />

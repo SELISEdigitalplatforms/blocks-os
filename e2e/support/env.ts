@@ -20,11 +20,6 @@ export function e2eProjectId(): string | undefined {
   return value || undefined
 }
 
-export function e2eProjectId(): string | undefined {
-  const value = process.env.E2E_PROJECT_ID?.trim();
-  return value || undefined;
-}
-
 export function e2eCredentials(): { email: string; password: string } {
   return {
     email: requireEnv("E2E_USERNAME"),
