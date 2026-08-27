@@ -105,10 +105,7 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
   // resources before comparing — otherwise every saved permission would look removed.
   const savedPermissionResources = useMemo(
     () =>
-      toSignupPermissionResources(
-        config.defaultPermissionsForNewUser,
-        permissionsData?.data ?? [],
-      ),
+      toSignupPermissionResources(config.defaultPermissionsForNewUser, permissionsData?.data ?? []),
     [config.defaultPermissionsForNewUser, permissionsData?.data],
   );
 

@@ -31,6 +31,12 @@ const h = vi.hoisted(() => ({
   errorToast: vi.fn(),
 }));
 
+// See the mock for why the tooltip barrel cannot be imported under jsdom.
+vi.mock(
+  "@/components/ui-kits/tooltip/tooltip",
+  () => import("@/test-utils/__mocks__/tooltip.mock"),
+);
+
 vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: (...a: unknown[]) => h.successToast(...a),
   showErrorToast: (...a: unknown[]) => h.errorToast(...a),

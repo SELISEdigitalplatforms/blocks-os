@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
@@ -12,6 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { ARCHIVE_ERROR_MESSAGES, normalizeArchiveErrors } from "../constants/archive-error-messages";
@@ -26,6 +32,12 @@ type ArchiveActionProps = {
   archive: (input: { id: string; confirmRevokeFromUsers?: boolean }) => Promise<unknown>;
   isPending: boolean;
   itemId: string;
+  /**
+   * When set, the trash button renders visibly disabled and reveals this reason instead of the
+   * confirm dialog. For entities the tenant may never archive -- built-in permissions -- which the
+   * API does not refuse on its own, so the gate has to live here.
+   */
+  disabledReason?: string;
 };
 
 const plural = (count: number, singular: string) =>
@@ -78,6 +90,83 @@ const consequenceText = (
   return `${subject} ${clauses.join(", ")}. ${effect}`;
 };
 
+/** How long a click keeps the reason visible; a pointer leaving closes it sooner. */
+const REASON_VISIBLE_MS = 3000;
+
+/**
+ * The trash button for a row that can never be archived.
+ *
+ * `aria-disabled` rather than `disabled`: a truly disabled button fires neither click nor hover, so
+ * it could not surface the one thing the user opened it to learn. The icon drops its destructive
+ * colour so the row still reads as inert at a glance.
+ */
+const ArchiveActionBlocked = ({
+  entity,
+  name,
+  reason,
+}: {
+  entity: "role" | "permission";
+  name: string;
+  reason: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const clearDismiss = () => {
+    if (dismissTimer.current !== undefined) {
+      clearTimeout(dismissTimer.current);
+      dismissTimer.current = undefined;
+    }
+  };
+
+  useEffect(() => clearDismiss, []);
+
+  const close = () => {
+    clearDismiss();
+    setOpen(false);
+  };
+
+  const hold = () => {
+    clearDismiss();
+    setOpen(true);
+  };
+
+  // Clicking is the only trigger a touch device has, and it is what the user tries first on a
+  // button that looks dead, so it opens the tooltip and times it out on its own.
+  const reveal = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    clearDismiss();
+    setOpen(true);
+    dismissTimer.current = setTimeout(() => setOpen(false), REASON_VISIBLE_MS);
+  };
+
+  return (
+    <TooltipProvider>
+      <Tooltip open={open}>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-disabled
+            aria-label={`Archive ${entity} ${name}`}
+            className="cursor-not-allowed rounded-full opacity-50 hover:bg-transparent"
+            onClick={reveal}
+            onPointerEnter={hold}
+            onPointerLeave={close}
+            onFocus={hold}
+            onBlur={close}
+          >
+            <Trash2 className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{reason}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 /**
  * Trash button plus its confirm dialog, for one row.
  *
@@ -86,13 +175,7 @@ const consequenceText = (
  * `isPending` as props from a single parent hook, which would make one row's archive disable every
  * other row's confirm button.
  */
-export const ArchiveAction = ({
-  entity,
-  name,
-  archive,
-  isPending,
-  itemId,
-}: ArchiveActionProps) => {
+const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: ArchiveActionProps) => {
   const [open, setOpen] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
 
@@ -245,5 +328,16 @@ export const ArchiveAction = ({
     </Dialog>
   );
 };
+
+/**
+ * Picks the variant for the row. Split so the blocked variant never mounts the impact queries or
+ * the dialog it has no use for.
+ */
+export const ArchiveAction = (props: ArchiveActionProps) =>
+  props.disabledReason ? (
+    <ArchiveActionBlocked entity={props.entity} name={props.name} reason={props.disabledReason} />
+  ) : (
+    <ArchiveActionConfirm {...props} />
+  );
 
 export type { IArchiveImpactBase };
