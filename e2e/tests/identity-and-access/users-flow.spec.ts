@@ -80,12 +80,35 @@ test.describe("flows", () => {
     const inviteEmail = uniqueTestEmail("flow-user");
 
     await test.step("Fill a valid, fresh email and send the invite", async () => {
-      await page.getByPlaceholder("name@company.com").fill(inviteEmail);
+      const inviteDialog = page.getByRole("dialog").filter({ hasText: "Invite User" });
+      await inviteDialog.getByPlaceholder("name@company.com").fill(inviteEmail);
 
-      await page.getByRole("button", { name: /Send invite|Grant access/ }).click();
+      // Multi-org workspaces require an organization before submit (zod min 1).
+      // A prior Organizations flow on the shared project leaves extra orgs, which
+      // disables the automatic "default" seed — pick Default (or the first org).
+      const orgTrigger = inviteDialog.getByRole("combobox");
+      if (await orgTrigger.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await orgTrigger.click();
+        const defaultOrg = page.getByRole("button", { name: "Default", exact: true });
+        if (await defaultOrg.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await defaultOrg.click();
+        } else {
+          const firstOrg = page.locator("[data-radix-popper-content-wrapper] button").first();
+          if (await firstOrg.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await firstOrg.click();
+          } else {
+            await page.keyboard.press("Escape");
+          }
+        }
+      }
+
+      const sendButton = inviteDialog.getByRole("button", { name: /Send invite|Grant access/ });
+      await expect(sendButton).toBeEnabled({ timeout: 15000 }).catch(() => {});
+      await sendButton.click();
       await expect(page.getByText(/Invitation is sent|User granted access to the organization/))
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
+      await expect(inviteDialog).toBeHidden({ timeout: 15000 }).catch(() => {});
     });
 
     // Each row renders as a single button whose accessible name includes
@@ -97,11 +120,22 @@ test.describe("flows", () => {
     });
 
     await test.step("Find the new user and open their details page", async () => {
+      // Invited users have no first/last name, so the row label is the email
+      // local part. Search that rather than the full address (the default
+      // filter is by name, not email).
+      const searchInput = page.getByPlaceholder("Minimum 3 characters…");
+      const nameQuery = inviteEmail.split("@")[0] ?? inviteEmail;
+      if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await searchInput.fill(nameQuery);
+      }
       if (!(await userRow.isVisible({ timeout: 15000 }).catch(() => false))) {
         // The Users list can race its own refetch right after a fresh
         // invite — one reload clears it, same pattern as people-flow.
         await page.reload({ waitUntil: "domcontentloaded" });
         await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({ timeout: 30000 });
+        if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await searchInput.fill(nameQuery);
+        }
       }
       await expect(userRow).toBeVisible({ timeout: 15000 });
       // Click the row's own name paragraph rather than the outer button —
