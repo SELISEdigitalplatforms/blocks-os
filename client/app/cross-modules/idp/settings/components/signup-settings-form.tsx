@@ -19,6 +19,7 @@ import {
   buildSignupSettingsSavePayload,
   resolveSignupPermissions,
   resolveSignupRoles,
+  toSignupPermissionResources,
   signupSettingsFormSchema,
   toSignupSettingsFormValues,
   type SignupSettingsFormValues,
@@ -100,16 +101,25 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
     [config.defaultRolesForNewUser, defaultRolesForNewUser, rolesData?.data],
   );
 
-  const removedPermissions = useMemo(
+  // Saved values can be legacy names, current values resources, so both sides are normalized to
+  // resources before comparing — otherwise every saved permission would look removed.
+  const savedPermissionResources = useMemo(
     () =>
-      resolveSignupPermissions(
-        config.defaultPermissionsForNewUser.filter(
-          (name) => !defaultPermissionsForNewUser.includes(name),
-        ),
+      toSignupPermissionResources(
+        config.defaultPermissionsForNewUser,
         permissionsData?.data ?? [],
       ),
-    [config.defaultPermissionsForNewUser, defaultPermissionsForNewUser, permissionsData?.data],
+    [config.defaultPermissionsForNewUser, permissionsData?.data],
   );
+
+  const removedPermissions = useMemo(() => {
+    const selected = new Set(displayPermissions.map((permission) => permission.resource));
+
+    return resolveSignupPermissions(
+      savedPermissionResources.filter((resource) => !selected.has(resource)),
+      permissionsData?.data ?? [],
+    );
+  }, [savedPermissionResources, displayPermissions, permissionsData?.data]);
 
   const handleReset = useCallback(() => {
     form.reset(toSignupSettingsFormValues(config), DISCARD_DIRTY_VALUES);
@@ -134,17 +144,26 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
 
   const handleSubmit = useCallback(
     async (values: SignupSettingsFormValues) => {
+      // Values untouched since load can still carry legacy names; every save persists resources.
+      const normalized: SignupSettingsFormValues = {
+        ...values,
+        defaultPermissionsForNewUser: toSignupPermissionResources(
+          values.defaultPermissionsForNewUser,
+          permissionsData?.data ?? [],
+        ),
+      };
+
       try {
-        const res = await mutateAsync(buildSignupSettingsSavePayload(values, config));
+        const res = await mutateAsync(buildSignupSettingsSavePayload(normalized, config));
         if (!res.isSuccess) return showErrorToast({ errors: res.errors });
-        form.reset(applySignupDisabledOverrides(values, config), DISCARD_DIRTY_VALUES);
+        form.reset(applySignupDisabledOverrides(normalized, config), DISCARD_DIRTY_VALUES);
         showSuccessToast({ description: "Signup settings updated successfully" });
       } catch (error) {
         if (isErrorWithErrors(error)) return showErrorToast({ errors: error.errors });
         showErrorToast({ errors: "Something went wrong" });
       }
     },
-    [config, form, mutateAsync],
+    [config, form, mutateAsync, permissionsData?.data],
   );
 
   const tabActions = useMemo(
@@ -198,9 +217,9 @@ export const SignupSettingsForm = ({ config }: SignupSettingsFormProps) => {
                   <SignupPermissionsSection
                     permissions={displayPermissions}
                     removedPermissions={removedPermissions}
-                    savedNames={config.defaultPermissionsForNewUser}
+                    savedResources={savedPermissionResources}
                     onChange={(permissions) =>
-                      field.onChange(permissions.map((permission) => permission.name))
+                      field.onChange(permissions.map((permission) => permission.resource))
                     }
                   />
                 )}
