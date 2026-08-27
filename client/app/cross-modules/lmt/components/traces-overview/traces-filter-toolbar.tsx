@@ -45,7 +45,10 @@ export function TracesFilterToolbar({
   serviceOptions: ServiceOption[];
 }) {
   const displayedServices = useMemo(
-    () => (queryParams.services.length > 0 ? queryParams.services : defaultServiceSelection(serviceOptions)),
+    () =>
+      queryParams.services.length > 0
+        ? queryParams.services
+        : defaultServiceSelection(serviceOptions),
     [queryParams.services, serviceOptions],
   );
   const changeHandler = (key: string, value: unknown) => {
