@@ -156,7 +156,7 @@ export const ApplyPermissionChangesDialog = ({
             {canPropagate && (
               <label className="flex items-start gap-2">
                 <Checkbox
-                  className="mt-0.5"
+                  className="mt-0.5 shrink-0"
                   checked={propagate}
                   onCheckedChange={(checked) => setPropagate(checked === true)}
                   aria-label="Apply this change to all organizations"

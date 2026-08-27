@@ -295,7 +295,10 @@ const ArchiveActionConfirm = ({ entity, name, archive, isPending, itemId }: Arch
         {needsConsent && (
           <label className="flex items-start gap-2 text-sm">
             <Checkbox
-              className="mt-0.5"
+              // `shrink-0`, matching endpoint-row and domain-delete-dialog: as a flex item next to
+              // wrapping text the 16px box is squeezed below its size, and checking it widens the
+              // box again because the tick gives it a min-content width it did not have empty.
+              className="mt-0.5 shrink-0"
               checked={consentChecked}
               onCheckedChange={(checked) => setConsentChecked(checked === true)}
               aria-label={`Confirm removing this ${entity} from ${affectedUserCount} users`}
