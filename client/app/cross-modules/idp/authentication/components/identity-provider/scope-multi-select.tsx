@@ -17,11 +17,6 @@ type ScopeOption = { value: string; label: string; locked?: boolean };
 
 export const STANDARD_OIDC_SCOPES: ScopeOption[] = [
   { value: "openid", label: "openid", locked: true },
-  { value: "profile", label: "profile" },
-  { value: "email", label: "email" },
-  { value: "address", label: "address" },
-  { value: "phone", label: "phone" },
-  { value: "offline_access", label: "offline_access" },
 ];
 
 type Props = {
