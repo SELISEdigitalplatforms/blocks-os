@@ -23,6 +23,7 @@ import { RestoredTracesTab } from "./restored-traces-tab";
 import {
   ServiceOption,
   TracesFilterToolbar,
+  defaultServiceSelection,
   useTraceSortQueryParams,
   useTracesFilterQueryParams,
 } from "./traces-filter-toolbar";
@@ -133,7 +134,13 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     return labels;
   }, [blocksServicesData, registeredServices?.data]);
   const selectedServiceNames = useMemo(
-    () => treeValuesToServiceNames(queryParams.services, serviceOptions),
+    () =>
+      treeValuesToServiceNames(
+        queryParams.services.length > 0
+          ? queryParams.services
+          : defaultServiceSelection(serviceOptions),
+        serviceOptions,
+      ),
     [queryParams.services, serviceOptions],
   );
   const { data, isLoading, isFetching } = useGetTraces({

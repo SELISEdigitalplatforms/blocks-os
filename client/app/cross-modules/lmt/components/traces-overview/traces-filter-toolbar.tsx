@@ -1,5 +1,6 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useMemo } from "react";
 
 export type TraceFilter = { search: string; services: string[] };
 
@@ -8,6 +9,15 @@ export type ServiceOption = {
   value: string;
   children?: { label: string; value: string }[];
 };
+
+/**
+ * The first root option is treated as the implicit default selection so the
+ * filter is never in an "empty -> fetch everything" state on first paint.
+ * The URL stays empty until the user interacts, so resetting back to the
+ * default behaviour remains a no-op write.
+ */
+export const defaultServiceSelection = (serviceOptions: ServiceOption[]): string[] =>
+  serviceOptions[0] ? [serviceOptions[0].value] : [];
 
 export const useTracesFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
@@ -34,6 +44,10 @@ export function TracesFilterToolbar({
   setQueryParams: ReturnType<typeof useTracesFilterQueryParams>["setQueryParams"];
   serviceOptions: ServiceOption[];
 }) {
+  const displayedServices = useMemo(
+    () => (queryParams.services.length > 0 ? queryParams.services : defaultServiceSelection(serviceOptions)),
+    [queryParams.services, serviceOptions],
+  );
   const changeHandler = (key: string, value: unknown) => {
     setQueryParams((params) => ({
       ...params,
@@ -56,9 +70,9 @@ export function TracesFilterToolbar({
       ]}
       values={{
         search: queryParams.search,
-        services: queryParams.services,
+        services: displayedServices,
       }}
-      defaultValues={{ search: "", services: [] }}
+      defaultValues={{ search: "", services: defaultServiceSelection(serviceOptions) }}
       onChange={(key, value) => changeHandler(String(key), value)}
       onReset={resetHandler}
     />
