@@ -70,20 +70,31 @@ test.describe("flows", () => {
     });
 
     await test.step("Organization filter narrows the roles list", async () => {
-      const orgFilterButton = page.getByRole("button", { name: /^Organization$/i });
-      if (await orgFilterButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await orgFilterButton.click();
+      // The trigger's accessible name is "Organization" when empty, and
+      // "Organization <selected org>" once a value is picked — never require
+      // an exact-only match or the restore click below will hang.
+      const orgFilterButton = page.getByRole("button", { name: /^Organization/i });
+      if (await orgFilterButton.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+        await orgFilterButton.first().click();
         const firstOption = page.getByRole("radio").first();
         if (await firstOption.isVisible({ timeout: 3000 }).catch(() => false)) {
           await firstOption.click();
           await expect(page.getByRole("table")).toBeVisible({ timeout: 8000 }).catch(() => {});
-          // Restore the default org scope so the new role stays visible below.
-          await orgFilterButton.click();
-          const clearButton = page.getByRole("button", { name: /clear/i });
+          // The popover often stays open after picking a radio. Prefer its
+          // Clear control (or the toolbar Reset) so the new role stays visible.
+          const clearButton = page.getByRole("button", { name: /^Clear$/i });
+          const resetButton = page.getByRole("button", { name: /^Reset$/i });
           if (await clearButton.isVisible({ timeout: 2000 }).catch(() => false)) {
             await clearButton.click();
+          } else if (await resetButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+            await resetButton.click();
           } else {
-            await page.keyboard.press("Escape");
+            await orgFilterButton.first().click();
+            if (await clearButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+              await clearButton.click();
+            } else {
+              await page.keyboard.press("Escape");
+            }
           }
         } else {
           await page.keyboard.press("Escape");

@@ -1,31 +1,17 @@
 import { test, expect } from "../../support/test-base";
-import { openOsDashboard, openLmt } from "../../support/os-helpers";
+import { openLmt } from "../../support/os-helpers";
 
 // Logs flow: navigate into the sub-section under Logs & Traces, toggle its
 // log source tabs, follow a service card into its details view, then
 // exercise the log stream's Search and Type (level) filters.
 test.describe("flows", () => {
-  test.beforeEach(async ({ page }) => {
-    await openOsDashboard(page);
-  });
-
-
   test("Logs flow: navigate to Logs -> toggle source -> open a service's details", async ({
     page,
   }) => {
     test.setTimeout(180_000);
 
-    const gotoLmtChild = async () => {
-      const link = page.getByRole("link", { name: "Logs", exact: true })
-      if (await link.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await link.click({ timeout: 10_000 })
-        return
-      }
-      await openLmt(page, "logs")
-    }
-
     await test.step("Navigate to Logs", async () => {
-      await gotoLmtChild()
+      await openLmt(page, "logs")
       // The tab strip renders after the page's own data fetch settles, so
       // wait for a heading first before asserting on the "Managed Service" tab.
       await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 20000 });
