@@ -31,6 +31,12 @@ const h = vi.hoisted(() => ({
   errorToast: vi.fn(),
 }));
 
+// See the mock for why the tooltip barrel cannot be imported under jsdom.
+vi.mock(
+  "@/components/ui-kits/tooltip/tooltip",
+  () => import("@/test-utils/__mocks__/tooltip.mock"),
+);
+
 vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: (...a: unknown[]) => h.successToast(...a),
   showErrorToast: (...a: unknown[]) => h.errorToast(...a),
@@ -151,6 +157,19 @@ describe("ArchiveAction", () => {
 
     await userEvent.click(confirmButton());
     expect(archive).toHaveBeenCalledWith({ id: "r1", confirmRevokeFromUsers: true });
+  });
+
+  it("keeps the consent checkbox at its own size next to the wrapping label", async () => {
+    // Without `shrink-0` the flex row squeezes the 16px box, and ticking it widens the box again --
+    // a visible jump on click. Pinned because the class is otherwise trivially droppable.
+    h.role = { data: roleImpact(), isLoading: false, isError: false };
+    renderAction();
+    await openDialog();
+
+    const consent = screen.getByRole("checkbox");
+    expect(consent.className).toContain("shrink-0");
+    await userEvent.click(consent);
+    expect(consent.className).toContain("shrink-0");
   });
 
   it("requires consent for an inactive-only holder too", async () => {

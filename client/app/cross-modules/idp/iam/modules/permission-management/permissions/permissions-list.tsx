@@ -18,6 +18,9 @@ import { usePermissionsSortQuaryParams } from "./permissions-filter-toolbar";
 
 type PermissionTableProps = { permissions: IPermission[]; isLoading: boolean };
 
+/** Built-ins ship with the platform; the tenant owns neither their definition nor their lifecycle. */
+const BUILT_IN_ARCHIVE_REASON = "Built-in permissions cannot be deleted.";
+
 const LoadingSkelton = () => (
   <div className="flex flex-col gap-3">
     {Array.from({ length: 5 }).map((_, index) => (
@@ -64,6 +67,7 @@ const PermissionRowActions = ({ row }: { row: IPermission }) => {
         itemId={row.itemId}
         archive={mutateAsync}
         isPending={isPending}
+        disabledReason={row.isBuiltIn ? BUILT_IN_ARCHIVE_REASON : undefined}
       />
     </div>
   );

@@ -189,11 +189,17 @@ test.describe("flows", () => {
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
 
-      await page.goBack();
-      await expect(page.getByRole("heading", { name: "OIDC" })).toBeVisible({ timeout: 15000 });
+      // goBack is unreliable from the branding client-route — deep-link back
+      // to the OIDC list so later row actions (rotate/edit/delete) still work.
+      await openSecretManagement(page, "oidc", "OIDC");
+      await expect(clientRow).toBeVisible({ timeout: 15000 });
     });
 
     await test.step("Reveal and copy the Client Secret, copy the Client Id", async () => {
+      if (!(await clientRow.isVisible({ timeout: 5000 }).catch(() => false))) {
+        await openSecretManagement(page, "oidc", "OIDC");
+        await expect(clientRow).toBeVisible({ timeout: 15000 });
+      }
       const showButton = clientRow.getByRole("button", { name: "Show value" }).first();
       if (await showButton.isVisible({ timeout: 5000 }).catch(() => false)) {
         await showButton.click();
@@ -207,9 +213,31 @@ test.describe("flows", () => {
     });
 
     await test.step("Rotate the client's secret and view the new value", async () => {
+      if (!(await clientRow.isVisible({ timeout: 5000 }).catch(() => false))) {
+        await openSecretManagement(page, "oidc", "OIDC");
+        await expect(clientRow).toBeVisible({ timeout: 15000 });
+      }
       const rotateButton = clientRow.getByRole("button", { name: "Rotate client secret" });
       if (await rotateButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await rotateButton.click();
+        // The row re-renders while expanded (and a layout shift can land on
+        // Template instead). Retry a bounded click rather than waiting out
+        // the whole test timeout on a detaching button.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await clientRow.getByRole("button", { name: "Rotate client secret" }).click({
+              timeout: 8000,
+              force: true,
+            });
+            break;
+          } catch {
+            if (attempt === 2) return;
+            if (/\/branding/.test(page.url())) {
+              await openSecretManagement(page, "oidc", "OIDC");
+              await expect(clientRow).toBeVisible({ timeout: 15000 });
+            }
+            await page.waitForTimeout(500);
+          }
+        }
         await expect(page.getByRole("heading", { name: "Rotate client secret" })).toBeVisible();
         await expect(
           page.getByText(new RegExp(`Do you want to rotate the client secret for.*${clientName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`)),

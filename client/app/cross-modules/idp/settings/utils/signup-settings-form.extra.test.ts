@@ -8,6 +8,7 @@ import {
   toSignupSettingsFormValues,
   applySignupDisabledOverrides,
   buildSignupSettingsSavePayload,
+  toSignupPermissionResources,
 } from "./signup-settings-form";
 
 const enabledConfig: ISettingsSignupConfig = {
@@ -36,17 +37,39 @@ describe("signup-settings-form", () => {
   });
 
   describe("resolveSignupPermissions", () => {
-    it("returns the matching permission and a stub for unknown names", () => {
+    it("matches on resource and stubs unknown resources", () => {
       const known = { name: "read-users", resource: "/api/users" } as IPermission;
-      const result = resolveSignupPermissions(["read-users", "unknown-perm"], [known]);
+      const result = resolveSignupPermissions(["/api/users", "/api/ghost"], [known]);
       expect(result[0]).toBe(known);
       const stub = result[1];
-      expect(stub.itemId).toBe("unknown-perm");
-      expect(stub.name).toBe("unknown-perm");
-      expect(stub.resource).toBe("");
+      expect(stub.itemId).toBe("/api/ghost");
+      expect(stub.name).toBe("/api/ghost");
+      expect(stub.resource).toBe("/api/ghost");
       expect(stub.type).toBe(0);
       expect(stub.permissionSeverity).toBe(1);
       expect(stub.isBuiltIn).toBe(false);
+    });
+
+    it("falls back to a name match for legacy name-based saved values", () => {
+      const known = { name: "read-users", resource: "/api/users" } as IPermission;
+      expect(resolveSignupPermissions(["read-users"], [known])[0]).toBe(known);
+    });
+
+    it("prefers a resource match over a name match", () => {
+      const byResource = { name: "a", resource: "shared" } as IPermission;
+      const byName = { name: "shared", resource: "/api/b" } as IPermission;
+      expect(resolveSignupPermissions(["shared"], [byName, byResource])[0]).toBe(byResource);
+    });
+  });
+
+  describe("toSignupPermissionResources", () => {
+    it("normalizes legacy names to resources and leaves unknown values intact", () => {
+      const known = { name: "read-users", resource: "/api/users" } as IPermission;
+      expect(toSignupPermissionResources(["read-users", "/api/users", "ghost"], [known])).toEqual([
+        "/api/users",
+        "/api/users",
+        "ghost",
+      ]);
     });
   });
 
