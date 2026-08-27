@@ -13,7 +13,9 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
 
-export const STANDARD_OIDC_SCOPES = [
+type ScopeOption = { value: string; label: string; locked?: boolean };
+
+export const STANDARD_OIDC_SCOPES: ScopeOption[] = [
   { value: "openid", label: "openid", locked: true },
   { value: "profile", label: "profile" },
   { value: "email", label: "email" },
@@ -32,7 +34,7 @@ export function ScopeMultiSelect({ value, onChange, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const options = [
+  const options: ScopeOption[] = [
     ...STANDARD_OIDC_SCOPES,
     ...value
       .filter((scope) => !STANDARD_OIDC_SCOPES.some((option) => option.value === scope))
