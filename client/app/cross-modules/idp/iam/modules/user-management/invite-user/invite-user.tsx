@@ -33,7 +33,7 @@ import {
 import { z } from "zod";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader } from "lucide-react";
+import { Check, CircleCheck, Loader } from "lucide-react";
 import { isErrorWithErrors } from "@/lib/error";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { cn } from "@/lib/utils";
@@ -294,6 +294,15 @@ export const InviteUser = () => {
                             : "No organizations available"
                         }
                       />
+                      {selectedOrganizationAlreadyAssigned && (
+                        <p
+                          role="status"
+                          className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
+                        >
+                          <CircleCheck className="h-3.5 w-3.5 shrink-0" />
+                          This user already has access to the selected organization.
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

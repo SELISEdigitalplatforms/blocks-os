@@ -284,6 +284,9 @@ describe("InviteOrganizationUser", () => {
     expect(
       (screen.getByRole("button", { name: /grant access/i }) as HTMLButtonElement).disabled,
     ).toBe(true);
+    expect(
+      screen.getByText("This user already has access to the selected organization."),
+    ).toBeTruthy();
     await user.click(combobox);
     const existingOption = await screen.findByRole("option", { name: "Acme" });
     expect(existingOption.getAttribute("aria-selected")).toBe("true");

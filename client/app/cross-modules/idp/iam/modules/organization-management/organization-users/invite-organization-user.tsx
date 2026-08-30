@@ -32,7 +32,7 @@ import {
 } from "@blocks-idp/iam/hooks/use-organization";
 import { z } from "zod";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { Check, Loader, Plus } from "lucide-react";
+import { Check, CircleCheck, Loader, Plus } from "lucide-react";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -300,6 +300,15 @@ export const InviteOrganizationUser = ({
                         : "No organizations available"
                     }
                   />
+                  {selectedOrganizationAlreadyAssigned && (
+                    <p
+                      role="status"
+                      className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
+                    >
+                      <CircleCheck className="h-3.5 w-3.5 shrink-0" />
+                      This user already has access to the selected organization.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
