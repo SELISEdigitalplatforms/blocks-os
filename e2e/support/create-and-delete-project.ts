@@ -236,19 +236,8 @@ export async function waitForOsDashboardReady(page: Page, projectName?: string) 
   }
 
   const label = projectName ?? "shared project"
-  const outcome = await Promise.race([
-    ready.waitFor({ state: "visible", timeout: 30_000 }).then(() => "ready" as const),
-    page
-      .waitForURL(/\/app\/console\/?$/i, { timeout: 30_000 })
-      .then(() => "console" as const)
-      .catch(() => null),
-    consoleProjectsHeading(page)
-      .waitFor({ state: "visible", timeout: 30_000 })
-      .then(() => "console" as const)
-      .catch(() => null),
-  ])
-
-  if (outcome === "console" || (await bouncedToConsole())) {
+  const throwIfConsole = async () => {
+    if (!(await bouncedToConsole())) return
     throw new Error(
       `Expected project dashboard for "${label}" but landed on the console. ` +
         "Suite setup must persist storageState after opening the shared project " +
@@ -256,8 +245,20 @@ export async function waitForOsDashboardReady(page: Page, projectName?: string) 
     )
   }
 
-  if (outcome !== "ready") {
-    await expect(ready).toBeVisible({ timeout: 1_000 })
+  await throwIfConsole()
+
+  // Do not race waitForURL(...console).catch(() => null) against ready —
+  // when we are already on the dashboard that waiter times out as `null`
+  // and used to fail the 1s assertion even while the page was still painting.
+  const appeared = await ready.waitFor({ state: "visible", timeout: 30_000 }).then(
+    () => true,
+    () => false,
+  )
+  if (!appeared) {
+    await throwIfConsole()
+    await page.reload({ waitUntil: "domcontentloaded" }).catch(() => {})
+    await throwIfConsole()
+    await expect(ready).toBeVisible({ timeout: 30_000 })
   }
 
   await expect(page).toHaveURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 10_000 })

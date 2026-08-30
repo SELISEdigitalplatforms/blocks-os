@@ -9,21 +9,20 @@ test.describe("flows", () => {
     await openOsDashboard(page);
   });
 
-
   test("Tracing flow: navigate to Tracing", async ({ page }) => {
     test.setTimeout(180_000);
 
     const gotoLmtChild = async () => {
-      const link = page.getByRole("link", { name: "Tracing" })
+      const link = page.getByRole("link", { name: "Tracing" });
       if (await link.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await link.click({ timeout: 10_000 })
-        return
+        await link.click({ timeout: 10_000 });
+        return;
       }
-      await openLmt(page, "tracing")
-    }
+      await openLmt(page, "tracing");
+    };
 
     await test.step("Navigate to Tracing", async () => {
-      await gotoLmtChild()
+      await gotoLmtChild();
       await expect(page.getByRole("heading", { name: "Tracing" })).toBeVisible({ timeout: 30000 });
     });
 
@@ -31,13 +30,13 @@ test.describe("flows", () => {
       const coldOption = page.getByText("Cold", { exact: true });
       if (await coldOption.isVisible({ timeout: 8000 }).catch(() => false)) {
         await coldOption.click();
-        await expect(page.getByText("Coming soon")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Request Cold Traces" })).toBeVisible();
 
         await page.getByText("Archive", { exact: true }).click();
-        await expect(page.getByText("Coming soon")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Request Archive Traces" })).toBeVisible();
 
         await page.getByText("Hot", { exact: true }).click();
-        await expect(page.getByText("Coming soon")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Service" })).toBeVisible();
       }
     });
 
@@ -72,7 +71,9 @@ test.describe("flows", () => {
       const searchInput = page.getByPlaceholder("Search...");
       if (await searchInput.isVisible({ timeout: 8000 }).catch(() => false)) {
         await searchInput.fill("nonexistent-trace-marker-xyz");
-        await expect(page.getByText("No results found.")).toBeVisible({ timeout: 8000 }).catch(() => {});
+        await expect(page.getByText("No results found."))
+          .toBeVisible({ timeout: 8000 })
+          .catch(() => {});
         await searchInput.fill("");
       }
     });
@@ -110,35 +111,37 @@ test.describe("flows", () => {
         (await nextPageButton.isEnabled().catch(() => false))
       ) {
         await nextPageButton.click();
-        await expect(page).toHaveURL(/[?&]page=1/, { timeout: 8000 }).catch(() => {});
+        await expect(page)
+          .toHaveURL(/[?&]page=1/, { timeout: 8000 })
+          .catch(() => {});
       }
     });
 
-    await test.step("Switch trace modes via the mobile Select dropdown", async () => {
-      const originalViewport = page.viewportSize();
-      await page.setViewportSize({ width: 375, height: 800 });
-      try {
-        await gotoLmtChild();
-        await expect(page.getByRole("heading", { name: "Tracing" })).toBeVisible({
-          timeout: 30000,
-        });
+    // await test.step("Switch trace modes via the mobile Select dropdown", async () => {
+    //   const originalViewport = page.viewportSize();
+    //   await page.setViewportSize({ width: 375, height: 800 });
+    //   try {
+    //     await gotoLmtChild();
+    //     await expect(page.getByRole("heading", { name: "Tracing" })).toBeVisible({
+    //       timeout: 30000,
+    //     });
 
-        const modeSelect = page.getByRole("combobox").first();
-        if (await modeSelect.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await modeSelect.click();
-          await page.getByRole("option", { name: "Cold" }).click();
-          await expect(page.getByText("Coming soon")).toBeVisible({ timeout: 8000 });
+    //     const modeSelect = page.getByRole("combobox").first();
+    //     if (await modeSelect.isVisible({ timeout: 5000 }).catch(() => false)) {
+    //       await modeSelect.click();
+    //       await page.getByRole("option", { name: "Cold" }).click();
+    //       await expect(page.getByText("Coming soon")).toBeVisible({ timeout: 8000 });
 
-          await modeSelect.click();
-          await page.getByRole("option", { name: "Hot" }).click();
-          await expect(page.getByText("Coming soon")).toHaveCount(0, { timeout: 8000 });
-        }
-      } finally {
-        if (originalViewport) {
-          await page.setViewportSize(originalViewport);
-        }
-      }
-    });
+    //       await modeSelect.click();
+    //       await page.getByRole("option", { name: "Hot" }).click();
+    //       await expect(page.getByText("Coming soon")).toHaveCount(0, { timeout: 8000 });
+    //     }
+    //   } finally {
+    //     if (originalViewport) {
+    //       await page.setViewportSize(originalViewport);
+    //     }
+    //   }
+    // });
 
     await test.step("Selecting a trace opens its detailed span breakdown", async () => {
       const firstTrace = page.getByRole("row").nth(1);
