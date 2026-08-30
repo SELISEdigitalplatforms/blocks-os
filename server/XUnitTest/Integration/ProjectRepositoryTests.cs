@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
+using XUnitTest.TestSupport;
 
 namespace XUnitTest.Integration
 {
@@ -27,7 +28,9 @@ namespace XUnitTest.Integration
             _fixture = fixture;
         }
 
-        private ProjectRepository NewRepository()
+        private ProjectRepository NewRepository() => NewRepository(_fixture.DbContextProvider);
+
+        private ProjectRepository NewRepository(IDbContextProvider provider)
         {
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
@@ -37,7 +40,7 @@ namespace XUnitTest.Integration
             var encoding = new Mock<IEncodingService>();
             encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
                     .ReturnsAsync("abcde");
-            return new ProjectRepository(_fixture.DbContextProvider, config, secret.Object, encoding.Object);
+            return new ProjectRepository(provider, config, secret.Object, encoding.Object);
         }
 
         private static string UserOf(string tenant) => "user-" + tenant;
@@ -753,6 +756,76 @@ namespace XUnitTest.Integration
             var remaining = await _fixture.Collection<ProjectPeople>("ProjectPeoples")
                 .Find(Builders<ProjectPeople>.Filter.Eq(x => x.TenantId, "tid-" + tenant)).ToListAsync();
             remaining.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task DeletePrjectPeopleAsync_WhenImpersonating_RemovesFromTheClientDb()
+        {
+            // Project/Disable always runs impersonated: the controller hands DisableProjectAsync the
+            // impersonated TenantId as the project to disable. `ResolvedClientDb` therefore pins
+            // every ProjectPeoples read and write to BlocksRootDb, while the raw
+            // `IDbContextProvider.GetCollection` resolves to the impersonated project's own tenant
+            // database instead -- a database these rows have never been written to. The delete used
+            // the latter, so it matched nothing and still reported success, leaving each disabled
+            // project's people behind (they surface in the People list with a blank Environment,
+            // because the tenant lookup that fills that column no longer resolves).
+            //
+            // The shared fixture cannot catch this: its provider resolves BlocksRootDb, every
+            // tenant db and every GetCollection call to one throwaway database, so the two handles
+            // are indistinguishable there. This provider keeps them apart, which is the only way
+            // the regression is visible.
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var provider = new SplitDatabaseContextProvider(_fixture.Client, _fixture.Database, "tenantdb_" + tenant);
+
+            // The context has to exist before the repository is built -- `_clientDb` is resolved
+            // once, in the constructor.
+            using var _ = new BlocksTestContext(tenantId: tenant, impersonated: true, originalTenantId: "root-" + tenant);
+            var repo = NewRepository(provider);
+
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "imp-" + tenant, TenantId = "tid-" + tenant, UserId = UserOf(tenant) });
+
+            await repo.DeletePrjectPeopleAsync("tid-" + tenant);
+
+            var remaining = await _fixture.Collection<ProjectPeople>("ProjectPeoples")
+                .Find(Builders<ProjectPeople>.Filter.Eq(x => x.TenantId, "tid-" + tenant)).ToListAsync();
+            remaining.Should().BeEmpty();
+
+            provider.Drop();
+        }
+
+        /// <summary>
+        /// Resolves BlocksRootDb to the fixture's database and every tenant-scoped request to a
+        /// separate one, so a repository reaching for the wrong handle reads an empty collection.
+        /// </summary>
+        private sealed class SplitDatabaseContextProvider : IDbContextProvider
+        {
+            private readonly IMongoClient _client;
+            private readonly IMongoDatabase _rootDatabase;
+            private readonly IMongoDatabase _tenantDatabase;
+            private readonly string _tenantDatabaseName;
+
+            public SplitDatabaseContextProvider(IMongoClient client, IMongoDatabase rootDatabase, string tenantDatabaseName)
+            {
+                _client = client;
+                _rootDatabase = rootDatabase;
+                _tenantDatabaseName = tenantDatabaseName;
+                _tenantDatabase = client.GetDatabase(tenantDatabaseName);
+            }
+
+            public void Drop() => _client.DropDatabase(_tenantDatabaseName);
+
+            public IMongoDatabase GetDatabase(string tenantId) => _tenantDatabase;
+
+            public IMongoDatabase GetDatabase() => _tenantDatabase;
+
+            public IMongoDatabase GetDatabase(string connectionString, string databaseName, bool isCacheRefreshed = false) =>
+                databaseName == "BlocksRootDb" ? _rootDatabase : _tenantDatabase;
+
+            public IMongoCollection<T> GetCollection<T>(string collectionName) =>
+                _tenantDatabase.GetCollection<T>(collectionName);
+
+            public IMongoCollection<T> GetCollection<T>(string tenantId, string collectionName) =>
+                _tenantDatabase.GetCollection<T>(collectionName);
         }
 
         [Fact]

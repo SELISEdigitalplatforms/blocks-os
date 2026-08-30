@@ -23,6 +23,12 @@ vi.stubGlobal(
   },
 );
 
+// See the mock for why the tooltip barrel cannot be imported under jsdom.
+vi.mock(
+  "@/components/ui-kits/tooltip/tooltip",
+  () => import("@/test-utils/__mocks__/tooltip.mock"),
+);
+
 const navigate = vi.fn();
 
 vi.mock("react-router", () => ({
@@ -177,6 +183,33 @@ describe("PermissionsList", () => {
     await user.click(screen.getByText("Manage Billing"));
     expect(navigate).toHaveBeenCalledWith("/scoped/iam/permission-detail/perm-custom");
   });
+
+  it("renders an accessible card row and activates it with Enter and Space", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <PermissionsList permissions={[customPermission]} isLoading={false} />,
+    );
+    const row = screen.getByRole("button", { name: "Open permission Manage Billing" });
+
+    expect(row.getAttribute("tabindex")).toBe("0");
+    expect(row.className).toContain("rounded-xl");
+    expect(row.className).toContain("hover:border-primary/30");
+    expect(container.querySelector("table")).toBeNull();
+
+    row.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    expect(navigate).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses Badge variants for source without hardcoded color overrides", () => {
+    render(
+      <PermissionsList permissions={[customPermission, builtInPermission]} isLoading={false} />,
+    );
+    expect(screen.getByText("Custom").className).toContain("bg-primary");
+    expect(screen.getByText("Built In").className).toContain("bg-secondary");
+    expect(screen.getByText("Custom").className).not.toContain("!bg-");
+  });
 });
 
 describe("PermissionsList archive action", () => {
@@ -184,6 +217,7 @@ describe("PermissionsList archive action", () => {
     render(<PermissionsList permissions={permissions} isLoading={false} />);
   const trash = (name = "Manage Billing") =>
     screen.getByRole("button", { name: `Archive permission ${name}` });
+  const BLOCKED_REASON = "Built-in permissions cannot be deleted.";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -192,12 +226,46 @@ describe("PermissionsList archive action", () => {
   });
 
   it("renders an archive action for every permission, built-in included", () => {
-    // C8's unit-testable half. Archiving a permission requires the caller to be in the default
-    // organization, but no client-side signal for that exists, so the action cannot be hidden --
-    // the rejection is what informs the user. The org-dependent behaviour is e2e-only.
+    // C8's unit-testable half. Archiving a custom permission requires the caller to be in the
+    // default organization, but no client-side signal for that exists, so the action cannot be
+    // hidden -- the rejection is what informs the user. The org-dependent behaviour is e2e-only.
+    // Built-ins keep the button too, visibly inert rather than absent, so the reason is reachable.
     renderList([customPermission, builtInPermission]);
     expect(trash()).toBeTruthy();
     expect(trash("Read Users")).toBeTruthy();
+  });
+
+  it("marks the built-in row's archive action disabled without disabling the button", () => {
+    renderList([builtInPermission]);
+    const button = trash("Read Users") as HTMLButtonElement;
+    // `disabled` would swallow the click the reason depends on, so only `aria-disabled` is set.
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.disabled).toBe(false);
+  });
+
+  it("reveals the reason instead of the confirm dialog when a built-in row is clicked", async () => {
+    const user = userEvent.setup();
+    renderList([builtInPermission]);
+    expect(screen.queryByText(BLOCKED_REASON)).toBeNull();
+    await user.click(trash("Read Users"));
+    // Radix renders the content once for sight and once for screen readers.
+    expect(screen.getAllByText(BLOCKED_REASON).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Archive this permission?")).toBeNull();
+    expect(archivePermission).not.toHaveBeenCalled();
+  });
+
+  it("does not open the row while explaining a built-in", async () => {
+    const user = userEvent.setup();
+    renderList([builtInPermission]);
+    await user.click(trash("Read Users"));
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("still opens the confirm dialog for a custom permission", async () => {
+    const user = userEvent.setup();
+    renderList([customPermission, builtInPermission]);
+    await user.click(trash());
+    expect(screen.getByText("Archive this permission?")).toBeTruthy();
   });
 
   it("opens a confirm dialog without sending a request", async () => {
@@ -218,7 +286,7 @@ describe("PermissionsList archive action", () => {
     expect(archivePermission).not.toHaveBeenCalled();
   });
 
-  it("drops the open dialog rather than retargeting it when the list changes underneath", async () => {
+  it("keeps the open dialog targeted to the same permission when the list changes underneath", async () => {
     // See the roles-list counterpart: the row remounts and the confirmation closes, so Confirm can
     // never land on a permission the user did not choose.
     const other: IPermission = { ...customPermission, itemId: "perm-other", name: "Manage Users" };
@@ -232,7 +300,8 @@ describe("PermissionsList archive action", () => {
 
     rerender(<PermissionsList permissions={[customPermission]} isLoading={false} />);
 
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText(/Manage Billing will be archived/)).toBeTruthy();
     expect(archivePermission).not.toHaveBeenCalled();
   });
 
@@ -270,9 +339,7 @@ describe("PermissionsList archive action", () => {
     await user.click(trash());
     await user.click(screen.getByRole("button", { name: "Archive" }));
 
-    expect(archivePermission).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "perm-custom" }),
-    );
+    expect(archivePermission).toHaveBeenCalledWith(expect.objectContaining({ id: "perm-custom" }));
     expect(successToast).toHaveBeenCalled();
     expect(errorToast).not.toHaveBeenCalled();
     expect(screen.queryByText("Archive this permission?")).toBeNull();

@@ -264,7 +264,7 @@ describe("InviteOrganizationUser", () => {
     await waitFor(() => expect(combobox.textContent).toContain("Default"));
   });
 
-  it("drops the selection when the existing user already belongs to that org", async () => {
+  it("keeps the existing organization selected and marks it with a green tick", async () => {
     h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
     h.orgs = {
       data: { organizations: [{ itemId: "org-1", name: "Acme", isDisabled: false }] },
@@ -280,13 +280,24 @@ describe("InviteOrganizationUser", () => {
     await user.type(screen.getByPlaceholderText("name@company.com"), "existing@org.com");
 
     const combobox = await screen.findByRole("combobox");
-    await waitFor(() => expect(combobox.textContent).toContain("Select organization"));
+    await waitFor(() => expect(combobox.textContent).toContain("org-1"));
+    expect(
+      (screen.getByRole("button", { name: /grant access/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText("This user already has access to the selected organization."),
+    ).toBeTruthy();
+    await user.click(combobox);
+    const existingOption = await screen.findByRole("option", { name: "Acme" });
+    expect(existingOption.getAttribute("aria-selected")).toBe("true");
+    expect(existingOption.getAttribute("aria-disabled")).toBe("true");
+    expect(existingOption.querySelector(".text-green-600")).not.toBeNull();
   });
 
   it("does not enable the org-picker organizations query until the dialog is opened", async () => {
     renderInvite();
     // On mount the dialog is closed and the query must be gated off so the
-    // Organizations page does not see an extra PageSize=1000 fetch on load.
+    // Organizations page does not see an extra paginated picker fetch on load.
     expect(h.orgQueryOptions).toBeDefined();
     expect(h.orgQueryOptions?.enabled).toBe(false);
 

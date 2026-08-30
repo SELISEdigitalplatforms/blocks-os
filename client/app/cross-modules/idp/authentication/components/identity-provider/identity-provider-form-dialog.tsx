@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
-import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   Select,
   SelectContent,
@@ -27,11 +26,15 @@ import {
   useGetIdentityProviderById,
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
-import { SOCIAL_AUTH_PROVIDERS_CONFIG } from "@blocks-idp/authentication/constants/sso-providers.constant";
+import {
+  SOCIAL_AUTH_PROVIDERS_CONFIG,
+  SSO_PROVIDERS,
+} from "@blocks-idp/authentication/constants/sso-providers.constant";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
 import { SSOInitialPermissions } from "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions";
+import { ScopeMultiSelect } from "./scope-multi-select";
 import {
   toPermissionStubs,
   toRoleStubs,
@@ -78,6 +81,11 @@ const BLANK_FORM: FormValues = {
   audience: "",
 };
 
+const parseScopes = (scope?: string): string[] => {
+  const scopes = (scope ?? "").split(/[\s,]+/).filter(Boolean);
+  return scopes.includes("openid") ? scopes : ["openid", ...scopes];
+};
+
 const parseRedirectUris = (provider: IdentityProvider): string[] => {
   const uris = Array.isArray(provider.redirectUris)
     ? provider.redirectUris
@@ -116,13 +124,21 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   } = useGetIdentityProviderById(editId ?? "", open && isEditing);
 
   const editedProvider = providerResponse?.isSuccess ? providerResponse.data : undefined;
-  const isFormLoading = isEditing && isLoadingProvider;
+
+  // Tracks whether the form has actually been populated (via `reset()`) for the
+  // current open/edit target - not just whether the network request finished.
+  // Gating the skeleton on `isLoadingProvider` alone leaves a render in between
+  // (data arrived, but `reset()` hasn't run yet) where the form mounts with its
+  // still-blank defaults, which is what made "Provider Name" flash empty.
+  const [isFormReady, setIsFormReady] = useState(false);
+  const isFormLoading = isEditing && !isFormReady;
 
   const [redirectUris, setRedirectUris] = useState<string[]>([""]);
   const [showClientId, setShowClientId] = useState(false);
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<IRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<IPermission[]>([]);
+  const [scopes, setScopes] = useState<string[]>(["openid"]);
   const [requirePkce, setRequirePkce] = useState(false);
   const [redirectUrisError, setRedirectUrisError] = useState<string | null>(null);
 
@@ -140,6 +156,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
 
   const providerType = watch("providerType");
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
+  const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
 
   useEffect(() => {
     if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
@@ -148,19 +165,27 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   }, [providerType, blocksOidcWellKnownUrl, setValue]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setIsFormReady(false);
+      return;
+    }
 
     if (!isEditing) {
       reset(BLANK_FORM);
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
+      setScopes(["openid"]);
       setRequirePkce(false);
       setRedirectUrisError(null);
+      setIsFormReady(true);
       return;
     }
 
-    if (isLoadingProvider) return;
+    if (isLoadingProvider) {
+      setIsFormReady(false);
+      return;
+    }
 
     if (!providerResponse?.isSuccess || !editedProvider) {
       showErrorToast({
@@ -174,8 +199,10 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     setRedirectUris(parseRedirectUris(editedProvider));
     setSelectedRoles(toRoleStubs(editedProvider.initialRoles ?? []));
     setSelectedPermissions(toPermissionStubs(editedProvider.initialPermissions ?? []));
+    setScopes(parseScopes(editedProvider.scope));
     setRequirePkce(!!editedProvider.requirePkce);
     setRedirectUrisError(null);
+    setIsFormReady(true);
   }, [open, isEditing, isLoadingProvider, providerResponse, editedProvider, reset, onOpenChange]);
 
   useEffect(() => {
@@ -205,6 +232,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
         cleanedUris,
         selectedRoles,
         selectedPermissions,
+        scopes,
         requirePkce,
         blocksOidcWellKnownUrl,
         editedProvider,
@@ -291,7 +319,23 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                     onValueChange={(v) => setValue("provider", v, { shouldValidate: true })}
                   >
                     <SelectTrigger id="provider">
-                      <SelectValue placeholder="Select a provider" />
+                      {/* Radix only knows an item's label once SelectContent has mounted at
+                          least once, which never happens for a value set programmatically
+                          (e.g. via `reset()` when editing) before the user opens it - so the
+                          trigger renders blank the first time. Passing the label in ourselves
+                          sidesteps that. */}
+                      <SelectValue placeholder="Select a provider">
+                        {selectedSocialProvider && (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={selectedSocialProvider.imageSrc}
+                              alt={selectedSocialProvider.label}
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span>{selectedSocialProvider.label}</span>
+                          </div>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
@@ -496,14 +540,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
               />
 
               {/* Scope(s) + PKCE */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <Label>Scope(s)</Label>
-                  <div className="flex items-center gap-2">
-                    <Checkbox checked disabled />
-                    <span className="text-sm text-muted-foreground">openid</span>
-                  </div>
-                </div>
+              <div className="space-y-1.5">
+                <Label>Scope(s)</Label>
+                <ScopeMultiSelect value={scopes} onChange={setScopes} />
                 {/* <div className="flex items-center gap-2">
               <Checkbox
                 id="requirePkce"

@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnitTest", "XUnitTest\XUni
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LmtManagedServiceWorker", "LmtManagedServiceWorker\LmtManagedServiceWorker.csproj", "{DC832562-EFBA-454D-A3D1-F2E96276649F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LmtColdArchiveRestoreWorker", "LmtColdArchiveRestoreWorker\LmtColdArchiveRestoreWorker.csproj", "{E1F2A3B4-5C6D-4E7F-8A9B-0C1D2E3F4A5B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -62,6 +64,10 @@ Global
 		{DC832562-EFBA-454D-A3D1-F2E96276649F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC832562-EFBA-454D-A3D1-F2E96276649F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DC832562-EFBA-454D-A3D1-F2E96276649F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1F2A3B4-5C6D-4E7F-8A9B-0C1D2E3F4A5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1F2A3B4-5C6D-4E7F-8A9B-0C1D2E3F4A5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1F2A3B4-5C6D-4E7F-8A9B-0C1D2E3F4A5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1F2A3B4-5C6D-4E7F-8A9B-0C1D2E3F4A5B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -71,7 +71,9 @@ describe("InviteUser", () => {
     await user.type(screen.getByPlaceholderText("name@company.com"), "new@user.com");
     // The send button becomes enabled from the email alone, and no name inputs appear.
     await waitFor(() =>
-      expect((screen.getByRole("button", { name: /send invite/i }) as HTMLButtonElement).disabled).toBe(false),
+      expect(
+        (screen.getByRole("button", { name: /send invite/i }) as HTMLButtonElement).disabled,
+      ).toBe(false),
     );
     expect(screen.queryByPlaceholderText("Enter first name")).toBeNull();
     expect(screen.queryByPlaceholderText("Enter last name")).toBeNull();
@@ -145,7 +147,9 @@ describe("InviteUser", () => {
     await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
     await user.click(submit);
 
-    await waitFor(() => expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "already invited" }));
+    await waitFor(() =>
+      expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "already invited" }),
+    );
     expect(h.showSuccessToast).not.toHaveBeenCalled();
   });
 
@@ -189,7 +193,9 @@ describe("InviteUser", () => {
     expect(
       await screen.findByText("A user with this email already exists in the system."),
     ).toBeTruthy();
-    expect((screen.getByRole("button", { name: /grant access/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: /grant access/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it("grants an existing user access to a selected organization", async () => {
@@ -290,7 +296,7 @@ describe("InviteUser", () => {
     expect(h.createUser.mock.calls[0][0]).toMatchObject({ organizationId: "default" });
   });
 
-  it("reports when the existing user is already in every organization", async () => {
+  it("shows Default as preselected when the existing user already belongs to it", async () => {
     h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
     h.orgs = { data: { organizations: [] }, isLoading: false };
     h.checkExists = { data: { userId: "u1", organizationIds: ["default"] }, isFetching: false };
@@ -300,15 +306,22 @@ describe("InviteUser", () => {
     await user.type(screen.getByPlaceholderText("name@company.com"), "existing@user.com");
 
     const combobox = await screen.findByRole("combobox");
-    await waitFor(() => expect(combobox.textContent).toContain("Select organization"));
+    await waitFor(() => expect(combobox.textContent).toContain("Default"));
+    expect(
+      (screen.getByRole("button", { name: /grant access/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText("This user already has access to the selected organization."),
+    ).toBeTruthy();
 
     await user.click(combobox);
-    expect(
-      await screen.findByText("This user is already a member of all organizations"),
-    ).toBeTruthy();
+    const defaultOption = await screen.findByRole("option", { name: "Default" });
+    expect(defaultOption.getAttribute("aria-selected")).toBe("true");
+    expect(defaultOption.getAttribute("aria-disabled")).toBe("true");
+    expect(defaultOption.querySelector(".text-green-600")).not.toBeNull();
   });
 
-  it("drops Default from the picker when the existing user already belongs to it", async () => {
+  it("keeps Default visible with a green tick when the existing user belongs to it", async () => {
     h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
     h.orgs = {
       data: { organizations: [{ itemId: "org-1", name: "Acme Org", isDisabled: false }] },
@@ -322,10 +335,12 @@ describe("InviteUser", () => {
 
     await user.click(await screen.findByRole("combobox"));
     expect(await screen.findByText("Acme Org")).toBeTruthy();
-    expect(screen.queryByText("Default")).toBeNull();
+    const defaultOption = await screen.findByRole("option", { name: "Default" });
+    expect(defaultOption.getAttribute("aria-selected")).toBe("true");
+    expect(defaultOption.querySelector(".text-green-600")).not.toBeNull();
   });
 
-  it("clears a selected organization the existing user turns out to be a member of", async () => {
+  it("keeps and marks an organization the existing user turns out to belong to", async () => {
     h.config = { data: { isMultiOrgEnabled: true }, isLoading: false };
     h.orgs = {
       data: { organizations: [{ itemId: "org-1", name: "Acme Org", isDisabled: false }] },
@@ -343,11 +358,21 @@ describe("InviteUser", () => {
     await waitFor(() => expect(combobox.textContent).toContain("Acme Org"));
 
     // The existence check now reports this address as an existing member of the
-    // organization that is currently selected, so the selection must be dropped.
+    // selected organization, so it stays visible and is marked as already assigned.
     h.checkExists = { data: { userId: "u1", organizationIds: ["org-1"] }, isFetching: false };
     await user.type(email, "s");
 
-    await waitFor(() => expect(combobox.textContent).toContain("Select organization"));
+    await waitFor(() => expect(combobox.textContent).toContain("Acme Org"));
+    expect(
+      (screen.getByRole("button", { name: /grant access/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText("This user already has access to the selected organization."),
+    ).toBeTruthy();
+    await user.click(combobox);
+    const existingOption = await screen.findByRole("option", { name: "Acme Org" });
+    expect(existingOption.getAttribute("aria-selected")).toBe("true");
+    expect(existingOption.querySelector(".text-green-600")).not.toBeNull();
   });
 
   it("skips organizations that are explicitly disabled", async () => {
@@ -378,8 +403,6 @@ describe("InviteUser", () => {
     await screen.findByText("Add a user to an organization.");
 
     await user.click(screen.getByRole("button", { name: /cancel/i }));
-    await waitFor(() =>
-      expect(screen.queryByText("Add a user to an organization.")).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByText("Add a user to an organization.")).toBeNull());
   });
 });

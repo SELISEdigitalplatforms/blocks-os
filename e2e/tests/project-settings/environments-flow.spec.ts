@@ -1,27 +1,11 @@
 import { test, expect } from "../../support/test-base";
-import {
-  createProject,
-  deleteCreatedProject,
-  openProjectOverviewPage,
-} from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openProjectOverview } from "../../support/os-helpers";
 
 // Environments flow: open the Environments list -> add a new environment
 // (guarded: only if the project isn't already at the 8-environment cap and
 // there's an unused environment type left) -> open its details/dashboard ->
 // come back to the list.
 test.describe("flows", () => {
-  let projectName = "";
-  let tenantGroupId = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName, tenantGroupId } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
 
   test("Environments flow: list -> add environment -> open its dashboard -> back to list", async ({
     page,
@@ -29,7 +13,7 @@ test.describe("flows", () => {
     test.setTimeout(180_000);
 
     await test.step("Open Environments", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "environments");
+      await openProjectOverview(page, "environments");
       await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
         timeout: 30000,
       });
@@ -98,7 +82,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Return to the Environments list", async () => {
-      await openProjectOverviewPage(page, tenantGroupId, "environments");
+      await openProjectOverview(page, "environments");
       await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
         timeout: 30000,
       });
@@ -108,6 +92,30 @@ test.describe("flows", () => {
           .locator('[class*="cursor-pointer"]')
           .filter({ hasText: "X-Blocks-Key:" });
         await expect(cards).not.toHaveCount(0);
+      }
+    });
+
+    await test.step("'Start Migration' opens the Environment Migration wizard", async () => {
+      const startMigrationButton = page.getByRole("button", { name: "Start Migration" });
+      if (await startMigrationButton.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await startMigrationButton.click();
+        // Two copies render — a mobile (md:hidden) heading and the desktop
+        // one; .first() picks the mobile-hidden copy at a desktop viewport,
+        // so use .last() (the desktop one) instead.
+        await expect(page.getByText("Environment migration", { exact: true }).last()).toBeVisible({
+          timeout: 15000,
+        });
+        await expect(
+          page.getByText("Environments & services", { exact: true }).last(),
+        ).toBeVisible();
+
+        // Data migration is a real, consequential operation — only confirm
+        // the wizard opens and can be closed without selecting or
+        // submitting a source/target migration.
+        await page.getByRole("link", { name: "Close migration" }).click();
+        await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
+          timeout: 15000,
+        });
       }
     });
   });

@@ -1,54 +1,40 @@
+import { FilterControls, SortValue } from "@/components/filter-toolbar";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui-kits/table/table";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useDeleteRole } from "@blocks-idp/iam/hooks/use-roles";
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
-import { Pencil } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { UpdateRole } from "../update-role/update-role";
-import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { useDeleteRole } from "@blocks-idp/iam/hooks/use-roles";
 import { IRole } from "@blocks-idp/iam/models/role";
-import { FilterControls, SortValue } from "@/components/filter-toolbar";
+import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+import { Pencil, ShieldCheck } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router";
+import { UpdateRole } from "../update-role/update-role";
 import { useRolesSortQueryParams } from "./roles-filter-toolbar";
+
 type RolesTableProps = {
   roles: IRole[];
   isLoading: boolean;
+  showDefaultOriginBadge?: boolean;
 };
+
 const LoadingSkelton = () => (
-  <div className="grid w-full gap-2">
+  <div className="flex flex-col gap-3">
     {Array.from({ length: 5 }).map((_, index) => (
-      <Skeleton key={index} className="h-12 w-full rounded-xl" />
+      <Skeleton key={index} className="h-[72px] w-full rounded-xl" />
     ))}
   </div>
 );
-/**
- * Actions for one role row.
- *
- * The archive mutation is instantiated here rather than in the list so `isPending` is scoped to
- * this row; a single hoisted hook would disable every other row's confirm button.
- *
- * stopPropagation sits on the wrapper, not just the buttons: the row navigates on click, and
- * React events bubble through the component tree even though the dialog renders in a portal --
- * so Cancel, Confirm and the overlay would otherwise navigate away too.
- */
+
 const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => void }) => {
   const { mutateAsync, isPending } = useDeleteRole();
-
   return (
     <div
-      className="flex"
+      className="flex justify-end"
       role="presentation"
       onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
     >
       <Button
         size="icon"
@@ -72,155 +58,124 @@ const RoleRowActions = ({ row, onEdit }: { row: IRole; onEdit: (role: IRole) => 
   );
 };
 
-export const RolesList = ({ roles, isLoading }: RolesTableProps) => {
+export const RolesList = ({
+  roles,
+  isLoading,
+  showDefaultOriginBadge = false,
+}: RolesTableProps) => {
   const { sortQueryParams, setSortQueryParams } = useRolesSortQueryParams();
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const sortHandler = useCallback(
-    (value: SortValue) => {
-      setSortQueryParams(value);
-    },
+    (value: SortValue) => setSortQueryParams(value),
     [setSortQueryParams],
   );
-  const columns = useMemo<ColumnDef<IRole>[]>(
-    () => [
-      {
-        id: "name",
-        accessorFn: (row) => `${row.name}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            id="Name"
-            label="Name"
-            value={sortQueryParams}
-            onChange={sortHandler}
-          />
-        ),
-        cell: (roles) => <div className="w-[130px] truncate">{roles.row.original.name}</div>,
-      },
-      {
-        id: "slug",
-        accessorFn: (row) => `${row.slug}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            id="Slug"
-            label="Slug"
-            value={sortQueryParams}
-            onChange={sortHandler}
-          />
-        ),
-        cell: (roles) => (
-          <div className="w-[150px] truncate">
-            <span className="rounded-sm bg-blocks-primary-shades-300 px-2 py-1">
-              {roles.row.original.slug}
-            </span>
-          </div>
-        ),
-      },
-      {
-        id: "count",
-        accessorFn: (row) => `${row.count}`.trim(),
-        header: () => (
-          <FilterControls.SortHeader
-            id="Count"
-            label="Permissions"
-            value={sortQueryParams}
-            onChange={sortHandler}
-          />
-        ),
-        cell: (roles) => <div className="w-[180px] truncate">{roles.row.original.count}</div>,
-      },
-      {
-        id: "description",
-        accessorFn: (row) => `${row.description}`.trim(),
-        header: () => (
-          <div className="flex items-center">
-            <span className="font-bold text-medium-emphasis">Description</span>
-          </div>
-        ),
-        cell: (roles) => (
-          <div className="w-[200px] truncate md:w-[260px]">{roles.row.original.description}</div>
-        ),
-      },
-      {
-        id: "actions",
-        enableHiding: false,
-        cell: ({ row }) => <RoleRowActions row={row.original} onEdit={setSelectedRole} />,
-      },
-    ],
-    [sortHandler, sortQueryParams],
-  );
-  const table = useReactTable({
-    data: roles,
-    columns,
-    // Row identity by itemId rather than the default array index, so the React key on each
-    // TableRow tracks the role and not the position. Measured: an open Archive dialog closes when
-    // the data changes either way, so this is not fixing a live wrong-row bug -- it is the
-    // correct identity for anything TanStack keys per row.
-    getRowId: (row) => row.itemId,
-    getCoreRowModel: getCoreRowModel(),
-  });
-  const onRowClickHandler = (itemId: number | string) => {
-    navigate(scoped(`iam/role-detail/${itemId}`));
-  };
+  const openRole = (itemId: string) => navigate(scoped(`iam/role-detail/${itemId}`));
+
   if (isLoading) return <LoadingSkelton />;
+  if (!roles.length) {
+    return (
+      <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-xl py-16 text-center text-sm text-muted-foreground">
+        <ShieldCheck className="h-6 w-6" />
+        No roles found. Please create new roles.
+      </div>
+    );
+  }
+
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow className="px-4 py-3 hover:bg-transparent">
-            {table
-              .getHeaderGroups()
-              .map((headerGroup) =>
-                headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                )),
-              )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {!roles.length ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No roles found. Please create new roles.
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="cursor-pointer"
-                onClick={() => onRowClickHandler(row.original.itemId)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+      <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
+        <div className="flex flex-col gap-3 md:min-w-[840px]">
+          <div className="hidden grid-cols-[minmax(200px,1fr)_140px_120px_minmax(200px,1fr)_88px] items-center gap-4 px-4 md:grid">
+            <FilterControls.SortHeader
+              id="Name"
+              label="Name"
+              value={sortQueryParams}
+              onChange={sortHandler}
+            />
+            <FilterControls.SortHeader
+              id="Slug"
+              label="Slug"
+              value={sortQueryParams}
+              onChange={sortHandler}
+            />
+            <FilterControls.SortHeader
+              id="Count"
+              label="Permissions"
+              value={sortQueryParams}
+              onChange={sortHandler}
+            />
+            <span className="font-bold text-medium-emphasis">Description</span>
+            <span />
+          </div>
+
+          {roles.map((role) => (
+            <div
+              key={role.itemId}
+              role="button"
+              aria-label={`Open role ${role.name}`}
+              tabIndex={0}
+              onClick={() => openRole(role.itemId)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openRole(role.itemId);
+                }
+              }}
+              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 outline-none transition-colors hover:border-primary/30 focus-visible:border-primary/30 md:grid md:grid-cols-[minmax(200px,1fr)_140px_120px_minmax(200px,1fr)_88px] md:items-center md:gap-4"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p
+                    className="truncate text-sm font-semibold text-high-emphasis"
+                    title={role.name}
+                  >
+                    {role.name}
+                  </p>
+                  {showDefaultOriginBadge && role.createdFromDefault && (
+                    <Badge variant="secondary" className="shrink-0 font-normal">
+                      Default
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs text-muted-foreground md:hidden">Slug</span>
+                <Badge variant="secondary" className="w-fit max-w-full font-normal">
+                  <span className="truncate" title={role.slug}>
+                    {role.slug}
+                  </span>
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between gap-3 md:block">
+                <span className="text-xs text-muted-foreground md:hidden">Permissions</span>
+                <Badge variant="secondary" className="w-fit">
+                  <span>{role.count}</span>&nbsp;{role.count === 1 ? "permission" : "permissions"}
+                </Badge>
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs text-muted-foreground md:hidden">Description</span>
+                <p className="truncate text-sm text-muted-foreground" title={role.description}>
+                  {role.description || "-"}
+                </p>
+              </div>
+              <RoleRowActions row={role} onEdit={setSelectedRole} />
+            </div>
+          ))}
+        </div>
+      </div>
       {selectedRole && (
         <Dialog
-          open={!!selectedRole}
+          open
           onOpenChange={(value) => {
             if (!value) setSelectedRole(null);
           }}
         >
-          <UpdateRole
-            role={selectedRole}
-            isOpen={!!selectedRole}
-            onClose={() => setSelectedRole(null)}
-          />
+          <UpdateRole role={selectedRole} isOpen onClose={() => setSelectedRole(null)} />
         </Dialog>
       )}
     </>

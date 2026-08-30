@@ -1,9 +1,7 @@
-import { FilterControls, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 import {
   Select,
   SelectContent,
@@ -11,46 +9,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui-kits/table/table";
 import { Tabs, TabsContent } from "@/components/ui-kits/tabs/tabs";
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
-import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { formatDate, parseDateString } from "@/lib/utils";
 import { TraceProviderSetupGuideLine } from "@blocks-lmt/components/trace-guideline/trace-provider-guideline";
-import { TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
+import { TRACE_PROVIDERS, TRACE_REQUEST_SOURCE_TYPE } from "@blocks-lmt/constants/trace.constant";
 import { useGetBlocksServices, useGetTraces } from "@blocks-lmt/hooks/use-trace";
-import { TraceTree, getTypeColor } from "@blocks-lmt/models/trace.model";
 import { useQuery } from "@tanstack/react-query";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Archive, BookOpenText, Flame, Snowflake } from "lucide-react";
-import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
 import { serviceRegistryService } from "@/cross-modules/identifier/services/service-registry.service";
+import { RestoredTracesTab } from "./restored-traces-tab";
+import {
+  ServiceOption,
+  TracesFilterToolbar,
+  defaultServiceSelection,
+  useTraceSortQueryParams,
+  useTracesFilterQueryParams,
+} from "./traces-filter-toolbar";
+import { TracesList } from "./traces-list";
 type TracesOverviewProps = {
   projectKey: string;
 };
-type TraceFilter = { search: string; services: string[] };
 /**
  * The service filter renders the same checkbox tree the logs page uses: a blocks
  * service is a parent (its key) and its API/worker collections are the children,
  * keyed "<serviceKey>::<collectionName>". A registered service has no children, so
  * its own value is already the collection name.
  */
-type ServiceOption = {
-  label: string;
-  value: string;
-  children?: { label: string; value: string }[];
-};
 const COMPONENT_PREFIX = "::";
 /** Checkbox-tree option values -> the collection names the traces API filters on. */
 const treeValuesToServiceNames = (treeValues: string[], options: ServiceOption[]) => {
@@ -66,19 +52,6 @@ const treeValuesToServiceNames = (treeValues: string[], options: ServiceOption[]
   });
   return [...new Set(names)];
 };
-const useTracesFilterQueryParams = () => {
-  const [queryParams, setQueryParams] = useQueryStates({
-    search: parseAsString.withDefault(""),
-    services: parseAsArrayOf(parseAsString).withDefault([]),
-    page: parseAsInteger.withDefault(0),
-    pageSize: parseAsInteger.withDefault(10),
-  });
-  return { queryParams, setQueryParams };
-};
-const useTraceSortQueryParams = () =>
-  useSortQueryParams({
-    initial: { property: "Timestamp", isDescending: true },
-  });
 const TRACE_MODE_OPTIONS = [
   {
     value: "hot",
@@ -99,161 +72,13 @@ const TRACE_MODE_OPTIONS = [
     Icon: Archive,
   },
 ] as const;
-const LoadingSkelton = () => (
-  <div className="grid w-full gap-2">
-    {Array.from({ length: 10 }).map((_, index) => (
-      <Skeleton key={index} className="h-12 w-full rounded-xl" />
-    ))}
-  </div>
-);
-function TracesList({
-  data,
-  isLoading,
-  serviceLabels,
-  hasActiveFilter,
-}: {
-  data: TraceTree[];
-  isLoading: boolean;
-  serviceLabels: Map<string, string>;
-  hasActiveFilter: boolean;
-}) {
-  const { sortQueryParams, setSortQueryParams } = useTraceSortQueryParams();
-  const navigate = useNavigate();
-  const LMT_BASE_PATH = useLmtBasePath();
-  const columns = useMemo<ColumnDef<TraceTree>[]>(
-    () => [
-      {
-        accessorKey: "entryPoint",
-        header: () => (
-          <FilterControls.SortHeader
-            id="OperationName"
-            label="Entry point"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: ({ row }) => {
-          const entryPoint = row.original.entryPoint;
-          return (
-            <div className="ml-2 flex w-[220px] flex-row items-center gap-2 sm:ml-0 sm:w-[320px]">
-              <span className={`font-semibold uppercase ${getTypeColor(entryPoint.method)}`}>
-                {entryPoint.method}
-              </span>
-              <span>{entryPoint.actionName}</span>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "service",
-        header: () => (
-          <FilterControls.SortHeader
-            id="ServiceName"
-            label="Service"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: ({ row }) => (
-          <div className="ml-2 flex items-center sm:ml-0 sm:w-[180px]">
-            {serviceLabels.get(row.original.serviceName) || row.original.serviceName}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "duration",
-        header: () => (
-          <FilterControls.SortHeader
-            id="Duration"
-            label="Duration"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: ({ row }) => (
-          <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
-            {row.original.duration}ms
-          </div>
-        ),
-      },
-      {
-        accessorKey: "timestamp",
-        header: () => (
-          <FilterControls.SortHeader
-            id="Timestamp"
-            label="Timestamp"
-            value={sortQueryParams}
-            onChange={setSortQueryParams}
-          />
-        ),
-        cell: ({ row }) => {
-          const dateValue = parseDateString(row.original.timestamp);
-          return <div className="ml-2 w-[180px] lowercase sm:ml-0">{formatDate(dateValue)}</div>;
-        },
-      },
-    ],
-    [serviceLabels, setSortQueryParams, sortQueryParams],
-  );
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-  if (isLoading) return <LoadingSkelton />;
-  return (
-    <ScrollArea className="w-full">
-      <Table className="text-sm">
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="px-4 py-2 hover:bg-transparent">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="font-bold text-medium-emphasis">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="cursor-pointer text-medium-emphasis hover:bg-accent/50"
-                onClick={() => navigate(`${LMT_BASE_PATH}/tracing/${row.original.traceId}`)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell
-                colSpan={table.getAllColumns().length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                {hasActiveFilter ? "No results found." : "No data found."}
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      <ScrollBar orientation="horizontal" />
-    </ScrollArea>
-  );
-}
 export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const isMobile = useIsMobile();
   const { queryParams, setQueryParams } = useTracesFilterQueryParams();
   const { sortQueryParams } = useTraceSortQueryParams();
-  const [tabId, setTabId] = useState("hot");
+  const tabId = (queryParams.tab || "hot") as keyof typeof TRACE_PROVIDERS;
   const [open, setOpen] = useState(false);
-  const [provider, setProvider] = useState<TRACE_PROVIDERS>(TRACE_PROVIDERS.hot);
+  const provider = TRACE_PROVIDERS[tabId] || TRACE_PROVIDERS.hot;
   const { data: registeredServices } = useQuery({
     queryKey: ["registered-services", projectKey],
     queryFn: () =>
@@ -309,7 +134,13 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     return labels;
   }, [blocksServicesData, registeredServices?.data]);
   const selectedServiceNames = useMemo(
-    () => treeValuesToServiceNames(queryParams.services, serviceOptions),
+    () =>
+      treeValuesToServiceNames(
+        queryParams.services.length > 0
+          ? queryParams.services
+          : defaultServiceSelection(serviceOptions),
+        serviceOptions,
+      ),
     [queryParams.services, serviceOptions],
   );
   const { data, isLoading, isFetching } = useGetTraces({
@@ -331,18 +162,8 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     setQueryParams((params) => ({ ...params, page: 0, pageSize }));
   };
   const tabChangedHandler = (value: keyof typeof TRACE_PROVIDERS) => {
-    pageChangeHandler(0);
-    setTabId(value);
-    setProvider(TRACE_PROVIDERS[value]);
+    setQueryParams((params) => ({ ...params, tab: value, page: 0 }));
   };
-  const changeHandler = (key: string, value: unknown) => {
-    setQueryParams((params) => ({
-      ...params,
-      [key]: Array.isArray(value) ? [...value] : value,
-      page: 0,
-    }));
-  };
-  const resetHandler = () => setQueryParams(null);
   const hasActiveFilter = queryParams.search.trim().length > 0 || queryParams.services.length > 0;
   return (
     <main>
@@ -433,23 +254,10 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
         <TabsContent value="hot">
           <Card>
             <CardHeader>
-              <FilterToolbar<TraceFilter>
-                filters={[
-                  { key: "search", type: "SearchInput", label: "" },
-                  {
-                    key: "services",
-                    type: "CheckboxTree",
-                    label: "Service",
-                    props: { options: serviceOptions },
-                  },
-                ]}
-                values={{
-                  search: queryParams.search,
-                  services: queryParams.services,
-                }}
-                defaultValues={{ search: "", services: [] }}
-                onChange={(key, value) => changeHandler(String(key), value)}
-                onReset={resetHandler}
+              <TracesFilterToolbar
+                queryParams={queryParams}
+                setQueryParams={setQueryParams}
+                serviceOptions={serviceOptions}
               />
             </CardHeader>
             <CardContent>
@@ -475,18 +283,30 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
           </Card>
         </TabsContent>
         <TabsContent value="cold">
-          <Card>
-            <CardContent className="flex h-[500px] items-center justify-center text-muted-foreground">
-              Coming soon
-            </CardContent>
-          </Card>
+          <RestoredTracesTab
+            sourceType={TRACE_REQUEST_SOURCE_TYPE.cold}
+            projectKey={projectKey}
+            queryParams={queryParams}
+            setQueryParams={setQueryParams}
+            sortQueryParams={sortQueryParams}
+            serviceOptions={serviceOptions}
+            serviceLabels={serviceLabels}
+            selectedServiceNames={selectedServiceNames}
+            hasActiveFilter={hasActiveFilter}
+          />
         </TabsContent>
         <TabsContent value="archive">
-          <Card>
-            <CardContent className="flex h-[500px] items-center justify-center text-muted-foreground">
-              Coming soon
-            </CardContent>
-          </Card>
+          <RestoredTracesTab
+            sourceType={TRACE_REQUEST_SOURCE_TYPE.archive}
+            projectKey={projectKey}
+            queryParams={queryParams}
+            setQueryParams={setQueryParams}
+            sortQueryParams={sortQueryParams}
+            serviceOptions={serviceOptions}
+            serviceLabels={serviceLabels}
+            selectedServiceNames={selectedServiceNames}
+            hasActiveFilter={hasActiveFilter}
+          />
         </TabsContent>
         {!isMobile ? (
           <TraceProviderSetupGuideLine open={open} onOpenChange={setOpen} provider={provider} />

@@ -62,6 +62,36 @@ export interface CreateRolePayload {
   name: string;
   description: string;
   slug: string;
+  /**
+   * Acknowledges that other organizations already have a role with this name, and that creating
+   * this one gives them a second role sharing it. Sent only on the second attempt, after the
+   * administrator has seen the count and confirmed.
+   */
+  confirmDuplicateName?: boolean;
+}
+
+/**
+ * What `roles/create` returns.
+ *
+ * The advisory fields carry counts only -- never the names or ids of other organizations, which
+ * would hand one administrator another organization's role inventory. They are populated for
+ * default-organization callers; an organization-scoped caller is never shown the advisory, because
+ * its only possible collisions are with its own roles (already refused by name) or with sibling
+ * organizations (none of its business).
+ */
+export interface CreateRoleResponse {
+  isSuccess: boolean;
+  itemId?: string;
+  errors?: Record<string, string>;
+  /** True on the one refusal a second attempt can clear by confirming. */
+  requiresDuplicateNameConfirmation?: boolean;
+  /** Other organizations already using this name. */
+  duplicateNameOrganizationCount?: number;
+  /**
+   * Of those, the ones that will keep their own role instead of receiving this one -- the insert
+   * skips any organization already holding the slug. Normally zero.
+   */
+  slugConflictOrganizationCount?: number;
 }
 export interface UpdateRolePayload extends Partial<Omit<CreateRolePayload, "slug">> {
   itemId: string;

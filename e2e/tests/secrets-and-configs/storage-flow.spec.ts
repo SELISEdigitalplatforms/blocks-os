@@ -1,17 +1,9 @@
-import { test, expect, Page } from "@playwright/test";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { test, expect } from "../../support/test-base";
+import { openSecretManagement } from "../../support/os-helpers";
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
 // straight to the section's URL instead.
-const gotoSecretManagementSection = async (page: Page, subpath: string, headingName: string) => {
-  const match = new URL(page.url()).pathname.match(/^\/app\/[^/]+/);
-  if (match) {
-    await page.goto(`${new URL(page.url()).origin}${match[0]}/secret-management/${subpath}`);
-  }
-  await expect(page.getByRole("heading", { name: headingName })).toBeVisible({ timeout: 30000 });
-};
 
 const openAddStorageDialog = async (page: Page) => {
   // The previous dialog's own submit button is also labeled "Add" (see
@@ -98,27 +90,35 @@ const saveDialogAndConfirmClosed = async (page: Page, providerLabel: string) => 
 // .../save-storage-configuration/utils.ts) — for each provider, trigger its
 // exact required-field validation with the fields left empty, then fill a
 // fully valid configuration and save it, before finally opening a saved
-// card into its file browser ("details" view).
+// card's "View Details" properties drawer.
+//
+// NOTE: there is no real file browser behind a card — storage-card.tsx's
+// dropdown has only one item ("View Details", a static properties panel);
+// `onRemove`/`onDisconnect` props exist on StorageCardProps but are never
+// wired up, and the model file's DMS/file-listing types
+// (IGetDmsFileAndFolderPayload, IUploadDmsFilePayload, ...) are unused dead
+// API surface. Edit is also fully implemented in
+// save-storage-configuration.tsx (accepts a `configuration` prop, "Edit
+// Storage Configuration" title, disabled provider selector, "Configuration
+// updated successfully" toast) but nothing in storage-card.tsx/
+// storage-contents.tsx ever triggers it — dead/unreachable code, not
+// something this e2e flow can exercise through the UI as it stands today.
 test.describe("flows", () => {
-  let projectName = "";
 
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
-
-  test("Storage flow: strict validation and successful save for every provider -> open a card's file browser", async ({
+  test("Storage flow: strict validation and successful save for every provider -> open a card's View Details drawer", async ({
     page,
   }) => {
     test.setTimeout(240_000);
 
     await test.step("Navigate to Storage", async () => {
-      await gotoSecretManagementSection(page, "storage", "Storage");
+      await openSecretManagement(page, "storage", "Storage");
       await expect(page.getByRole("button", { name: /add/i })).toBeVisible();
+    });
+
+    await test.step("A fresh project starts with no storage configurations", async () => {
+      await expect(page.getByText("No storage configurations found."))
+        .toBeVisible({ timeout: 10000 })
+        .catch(() => {});
     });
 
     await test.step("[AWS] Name is required regardless of provider", async () => {
@@ -338,6 +338,15 @@ test.describe("flows", () => {
         .first();
       const menuTrigger = targetCard.locator("button").last();
       await menuTrigger.click();
+
+      // Regression guard: "View Details" is the ONLY action offered today —
+      // no Edit/Delete/Disconnect, even though those props exist unused in
+      // storage-card.tsx. If this starts failing because a new item
+      // appeared, that's a real feature landing and this guard (plus the
+      // file-level NOTE above) should be updated/removed.
+      await expect(page.getByRole("menuitem")).toHaveCount(1);
+      await expect(page.getByRole("menuitem", { name: "View Details" })).toBeVisible();
+
       await page.getByRole("menuitem", { name: "View Details" }).click();
 
       await expect(page.getByRole("heading", { name: "Details" })).toBeVisible({ timeout: 10000 });
