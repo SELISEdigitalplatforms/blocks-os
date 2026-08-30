@@ -88,4 +88,31 @@ describe("OrganizationCombobox", () => {
     expect(await screen.findByRole("option", { name: "Organization 11" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Organization 1" })).toBeTruthy();
   });
+
+  it("keeps existing memberships visible with a green check on the right", async () => {
+    h.responses.set("0:", {
+      organizations: [organization(1), organization(2)],
+      totalCount: 2,
+    });
+    const onValueChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <OrganizationCombobox
+        projectKey="tenant-1"
+        value="org-1"
+        onValueChange={onValueChange}
+        preselectedOrganizationIds={new Set(["org-1"])}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox"));
+    const existingOption = await screen.findByRole("option", { name: "Organization 1" });
+    expect(existingOption.getAttribute("aria-selected")).toBe("true");
+    expect(existingOption.getAttribute("aria-disabled")).toBe("true");
+    expect(existingOption.querySelector(".text-green-600")).not.toBeNull();
+
+    await user.click(existingOption);
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("option", { name: "Organization 2" })).toBeTruthy();
+  });
 });

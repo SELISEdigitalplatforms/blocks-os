@@ -146,16 +146,6 @@ export const InviteUser = () => {
   // organizationId in the payload. The user is implicitly scoped to the
   // built-in "default" org on the server side.
 
-  // If the form's currently selected org becomes hidden because the existing
-  // user is already a member of it, clear it so the trigger label and submit
-  // payload stay in sync with the filtered dropdown.
-  useEffect(() => {
-    if (!open) return;
-    if (selectedOrgId && existingUserOrgIds.has(selectedOrgId)) {
-      form.setValue("organizationIds", [], { shouldValidate: true });
-    }
-  }, [open, existingUserOrgIds, selectedOrgId, form]);
-
   const onSubmitHandler = async (values: InviteFormValues) => {
     try {
       if (exists) {
@@ -221,7 +211,10 @@ export const InviteUser = () => {
   // When multi-org is off, "grant access" is meaningless. There is no other
   // org to add the existing user to. Block submit and tell the user instead.
   const showExistingUserNotice = exists && !isMultiOrgEnabled;
-  const isSubmitDisabled = isPending || isFormInvalid || showExistingUserNotice;
+  const selectedOrganizationAlreadyAssigned =
+    exists && !!selectedOrgId && existingUserOrgIds.has(selectedOrgId);
+  const isSubmitDisabled =
+    isPending || isFormInvalid || showExistingUserNotice || selectedOrganizationAlreadyAssigned;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -294,7 +287,7 @@ export const InviteUser = () => {
                         onValueChange={(orgId) =>
                           form.setValue("organizationIds", [orgId], { shouldValidate: true })
                         }
-                        excludedOrganizationIds={existingUserOrgIds}
+                        preselectedOrganizationIds={existingUserOrgIds}
                         emptyMessage={
                           exists
                             ? "This user is already a member of all organizations"

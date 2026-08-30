@@ -168,17 +168,9 @@ export const InviteOrganizationUser = ({
     }
   }, [open, isMultiOrgEnabled, orgsData, hasNonDefaultOrgs, form, organizationId]);
 
-  // If the current selected org becomes hidden (because the existing user is
-  // already a member of it), drop the selection so the trigger label and the
-  // submit-time org id stay in sync with the filtered dropdown.
-  useEffect(() => {
-    if (!open) return;
-    if (selectedOrgId && existingUserOrgIds.has(selectedOrgId)) {
-      setSelectedOrgId("");
-    }
-  }, [open, existingUserOrgIds, selectedOrgId]);
-
   const isFormInvalid = !isValidEmailFormat || (exists && !existingUserId);
+  const selectedOrganizationAlreadyAssigned =
+    exists && !!selectedOrgId && existingUserOrgIds.has(selectedOrgId);
 
   const onSubmitHandler = async (values: InviteFormValues) => {
     try {
@@ -300,7 +292,7 @@ export const InviteOrganizationUser = ({
                     projectKey={tenantId}
                     value={selectedOrgId}
                     onValueChange={setSelectedOrgId}
-                    excludedOrganizationIds={existingUserOrgIds}
+                    preselectedOrganizationIds={existingUserOrgIds}
                     initialSelectedName={organizationName}
                     emptyMessage={
                       exists
@@ -323,7 +315,10 @@ export const InviteOrganizationUser = ({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || isFormInvalid}>
+              <Button
+                type="submit"
+                disabled={isPending || isFormInvalid || selectedOrganizationAlreadyAssigned}
+              >
                 {isPending ? (
                   <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />

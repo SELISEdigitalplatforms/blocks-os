@@ -15,7 +15,7 @@ interface OrganizationComboboxProps {
   projectKey: string;
   value: string;
   onValueChange: (organizationId: string) => void;
-  excludedOrganizationIds?: Iterable<string>;
+  preselectedOrganizationIds?: Iterable<string>;
   initialSelectedName?: string;
   emptyMessage?: string;
   disabled?: boolean;
@@ -34,7 +34,7 @@ export const OrganizationCombobox = ({
   projectKey,
   value,
   onValueChange,
-  excludedOrganizationIds = [],
+  preselectedOrganizationIds = [],
   initialSelectedName,
   emptyMessage = "No organizations available",
   disabled = false,
@@ -48,7 +48,10 @@ export const OrganizationCombobox = ({
     initialSelectedName ? { itemId: value, name: initialSelectedName } : undefined,
   );
 
-  const excludedIds = useMemo(() => new Set(excludedOrganizationIds), [excludedOrganizationIds]);
+  const preselectedIds = useMemo(
+    () => new Set(preselectedOrganizationIds),
+    [preselectedOrganizationIds],
+  );
 
   useEffect(() => {
     const timeout = window.setTimeout(
@@ -85,19 +88,17 @@ export const OrganizationCombobox = ({
   const options = useMemo(() => {
     const organizations = loadedOrganizations.filter(
       (organization) =>
-        organization.isDisabled !== true &&
-        organization.itemId !== DEFAULT_ORGANIZATION_ID &&
-        !excludedIds.has(organization.itemId),
+        organization.isDisabled !== true && organization.itemId !== DEFAULT_ORGANIZATION_ID,
     );
     const defaultMatchesSearch = "default".includes(debouncedSearchTerm.toLowerCase());
-    if (!excludedIds.has(DEFAULT_ORGANIZATION_ID) && defaultMatchesSearch) {
+    if (defaultMatchesSearch) {
       return [
         { itemId: DEFAULT_ORGANIZATION_ID, name: "Default" },
         ...organizations.map(({ itemId, name }) => ({ itemId, name })),
       ];
     }
     return organizations.map(({ itemId, name }) => ({ itemId, name }));
-  }, [debouncedSearchTerm, excludedIds, loadedOrganizations]);
+  }, [debouncedSearchTerm, loadedOrganizations]);
 
   const totalCount = data?.totalCount ?? loadedOrganizations.length;
   const hasMore = loadedOrganizations.length < totalCount;
@@ -181,13 +182,16 @@ export const OrganizationCombobox = ({
           )}
           {options.map((organization) => {
             const isSelected = value === organization.itemId;
+            const isPreselected = preselectedIds.has(organization.itemId);
             return (
               <button
                 key={organization.itemId}
                 type="button"
                 role="option"
-                aria-selected={isSelected}
+                aria-selected={isSelected || isPreselected}
+                aria-disabled={isPreselected}
                 onClick={() => {
+                  if (isPreselected) return;
                   setSelectedOption(organization);
                   onValueChange(organization.itemId);
                   handleOpenChange(false);
@@ -195,10 +199,18 @@ export const OrganizationCombobox = ({
                 className={cn(
                   "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted/50",
                   isSelected && "bg-accent text-accent-foreground",
+                  isPreselected && "cursor-default",
                 )}
               >
-                <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
                 <span className="flex-1 truncate">{organization.name}</span>
+                {(isSelected || isPreselected) && (
+                  <Check
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0",
+                      isPreselected ? "text-green-600 dark:text-green-400" : "text-primary",
+                    )}
+                  />
+                )}
               </button>
             );
           })}
