@@ -11,6 +11,12 @@ import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
 import { permissionService } from "./permission.service";
 import { roleService } from "./role.service";
 
+// See the mock for why the tooltip barrel cannot be imported under jsdom.
+vi.mock(
+  "@/components/ui-kits/tooltip/tooltip",
+  () => import("@/test-utils/__mocks__/tooltip.mock"),
+);
+
 const errorToast = vi.fn();
 const successToast = vi.fn();
 vi.mock("@/hooks/use-toast", () => ({

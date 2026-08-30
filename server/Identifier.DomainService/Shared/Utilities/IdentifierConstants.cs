@@ -39,7 +39,9 @@ namespace DomainService.Shared
         public const string RemoteFeTemplate = "/home/nginxreverseproxy/fe-domain.conf";
         public const string RemoteBlocksapiTemplate = "/home/nginxreverseproxy/blocksapi-domain.conf";
 
-
+        public const string StartBackupQueue = "start_backup_queue";
+        public const string ColdRestoreQueue = "cold-restore-queue";
+        public const string ArchiveRestoreQueue = "archive-restore-queue";
         private const string DefaultProvider = "azure";
         private const string RabbitMqProvider = "rabbitmq";
 
@@ -78,7 +80,10 @@ namespace DomainService.Shared
                     ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(IdentifierQueueName),
                                              ConsumerSubscription.BindToQueue(GenericMigrationQueue),
                                              ConsumerSubscription.BindToQueue(DataCleanupQueue),
-                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic)],
+                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic),
+                                             ConsumerSubscription.BindToQueue(StartBackupQueue),
+                                             ConsumerSubscription.BindToQueue(ColdRestoreQueue),
+                                             ConsumerSubscription.BindToQueue(ArchiveRestoreQueue),],
                 }
             };
         }
@@ -89,7 +94,7 @@ namespace DomainService.Shared
             {
                 AzureServiceBusConfiguration = new AzureServiceBusConfiguration
                 {
-                    Queues = [IdentifierQueueName, GenericMigrationQueue, DataCleanupQueue],
+                    Queues = [IdentifierQueueName, GenericMigrationQueue, DataCleanupQueue, StartBackupQueue, ColdRestoreQueue, ArchiveRestoreQueue],
                     Topics = [MigrationCompletionTopic]
                 }
             };

@@ -96,6 +96,7 @@ export const CreateClientCredential = ({
   const {
     formState: { isDirty, isValid },
     reset,
+    trigger,
   } = form;
 
   useEffect(() => {
@@ -112,7 +113,11 @@ export const CreateClientCredential = ({
     } else {
       reset(CreateClientModalFormDefaultValues);
     }
-  }, [editClient, open, reset]);
+    // `reset` alone leaves `formState.isValid` stale (it only recomputes on the next
+    // field-level change), so the submit button stays disabled until the user touches
+    // an unrelated field. Force a validation pass against the just-reset values.
+    void trigger();
+  }, [editClient, open, reset, trigger]);
 
   const handleDialogOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -165,7 +170,7 @@ export const CreateClientCredential = ({
         </DialogTrigger>
       )}
       <DialogContent className="max-w-2xl flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6 pr-12">
+        <DialogHeader className="shrink-0 px-6 pb-4 pt-6 pr-12">
           <DialogTitle>{isEdit ? "Edit Client Credential" : "Add Client Credential"}</DialogTitle>
           <DialogDescription>
             {isEdit
@@ -180,10 +185,7 @@ export const CreateClientCredential = ({
           >
             <div className="min-h-0 w-full min-w-0 flex-1 space-y-8 overflow-y-auto px-6 py-4">
               <section className="space-y-4">
-                <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase tracking-wider text-medium-emphasis">
-                  <KeyRound className="h-4 w-4" />
-                  General
-                </div>
+              
                 <FormField
                   control={form.control}
                   name="clientNameService"
@@ -297,7 +299,7 @@ export const CreateClientCredential = ({
                 )}
               />
             </div>
-            <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4 pr-12">
+            <DialogFooter className="shrink-0 px-6 py-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <UserSecretsId>dotnet-LmtColdArchiveRestoreWorker-7b3e4f1a-2c5d-4a8e-9f6b-1d3c5e7a9b2f</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="SeliseBlocks.ConfigurationDriver" />
+    <PackageReference Include="SeliseBlocks.Genesis.OS" />
+   <PackageReference Include="SeliseBlocks.MailDriver.OS" />
+   <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cloud.LmtService\Cloud.LmtService.csproj" />
+  </ItemGroup>
+
+</Project>

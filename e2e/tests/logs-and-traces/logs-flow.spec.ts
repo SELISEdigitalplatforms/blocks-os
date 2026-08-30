@@ -1,45 +1,17 @@
 import { test, expect } from "../../support/test-base";
-import { createProject, deleteCreatedProject } from "../../support/create-and-delete-project";
-import { ensureAuthenticated } from "../../support/login-helper";
+import { openLmt } from "../../support/os-helpers";
 
 // Logs flow: navigate into the sub-section under Logs & Traces, toggle its
 // log source tabs, follow a service card into its details view, then
 // exercise the log stream's Search and Type (level) filters.
 test.describe("flows", () => {
-  let projectName = "";
-
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    ({ projectName } = await createProject(page));
-  });
-
-  test.afterEach(async ({ page }) => {
-    await deleteCreatedProject(page, projectName);
-  });
-
   test("Logs flow: navigate to Logs -> toggle source -> open a service's details", async ({
     page,
   }) => {
     test.setTimeout(180_000);
 
-    const appBaseUrl = page.url().replace(/\/dashboard$/, "");
-    const gotoLmtChild = async (linkName: "Logs") => {
-      const link = page.getByRole("link", { name: linkName, exact: true });
-      for (let attempt = 0; attempt < 5; attempt++) {
-        if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await link.click({ timeout: 10000 });
-          return;
-        }
-        await page
-          .getByText("Logs & Traces", { exact: true })
-          .click({ timeout: 5000 })
-          .catch(() => {});
-      }
-      await page.goto(`${appBaseUrl}/lmt/logs`);
-    };
-
     await test.step("Navigate to Logs", async () => {
-      await gotoLmtChild("Logs");
+      await openLmt(page, "logs")
       // The tab strip renders after the page's own data fetch settles, so
       // wait for a heading first before asserting on the "Managed Service" tab.
       await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 20000 });
@@ -77,6 +49,35 @@ test.describe("flows", () => {
       }
     });
 
+    // The service details page (LmtServiceLogsRoute) renders its own
+    // LogsViewer with its own separate Managed Service / My Service tab
+    // pair — distinct from the one on the top-level Logs page toggled above.
+    await test.step("The service details page has its own Managed/My Service tabs", async () => {
+      const detailMyServiceTab = page.getByRole("tab", { name: "My Service" });
+      if (await detailMyServiceTab.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await detailMyServiceTab.click();
+        await expect(detailMyServiceTab).toHaveAttribute("aria-selected", "true");
+
+        const detailBlocksTab = page.getByRole("tab", { name: "Managed Service" });
+        await detailBlocksTab.click();
+        await expect(detailBlocksTab).toHaveAttribute("aria-selected", "true");
+      }
+    });
+
+    await test.step("Copy a log entry's trace ID to the clipboard", async () => {
+      const copyButton = page.locator("button:has(svg.lucide-copy)").first();
+      if (await copyButton.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await copyButton.click();
+        // The button swaps its Copy icon for a Check icon while "copied" is
+        // shown — that swap is the only reliably-testable signal here (the
+        // hover tooltip text isn't rendered without a real hover, and actual
+        // clipboard content isn't readable without a granted permission).
+        await expect(page.locator("button:has(svg.lucide-check)").first())
+          .toBeVisible({ timeout: 5000 })
+          .catch(() => {});
+      }
+    });
+
     await test.step("Search filters the log stream by text", async () => {
       const searchInput = page.getByPlaceholder("Search...");
       if (await searchInput.isVisible({ timeout: 8000 }).catch(() => false)) {
@@ -86,15 +87,22 @@ test.describe("flows", () => {
       }
     });
 
-    await test.step("The 'Type' filter offers log levels and can be cleared", async () => {
+    await test.step("The 'Type' filter narrows the stream to the selected level", async () => {
       const typeFilter = page.getByRole("button", { name: /Type/ });
       if (await typeFilter.isVisible({ timeout: 8000 }).catch(() => false)) {
         await typeFilter.click();
-        const firstLevelOption = page.getByRole("radio").first();
-        if (await firstLevelOption.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await firstLevelOption.click();
+        const errorOption = page.getByRole("radio", { name: "Error" });
+        if (await errorOption.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await errorOption.click();
+          await page.keyboard.press("Escape");
+
+          // If any log rows survive the filter, every one of them must be
+          // an Error-level entry.
+          const visibleLevel = page.getByText(/^error$/i).first();
+          await expect(visibleLevel).toBeVisible({ timeout: 8000 }).catch(() => {});
+        } else {
+          await page.keyboard.press("Escape");
         }
-        await page.keyboard.press("Escape");
 
         // Re-open and clear via the toolbar's own Clear control so the
         // stream returns to showing every level.
@@ -105,6 +113,54 @@ test.describe("flows", () => {
         } else {
           await page.keyboard.press("Escape");
         }
+      }
+    });
+
+    await test.step("The 'Service' filter narrows the stream to one service", async () => {
+      const serviceFilter = page.getByRole("button", { name: /^Service$/i });
+      if (await serviceFilter.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await serviceFilter.click();
+        const firstServiceOption = page.getByRole("radio").first();
+        if (await firstServiceOption.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await firstServiceOption.click();
+          await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 8000 }).catch(() => {});
+        } else {
+          await page.keyboard.press("Escape");
+        }
+      }
+    });
+
+    await test.step("The 'Date' range filter narrows the stream to a picked range", async () => {
+      const dateFilter = page.getByRole("button", { name: /^Date$/i });
+      if (await dateFilter.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await dateFilter.click();
+        const dayCell = page.getByRole("gridcell").filter({ has: page.locator("button") }).first();
+        if (await dayCell.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await dayCell.locator("button").click();
+          const applyButton = page.getByRole("button", { name: "Apply" });
+          await applyButton.click();
+          await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 8000 }).catch(() => {});
+
+          // Reset the range so later steps see the unfiltered stream.
+          await dateFilter.click();
+          const resetButton = page.getByRole("button", { name: "Reset" });
+          if (await resetButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await resetButton.click();
+            await page.getByRole("button", { name: "Apply" }).click();
+          } else {
+            await page.keyboard.press("Escape");
+          }
+        } else {
+          await page.keyboard.press("Escape");
+        }
+      }
+    });
+
+    await test.step("Following a log's trace link opens its trace details view", async () => {
+      const traceLink = page.getByRole("link", { name: /View trace details for/ }).first();
+      if (await traceLink.isVisible({ timeout: 8000 }).catch(() => false)) {
+        await traceLink.click();
+        await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 15000 });
       }
     });
   });

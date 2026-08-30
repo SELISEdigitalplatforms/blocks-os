@@ -2,6 +2,12 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// See the mock for why the tooltip barrel cannot be imported under jsdom.
+vi.mock(
+  "@/components/ui-kits/tooltip/tooltip",
+  () => import("@/test-utils/__mocks__/tooltip.mock"),
+);
+
 // blocks-kit's theme store reads matchMedia at import time, which jsdom does not provide.
 vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false,
@@ -119,6 +125,42 @@ describe("RolesList", () => {
     vi.clearAllMocks();
   });
 
+  describe("default-origin badge", () => {
+    const copy = { ...role, itemId: "role-copy", createdFromDefault: true } as IRole;
+    const own = { ...role, itemId: "role-own", slug: "administrator_f47ac10b" } as IRole;
+
+    it("marks a role that came from the default organization", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getByText("Default")).toBeTruthy();
+    });
+
+    it("leaves the organization's own role unmarked", () => {
+      render(<RolesList roles={[own]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("marks only the copy when both are listed together", () => {
+      render(<RolesList roles={[copy, own]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getAllByText("Default")).toHaveLength(1);
+    });
+
+    it("renders no badge in a single-organization tenant", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge={false} />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("defaults to no badge when the flag is not passed", () => {
+      render(<RolesList roles={[copy]} isLoading={false} />);
+      expect(screen.queryByText("Default")).toBeNull();
+    });
+
+    it("still shows the name and slug next to the badge", () => {
+      render(<RolesList roles={[copy]} isLoading={false} showDefaultOriginBadge />);
+      expect(screen.getByText("Administrator")).toBeTruthy();
+      expect(screen.getByText("administrator")).toBeTruthy();
+    });
+  });
+
   it("renders loading skeletons and no table while loading", () => {
     // C5. "No table" alone is satisfied by `return null`; the skeleton and its row count are what
     // actually say the loading state renders as it does today.
@@ -147,6 +189,22 @@ describe("RolesList", () => {
     render(<RolesList roles={[role]} isLoading={false} />);
     await user.click(screen.getByText("Administrator"));
     expect(navigate).toHaveBeenCalledWith("/scoped/iam/role-detail/role-1");
+  });
+
+  it("renders an accessible card row and activates it with Enter and Space", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<RolesList roles={[role]} isLoading={false} />);
+    const row = screen.getByRole("button", { name: "Open role Administrator" });
+
+    expect(row.getAttribute("tabindex")).toBe("0");
+    expect(row.className).toContain("rounded-xl");
+    expect(row.className).toContain("hover:border-primary/30");
+    expect(container.querySelector("table")).toBeNull();
+
+    row.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    expect(navigate).toHaveBeenCalledTimes(2);
   });
 
   it("opens the update-role dialog when the edit button is clicked", async () => {
@@ -273,7 +331,7 @@ describe("RolesList archive action", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("drops the open dialog rather than retargeting it when the list changes underneath", async () => {
+  it("keeps the open dialog targeted to the same role when the list changes underneath", async () => {
     // The dangerous shape here would be a row component reused with a stale open=true and a new
     // itemId, so Confirm archives a role the user never picked. Measured behaviour is the safe
     // one: the row remounts and the dialog closes with no archive call. Asserted so that a
@@ -288,11 +346,12 @@ describe("RolesList archive action", () => {
     // A refetch drops the other row.
     rerender(<RolesList roles={[role]} isLoading={false} />);
 
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText(/Administrator will be archived/)).toBeTruthy();
     expect(archiveRole).not.toHaveBeenCalled();
   });
 
-  it("closes the confirmation on any parent re-render (known limitation)", async () => {
+  it("keeps the confirmation open on a parent re-render", async () => {
     // Documents real behaviour rather than desired behaviour, so it fails loudly if either
     // changes. Root cause is outside this ticket: useSortQueryParams returns a fresh
     // sortQueryParams object every render, which invalidates the columns useMemo, which gives
@@ -308,7 +367,7 @@ describe("RolesList archive action", () => {
 
     rerender(<RolesList roles={[role]} isLoading={false} />);
 
-    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.querySelector('[role="dialog"]')).toBeTruthy();
     expect(archiveRole).not.toHaveBeenCalled();
   });
 
@@ -318,6 +377,7 @@ describe("RolesList archive action", () => {
     const user = userEvent.setup();
     renderList([role]);
 
+    await user.tab();
     await user.tab();
     await user.tab();
     await user.keyboard("{Enter}");
@@ -353,7 +413,9 @@ describe("RolesList archive action", () => {
     const user = userEvent.setup();
     renderList([role]);
     await user.click(trash());
-    expect((screen.getByRole("button", { name: "Archiving..." }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Archiving..." }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it("renders no archive actions in the empty state", () => {

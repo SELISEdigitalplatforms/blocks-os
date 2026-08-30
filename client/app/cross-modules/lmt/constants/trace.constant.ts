@@ -10,3 +10,21 @@ export enum TRACE_PROVIDERS {
   /** Archive storage: slowest, cheapest, very long retention. */
   archive = "archive",
 }
+
+export enum TRACE_REQUEST_SOURCE_TYPE {
+  hot = "Hot",
+  cold = "Cold",
+  archive = "Archive",
+}
+
+export enum TRACE_REQUEST_STATUS {
+  pending = "Pending",
+  processing = "InProgress",
+  completed = "Completed",
+  partialSuccess = "PartialSuccess",
+  failed = "Failed",
+}
+
+export const COLD_TRACE_RANGE_DAYS = { MIN: 31, MAX: 120 };
+export const ARCHIVE_TRACE_RANGE_DAYS = { MIN: 121, MAX: 180 };
+export const MAX_TRACE_REQUEST_DAYS = 7;

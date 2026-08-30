@@ -12,10 +12,7 @@ export const createClientSchema = z.object({
   roles: z
     .array(z.string().trim())
     .min(1, "At least one role is required"),
-  permissions: z
-    .array(z.string().trim())
-    .min(1, "At least one permission is required")
-    .max(10, "Maximum 10 permissions allowed"),
+  permissions: z.array(z.string().trim()).max(10, "Maximum 10 permissions allowed"),
 });
 
 export type CreateClientModalFormValues = z.infer<typeof createClientSchema>;

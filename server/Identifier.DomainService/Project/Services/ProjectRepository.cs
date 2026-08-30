@@ -689,11 +689,15 @@ namespace DomainService.Projects
                                         .Set(t => t.LastUpdatedDate, DateTime.UtcNow));
         }
 
+        // `_clientDb`, not `_dbContextProvider`, exactly like every other ProjectPeoples access in
+        // this repository. Disable runs impersonated -- the controller passes the impersonated
+        // TenantId as the project to disable -- so the raw provider resolves to the project's own
+        // tenant database, where these rows have never lived, and the delete matched nothing while
+        // reporting success. The rows survived their project.
         public async Task DeletePrjectPeopleAsync(string tenantId)
         {
-            var collection = _dbContextProvider.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
+            var collection = _clientDb.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
             await collection.DeleteManyAsync(Builders<ProjectPeople>.Filter.Eq(p => p.TenantId, tenantId));
-
         }
     }
 }

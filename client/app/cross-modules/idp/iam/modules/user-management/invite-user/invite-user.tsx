@@ -11,7 +11,11 @@ import {
 import { Input } from "@/components/ui-kits/input/input";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { buildInviteUserFormSchema, inviteUserFormDefaultValue, inviteUserFormSchema } from "./utils";
+import {
+  buildInviteUserFormSchema,
+  inviteUserFormDefaultValue,
+  inviteUserFormSchema,
+} from "./utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -29,16 +33,15 @@ import {
 import { z } from "zod";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronsUpDown, Check, Loader } from "lucide-react";
+import { Check, CircleCheck, Loader } from "lucide-react";
 import { isErrorWithErrors } from "@/lib/error";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { cn } from "@/lib/utils";
-import { useGetOrganizationConfig, useGetOrganizations } from "@blocks-idp/iam/hooks/use-organization";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui-kits/popover/popover";
+  useGetOrganizationConfig,
+  useGetOrganizations,
+} from "@blocks-idp/iam/hooks/use-organization";
+import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
 
 type InviteFormValues = z.infer<typeof inviteUserFormSchema>;
 
@@ -48,12 +51,12 @@ export const InviteUser = () => {
   const { isPending: isCreatingUser, mutateAsync: createUser } = useAddUser();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const [open, setOpen] = useState(false);
-  const [orgPopoverOpen, setOrgPopoverOpen] = useState(false);
 
-  const { data: orgsData, isLoading: isOrgsLoading } = useGetOrganizations({
+  const { data: orgsData } = useGetOrganizations({
     projectKey: tenantId,
     page: 0,
-    pageSize: 1000,
+    pageSize: 10,
+    enabled: open,
   });
   const { data: configData, isLoading: isConfigLoading } = useGetOrganizationConfig(tenantId);
   const isMultiOrgEnabled = configData?.isMultiOrgEnabled ?? true;
@@ -95,8 +98,9 @@ export const InviteUser = () => {
   // grant them access to the selected org instead of creating a new account.
   // The userId comes straight from the existence check response, no extra lookup needed.
   const existingUserId = existsData?.userId;
-  const { mutateAsync: updateUserAccess, isPending: isGrantingAccess } =
-    useUpdateUserAccessControl({ id: existingUserId ?? "", projectKey: tenantId });
+  const { mutateAsync: updateUserAccess, isPending: isGrantingAccess } = useUpdateUserAccessControl(
+    { id: existingUserId ?? "", projectKey: tenantId },
+  );
 
   const isPending = isCreatingUser || isGrantingAccess;
 
@@ -111,14 +115,15 @@ export const InviteUser = () => {
   // never returned by the tenant organizations list, so it has to be added
   // in manually or it can never be selected.
   const hasNonDefaultOrgs = useMemo(
-    () => enabledOrgs.some((org) => org.itemId !== DEFAULT_ORGANIZATION_ID),
-    [enabledOrgs],
+    () =>
+      enabledOrgs.some((org) => org.itemId !== DEFAULT_ORGANIZATION_ID) ||
+      (orgsData?.totalCount ?? enabledOrgs.length) > (orgsData?.organizations?.length ?? 0),
+    [enabledOrgs, orgsData?.organizations?.length, orgsData?.totalCount],
   );
 
   useEffect(() => {
     if (!open) {
       form.reset();
-      setOrgPopoverOpen(false);
       return;
     }
     // When multi-org is disabled we don't show an org picker, and the server
@@ -141,43 +146,6 @@ export const InviteUser = () => {
   // organizationId in the payload. The user is implicitly scoped to the
   // built-in "default" org on the server side.
 
-  // If the form's currently selected org becomes hidden because the existing
-  // user is already a member of it, clear it so the trigger label and submit
-  // payload stay in sync with the filtered dropdown.
-  useEffect(() => {
-    if (!open) return;
-    if (selectedOrgId && existingUserOrgIds.has(selectedOrgId)) {
-      form.setValue("organizationIds", [], { shouldValidate: true });
-    }
-  }, [open, existingUserOrgIds, selectedOrgId, form]);
-
-  // Dropdown list: enabled orgs with a synthetic "Default" entry pinned at the top.
-  // When the email maps to an existing user, hide orgs (including Default) they're already in.
-  const orgOptions = useMemo(() => {
-    const hideDefault = existingUserOrgIds.has(DEFAULT_ORGANIZATION_ID);
-    const list = enabledOrgs.filter(
-      (org) =>
-        org.itemId !== DEFAULT_ORGANIZATION_ID && !existingUserOrgIds.has(org.itemId),
-    );
-    return hideDefault
-      ? list.map((org) => ({ itemId: org.itemId, name: org.name }))
-      : [
-          { itemId: DEFAULT_ORGANIZATION_ID, name: "Default" },
-          ...list.map((org) => ({ itemId: org.itemId, name: org.name })),
-        ];
-  }, [enabledOrgs, existingUserOrgIds]);
-
-  const orgIdToName = useMemo(() => {
-    const map = new Map<string, string>();
-    orgOptions.forEach((o) => map.set(o.itemId, o.name));
-    return map;
-  }, [orgOptions]);
-
-  const selectOrg = (orgId: string) => {
-    form.setValue("organizationIds", [orgId], { shouldValidate: true });
-    setOrgPopoverOpen(false);
-  };
-
   const onSubmitHandler = async (values: InviteFormValues) => {
     try {
       if (exists) {
@@ -195,8 +163,7 @@ export const InviteUser = () => {
         if (!res.isSuccess) {
           const msg =
             res.errors && typeof res.errors === "object"
-              ? Object.values(res.errors as Record<string, string>)[0] ??
-                "Failed to grant access"
+              ? (Object.values(res.errors as Record<string, string>)[0] ?? "Failed to grant access")
               : (res.errors as string) || "Failed to grant access";
           showErrorToast({ errors: msg });
           return;
@@ -222,8 +189,7 @@ export const InviteUser = () => {
       if (!res.isSuccess) {
         const msg =
           res.errors && typeof res.errors === "object"
-            ? Object.values(res.errors as Record<string, string>)[0] ??
-              "Failed to invite user"
+            ? (Object.values(res.errors as Record<string, string>)[0] ?? "Failed to invite user")
             : (res.errors as string) || "Failed to invite user";
         showErrorToast({ errors: msg });
         return;
@@ -240,15 +206,15 @@ export const InviteUser = () => {
     }
   };
 
-  const isFormInvalid =
-    !isValidEmailFormat ||
-    isConfigLoading ||
-    (exists && !existingUserId);
+  const isFormInvalid = !isValidEmailFormat || isConfigLoading || (exists && !existingUserId);
 
   // When multi-org is off, "grant access" is meaningless. There is no other
   // org to add the existing user to. Block submit and tell the user instead.
   const showExistingUserNotice = exists && !isMultiOrgEnabled;
-  const isSubmitDisabled = isPending || isFormInvalid || showExistingUserNotice;
+  const selectedOrganizationAlreadyAssigned =
+    exists && !!selectedOrgId && existingUserOrgIds.has(selectedOrgId);
+  const isSubmitDisabled =
+    isPending || isFormInvalid || showExistingUserNotice || selectedOrganizationAlreadyAssigned;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -315,66 +281,33 @@ export const InviteUser = () => {
                   render={() => (
                     <FormItem>
                       <FormLabel>Organization</FormLabel>
-                      <Popover open={orgPopoverOpen} onOpenChange={setOrgPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={orgPopoverOpen}
-                            className="w-full justify-between"
-                          >
-                            <span className="truncate text-sm font-normal">
-                              {selectedOrgId
-                                ? orgIdToName.get(selectedOrgId) ?? selectedOrgId
-                                : "Select organization"}
-                            </span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[--radix-popover-trigger-width] p-0"
-                          align="start"
+                      <OrganizationCombobox
+                        projectKey={tenantId}
+                        value={selectedOrgId}
+                        onValueChange={(orgId) =>
+                          form.setValue("organizationIds", [orgId], { shouldValidate: true })
+                        }
+                        preselectedOrganizationIds={existingUserOrgIds}
+                        emptyMessage={
+                          exists
+                            ? "This user is already a member of all organizations"
+                            : "No organizations available"
+                        }
+                      />
+                      {selectedOrganizationAlreadyAssigned && (
+                        <p
+                          role="status"
+                          className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
                         >
-                          <div className="max-h-[260px] overflow-y-auto p-1">
-                            {orgOptions.length === 0 && !isOrgsLoading && (
-                              <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                                {exists
-                                  ? "This user is already a member of all organizations"
-                                  : "No organizations available"}
-                              </div>
-                            )}
-                            {orgOptions.map((org) => {
-                              const isSelected = selectedOrgId === org.itemId;
-                              return (
-                                <button
-                                  key={org.itemId}
-                                  type="button"
-                                  onClick={() => selectOrg(org.itemId)}
-                                  className={cn(
-                                    "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted/50",
-                                  )}
-                                >
-                                  <span className="flex-1 truncate">{org.name}</span>
-                                  {isSelected && <Check className="h-4 w-4 text-primary" />}
-                                </button>
-                              );
-                            })}
-                            {isOrgsLoading && (
-                              <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-                                <Loader className="h-3.5 w-3.5 animate-spin" />
-                                Loading organizations...
-                              </div>
-                            )}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                          <CircleCheck className="h-3.5 w-3.5 shrink-0" />
+                          This user already has access to the selected organization.
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               )}
-
             </div>
             <DialogFooter className="mt-6">
               <Button
