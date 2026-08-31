@@ -33,9 +33,7 @@ const MailcraftEditor = forwardRef<IMailcraftEditorRef, IMailcraftEditorProps>(
   function MailcraftEditorInner({ onSave, onTemplateLoad, html, templateName, embedded }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<EditorHandle | null>(null);
-    // Uploads live in a root directory named after the organization, so the
-    // id is host state, not something the storage layer can infer.
-    const organizationId = useProjectStore()?.selectedProject?.organizationIds?.[0] ?? "";
+    const projectKey = useProjectStore()?.selectedProject?.tenantId ?? "";
     const { resolvedTheme } = useTheme();
 
     // Latest props live in refs so the mount effect runs exactly once —
@@ -74,7 +72,7 @@ const MailcraftEditor = forwardRef<IMailcraftEditorRef, IMailcraftEditorProps>(
             // editor's own toggle, so it isn't also dropped from the bar.
             theme: initialTheme,
             toolbar: { logo: false, ai: false, status: false },
-            storageProvider: createMailcraftStorageProvider({ organizationId }),
+            storageProvider: createMailcraftStorageProvider(projectKey),
             storageLimits: MAILCRAFT_STORAGE_LIMITS,
             replace: true,
           });
@@ -101,7 +99,7 @@ const MailcraftEditor = forwardRef<IMailcraftEditorRef, IMailcraftEditorProps>(
         editorRef.current?.destroy();
         editorRef.current = null;
       };
-    }, [organizationId]);
+    }, [projectKey]);
 
     // `theme` is a plain attribute, not a settable element property, so a
     // host theme change after mount is pushed through setAttribute — the

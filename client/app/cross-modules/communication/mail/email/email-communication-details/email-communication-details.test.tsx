@@ -109,11 +109,17 @@ describe("EmailCommunicationDetails", () => {
     expect(screen.getByText("Template preview")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Welcome Email" })).toBeTruthy();
     expect(screen.getByTitle("Welcome Email preview").className).toContain("w-full");
-    expect(screen.getByTitle("Welcome Email preview").closest(".grid")?.className).toContain(
-      "flex-none",
+    const previewGrid = screen.getByTitle("Welcome Email preview").closest(".grid");
+    expect(previewGrid?.className).toContain("flex-none");
+    expect(previewGrid?.className).toContain(
+      "grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.8fr)]",
     );
+    expect(previewGrid?.className).not.toContain("grid-cols-1");
     expect(screen.getByTitle("Welcome Email preview").closest("section")?.className).toContain(
       "sm:min-h-[38rem]",
+    );
+    expect(screen.getByTitle("Welcome Email preview").closest("section")?.className).toContain(
+      "border-r",
     );
   });
 

@@ -164,8 +164,8 @@ export function EmailCommunicationDetails({
           </Dialog>
         </div>
       </div>
-      <div className="grid min-h-[34rem] min-w-0 flex-none grid-cols-1 overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:min-h-[38rem] xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,0.9fr)]">
-        <section className="flex min-h-[34rem] min-w-0 flex-col sm:min-h-[38rem] xl:min-h-0 xl:border-r xl:border-border">
+      <div className="grid min-h-[34rem] min-w-0 flex-none grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.8fr)] overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:min-h-[38rem] sm:grid-cols-[minmax(0,2fr)_minmax(16rem,0.9fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,0.9fr)]">
+        <section className="flex min-h-[34rem] min-w-0 flex-col border-r border-border sm:min-h-[38rem] xl:min-h-0">
           <header className="flex min-h-16 items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-6">
             <h2 className="text-lg font-semibold tracking-tight text-high-emphasis">
               Template preview
@@ -190,7 +190,7 @@ export function EmailCommunicationDetails({
             />
           </div>
         </section>
-        <aside className="flex min-w-0 flex-col border-t border-border xl:border-t-0">
+        <aside className="flex min-w-0 flex-col">
           <header className="flex min-h-16 items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-6">
             <h2 className="text-lg font-semibold tracking-tight text-high-emphasis">Details</h2>
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
