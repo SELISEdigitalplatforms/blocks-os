@@ -5,6 +5,8 @@ const h = vi.hoisted(() => ({
   getPreSignedUrlForUpload: vi.fn(),
   getFileByFileId: vi.fn(),
   uploadFile: vi.fn(),
+  getFilesAndFolders: vi.fn(),
+  createDmsFolder: vi.fn(),
 }));
 
 vi.mock("@blocks-storage/services/storage.service", () => ({
@@ -15,6 +17,8 @@ vi.mock("@blocks-storage/services/storage.service", () => ({
       getFileByFileId: h.getFileByFileId,
     },
     uploadFile: h.uploadFile,
+    getFilesAndFolders: h.getFilesAndFolders,
+    createDmsFolder: h.createDmsFolder,
   },
 }));
 
@@ -41,6 +45,8 @@ describe("createMailcraftStorageProvider", () => {
       itemId: "image-1",
       url: "https://cdn.example/image-1.png",
     });
+    h.getFilesAndFolders.mockResolvedValue({ dmsFileAndFolderInfos: [], totalCount: 0 });
+    h.createDmsFolder.mockResolvedValue({ result: [{ fileStorageId: "dir-created", success: true }] });
   });
 
   it("lists image assets through the supported GetFiles endpoint", async () => {
@@ -65,19 +71,52 @@ describe("createMailcraftStorageProvider", () => {
     });
   });
 
-  it("uses the authenticated project context when requesting an upload URL", async () => {
+  it("creates the email-assets folder and uploads into it", async () => {
     const provider = createMailcraftStorageProvider("project-1");
     const file = new File(["image"], "welcome.png", { type: "image/png" });
 
     await provider.upload(file, { width: 120, height: 80 });
 
+    expect(h.createDmsFolder).toHaveBeenCalledWith(
+      expect.objectContaining({ artifactName: "email-assets", parentId: "", projectKey: "project-1" }),
+    );
     const payload = h.getPreSignedUrlForUpload.mock.calls[0][0];
-    // Root upload, no directory lookup: `null` would ask the backend for the
-    // module's default directory, which dev projects don't have.
-    expect(payload).toMatchObject({ parentDirectoryId: "", projectKey: "project-1" });
+    // `null` is never sent: it would ask the backend for the module's
+    // default directory, which dev projects don't have.
+    expect(payload).toMatchObject({ parentDirectoryId: "dir-created", projectKey: "project-1" });
   });
 
-  it("uploads into a pinned directory when one is configured", async () => {
+  it("reuses an existing folder without creating, and resolves it once", async () => {
+    h.getFilesAndFolders.mockResolvedValue({
+      dmsFileAndFolderInfos: [
+        { type: 2, name: "email-assets", fileStorageId: "dir-existing", parentId: "", itemId: "x" },
+      ],
+      totalCount: 1,
+    });
+    const provider = createMailcraftStorageProvider("project-1");
+    const file = new File(["image"], "welcome.png", { type: "image/png" });
+
+    await provider.upload(file, { width: 120, height: 80 });
+    await provider.upload(file, { width: 120, height: 80 });
+
+    expect(h.createDmsFolder).not.toHaveBeenCalled();
+    expect(h.getFilesAndFolders).toHaveBeenCalledTimes(1);
+    expect(h.getPreSignedUrlForUpload.mock.calls[1][0]).toMatchObject({
+      parentDirectoryId: "dir-existing",
+    });
+  });
+
+  it("falls back to a root upload when the folder APIs fail", async () => {
+    h.getFilesAndFolders.mockRejectedValue(new Error("dms unavailable"));
+    const provider = createMailcraftStorageProvider("project-1");
+    const file = new File(["image"], "welcome.png", { type: "image/png" });
+
+    await provider.upload(file, { width: 120, height: 80 });
+
+    expect(h.getPreSignedUrlForUpload.mock.calls[0][0]).toMatchObject({ parentDirectoryId: "" });
+  });
+
+  it("uploads into a pinned directory without touching the folder APIs", async () => {
     const provider = createMailcraftStorageProvider("project-1", {
       parentDirectoryId: "dir-42",
     });
@@ -85,7 +124,18 @@ describe("createMailcraftStorageProvider", () => {
 
     await provider.upload(file, { width: 120, height: 80 });
 
-    const payload = h.getPreSignedUrlForUpload.mock.calls[0][0];
-    expect(payload).toMatchObject({ parentDirectoryId: "dir-42" });
+    expect(h.getFilesAndFolders).not.toHaveBeenCalled();
+    expect(h.createDmsFolder).not.toHaveBeenCalled();
+    expect(h.getPreSignedUrlForUpload.mock.calls[0][0]).toMatchObject({ parentDirectoryId: "dir-42" });
+  });
+
+  it("uploads to root when the folder is disabled", async () => {
+    const provider = createMailcraftStorageProvider("project-1", { directoryName: null });
+    const file = new File(["image"], "welcome.png", { type: "image/png" });
+
+    await provider.upload(file, { width: 120, height: 80 });
+
+    expect(h.getFilesAndFolders).not.toHaveBeenCalled();
+    expect(h.getPreSignedUrlForUpload.mock.calls[0][0]).toMatchObject({ parentDirectoryId: "" });
   });
 });
