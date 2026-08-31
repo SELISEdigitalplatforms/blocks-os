@@ -119,7 +119,7 @@ export const OrganizationDetail = ({ id }: { id: string }) => {
         <section className="flex min-h-0 flex-col lg:col-span-9 xl:col-span-10">
           <OrganizationUsers
             organizationId={id}
-            action={<InviteOrganizationUser organizationId={id} />}
+            action={<InviteOrganizationUser organizationId={id} organizationName={org?.name} />}
           />
         </section>
       </div>
