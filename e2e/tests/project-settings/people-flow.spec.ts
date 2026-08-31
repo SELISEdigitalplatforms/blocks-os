@@ -1,5 +1,6 @@
 import { test, expect } from "../../support/test-base";
 import { openProjectOverview } from "../../support/os-helpers";
+import { waitForPeopleOwnerReady } from "../../support/people-helpers";
 import { uniqueTestEmail } from "../../support/env";
 
 // People flow: strict validation on Invite, invite a fresh person into the
@@ -14,25 +15,7 @@ test.describe("flows", () => {
 
     await test.step("Open People", async () => {
       await openProjectOverview(page, "people");
-      // Invite only renders when the people API reports isOwner — wait for it
-      // (not just the heading) so a cold store / late fetch doesn't race Owner.
-      // A freshly created project can also race the people API itself and
-      // return isOwner=false once, after which the cached response keeps the
-      // Invite button hidden. Reload once on that same path used in step 2.
-      if (
-        !(await page
-          .getByRole("button", { name: "Invite" })
-          .isVisible({ timeout: 5000 })
-          .catch(() => false))
-      ) {
-        await page.reload({ waitUntil: "domcontentloaded" });
-        await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
-          timeout: 30000,
-        });
-      }
-      await expect(page.getByRole("button", { name: "Invite" })).toBeVisible({
-        timeout: 30000,
-      });
+      await waitForPeopleOwnerReady(page, () => openProjectOverview(page, "people"));
     });
 
     await test.step("The project owner appears in the list", async () => {

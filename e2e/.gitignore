@@ -3,6 +3,14 @@ node_modules/
 /playwright-report/
 /blob-report/
 /.playwright/
+/.playwright-cli/
+/snapshots/
+
+# Spec Kit (local — run: npm run spec-kit:init)
+/.specify/
+/specs/
+/.cursor/
+
 /fixtures/*.json
 
 # Local secrets — never commit real credentials
