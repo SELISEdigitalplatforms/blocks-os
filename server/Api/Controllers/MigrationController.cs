@@ -46,6 +46,7 @@ namespace BlocksOs.Api.Controllers
   /// <param name="command">The OTP verification request containing the verification ID and code.</param>
   /// <returns>An <see cref="MigrationOtpVerificationResponse"/> indicating whether the OTP is valid.</returns>
   [HttpPost]
+  [Authorize]
   public async Task<MigrationOtpVerificationResponse> Verify ( [FromBody] MigrationVerifyOtpRequest request )
    {
    return await _migrationService.VerifyAsync(request);
