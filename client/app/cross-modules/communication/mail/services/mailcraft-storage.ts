@@ -1,6 +1,5 @@
 import type { Asset, StorageProvider } from "@seliseblocks/mailcraft";
 import { ModuleName } from "@/constants/modules.constants";
-import { DmsItemType } from "@blocks-storage/models/storage.model";
 import { storageService } from "@blocks-storage/services/storage.service";
 
 const PAGE_SIZE = 24;
@@ -16,6 +15,27 @@ const IMAGE_NAME_PATTERN = /\.(png|jpe?g|gif|webp)$/i;
 const UPLOAD_ACCESS_MODIFIER = "Public";
 const UPLOAD_CONFIGURATION_NAME = "Default";
 
+/**
+ * Only consulted when parentDirectoryId is blank, which this provider never
+ * leaves blank. Kept aligned with the other uploaders in the app.
+ */
+const UPLOAD_MODULE_NAME = ModuleName.IAMCloud;
+
+/**
+ * Marks a file as uploaded from the MailCraft editor.
+ *
+ * Written to both `tags` and `additionalProperties`: GetFiles returns tags but
+ * omits additional properties, while GetFilesInfo -- the one endpoint that can
+ * filter on additional properties server-side -- is commented out on this
+ * backend. So the tag is what the library filter actually reads today, and the
+ * additional property is there for when that endpoint is enabled.
+ *
+ * The owning organization needs no marker of its own: the backend stamps
+ * TenantId from the caller's token and scopes every read by it.
+ */
+export const MAILCRAFT_ASSET_TAG = "mailcraft";
+export const MAILCRAFT_ASSET_FILTER: Record<string, string> = { source: MAILCRAFT_ASSET_TAG };
+
 export const MAILCRAFT_STORAGE_LIMITS = {
   accept: ["image/jpeg", "image/png", "image/gif", "image/webp"],
   maxBytes: 5 * 1024 * 1024,
@@ -23,88 +43,87 @@ export const MAILCRAFT_STORAGE_LIMITS = {
   allowSvg: false,
 };
 
+export interface MailcraftStorageOptions {
+  /**
+   * Name of the root directory uploads live in -- the organization id, so each
+   * org owns one directory at the root of the tenant's storage.
+   */
+  organizationId?: string;
+  /**
+   * Pin uploads to an exact directory id, skipping the ensure flow. Never pass
+   * "" or null: the backend treats both as "resolve the module's default
+   * directory" and answers `default_directory_not_found` when the project has
+   * none -- which no project does.
+   */
+  parentDirectoryId?: string;
+}
+
+/**
+ * Find-or-create the organization's root directory, once per provider.
+ *
+ * Find: every image this editor uploads lands in that directory, so any file
+ * carrying the MailCraft tag reports it as ParentDirectoryID. GetFiles is the
+ * only listing endpoint available and it cannot list directories, so this is
+ * the only way to recognise the directory again on a later session.
+ *
+ * Create: CreateDirectory with a blank parent creates at the root of the
+ * tenant. It is commented out in the blocks-logic StorageController, so until
+ * that action is enabled this call 404s and the upload fails with the message
+ * below rather than the backend's opaque `default_directory_not_found`.
+ *
+ * A failed attempt is not cached, so the next upload retries.
+ */
+function directoryResolver(organizationId: string): () => Promise<string> {
+  let pending: Promise<string> | null = null;
+  return () => {
+    pending ??= (async () => {
+      const files = await storageService.file.getFiles({
+        fileIds: [],
+        configurationName: UPLOAD_CONFIGURATION_NAME,
+      });
+      const known = files.find(
+        (file) => file.tags?.includes(MAILCRAFT_ASSET_TAG) && file.parentDirectoryID,
+      )?.parentDirectoryID;
+      if (known) return known;
+
+      const created = await storageService.createDirectory({
+        name: organizationId,
+        // Root of the tenant: the org directory is a top-level directory.
+        parentDirectoryId: "",
+        description: "Images uploaded from the MailCraft email editor",
+        configurationName: UPLOAD_CONFIGURATION_NAME,
+        moduleName: UPLOAD_MODULE_NAME,
+      });
+      if (!created?.directoryId) {
+        throw new Error(
+          `Could not create the "${organizationId}" storage directory. The ` +
+            "CreateDirectory endpoint is not enabled on this environment, and " +
+            "uploads cannot proceed without a directory.",
+        );
+      }
+      return created.directoryId;
+    })().catch((error: unknown) => {
+      pending = null;
+      throw error;
+    });
+    return pending;
+  };
+}
+
 /**
  * Bridges the MailCraft editor's storageProvider contract onto the Blocks
  * storage service: listing via GetFiles, uploads via the presigned-URL flow,
  * and deletes via DeleteFile.
  */
-/** The folder editor uploads land in unless the host pins or disables one. */
-export const MAILCRAFT_DIRECTORY_NAME = "email-assets";
-
-export interface MailcraftStorageOptions {
-  /**
-   * Pin uploads to an exact directory id (a `fileStorageId`), skipping the
-   * ensure-directory flow entirely. Note "" means root -- `null` is *not* a
-   * valid value for the presigned request, it asks Blocks Data for the
-   * module's default directory, which dev projects don't provision
-   * (default_directory_not_found).
-   */
-  parentDirectoryId?: string;
-  /**
-   * Name of the folder to find-or-create for uploads (default
-   * "email-assets"). Pass `null` to skip folders and upload to root.
-   * Listing is unaffected either way -- GetFiles has no folder input.
-   */
-  directoryName?: string | null;
-}
-
-/**
- * Find-or-create the named top-level folder, once per provider: the resolved
- * id (a `fileStorageId`) is cached, concurrent uploads share one in-flight
- * lookup, and *any* failure resolves to "" (root) -- an upload must never
- * fail because the folder APIs are unavailable in some environment, so the
- * folder is an organizational nicety, not a dependency.
- */
-function directoryResolver(projectKey: string, name: string): () => Promise<string> {
-  let pending: Promise<string> | null = null;
-  return () => {
-    pending ??= (async () => {
-      try {
-        const listing = await storageService.getFilesAndFolders({
-          parentId: "",
-          configurationName: UPLOAD_CONFIGURATION_NAME,
-          projectKey,
-          searchKey: name,
-          skip: 0,
-          take: 50,
-        });
-        const found = listing?.dmsFileAndFolderInfos?.find(
-          (entry) => entry.type === DmsItemType.Folder && entry.name === name,
-        );
-        if (found?.fileStorageId) return found.fileStorageId;
-        const created = await storageService.createDmsFolder({
-          artifactName: name,
-          description: "Images uploaded from the MailCraft email editor",
-          parentId: "",
-          tags: [],
-          metaData: {},
-          organizationId: "",
-          fileStorageId: "",
-          projectKey,
-          configurationName: UPLOAD_CONFIGURATION_NAME,
-        });
-        const node = created?.result?.find((entry) => entry.success);
-        return node?.fileStorageId ?? "";
-      } catch {
-        return "";
-      }
-    })();
-    return pending;
-  };
-}
-
 export function createMailcraftStorageProvider(
-  projectKey: string,
   options: MailcraftStorageOptions = {},
 ): StorageProvider {
-  const directoryName = options.directoryName === undefined ? MAILCRAFT_DIRECTORY_NAME : options.directoryName;
-  const resolveDirectory =
-    options.parentDirectoryId === undefined && directoryName
-      ? directoryResolver(projectKey, directoryName)
-      : null;
+  const resolveDirectory = directoryResolver(options.organizationId ?? "");
   return {
-    // GetFiles resolves files for the authenticated project. It has no folder,
-    // query, or pagination inputs, so those are applied locally for MailCraft.
+    // GetFiles resolves files for the authenticated tenant. It has no folder,
+    // query, or pagination inputs, so those are applied locally. The tag keeps
+    // the project's other images (profile pictures, branding logos) out of the
+    // editor's library.
     async list({ cursor, query }) {
       const page = cursor ? Number(cursor) : 0;
       const normalizedQuery = query?.trim().toLocaleLowerCase();
@@ -113,6 +132,7 @@ export function createMailcraftStorageProvider(
         configurationName: UPLOAD_CONFIGURATION_NAME,
       });
       const matchingFiles = files
+        .filter((file) => file.tags?.includes(MAILCRAFT_ASSET_TAG))
         .filter((file) => IMAGE_NAME_PATTERN.test(file.name ?? ""))
         .filter(
           (file) => !normalizedQuery || file.name.toLocaleLowerCase().includes(normalizedQuery),
@@ -133,29 +153,24 @@ export function createMailcraftStorageProvider(
     },
 
     async upload(file, { width, height }) {
-      const parentDirectoryId = options.parentDirectoryId ?? (resolveDirectory ? await resolveDirectory() : "");
+      const parentDirectoryId = options.parentDirectoryId ?? (await resolveDirectory());
       const presigned = await storageService.file.getPreSignedUrlForUpload({
         itemId: "",
         accessModifier: UPLOAD_ACCESS_MODIFIER,
         configurationName: UPLOAD_CONFIGURATION_NAME,
         name: file.name,
-        projectKey,
-        tags: "",
+        // ParseTags accepts a JSON array or one plain-text tag.
+        tags: JSON.stringify([MAILCRAFT_ASSET_TAG]),
         metaData: "",
-        // The ensured folder, a pinned id, or "" (root) -- never null, which
-        // asks for a default directory dev projects don't have. See
-        // MailcraftStorageOptions and directoryResolver.
+        additionalProperties: MAILCRAFT_ASSET_FILTER,
         parentDirectoryId,
-        moduleName: ModuleName.DefaultCloud,
+        moduleName: UPLOAD_MODULE_NAME,
       });
       if (!presigned?.isSuccess) {
         throw new Error("Could not get an upload URL for the image.");
       }
       await storageService.uploadFile({ url: presigned.uploadUrl, file });
-      const saved = await storageService.file.getFileByFileId({
-        itemId: presigned.fileId,
-        projectKey,
-      });
+      const saved = await storageService.file.getFileByFileId({ itemId: presigned.fileId });
       return {
         id: saved.itemId,
         name: file.name,
@@ -168,7 +183,7 @@ export function createMailcraftStorageProvider(
     },
 
     async remove(asset) {
-      await storageService.file.deleteFileByFileId({ fileId: asset.id, projectKey });
+      await storageService.file.deleteFileByFileId({ fileId: asset.id });
     },
 
     limits: MAILCRAFT_STORAGE_LIMITS,

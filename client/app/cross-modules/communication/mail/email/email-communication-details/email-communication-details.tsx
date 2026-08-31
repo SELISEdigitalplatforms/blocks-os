@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { ArrowLeft, Pencil, Send } from "lucide-react";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
@@ -119,26 +118,30 @@ export function EmailCommunicationDetails({
     }
   };
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-1 gap-2">
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 shrink-0 md:hidden"
+            className="mt-5 h-8 w-8 shrink-0 md:hidden"
             onClick={() => (onBack ? onBack() : navigate(-1))}
             aria-label="Go back"
           >
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <PageBreadcrumb
-            breadcrumbIndex={3}
-            className="flex min-w-0"
-            customTitles={breadcrumbTitles}
-          />
-          <h1 className="truncate text-lg font-semibold md:sr-only">{emailDetails.name}</h1>
+          <div className="min-w-0">
+            <PageBreadcrumb
+              breadcrumbIndex={3}
+              className="flex min-w-0"
+              customTitles={breadcrumbTitles}
+            />
+            <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-high-emphasis sm:text-2xl">
+              {emailDetails.name}
+            </h1>
+          </div>
         </div>
-        <div className="flex shrink-0">
+        <div className="flex shrink-0 justify-end sm:self-end">
           <Button
             size="default"
             variant="outline"
@@ -161,119 +164,98 @@ export function EmailCommunicationDetails({
           </Dialog>
         </div>
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-sm border border-gray-200 bg-white shadow-none dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
-          <CardHeader>
-            <div className="flex w-full items-center justify-between px-4 pt-4">
-              <CardTitle className="text-xl">Template</CardTitle>
-              <Button
-                size="default"
-                variant="outline"
-                className="gap-2 shadow-none hover:bg-white"
-                onClick={() =>
-                  navigate(scoped(`email-management/communications/${emailDetails.itemId}/edit`))
-                }
-              >
-                <Pencil className="h-5 w-5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-1 border-t">
-              <iframe
-                srcDoc={emailDetails.templateBody}
-                style={{ width: "100%", height: "60vh" }}
+      <div className="grid min-h-[34rem] min-w-0 flex-none grid-cols-1 overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:min-h-[38rem] xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,0.9fr)]">
+        <section className="flex min-h-[34rem] min-w-0 flex-col sm:min-h-[38rem] xl:min-h-0 xl:border-r xl:border-border">
+          <header className="flex min-h-16 items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-6">
+            <h2 className="text-lg font-semibold tracking-tight text-high-emphasis">
+              Template preview
+            </h2>
+            <Button
+              size="default"
+              variant="outline"
+              className="shrink-0 gap-2 shadow-none"
+              onClick={() =>
+                navigate(scoped(`email-management/communications/${emailDetails.itemId}/edit`))
+              }
+            >
+              <Pencil className="h-5 w-5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
+            </Button>
+          </header>
+          <div className="min-h-0 flex-1 bg-muted/30">
+            <iframe
+              title={`${emailDetails.name || "Email template"} preview`}
+              srcDoc={emailDetails.templateBody}
+              className="h-full min-h-[30rem] w-full border-0 bg-white sm:min-h-[34rem] xl:min-h-0"
+            />
+          </div>
+        </section>
+        <aside className="flex min-w-0 flex-col border-t border-border xl:border-t-0">
+          <header className="flex min-h-16 items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-6">
+            <h2 className="text-lg font-semibold tracking-tight text-high-emphasis">Details</h2>
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  size="default"
+                  variant="outline"
+                  className="shrink-0 gap-2 shadow-none"
+                  onClick={() => setIsEditDialogOpen(true)}
+                >
+                  <Pencil className="h-5 w-5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
+                </Button>
+              </DialogTrigger>
+              <EditCommunication
+                dialogTitle="Edit Template"
+                templateData={editData}
+                onClose={() => {
+                  setIsEditDialogOpen(false);
+                }}
               />
+            </Dialog>
+          </header>
+          <div className="grid gap-x-6 gap-y-7 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-1 2xl:grid-cols-2">
+            <div className="grid min-w-0 gap-1 sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+              <h3 className="text-sm font-medium text-low-emphasis">Subject</h3>
+              <p className="break-words text-base font-medium text-high-emphasis">
+                {emailDetails.templateSubject || "-"}
+              </p>
             </div>
-          </CardContent>
-        </div>
-        <div className="rounded-sm border border-gray-200 bg-white shadow-none dark:border-gray-700 dark:bg-gray-800">
-          <CardHeader>
-            <div className="flex w-full items-center justify-between px-4 pt-4">
-              <CardTitle className="text-xl">Details</CardTitle>
-              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="default"
-                    variant="outline"
-                    className="gap-2 shadow-none hover:bg-white"
-                    onClick={() => setIsEditDialogOpen(true)}
-                  >
-                    <Pencil className="h-5 w-5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
-                  </Button>
-                </DialogTrigger>
-                <EditCommunication
-                  dialogTitle="Edit Template"
-                  templateData={editData}
-                  onClose={() => {
-                    setIsEditDialogOpen(false);
-                  }}
-                />
-              </Dialog>
+            <div className="grid min-w-0 gap-1">
+              <h3 className="text-sm font-medium text-low-emphasis">Language</h3>
+              <p className="break-words text-base font-medium text-high-emphasis">
+                {langConfigureData.find(
+                  (lang) =>
+                    lang.itemId.split("-")[0] === (emailDetails.language ?? "").split("-")[0],
+                )?.languageName || "-"}
+              </p>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="border-t px-4 pt-4">
-              <div className="mb-10">
-                <h3 className="text-sm font-medium text-low-emphasis">Subject</h3>
-                <p className="text-base font-normal text-high-emphasis">
-                  {emailDetails.templateSubject}
-                </p>
-              </div>
+            <div className="grid min-w-0 gap-1">
+              <h3 className="text-sm font-medium text-low-emphasis">Configuration</h3>
+              <p className="break-words text-base font-medium text-high-emphasis">
+                {emailConfigsData?.find(
+                  (config) => config.itemId === emailDetails.mailConfigurationId,
+                )?.name || "-"}
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-4 px-4">
-              <div className="grid gap-10">
-                <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">Language</h3>
-                  <p className="text-base font-normal text-high-emphasis">
-                    {
-                      langConfigureData.find(
-                        (lang) =>
-                          lang.itemId.split("-")[0] === (emailDetails.language ?? "").split("-")[0],
-                      )?.languageName
-                    }
-                  </p>
-                </div>
-                <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-low-emphasis">Created on</h3>
-                  <p className="text-base font-normal text-high-emphasis">
-                    {!emailDetails ||
-                    !emailDetails.createdDate ||
-                    !checkValidDate(emailDetails.createdDate)
-                      ? "-"
-                      : formatFullDate(parseDateString(emailDetails.createdDate))}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <div className="grid gap-10">
-                  <div className="grid gap-1">
-                    <h3 className="text-sm font-medium text-low-emphasis">Configuration</h3>
-                    <p className="text-base font-normal text-high-emphasis">
-                      {
-                        emailConfigsData?.find(
-                          (config) => config.itemId === emailDetails.mailConfigurationId,
-                        )?.name
-                      }
-                    </p>
-                  </div>
-                  <div className="grid gap-1">
-                    <h3 className="text-sm font-medium text-low-emphasis">Last modified</h3>
-                    <p className="text-base font-normal text-high-emphasis">
-                      {!emailDetails ||
-                      !emailDetails.lastUpdatedDate ||
-                      !checkValidDate(emailDetails.lastUpdatedDate)
-                        ? "-"
-                        : formatFullDate(parseDateString(emailDetails.lastUpdatedDate))}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="grid min-w-0 gap-1">
+              <h3 className="text-sm font-medium text-low-emphasis">Created on</h3>
+              <p className="break-words text-base font-medium text-high-emphasis">
+                {!emailDetails.createdDate || !checkValidDate(emailDetails.createdDate)
+                  ? "-"
+                  : formatFullDate(parseDateString(emailDetails.createdDate))}
+              </p>
             </div>
-          </CardContent>
-        </div>
+            <div className="grid min-w-0 gap-1">
+              <h3 className="text-sm font-medium text-low-emphasis">Last modified</h3>
+              <p className="break-words text-base font-medium text-high-emphasis">
+                {!emailDetails.lastUpdatedDate || !checkValidDate(emailDetails.lastUpdatedDate)
+                  ? "-"
+                  : formatFullDate(parseDateString(emailDetails.lastUpdatedDate))}
+              </p>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

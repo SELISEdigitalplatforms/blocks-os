@@ -106,7 +106,15 @@ describe("EmailCommunicationDetails", () => {
     expect(screen.getByText("Welcome Email")).toBeTruthy();
     expect(screen.getByText("Welcome!")).toBeTruthy();
     expect(screen.getByText("Default SMTP")).toBeTruthy();
-    expect(screen.getByText("Template")).toBeTruthy();
+    expect(screen.getByText("Template preview")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Welcome Email" })).toBeTruthy();
+    expect(screen.getByTitle("Welcome Email preview").className).toContain("w-full");
+    expect(screen.getByTitle("Welcome Email preview").closest(".grid")?.className).toContain(
+      "flex-none",
+    );
+    expect(screen.getByTitle("Welcome Email preview").closest("section")?.className).toContain(
+      "sm:min-h-[38rem]",
+    );
   });
 
   it("calls the onBack handler when provided", async () => {

@@ -21,7 +21,6 @@ export const EMAIL_TEMPLATE_ENDPOINTS = {
   SAVE_TEMPLATE: `${MAIL_BASE}/${MAIL_SUBPATH}/SaveTemplate`,
   CLONE_TEMPLATE: `${MAIL_BASE}/${MAIL_SUBPATH}/CloneTemplate`,
   DELETE_TEMPLATE: `${MAIL_BASE}/${MAIL_SUBPATH}/DeleteTemplate`,
-  LOAD_TEMPLATE_PLUGIN_TOKEN: `${MAIL_BASE}/${MAIL_SUBPATH}/LoadTemplatePluginToken`,
 } as const;
 
 // Mail Configuration endpoints

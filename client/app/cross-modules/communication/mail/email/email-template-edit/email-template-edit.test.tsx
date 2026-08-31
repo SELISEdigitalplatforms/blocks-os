@@ -20,19 +20,20 @@ vi.mock("@blocks-communication/mail/hooks/use-email-template", () => ({
   useSaveEmailTemplate: () => ({ saveEmailTemplate: h.saveEmailTemplate, isPending: h.isPending }),
 }));
 vi.mock("@/components/breadcrumb/breadcrumb", () => ({ default: () => <nav /> }));
-vi.mock("@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter", () => {
-  const BeePluginStarterMock = React.forwardRef(
-    (props: { onBeeSave: (d: { htmlFile: string; jsonFile: string }) => void }) => (
+vi.mock("@blocks-communication/mail/components/mailcraft-editor/mailcraft-editor", () => {
+  const MailcraftEditorMock = React.forwardRef(
+    (props: { onSave: (d: { htmlFile: string }) => void; embedded?: boolean }) => (
       <button
-        data-testid="bee-save"
-        onClick={() => props.onBeeSave({ htmlFile: "<html/>", jsonFile: "{}" })}
+        data-embedded={props.embedded}
+        data-testid="editor-save"
+        onClick={() => props.onSave({ htmlFile: "<html/>" })}
       >
-        bee save
+        editor save
       </button>
     ),
   );
-  BeePluginStarterMock.displayName = "BeePluginStarterMock";
-  return { default: BeePluginStarterMock };
+  MailcraftEditorMock.displayName = "MailcraftEditorMock";
+  return { default: MailcraftEditorMock };
 });
 
 import { EditEmailTemplate } from "./email-template-edit";
@@ -43,7 +44,7 @@ describe("EditEmailTemplate", () => {
     h.isLoading = false;
     h.isFetching = false;
     h.isPending = false;
-    h.data = { itemId: "t1", name: "Welcome Email", jsonContent: "" };
+    h.data = { itemId: "t1", name: "Welcome Email", templateBody: "" };
     h.saveEmailTemplate.mockResolvedValue(undefined);
   });
 
@@ -51,26 +52,24 @@ describe("EditEmailTemplate", () => {
     h.isLoading = true;
     render(<EditEmailTemplate params={{ id: "t1" }} />);
     expect(screen.queryByText("Welcome Email")).toBeNull();
-    expect(screen.queryByTestId("bee-save")).toBeNull();
+    expect(screen.queryByTestId("editor-save")).toBeNull();
   });
 
-  it("renders the action buttons and editor without a page title", () => {
+  it("renders the template title, action buttons, and embedded editor", () => {
     render(<EditEmailTemplate params={{ id: "t1" }} />);
-    expect(screen.queryByRole("heading", { name: "Welcome Email" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Welcome Email" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Reset/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Preview/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Save/ })).toBeTruthy();
-    expect(screen.getByTestId("bee-save")).toBeTruthy();
+    expect(screen.getByTestId("editor-save").dataset.embedded).toBe("true");
   });
 
   it("saves the template through the editor callback and navigates back", async () => {
     render(<EditEmailTemplate params={{ id: "t1" }} />);
-    fireEvent.click(screen.getByTestId("bee-save"));
+    fireEvent.click(screen.getByTestId("editor-save"));
     await waitFor(() => expect(h.saveEmailTemplate).toHaveBeenCalled());
     expect(h.saveEmailTemplate.mock.calls[0][0]).toMatchObject({
       itemId: "t1",
       templateBody: "<html/>",
-      jsonContent: "{}",
     });
     expect(h.navigate).toHaveBeenCalledWith("/app/proj/email-management/communications/t1");
   });

@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
-import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
+import MailcraftEditor, {
+  IMailcraftEditorRef,
+} from "@blocks-communication/mail/components/mailcraft-editor/mailcraft-editor";
 import { useState, useRef } from "react";
 import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
@@ -16,9 +18,7 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
   const { saveEmailTemplate, isPending } = useSaveEmailTemplate();
-  const beeRef = useRef<
-    { submit: () => void; preview: () => void; reset: () => void } | undefined
-  >(undefined);
+  const editorRef = useRef<IMailcraftEditorRef | null>(null);
   const [, setTemplateData] = useState<IEmailTemplate>({
     itemId: "",
   });
@@ -41,11 +41,10 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
           <div className="flex shrink-0 gap-2">
             <Skeleton className="h-10 w-20 rounded" />
             <Skeleton className="h-10 w-20 rounded" />
-            <Skeleton className="h-10 w-20 rounded" />
           </div>
         </div>
-        <div className="rounded-sm border border-border bg-card shadow-none">
-          <Skeleton className="h-80 w-full rounded" />
+        <div className="overflow-hidden rounded-lg">
+          <Skeleton className="h-80 w-full" />
         </div>
       </div>
     );
@@ -59,11 +58,10 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
     [`${emailBasePath}/communications/${emailDetails.itemId}/edit`]: "Edit",
   };
 
-  const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
+  const handleEditorSave = async (data: { htmlFile: string }) => {
     const currentData: IEmailTemplate = {
       itemId: emailDetails?.itemId || "",
       templateBody: data.htmlFile,
-      jsonContent: data.jsonFile,
     };
     await saveEmailTemplate(currentData);
     setTemplateData(currentData);
@@ -71,48 +69,46 @@ export function EditEmailTemplate({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
-        <PageBreadcrumb
-          breadcrumbIndex={3}
-          className="flex min-w-0"
-          customTitles={breadcrumbTitles}
-        />
-        <div className="flex shrink-0 gap-2">
+    <div className="flex min-h-[40rem] min-w-0 flex-1 flex-col lg:min-h-0">
+      <div className="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <PageBreadcrumb
+            breadcrumbIndex={3}
+            className="flex min-w-0"
+            customTitles={breadcrumbTitles}
+          />
+          <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-high-emphasis sm:text-2xl">
+            {emailDetails.name}
+          </h1>
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-2 sm:self-end">
           <Button
             variant="outline"
             size="default"
             className="gap-1 text-sm font-medium shadow-none"
             disabled={isLoading || isFetching}
-            onClick={() => beeRef?.current?.reset()}
+            onClick={() => editorRef?.current?.reset()}
           >
             <span className="sr-only sm:not-sr-only">Reset</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="default"
-            className="gap-1 text-sm font-medium shadow-none"
-            disabled={isLoading || isFetching}
-            onClick={() => beeRef?.current?.preview()}
-          >
-            <span className="sr-only sm:not-sr-only">Preview</span>
           </Button>
           <Button
             disabled={isPending || isLoading || isFetching}
             size="default"
             onClick={() => {
-              beeRef?.current?.submit();
+              editorRef?.current?.submit();
             }}
           >
             Save
           </Button>
         </div>
       </div>
-      <div className="mb-8 overflow-hidden rounded-sm border border-border bg-card shadow-none">
-        <BeePluginStarter
-          onBeeSave={handleBeePluginData}
-          ref={beeRef}
-          jsonFile={emailDetails.jsonContent ? JSON.parse(emailDetails.jsonContent) : undefined}
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border-l border-border">
+        <MailcraftEditor
+          embedded
+          onSave={handleEditorSave}
+          ref={editorRef}
+          html={emailDetails.templateBody || undefined}
+          templateName={emailDetails.name ?? ""}
         />
       </div>
     </div>
