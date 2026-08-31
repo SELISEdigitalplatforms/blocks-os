@@ -4,8 +4,9 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Step, Stepper, useStepper, type StepItem } from "@/components/ui-kits/stepper";
 import { toast } from "@/hooks/use-toast";
 import BasicInformation from "@blocks-communication/mail/components/email-service/basic-information/basic-information";
-import BeePluginStarter from "@blocks-communication/mail/components/bee-plugin-starter/bee-plugin-starter";
-import { blankTemplate } from "@blocks-communication/mail/constants/email-template";
+import MailcraftEditor, {
+  IMailcraftEditorRef,
+} from "@blocks-communication/mail/components/mailcraft-editor/mailcraft-editor";
 import { useSaveMailTemplate } from "@blocks-communication/mail/hooks/use-email-template";
 import { IEmailTemplate } from "@blocks-communication/mail/models/email";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -93,17 +94,16 @@ type TemplateDesignStepProps = {
 
 const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignStepProps) => {
   const { isPending, mutateAsync: saveTemplate } = useSaveMailTemplate();
-  const beeRef = useRef<{ submit: () => void; preview: () => void } | undefined>(undefined);
+  const editorRef = useRef<IMailcraftEditorRef | null>(null);
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
   const emailBasePath = scoped("email-management");
 
-  const handleBeePluginData = async (data: { htmlFile: string; jsonFile: string }) => {
+  const handleEditorSave = async (data: { htmlFile: string }) => {
     const currentData: IEmailTemplate = {
       itemId: templateData?.itemId || "",
       templateBody: data.htmlFile,
-      jsonContent: data.jsonFile,
     };
 
     try {
@@ -146,26 +146,17 @@ const TemplateDesignStep = ({ templateData, setTemplateData }: TemplateDesignSte
         <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center">
           <Button
             type="button"
-            variant="outline"
-            size="default"
-            className="w-full shadow-none sm:w-auto"
-            onClick={() => beeRef?.current?.preview()}
-          >
-            Preview
-          </Button>
-          <Button
-            type="button"
             size="default"
             className="w-full sm:w-auto"
             disabled={isPending}
-            onClick={() => beeRef?.current?.submit()}
+            onClick={() => editorRef?.current?.submit()}
           >
             Save template
           </Button>
         </div>
       </div>
       <div className="flex min-h-[calc(100vh-22rem)] w-full flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card shadow-none">
-        <BeePluginStarter onBeeSave={handleBeePluginData} ref={beeRef} jsonFile={blankTemplate} />
+        <MailcraftEditor onSave={handleEditorSave} ref={editorRef} />
       </div>
     </div>
   );

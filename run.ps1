@@ -108,6 +108,9 @@ $WorkerProject = Join-Path $ScriptDir "server/Worker/Worker.csproj"
 $Wwwroot = Join-Path $ScriptDir "server/Api/wwwroot"
 
 $ApiPort = 5000
+# Host the local API is reached by. It resolves to 127.0.0.1 via the hosts file and matches the
+# dev TLS cert, so it is also the origin the served frontend must call.
+$ApiHost = "dev-os.blocksdevelopers.com"
 
 # ---- Helpers ----
 
@@ -115,12 +118,46 @@ function Free-Port {
     $connections = netstat -ano | Select-String ":$ApiPort"
     foreach ($line in $connections) {
         $parts = ($line -split "\s+") | Where-Object { $_ }
-        $pid = $parts[-1]
-        if ($pid -match "^\d+$") {
-            Write-Host "Killing PID $pid on port $ApiPort"
-            taskkill /PID $pid /F | Out-Null
+        # Not $pid: that is a read-only automatic variable and assigning to it throws.
+        $procId = $parts[-1]
+        if ($procId -match "^\d+$") {
+            Write-Host "Killing PID $procId on port $ApiPort"
+            taskkill /PID $procId /F | Out-Null
         }
     }
+}
+
+# HTTPS is driven by the machine env vars OS_SSL_CERT / OS_SSL_KEY (the same pair
+# vite.config.ts reads for the dev server).
+# Both set + both files present -> HTTPS on $ApiPort; otherwise -> HTTP (fallback).
+function Configure-BackendTls {
+    if ($env:OS_SSL_CERT -and $env:OS_SSL_KEY -and
+        (Test-Path $env:OS_SSL_CERT) -and (Test-Path $env:OS_SSL_KEY)) {
+        $env:Kestrel__Certificates__Default__Path = $env:OS_SSL_CERT
+        $env:Kestrel__Certificates__Default__KeyPath = $env:OS_SSL_KEY
+        $env:ASPNETCORE_URLS = "https://0.0.0.0:$ApiPort"
+        Write-Host "Backend TLS: HTTPS on $ApiPort"
+    }
+    else {
+        $env:ASPNETCORE_URLS = "http://0.0.0.0:$ApiPort"
+        Write-Host "Backend TLS: cert env not set/found - HTTP on $ApiPort"
+    }
+}
+
+# The FrontendRuntime values Program.cs bakes into wwwroot come from the Mongo "Secrets"
+# document, which stores the *deployed* origin - https://dev-os.blocksdevelopers.com, with no
+# port. Served locally that aims every frontend API call at :443, where nothing listens.
+# Program.cs reads "FrontendRuntime__<key>" env vars ahead of the Mongo section, so pin the OS
+# origin to the port this script actually binds. Call it after Configure-BackendTls: the scheme
+# has to match the one chosen there.
+function Configure-FrontendRuntime {
+    $scheme = if ($env:ASPNETCORE_URLS -like "https://*") { "https" } else { "http" }
+    $origin = "${scheme}://${ApiHost}:$ApiPort"
+
+    $env:FrontendRuntime__BLOCKS_OS_BASE_URL = $origin
+    $env:FrontendRuntime__BLOCKS_OS_CALLBACK_URL = "$origin/login/callback"
+
+    Write-Host "Frontend runtime: BLOCKS_OS_BASE_URL = $origin"
 }
 
 function Restore-Dotnet {
@@ -145,8 +182,13 @@ function Build-Frontend {
 }
 
 function Run-Backend {
-    Write-Host "Running .NET API..."
-    dotnet run --project $ApiProject
+    Configure-BackendTls
+    Configure-FrontendRuntime
+    Write-Host "Running .NET API on port $ApiPort..."
+    # Pass the URL on the command line: it has higher precedence than the
+    # launchSettings.json applicationUrl, which would otherwise override
+    # the ASPNETCORE_URLS set above.
+    dotnet run --project $ApiProject -- --urls $env:ASPNETCORE_URLS
 }
 
 function Run-Worker {
@@ -270,10 +312,15 @@ if ($All) {
     Restore-Dotnet
     Build-Frontend
 
+    Configure-BackendTls
+    Configure-FrontendRuntime
+
     Write-Host "Starting API + Worker..."
 
+    # Start-Process spawns a child shell, which inherits the env vars set by
+    # Configure-BackendTls; --urls still has to be explicit to beat launchSettings.json.
     $api = Start-Process powershell `
-        -ArgumentList "-NoExit", "-Command", "dotnet run --project '$ApiProject'" `
+        -ArgumentList "-NoExit", "-Command", "dotnet run --project '$ApiProject' -- --urls '$($env:ASPNETCORE_URLS)'" `
         -PassThru
 
     $worker = Start-Process powershell `
