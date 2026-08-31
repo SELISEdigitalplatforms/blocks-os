@@ -1,4 +1,5 @@
 import { test, expect } from "../../support/test-base";
+import { openEnvironmentCardDashboard, waitForEnvironmentsListReady } from "../../support/environment-helpers";
 import { openProjectOverview } from "../../support/os-helpers";
 
 // Environments flow: open the Environments list -> add a new environment
@@ -52,31 +53,12 @@ test.describe("flows", () => {
       await expect(page.getByRole("heading", { name: "Add Environment" })).toBeHidden({
         timeout: 15000,
       });
+      await waitForEnvironmentsListReady(page);
       addedNewEnvironment = true;
     });
 
     await test.step("Open an environment card into its dashboard details", async () => {
-      const card = page
-        .locator('[class*="cursor-pointer"]')
-        .filter({ hasText: "X-Blocks-Key:" })
-        .first();
-      await expect(card).toBeVisible({ timeout: 15000 });
-
-      const setupPending = card.locator('[aria-label="Setup pending"]');
-      if (await setupPending.isVisible({ timeout: 3000 }).catch(() => false)) {
-        // Setup still in progress for this card — nothing more to drill into.
-        return;
-      }
-
-      for (let attempt = 0; attempt < 3; attempt++) {
-        await card.click({ force: true });
-        try {
-          await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 15_000 });
-          break;
-        } catch (error) {
-          if (attempt === 2) throw error;
-        }
-      }
+      await openEnvironmentCardDashboard(page, "Development");
       await expect(page.getByText("X-Blocks-Key:")).toBeVisible({ timeout: 15000 });
       await expect(page.getByText("Domains", { exact: true })).toBeVisible();
     });

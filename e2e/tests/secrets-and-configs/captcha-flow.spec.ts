@@ -1,5 +1,9 @@
+import { type Page } from "@playwright/test";
 import { test, expect } from "../../support/test-base";
 import { openSecretManagement } from "../../support/os-helpers";
+
+const captchaProviderCard = (page: Page, provider: string) =>
+  page.locator("div").filter({ has: page.getByRole("heading", { name: provider }) });
 
 test.describe("flows", () => {
 
@@ -57,11 +61,15 @@ test.describe("flows", () => {
       await expect(page.getByText("Captcha added successfully"))
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
+      await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15000 });
     });
 
     await test.step("Card shows the masked Site Key and 'Configured' Secret Key", async () => {
-      await expect(page.getByText("Site Key")).toBeVisible({ timeout: 15000 });
-      await expect(page.getByText("Secret Key")).toBeVisible();
+      const googleCard = captchaProviderCard(page, "Google reCAPTCHA");
+      await expect(googleCard.getByText("Site Key", { exact: true })).toBeVisible({
+        timeout: 15000,
+      });
+      await expect(googleCard.getByText("Secret Key", { exact: true })).toBeVisible();
     });
 
     await test.step("Open Edit for the configuration and close without changes", async () => {

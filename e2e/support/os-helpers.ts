@@ -2,8 +2,13 @@ import fs from "fs"
 import path from "path"
 import { expect, type Page } from "@playwright/test"
 import { openNamedProjectDashboard } from "./create-and-delete-project"
-import { e2eBaseUrl } from "./env"
 import { ensureAuthenticated, isLoginSurface } from "./login-helper"
+import {
+  buildProjectRouteUrl,
+  canonicalDashboardUrl,
+  gotoE2e,
+} from "./navigation"
+import { e2eBaseUrl } from "./env"
 import { OS_SESSION_PATH, readOsProject } from "./os-project"
 import { openSharedProjectDashboard } from "./suite-helpers"
 
@@ -16,10 +21,7 @@ import { openSharedProjectDashboard } from "./suite-helpers"
  * - Email → /app/{itemId}/email-management
  * - Project overview → /app/project/{tenantGroupId}/{subpath}
  */
-export function buildProjectRouteUrl(itemId: string, route: string) {
-  const normalizedRoute = route.replace(/^\//, "")
-  return `${e2eBaseUrl()}/app/${itemId}/${normalizedRoute}`
-}
+export { buildProjectRouteUrl, canonicalDashboardUrl } from "./navigation"
 
 async function persistSuiteSession(page: Page) {
   fs.mkdirSync(path.dirname(OS_SESSION_PATH), { recursive: true })
@@ -34,7 +36,7 @@ async function reseedThenGoto(
 ) {
   await openNamedProjectDashboard(page, projectName, { dashboardUrl })
   await persistSuiteSession(page)
-  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+  await gotoE2e(page, targetUrl)
 }
 
 function requireFixture() {
@@ -50,9 +52,9 @@ function requireFixture() {
 async function gotoItemRoute(page: Page, route: string, ready?: { heading: string | RegExp }) {
   const fixture = requireFixture()
   const targetUrl = buildProjectRouteUrl(fixture.itemId, route)
-  const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
+  const dashboardUrl = canonicalDashboardUrl(fixture)
 
-  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+  await gotoE2e(page, targetUrl)
 
   if (await isLoginSurface(page)) {
     await ensureAuthenticated(page)
@@ -104,12 +106,12 @@ export async function openProjectOverview(
   }
 
   const targetUrl = `${e2eBaseUrl()}/app/project/${fixture.tenantGroupId}/${subpath}`
-  const dashboardUrl = fixture.dashboardUrl || buildProjectRouteUrl(fixture.itemId, "dashboard")
+  const dashboardUrl = canonicalDashboardUrl(fixture)
 
   // Project-overview pages read selectedTenantGroup from the store (not only the
   // URL). Seed that by opening the shared env dashboard first when localStorage
   // is cold, otherwise People/Settings can render empty after a bare deep-link.
-  await page.goto(dashboardUrl, { waitUntil: "domcontentloaded" })
+  await gotoE2e(page, dashboardUrl)
   if (await isLoginSurface(page)) {
     await ensureAuthenticated(page)
     await reseedThenGoto(page, dashboardUrl, fixture.projectName, dashboardUrl)
@@ -117,7 +119,7 @@ export async function openProjectOverview(
     await reseedThenGoto(page, dashboardUrl, fixture.projectName, dashboardUrl)
   }
 
-  await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
+  await gotoE2e(page, targetUrl)
 
   if (await isLoginSurface(page)) {
     await ensureAuthenticated(page)

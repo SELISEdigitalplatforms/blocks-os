@@ -83,5 +83,15 @@ export default defineConfig({
         ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
       },
     },
+    {
+      name: "snapshot-capture",
+      testMatch: /capture-snapshots\.spec\.ts/,
+      dependencies: ["os-setup"],
+      timeout: 900_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
+      },
+    },
   ],
 })

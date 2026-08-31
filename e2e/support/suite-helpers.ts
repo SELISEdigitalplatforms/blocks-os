@@ -5,17 +5,13 @@ import {
   openNamedProjectDashboard,
   waitForOsDashboardReady,
 } from "./create-and-delete-project"
-import { e2eBaseUrl } from "./env"
 import { ensureAuthenticated, isLoginSurface } from "./login-helper"
+import { buildProjectRouteUrl, canonicalDashboardUrl, gotoE2e } from "./navigation"
 import { OS_SESSION_PATH, readOsProject } from "./os-project"
 
 async function persistSuiteSession(page: Page) {
   fs.mkdirSync(path.dirname(OS_SESSION_PATH), { recursive: true })
   await page.context().storageState({ path: OS_SESSION_PATH })
-}
-
-function sharedDashboardUrl(itemId: string): string {
-  return `${e2eBaseUrl()}/app/${itemId}/dashboard`
 }
 
 async function reseedProjectContext(
@@ -41,14 +37,10 @@ export async function openSharedProjectDashboard(page: Page) {
     )
   }
 
-  const targetUrl = sharedDashboardUrl(fixture.itemId)
-  const fixtureDashboardUrl = fixture.dashboardUrl || targetUrl
+  const targetUrl = buildProjectRouteUrl(fixture.itemId, "dashboard")
+  const fixtureDashboardUrl = canonicalDashboardUrl(fixture)
 
-  const gotoDashboard = async () => {
-    await page.goto(targetUrl, { waitUntil: "domcontentloaded" })
-  }
-
-  await gotoDashboard()
+  await gotoE2e(page, targetUrl)
 
   if (await isLoginSurface(page)) {
     await ensureAuthenticated(page)
