@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test"
 import { openProjectOverview } from "./os-helpers"
+import { ensureAuthenticated, isLoginSurface } from "./login-helper"
 
 export function environmentCard(page: Page, label: string) {
   return page
@@ -72,19 +73,31 @@ export async function openEnvironmentCardDashboard(page: Page, label = "Developm
     }
   }
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const maxAttempts = 4
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await ensureEnvironmentsList(page)
     await expect(card).toBeVisible({ timeout: 15_000 })
     await card.click({ force: true })
 
     try {
-      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 20_000 })
+      // The suite session can expire mid-click: the card navigation bounces
+      // through /login (sometimes twice) before settling on /app/console.
+      // That redirect chain is slower than a same-session navigation, so
+      // give it more room than a normal in-app route change.
+      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 35_000 })
       return
     } catch (error) {
       if (isEnvDashboardUrl(page)) {
         return
       }
-      if (attempt === 2) {
+      if (await isLoginSurface(page)) {
+        // Session expired mid-navigation — re-authenticate explicitly
+        // instead of relying on the next ensureEnvironmentsList() call to
+        // catch it, since that call already failed to recover once above.
+        await ensureAuthenticated(page)
+      }
+      if (attempt === maxAttempts - 1) {
         throw error
       }
       // Console bounce or stuck mid-nav — recover Environments list and retry.

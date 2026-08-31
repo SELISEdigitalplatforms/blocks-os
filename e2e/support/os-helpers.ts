@@ -64,7 +64,11 @@ async function gotoItemRoute(page: Page, route: string, ready?: { heading: strin
   }
 
   if (ready) {
-    await expect(page.getByRole("heading", { name: ready.heading })).toBeVisible({
+    // exact: true — Playwright's default name match is substring/case-insensitive,
+    // so a route heading like "Captcha" also matches a "Google reCAPTCHA" card
+    // heading once one exists on the project ("reCAPTCHA" contains "Captcha"),
+    // hitting a strict-mode violation. The page-level heading should match exactly.
+    await expect(page.getByRole("heading", { name: ready.heading, exact: true })).toBeVisible({
       timeout: 30_000,
     })
   }

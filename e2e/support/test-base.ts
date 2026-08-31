@@ -1,5 +1,6 @@
 import { test as base, expect } from "@playwright/test"
 import { markSuiteTestFailed } from "./run-outcome"
+import { refreshSuiteSessionIfStale } from "./session-lifecycle"
 
 // Shared `test` for the whole suite. Specs import from here instead of
 // "@playwright/test" so the pause below applies everywhere automatically.
@@ -23,7 +24,28 @@ function pauseMs(isHeaded: boolean): number {
   return isHeaded ? 10_000 : 0
 }
 
-export const test = base.extend<{ pauseAfterEachTest: void }>({
+export const test = base.extend<{ pauseAfterEachTest: void; refreshStaleSuiteSession: void }>({
+  // The app's own silent token refresh is broken (see session-lifecycle.ts) —
+  // a long serial "os" run outlives the access token. Refresh the suite's own
+  // saved session on a timer, before each test runs, instead of finding out
+  // mid-test via a failed assertion. A refresh failure here is logged, not
+  // thrown: the reactive isLoginSurface recovery in the navigation helpers is
+  // still the backstop, and one skipped proactive refresh shouldn't fail an
+  // otherwise-unrelated test.
+  refreshStaleSuiteSession: [
+    async ({ page }, use, testInfo) => {
+      if (testInfo.project.name === "os") {
+        try {
+          await refreshSuiteSessionIfStale(page)
+        } catch (error) {
+          console.warn(`[e2e] proactive session refresh failed, continuing: ${String(error)}`)
+        }
+      }
+
+      await use()
+    },
+    { auto: true },
+  ],
   pauseAfterEachTest: [
     async ({ page }, use, testInfo) => {
       const isHeaded = testInfo.project.use.headless === false

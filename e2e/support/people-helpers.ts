@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test"
+import { ensureAuthenticated, isLoginSurface } from "./login-helper"
 
 /**
  * People list + Invite only render after the people API reports isOwner.
@@ -26,6 +27,19 @@ export async function waitForPeopleOwnerReady(
       await reopen()
     } else {
       await page.reload({ waitUntil: "domcontentloaded" })
+    }
+
+    // The suite session can expire mid-run (long serial suite). A plain
+    // reload then lands on the logged-out marketing page instead of People —
+    // re-authenticate and reopen before re-asserting, same recovery path
+    // openProjectOverview already uses for other flows.
+    if (await isLoginSurface(page)) {
+      await ensureAuthenticated(page)
+      if (reopen) {
+        await reopen()
+      } else {
+        await page.reload({ waitUntil: "domcontentloaded" })
+      }
     }
 
     await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
