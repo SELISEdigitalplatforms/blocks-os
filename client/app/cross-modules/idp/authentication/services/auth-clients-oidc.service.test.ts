@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import { http } from "@/lib/http/http-client";
 import { AuthOidc } from "./auth-clients-oidc.service";
-import { AUTH_OIDC_ENDPOINTS } from "../constants/endpoint.constant";
+import { AUTH_OIDC_ENDPOINTS, AUTH_OIDC_TEMPLATE_ENDPOINTS } from "../constants/endpoint.constant";
 import {
   mockGetOidcPayload,
   mockOidcCredentialsResponse,
@@ -143,6 +143,40 @@ describe("AuthOidc", () => {
       await expect(service.rotateOidcClientSecret(mockRotateOidcSecretPayload)).rejects.toThrow(
         "Network error",
       );
+    });
+  });
+
+  describe("getOidcTemplate", () => {
+    it("GETs the tenant-level template endpoint", async () => {
+      const template = { branding: { brandName: "Blocks IAM", logoUrl: null } };
+      vi.mocked(http.get).mockResolvedValue(template);
+
+      const result = await service.getOidcTemplate();
+
+      expect(http.get).toHaveBeenCalledWith(
+        AUTH_OIDC_TEMPLATE_ENDPOINTS.GET_OIDC_TEMPLATE,
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(result).toBe(template);
+    });
+  });
+
+  describe("saveOidcTemplate", () => {
+    it("PUTs the complete tenant-level template", async () => {
+      const template = { branding: { brandName: "Blocks IAM", logoUrl: null } };
+      const response = { isSuccess: true, itemId: "template-1" };
+      vi.mocked(http.put).mockResolvedValue(response);
+
+      const result = await service.saveOidcTemplate(template as never);
+
+      expect(http.put).toHaveBeenCalledWith(
+        AUTH_OIDC_TEMPLATE_ENDPOINTS.SAVE_OIDC_TEMPLATE,
+        template,
+        undefined,
+        { absoluteUrl: true },
+      );
+      expect(result).toBe(response);
     });
   });
 });

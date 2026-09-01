@@ -17,9 +17,9 @@ import {
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { Pencil, Plus, Loader2, Notebook, Waypoints } from "lucide-react";
+import { Pencil, Plus, Loader2, Notebook, Waypoints, LayoutTemplate } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
-import { Outlet, useLocation } from "react-router";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 
 function SecretManagementHeaderActions({
@@ -46,16 +46,23 @@ function SecretManagementHeaderActions({
   externalIdpConfigured: boolean;
 }) {
   const brandingHeader = useOidcBrandingHeaderOptional();
+  const navigate = useNavigate();
+  const scoped = useScopedPath();
 
   if (isOidcBranding && brandingHeader?.actions) {
-    const { onSave, onUndo, isBusy, isDirty } = brandingHeader.actions;
-    const disabled = isBusy || !isDirty;
+    const { onSave, onUndo, isBusy, isDirty, isValid } = brandingHeader.actions;
     return (
       <>
-        <Button type="button" variant="outline" size="sm" onClick={onUndo} disabled={disabled}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onUndo}
+          disabled={isBusy || !isDirty}
+        >
           Undo
         </Button>
-        <Button type="button" size="sm" onClick={onSave} disabled={disabled}>
+        <Button type="button" size="sm" onClick={onSave} disabled={isBusy || !isDirty || !isValid}>
           {isBusy ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -71,7 +78,20 @@ function SecretManagementHeaderActions({
 
   return (
     <>
-      {!isOidcBranding && currentPath === "oidc" && <CreateOIDC />}
+      {!isOidcBranding && currentPath === "oidc" && (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(scoped("secret-management/oidc/branding"))}
+          >
+            <LayoutTemplate className="h-4 w-4" />
+            <span className="ml-2">Manage Template</span>
+          </Button>
+          <CreateOIDC />
+        </>
+      )}
       {currentPath === "client-credentials" && (
         <Button size="sm" onClick={() => setIsClientCredentialOpen(true)}>
           <Plus className="h-5 w-5" />
@@ -175,9 +195,8 @@ export default function SecretManagementLayout() {
   const { pathname } = useLocation();
   const scoped = useScopedPath();
   const currentPath = pathname.split("/").pop() ?? "secret";
-  const oidcBrandingMatch = pathname.match(/\/oidc\/([^/]+)\/branding$/);
+  const oidcBrandingMatch = pathname.match(/\/oidc\/branding$/);
   const isOidcBranding = Boolean(oidcBrandingMatch);
-  const oidcClientId = oidcBrandingMatch?.[1];
   const secretManagementBase = scoped("secret-management");
 
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -216,14 +235,12 @@ export default function SecretManagementLayout() {
     parseAsString.withDefault(""),
   );
 
-  const breadcrumbTitles =
-    isOidcBranding && oidcClientId
-      ? {
-          [`${secretManagementBase}/oidc`]: "OIDC",
-          [`${secretManagementBase}/oidc/${oidcClientId}`]: null,
-          [`${secretManagementBase}/oidc/${oidcClientId}/branding`]: "Template",
-        }
-      : undefined;
+  const breadcrumbTitles = isOidcBranding
+    ? {
+        [`${secretManagementBase}/oidc`]: "OIDC",
+        [`${secretManagementBase}/oidc/branding`]: "Template",
+      }
+    : undefined;
 
   const currentItem = isOidcBranding
     ? null
@@ -253,7 +270,7 @@ export default function SecretManagementLayout() {
           {isOidcBranding ? (
             <header className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
               <PageBreadcrumb
-                breadcrumbIndex={4}
+                breadcrumbIndex={3}
                 className="flex"
                 customTitles={breadcrumbTitles}
               />

@@ -53,7 +53,6 @@ export const createOidcSchema = z
   .object({
     redirectUris: redirectUriEntry.array(),
     scope: z.string().trim(),
-    clientBrandColor: z.string().optional(),
     clientDisplayName: z.string().trim().min(1, "Client display name is required"),
     isAutoRedirect: z.boolean(),
     isActive: z.boolean(),
@@ -92,7 +91,6 @@ export type CreateOIDCFormValues = z.infer<typeof createOidcSchema>;
 export const createOIDCFormDefaultValue: CreateOIDCFormValues = {
   redirectUris: [{ value: "" }],
   scope: "openid",
-  clientBrandColor: "#FFFFFF",
   clientDisplayName: "",
   isAutoRedirect: false,
   isActive: true,

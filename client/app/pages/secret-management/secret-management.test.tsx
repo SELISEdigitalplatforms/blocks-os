@@ -7,11 +7,14 @@ const h = vi.hoisted(() => ({
   externalIdpData: undefined as unknown,
   clientsData: [] as unknown[],
   brandingActions: undefined as unknown,
+  navigate: vi.fn(),
+  breadcrumbProps: undefined as unknown,
   toast: vi.fn(),
 }));
 
 vi.mock("react-router", () => ({
   useLocation: () => ({ pathname: h.pathname }),
+  useNavigate: () => h.navigate,
   Outlet: () => <div data-testid="outlet" />,
 }));
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -43,9 +46,12 @@ vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () =
 vi.mock("@/cross-modules/secrets/components/secret-form-modal/create-secret-button", () => ({
   CreateSecretButton: () => <div data-testid="create-secret-button" />,
 }));
-vi.mock("@blocks-idp/authentication/components/create-client-credential/create-client-credential", () => ({
-  CreateClientCredential: () => <div data-testid="create-client-credential" />,
-}));
+vi.mock(
+  "@blocks-idp/authentication/components/create-client-credential/create-client-credential",
+  () => ({
+    CreateClientCredential: () => <div data-testid="create-client-credential" />,
+  }),
+);
 vi.mock("@blocks-identifier/components/add-service/add-service", () => ({
   AddService: () => <div data-testid="add-service" />,
 }));
@@ -66,7 +72,12 @@ vi.mock("@/components/page-header/page-header", () => ({
     </div>
   ),
 }));
-vi.mock("@/components/breadcrumb/breadcrumb", () => ({ default: () => <nav /> }));
+vi.mock("@/components/breadcrumb/breadcrumb", () => ({
+  default: (props: unknown) => {
+    h.breadcrumbProps = props;
+    return <nav />;
+  },
+}));
 // The captcha/magic-url actions wrap DialogTrigger; the real Dialog wrapper is
 // mocked away above, so provide a context-free trigger passthrough.
 vi.mock("@/components/ui-kits/dialog/dialog", () => ({
@@ -82,6 +93,7 @@ describe("SecretManagementLayout", () => {
     h.externalIdpData = undefined;
     h.clientsData = [];
     h.brandingActions = undefined;
+    h.breadcrumbProps = undefined;
   });
 
   it("renders the page header and outlet for a known nav item", () => {
@@ -92,10 +104,21 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByTestId("create-secret-button")).toBeTruthy();
   });
 
-  it("shows the OIDC create action on the oidc page", () => {
+  it("shows Manage Template immediately before Create on the OIDC page", () => {
     h.pathname = "/app/proj/secret-management/oidc";
     render(<SecretManagementLayout />);
-    expect(screen.getByTestId("create-oidc")).toBeTruthy();
+    const manageTemplate = screen.getByRole("button", { name: "Manage Template" });
+    const create = screen.getByTestId("create-oidc");
+    expect(
+      manageTemplate.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("navigates Manage Template to the tenant-level branding route", () => {
+    h.pathname = "/app/proj/secret-management/oidc";
+    render(<SecretManagementLayout />);
+    screen.getByRole("button", { name: "Manage Template" }).click();
+    expect(h.navigate).toHaveBeenCalledWith("/app/proj/secret-management/oidc/branding");
   });
 
   it("shows the add-service action and setup guide on my-services", () => {
@@ -133,26 +156,81 @@ describe("SecretManagementLayout", () => {
   });
 
   it("renders the branding save/undo actions in branding mode", () => {
-    h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
-    h.brandingActions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false, isDirty: true };
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: true,
+    };
     render(<SecretManagementLayout />);
     expect(screen.getByText("Save")).toBeTruthy();
     expect(screen.getByText("Undo")).toBeTruthy();
+    expect(h.breadcrumbProps).toEqual(
+      expect.objectContaining({
+        breadcrumbIndex: 3,
+        customTitles: {
+          "/app/proj/secret-management/oidc": "OIDC",
+          "/app/proj/secret-management/oidc/branding": "Template",
+        },
+      }),
+    );
   });
 
   it("disables the branding save/undo actions when nothing is dirty", () => {
-    h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
-    h.brandingActions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false, isDirty: false };
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: false,
+      isValid: true,
+    };
     render(<SecretManagementLayout />);
     expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("enables the branding save/undo actions when dirty", () => {
-    h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
-    h.brandingActions = { onSave: vi.fn(), onUndo: vi.fn(), isBusy: false, isDirty: true };
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: true,
+    };
     render(<SecretManagementLayout />);
     expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("keeps Undo enabled but blocks Save when dirty branding is invalid", () => {
+    h.pathname = "/app/proj/secret-management/oidc/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: false,
+    };
+    render(<SecretManagementLayout />);
+    expect((screen.getByText("Save").closest("button") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText("Undo").closest("button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("does not treat the retired per-client branding URL as branding mode", () => {
+    h.pathname = "/app/proj/secret-management/oidc/client-9/branding";
+    h.brandingActions = {
+      onSave: vi.fn(),
+      onUndo: vi.fn(),
+      isBusy: false,
+      isDirty: true,
+      isValid: true,
+    };
+    render(<SecretManagementLayout />);
+    expect(screen.queryByText("Save")).toBeNull();
+    expect(screen.queryByText("Undo")).toBeNull();
   });
 });
