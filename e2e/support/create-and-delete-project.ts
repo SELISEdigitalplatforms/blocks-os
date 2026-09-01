@@ -16,7 +16,15 @@ function orphanProjectPatterns(): RegExp[] {
   const prefixes = new Set(["Test Project"])
   const configured = process.env.PROJECT_NAME?.trim()
   if (configured) prefixes.add(configured)
-  return [...prefixes].map((prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+`, "g"))
+  // project-settings-flow renames the shared project to "<name> Renamed" (and
+  // can compound to "... Renamed Renamed" across repeated reuse) without ever
+  // changing its numeric id — capture that suffix too, or the truncated name
+  // handed to namedProjectCard()'s exact-text match never matches the (now
+  // longer) rendered label again, and reuseOrCreateSharedProject silently
+  // abandons the project and creates a brand-new one on every subsequent run.
+  return [...prefixes].map(
+    (prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+(?: Renamed)*`, "g"),
+  )
 }
 
 async function listOrphanProjectNames(page: Page): Promise<string[]> {
@@ -452,6 +460,32 @@ async function openProjectById(page: Page, projectId: string) {
   }
 }
 
+/**
+ * Reuse the project from a previous local run's fixture by id, when it still
+ * resolves. Sidesteps name-based DOM matching entirely (immune to renames,
+ * truncation, or rendering flakiness) — the fixture is local-only (gitignored)
+ * so this is a same-machine fast path, not something CI can rely on.
+ */
+async function tryReuseFixtureProject(page: Page): Promise<{
+  projectName: string
+  dashboardUrl: string
+  itemId: string
+  tenantGroupId: string
+} | null> {
+  const fixture = readOsProject()
+  if (!fixture?.itemId || !fixture.tenantGroupId) return null
+
+  try {
+    await page.goto(`${e2eBaseUrl()}/app/${fixture.itemId}/dashboard`, {
+      waitUntil: "domcontentloaded",
+    })
+    await waitForOsDashboardReady(page, fixture.projectName)
+    return { ...fixture, dashboardUrl: page.url() }
+  } catch {
+    return null
+  }
+}
+
 /** Reuse an existing OS project, or create one natively on Blocks OS. */
 export async function reuseOrCreateSharedProject(page: Page): Promise<{
   projectName: string
@@ -465,6 +499,9 @@ export async function reuseOrCreateSharedProject(page: Page): Promise<{
   if (configuredProjectId) {
     return openProjectById(page, configuredProjectId)
   }
+
+  const reusedFromFixture = await tryReuseFixtureProject(page)
+  if (reusedFromFixture) return reusedFromFixture
 
   await ensureConsole(page)
   await waitForConsoleProjectsReady(page)
@@ -568,20 +605,31 @@ export async function openNamedProjectDashboard(
     }
   }
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await ensureConsole(page)
-    await waitForConsoleProjectsReady(page)
-    const card = namedProjectCard(page, projectName)
-    await expect(card).toBeVisible({ timeout: 30_000 })
-    const development = card.getByRole("button", { name: ENV_BUTTON }).first()
-    await expect(development).toBeVisible({ timeout: 15_000 })
-    await development.click({ force: true })
+  const maxAttempts = 3
 
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
+      await ensureConsole(page)
+      if (attempt > 0) {
+        // A slow-to-paint project grid can leave this specific card invisible
+        // even after waitForConsoleProjectsReady resolves (that only waits for
+        // the *first* card/heading, not this one) — force a fresh render
+        // before checking again instead of re-polling the same stale DOM.
+        await page.reload({ waitUntil: "domcontentloaded" })
+      }
+      await waitForConsoleProjectsReady(page)
+      const card = namedProjectCard(page, projectName)
+      await expect(card).toBeVisible({ timeout: 30_000 })
+      const development = card.getByRole("button", { name: ENV_BUTTON }).first()
+      await expect(development).toBeVisible({ timeout: 15_000 })
+      await development.click({ force: true })
+
       await waitForOsDashboardReady(page, projectName)
       return
     } catch (error) {
-      if (attempt === 2) throw error
+      if (attempt === maxAttempts - 1) throw error
+      // Card not (yet) visible, or the click didn't land on the dashboard —
+      // retry with a fresh console render.
     }
   }
 }

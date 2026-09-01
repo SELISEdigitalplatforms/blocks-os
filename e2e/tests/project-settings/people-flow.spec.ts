@@ -11,7 +11,11 @@ test.describe("flows", () => {
   test("People flow: strict validation -> invite -> open details -> remove environment access", async ({
     page,
   }) => {
-    test.setTimeout(180_000);
+    // A retry that hits a stale-token empty People list now forces a real
+    // OIDC re-login + project reseed (refreshSuiteSession, ~30-60s) instead
+    // of the no-op ensureAuthenticated() previously used there — budget for
+    // that.
+    test.setTimeout(240_000);
 
     await test.step("Open People", async () => {
       await openProjectOverview(page, "people");

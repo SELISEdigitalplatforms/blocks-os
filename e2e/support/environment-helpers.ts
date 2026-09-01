@@ -1,6 +1,7 @@
 import { expect, type Page } from "@playwright/test"
 import { openProjectOverview } from "./os-helpers"
 import { ensureAuthenticated, isLoginSurface } from "./login-helper"
+import { refreshSuiteSession } from "./session-lifecycle"
 
 export function environmentCard(page: Page, label: string) {
   return page
@@ -73,7 +74,7 @@ export async function openEnvironmentCardDashboard(page: Page, label = "Developm
     }
   }
 
-  const maxAttempts = 4
+  const maxAttempts = 3
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await ensureEnvironmentsList(page)
@@ -83,19 +84,27 @@ export async function openEnvironmentCardDashboard(page: Page, label = "Developm
     try {
       // The suite session can expire mid-click: the card navigation bounces
       // through /login (sometimes twice) before settling on /app/console.
-      // That redirect chain is slower than a same-session navigation, so
-      // give it more room than a normal in-app route change.
-      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 35_000 })
+      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 25_000 })
       return
     } catch (error) {
       if (isEnvDashboardUrl(page)) {
         return
       }
       if (await isLoginSurface(page)) {
-        // Session expired mid-navigation — re-authenticate explicitly
-        // instead of relying on the next ensureEnvironmentsList() call to
-        // catch it, since that call already failed to recover once above.
+        // Genuinely stuck on the login page — the app's own guard hasn't
+        // bounced us onward yet.
         await ensureAuthenticated(page)
+      } else if (isConsoleUrl(page)) {
+        // The click bounced through /login and back to /app/console, and the
+        // console heading renders fine there — ensureAuthenticated() checks
+        // exactly that heading and no-ops the instant it's visible, so it
+        // never actually re-authenticates in this state. That auto-bounce is
+        // the symptom of a stale/degraded access token (the app's own silent
+        // refresh is broken — see session-lifecycle.ts), not something a
+        // "does the console look loaded" check can detect. Force a real OIDC
+        // login instead, or every retry clicks with the same bad token and
+        // fails identically.
+        await refreshSuiteSession(page)
       }
       if (attempt === maxAttempts - 1) {
         throw error

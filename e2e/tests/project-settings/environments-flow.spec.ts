@@ -11,7 +11,10 @@ test.describe("flows", () => {
   test("Environments flow: list -> add environment -> open its dashboard -> back to list", async ({
     page,
   }) => {
-    test.setTimeout(180_000);
+    // A retry that hits a stale-token console bounce now forces a real OIDC
+    // re-login + project reseed (refreshSuiteSession, ~30-60s) instead of the
+    // no-op ensureAuthenticated() previously used there — budget for that.
+    test.setTimeout(240_000);
 
     await test.step("Open Environments", async () => {
       await openProjectOverview(page, "environments");
