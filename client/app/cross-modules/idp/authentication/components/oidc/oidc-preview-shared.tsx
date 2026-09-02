@@ -117,9 +117,13 @@ export const OidcPreviewShell = ({
       aria-hidden
     />
     <div className="relative z-10 flex flex-1 items-stretch justify-center p-3 sm:p-4">
-      <div className="oidc-login-preview-card flex w-full max-w-[26rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl">
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4 pt-5 sm:px-6">
-          <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="oidc-login-preview-card flex min-h-0 w-full max-w-[26rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl">
+        <div
+          className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-4 pt-4 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] sm:px-6"
+          tabIndex={0}
+          aria-label={`${pageLabel} preview content`}
+        >
+          <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-3">
               {template.branding.logoUrl ? (
                 <img
@@ -141,8 +145,8 @@ export const OidcPreviewShell = ({
               showAuto={showAuto}
             />
           </div>
-          <div className="flex flex-1 flex-col justify-center">{children}</div>
-          <p className="mt-4 text-xs text-[var(--muted)]">
+          <div className="flex flex-col">{children}</div>
+          <p className="mt-3 shrink-0 text-xs text-[var(--muted)]">
             {template.pages.shared.footerText.replaceAll(
               "{year}",
               String(new Date().getFullYear()),
@@ -155,7 +159,7 @@ export const OidcPreviewShell = ({
 );
 
 export const PreviewHeading = ({ children }: { children: ReactNode }) => (
-  <h1 className="mb-5 text-xl font-semibold leading-snug tracking-tight text-[var(--fg)] sm:text-2xl">
+  <h1 className="mb-4 text-xl font-semibold leading-snug tracking-tight text-[var(--fg)] sm:text-2xl">
     {children}
   </h1>
 );
@@ -167,7 +171,7 @@ export const PreviewField = ({
   label: string;
   password?: boolean;
 }) => (
-  <div className="flex flex-col gap-2">
+  <div className="flex flex-col gap-1.5">
     <span className="oidc-sci-fi-label">{label}</span>
     <div className="relative">
       <input

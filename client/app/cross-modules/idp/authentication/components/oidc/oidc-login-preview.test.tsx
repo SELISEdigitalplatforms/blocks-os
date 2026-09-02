@@ -30,6 +30,10 @@ describe("OidcLoginPreview", () => {
     expect(root.style.getPropertyValue("--accent")).toBe(input.palette.primary);
     expect(root.style.getPropertyValue("--danger")).toBe(input.palette.danger);
     expect(root.style.getPropertyValue("--border-strong")).toBe(input.palette.borderStrong);
+
+    const scrollRegion = screen.getByLabelText("Login preview content");
+    expect(scrollRegion.getAttribute("tabindex")).toBe("0");
+    expect(scrollRegion.className).toContain("overflow-y-auto");
   });
 
   it("reflects in-progress template changes on rerender", () => {

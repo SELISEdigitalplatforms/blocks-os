@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Brush, FileText, ImagePlus, Palette, Trash2, Upload } from "lucide-react";
+import { Brush, FileText, ImagePlus, Moon, Palette, Sun, Trash2, Upload } from "lucide-react";
 import { parseAsStringEnum, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
@@ -55,6 +55,42 @@ const EDITOR_TABS: Array<{
 const EDITOR_TAB_VALUES = ["branding", "theme", "pages"] as const;
 const PREVIEW_MODE_VALUES = ["system", "light", "dark"] as const;
 
+const THEME_GROUPS: Array<{
+  label: string;
+  description: string;
+  fields: Array<keyof IOidcUiThemePalette>;
+}> = [
+  {
+    label: "Brand colors",
+    description: "Core actions and subtle highlights.",
+    fields: ["primary", "secondary", "accentSoft"],
+  },
+  {
+    label: "Surfaces",
+    description: "Canvas, cards, and structural borders.",
+    fields: ["background", "surface", "border", "borderStrong"],
+  },
+  {
+    label: "Content & status",
+    description: "Typography and semantic feedback.",
+    fields: ["text", "mutedText", "success", "danger"],
+  },
+];
+
+const THEME_FIELD_DESCRIPTIONS: Record<keyof IOidcUiThemePalette, string> = {
+  primary: "Primary actions",
+  secondary: "Secondary accents",
+  background: "Page canvas",
+  surface: "Cards and panels",
+  text: "Main content",
+  mutedText: "Supporting content",
+  success: "Success feedback",
+  danger: "Errors and warnings",
+  border: "Subtle dividers",
+  borderStrong: "Emphasized outlines",
+  accentSoft: "Tinted highlights",
+};
+
 const normalizeField = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
 
 const getServerFieldError = (errors: Record<string, string>, field: string) => {
@@ -70,13 +106,20 @@ const colorPickerValue = (value: string) => {
     const [red, green, blue] = value.slice(1);
     return `#${red}${red}${green}${green}${blue}${blue}`;
   }
+  const rgba = value.match(/^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,/i);
+  if (rgba) {
+    return `#${rgba
+      .slice(1, 4)
+      .map((channel) => Math.min(255, Number(channel)).toString(16).padStart(2, "0"))
+      .join("")}`;
+  }
   return DEFAULT_COLOR;
 };
 
 const TemplateSkeleton = () => (
   <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
     <CardContent>
-      <div className="grid min-h-[34rem] grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-[38rem] xl:grid-cols-[minmax(26rem,0.9fr)_minmax(30rem,1.1fr)]">
+      <div className="grid min-h-[34rem] min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-[38rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section className="flex border-b xl:border-b-0 xl:border-r">
           <div className="hidden w-[5.5rem] shrink-0 space-y-2 border-r bg-muted/20 p-2 xl:block">
             {[0, 1, 2].map((item) => (
@@ -102,6 +145,7 @@ const ColorInput = ({
   palette,
   field,
   label,
+  description,
   value,
   error,
   onChange,
@@ -109,6 +153,7 @@ const ColorInput = ({
   palette: OidcPreviewTheme;
   field: keyof IOidcUiThemePalette;
   label: string;
+  description: string;
   value: string;
   error: string | null;
   onChange: (value: string) => void;
@@ -116,20 +161,31 @@ const ColorInput = ({
   const id = `theme-${palette}-${field}`;
   const paletteLabel = palette === "light" ? "Light" : "Dark";
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs font-medium capitalize text-medium-emphasis">
-        {label} <span className="text-destructive">*</span>
-      </Label>
-      <div className="relative">
-        <div className="absolute left-1.5 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center overflow-hidden rounded-md border border-border bg-background shadow-sm">
+    <div className="space-y-1">
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-3 rounded-lg border bg-background px-3 py-2.5 transition-colors hover:border-primary/30",
+          error && "border-destructive/60",
+        )}
+      >
+        <div
+          className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          style={{ backgroundColor: value }}
+        >
           <input
             id={`${id}-picker`}
             type="color"
             aria-label={`${paletteLabel} ${label} color picker`}
             value={colorPickerValue(value)}
             onChange={(event) => onChange(event.target.value)}
-            className="h-10 w-10 cursor-pointer border-0 bg-transparent p-0"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
+        </div>
+        <div className="min-w-0 flex-1">
+          <Label htmlFor={id} className="block truncate text-sm font-medium text-high-emphasis">
+            {label} <span className="text-destructive">*</span>
+          </Label>
+          <p className="truncate text-xs text-muted-foreground">{description}</p>
         </div>
         <Input
           id={id}
@@ -139,7 +195,7 @@ const ColorInput = ({
           maxLength={48}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="min-w-0 pl-11 font-mono text-xs shadow-none"
+          className="h-8 w-[7.25rem] shrink-0 px-2 font-mono text-xs shadow-none"
         />
       </div>
       {error && (
@@ -432,7 +488,7 @@ export const OidcBrandingForm = () => {
         <Tabs
           value={editorTab}
           onValueChange={handleEditorTabChange}
-          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:max-h-[38rem] xl:grid-cols-[minmax(26rem,0.9fr)_minmax(30rem,1.1fr)]"
+          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:max-h-[38rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
         >
           <section className="flex min-h-0 min-w-0 flex-col border-b border-border bg-card xl:flex-row xl:border-b-0 xl:border-r">
             <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-[5.5rem] xl:border-b-0 xl:border-r">
@@ -603,33 +659,58 @@ export const OidcBrandingForm = () => {
                   </div>
                   <Tabs value={paletteMode} onValueChange={handlePaletteChange}>
                     <TabsList
-                      className="grid h-10 w-full grid-cols-2 bg-muted/50"
+                      className="grid h-11 w-full grid-cols-2 gap-1 rounded-lg bg-muted/40 p-1"
                       aria-label="Theme palette"
                     >
-                      <TabsTrigger value="light" className="gap-2 text-xs sm:text-sm">
-                        <span className="h-3 w-3 rounded-full border bg-white" aria-hidden /> Light
+                      <TabsTrigger
+                        value="light"
+                        className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-sm sm:text-sm"
+                      >
+                        <Sun className="h-4 w-4" aria-hidden /> Light
                       </TabsTrigger>
-                      <TabsTrigger value="dark" className="gap-2 text-xs sm:text-sm">
-                        <span className="h-3 w-3 rounded-full border bg-slate-900" aria-hidden />{" "}
-                        Dark
+                      <TabsTrigger
+                        value="dark"
+                        className="h-9 gap-2 rounded-md text-xs shadow-none data-[state=active]:shadow-sm sm:text-sm"
+                      >
+                        <Moon className="h-4 w-4" aria-hidden /> Dark
                       </TabsTrigger>
                     </TabsList>
                     {(["light", "dark"] as const).map((mode) => (
-                      <TabsContent
-                        key={mode}
-                        value={mode}
-                        className="mt-5 grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2"
-                      >
-                        {THEME_FIELDS.map(({ key, label }) => (
-                          <ColorInput
-                            key={key}
-                            palette={mode}
-                            field={key}
-                            label={label}
-                            value={draft.theme[mode][key]}
-                            error={fieldError(`theme.${mode}.${key}`)}
-                            onChange={(value) => updatePalette(mode, key, value)}
-                          />
+                      <TabsContent key={mode} value={mode} className="mt-5 space-y-5">
+                        {THEME_GROUPS.map((group) => (
+                          <section key={group.label}>
+                            <div className="mb-2 flex items-end justify-between gap-3">
+                              <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-wide text-high-emphasis">
+                                  {group.label}
+                                </h3>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {group.description}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-[11px] text-muted-foreground">
+                                {group.fields.length} tokens
+                              </span>
+                            </div>
+                            <div className="space-y-2">
+                              {group.fields.map((key) => {
+                                const field = THEME_FIELDS.find((item) => item.key === key);
+                                if (!field) return null;
+                                return (
+                                  <ColorInput
+                                    key={key}
+                                    palette={mode}
+                                    field={key}
+                                    label={field.label}
+                                    description={THEME_FIELD_DESCRIPTIONS[key]}
+                                    value={draft.theme[mode][key]}
+                                    error={fieldError(`theme.${mode}.${key}`)}
+                                    onChange={(value) => updatePalette(mode, key, value)}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </section>
                         ))}
                       </TabsContent>
                     ))}
@@ -684,7 +765,7 @@ export const OidcBrandingForm = () => {
                       Live
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid min-w-0 grid-cols-1 gap-4">
                     {selectedPageFields.map(({ key, label, optional, multiline }) => {
                       const error = fieldError(`pages.${selectedPage}.${key}`);
                       const controlProps = {
@@ -701,7 +782,7 @@ export const OidcBrandingForm = () => {
                           ),
                       };
                       return (
-                        <div key={key} className={cn("space-y-1.5", multiline && "sm:col-span-2")}>
+                        <div key={key} className="min-w-0 space-y-1.5">
                           <Label htmlFor={controlProps.id} className="text-xs">
                             {label}
                             {!optional && <span className="text-destructive"> *</span>}
@@ -785,8 +866,8 @@ export const OidcBrandingForm = () => {
                 {isDirty ? "Unsaved" : "Saved"}
               </div>
             </div>
-            <div className="flex min-h-[500px] flex-1 items-center justify-center p-3 sm:p-4 xl:min-h-0">
-              <div className="h-full max-h-full w-full max-w-[38rem] overflow-hidden rounded-xl border border-border bg-background p-2 shadow-sm">
+            <div className="flex min-h-[500px] flex-1 items-center justify-center p-2 sm:p-3 xl:min-h-0 xl:p-2">
+              <div className="h-full max-h-full w-full max-w-[38rem] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
                 <OidcTemplatePreview
                   template={previewTemplate}
                   selectedPage={selectedPage}

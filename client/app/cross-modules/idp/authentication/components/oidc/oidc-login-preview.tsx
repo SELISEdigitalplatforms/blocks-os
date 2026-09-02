@@ -11,7 +11,7 @@ export const OidcLoginPreview = (props: OidcPagePreviewProps) => {
   return (
     <OidcPreviewShell {...props} pageLabel="Login">
       <PreviewHeading>{copy.heading}</PreviewHeading>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <PreviewField label={copy.emailLabel} />
         <div>
           <div className="mb-2 flex items-center justify-between">
@@ -22,10 +22,10 @@ export const OidcLoginPreview = (props: OidcPagePreviewProps) => {
         </div>
         <PreviewButton>{copy.submitButton}</PreviewButton>
       </div>
-      <p className="mt-4 text-xs text-[var(--muted)]">
+      <p className="mt-3 text-xs text-[var(--muted)]">
         {copy.signupPrompt} <span className="oidc-sci-fi-link">{copy.signupLink}</span>
       </p>
-      <div className="mt-4 rounded-lg border border-[var(--border-strong)] p-3">
+      <div className="mt-3 rounded-lg border border-[var(--border-strong)] p-2.5">
         <p className="text-sm font-semibold text-[var(--danger)]">{copy.activationErrorTitle}</p>
         <p className="mt-1 text-xs text-[var(--danger)]">{copy.activationErrorMessage}</p>
         <div className="mt-2 flex gap-2 text-xs text-[var(--accent)]">
