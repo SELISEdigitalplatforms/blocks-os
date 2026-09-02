@@ -52,14 +52,18 @@ export const PersonDetailPage = () => {
     enabled: !!selectedTenantGroup,
   });
 
-  const person = peopleData?.peoples?.[0];
+  // The search endpoint can return more than one row while its filter is catching up. Always
+  // use the route user, rather than assuming the first result is the person being viewed.
+  const person = peopleData?.peoples?.find(
+    (candidate) => candidate.peopleDetails?.userId?.toLowerCase() === id.toLowerCase(),
+  );
   const sharedEnvironments = person?.sharedEnviroments || [];
 
   // Read the rows as well as the derived field. `role` is newer than the rows, so relying on
   // it alone shows an owner the grant form on any server that predates it — and an owner has
   // nothing to grant.
   const isTargetOwner =
-    person?.role === "owner" || sharedEnvironments.some((env) => env.isCreator);
+    person?.role?.toLowerCase() === "owner" || sharedEnvironments.some((env) => env.isCreator);
   const projectRole = isTargetOwner ? "Owner" : "Contributor";
   const isPending =
     sharedEnvironments.some((env) => !env.isInvitationConfirmed) &&
@@ -108,6 +112,7 @@ export const PersonDetailPage = () => {
 
         <PeopleEnvironmentsTab
           user={user}
+          person={person}
           peopleData={peopleData?.peoples}
           environmentList={environmentList}
           canRemove={can("people", "remove")}

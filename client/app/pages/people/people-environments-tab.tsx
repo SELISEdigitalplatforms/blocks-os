@@ -16,6 +16,8 @@ import { buildInvitePeoplePayload } from "./invite-people-utils";
 
 interface PeopleEnvironmentsTabProps {
   user?: User;
+  /** The exact People/Gets row selected by the detail page. */
+  person?: PeopleGroupedByEnvironments;
   peopleData?: PeopleGroupedByEnvironments[];
   environmentList?: IProjectGroup[];
   /**
@@ -33,17 +35,27 @@ type PendingAction = {
 
 export const PeopleEnvironmentsTab = ({
   user,
+  person,
   peopleData,
   environmentList,
   canRemove = false,
   canInvite = false,
 }: PeopleEnvironmentsTabProps) => {
-  const userEnvironmentData = peopleData?.[0];
+  // Prefer the row selected by the parent. Falling back to a user-id match keeps this component
+  // safe for its existing callers without accidentally using the first row of a broad search.
+  const userEnvironmentData =
+    person ??
+    peopleData?.find(
+      (candidate) =>
+        candidate.peopleDetails?.userId?.toLowerCase() === user?.itemId?.toLowerCase(),
+    );
   const sharedEnvironments = useMemo(
     () => userEnvironmentData?.sharedEnviroments || [],
     [userEnvironmentData?.sharedEnviroments],
   );
-  const isProfileUserOwner = sharedEnvironments.some((env) => env.isCreator);
+  const isProfileUserOwner =
+    userEnvironmentData?.role?.toLowerCase() === "owner" ||
+    sharedEnvironments.some((env) => env.isCreator);
 
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
