@@ -1,20 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Brush,
-  Check,
-  FileText,
-  ImagePlus,
-  MonitorUp,
-  Palette,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Brush, FileText, ImagePlus, Palette, Trash2, Upload } from "lucide-react";
 import { parseAsStringEnum, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
-import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
+import { ScrollArea } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
@@ -85,20 +76,22 @@ const colorPickerValue = (value: string) => {
 const TemplateSkeleton = () => (
   <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
     <CardContent>
-      <div className="flex h-14 items-center justify-between border-b px-4 sm:px-5">
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-6 w-24 rounded-full" />
-      </div>
-      <div className="grid min-h-[640px] grid-cols-1 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(34rem,1.2fr)]">
-        <section className="space-y-5 border-b p-5 xl:border-b-0 xl:border-r">
-          <Skeleton className="h-14 w-full rounded-lg" />
-          <Skeleton className="h-6 w-36" />
-          <Skeleton className="h-4 w-64" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-48 w-full rounded-xl" />
+      <div className="grid min-h-[34rem] grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-[38rem] xl:grid-cols-[minmax(26rem,0.9fr)_minmax(30rem,1.1fr)]">
+        <section className="flex border-b xl:border-b-0 xl:border-r">
+          <div className="hidden w-[5.5rem] shrink-0 space-y-2 border-r bg-muted/20 p-2 xl:block">
+            {[0, 1, 2].map((item) => (
+              <Skeleton key={item} className="h-[4.25rem] w-full rounded-lg" />
+            ))}
+          </div>
+          <div className="flex-1 space-y-5 p-5">
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-4 w-64" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+          </div>
         </section>
         <section className="flex items-center justify-center bg-muted/20 p-6">
-          <Skeleton className="h-[520px] w-full max-w-xl rounded-2xl" />
+          <Skeleton className="h-[460px] w-full max-w-xl rounded-xl" />
         </section>
       </div>
     </CardContent>
@@ -436,60 +429,31 @@ export const OidcBrandingForm = () => {
   return (
     <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
       <CardContent>
-        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <MonitorUp className="h-4 w-4" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-sm font-semibold text-high-emphasis">Template studio</h1>
-              <p className="truncate text-xs text-muted-foreground">
-                Design the sign-in experience for every OIDC application
-              </p>
-            </div>
-          </div>
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-              isDirty
-                ? "border-warning-200 bg-warning-50 text-warning-700"
-                : "border-border bg-muted/30 text-muted-foreground",
-            )}
-          >
-            {isDirty ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-warning-500" aria-hidden />
-            ) : (
-              <Check className="h-3 w-3" aria-hidden />
-            )}
-            {isDirty ? "Unsaved changes" : "All changes saved"}
-          </div>
-        </div>
-
         <Tabs
           value={editorTab}
           onValueChange={handleEditorTabChange}
-          className="grid min-w-0 grid-cols-1 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(34rem,1.2fr)]"
+          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:max-h-[38rem] xl:grid-cols-[minmax(26rem,0.9fr)_minmax(30rem,1.1fr)]"
         >
-          <section className="min-w-0 border-b border-border bg-card xl:border-b-0 xl:border-r">
-            <div className="border-b border-border px-4 py-3 sm:px-5">
+          <section className="flex min-h-0 min-w-0 flex-col border-b border-border bg-card xl:flex-row xl:border-b-0 xl:border-r">
+            <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-[5.5rem] xl:border-b-0 xl:border-r">
               <TabsList
-                className="grid h-auto w-full grid-cols-3 gap-1 rounded-lg bg-muted/50 p-1"
+                className="grid h-auto w-full grid-cols-3 gap-1 rounded-lg bg-transparent p-0 xl:flex xl:h-full xl:flex-col xl:justify-start xl:gap-2"
                 aria-label="Template sections"
               >
                 {EDITOR_TABS.map(({ value, label, Icon }) => (
                   <TabsTrigger
                     key={value}
                     value={value}
-                    className="h-10 gap-2 rounded-md px-2 text-xs shadow-none data-[state=active]:shadow-sm sm:text-sm"
+                    className="h-11 gap-2 rounded-lg border border-transparent px-2 text-xs shadow-none hover:bg-background/60 data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm xl:h-[4.25rem] xl:w-full xl:flex-col xl:gap-1.5 xl:px-1 xl:text-[11px]"
                   >
-                    <Icon className="h-4 w-4" aria-hidden />
+                    <Icon className="h-4 w-4 xl:h-[18px] xl:w-[18px]" aria-hidden />
                     {label}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
 
-            <ScrollArea className="h-auto xl:h-[min(680px,calc(100vh-14rem))] xl:min-h-[570px]">
+            <ScrollArea className="h-auto min-h-0 min-w-0 flex-1 xl:h-full">
               <div className="p-4 sm:p-5">
                 <TabsContent value="branding" className="m-0 space-y-6">
                   <div className="flex gap-3">
@@ -684,7 +648,7 @@ export const OidcBrandingForm = () => {
                       </p>
                     </div>
                   </div>
-                  <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="w-full overflow-x-auto pb-2 [scrollbar-width:thin]">
                     <div
                       role="tablist"
                       aria-label="OIDC page"
@@ -708,8 +672,7 @@ export const OidcBrandingForm = () => {
                         </button>
                       ))}
                     </div>
-                    <ScrollBar orientation="horizontal" />
-                  </ScrollArea>
+                  </div>
                   <div className="flex items-center justify-between border-b border-border pb-3">
                     <div>
                       <p className="text-sm font-medium text-high-emphasis">{selectedPageLabel}</p>
@@ -796,7 +759,7 @@ export const OidcBrandingForm = () => {
             </ScrollArea>
           </section>
 
-          <section className="min-w-0 bg-muted/20">
+          <section className="flex min-h-0 min-w-0 flex-col bg-muted/20">
             <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 py-3 sm:px-5">
               <div>
                 <h2 className="text-sm font-semibold text-high-emphasis">Live preview</h2>
@@ -804,13 +767,26 @@ export const OidcBrandingForm = () => {
                   {selectedPageLabel} page · updates instantly
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-success" aria-hidden />
-                Previewing
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+                  isDirty
+                    ? "border-warning-200 bg-warning-50 text-warning-700"
+                    : "border-border bg-background text-muted-foreground",
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    isDirty ? "bg-warning-500" : "bg-success",
+                  )}
+                  aria-hidden
+                />
+                {isDirty ? "Unsaved" : "Saved"}
               </div>
             </div>
-            <div className="flex min-h-[570px] items-center justify-center p-3 sm:p-5 xl:h-[min(680px,calc(100vh-14rem))] xl:p-6">
-              <div className="w-full max-w-[42rem] overflow-hidden rounded-2xl border border-border bg-background p-2 shadow-sm sm:p-3">
+            <div className="flex min-h-[500px] flex-1 items-center justify-center p-3 sm:p-4 xl:min-h-0">
+              <div className="h-full max-h-full w-full max-w-[38rem] overflow-hidden rounded-xl border border-border bg-background p-2 shadow-sm">
                 <OidcTemplatePreview
                   template={previewTemplate}
                   selectedPage={selectedPage}

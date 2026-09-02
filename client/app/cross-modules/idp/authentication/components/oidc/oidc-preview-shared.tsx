@@ -101,7 +101,7 @@ export const OidcPreviewShell = ({
   children,
 }: OidcPagePreviewProps & { pageLabel: string; children: ReactNode }) => (
   <div
-    className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[520px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)]"
+    className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[460px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] xl:h-full xl:min-h-0"
     data-theme={resolvedTheme}
     style={buildOidcBrandCssVars(palette)}
     aria-label={`${pageLabel} page preview`}

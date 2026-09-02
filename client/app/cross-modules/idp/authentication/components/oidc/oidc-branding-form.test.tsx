@@ -97,7 +97,7 @@ const renderOidcForm = (searchParams = "", onUrlUpdate?: OnUrlUpdateFunction) =>
 
 const renderForm = async (searchParams = "", onUrlUpdate?: OnUrlUpdateFunction) => {
   renderOidcForm(searchParams, onUrlUpdate);
-  await screen.findByText("Template studio");
+  await screen.findByRole("tab", { name: "Branding" });
   await waitFor(() => expect(latestActions()).toBeTruthy());
 };
 
