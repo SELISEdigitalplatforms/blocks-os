@@ -52,11 +52,22 @@ export const PersonDetailPage = () => {
     enabled: !!selectedTenantGroup,
   });
 
-  // The search endpoint can return more than one row while its filter is catching up. Always
-  // use the route user, rather than assuming the first result is the person being viewed.
-  const person = peopleData?.peoples?.find(
-    (candidate) => candidate.peopleDetails?.userId?.toLowerCase() === id.toLowerCase(),
-  );
+  // The IAM user and People records do not always expose the same id during provisioning.
+  // Prefer the route id, then the email used for this exact search. A single returned row is
+  // also unambiguous and must not be discarded just because those two systems are out of sync.
+  const people = peopleData?.peoples ?? [];
+  const normalizedId = id.toLowerCase();
+  const normalizedEmail = user?.email?.trim().toLowerCase();
+  const person =
+    people.find(
+      (candidate) => candidate.peopleDetails?.userId?.toLowerCase() === normalizedId,
+    ) ??
+    people.find(
+      (candidate) =>
+        !!normalizedEmail &&
+        candidate.peopleDetails?.email?.trim().toLowerCase() === normalizedEmail,
+    ) ??
+    (people.length === 1 ? people[0] : undefined);
   const sharedEnvironments = person?.sharedEnviroments || [];
 
   // Read the rows as well as the derived field. `role` is newer than the rows, so relying on

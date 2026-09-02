@@ -79,7 +79,15 @@ describe("PersonDetailPage", () => {
     h.accessTabProps = {};
     h.detailsTabProps = {};
     h.params = { id: "user-1", tenantGroupId: "tg-1" };
-    h.userResponse = { data: { firstName: "Ada", lastName: "Lovelace", active: true, isVerified: true } };
+    h.userResponse = {
+      data: {
+        firstName: "Ada",
+        lastName: "Lovelace",
+        email: "ada@example.com",
+        active: true,
+        isVerified: true,
+      },
+    };
     h.isUserLoading = false;
     h.peopleData = {
       peoples: [{ peopleDetails: { userId: "user-1" }, sharedEnviroments: [] }],
@@ -135,21 +143,28 @@ describe("PersonDetailPage", () => {
     expect(screen.queryByTestId("access-tab")).toBeNull();
   });
 
-  it("passes owner standing down when the person holds a creator row", () => {
+  it("shows owner standing and hides access when the person holds a creator row", () => {
     // `role` is newer than the rows, so an owner must still be recognised from the rows alone.
     h.peopleData = {
       peoples: [{ peopleDetails: { userId: "user-1" }, sharedEnviroments: [{ isCreator: true, isInvitationConfirmed: true }] }],
       isOwner: true,
     };
     renderPage();
-    expect(h.accessTabProps.isTargetOwner).toBe(true);
     expect(h.detailsTabProps.projectRole).toBe("Owner");
     expect(screen.queryByTestId("access-tab")).toBeNull();
   });
 
   it("shows an owner role and hides project access when the API identifies the person as an owner", () => {
     h.peopleData = {
-      peoples: [{ peopleDetails: { userId: "user-1" }, role: "owner", sharedEnviroments: [] }],
+      peoples: [
+        {
+          peopleDetails: { userId: "provisioned-user-id", email: "ada@example.com" },
+          role: "owner",
+          sharedEnviroments: [
+            { enviroment: "dev", isCreator: true, isInvitationConfirmed: true },
+          ],
+        },
+      ],
       isOwner: true,
     };
 
