@@ -13,9 +13,33 @@ import { ArrowLeft } from "lucide-react";
 import { useGetPeople } from "@/hooks/use-people";
 import { useGetProjects } from "@/hooks/use-project";
 import { useProjectPermissions } from "@/hooks/use-project-access";
+import { PeopleGroupedByEnvironments } from "@/models/people";
 // Devices tab temporarily disabled.
 // import { UserDevices } from "@blocks-idp/iam/modules/user-management/user-devices"
 // import { getRuntimeEnv } from "@/lib/runtime-env"
+
+// The IAM user and People records do not always expose the same id during provisioning.
+// Prefer the route id, then the email used for this exact search. A single returned row is
+// also unambiguous and must not be discarded just because those two systems are out of sync.
+export const findPersonRow = (
+  people: PeopleGroupedByEnvironments[] | undefined,
+  userId: string,
+  email?: string,
+) => {
+  const rows = people ?? [];
+  const normalizedId = userId.toLowerCase();
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  return (
+    rows.find((candidate) => candidate.peopleDetails?.userId?.toLowerCase() === normalizedId) ??
+    rows.find(
+      (candidate) =>
+        !!normalizedEmail &&
+        candidate.peopleDetails?.email?.trim().toLowerCase() === normalizedEmail,
+    ) ??
+    (rows.length === 1 ? rows[0] : undefined)
+  );
+};
 
 export const PersonDetailPage = () => {
   const { id = "" } = useParams<{
@@ -40,11 +64,24 @@ export const PersonDetailPage = () => {
   const user = userResponse?.data;
   const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
 
-  const { data: peopleData, isLoading: isPeopleLoading } = useGetPeople({
+  // People/Gets is the only source for this person's row, and its server-side email search
+  // does not return every row it should — an owner's own row comes back empty from it — which
+  // left the page reading an owner as a contributor with no environments. A miss therefore
+  // falls back to the unfiltered page and matches the row locally.
+  const { data: searchedPeople, isLoading: isSearchLoading } = useGetPeople({
     page: 0,
     pageSize: 100,
     filter: user?.email || "",
     searchField: "email",
+  });
+  const searchedPerson = findPersonRow(searchedPeople?.peoples, id, user?.email);
+  const needsUnfilteredLookup = !!user?.email && !isSearchLoading && !searchedPerson;
+  const { data: allPeople, isLoading: isAllPeopleLoading } = useGetPeople({
+    page: 0,
+    pageSize: 100,
+    filter: "",
+    searchField: "email",
+    enabled: needsUnfilteredLookup,
   });
 
   const { data: environmentList, isLoading: isProjectLoading } = useGetProjects({
@@ -52,22 +89,9 @@ export const PersonDetailPage = () => {
     enabled: !!selectedTenantGroup,
   });
 
-  // The IAM user and People records do not always expose the same id during provisioning.
-  // Prefer the route id, then the email used for this exact search. A single returned row is
-  // also unambiguous and must not be discarded just because those two systems are out of sync.
-  const people = peopleData?.peoples ?? [];
-  const normalizedId = id.toLowerCase();
-  const normalizedEmail = user?.email?.trim().toLowerCase();
-  const person =
-    people.find(
-      (candidate) => candidate.peopleDetails?.userId?.toLowerCase() === normalizedId,
-    ) ??
-    people.find(
-      (candidate) =>
-        !!normalizedEmail &&
-        candidate.peopleDetails?.email?.trim().toLowerCase() === normalizedEmail,
-    ) ??
-    (people.length === 1 ? people[0] : undefined);
+  const peopleRows = searchedPerson ? searchedPeople?.peoples : allPeople?.peoples;
+  const person = searchedPerson ?? findPersonRow(allPeople?.peoples, id, user?.email);
+  const isPeopleLoading = isSearchLoading || (needsUnfilteredLookup && isAllPeopleLoading);
   const sharedEnvironments = person?.sharedEnviroments || [];
 
   // Read the rows as well as the derived field. `role` is newer than the rows, so relying on
@@ -124,7 +148,7 @@ export const PersonDetailPage = () => {
         <PeopleEnvironmentsTab
           user={user}
           person={person}
-          peopleData={peopleData?.peoples}
+          peopleData={peopleRows}
           environmentList={environmentList}
           canRemove={can("people", "remove")}
           canInvite={can("people", "invite")}
