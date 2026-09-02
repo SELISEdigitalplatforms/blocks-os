@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   userResponse: undefined as unknown,
   isUserLoading: false,
   peopleData: undefined as unknown,
+  searchedPeopleData: undefined as unknown,
   isPeopleLoading: false,
   projects: undefined as unknown,
   isProjectLoading: false,
@@ -37,7 +38,11 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   useGetUserById: () => ({ data: h.userResponse, isLoading: h.isUserLoading }),
 }));
 vi.mock("@/hooks/use-people", () => ({
-  useGetPeople: () => ({ data: h.peopleData, isLoading: h.isPeopleLoading }),
+  // The page runs two lookups: the email search, then an unfiltered fallback when that misses.
+  useGetPeople: (option: { filter: string }) => ({
+    data: option.filter ? (h.searchedPeopleData ?? h.peopleData) : h.peopleData,
+    isLoading: h.isPeopleLoading,
+  }),
 }));
 vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => ({ data: h.projects, isLoading: h.isProjectLoading }),
@@ -93,6 +98,7 @@ describe("PersonDetailPage", () => {
       peoples: [{ peopleDetails: { userId: "user-1" }, sharedEnviroments: [] }],
       isOwner: true,
     };
+    h.searchedPeopleData = undefined;
     h.isPeopleLoading = false;
     h.projects = [];
     h.isProjectLoading = false;
@@ -163,6 +169,27 @@ describe("PersonDetailPage", () => {
           sharedEnviroments: [
             { enviroment: "dev", isCreator: true, isInvitationConfirmed: true },
           ],
+        },
+      ],
+      isOwner: true,
+    };
+
+    renderPage();
+
+    expect(h.detailsTabProps.projectRole).toBe("Owner");
+    expect(screen.queryByTestId("access-tab")).toBeNull();
+  });
+
+  it("falls back to the unfiltered lookup when the email search returns no rows", () => {
+    // People/Gets returns nothing for an email search on an owner's own row, which read the
+    // owner as a contributor and offered them the grant form.
+    h.searchedPeopleData = { peoples: [], isOwner: true };
+    h.peopleData = {
+      peoples: [
+        {
+          peopleDetails: { userId: "user-1", email: "ada@example.com" },
+          role: "owner",
+          sharedEnviroments: [{ enviroment: "dev", isCreator: true, isInvitationConfirmed: true }],
         },
       ],
       isOwner: true,

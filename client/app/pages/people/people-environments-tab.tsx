@@ -79,8 +79,11 @@ export const PeopleEnvironmentsTab = ({
     return Array.from(new Set([...projects, ...nonShared]));
   }, [environmentList]);
 
+  // An owner reaches every environment in the group. Their own rows are unioned in so the
+  // list still shows what they hold even when the project list has not loaded or omits one.
   const currentAvailableEnvironments = useMemo(() => {
-    if (isProfileUserOwner) return allAvailableEnvironments;
+    if (isProfileUserOwner)
+      return Array.from(new Set([...allAvailableEnvironments, ...withAccessEnvironments]));
     return withAccessEnvironments;
   }, [isProfileUserOwner, allAvailableEnvironments, withAccessEnvironments]);
 
