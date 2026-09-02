@@ -63,23 +63,28 @@ export interface ISaveOidcCredentialResponse {
   clientDisplayName: string;
 }
 
+export interface IOidcUiThemePalette {
+  primary: string;
+  secondary: string;
+  background: string;
+  surface: string;
+  text: string;
+  mutedText: string;
+  success: string;
+  danger: string;
+  border: string;
+  borderStrong: string;
+  accentSoft: string;
+}
+
 export interface IOidcUiTemplate {
   branding: {
     logoUrl: string | null;
     brandName: string;
   };
   theme: {
-    primary: string;
-    secondary: string;
-    background: string;
-    surface: string;
-    text: string;
-    mutedText: string;
-    success: string;
-    danger: string;
-    border: string | null;
-    borderStrong: string | null;
-    accentSoft: string | null;
+    light: IOidcUiThemePalette;
+    dark: IOidcUiThemePalette;
   };
   pages: {
     login: {

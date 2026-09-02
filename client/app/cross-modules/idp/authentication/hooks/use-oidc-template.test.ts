@@ -14,7 +14,10 @@ vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
 
 const template = {
   branding: { brandName: "Blocks IAM", logoUrl: null },
-  theme: { primary: "#0066b2" },
+  theme: {
+    light: { primary: "#0066b2" },
+    dark: { primary: "#0066b2" },
+  },
   pages: { login: { heading: "Sign in" } },
 };
 

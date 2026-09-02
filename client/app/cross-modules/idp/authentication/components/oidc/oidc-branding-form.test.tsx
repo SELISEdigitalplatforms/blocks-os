@@ -49,17 +49,32 @@ import { OidcBrandingForm } from "./oidc-branding-form";
 const template = {
   branding: { logoUrl: null, brandName: "Blocks IAM" },
   theme: {
-    primary: "#0066b2",
-    secondary: "#00b2ff",
-    background: "#050510",
-    surface: "#0a0a1a",
-    text: "#e8e8f0",
-    mutedText: "#5e5e7a",
-    success: "#17a34a",
-    danger: "#f87171",
-    border: "#16162a",
-    borderStrong: "rgba(0, 102, 178, 0.35)",
-    accentSoft: "rgba(0, 102, 178, 0.10)",
+    light: {
+      primary: "#0066b2",
+      secondary: "#004d87",
+      background: "#f5f7fb",
+      surface: "#ffffff",
+      text: "#0c1024",
+      mutedText: "#5b6478",
+      success: "#15803d",
+      danger: "#dc2626",
+      border: "#dce1ea",
+      borderStrong: "rgba(0, 102, 178, 0.35)",
+      accentSoft: "rgba(0, 102, 178, 0.10)",
+    },
+    dark: {
+      primary: "#0066b2",
+      secondary: "#00b2ff",
+      background: "#050510",
+      surface: "#0a0a1a",
+      text: "#e8e8f0",
+      mutedText: "#5e5e7a",
+      success: "#17a34a",
+      danger: "#f87171",
+      border: "#16162a",
+      borderStrong: "rgba(0, 102, 178, 0.35)",
+      accentSoft: "rgba(0, 102, 178, 0.10)",
+    },
   },
   pages: {
     login: { heading: "Sign in", emailLabel: "Email", passwordLabel: "Password" },
@@ -145,7 +160,14 @@ describe("OidcBrandingForm", () => {
     expect(h.saveTemplate).toHaveBeenCalledTimes(1);
     const payload = h.saveTemplate.mock.calls[0][0];
     expect(payload.branding).toEqual({ brandName: "Acme Corp", logoUrl: null });
-    expect(payload.theme).toEqual({ ...template.theme, primary: "#FF0000" });
+    expect(payload.theme).toEqual({
+      light: { ...template.theme.light, primary: "#FF0000" },
+      dark: { ...template.theme.dark, primary: "#FF0000" },
+    });
+    expect(payload.theme.light.secondary).toBe(template.theme.light.secondary);
+    expect(payload.theme.light.background).toBe(template.theme.light.background);
+    expect(payload.theme.dark.secondary).toBe(template.theme.dark.secondary);
+    expect(payload.theme.dark.background).toBe(template.theme.dark.background);
     expect(payload.pages).toBe(template.pages);
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "Template saved successfully",
@@ -264,7 +286,10 @@ describe("OidcBrandingForm", () => {
   it("surfaces field-level PUT errors without treating the values as saved", async () => {
     h.saveTemplate.mockResolvedValue({
       isSuccess: false,
-      errors: { "Branding.BrandName": "must be unique", "Theme.Primary": "server color error" },
+      errors: {
+        "Branding.BrandName": "must be unique",
+        "Theme.Light.Primary": "server color error",
+      },
     });
     const user = userEvent.setup();
     await renderForm();

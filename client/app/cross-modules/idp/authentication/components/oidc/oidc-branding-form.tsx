@@ -76,7 +76,9 @@ export const OidcBrandingForm = () => {
 
   const [savedTemplate, setSavedTemplate] = useState<IOidcUiTemplate | null>(template ?? null);
   const [brandName, setBrandName] = useState(template?.branding.brandName ?? "");
-  const [brandColor, setBrandColor] = useState(template?.theme.primary || DEFAULT_BRAND_COLOR);
+  const [brandColor, setBrandColor] = useState(
+    template?.theme.light.primary || DEFAULT_BRAND_COLOR,
+  );
   const [logoUrl, setLogoUrl] = useState<string | null>(template?.branding.logoUrl ?? null);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [previewLogoUrl, setPreviewLogoUrl] = useState<string | null>(
@@ -93,7 +95,7 @@ export const OidcBrandingForm = () => {
     setSavedTemplate(template ?? null);
     if (template) {
       setBrandName(template.branding.brandName);
-      setBrandColor(template.theme.primary || DEFAULT_BRAND_COLOR);
+      setBrandColor(template.theme.light.primary || DEFAULT_BRAND_COLOR);
       setLogoUrl(template.branding.logoUrl);
       setPreviewLogoUrl(template.branding.logoUrl);
       setPendingLogoFile(null);
@@ -181,7 +183,7 @@ export const OidcBrandingForm = () => {
     if (previewLogoUrl?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrl);
 
     setBrandName(savedTemplate.branding.brandName);
-    setBrandColor(savedTemplate.theme.primary || DEFAULT_BRAND_COLOR);
+    setBrandColor(savedTemplate.theme.light.primary || DEFAULT_BRAND_COLOR);
     setLogoUrl(savedTemplate.branding.logoUrl);
     setPreviewLogoUrl(savedTemplate.branding.logoUrl);
     setPendingLogoFile(null);
@@ -192,7 +194,9 @@ export const OidcBrandingForm = () => {
   const brandNameError =
     validateBrandName(brandName) || getServerFieldError(serverErrors, "branding.brandName");
   const brandColorError =
-    validateBrandColor(brandColor) || getServerFieldError(serverErrors, "theme.primary");
+    validateBrandColor(brandColor) ||
+    getServerFieldError(serverErrors, "theme.light.primary") ||
+    getServerFieldError(serverErrors, "theme.dark.primary");
   const logoUrlError =
     logoValidationMessage ||
     validateLogoUrl(logoUrl) ||
@@ -222,7 +226,11 @@ export const OidcBrandingForm = () => {
       const payload: IOidcUiTemplate = {
         ...savedTemplate,
         branding: { ...savedTemplate.branding, brandName, logoUrl: resolvedLogoUrl },
-        theme: { ...savedTemplate.theme, primary: brandColor },
+        theme: {
+          ...savedTemplate.theme,
+          light: { ...savedTemplate.theme.light, primary: brandColor },
+          dark: { ...savedTemplate.theme.dark, primary: brandColor },
+        },
       };
 
       const res = await saveTemplate(payload);
@@ -274,7 +282,7 @@ export const OidcBrandingForm = () => {
     () =>
       !!savedTemplate &&
       (brandName !== savedTemplate.branding.brandName ||
-        brandColor !== savedTemplate.theme.primary ||
+        brandColor !== savedTemplate.theme.light.primary ||
         (previewLogoUrl ?? null) !== savedTemplate.branding.logoUrl),
     [brandColor, brandName, previewLogoUrl, savedTemplate],
   );
@@ -468,7 +476,8 @@ export const OidcBrandingForm = () => {
                     value={colorPickerValue(brandColor)}
                     onChange={(event) => {
                       setBrandColor(event.target.value);
-                      clearServerFieldError("theme.primary");
+                      clearServerFieldError("theme.light.primary");
+                      clearServerFieldError("theme.dark.primary");
                     }}
                     className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent p-1"
                     aria-label="Pick brand color"
@@ -478,7 +487,8 @@ export const OidcBrandingForm = () => {
                     value={brandColor}
                     onChange={(event) => {
                       setBrandColor(event.target.value);
-                      clearServerFieldError("theme.primary");
+                      clearServerFieldError("theme.light.primary");
+                      clearServerFieldError("theme.dark.primary");
                     }}
                     className="w-[140px] min-w-[120px] font-mono text-sm uppercase"
                     maxLength={7}
