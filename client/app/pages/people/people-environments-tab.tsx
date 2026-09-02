@@ -48,7 +48,14 @@ export const PeopleEnvironmentsTab = ({
     peopleData?.find(
       (candidate) =>
         candidate.peopleDetails?.userId?.toLowerCase() === user?.itemId?.toLowerCase(),
-    );
+    ) ??
+    peopleData?.find(
+      (candidate) =>
+        !!user?.email &&
+        candidate.peopleDetails?.email?.trim().toLowerCase() ===
+          user.email.trim().toLowerCase(),
+    ) ??
+    (peopleData?.length === 1 ? peopleData[0] : undefined);
   const sharedEnvironments = useMemo(
     () => userEnvironmentData?.sharedEnviroments || [],
     [userEnvironmentData?.sharedEnviroments],
