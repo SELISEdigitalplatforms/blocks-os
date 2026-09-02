@@ -60,7 +60,7 @@ export const PersonDetailPage = () => {
   // nothing to grant.
   const isTargetOwner =
     person?.role === "owner" || sharedEnvironments.some((env) => env.isCreator);
-  const projectRole = sharedEnvironments.some((env) => env.isCreator) ? "Owner" : "Contributor";
+  const projectRole = isTargetOwner ? "Owner" : "Contributor";
   const isPending =
     sharedEnvironments.some((env) => !env.isInvitationConfirmed) &&
     !sharedEnvironments.some((env) => env.isCreator);
@@ -114,7 +114,7 @@ export const PersonDetailPage = () => {
           canInvite={can("people", "invite")}
         />
 
-        {isOwner && selectedTenantGroup && id && (
+        {isOwner && !isTargetOwner && selectedTenantGroup && id && (
           <PeopleAccessTab
             projectGroupId={selectedTenantGroup}
             userId={id}
