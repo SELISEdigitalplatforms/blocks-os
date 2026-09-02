@@ -81,7 +81,10 @@ describe("PersonDetailPage", () => {
     h.params = { id: "user-1", tenantGroupId: "tg-1" };
     h.userResponse = { data: { firstName: "Ada", lastName: "Lovelace", active: true, isVerified: true } };
     h.isUserLoading = false;
-    h.peopleData = { peoples: [{ sharedEnviroments: [] }], isOwner: true };
+    h.peopleData = {
+      peoples: [{ peopleDetails: { userId: "user-1" }, sharedEnviroments: [] }],
+      isOwner: true,
+    };
     h.isPeopleLoading = false;
     h.projects = [];
     h.isProjectLoading = false;
@@ -103,7 +106,7 @@ describe("PersonDetailPage", () => {
 
   it("shows the pending invite badge when an unconfirmed invitation exists", () => {
     h.peopleData = {
-      peoples: [{ sharedEnviroments: [{ isInvitationConfirmed: false, isCreator: false }] }],
+      peoples: [{ peopleDetails: { userId: "user-1" }, sharedEnviroments: [{ isInvitationConfirmed: false, isCreator: false }] }],
       isOwner: true,
     };
     renderPage();
@@ -135,7 +138,7 @@ describe("PersonDetailPage", () => {
   it("passes owner standing down when the person holds a creator row", () => {
     // `role` is newer than the rows, so an owner must still be recognised from the rows alone.
     h.peopleData = {
-      peoples: [{ sharedEnviroments: [{ isCreator: true, isInvitationConfirmed: true }] }],
+      peoples: [{ peopleDetails: { userId: "user-1" }, sharedEnviroments: [{ isCreator: true, isInvitationConfirmed: true }] }],
       isOwner: true,
     };
     renderPage();
@@ -146,7 +149,7 @@ describe("PersonDetailPage", () => {
 
   it("shows an owner role and hides project access when the API identifies the person as an owner", () => {
     h.peopleData = {
-      peoples: [{ role: "owner", sharedEnviroments: [] }],
+      peoples: [{ peopleDetails: { userId: "user-1" }, role: "owner", sharedEnviroments: [] }],
       isOwner: true,
     };
 
