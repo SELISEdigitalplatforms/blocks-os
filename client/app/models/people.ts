@@ -67,6 +67,14 @@ export interface PeopleDetails {
 export interface PeopleGroupedByEnvironments {
   peopleDetails: PeopleDetails;
   sharedEnviroments: SharedEnvironment[];
+  /**
+   * What this person may do in the project pages, unioned across their environment rows.
+   * Carried on the list rather than behind a per-person endpoint — the list already reads
+   * every row this needs.
+   */
+  accessPolicies: string[];
+  /** "owner" or "contributor", derived server-side from the rows. */
+  role: "owner" | "contributor";
 }
 
 // Legacy interface for backward compatibility

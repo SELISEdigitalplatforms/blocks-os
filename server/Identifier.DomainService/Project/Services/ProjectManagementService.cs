@@ -108,17 +108,27 @@ namespace DomainService.Projects
         {
             if (statusTracer.InsertedIntoProjectPeople) return;
 
+            // Ownership of a new environment belongs to the group's existing owner, never to
+            // whoever created it. Ownership is "IsCreator on every tenant in the group", so
+            // stamping the caller here would hand the whole group to anyone who could add an
+            // environment to it. Creating an environment is owner-only today, which makes this
+            // a no-op — and a permanent guard if that ever changes.
+            var groupOwner = await _projectRepository.GetGroupOwnerAsync(project.TenantGroupId);
+
             await _projectRepository.InsertPeopleAsync(new ProjectPeople
             {
                 ItemId = Guid.NewGuid().ToString(),
-                UserId = project.CreatedBy,
+                UserId = groupOwner?.UserId ?? project.CreatedBy,
                 TenantId = project.TenantId,
                 IsCreator = true,
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
                 IsInvitationConfirmed = true,
                 IsInvitationSent = true,
-                Email = BlocksContext.GetContext()?.UserName?? ""
+                // Taken from the owner's existing row rather than the caller's context: on the
+                // restore path those are two different people, which used to stamp the
+                // restorer's address onto the creator's row.
+                Email = groupOwner?.Email ?? BlocksContext.GetContext()?.UserName ?? ""
             });
 
             statusTracer.InsertedIntoProjectPeople = true;

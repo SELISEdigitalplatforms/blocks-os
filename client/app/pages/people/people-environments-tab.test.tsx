@@ -96,7 +96,8 @@ describe("PeopleEnvironmentsTab", () => {
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner={false}
+        canRemove={false}
+        canInvite={false}
       />,
     );
     expect(screen.queryByLabelText(/Remove access from/)).toBeNull();
@@ -110,7 +111,8 @@ describe("PeopleEnvironmentsTab", () => {
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner
+        canRemove
+        canInvite
       />,
     );
     await userEvent.click(screen.getByLabelText("Grant access to Staging"));
@@ -133,7 +135,8 @@ describe("PeopleEnvironmentsTab", () => {
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner
+        canRemove
+        canInvite
       />,
     );
     await userEvent.click(screen.getByLabelText("Remove access from Development"));
@@ -157,7 +160,8 @@ describe("PeopleEnvironmentsTab", () => {
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner
+        canRemove
+        canInvite
       />,
     );
     await userEvent.click(screen.getByLabelText("Grant access to Staging"));

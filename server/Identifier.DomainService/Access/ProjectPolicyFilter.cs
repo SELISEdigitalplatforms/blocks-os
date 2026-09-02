@@ -1,0 +1,175 @@
+using System.Reflection;
+using Blocks.Genesis;
+using DomainService.Access.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.Filters;
+
+namespace DomainService.Access
+{
+    /// <summary>
+    /// Enforces <see cref="ProjectPolicyAttribute"/>: owner passes, contributor is checked
+    /// against their grants, everyone else is refused.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately an <see cref="IAsyncActionFilter"/> rather than an authorization handler.
+    /// The authorization middleware evaluates <c>[Authorize]</c>/<c>[ProtectedEndPoint]</c>
+    /// before MVC filters run, so this cannot fire early even by accident — the ordering is
+    /// structural, not arranged. It also runs after model binding, which is what lets the
+    /// project be read straight off the bound request whether it arrived from the body or the
+    /// query string.
+    /// </remarks>
+    public class ProjectPolicyFilter : IAsyncActionFilter
+    {
+        /// <summary>
+        /// Where the project is looked for on a request, in order: the group directly, then
+        /// anything naming a single project, then the caller's own tenant.
+        /// </summary>
+        /// <remarks>
+        /// Matched against both argument names (a bare <c>[FromQuery] string tenantGroupId</c>)
+        /// and property names on bound request objects. <c>GroupId</c> is in here because the
+        /// People requests spell it that way; leaving it out meant Invite, ResendInvitation and
+        /// RemoveAccess could not be scoped and so refused everyone, owners included.
+        /// </remarks>
+        private static readonly string[] GroupNames = ["TenantGroupId", "ProjectGroupId", "GroupId"];
+
+        private static readonly string[] ProjectNames = ["ItemId", "ProjectKey", "TenantId"];
+
+        private readonly IProjectAccessService _access;
+
+        public ProjectPolicyFilter(IProjectAccessService access)
+        {
+            _access = access;
+        }
+
+        public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+        {
+            var policy = (context.ActionDescriptor as ControllerActionDescriptor)?
+                .MethodInfo.GetCustomAttribute<ProjectPolicyAttribute>(inherit: false);
+
+            if (policy is null)
+            {
+                await next();
+                return;
+            }
+
+            var groupId = await ResolveGroupAsync(context);
+
+            // No project named on the request and none in the token: this is not a call against
+            // an existing project — creating a brand-new one from the console being the case
+            // that matters. There is nothing to check, and every guarded endpoint validates its
+            // own scope argument anyway, so a missing one fails in the service with its own
+            // message rather than as an authorization error.
+            if (string.IsNullOrWhiteSpace(groupId))
+            {
+                await next();
+                return;
+            }
+
+            var access = await _access.ResolveAsync(groupId, context.HttpContext.RequestAborted);
+
+            if (access.IsOwner)
+            {
+                await next();
+                return;
+            }
+
+            // OwnerOnly is a flag rather than a reserved policy string precisely so no entry
+            // typed into the hand-editable AccessPolicies list can satisfy it.
+            if (policy.OwnerOnly)
+            {
+                // A bare "you are not the owner" is unfalsifiable from the outside: it cannot
+                // distinguish the wrong project from a missing row from the wrong database. The
+                // resolution is echoed back so a denial can be diagnosed from the response.
+                context.Result = Denied("Only the project owner can do this.", Explain(access));
+                return;
+            }
+
+            if (!access.IsMember)
+            {
+                context.Result = Denied("You are not allowed to access this project.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(policy.Policy) || !access.Policies.Contains(policy.Policy))
+            {
+                context.Result = Denied("You have not been given access to this part of the project.");
+                return;
+            }
+
+            await next();
+        }
+
+        /// <summary>
+        /// Finds the project group this call is about. Binding source is invisible here: MVC has
+        /// already materialised <c>[FromQuery]</c> and <c>[FromBody]</c> alike into
+        /// <see cref="ActionExecutingContext.ActionArguments"/>.
+        /// </summary>
+        private async Task<string?> ResolveGroupAsync(ActionExecutingContext context)
+        {
+            foreach (var name in GroupNames)
+            {
+                if (Find(context, name) is { Length: > 0 } groupId) return groupId;
+            }
+
+            foreach (var name in ProjectNames)
+            {
+                if (Find(context, name) is { Length: > 0 } projectRef)
+                {
+                    var groupId = await _access.ResolveGroupOfProjectAsync(projectRef);
+                    if (!string.IsNullOrWhiteSpace(groupId)) return groupId;
+                }
+            }
+
+            // Endpoints naming no project, acting on whichever one the caller is currently in —
+            // Project/Disable, whose request object is empty.
+            return await _access.ResolveGroupOfProjectAsync(BlocksContext.GetContext()?.TenantId ?? string.Empty);
+        }
+
+        private static string? Find(ActionExecutingContext context, string wanted)
+        {
+            foreach (var (argumentName, argument) in context.ActionArguments)
+            {
+                if (argument is null) continue;
+
+                if (argument is string text)
+                {
+                    if (argumentName.Equals(wanted, StringComparison.OrdinalIgnoreCase)) return text;
+                    continue;
+                }
+
+                var property = argument.GetType().GetProperty(wanted,
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+                if (property?.GetValue(argument) is string value && !string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Denials keep the envelope the rest of the API uses. The manual owner checks this
+        /// filter replaced returned 200 with <c>IsSuccess:false</c> and an <c>Errors</c> map, and
+        /// the frontend's toast reads that map — a bare 403 would turn every one of those
+        /// messages into a generic failure.
+        /// </summary>
+        private static string Explain(ProjectAccessContext access) =>
+            $"group={access.ProjectGroupId}; tenants={access.TenantIds.Count}; " +
+            $"userId={access.UserId}; rows={access.RowCount}; ownerRows={access.OwnerRowCount}";
+
+        private static IActionResult Denied(string message, string? detail = null)
+        {
+            var errors = new Dictionary<string, string> { { "own_project", message } };
+            if (!string.IsNullOrWhiteSpace(detail)) errors["resolution"] = detail;
+
+            return new ObjectResult(new BaseResponse { IsSuccess = false, Errors = errors })
+            {
+                StatusCode = StatusCodes.Status403Forbidden,
+            };
+        }
+    }
+}

@@ -19,6 +19,14 @@ namespace DomainService.Projects
         Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTrace, Tenant project);
         Task<long> GetProjectCountAsync();
         Task<string?> GetOwnerUserIdAsync(string tenantId);
+
+        /// <summary>
+        /// The owner's membership row anywhere in a project group, or null for a group that has
+        /// none yet. Used when provisioning a further environment so the new row is attributed to
+        /// the group's owner rather than to whoever triggered the provisioning.
+        /// </summary>
+        Task<ProjectPeople?> GetGroupOwnerAsync(string tenantGroupId);
+
         Task InsertPeopleAsync(ProjectPeople projectPeople);
         Task<bool> SaveTenantCertificateAsync(TenantCertificate tenantCertificate);
         Task<Tenant> GetByTenantIdAsync(string tenantId);

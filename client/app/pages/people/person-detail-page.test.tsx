@@ -1,10 +1,11 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import React from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
+  isOwner: true,
+  accessTabProps: {} as { isTargetOwner?: boolean },
   navigate: vi.fn(),
   params: { id: "user-1", tenantGroupId: "tg-1" } as Record<string, string>,
   userResponse: undefined as unknown,
@@ -44,6 +45,15 @@ vi.mock("./people-details-tab", () => ({ PeopleDetailsTab: () => <div data-testi
 vi.mock("./people-environments-tab", () => ({
   PeopleEnvironmentsTab: () => <div data-testid="environments-tab" />,
 }));
+vi.mock("./people-access-tab", () => ({
+  PeopleAccessTab: (props: { isTargetOwner: boolean }) => {
+    h.accessTabProps = props;
+    return <div data-testid="access-tab" />;
+  },
+}));
+vi.mock("@/hooks/use-project-access", () => ({
+  useProjectPermissions: () => ({ isOwner: h.isOwner, can: () => h.isOwner, menus: [] }),
+}));
 
 import { PersonDetailPage } from "./person-detail-page";
 
@@ -57,6 +67,10 @@ const renderPage = () =>
 describe("PersonDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Both are mutated by individual tests, so they have to be reset or the next test inherits
+    // the previous one's viewer.
+    h.isOwner = true;
+    h.accessTabProps = {};
     h.params = { id: "user-1", tenantGroupId: "tg-1" };
     h.userResponse = { data: { firstName: "Ada", lastName: "Lovelace", active: true, isVerified: true } };
     h.isUserLoading = false;
@@ -95,11 +109,30 @@ describe("PersonDetailPage", () => {
     expect(screen.getByText("Inactive")).toBeTruthy();
   });
 
-  it("switches to the environments tab", async () => {
-    const user = userEvent.setup();
+  it("shows details, environments and access on one page", () => {
+    // The three former tabs held six fields, a few chips and a checkbox list between them,
+    // so they are stacked rather than hidden behind a tab strip.
     renderPage();
-    await user.click(screen.getByRole("tab", { name: "Environments" }));
-    expect(await screen.findByTestId("environments-tab")).toBeTruthy();
+    expect(screen.getByTestId("details-tab")).toBeTruthy();
+    expect(screen.getByTestId("environments-tab")).toBeTruthy();
+    expect(screen.getByTestId("access-tab")).toBeTruthy();
+  });
+
+  it("hides the access card from a contributor", () => {
+    // Only an owner may read or write another member's grants.
+    h.isOwner = false;
+    renderPage();
+    expect(screen.queryByTestId("access-tab")).toBeNull();
+  });
+
+  it("passes owner standing down when the person holds a creator row", () => {
+    // `role` is newer than the rows, so an owner must still be recognised from the rows alone.
+    h.peopleData = {
+      peoples: [{ sharedEnviroments: [{ isCreator: true, isInvitationConfirmed: true }] }],
+      isOwner: true,
+    };
+    renderPage();
+    expect(h.accessTabProps.isTargetOwner).toBe(true);
   });
 
   it("navigates back through the history when the back button is clicked", () => {
