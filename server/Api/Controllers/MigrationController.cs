@@ -1,4 +1,5 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
+using DomainService.Access;
 using DomainService.Migration;
 using DomainService.Migration.Services;
 using DomainService.Shared;
@@ -35,6 +36,7 @@ namespace BlocksOs.Api.Controllers
   /// <returns></returns>
   [HttpPost]
   [Authorize]
+  [ProjectPolicy("environments::migrate")]
   public async Task<MigrationOtpGenerationResponse> Migrate ( [FromBody] MigrationRequest command )
    {
    return await _migrationService.Migrate(command);
@@ -47,6 +49,10 @@ namespace BlocksOs.Api.Controllers
   /// <returns>An <see cref="MigrationOtpVerificationResponse"/> indicating whether the OTP is valid.</returns>
   [HttpPost]
   [Authorize]
+  // Scope comes from TenantGroupId on the request, added so the second step of the
+  // wizard is guarded by the same grant as the first. VerifyAsync additionally checks
+  // the OTP was issued to this caller, so only whoever started a migration can finish it.
+  [ProjectPolicy("environments::migrate")]
   public async Task<MigrationOtpVerificationResponse> Verify ( [FromBody] MigrationVerifyOtpRequest request )
    {
    return await _migrationService.VerifyAsync(request);
@@ -58,6 +64,8 @@ namespace BlocksOs.Api.Controllers
   /// <param name="tenantGroupId">The tenant group ID to check for migrations.</param>
   /// <returns>List of migration trackers with incomplete services.</returns>
   [HttpGet]
+  [Authorize]
+  [ProjectPolicy("environments::view")]
   public async Task<IActionResult> GetMigrationStatus ( [FromQuery] string tenantGroupId )
    {
    if (string.IsNullOrEmpty(tenantGroupId))
@@ -70,6 +78,8 @@ namespace BlocksOs.Api.Controllers
    }
 
   [HttpPost]
+  [Authorize]
+  [ProjectPolicy(OwnerOnly = true)]
   public async Task<IActionResult> DataCleanup ( [FromBody] DataCleanupRequest request )
    {
    if (request == null || string.IsNullOrWhiteSpace(request.ProjectKey))

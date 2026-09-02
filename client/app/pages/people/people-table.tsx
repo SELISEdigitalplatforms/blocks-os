@@ -46,10 +46,20 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 type PeopleTableProps = {
   people: PeopleGroupedByEnvironments[];
   isLoading: boolean;
-  isViewerOwner?: boolean;
+  /** Resend invitation and activation both go through the invite endpoint. */
+  canInvite?: boolean;
+  canRemove?: boolean;
+  /** Transferring ownership is never delegable, so it stays owner-only. */
+  isOwner?: boolean;
 };
 
-export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: PeopleTableProps) => {
+export const PeopleTable = ({
+  people,
+  isLoading,
+  canInvite = false,
+  canRemove = false,
+  isOwner: isViewerOwner = false,
+}: PeopleTableProps) => {
   const navigate = useNavigate();
   const { tenantGroupId = "" } = useParams<{ tenantGroupId: string }>();
   const [isResendInvitationDialogOpen, setIsResendInvitationDialogOpen] = useState(false);
@@ -178,12 +188,6 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                 )}
               </div>
               <span className="truncate">{displayName}</span>
-              {info.row.original.sharedEnviroments.some((env) => env.isCreator) && (
-                <PeopleStatusBadge
-                  status="Owner"
-                  className="w-fit bg-primary/10 px-2 py-0.5 text-[10px] text-xs font-normal text-primary"
-                />
-              )}
               {/* Pending Invite: they were sent an invitation but have not accepted it yet. */}
               {info.row.original.sharedEnviroments.some(
                 (env) => env.isInvitationSent && !env.isInvitationConfirmed,
@@ -203,6 +207,37 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                     className="w-fit bg-blocks-error-100 px-2 py-0.5 text-[10px] text-xs font-normal text-blocks-error-800"
                   />
                 )}
+            </div>
+          );
+        },
+      },
+      {
+        // Role is identity, not state. It used to share the name cell with Pending Invite and
+        // Inactive, which are two different kinds of fact about a person.
+        //
+        // Owner means IsCreator on every environment of the group; anyone else with a
+        // membership row is a contributor, whatever they have or have not been granted.
+        id: "role",
+        header: () => (
+          <div className="flex w-[110px] items-center">
+            <span className="font-bold text-medium-emphasis">Role</span>
+          </div>
+        ),
+        cell: ({ row }: CellContext<PeopleGroupedByEnvironments, unknown>) => {
+          const isOwner =
+            row.original.sharedEnviroments.length > 0 &&
+            row.original.sharedEnviroments.every((env) => env.isCreator);
+
+          return (
+            <div className="ml-2 sm:ml-0">
+              <PeopleStatusBadge
+                status={isOwner ? "Owner" : "Contributor"}
+                className={
+                  isOwner
+                    ? "w-fit bg-primary/10 px-2 py-0.5 text-xs font-normal text-primary"
+                    : "w-fit bg-neutral-100 px-2 py-0.5 text-xs font-normal text-medium-emphasis"
+                }
+              />
             </div>
           );
         },
@@ -262,7 +297,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
           );
         },
       },
-      ...(isViewerOwner
+      ...(canInvite || canRemove || isViewerOwner
         ? [
             {
               id: "actions",
@@ -274,8 +309,9 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                   (env) => !env.isInvitationConfirmed,
                 );
                 const isOwner = row.original.sharedEnviroments.some((env) => env.isCreator);
-                const showResendInvite = hasPending && !isOwner;
+                const showResendInvite = hasPending && !isOwner && canInvite;
                 const showResendActivation =
+                  canInvite &&
                   row.original.peopleDetails.allowResendActivation &&
                   row.original.sharedEnviroments.some((env) => env.isInvitationConfirmed);
 
@@ -310,7 +346,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
                           <span>Resend Activation</span>
                         </DropdownMenuItem>
                       )}
-                      {!showResendInvite && (
+                      {!showResendInvite && isViewerOwner && (
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
@@ -329,7 +365,7 @@ export const PeopleTable = ({ people, isLoading, isViewerOwner = false }: People
           ]
         : []),
     ],
-    [isViewerOwner],
+    [canInvite, canRemove, isViewerOwner],
   );
 
   const table = useReactTable({

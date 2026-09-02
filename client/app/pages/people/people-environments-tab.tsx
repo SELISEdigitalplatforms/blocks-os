@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { X, Plus } from "lucide-react";
+import { CircleMinus, Plus } from "lucide-react";
 import { User } from "@blocks-idp/iam/models/user";
 import { useRemoveEnvironmentAccess, useInvitePeople } from "@/hooks/use-people";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -18,7 +18,12 @@ interface PeopleEnvironmentsTabProps {
   user?: User;
   peopleData?: PeopleGroupedByEnvironments[];
   environmentList?: IProjectGroup[];
-  isViewerOwner?: boolean;
+  /**
+   * Removing someone from an environment and adding them to one are two different grants —
+   * `people::remove` and `people::invite` — not one privilege of ownership.
+   */
+  canRemove?: boolean;
+  canInvite?: boolean;
 }
 
 type PendingAction = {
@@ -30,7 +35,8 @@ export const PeopleEnvironmentsTab = ({
   user,
   peopleData,
   environmentList,
-  isViewerOwner = false,
+  canRemove = false,
+  canInvite = false,
 }: PeopleEnvironmentsTabProps) => {
   const userEnvironmentData = peopleData?.[0];
   const sharedEnvironments = useMemo(
@@ -151,14 +157,15 @@ export const PeopleEnvironmentsTab = ({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <Card className="overflow-hidden p-0">
+        <CardHeader className="mb-0 flex flex-row items-center justify-between border-b px-5 py-4 sm:px-6">
           <CardTitle>Environment Access</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground">With access to</div>
-            <div className="flex flex-wrap gap-3">
+        <CardContent className="px-5 py-5 sm:px-6">
+          <div className="grid grid-cols-1 gap-7 lg:grid-cols-2 lg:gap-10">
+            <section className="min-w-0 space-y-4 lg:border-r lg:pr-10">
+              <h3 className="text-sm font-semibold text-foreground">With access to</h3>
+              <div className="flex flex-wrap gap-2.5">
               {currentAvailableEnvironments.length > 0 ? (
                 currentAvailableEnvironments.map((envValue) => (
                   <div
@@ -166,7 +173,7 @@ export const PeopleEnvironmentsTab = ({
                     className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
                   >
                     <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
-                    {isViewerOwner && !isProfileUserOwner && (
+                    {canRemove && !isProfileUserOwner && (
                       <button
                         type="button"
                         onClick={() => {
@@ -178,7 +185,7 @@ export const PeopleEnvironmentsTab = ({
                         title="Remove access"
                         aria-label={`Remove access from ${getEnvironmentLabel(envValue)}`}
                       >
-                        <X className="h-4 w-4" />
+                        <CircleMinus className="h-4 w-4" />
                       </button>
                     )}
                   </div>
@@ -188,41 +195,42 @@ export const PeopleEnvironmentsTab = ({
                   No environments with access yet
                 </div>
               )}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground">Without access to</div>
-            <div className="flex flex-wrap gap-3">
-              {withoutAccessEnvironments.length > 0 ? (
-                withoutAccessEnvironments.map((envValue) => (
-                  <div
-                    key={envValue}
-                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
-                  >
-                    <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
-                    {isViewerOwner && !isProfileUserOwner && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPendingAction({ type: "add", envValue });
-                          setIsConfirmDialogOpen(true);
-                        }}
-                        disabled={isProcessing}
-                        className="ml-2 cursor-pointer p-1 text-primary transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Grant access"
-                        aria-label={`Grant access to ${getEnvironmentLabel(envValue)}`}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    )}
+              </div>
+            </section>
+            <section className="min-w-0 space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Without access to</h3>
+              <div className="flex flex-wrap gap-2.5">
+                {withoutAccessEnvironments.length > 0 ? (
+                  withoutAccessEnvironments.map((envValue) => (
+                    <div
+                      key={envValue}
+                      className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
+                    >
+                      <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
+                      {canInvite && !isProfileUserOwner && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingAction({ type: "add", envValue });
+                            setIsConfirmDialogOpen(true);
+                          }}
+                          disabled={isProcessing}
+                          className="ml-2 cursor-pointer p-1 text-primary transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Grant access"
+                          aria-label={`Grant access to ${getEnvironmentLabel(envValue)}`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-2 text-sm italic text-muted-foreground">
+                    Has access to all environments
                   </div>
-                ))
-              ) : (
-                <div className="py-2 text-sm italic text-muted-foreground">
-                  Has access to all environments
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </section>
           </div>
         </CardContent>
       </Card>

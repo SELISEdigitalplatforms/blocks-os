@@ -49,6 +49,20 @@
             <param name="tenantGroupId">The tenant group ID to check for migrations.</param>
             <returns>List of migration trackers with incomplete services.</returns>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.PeopleController.GetMyAccess(DomainService.Access.GetMyAccessRequest)">
+            <summary>
+            What the caller may see and do in one project group.
+            </summary>
+            <remarks>
+            Deliberately <c>[Authorize]</c> only, with no resource name and no project policy: it
+            is scoped to the caller's own access, and a member who lacks some permission still has
+            to be able to ask what they may do or the frontend cannot render at all. Gating this
+            behind a grant would be circular.
+            </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
+            <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.ReleaseController">
             <summary>
             Release and repository operations, served out of blocks-os. This is the move of what blocks-logic

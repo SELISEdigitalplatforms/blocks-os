@@ -12,6 +12,12 @@ export const PEOPLE_ENDPOINTS = {
   REMOVE_ACCESS: `/api${PEOPLE_SUBPATH}/RemoveAccess`,
   SIGNUP: `/api${PEOPLE_SUBPATH}/Signup`,
   TRANSFER_OWNERSHIP: `/api${PEOPLE_SUBPATH}/TransferOwnerShip`,
+
+  // ── Project access (owner / contributor grants) ─────────────────────────────
+  /** The caller's own grants for a project group. Drives the route gate and the sidebar. */
+  GET_MY_ACCESS: `/api${PEOPLE_SUBPATH}/GetMyAccess`,
+  /** Replaces a member's grants. Owner only. */
+  SAVE_ACCESS_POLICY: `/api${PEOPLE_SUBPATH}/SaveAccessPolicy`,
 } as const;
 
 // ─── Project endpoints ────────────────────────────────────────────────────────

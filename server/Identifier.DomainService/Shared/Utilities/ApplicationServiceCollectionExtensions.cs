@@ -1,4 +1,7 @@
 using Blocks.Extension.DependencyInjection;
+using Blocks.Genesis;
+using DomainService.Access;
+using DomainService.Access.Services;
 using DomainService.Certificate;
 using DomainService.ManagedService;
 using DomainService.ManagedService.Services;
@@ -47,6 +50,13 @@ namespace DomainService.Shared
    // People
             services.AddSingleton<IPeopleService, PeopleService>();
             services.AddSingleton<IPeopleRepository, PeopleRepository>();
+
+            // Project access (owner / contributor grants)
+            // Scoped, not singleton: it caches the per-request access resolution through
+            // IHttpContextAccessor, and a singleton would hand one caller's answer to the next.
+            services.AddHttpContextAccessor();
+            services.AddScoped<IProjectAccessService, ProjectAccessService>();
+            services.AddScoped<ProjectPolicyFilter>();
 
             // Drivers
             services.AddSingleton<DmsArtifactBuilderFactory>();
