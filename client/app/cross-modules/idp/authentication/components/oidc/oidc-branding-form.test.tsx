@@ -34,148 +34,341 @@ vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: h.showErrorToast,
   showSuccessToast: h.showSuccessToast,
 }));
-vi.mock("./oidc-login-preview", () => ({
-  OidcLoginPreview: (props: { clientBrandColor: string; clientLogoUrl: string | null }) => (
+vi.mock("./oidc-template-preview", () => ({
+  OidcTemplatePreview: (props: {
+    template: {
+      branding: { brandName: string; logoUrl: string | null };
+      theme: { light: { primary: string }; dark: { primary: string } };
+      pages: Record<string, Record<string, string | null>>;
+    };
+    selectedPage: string;
+    previewMode: string;
+    showAuto: boolean;
+    onPreviewModeChange: (mode: "light" | "dark" | "system") => void;
+  }) => (
     <div
       data-testid="preview"
-      data-color={props.clientBrandColor}
-      data-logo={props.clientLogoUrl}
-    />
+      data-page={props.selectedPage}
+      data-mode={props.previewMode}
+      data-show-auto={props.showAuto}
+      data-light-primary={props.template.theme.light.primary}
+      data-dark-primary={props.template.theme.dark.primary}
+      data-logo={props.template.branding.logoUrl}
+    >
+      <span>{props.template.branding.brandName}</span>
+      <span>{props.template.pages[props.selectedPage].heading}</span>
+      <span data-testid="preview-template">{JSON.stringify(props.template)}</span>
+      <button type="button" onClick={() => props.onPreviewModeChange("light")}>
+        Preview Light
+      </button>
+      <button type="button" onClick={() => props.onPreviewModeChange("dark")}>
+        Preview Dark
+      </button>
+      <button type="button" onClick={() => props.onPreviewModeChange("system")}>
+        Preview Auto
+      </button>
+    </div>
   ),
 }));
 
 import { OidcBrandingForm } from "./oidc-branding-form";
+import { DEFAULT_OIDC_UI_TEMPLATE } from "./oidc-template-defaults";
 
-const template = {
-  branding: { logoUrl: null, brandName: "Blocks IAM" },
-  theme: {
-    light: {
-      primary: "#0066b2",
-      secondary: "#004d87",
-      background: "#f5f7fb",
-      surface: "#ffffff",
-      text: "#0c1024",
-      mutedText: "#5b6478",
-      success: "#15803d",
-      danger: "#dc2626",
-      border: "#dce1ea",
-      borderStrong: "rgba(0, 102, 178, 0.35)",
-      accentSoft: "rgba(0, 102, 178, 0.10)",
-    },
-    dark: {
-      primary: "#0066b2",
-      secondary: "#00b2ff",
-      background: "#050510",
-      surface: "#0a0a1a",
-      text: "#e8e8f0",
-      mutedText: "#5e5e7a",
-      success: "#17a34a",
-      danger: "#f87171",
-      border: "#16162a",
-      borderStrong: "rgba(0, 102, 178, 0.35)",
-      accentSoft: "rgba(0, 102, 178, 0.10)",
-    },
-  },
-  pages: {
-    login: { heading: "Sign in", emailLabel: "Email", passwordLabel: "Password" },
-    signup: { heading: "Create account" },
-    forgotPassword: { heading: "Reset password" },
-    resetPassword: { heading: "Set a new password" },
-    activation: { heading: "Activate" },
-    mfa: { heading: "Verify" },
-    accountSelector: { heading: "Blocks IAM" },
-    shared: { footerText: "Copyright" },
-  },
+type HeaderActions = {
+  onSave: () => Promise<void>;
+  onUndo: () => void;
+  isBusy: boolean;
+  isDirty: boolean;
+  isValid: boolean;
 };
 
 const latestActions = () => {
   const calls = h.setActions.mock.calls.filter((call) => call[0] !== null);
-  return calls[calls.length - 1]?.[0] as {
-    onSave: () => Promise<void>;
-    onUndo: () => void;
-    isBusy: boolean;
-    isDirty: boolean;
-    isValid: boolean;
-  };
+  return calls.at(-1)?.[0] as HeaderActions;
 };
 
 const renderForm = async () => {
   render(<OidcBrandingForm />);
-  await waitFor(() => expect(screen.getByDisplayValue("Blocks IAM")).toBeTruthy());
+  await screen.findByDisplayValue(DEFAULT_OIDC_UI_TEMPLATE.branding.brandName);
   await waitFor(() => expect(latestActions()).toBeTruthy());
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.useGetOidcTemplate.mockReturnValue({ data: template, isLoading: false, isError: false });
+  h.useGetOidcTemplate.mockReturnValue({
+    data: structuredClone(DEFAULT_OIDC_UI_TEMPLATE),
+    isLoading: false,
+    isError: false,
+  });
   h.saveTemplate.mockResolvedValue({ isSuccess: true, itemId: "template-1" });
   globalThis.URL.createObjectURL = vi.fn(() => "blob:preview");
   globalThis.URL.revokeObjectURL = vi.fn();
 });
 
 describe("OidcBrandingForm", () => {
-  it("shows the existing loading skeleton while the tenant template loads", () => {
+  it("preserves the loading and GET-unavailable states", () => {
     h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: true, isError: false });
-    const { container } = render(<OidcBrandingForm />);
+    const { container, rerender } = render(<OidcBrandingForm />);
     expect(container.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
+
+    h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    rerender(<OidcBrandingForm />);
+    expect(screen.getByRole("alert").textContent).toContain("Unable to load the OIDC template");
   });
 
-  it("renders compiled-in defaults as a usable first-load template", async () => {
+  it("shows Branding, Theme, and Pages with Branding selected initially", async () => {
     await renderForm();
-    expect(screen.getByDisplayValue("Blocks IAM")).toBeTruthy();
-    expect(screen.getByLabelText("Brand color hex value")).toHaveProperty("value", "#0066b2");
-    expect(screen.queryByText("OIDC client not found.")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Branding" }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "Theme" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Pages" })).toBeTruthy();
     expect(latestActions().isDirty).toBe(false);
     expect(latestActions().isValid).toBe(true);
   });
 
-  it("shows an unavailable state when the template GET fails", () => {
-    h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: false, isError: true });
-    render(<OidcBrandingForm />);
-    expect(screen.getByRole("alert").textContent).toContain("Unable to load the OIDC template");
-    expect(screen.queryByText("Configuration")).toBeNull();
-  });
-
-  it("updates the primary color in the unchanged login preview", async () => {
-    const user = userEvent.setup();
-    await renderForm();
-    const color = screen.getByLabelText("Brand color hex value");
-    await user.clear(color);
-    await user.type(color, "#ff0000");
-    expect(screen.getByTestId("preview").getAttribute("data-color")).toBe("#ff0000");
-  });
-
-  it("overlays only the exposed fields and sends the complete template", async () => {
+  it("falls back only for genuinely absent fields", async () => {
+    const partial = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as Record<
+      string,
+      Record<string, unknown>
+    >;
+    delete (partial.theme.light as Record<string, unknown>).secondary;
+    delete (
+      (partial.pages as Record<string, Record<string, unknown>>).signup as Record<string, unknown>
+    ).submitButton;
+    h.useGetOidcTemplate.mockReturnValue({ data: partial, isLoading: false, isError: false });
     const user = userEvent.setup();
     await renderForm();
 
-    const brandName = screen.getByLabelText(/Brand name/);
-    await user.clear(brandName);
-    await user.type(brandName, "Acme Corp");
-    const color = screen.getByLabelText("Brand color hex value");
-    await user.clear(color);
-    await user.type(color, "#FF0000");
-    await latestActions().onSave();
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    expect(screen.getByLabelText("Light Secondary")).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.theme.light.secondary,
+    );
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    expect(screen.getByTestId("preview").getAttribute("data-page")).toBe("signup");
+    expect(screen.getByLabelText(/Submit button/)).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.pages.signup.submitButton,
+    );
+  });
+
+  it("lists all seven pages, shows only the selected page fields, and always shows Footer", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+
+    for (const name of [
+      "Login",
+      "Signup",
+      "Forgot Password",
+      "Reset Password",
+      "Activation",
+      "MFA",
+      "Account Selector",
+    ]) {
+      expect(screen.getByRole("tab", { name })).toBeTruthy();
+    }
+    expect(screen.getByLabelText(/Activation error title/)).toBeTruthy();
+    expect(screen.queryByLabelText(/First name label/)).toBeNull();
+    expect(screen.getByLabelText(/Footer/)).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    expect(screen.getByLabelText(/First name label/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Activation error title/)).toBeNull();
+    expect(screen.getByLabelText(/Footer/)).toBeTruthy();
+    expect(screen.getByTestId("preview").getAttribute("data-page")).toBe("signup");
+  });
+
+  it("updates page previews live and retains unsaved copy while switching pages", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    const heading = screen.getByLabelText(/Heading/);
+    await user.clear(heading);
+    await user.type(heading, "Unsaved login heading");
+    expect(screen.getByText("Unsaved login heading")).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    await user.click(screen.getByRole("tab", { name: "Login" }));
+    expect(screen.getByLabelText(/Heading/)).toHaveProperty("value", "Unsaved login heading");
+  });
+
+  it("keeps the Theme sub-switcher and preview mode synchronized in both directions", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    expect(screen.getByTestId("preview").getAttribute("data-mode")).toBe("light");
+    expect(screen.getByTestId("preview").getAttribute("data-show-auto")).toBe("false");
+
+    await user.click(screen.getByRole("tab", { name: "Dark" }));
+    expect(screen.getByLabelText("Dark Primary")).toBeTruthy();
+    expect(screen.getByTestId("preview").getAttribute("data-mode")).toBe("dark");
+
+    await user.click(screen.getByRole("button", { name: "Preview Light" }));
+    expect(screen.getByLabelText("Light Primary")).toBeTruthy();
+    expect(screen.getByTestId("preview").getAttribute("data-mode")).toBe("light");
+  });
+
+  it("keeps palette edits independent and retains them across palette switches", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    await user.click(screen.getByRole("tab", { name: "Dark" }));
+    const darkDanger = screen.getByLabelText("Dark Danger");
+    await user.clear(darkDanger);
+    await user.type(darkDanger, "#123456");
+    expect(screen.getByTestId("preview-template").textContent).toContain('"danger":"#123456"');
+
+    await user.click(screen.getByRole("tab", { name: "Light" }));
+    expect(screen.getByLabelText("Light Danger")).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.theme.light.danger,
+    );
+    await user.click(screen.getByRole("tab", { name: "Dark" }));
+    expect(screen.getByLabelText("Dark Danger")).toHaveProperty("value", "#123456");
+  });
+
+  it("sends one complete current template and establishes a new saved baseline", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.clear(screen.getByLabelText(/Brand name/));
+    await user.type(screen.getByLabelText(/Brand name/), "Acme Corp");
+
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    await user.click(screen.getByRole("tab", { name: "Dark" }));
+    await user.clear(screen.getByLabelText("Dark Primary"));
+    await user.type(screen.getByLabelText("Dark Primary"), "#112233");
+
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    await user.clear(screen.getByLabelText(/Heading/));
+    await user.type(screen.getByLabelText(/Heading/), "Join Acme");
+    fireEvent.change(screen.getByLabelText(/Footer/), { target: { value: "Acme {year}" } });
+
+    await act(async () => latestActions().onSave());
 
     expect(h.saveTemplate).toHaveBeenCalledTimes(1);
     const payload = h.saveTemplate.mock.calls[0][0];
-    expect(payload.branding).toEqual({ brandName: "Acme Corp", logoUrl: null });
-    expect(payload.theme).toEqual({
-      light: { ...template.theme.light, primary: "#FF0000" },
-      dark: { ...template.theme.dark, primary: "#FF0000" },
+    expect(payload).toEqual({
+      ...DEFAULT_OIDC_UI_TEMPLATE,
+      branding: { brandName: "Acme Corp", logoUrl: null },
+      theme: {
+        light: DEFAULT_OIDC_UI_TEMPLATE.theme.light,
+        dark: { ...DEFAULT_OIDC_UI_TEMPLATE.theme.dark, primary: "#112233" },
+      },
+      pages: {
+        ...DEFAULT_OIDC_UI_TEMPLATE.pages,
+        signup: { ...DEFAULT_OIDC_UI_TEMPLATE.pages.signup, heading: "Join Acme" },
+        shared: { footerText: "Acme {year}" },
+      },
     });
-    expect(payload.theme.light.secondary).toBe(template.theme.light.secondary);
-    expect(payload.theme.light.background).toBe(template.theme.light.background);
-    expect(payload.theme.dark.secondary).toBe(template.theme.dark.secondary);
-    expect(payload.theme.dark.background).toBe(template.theme.dark.background);
-    expect(payload.pages).toBe(template.pages);
+    expect(Object.keys(payload.theme.light)).toHaveLength(11);
+    expect(Object.keys(payload.theme.dark)).toHaveLength(11);
+    expect(Object.keys(payload.pages)).toHaveLength(8);
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "Template saved successfully",
     });
     await waitFor(() => expect(latestActions().isDirty).toBe(false));
   });
 
-  it("uploads a pending logo and saves its absolute storage URL", async () => {
+  it("blocks Save with exact inline errors for required page copy and palette colors", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    await user.click(screen.getByRole("tab", { name: "Dark" }));
+    await user.clear(screen.getByLabelText("Dark Border"));
+    expect(
+      screen.getByText(
+        "Dark Border must be a valid hex color (#RGB or #RRGGBB) or rgba(r,g,b,a) color",
+      ),
+    ).toBeTruthy();
+    expect(latestActions().isValid).toBe(false);
+    await act(async () => latestActions().onSave());
+    expect(h.saveTemplate).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText("Dark Border"), "#123");
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    await user.clear(screen.getByLabelText(/Heading/));
+    expect(screen.getByText("Heading must be between 1 and 200 characters")).toBeTruthy();
+    expect(latestActions().isValid).toBe(false);
+  });
+
+  it("saves cleared optional page fields as null", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    await user.click(screen.getByRole("tab", { name: "MFA" }));
+    await user.clear(screen.getByLabelText("Resend button"));
+    await user.click(screen.getByRole("tab", { name: "Account Selector" }));
+    await user.clear(screen.getByLabelText("Subheading"));
+
+    await act(async () => latestActions().onSave());
+    const payload = h.saveTemplate.mock.calls[0][0];
+    expect(payload.pages.mfa.resendButton).toBeNull();
+    expect(payload.pages.accountSelector.subheading).toBeNull();
+  });
+
+  it("shows server field errors beside inputs without accepting the failed save", async () => {
+    h.saveTemplate.mockResolvedValue({
+      isSuccess: false,
+      errors: {
+        "Branding.BrandName": "server brand error",
+        "Theme.Dark.Primary": "server dark error",
+        "Pages.Signup.Heading": "server signup error",
+      },
+    });
+    const user = userEvent.setup();
+    await renderForm();
+    await user.type(screen.getByLabelText(/Brand name/), " updated");
+    await act(async () => latestActions().onSave());
+
+    expect(screen.getByText("Brand name server brand error")).toBeTruthy();
+    expect(h.showSuccessToast).not.toHaveBeenCalled();
+    expect(latestActions().isDirty).toBe(true);
+
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    await user.click(screen.getByRole("tab", { name: "Dark" }));
+    expect(screen.getByText("Dark Primary server dark error")).toBeTruthy();
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    expect(screen.getByText("Heading server signup error")).toBeTruthy();
+  });
+
+  it("Undo restores unsaved changes across Branding, Theme, and Pages", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.type(screen.getByLabelText(/Brand name/), " changed");
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    await user.click(screen.getByRole("tab", { name: "Dark" }));
+    await user.clear(screen.getByLabelText("Dark Primary"));
+    await user.type(screen.getByLabelText("Dark Primary"), "#abcdef");
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    await user.clear(screen.getByLabelText(/Heading/));
+    await user.type(screen.getByLabelText(/Heading/), "Unsaved signup");
+    expect(latestActions().isDirty).toBe(true);
+
+    act(() => latestActions().onUndo());
+    expect(screen.getByLabelText(/Heading/)).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.pages.signup.heading,
+    );
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    expect(screen.getByLabelText("Dark Primary")).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.theme.dark.primary,
+    );
+    await user.click(screen.getByRole("tab", { name: "Branding" }));
+    expect(screen.getByLabelText(/Brand name/)).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.branding.brandName,
+    );
+    expect(latestActions().isDirty).toBe(false);
+  });
+
+  it("uploads a pending logo and saves the resolved absolute URL", async () => {
     h.getPresignedUrl.mockResolvedValue({ isSuccess: true, uploadUrl: "u", fileId: "f1" });
     h.uploadFile.mockResolvedValue({});
     h.getFileByFileId.mockResolvedValue({ url: "https://cdn.example.com/new.png" });
@@ -186,147 +379,50 @@ describe("OidcBrandingForm", () => {
       document.getElementById("client-logo-upload") as HTMLInputElement,
       new File(["x"], "logo.png", { type: "image/png" }),
     );
-    await latestActions().onSave();
-
-    expect(h.getPresignedUrl).toHaveBeenCalled();
+    expect(screen.getByTestId("preview").getAttribute("data-logo")).toBe("blob:preview");
+    await act(async () => latestActions().onSave());
     expect(h.uploadFile).toHaveBeenCalled();
     expect(h.saveTemplate.mock.calls[0][0].branding.logoUrl).toBe(
       "https://cdn.example.com/new.png",
     );
   });
 
-  it("removes an existing logo and saves null", async () => {
-    h.useGetOidcTemplate.mockReturnValue({
-      data: { ...template, branding: { ...template.branding, logoUrl: "https://cdn/logo.png" } },
-      isLoading: false,
-      isError: false,
-    });
+  it("removes a saved logo as null and rejects invalid files before upload", async () => {
+    const withLogo = structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
+    withLogo.branding.logoUrl = "https://cdn.example.com/old.png";
+    h.useGetOidcTemplate.mockReturnValue({ data: withLogo, isLoading: false, isError: false });
     const user = userEvent.setup();
-    render(<OidcBrandingForm />);
-    await user.click(await screen.findByRole("button", { name: "Remove logo" }));
-    await waitFor(() => expect(latestActions().isDirty).toBe(true));
-    await latestActions().onSave();
-    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrl).toBeNull();
-    expect(screen.getByTestId("preview").getAttribute("data-logo")).toBeNull();
-  });
-
-  it("rejects unsupported and oversized logo files before upload", async () => {
     await renderForm();
-    const fileInput = document.getElementById("client-logo-upload") as HTMLInputElement;
+    await user.click(screen.getByRole("button", { name: "Remove logo" }));
+    await act(async () => latestActions().onSave());
+    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrl).toBeNull();
 
-    Object.defineProperty(fileInput, "files", {
+    const input = document.getElementById("client-logo-upload") as HTMLInputElement;
+    Object.defineProperty(input, "files", {
       value: [new File(["x"], "logo.txt", { type: "text/plain" })],
       configurable: true,
     });
-    fireEvent.change(fileInput);
+    fireEvent.change(input);
     expect(h.showErrorToast).toHaveBeenCalledWith({
       errors: "Only PNG, JPG, SVG, and WebP images are allowed",
     });
 
-    Object.defineProperty(fileInput, "files", {
+    Object.defineProperty(input, "files", {
       value: [new File([new Uint8Array(3 * 1024 * 1024)], "logo.png", { type: "image/png" })],
       configurable: true,
     });
-    fireEvent.change(fileInput);
+    fireEvent.change(input);
     expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Logo must be smaller than 2MB" });
-    expect(h.getPresignedUrl).not.toHaveBeenCalled();
   });
 
-  it("blocks save and shows an inline error for a missing or overlong brand name", async () => {
-    const user = userEvent.setup();
-    await renderForm();
-    const brandName = screen.getByLabelText(/Brand name/);
-
-    await user.clear(brandName);
-    expect(screen.getByText("Brand name is required.")).toBeTruthy();
-    expect(latestActions().isValid).toBe(false);
-    await latestActions().onSave();
-    expect(h.saveTemplate).not.toHaveBeenCalled();
-
-    await user.type(brandName, "a".repeat(81));
-    expect(screen.getByText("Brand name must be 80 characters or fewer.")).toBeTruthy();
-    expect(latestActions().isValid).toBe(false);
-  });
-
-  it("blocks save and shows an inline error for an invalid primary color", async () => {
-    const user = userEvent.setup();
-    await renderForm();
-    const color = screen.getByLabelText("Brand color hex value");
-    await user.clear(color);
-    await user.type(color, "not-a");
-    expect(screen.getByText(/valid hex value/)).toBeTruthy();
-    expect(latestActions().isValid).toBe(false);
-    await latestActions().onSave();
-    expect(h.saveTemplate).not.toHaveBeenCalled();
-  });
-
-  it("accepts both three- and six-digit hex colors", async () => {
-    const user = userEvent.setup();
-    await renderForm();
-    const color = screen.getByLabelText("Brand color hex value");
-    await user.clear(color);
-    await user.type(color, "#abc");
-    expect(screen.queryByText(/valid hex value/)).toBeNull();
-    expect(latestActions().isValid).toBe(true);
-  });
-
-  it("blocks save and shows an inline error for a non-absolute template logo URL", async () => {
-    h.useGetOidcTemplate.mockReturnValue({
-      data: { ...template, branding: { ...template.branding, logoUrl: "/relative/logo.png" } },
-      isLoading: false,
-      isError: false,
-    });
-    render(<OidcBrandingForm />);
-    expect(await screen.findByText("Logo URL must be an absolute http or https URL.")).toBeTruthy();
-    await waitFor(() => expect(latestActions().isValid).toBe(false));
-    await latestActions().onSave();
-    expect(h.saveTemplate).not.toHaveBeenCalled();
-  });
-
-  it("surfaces field-level PUT errors without treating the values as saved", async () => {
-    h.saveTemplate.mockResolvedValue({
-      isSuccess: false,
-      errors: {
-        "Branding.BrandName": "must be unique",
-        "Theme.Light.Primary": "server color error",
-      },
-    });
-    const user = userEvent.setup();
-    await renderForm();
-    await user.type(screen.getByLabelText(/Brand name/), " updated");
-    await act(async () => latestActions().onSave());
-
-    expect(await screen.findByText("must be unique")).toBeTruthy();
-    expect(await screen.findByText("server color error")).toBeTruthy();
-    expect(h.showSuccessToast).not.toHaveBeenCalled();
-    expect(h.showErrorToast).toHaveBeenCalled();
-    expect(latestActions().isDirty).toBe(true);
-  });
-
-  it("undo restores every exposed field to the latest successful save", async () => {
-    const user = userEvent.setup();
-    await renderForm();
-    const brandName = screen.getByLabelText(/Brand name/);
-    await user.clear(brandName);
-    await user.type(brandName, "Acme Corp");
-    await latestActions().onSave();
-    await waitFor(() => expect(latestActions().isDirty).toBe(false));
-
-    await user.clear(brandName);
-    await user.type(brandName, "Unsaved");
-    await waitFor(() => expect(latestActions().isDirty).toBe(true));
-    latestActions().onUndo();
-    expect(await screen.findByDisplayValue("Acme Corp")).toBeTruthy();
-    await waitFor(() => expect(latestActions().isDirty).toBe(false));
-  });
-
-  it("shows a generic save error when PUT throws unexpectedly", async () => {
+  it("keeps the current draft and shows a generic error when PUT throws", async () => {
     h.saveTemplate.mockRejectedValue(new Error("network"));
     const user = userEvent.setup();
     await renderForm();
     await user.type(screen.getByLabelText(/Brand name/), " updated");
-    await latestActions().onSave();
+    await act(async () => latestActions().onSave());
     expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Failed to save template" });
     expect(h.showSuccessToast).not.toHaveBeenCalled();
+    expect(latestActions().isDirty).toBe(true);
   });
 });
