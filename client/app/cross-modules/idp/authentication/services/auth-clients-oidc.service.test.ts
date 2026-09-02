@@ -147,9 +147,9 @@ describe("AuthOidc", () => {
   });
 
   describe("getOidcTemplate", () => {
-    it("GETs the tenant-level template endpoint", async () => {
+    it("GETs and unwraps the tenant-level template response", async () => {
       const template = { branding: { brandName: "Blocks IAM", logoUrl: null } };
-      vi.mocked(http.get).mockResolvedValue(template);
+      vi.mocked(http.get).mockResolvedValue({ template });
 
       const result = await service.getOidcTemplate();
 
@@ -159,6 +159,12 @@ describe("AuthOidc", () => {
         { absoluteUrl: true },
       );
       expect(result).toBe(template);
+    });
+
+    it("returns null when the tenant has no saved template", async () => {
+      vi.mocked(http.get).mockResolvedValue({ template: null });
+
+      await expect(service.getOidcTemplate()).resolves.toBeNull();
     });
   });
 

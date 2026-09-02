@@ -151,6 +151,10 @@ export interface IOidcUiTemplate {
   };
 }
 
+export interface IGetOidcUiTemplateResponse {
+  template: IOidcUiTemplate | null;
+}
+
 export interface ISaveOidcUiTemplateResponse {
   isSuccess: boolean;
   itemId?: string | null;

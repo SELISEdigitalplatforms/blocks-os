@@ -5,6 +5,7 @@ import {
   IDeleteOidcClientResponse,
   IGetOidcPayload,
   IGetOidcCredentialsResponse,
+  IGetOidcUiTemplateResponse,
   IRotateOidcClientSecretPayload,
   IRotateOidcClientSecretResponse,
   ISaveOidcCredentialPayload,
@@ -59,10 +60,15 @@ export class AuthOidc {
     );
   }
 
-  getOidcTemplate(): Promise<IOidcUiTemplate> {
-    return http.get(AUTH_OIDC_TEMPLATE_ENDPOINTS.GET_OIDC_TEMPLATE, undefined, {
-      absoluteUrl: true,
-    });
+  async getOidcTemplate(): Promise<IOidcUiTemplate | null> {
+    const response: IGetOidcUiTemplateResponse = await http.get(
+      AUTH_OIDC_TEMPLATE_ENDPOINTS.GET_OIDC_TEMPLATE,
+      undefined,
+      {
+        absoluteUrl: true,
+      },
+    );
+    return response.template;
   }
 
   saveOidcTemplate(payload: IOidcUiTemplate): Promise<ISaveOidcUiTemplateResponse> {

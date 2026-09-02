@@ -24,7 +24,7 @@ import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hook
 import { storageService } from "@blocks-storage/services/storage.service";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { OidcTemplatePreview } from "./oidc-template-preview";
-import { normalizeOidcUiTemplate } from "./oidc-template-defaults";
+import { DEFAULT_OIDC_UI_TEMPLATE, normalizeOidcUiTemplate } from "./oidc-template-defaults";
 import {
   PAGE_FIELDS,
   PAGE_OPTIONS,
@@ -136,7 +136,8 @@ export const OidcBrandingForm = () => {
   const { mutateAsync: getPresignedUrl } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadFile } = useUploadFile();
 
-  const normalizedTemplate = template ? normalizeOidcUiTemplate(template) : null;
+  const sourceTemplate = !isLoading && !isError ? (template ?? DEFAULT_OIDC_UI_TEMPLATE) : null;
+  const normalizedTemplate = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
   const [savedTemplate, setSavedTemplate] = useState<IOidcUiTemplate | null>(normalizedTemplate);
   const [draft, setDraft] = useState<IOidcUiTemplate | null>(normalizedTemplate);
   const [editorTab, setEditorTab] = useState<EditorTab>("branding");
@@ -152,10 +153,10 @@ export const OidcBrandingForm = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const [previousTemplate, setPreviousTemplate] = useState(template);
-  if (template !== previousTemplate) {
-    setPreviousTemplate(template);
-    const next = template ? normalizeOidcUiTemplate(template) : null;
+  const [previousTemplate, setPreviousTemplate] = useState(sourceTemplate);
+  if (sourceTemplate !== previousTemplate) {
+    setPreviousTemplate(sourceTemplate);
+    const next = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
     setSavedTemplate(next);
     setDraft(next);
     setPreviewLogoUrl(next?.branding.logoUrl ?? null);

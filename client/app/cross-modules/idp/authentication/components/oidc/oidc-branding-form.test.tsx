@@ -127,6 +127,29 @@ describe("OidcBrandingForm", () => {
     expect(latestActions().isValid).toBe(true);
   });
 
+  it("shows the compiled-in constants when GET succeeds with a null template", async () => {
+    h.useGetOidcTemplate.mockReturnValue({ data: null, isLoading: false, isError: false });
+    const user = userEvent.setup();
+    await renderForm();
+
+    expect(screen.getByLabelText(/Brand name/)).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.branding.brandName,
+    );
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    expect(screen.getByLabelText("Light Primary")).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.theme.light.primary,
+    );
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    expect(screen.getByLabelText(/Heading/)).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.pages.login.heading,
+    );
+    expect(latestActions().isDirty).toBe(false);
+    expect(latestActions().isValid).toBe(true);
+  });
+
   it("falls back only for genuinely absent fields", async () => {
     const partial = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as Record<
       string,
