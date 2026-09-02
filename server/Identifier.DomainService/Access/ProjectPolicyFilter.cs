@@ -54,7 +54,7 @@ namespace DomainService.Access
                 return;
             }
 
-            var groupId = await ResolveGroupAsync(context);
+            var groupId = await ResolveGroupAsync(context, policy.AllowUnscoped);
 
             // No project named on the request and none in the token: this is not a call against
             // an existing project — creating a brand-new one from the console being the case
@@ -106,12 +106,17 @@ namespace DomainService.Access
         /// already materialised <c>[FromQuery]</c> and <c>[FromBody]</c> alike into
         /// <see cref="ActionExecutingContext.ActionArguments"/>.
         /// </summary>
-        private async Task<string?> ResolveGroupAsync(ActionExecutingContext context)
+        private async Task<string?> ResolveGroupAsync(ActionExecutingContext context, bool allowUnscoped)
         {
             foreach (var name in GroupNames)
             {
                 if (Find(context, name) is { Length: > 0 } groupId) return groupId;
             }
+
+            // Creating a group has no project to authorize yet. This opt-in must occur before
+            // the current-tenant fallback below, otherwise a user opening the create screen from
+            // a project they do not own is incorrectly checked as though they were modifying it.
+            if (allowUnscoped) return null;
 
             foreach (var name in ProjectNames)
             {

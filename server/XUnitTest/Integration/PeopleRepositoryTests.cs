@@ -9,6 +9,7 @@ using DomainService.Projects;
 using FluentAssertions;
 using MongoDB.Driver;
 using Moq;
+using XUnitTest.TestSupport;
 
 namespace XUnitTest.Integration
 {
@@ -24,8 +25,9 @@ namespace XUnitTest.Integration
 
         private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IProjectRepository> _projectRepo = new();
+        private readonly Mock<IBlocksSecret> _blocksSecret = new();
 
-        private PeopleRepository NewRepository()
+        private PeopleRepository NewRepository(IDbContextProvider? dbContextProvider = null)
         {
             _tenants.Setup(t => t.GetTenantByID(It.IsAny<string>()))
                     .Returns(new Tenant
@@ -34,7 +36,8 @@ namespace XUnitTest.Integration
                         DbConnectionString = "mongodb://x",
                         JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
                     });
-            return new PeopleRepository(_fixture.DbContextProvider, _tenants.Object, _projectRepo.Object);
+            _blocksSecret.SetupGet(secret => secret.DatabaseConnectionString).Returns("mongodb://test");
+            return new PeopleRepository(dbContextProvider ?? _fixture.DbContextProvider, _tenants.Object, _projectRepo.Object, _blocksSecret.Object);
         }
 
         private Task InsertPeopleAsync(params ProjectPeople[] people)
@@ -281,6 +284,54 @@ namespace XUnitTest.Integration
         {
             using var _ = new IntegrationContext("ctx-" + Guid.NewGuid().ToString("N"));
             (await NewRepository().IsOwner("u1", new List<string>())).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetProjectPeoplesAsync_WhenImpersonating_ReadsTheRootDatabase()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var tenantId = "D" + suffix;
+            var userId = "u-" + suffix;
+            var provider = new SplitDatabaseContextProvider(_fixture.Client, _fixture.Database, "people_tenant_" + suffix);
+            await _fixture.Collection<ProjectPeople>("ProjectPeoples")
+                .InsertOneAsync(Person(userId, tenantId, "owner@blocks.com", creator: true));
+
+            try
+            {
+                using var _ = new BlocksTestContext("I" + suffix, userId, impersonated: true, originalTenantId: "root");
+
+                var rows = await NewRepository(provider).GetProjectPeoplesAsync(userId, new List<string> { tenantId });
+
+                rows.Should().ContainSingle(row => row.IsCreator);
+            }
+            finally
+            {
+                provider.Drop();
+            }
+        }
+
+        private sealed class SplitDatabaseContextProvider : IDbContextProvider
+        {
+            private readonly IMongoClient _client;
+            private readonly IMongoDatabase _rootDatabase;
+            private readonly IMongoDatabase _tenantDatabase;
+            private readonly string _tenantDatabaseName;
+
+            public SplitDatabaseContextProvider(IMongoClient client, IMongoDatabase rootDatabase, string tenantDatabaseName)
+            {
+                _client = client;
+                _rootDatabase = rootDatabase;
+                _tenantDatabaseName = tenantDatabaseName;
+                _tenantDatabase = client.GetDatabase(tenantDatabaseName);
+            }
+
+            public void Drop() => _client.DropDatabase(_tenantDatabaseName);
+            public IMongoDatabase GetDatabase(string tenantId) => _tenantDatabase;
+            public IMongoDatabase GetDatabase() => _tenantDatabase;
+            public IMongoDatabase GetDatabase(string connectionString, string databaseName, bool isCacheRefreshed = false) =>
+                databaseName == "BlocksRootDb" ? _rootDatabase : _tenantDatabase;
+            public IMongoCollection<T> GetCollection<T>(string collectionName) => _tenantDatabase.GetCollection<T>(collectionName);
+            public IMongoCollection<T> GetCollection<T>(string tenantId, string collectionName) => _tenantDatabase.GetCollection<T>(collectionName);
         }
     }
 }

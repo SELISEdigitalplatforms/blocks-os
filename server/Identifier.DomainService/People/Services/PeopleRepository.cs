@@ -11,9 +11,9 @@ namespace DomainService.People
 {
     public class PeopleRepository : IPeopleRepository
     {
-        private readonly IDbContextProvider _dbContextProvider;
         private readonly ITenants _tenants;
         private readonly IProjectRepository _projectRepository;
+        private readonly IMongoDatabase _rootDatabase;
 
         private const string _userCollectionName = "Users";
         private const string _peopleCollectionName = "ProjectPeoples";
@@ -35,17 +35,27 @@ namespace DomainService.People
             { "_id", 1 }
         });
 
-        public PeopleRepository(IDbContextProvider dbContextProvider, ITenants tenants, IProjectRepository projectRepository)
+        public PeopleRepository(IDbContextProvider dbContextProvider,
+                                ITenants tenants,
+                                IProjectRepository projectRepository,
+                                IBlocksSecret blocksSecret)
         {
-            _dbContextProvider = dbContextProvider;
             _tenants = tenants;
             _projectRepository = projectRepository;
+            // Project membership and the console's users are shared records. In an impersonated
+            // request GetCollection() selects the project tenant database, where these records
+            // do not live, so always select the root database explicitly.
+            _rootDatabase = dbContextProvider.GetDatabase(blocksSecret.DatabaseConnectionString, "BlocksRootDb");
         }
+
+        private IMongoCollection<ProjectPeople> ProjectPeoples => _rootDatabase.GetCollection<ProjectPeople>(_peopleCollectionName);
+        private IMongoCollection<User> Users => _rootDatabase.GetCollection<User>(_userCollectionName);
+        private IMongoCollection<Tenant> Projects => _rootDatabase.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
         public async Task<(List<GetProjectPeople> peoples, long totalCount, long peoplesTotalCount, bool isOwner)> GetPeoplesAsync(GetPeoplesRequest request)
         {
-            var peopleCollection = _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName);
-            var userCollection = _dbContextProvider.GetCollection<User>(_userCollectionName);
+            var peopleCollection = ProjectPeoples;
+            var userCollection = Users;
 
             var projectIds = await _projectRepository.GetProjectIdsByGroupId(request.ProjectGroupId);
             FilterDefinition<ProjectPeople> projectPeopleFilter = Builders<ProjectPeople>.Filter.In("TenantId", projectIds);
@@ -176,24 +186,24 @@ namespace DomainService.People
         public async Task<Tenant> GetProjectByIdAsync(string tenantId)
         {
             var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId);
-            return await _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName).Find(filter).FirstOrDefaultAsync();
+            return await Projects.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<List<User>> GetUsersByEmailAsync(List<string> emails)
         {
             var filter = Builders<User>.Filter.In(x => x.Email, emails);
-            return await _dbContextProvider.GetCollection<User>(_userCollectionName).Find(filter).ToListAsync();
+            return await Users.Find(filter).ToListAsync();
         }
 
         public async Task<User> GetUserByIdAsync(string userId)
         {
             var filter = Builders<User>.Filter.Eq(x => x.ItemId, userId);
-            return await _dbContextProvider.GetCollection<User>(_userCollectionName).Find(filter).FirstOrDefaultAsync();
+            return await Users.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<bool> InsertPeoplesAsync(List<ProjectPeople> projectPeoples)
         {
-            await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).InsertManyAsync(projectPeoples);
+            await ProjectPeoples.InsertManyAsync(projectPeoples);
             return true;
         }
 
@@ -201,7 +211,7 @@ namespace DomainService.People
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.Email, email)
                 & Builders<ProjectPeople>.Filter.In(x => x.TenantId, tenantIds);
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).DeleteManyAsync(filter);
+            var result = await ProjectPeoples.DeleteManyAsync(filter);
             return result.IsAcknowledged;
         }
 
@@ -209,20 +219,20 @@ namespace DomainService.People
         {
             var filter = Builders<ProjectPeople>.Filter.In(x => x.ItemId, ids);
             var update = Builders<ProjectPeople>.Update.Set(x => x.IsInvitationConfirmed, true);
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).UpdateManyAsync(filter, update);
+            var result = await ProjectPeoples.UpdateManyAsync(filter, update);
             return result.IsAcknowledged;
         }
 
         public async Task<List<ProjectPeople>> GetProjectPeoplesAsync(string userId, List<string> tenantIds)
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId) & Builders<ProjectPeople>.Filter.In(x => x.TenantId, tenantIds);
-            return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).Find(filter).ToListAsync();
+            return await ProjectPeoples.Find(filter).ToListAsync();
         }
 
         public async Task<ProjectPeople> GetProjectPeopleAsync(string id)
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.ItemId, id);
-            return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).Find(filter).FirstOrDefaultAsync();
+            return await ProjectPeoples.Find(filter).FirstOrDefaultAsync();
         }
 
         /// <summary>
@@ -237,7 +247,7 @@ namespace DomainService.People
                        & Builders<ProjectPeople>.Filter.In(x => x.TenantId, tenantIds)
                        & Builders<ProjectPeople>.Filter.Eq(x => x.IsCreator, true);
 
-            return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName)
+            return await ProjectPeoples
                 .CountDocumentsAsync(filter) > 0;
         }
 
@@ -251,7 +261,7 @@ namespace DomainService.People
                 .Set(x => x.LastUpdatedDate, DateTime.UtcNow)
                 .Set(x => x.LastUpdatedBy, BlocksContext.GetContext()?.UserId);
 
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName)
+            var result = await ProjectPeoples
                 .UpdateManyAsync(filter, update);
 
             return result.MatchedCount > 0;
@@ -263,20 +273,20 @@ namespace DomainService.People
             var update = Builders<ProjectPeople>.Update.Set(x => x.IsCreator, ownerShipStatus)
                                                        .Set(x => x.IsInvitationConfirmed, true)
                                                        .Set(x => x.IsInvitationSent, true);
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).UpdateManyAsync(filter, update);
+            var result = await ProjectPeoples.UpdateManyAsync(filter, update);
             return result.IsAcknowledged;
         }
 
         public async Task<ProjectPeople> GetProjectPeopleByTenantIdAndUserIdAsync(string tenantId, string userId)
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.TenantId, tenantId) & Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId);
-            return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).Find(filter).FirstOrDefaultAsync();
+            return await ProjectPeoples.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<User> GetUserByEmailAsync(string email)
         {
             var filter = Builders<User>.Filter.Eq(x => x.Email, email);
-            return await _dbContextProvider.GetCollection<User>("Users").Find(filter).FirstOrDefaultAsync();
+            return await Users.Find(filter).FirstOrDefaultAsync();
         }
     }
 }

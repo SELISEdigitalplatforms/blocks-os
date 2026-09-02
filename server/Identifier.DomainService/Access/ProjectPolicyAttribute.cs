@@ -43,5 +43,12 @@ namespace DomainService.Access
         /// strings, so anything expressible as a string is something somebody can type into it.
         /// </summary>
         public bool OwnerOnly { get; init; }
+
+        /// <summary>
+        /// Allows an explicitly unscoped request through this filter. This is only appropriate
+        /// for an endpoint which creates a new project group: a supplied group is still resolved
+        /// and checked normally.
+        /// </summary>
+        public bool AllowUnscoped { get; init; }
     }
 }

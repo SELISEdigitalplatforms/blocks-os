@@ -33,7 +33,7 @@ namespace BlocksOs.Api.Controllers
         // Optional: a blank TenantGroupId is a brand-new project, which belongs to nobody
         // yet. When a group IS supplied this appends an environment to it, and only the
         // owner may do that.
-        [ProjectPolicy(OwnerOnly = true)]
+        [ProjectPolicy(OwnerOnly = true, AllowUnscoped = true)]
         public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
         {
             var validationResult = await _createProjectValidator.ValidateAsync(request);
