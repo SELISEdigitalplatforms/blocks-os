@@ -116,7 +116,7 @@ export const OidcPreviewShell = ({
       }}
       aria-hidden
     />
-    <div className="relative z-10 flex flex-1 items-stretch justify-center p-3 sm:p-4">
+    <div className="relative z-10 flex min-h-0 flex-1 items-stretch justify-center p-3 sm:p-4">
       <div className="oidc-login-preview-card flex min-h-0 w-full max-w-[26rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl">
         <div
           className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-4 pt-4 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] sm:px-6"

@@ -509,7 +509,7 @@ export const OidcBrandingForm = () => {
               </TabsList>
             </div>
 
-            <ScrollArea className="h-auto min-h-0 min-w-0 flex-1 xl:h-full">
+            <ScrollArea className="h-auto min-h-0 min-w-0 flex-1 [&>[data-radix-scroll-area-viewport]>div]:!block xl:h-full">
               <div className="p-4 sm:p-5">
                 <TabsContent value="branding" className="m-0 space-y-6">
                   <div className="flex gap-3">
