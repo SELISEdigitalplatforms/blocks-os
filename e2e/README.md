@@ -26,7 +26,48 @@ in suite setup/teardown — no cross-app hop to another product.
    cd e2e
    npm install
    npx playwright install chromium
+   npm run cli:skills   # optional: agent skill for playwright-cli
    ```
+
+## Playwright CLI (agent browser automation)
+
+[Playwright CLI](https://playwright.dev/agent-cli/introduction) is installed locally for
+coding-agent browser automation (token-efficient alternative to MCP). Run from `e2e/`:
+
+```bash
+npm run cli -- open $E2E_BASE_URL --headed
+npm run cli -- snapshot
+npm run cli -- click e12
+npm run cli -- close
+```
+
+Use a named session when exploring in parallel:
+
+```bash
+PLAYWRIGHT_CLI_SESSION=blocks-os npm run cli -- open $E2E_BASE_URL
+```
+
+Reinstall the agent skill after upgrading `@playwright/cli`:
+
+```bash
+npm run cli:skills
+```
+
+### Pre-captured page snapshots (token saver)
+
+Capture accessibility snapshots for every feature route once, then read them locally
+instead of opening the browser during agent work:
+
+```bash
+npm run snapshots:capture   # runs os-setup if needed, then visits all 25 routes
+```
+
+Output lands in `e2e/snapshots/`:
+
+- `{feature-id}.yml` — page URL, title, and accessibility tree per route
+- `index.json` — manifest mapping ids → files and URLs
+
+Re-run after UI changes or when the shared project/session is refreshed.
 
 ## Run
 

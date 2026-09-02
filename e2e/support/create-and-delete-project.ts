@@ -1,6 +1,7 @@
 import { Page, expect, test } from "@playwright/test"
 import { e2eBaseUrl } from "./env"
 import { ensureAuthenticated, isLoginSurface } from "./login-helper"
+import { gotoE2e, resolveE2eUrl } from "./navigation"
 import { readOsProject } from "./os-project"
 
 function getBaseProjectName(): string {
@@ -558,7 +559,7 @@ export async function openNamedProjectDashboard(
   options?: { dashboardUrl?: string },
 ) {
   if (options?.dashboardUrl) {
-    await page.goto(options.dashboardUrl, { waitUntil: "domcontentloaded" })
+    await gotoE2e(page, resolveE2eUrl(options.dashboardUrl))
     try {
       await waitForOsDashboardReady(page, projectName)
       return

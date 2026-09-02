@@ -154,6 +154,9 @@ describe("ReviewConfirmForm", () => {
       expect(h.verify).toHaveBeenCalledWith({
         verificationId: "verify-1",
         verificationCode: "12345",
+        // Scopes the second step to the same project as the first, so it is guarded by the
+        // same grant rather than by the verification id alone.
+        tenantGroupId: "group-1",
       }),
     );
     expect(h.showSuccessToast).toHaveBeenCalledWith({

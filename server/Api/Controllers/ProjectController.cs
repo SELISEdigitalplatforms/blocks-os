@@ -1,4 +1,5 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
+using DomainService.Access;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
@@ -29,6 +30,10 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
+        // Optional: a blank TenantGroupId is a brand-new project, which belongs to nobody
+        // yet. When a group IS supplied this appends an environment to it, and only the
+        // owner may do that.
+        [ProjectPolicy(OwnerOnly = true)]
         public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
         {
             var validationResult = await _createProjectValidator.ValidateAsync(request);
@@ -51,13 +56,14 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::restore-project")]
+        [ProjectPolicy(OwnerOnly = true)]
         public async Task<RestoreProjectResponse> Restore([FromBody] RestoreProjectRequest restoreProjectRequest)
         {
             return await _projectManagementService.RestoreProjectAsync(restoreProjectRequest);
         }
 
         [HttpGet]
-        [Authorize]  
+        [Authorize]
         public async Task<bool> GetProjectStatus([FromQuery] GetProjectStatusRequest request)
         {
             return await _projectManagementService.GetProjectStatusAsync(request.ItemId);
@@ -89,6 +95,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
+        [ProjectPolicy("settings::rename")]
         public async Task<BaseResponse> UpdateProjectGroup([FromBody] UpdateProjectGroupRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ProjectGroupId))
@@ -103,6 +110,7 @@ namespace BlocksOs.Api.Controllers
         [Obsolete("Renamed to UpdateProjectGroup.")]
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-project")]
+        [ProjectPolicy("settings::rename")]
         public async Task<BaseResponse> UpdateTenantGroup([FromBody] UpdateTenantGroupRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.TenantGroupId))
@@ -116,6 +124,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::delete-project")]
+        [ProjectPolicy(OwnerOnly = true)]
         public async Task<BaseResponse> Disable([FromBody] DisableProjectRequest request)
         {
             return await _projectManagementService.DisableProjectAsync(BlocksContext.GetContext()?.TenantId ?? string.Empty);
@@ -123,6 +132,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::project::asset")]
+        [ProjectPolicy("repositories::view")]
         public async Task<GetAssetResponse> GetAsset([FromQuery] GetAssetRequest request)
         {
             return await _projectManagementService.GetAssetAsync(request);   
@@ -130,6 +140,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::add-asset")]
+        [ProjectPolicy("repositories::add")]
         public async Task<AddAssetResponse> AddAsset([FromBody] AddAssetRequest asset)
         {
             if (string.IsNullOrWhiteSpace(asset.TenantGroupId) || asset.Resource == null)
@@ -142,6 +153,7 @@ namespace BlocksOs.Api.Controllers
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::delete-asset")]
+        [ProjectPolicy("repositories::delete")]
         public async Task<BaseResponse> DeleteAsset([FromBody] DeleteAssetRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.TenantGroupId) || string.IsNullOrWhiteSpace(request.ResourceId))

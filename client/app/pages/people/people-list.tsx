@@ -6,6 +6,10 @@ import { PeopleTable } from "./people-table";
 
 type PeopleListProps = {
   data: UseGetPeopleReturnType | undefined;
+  /** Each row action is gated on its own grant; only Transfer Ownership is owner-only. */
+  canInvite?: boolean;
+  canRemove?: boolean;
+  isOwner?: boolean;
   isPeopleLoading: boolean;
   page: number;
   pageSize: number;
@@ -14,13 +18,15 @@ type PeopleListProps = {
 };
 export const PeopleList = ({
   data,
+  canInvite = false,
+  canRemove = false,
+  isOwner = false,
   isPeopleLoading,
   page,
   pageSize,
   onPageChange,
   onPageSizeChange,
 }: PeopleListProps) => {
-  const isViewerOwner = data?.isOwner ?? false;
   const peoples = data?.peoples || [];
   const totalCount = data?.totalCount || 0;
 
@@ -31,7 +37,13 @@ export const PeopleList = ({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="bg-card text-card-foreground">
-          <PeopleTable people={peoples} isLoading={isPeopleLoading} isViewerOwner={isViewerOwner} />
+          <PeopleTable
+            people={peoples}
+            isLoading={isPeopleLoading}
+            canInvite={canInvite}
+            canRemove={canRemove}
+            isOwner={isOwner}
+          />
         </div>
 
         {!isPeopleLoading && peoples.length > 0 && (

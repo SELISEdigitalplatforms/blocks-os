@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { useGetProjects, useUpdateTenantGroup } from "@/hooks/use-project";
+import { useProjectPermissions } from "@/hooks/use-project-access";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { formatDate } from "@/lib/utils";
 import { EnvironmentsCard, getEnvironmentOrder } from "./environments-card";
@@ -76,6 +77,12 @@ export const SettingsPage = () => {
     .sort((a, b) => getEnvironmentOrder(a.environment) - getEnvironmentOrder(b.environment));
   const project = projectsData?.[0]?.projects?.[0];
   const { mutateAsync: updateTenantGroup, isPending: isUpdating } = useUpdateTenantGroup();
+
+  // Edit opens the rename dialog, which posts Project/UpdateProjectGroup — guarded by
+  // settings::rename. Showing it to someone granted only settings::view offers an action the
+  // server refuses.
+  const { can } = useProjectPermissions(selectedTenantGroup ?? undefined);
+  const canRename = can("settings", "rename");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const form = useForm<ProjectNameForm>({
     resolver: zodResolver(projectNameSchema),
@@ -133,16 +140,18 @@ export const SettingsPage = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>General Information</CardTitle>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-10"
-            aria-label="Edit project name"
-            onClick={() => setIsEditOpen(true)}
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Edit</span>
-          </Button>
+          {canRename && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10"
+              aria-label="Edit project name"
+              onClick={() => setIsEditOpen(true)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Edit</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

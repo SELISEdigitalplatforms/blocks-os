@@ -24,6 +24,7 @@ vi.stubGlobal(
 );
 
 const h = vi.hoisted(() => ({
+  menuIdsPassedToLayout: [] as string[],
   params: { tenantGroupId: "grp-1" } as Record<string, string | undefined>,
   user: { sub: "owner-1" } as { sub?: string } | null,
   projects: {
@@ -32,6 +33,12 @@ const h = vi.hoisted(() => ({
     ] as unknown,
     isLoading: false,
     isError: false,
+  },
+  access: {
+    isLoading: false,
+    isOwner: true,
+    hasAnyAccess: true,
+    menuIds: ["environments", "people", "repositories", "settings"],
   },
   setTenantGroup: vi.fn(),
   setSelectedProject: vi.fn(),
@@ -46,6 +53,11 @@ vi.mock("react-router", async (importOriginal) => {
 
 vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => h.projects,
+}));
+// The gate is now "owner, or granted at least one menu", read from the project-access
+// endpoint rather than inferred from the projects response.
+vi.mock("@/hooks/use-project-access", () => ({
+  useProjectPermissions: () => h.access,
 }));
 
 // Lightweight stand-in for the shared zustand store, supporting the selector
@@ -66,28 +78,49 @@ vi.mock("@seliseblocks/genesis-os/components", () => ({
 }));
 
 vi.mock("@/layouts/project-overview/project-overview-layout", () => ({
-  ProjectOverviewLayout: ({ children }: { children: React.ReactNode }) => (
-    <div>
-      <span>overview layout</span>
-      {children}
-    </div>
-  ),
+  ProjectOverviewLayout: ({
+    children,
+    navigationMenus,
+  }: {
+    children: React.ReactNode;
+    navigationMenus: { id: string }[];
+  }) => {
+    // Captured so a test can assert which menus survived the grant filter.
+    h.menuIdsPassedToLayout = (navigationMenus ?? []).map((menu) => menu.id);
+    return (
+      <div>
+        <span>overview layout</span>
+        {children}
+      </div>
+    );
+  },
 }));
+
+// A cut-down copy of the real menu shape: one menu outside the project subtree, which the
+// grant filter must never touch, and the four inside it that it filters.
+const MENUS = [
+  { type: "menu", id: "overview-project", name: "Overview", path: "/app/dashboard" },
+  { type: "separator", id: "separator-overview" },
+  { type: "menu", id: "environments", name: "Environments", path: "/app/project/environments" },
+  { type: "menu", id: "people", name: "People", path: "/app/project/people" },
+  { type: "menu", id: "repositories", name: "Repositories", path: "/app/project/repositories" },
+  { type: "menu", id: "settings", name: "Project Settings", path: "/app/project/settings" },
+] as never;
 
 const renderRoute = () =>
   render(
-    <MemoryRouter initialEntries={["/app/project/grp-1/overview"]}>
+    <MemoryRouter initialEntries={["/app/project/grp-1/environments"]}>
       <Routes>
         <Route
           path="/app/project/:tenantGroupId/*"
           element={
             <ProjectOverviewRoute
-              navigationMenus={[]}
+              navigationMenus={MENUS}
               redirectPaths={{ "/app/iam/*": "/app/iam" }}
             />
           }
         >
-          <Route path="overview" element={<div>overview child</div>} />
+          <Route path="environments" element={<div>overview child</div>} />
         </Route>
         <Route path="/app/console" element={<div>console page</div>} />
       </Routes>
@@ -141,10 +174,53 @@ describe("ProjectOverviewRoute", () => {
     expect(screen.getByText("overview layout")).toBeTruthy();
   });
 
-  it("redirects to the console when the viewer is not the project owner", () => {
-    h.user = { sub: "someone-else" };
+  it("redirects to the console when the viewer has no access at all", () => {
+    // Not an owner and holding no granted menu: an empty sidebar reads as a broken page
+    // rather than as a permissions boundary, so the shell is not opened at all.
+    h.access = { isLoading: false, isOwner: false, hasAnyAccess: false, menuIds: [] };
     renderRoute();
     expect(screen.getByText("console page")).toBeTruthy();
+  });
+
+  it("redirects a contributor away from a menu they were not granted", () => {
+    // The sidebar link is hidden, but a bookmark or typed URL is not, and every request the
+    // page makes would be refused. Send them to a page they can actually use.
+    h.access = { isLoading: false, isOwner: false, hasAnyAccess: true, menuIds: ["people"] };
+    render(
+      <MemoryRouter initialEntries={["/app/project/grp-1/overview"]}>
+        <Routes>
+          <Route
+            path="/app/project/:tenantGroupId/*"
+            element={
+              <ProjectOverviewRoute
+                navigationMenus={MENUS}
+                redirectPaths={{ "/app/iam/*": "/app/iam" }}
+              />
+            }
+          >
+            <Route path="overview" element={<div>overview child</div>} />
+          </Route>
+          <Route path="/app/project/grp-1/people" element={<div>people page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("people page")).toBeTruthy();
+  });
+
+  it("lets a contributor in and keeps only the menus they were granted", () => {
+    h.access = {
+      isLoading: false,
+      isOwner: false,
+      hasAnyAccess: true,
+      menuIds: ["environments"],
+    };
+    renderRoute();
+    expect(screen.getByText("overview layout")).toBeTruthy();
+    expect(h.menuIdsPassedToLayout).toEqual(
+      expect.arrayContaining(["overview-project", "environments"]),
+    );
+    expect(h.menuIdsPassedToLayout).not.toContain("people");
+    expect(h.menuIdsPassedToLayout).not.toContain("settings");
   });
 
   it("does not hydrate the store when the id resolves to no projects", () => {

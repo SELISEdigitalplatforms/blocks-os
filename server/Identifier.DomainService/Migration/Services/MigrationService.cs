@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using Blocks.MailDriver;
 using DomainService.Dtos;
 using DomainService.Migration.Entities;
@@ -81,7 +81,15 @@ namespace DomainService.Migration
                 var code = GenerateSecureRandomNumber();
                 var verificationId = Guid.NewGuid().ToString();
 
-                var serializedData = JsonSerializer.Serialize(new { Code = code, Request = request });
+                // IssuedToUserId binds the code to whoever started the migration: Verify
+                // asserts against it, so holding a verification id is not on its own enough
+                // to finish somebody else's migration.
+                var serializedData = JsonSerializer.Serialize(new
+                {
+                    Code = code,
+                    Request = request,
+                    IssuedToUserId = BlocksContext.GetContext()?.UserId ?? string.Empty
+                });
 
                 await _cacheClient.AddStringValueAsync(verificationId, serializedData, 600);
                 _logger.LogInformation("Migration OTP cached successfully. VerificationId: {VerificationId}, Email: {Email}, ExpirySeconds: {ExpirySeconds}",
@@ -165,6 +173,14 @@ namespace DomainService.Migration
 
             var data = JsonSerializer.Deserialize<MigrationOtpData>(keyValue);
             if (data == null)
+            {
+                return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { "message", "invalid_two_factor_id" } }, IsSuccess = false, IsValid = false };
+            }
+
+            // The endpoint's [ProjectPolicy] answers "may this person migrate this project";
+            // this answers "is this their migration". Both, not either.
+            var callerId = BlocksContext.GetContext()?.UserId ?? string.Empty;
+            if (!string.IsNullOrEmpty(data.IssuedToUserId) && data.IssuedToUserId != callerId)
             {
                 return new MigrationOtpVerificationResponse { Errors = new Dictionary<string, string> { { "message", "invalid_two_factor_id" } }, IsSuccess = false, IsValid = false };
             }

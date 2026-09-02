@@ -6,6 +6,12 @@ export interface IProjectGroup {
   projects: IProject[];
   nonSharedProject: IProject[];
   isShared: boolean;
+  /**
+   * The caller's grants in this group. Empty for a group they own — an owner holds everything
+   * implicitly. Carried on the list so the console can tell whether a shared project has
+   * anything to open without asking per card.
+   */
+  accessPolicies?: string[];
 }
 
 export interface IGetProjectResponse {
