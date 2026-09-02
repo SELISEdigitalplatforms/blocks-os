@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   isOwner: true,
   accessTabProps: {} as { isTargetOwner?: boolean },
+  detailsTabProps: {} as { projectRole?: "Owner" | "Contributor" },
   navigate: vi.fn(),
   params: { id: "user-1", tenantGroupId: "tg-1" } as Record<string, string>,
   userResponse: undefined as unknown,
@@ -41,7 +42,12 @@ vi.mock("@/hooks/use-people", () => ({
 vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => ({ data: h.projects, isLoading: h.isProjectLoading }),
 }));
-vi.mock("./people-details-tab", () => ({ PeopleDetailsTab: () => <div data-testid="details-tab" /> }));
+vi.mock("./people-details-tab", () => ({
+  PeopleDetailsTab: (props: { projectRole?: "Owner" | "Contributor" }) => {
+    h.detailsTabProps = props;
+    return <div data-testid="details-tab" />;
+  },
+}));
 vi.mock("./people-environments-tab", () => ({
   PeopleEnvironmentsTab: () => <div data-testid="environments-tab" />,
 }));
@@ -71,6 +77,7 @@ describe("PersonDetailPage", () => {
     // the previous one's viewer.
     h.isOwner = true;
     h.accessTabProps = {};
+    h.detailsTabProps = {};
     h.params = { id: "user-1", tenantGroupId: "tg-1" };
     h.userResponse = { data: { firstName: "Ada", lastName: "Lovelace", active: true, isVerified: true } };
     h.isUserLoading = false;
@@ -133,6 +140,20 @@ describe("PersonDetailPage", () => {
     };
     renderPage();
     expect(h.accessTabProps.isTargetOwner).toBe(true);
+    expect(h.detailsTabProps.projectRole).toBe("Owner");
+    expect(screen.queryByTestId("access-tab")).toBeNull();
+  });
+
+  it("shows an owner role and hides project access when the API identifies the person as an owner", () => {
+    h.peopleData = {
+      peoples: [{ role: "owner", sharedEnviroments: [] }],
+      isOwner: true,
+    };
+
+    renderPage();
+
+    expect(h.detailsTabProps.projectRole).toBe("Owner");
+    expect(screen.queryByTestId("access-tab")).toBeNull();
   });
 
   it("navigates back through the history when the back button is clicked", () => {
