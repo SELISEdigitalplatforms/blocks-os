@@ -3,32 +3,43 @@
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { PeopleDetailsTab } from "./people-details-tab";
 import { PeopleEnvironmentsTab } from "./people-environments-tab";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
-import { useQueryState } from "nuqs";
+import { PeopleAccessTab } from "./people-access-tab";
 import { useNavigate, useParams } from "react-router";
 import { useGetUserById } from "@blocks-idp/iam/hooks/use-user";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui-kits/select/select";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Button } from "@/components/ui-kits/button/button";
 import { ArrowLeft } from "lucide-react";
 import { useGetPeople } from "@/hooks/use-people";
 import { useGetProjects } from "@/hooks/use-project";
+import { useProjectPermissions } from "@/hooks/use-project-access";
+import { PeopleGroupedByEnvironments } from "@/models/people";
 // Devices tab temporarily disabled.
 // import { UserDevices } from "@blocks-idp/iam/modules/user-management/user-devices"
 // import { getRuntimeEnv } from "@/lib/runtime-env"
 
-const tabs = [
-  { value: "details", label: "Details" },
-  { value: "environments", label: "Environments" },
-  // { value: "devices", label: "Devices" },
-];
+// The IAM user and People records do not always expose the same id during provisioning.
+// Prefer the route id, then the email used for this exact search. A single returned row is
+// also unambiguous and must not be discarded just because those two systems are out of sync.
+export const findPersonRow = (
+  people: PeopleGroupedByEnvironments[] | undefined,
+  userId: string,
+  email?: string,
+) => {
+  const rows = people ?? [];
+  const normalizedId = userId.toLowerCase();
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  return (
+    rows.find((candidate) => candidate.peopleDetails?.userId?.toLowerCase() === normalizedId) ??
+    rows.find(
+      (candidate) =>
+        !!normalizedEmail &&
+        candidate.peopleDetails?.email?.trim().toLowerCase() === normalizedEmail,
+    ) ??
+    (rows.length === 1 ? rows[0] : undefined)
+  );
+};
 
 export const PersonDetailPage = () => {
   const { id = "" } = useParams<{
@@ -36,10 +47,15 @@ export const PersonDetailPage = () => {
     tenantGroupId: string;
   }>();
   const navigate = useNavigate();
-  const [currentTab, setCurrentTab] = useQueryState("tab", {
-    defaultValue: "details",
-  });
   const { selectedTenantGroup } = useProjectStore();
+
+  // Owner-only: only an owner may read or write another member's grants, so the access card is
+  // rendered for them alone.
+  // An owner's own grants are the whole catalog, so this doubles as the list of everything
+  // grantable — no separate per-person endpoint to fetch it from.
+  const { isOwner, can, menus: catalogMenus } = useProjectPermissions(
+    selectedTenantGroup ?? undefined,
+  );
 
   const { data: userResponse, isLoading: isUserLoading } = useGetUserById({
     id,
@@ -48,11 +64,24 @@ export const PersonDetailPage = () => {
   const user = userResponse?.data;
   const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
 
-  const { data: peopleData, isLoading: isPeopleLoading } = useGetPeople({
+  // People/Gets is the only source for this person's row, and its server-side email search
+  // does not return every row it should — an owner's own row comes back empty from it — which
+  // left the page reading an owner as a contributor with no environments. A miss therefore
+  // falls back to the unfiltered page and matches the row locally.
+  const { data: searchedPeople, isLoading: isSearchLoading } = useGetPeople({
     page: 0,
     pageSize: 100,
     filter: user?.email || "",
     searchField: "email",
+  });
+  const searchedPerson = findPersonRow(searchedPeople?.peoples, id, user?.email);
+  const needsUnfilteredLookup = !!user?.email && !isSearchLoading && !searchedPerson;
+  const { data: allPeople, isLoading: isAllPeopleLoading } = useGetPeople({
+    page: 0,
+    pageSize: 100,
+    filter: "",
+    searchField: "email",
+    enabled: needsUnfilteredLookup,
   });
 
   const { data: environmentList, isLoading: isProjectLoading } = useGetProjects({
@@ -60,7 +89,17 @@ export const PersonDetailPage = () => {
     enabled: !!selectedTenantGroup,
   });
 
-  const sharedEnvironments = peopleData?.peoples?.[0]?.sharedEnviroments || [];
+  const peopleRows = searchedPerson ? searchedPeople?.peoples : allPeople?.peoples;
+  const person = searchedPerson ?? findPersonRow(allPeople?.peoples, id, user?.email);
+  const isPeopleLoading = isSearchLoading || (needsUnfilteredLookup && isAllPeopleLoading);
+  const sharedEnvironments = person?.sharedEnviroments || [];
+
+  // Read the rows as well as the derived field. `role` is newer than the rows, so relying on
+  // it alone shows an owner the grant form on any server that predates it — and an owner has
+  // nothing to grant.
+  const isTargetOwner =
+    person?.role?.toLowerCase() === "owner" || sharedEnvironments.some((env) => env.isCreator);
+  const projectRole = isTargetOwner ? "Owner" : "Contributor";
   const isPending =
     sharedEnvironments.some((env) => !env.isInvitationConfirmed) &&
     !sharedEnvironments.some((env) => env.isCreator);
@@ -69,22 +108,18 @@ export const PersonDetailPage = () => {
   // Devices tab temporarily disabled.
   // const projectKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || ""
 
-  const handleTabChange = (value: string) => {
-    void setCurrentTab(value);
-  };
-
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-6 w-6" />
+    <main className="flex min-w-0 flex-1 flex-col gap-6 p-6">
+      <div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back to people">
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           {isLoading ? (
             <Skeleton className="h-8 w-48" />
           ) : (
             <>
-              <h1 className="mr-4 text-2xl font-bold tracking-tight">
+              <h1 className="min-w-0 text-2xl font-bold tracking-tight">
                 {fullName || "Person's Details"}
               </h1>
               {isPending && (
@@ -104,57 +139,33 @@ export const PersonDetailPage = () => {
         </div>
       </div>
 
-      <Tabs
-        value={currentTab ?? "details"}
-        onValueChange={handleTabChange}
-        className="mt-[18px] flex w-full flex-col md:mt-[24px]"
-      >
-        <div className="mb-5 flex items-center justify-between text-base">
-          <div className="md:hidden">
-            <Select
-              value={currentTab ?? "details"}
-              onValueChange={(value) => handleTabChange(value)}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {tabs.map((tab) => (
-                  <SelectItem key={tab.value} value={tab.value}>
-                    {tab.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="hidden items-center md:flex">
-            <TabsList className="h-[42px] bg-blocks-primary-shades-300">
-              {tabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value} className="h-8">
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </div>
+      {/* One page rather than tabs. Details, Environments and Access held six fields, a
+          handful of chips and a checkbox list between them — never enough to justify hiding
+          two-thirds of the page behind a tab strip. */}
+      <div className="flex flex-col gap-6">
+        <PeopleDetailsTab user={user} projectRole={projectRole} />
 
-        <TabsContent value="details">
-          <PeopleDetailsTab user={user} />
-        </TabsContent>
-        <TabsContent value="environments">
-          <PeopleEnvironmentsTab
-            user={user}
-            peopleData={peopleData?.peoples}
-            environmentList={environmentList}
-            isViewerOwner={peopleData?.isOwner ?? false}
+        <PeopleEnvironmentsTab
+          user={user}
+          person={person}
+          peopleData={peopleRows}
+          environmentList={environmentList}
+          canRemove={can("people", "remove")}
+          canInvite={can("people", "invite")}
+        />
+
+        {isOwner && !isTargetOwner && selectedTenantGroup && id && (
+          <PeopleAccessTab
+            projectGroupId={selectedTenantGroup}
+            userId={id}
+            isViewerOwner={isOwner}
+            catalogMenus={catalogMenus}
+            accessPolicies={person?.accessPolicies ?? []}
+            isTargetOwner={isTargetOwner}
+            isLoading={isPeopleLoading}
           />
-        </TabsContent>
-        {/* Devices tab temporarily disabled.
-        <TabsContent value="devices">
-          <UserDevices id={id} projectKey={projectKey} />
-        </TabsContent>
-        */}
-      </Tabs>
-    </div>
+        )}
+      </div>
+    </main>
   );
 };

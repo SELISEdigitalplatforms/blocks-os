@@ -128,6 +128,7 @@ export const ReviewConfirmForm = () => {
       const response = await verifyMigration({
         verificationId,
         verificationCode: values.verificationCode,
+        tenantGroupId: groupId ?? "",
       });
 
       if (response.isSuccess && response.isValid) {

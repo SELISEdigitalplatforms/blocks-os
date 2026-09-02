@@ -18,13 +18,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui-kits/tooltip/tooltip";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
-import { useGetPeople } from "@/hooks/use-people";
 import { useGetMigrationStatus, useGetProjects } from "@/hooks/use-project";
+import { useProjectPermissions } from "@/hooks/use-project-access";
 import type { IMigrationStatusResponse } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { ArrowRightLeft, CircleHelp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 
 const isRecentMigrationForTarget = (
   data: IMigrationStatusResponse[number],
@@ -65,13 +65,11 @@ export const EnvironmentsPage = () => {
     isLoading,
     isFetching,
   } = useGetProjects({ tenantGroupId: groupId ?? "", enabled: !!groupId });
-  const { data: peopleData } = useGetPeople({
-    page: 0,
-    pageSize: 1,
-    filter: "",
-    searchField: "name",
-  });
-  const isViewerOwner = peopleData?.isOwner ?? false;
+  // Reads standing from the project-access endpoint rather than People/Gets. That call was
+  // only ever made for its isOwner flag, and it now needs the `people::view` grant — so a
+  // contributor granted only environments would have been 403'd on a page that has nothing to
+  // do with People.
+  const { isOwner, can } = useProjectPermissions(groupId ?? undefined);
   const [addEnvModalOpen, setAddEnvModalOpen] = useState(false);
   const navigate = useNavigate();
   const { data: migrationStatus, refetch: refetchMigrationStatus } = useGetMigrationStatus(
@@ -90,22 +88,35 @@ export const EnvironmentsPage = () => {
   if (isLoading || isFetching || !environmentList || !environmentList[0]?.projects[0]) {
     return <ProjectGroupLoading />;
   }
+  // Creating an environment is owner-only and deliberately absent from the grant catalog:
+  // provisioning one writes an owner row, so a contributor able to do it could widen their own
+  // standing. Migration is delegable, so it is a grant like any other.
   const canAddEnvironment =
-    environmentList && environmentList[0]?.projects?.length < 8 && isViewerOwner;
+    environmentList && environmentList[0]?.projects?.length < 8 && isOwner;
+  const canMigrate = can("environments", "migrate");
   return (
     <main className="flex flex-1 flex-col gap-4 p-6 md:gap-6">
       <div>
-        <div className="mb-6 flex flex-row justify-between">
-          <h4 className="text-lg font-semibold md:text-xl">Environments</h4>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h4 className="text-lg font-semibold md:text-xl">Environments</h4>
+            {/* The eight-environment cap is already enforced by hiding New Environment;
+                saying so up front beats the button quietly disappearing. */}
+            <p className="mt-0.5 text-sm text-medium-emphasis">
+              {environmentList[0]?.projects?.length ?? 0} of 8 environments used
+            </p>
+          </div>
           <div className="flex gap-2 sm:gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/app/data-migration")}
-              className="h-10 whitespace-nowrap text-sm">
-              <ArrowRightLeft className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Start Migration</span>
-            </Button>
+            {canMigrate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/app/data-migration")}
+                className="h-10 whitespace-nowrap text-sm">
+                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Start Migration</span>
+              </Button>
+            )}
             {canAddEnvironment && (
               <Button
                 variant="default"
@@ -197,4 +208,16 @@ export const EnvironmentsPage = () => {
   );
 };
 
-export const EnvironmentMigrationPage = () => <EnvironmentMigrationWizard />;
+export const EnvironmentMigrationPage = () => {
+  // The wizard lives at /app/data-migration, outside the project routes, so the gated
+  // "Start Migration" button is not the only way in — a bookmark or a typed URL reaches it
+  // directly. The server refuses at Migrate and Verify either way; this stops someone
+  // filling in the whole wizard first only to be turned away at the end.
+  const groupId = useProjectStore().selectedTenantGroup;
+  const { isLoading, can } = useProjectPermissions(groupId ?? undefined);
+
+  if (isLoading) return <ProjectGroupLoading />;
+  if (!can("environments", "migrate")) return <Navigate to="/app/console" replace />;
+
+  return <EnvironmentMigrationWizard />;
+};

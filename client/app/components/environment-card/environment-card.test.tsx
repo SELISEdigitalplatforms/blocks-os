@@ -3,6 +3,7 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
+  isOwner: true,
   navigate: vi.fn(),
   setSelectedProject: vi.fn(),
   startImpersonation: vi.fn(),
@@ -17,6 +18,9 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useStartImpersonation: () => ({ mutateAsync: h.startImpersonation }),
+}));
+vi.mock("@/hooks/use-project-access", () => ({
+  useProjectPermissions: () => ({ isOwner: h.isOwner ?? true, can: () => true, menus: [] }),
 }));
 vi.mock("@/hooks/use-project", () => ({
   useGetProjectStatus: () => ({ data: h.projectStatus }),
@@ -39,6 +43,11 @@ const project = {
   tenantId: "tenant-abc",
   environment: "dev",
   name: "Test",
+  createdDate: "2026-03-15T17:05:00Z",
+  applications: [
+    { domain: "https://dcumfk.dev.seliseblocks.com" },
+    { domain: "https://dev.studio-ai.com" },
+  ],
 } as unknown as IProject;
 
 describe("EnvironmentCard", () => {
@@ -47,14 +56,34 @@ describe("EnvironmentCard", () => {
     h.startImpersonation.mockResolvedValue(undefined);
     h.restoreProject.mockResolvedValue({ isSuccess: true });
     h.projectStatus = undefined;
+    h.isOwner = true;
     h.isRestoring = false;
   });
 
-  it("renders the environment label and the tenant id", () => {
+  it("renders the environment label and masks the key", () => {
     render(<EnvironmentCard project={project} />);
     expect(screen.getByText("Development")).toBeTruthy();
-    expect(screen.getByText("tenant-abc")).toBeTruthy();
-    expect(screen.getByText("X-Blocks-Key:")).toBeTruthy();
+    expect(screen.getByText("X-Blocks-Key")).toBeTruthy();
+    // Project Settings already masked this same value; the card printed it in full.
+    expect(screen.queryByText("tenant-abc")).toBeNull();
+    expect(screen.getByText("ten")).toBeTruthy();
+    expect(screen.getByText("abc")).toBeTruthy();
+  });
+
+  it("hides Repair from a contributor", () => {
+    // Restore re-runs the whole provisioning routine and is owner-only, absent from the grant
+    // catalog. The warning still shows; the action does not.
+    h.isOwner = false;
+    h.projectStatus = false;
+    render(<EnvironmentCard project={project} />);
+    expect(screen.queryByRole("button", { name: /Repair/i })).toBeNull();
+  });
+
+  it("shows the primary domain and counts the rest", () => {
+    // An environment carries a generated domain plus any custom ones.
+    render(<EnvironmentCard project={project} />);
+    expect(screen.getByText("dcumfk.dev.seliseblocks.com")).toBeTruthy();
+    expect(screen.getByText("+1")).toBeTruthy();
   });
 
   it("does not show a setup indicator while the status is unknown or complete", () => {
