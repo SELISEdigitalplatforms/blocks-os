@@ -46,6 +46,7 @@ namespace DomainService.Access.Services
                 : await _peopleRepository.GetProjectPeoplesAsync(userId, tenantIds);
 
             var catalog = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
+            var isOwner = rows.Exists(row => row.IsCreator);
 
             var context = new ProjectAccessContext
             {
@@ -66,8 +67,16 @@ namespace DomainService.Access.Services
                 // are shut. TransferOwnership is [ProjectPolicy(OwnerOnly)], and provisioning an
                 // environment attributes the row to the group's existing owner instead of to
                 // whoever triggered it.
-                IsOwner = rows.Exists(row => row.IsCreator),
-                Policies = Intersect(Union(rows), catalog),
+                IsOwner = isOwner,
+                // The owner holds the whole catalog, not the (usually empty) grants on their own
+                // rows. Grants exist to give a contributor a subset of what the owner can do, so
+                // there is never anything to write onto an owner's row — SaveAccessPolicy
+                // refuses to — and reading their Policies literally answers "the owner may do
+                // nothing". The filter short-circuits on IsOwner before it looks here, so this
+                // is what keeps every *other* reader of a resolved context agreeing with it.
+                Policies = isOwner
+                    ? ProjectAccessCatalog.Flatten(catalog).ToHashSet(StringComparer.Ordinal)
+                    : Intersect(Union(rows), catalog),
             };
 
             items?[cacheKey] = context;
@@ -152,16 +161,13 @@ namespace DomainService.Access.Services
             var context = await ResolveAsync(projectGroupId, cancellationToken).ConfigureAwait(false);
             var catalog = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
 
-            var policies = context.IsOwner
-                ? ProjectAccessCatalog.Flatten(catalog).ToHashSet(StringComparer.Ordinal)
-                : context.Policies;
-
             return new GetMyAccessResponse
             {
                 IsSuccess = true,
                 IsOwner = context.IsOwner,
                 Role = context.IsOwner ? ProjectRoles.Owner : ProjectRoles.Contributor,
-                Menus = ToMenuGrants(policies, catalog),
+                // Owners already carry the whole catalog out of ResolveAsync.
+                Menus = ToMenuGrants(context.Policies, catalog),
                 Environments = context.TenantIds.Count == 0 ? [] : await MemberEnvironmentsAsync(context),
             };
         }

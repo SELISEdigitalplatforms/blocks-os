@@ -108,6 +108,16 @@ namespace DomainService.Projects
         {
             if (statusTracer.InsertedIntoProjectPeople) return;
 
+            // Idempotent per environment, which the tracer flag alone does not make it: a
+            // brand-new group's environments are claimed by the API before they are queued, and
+            // a resumed run can arrive here with the row already written and the flag not yet
+            // saved. Both used to leave the same person holding two creator rows on one tenant.
+            if (await _projectRepository.GetOwnerUserIdAsync(project.TenantId) is not null)
+            {
+                statusTracer.InsertedIntoProjectPeople = true;
+                return;
+            }
+
             // Ownership of a new environment belongs to the group's existing owner, never to
             // whoever created it. Ownership is "IsCreator on every tenant in the group", so
             // stamping the caller here would hand the whole group to anyone who could add an
@@ -115,25 +125,36 @@ namespace DomainService.Projects
             // a no-op — and a permanent guard if that ever changes.
             var groupOwner = await _projectRepository.GetGroupOwnerAsync(project.TenantGroupId);
 
-            await _projectRepository.InsertPeopleAsync(new ProjectPeople
+            await InsertCreatorRowAsync(project,
+                groupOwner?.UserId ?? project.CreatedBy,
+                // Taken from the owner's existing row rather than the caller's context: on the
+                // restore path those are two different people, which used to stamp the
+                // restorer's address onto the creator's row.
+                groupOwner?.Email ?? BlocksContext.GetContext()?.UserName ?? "");
+
+            statusTracer.InsertedIntoProjectPeople = true;
+
+        }
+
+        /// <summary>
+        /// Records who owns one environment. <c>ProjectPeople.IsCreator</c> is the only place
+        /// ownership is ever written — see docs/specs/transfer-ownership-createdby-decoupling.md
+        /// — so both the API and the provisioning worker go through here rather than each
+        /// composing the row themselves.
+        /// </summary>
+        private Task InsertCreatorRowAsync(Tenant project, string? userId, string email) =>
+            _projectRepository.InsertPeopleAsync(new ProjectPeople
             {
                 ItemId = Guid.NewGuid().ToString(),
-                UserId = groupOwner?.UserId ?? project.CreatedBy,
+                UserId = userId,
                 TenantId = project.TenantId,
                 IsCreator = true,
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
                 IsInvitationConfirmed = true,
                 IsInvitationSent = true,
-                // Taken from the owner's existing row rather than the caller's context: on the
-                // restore path those are two different people, which used to stamp the
-                // restorer's address onto the creator's row.
-                Email = groupOwner?.Email ?? BlocksContext.GetContext()?.UserName ?? ""
+                Email = email
             });
-
-            statusTracer.InsertedIntoProjectPeople = true;
-
-        }
 
         private async Task UploadPrivateCertificateIfNeeded(ProjectStatusTracer statusTracer, X509Certificate2 privateKeyCertificate, Tenant project)
         {
@@ -273,7 +294,8 @@ namespace DomainService.Projects
 
         public async Task<CreateProjectResponse> SaveProjectAsync(CreateProjectRequest project)
         {
-            var groupId = string.IsNullOrEmpty(project.TenantGroupId) ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
+            var isNewGroup = string.IsNullOrEmpty(project.TenantGroupId);
+            var groupId = isNewGroup ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
             await ManageTenantAssetAsync(project, groupId);
 
             foreach (var applicationContext in project.applicationContexts)
@@ -281,6 +303,20 @@ namespace DomainService.Projects
                 var tenant = await MapAsync(project, applicationContext, groupId);
                 await Task.WhenAll(_projectRepository.SaveRepoInfoAsync(tenant, project.Resources),
                                    _projectRepository.InsertProjectAsync(tenant));
+
+                // Ownership is recorded here rather than being left to the worker. Provisioning
+                // is asynchronous, so the creator row appeared only once the worker had picked
+                // the project up; until then the group had environments and no owner, and every
+                // [ProjectPolicy(OwnerOnly)] endpoint refused the person who had just created
+                // it — adding an environment and deleting the project among them.
+                //
+                // Only for a brand-new group, where the caller is the creator by definition.
+                // Appending an environment to an existing group must leave ownership exactly
+                // where it is, which is what the worker's GetGroupOwnerAsync goes on to do.
+                if (isNewGroup)
+                {
+                    await InsertCreatorRowAsync(tenant, tenant.CreatedBy, BlocksContext.GetContext()?.UserName ?? "");
+                }
 
                 await Task.WhenAll(_messageClient.SendToConsumerAsync(new ConsumerMessage<Tenant> { ConsumerName = IdentifierConstants.IdentifierQueueName, Payload = tenant }));
             }
@@ -493,14 +529,17 @@ namespace DomainService.Projects
             var blocksContext = BlocksContext.GetContext();
             var project = await _projectRepository.GetByTenantIdAsync(blocksContext.TenantId);
 
-            if(project.IsRootTenant)
-            {
-             return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "root_tenant", $"Root tenant cannot be updated" } } };
-            }
-
+            // Null before root-tenant: the root-tenant guard was added above this one and
+            // dereferenced a project that may not exist, so an unknown tenant threw instead of
+            // being reported as one.
             if (project == null)
             {
                 return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {blocksContext.TenantId}" } } };
+            }
+
+            if(project.IsRootTenant)
+            {
+             return new BaseResponse() { IsSuccess = false, Errors = new Dictionary<string, string> { { "root_tenant", $"Root tenant cannot be updated" } } };
             }
 
             project.LastUpdatedDate = DateTime.UtcNow;

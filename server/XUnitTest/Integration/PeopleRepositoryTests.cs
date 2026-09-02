@@ -9,6 +9,7 @@ using DomainService.Projects;
 using FluentAssertions;
 using MongoDB.Driver;
 using Moq;
+using XUnitTest.TestSupport;
 
 namespace XUnitTest.Integration
 {
@@ -25,7 +26,9 @@ namespace XUnitTest.Integration
         private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IProjectRepository> _projectRepo = new();
 
-        private PeopleRepository NewRepository()
+        private PeopleRepository NewRepository() => NewRepository(_fixture.DbContextProvider);
+
+        private PeopleRepository NewRepository(IDbContextProvider provider)
         {
             _tenants.Setup(t => t.GetTenantByID(It.IsAny<string>()))
                     .Returns(new Tenant
@@ -34,7 +37,9 @@ namespace XUnitTest.Integration
                         DbConnectionString = "mongodb://x",
                         JwtTokenParameters = new JwtTokenParameters { IssueDate = DateTime.UtcNow, PrivateCertificatePassword = "p" }
                     });
-            return new PeopleRepository(_fixture.DbContextProvider, _tenants.Object, _projectRepo.Object);
+            var secret = new Mock<IBlocksSecret>();
+            secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
+            return new PeopleRepository(provider, _tenants.Object, _projectRepo.Object, secret.Object);
         }
 
         private Task InsertPeopleAsync(params ProjectPeople[] people)
@@ -281,6 +286,36 @@ namespace XUnitTest.Integration
         {
             using var _ = new IntegrationContext("ctx-" + Guid.NewGuid().ToString("N"));
             (await NewRepository().IsOwner("u1", new List<string>())).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task ProjectPeoples_IsReadFromTheRootDb_WhenImpersonating()
+        {
+            // Every request made from inside a project is impersonated, so BlocksContext.TenantId
+            // is the project's own tenant and the bare IDbContextProvider.GetCollection resolves
+            // to that project's database. ProjectPeoples is never written there -- ProjectRepository
+            // pins all of its writes to the root database -- so these reads came back empty, and
+            // because ProjectAccessService decides ownership from exactly these rows, the owner of
+            // a project was refused as a non-member of it: Project/Create and Project/Disable both
+            // answered "Only the project owner can do this" with rows=0; ownerRows=0.
+            var suffix = Guid.NewGuid().ToString("N");
+            var tenant = "t-" + suffix;
+            var user = "u-" + suffix;
+
+            var provider = new SplitDatabaseContextProvider(_fixture.Client, _fixture.Database, "tenantdb_" + suffix);
+            using var _ = new BlocksTestContext(tenantId: tenant, userId: user, impersonated: true,
+                                                originalTenantId: "root-" + suffix);
+            var repo = NewRepository(provider);
+
+            // Written the way provisioning writes it: through the root database, not through the
+            // repository under test.
+            await InsertPeopleAsync(Person(user, tenant, "own@x.com", creator: true));
+
+            (await repo.GetProjectPeoplesAsync(user, new List<string> { tenant })).Should().HaveCount(1);
+            (await repo.IsOwner(user, new List<string> { tenant })).Should().BeTrue();
+            (await repo.GetProjectPeopleByTenantIdAndUserIdAsync(tenant, user)).Should().NotBeNull();
+
+            provider.Drop();
         }
     }
 }

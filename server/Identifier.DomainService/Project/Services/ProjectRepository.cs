@@ -40,7 +40,7 @@ namespace DomainService.Projects
 
             if (blocksContext?.Impersonated ?? true)
             {
-                return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
+                return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, IdentifierConstants.RootDatabaseName);
             }
 
             return _dbContextProvider.GetDatabase(blocksContext.TenantId);

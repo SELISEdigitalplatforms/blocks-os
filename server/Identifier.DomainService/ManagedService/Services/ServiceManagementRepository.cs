@@ -23,7 +23,7 @@ namespace DomainService.ManagedService.Services
         var blocksContext = BlocksContext.GetContext();
         if (blocksContext.Impersonated)
         {
-         return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
+         return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, IdentifierConstants.RootDatabaseName);
         }
         return _dbContextProvider.GetDatabase(blocksContext.TenantId);
        }
