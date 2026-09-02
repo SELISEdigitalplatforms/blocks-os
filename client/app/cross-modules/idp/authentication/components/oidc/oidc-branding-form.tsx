@@ -1,9 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Trash2, Upload } from "lucide-react";
+import {
+  Brush,
+  Check,
+  FileText,
+  ImagePlus,
+  MonitorUp,
+  Palette,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { parseAsStringEnum, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
+import { ScrollArea, ScrollBar } from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
@@ -40,6 +51,19 @@ const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/svg+x
 
 type EditorTab = "branding" | "theme" | "pages";
 
+const EDITOR_TABS: Array<{
+  value: EditorTab;
+  label: string;
+  Icon: typeof Brush;
+}> = [
+  { value: "branding", label: "Branding", Icon: Brush },
+  { value: "theme", label: "Theme", Icon: Palette },
+  { value: "pages", label: "Pages", Icon: FileText },
+];
+
+const EDITOR_TAB_VALUES = ["branding", "theme", "pages"] as const;
+const PREVIEW_MODE_VALUES = ["system", "light", "dark"] as const;
+
 const normalizeField = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
 
 const getServerFieldError = (errors: Record<string, string>, field: string) => {
@@ -59,18 +83,23 @@ const colorPickerValue = (value: string) => {
 };
 
 const TemplateSkeleton = () => (
-  <Card className="bg-background">
-    <CardContent className="p-3 sm:p-5 lg:p-6">
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        {[0, 1].map((column) => (
-          <section key={column} className="space-y-5 rounded-xl border border-border bg-card p-5">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-4 w-56" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-10 w-2/3" />
-          </section>
-        ))}
+  <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
+    <CardContent>
+      <div className="flex h-14 items-center justify-between border-b px-4 sm:px-5">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-6 w-24 rounded-full" />
+      </div>
+      <div className="grid min-h-[640px] grid-cols-1 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(34rem,1.2fr)]">
+        <section className="space-y-5 border-b p-5 xl:border-b-0 xl:border-r">
+          <Skeleton className="h-14 w-full rounded-lg" />
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </section>
+        <section className="flex items-center justify-center bg-muted/20 p-6">
+          <Skeleton className="h-[520px] w-full max-w-xl rounded-2xl" />
+        </section>
       </div>
     </CardContent>
   </Card>
@@ -94,19 +123,21 @@ const ColorInput = ({
   const id = `theme-${palette}-${field}`;
   const paletteLabel = palette === "light" ? "Light" : "Dark";
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id} className="capitalize">
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs font-medium capitalize text-medium-emphasis">
         {label} <span className="text-destructive">*</span>
       </Label>
-      <div className="flex items-center gap-2">
-        <input
-          id={`${id}-picker`}
-          type="color"
-          aria-label={`${paletteLabel} ${label} color picker`}
-          value={colorPickerValue(value)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-10 w-12 cursor-pointer rounded border border-border bg-transparent p-1"
-        />
+      <div className="relative">
+        <div className="absolute left-1.5 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center overflow-hidden rounded-md border border-border bg-background shadow-sm">
+          <input
+            id={`${id}-picker`}
+            type="color"
+            aria-label={`${paletteLabel} ${label} color picker`}
+            value={colorPickerValue(value)}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-10 w-10 cursor-pointer border-0 bg-transparent p-0"
+          />
+        </div>
         <Input
           id={id}
           aria-label={`${paletteLabel} ${label}`}
@@ -115,7 +146,7 @@ const ColorInput = ({
           maxLength={48}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="min-w-0 font-mono text-sm"
+          className="min-w-0 pl-11 font-mono text-xs shadow-none"
         />
       </div>
       {error && (
@@ -140,10 +171,18 @@ export const OidcBrandingForm = () => {
   const normalizedTemplate = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
   const [savedTemplate, setSavedTemplate] = useState<IOidcUiTemplate | null>(normalizedTemplate);
   const [draft, setDraft] = useState<IOidcUiTemplate | null>(normalizedTemplate);
-  const [editorTab, setEditorTab] = useState<EditorTab>("branding");
-  const [selectedPage, setSelectedPage] = useState<OidcPageKey>("login");
-  const [paletteMode, setPaletteMode] = useState<OidcPreviewTheme>("light");
-  const [previewMode, setPreviewMode] = useState<OidcPreviewThemeMode>("system");
+  const [
+    { section: editorTab, page: selectedPage, palette: paletteMode, preview: previewMode },
+    setEditorState,
+  ] = useQueryStates(
+    {
+      section: parseAsStringLiteral(EDITOR_TAB_VALUES).withDefault("branding"),
+      page: parseAsStringEnum<OidcPageKey>(PAGE_OPTIONS.map(({ key }) => key)).withDefault("login"),
+      palette: parseAsStringLiteral(["light", "dark"] as const).withDefault("light"),
+      preview: parseAsStringLiteral(PREVIEW_MODE_VALUES).withDefault("system"),
+    },
+    { history: "replace" },
+  );
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [previewLogoUrl, setPreviewLogoUrl] = useState<string | null>(
     normalizedTemplate?.branding.logoUrl ?? null,
@@ -375,271 +414,414 @@ export const OidcBrandingForm = () => {
 
   const handleEditorTabChange = (value: string) => {
     const next = value as EditorTab;
-    setEditorTab(next);
-    if (next === "theme") setPreviewMode(paletteMode);
+    void setEditorState({
+      section: next,
+      ...(next === "theme" ? { preview: paletteMode } : {}),
+    });
   };
   const handlePaletteChange = (value: string) => {
     const next = value as OidcPreviewTheme;
-    setPaletteMode(next);
-    setPreviewMode(next);
+    void setEditorState({ palette: next, preview: next });
   };
   const handlePreviewModeChange = (mode: OidcPreviewThemeMode) => {
     if (mode === "system" && editorTab === "theme") return;
-    setPreviewMode(mode);
-    if (mode !== "system") setPaletteMode(mode);
+    void setEditorState({
+      preview: mode,
+      ...(mode !== "system" ? { palette: mode } : {}),
+    });
   };
 
+  const selectedPageLabel = PAGE_OPTIONS.find(({ key }) => key === selectedPage)?.label ?? "Login";
+
   return (
-    <Card className="bg-background">
-      <CardContent className="p-3 sm:p-5 lg:p-6">
-        <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-2 xl:gap-6">
-          <section className="min-w-0 rounded-xl border border-border bg-card p-4 sm:p-5">
-            <Tabs value={editorTab} onValueChange={handleEditorTabChange}>
-              <TabsList className="mb-5 grid w-full grid-cols-3" aria-label="Template sections">
-                <TabsTrigger value="branding">Branding</TabsTrigger>
-                <TabsTrigger value="theme">Theme</TabsTrigger>
-                <TabsTrigger value="pages">Pages</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="branding" className="space-y-5">
-                <div>
-                  <h2 className="text-base font-semibold">Branding</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Set the tenant name and logo.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="brand-name">
-                    Brand name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="brand-name"
-                    value={draft.branding.brandName}
-                    maxLength={81}
-                    onChange={(event) => updateBranding("brandName", event.target.value)}
-                    aria-invalid={!!fieldError("branding.brandName")}
-                  />
-                  {fieldError("branding.brandName") && (
-                    <p className="text-sm text-destructive" role="alert">
-                      Brand name {fieldError("branding.brandName")}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="client-logo-upload">Client logo</Label>
-                  <div
-                    className={cn(
-                      "flex flex-col items-center gap-4 rounded-lg border border-dashed p-5",
-                      isDragOver ? "border-primary bg-primary/5" : "border-border bg-muted/20",
-                    )}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      setIsDragOver(true);
-                    }}
-                    onDragLeave={() => setIsDragOver(false)}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      setIsDragOver(false);
-                      const file = event.dataTransfer.files?.[0];
-                      if (file) applyLogoFile(file);
-                    }}
-                  >
-                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border bg-background">
-                      {previewLogoUrl ? (
-                        <img
-                          src={previewLogoUrl}
-                          alt="Logo preview"
-                          className="max-h-full max-w-full object-contain p-1"
-                        />
-                      ) : (
-                        <ImagePlus className="h-8 w-8 text-muted-foreground" />
-                      )}
-                    </div>
-                    <input
-                      id="client-logo-upload"
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                      className="sr-only"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.target.value = "";
-                        if (file) applyLogoFile(file);
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isBusy}
-                      >
-                        <Upload className="mr-2 h-4 w-4" /> Upload logo
-                      </Button>
-                      {previewLogoUrl && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={removeLogo}
-                          disabled={isBusy}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Remove logo
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-center text-xs text-muted-foreground">
-                      PNG, JPG, SVG, or WebP up to 2MB.
-                    </p>
-                  </div>
-                  {(logoValidationMessage || fieldError("branding.logoUrl")) && (
-                    <p className="text-sm text-destructive" role="alert">
-                      Logo URL {logoValidationMessage || fieldError("branding.logoUrl")}
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="theme" className="space-y-5">
-                <div>
-                  <h2 className="text-base font-semibold">Theme</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Edit each preview palette independently.
-                  </p>
-                </div>
-                <Tabs value={paletteMode} onValueChange={handlePaletteChange}>
-                  <TabsList className="grid w-full grid-cols-2" aria-label="Theme palette">
-                    <TabsTrigger value="light">Light</TabsTrigger>
-                    <TabsTrigger value="dark">Dark</TabsTrigger>
-                  </TabsList>
-                  {(["light", "dark"] as const).map((mode) => (
-                    <TabsContent
-                      key={mode}
-                      value={mode}
-                      className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2"
-                    >
-                      {THEME_FIELDS.map(({ key, label }) => (
-                        <ColorInput
-                          key={key}
-                          palette={mode}
-                          field={key}
-                          label={label}
-                          value={draft.theme[mode][key]}
-                          error={fieldError(`theme.${mode}.${key}`)}
-                          onChange={(value) => updatePalette(mode, key, value)}
-                        />
-                      ))}
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </TabsContent>
-
-              <TabsContent value="pages" className="space-y-5">
-                <div>
-                  <h2 className="text-base font-semibold">Pages</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Choose a page and edit its copy.
-                  </p>
-                </div>
-                <div role="tablist" aria-label="OIDC page" className="flex flex-wrap gap-2">
-                  {PAGE_OPTIONS.map(({ key, label }) => (
-                    <Button
-                      key={key}
-                      type="button"
-                      role="tab"
-                      aria-selected={selectedPage === key}
-                      variant={selectedPage === key ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedPage(key)}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {selectedPageFields.map(({ key, label, optional, multiline }) => {
-                    const error = fieldError(`pages.${selectedPage}.${key}`);
-                    const controlProps = {
-                      id: `page-${selectedPage}-${key}`,
-                      value: selectedPageValues[key] ?? "",
-                      maxLength: 201,
-                      "aria-invalid": !!error,
-                      onChange: (
-                        event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-                      ) =>
-                        updatePage(
-                          key,
-                          optional && !event.target.value ? null : event.target.value,
-                        ),
-                    };
-                    return (
-                      <div key={key} className={cn("space-y-2", multiline && "sm:col-span-2")}>
-                        <Label htmlFor={controlProps.id}>
-                          {label}
-                          {!optional && <span className="text-destructive"> *</span>}
-                        </Label>
-                        {multiline ? <Textarea {...controlProps} /> : <Input {...controlProps} />}
-                        {error && (
-                          <p className="text-xs text-destructive" role="alert">
-                            {label} {error}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="space-y-2 border-t border-border pt-5">
-                  <Label htmlFor="page-shared-footerText">
-                    Footer <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="page-shared-footerText"
-                    value={draft.pages.shared.footerText}
-                    maxLength={201}
-                    onChange={(event) => {
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              pages: {
-                                ...current.pages,
-                                shared: { footerText: event.target.value },
-                              },
-                            }
-                          : current,
-                      );
-                      clearServerFieldError("pages.shared.footerText");
-                    }}
-                    aria-invalid={!!fieldError("pages.shared.footerText")}
-                  />
-                  {fieldError("pages.shared.footerText") && (
-                    <p className="text-xs text-destructive" role="alert">
-                      Footer {fieldError("pages.shared.footerText")}
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </section>
-
-          <section className="min-w-0 rounded-xl border border-border bg-card p-4 sm:p-5">
-            <div className="mb-4 border-b border-border pb-3">
-              <h2 className="text-base font-semibold">Live Preview</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Unsaved changes appear here immediately.
+    <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
+      <CardContent>
+        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MonitorUp className="h-4 w-4" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold text-high-emphasis">Template studio</h1>
+              <p className="truncate text-xs text-muted-foreground">
+                Design the sign-in experience for every OIDC application
               </p>
             </div>
-            <OidcTemplatePreview
-              template={previewTemplate}
-              selectedPage={selectedPage}
-              previewMode={previewMode}
-              onPreviewModeChange={handlePreviewModeChange}
-              showAuto={editorTab !== "theme"}
-            />
-          </section>
+          </div>
+          <div
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+              isDirty
+                ? "border-warning-200 bg-warning-50 text-warning-700"
+                : "border-border bg-muted/30 text-muted-foreground",
+            )}
+          >
+            {isDirty ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-warning-500" aria-hidden />
+            ) : (
+              <Check className="h-3 w-3" aria-hidden />
+            )}
+            {isDirty ? "Unsaved changes" : "All changes saved"}
+          </div>
         </div>
+
+        <Tabs
+          value={editorTab}
+          onValueChange={handleEditorTabChange}
+          className="grid min-w-0 grid-cols-1 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(34rem,1.2fr)]"
+        >
+          <section className="min-w-0 border-b border-border bg-card xl:border-b-0 xl:border-r">
+            <div className="border-b border-border px-4 py-3 sm:px-5">
+              <TabsList
+                className="grid h-auto w-full grid-cols-3 gap-1 rounded-lg bg-muted/50 p-1"
+                aria-label="Template sections"
+              >
+                {EDITOR_TABS.map(({ value, label, Icon }) => (
+                  <TabsTrigger
+                    key={value}
+                    value={value}
+                    className="h-10 gap-2 rounded-md px-2 text-xs shadow-none data-[state=active]:shadow-sm sm:text-sm"
+                  >
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            <ScrollArea className="h-auto xl:h-[min(680px,calc(100vh-14rem))] xl:min-h-[570px]">
+              <div className="p-4 sm:p-5">
+                <TabsContent value="branding" className="m-0 space-y-6">
+                  <div className="flex gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
+                      <Brush className="h-4 w-4" aria-hidden />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold">Brand identity</h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        Add the name and logo users will recognize.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="brand-name">
+                      Brand name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="brand-name"
+                      value={draft.branding.brandName}
+                      maxLength={80}
+                      onChange={(event) => updateBranding("brandName", event.target.value)}
+                      aria-invalid={!!fieldError("branding.brandName")}
+                      className="shadow-none"
+                    />
+                    <div className="flex items-start justify-between gap-3">
+                      {fieldError("branding.brandName") ? (
+                        <p className="text-xs text-destructive" role="alert">
+                          Brand name {fieldError("branding.brandName")}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Displayed beside your logo on authentication pages.
+                        </p>
+                      )}
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {draft.branding.brandName.length}/80
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="client-logo-upload">Brand logo</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Use a transparent, horizontal logo for the best result.
+                      </p>
+                    </div>
+                    <div
+                      className={cn(
+                        "group rounded-xl border border-dashed p-4 transition-colors",
+                        isDragOver
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/30",
+                      )}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        setIsDragOver(true);
+                      }}
+                      onDragLeave={() => setIsDragOver(false)}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setIsDragOver(false);
+                        const file = event.dataTransfer.files?.[0];
+                        if (file) applyLogoFile(file);
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-4 sm:flex-row">
+                        <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background shadow-sm">
+                          {previewLogoUrl ? (
+                            <img
+                              src={previewLogoUrl}
+                              alt="Logo preview"
+                              className="max-h-full max-w-full object-contain p-2"
+                            />
+                          ) : (
+                            <ImagePlus className="h-7 w-7 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1 text-center sm:text-left">
+                          <p className="text-sm font-medium text-high-emphasis">
+                            {previewLogoUrl ? "Replace your logo" : "Drop your logo here"}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            PNG, JPG, SVG, or WebP · max 2MB
+                          </p>
+                          <input
+                            id="client-logo-upload"
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                            className="sr-only"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              event.target.value = "";
+                              if (file) applyLogoFile(file);
+                            }}
+                          />
+                          <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="xs"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isBusy}
+                              className="gap-1.5 shadow-none"
+                            >
+                              <Upload className="h-3.5 w-3.5" />
+                              {previewLogoUrl ? "Replace" : "Browse files"}
+                            </Button>
+                            {previewLogoUrl && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="xs"
+                                onClick={removeLogo}
+                                disabled={isBusy}
+                                className="gap-1.5 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> Remove logo
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {(logoValidationMessage || fieldError("branding.logoUrl")) && (
+                      <p className="text-xs text-destructive" role="alert">
+                        Logo URL {logoValidationMessage || fieldError("branding.logoUrl")}
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="theme" className="m-0 space-y-6">
+                  <div className="flex gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
+                      <Palette className="h-4 w-4" aria-hidden />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold">Color system</h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        Fine-tune accessible colors for both appearances.
+                      </p>
+                    </div>
+                  </div>
+                  <Tabs value={paletteMode} onValueChange={handlePaletteChange}>
+                    <TabsList
+                      className="grid h-10 w-full grid-cols-2 bg-muted/50"
+                      aria-label="Theme palette"
+                    >
+                      <TabsTrigger value="light" className="gap-2 text-xs sm:text-sm">
+                        <span className="h-3 w-3 rounded-full border bg-white" aria-hidden /> Light
+                      </TabsTrigger>
+                      <TabsTrigger value="dark" className="gap-2 text-xs sm:text-sm">
+                        <span className="h-3 w-3 rounded-full border bg-slate-900" aria-hidden />{" "}
+                        Dark
+                      </TabsTrigger>
+                    </TabsList>
+                    {(["light", "dark"] as const).map((mode) => (
+                      <TabsContent
+                        key={mode}
+                        value={mode}
+                        className="mt-5 grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2"
+                      >
+                        {THEME_FIELDS.map(({ key, label }) => (
+                          <ColorInput
+                            key={key}
+                            palette={mode}
+                            field={key}
+                            label={label}
+                            value={draft.theme[mode][key]}
+                            error={fieldError(`theme.${mode}.${key}`)}
+                            onChange={(value) => updatePalette(mode, key, value)}
+                          />
+                        ))}
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                </TabsContent>
+
+                <TabsContent value="pages" className="m-0 space-y-6">
+                  <div className="flex gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
+                      <FileText className="h-4 w-4" aria-hidden />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold">Page content</h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        Customize labels and messages for each step.
+                      </p>
+                    </div>
+                  </div>
+                  <ScrollArea className="w-full whitespace-nowrap">
+                    <div
+                      role="tablist"
+                      aria-label="OIDC page"
+                      className="flex w-max gap-1 rounded-lg bg-muted/50 p-1"
+                    >
+                      {PAGE_OPTIONS.map(({ key, label }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          role="tab"
+                          aria-selected={selectedPage === key}
+                          className={cn(
+                            "rounded-md px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            selectedPage === key
+                              ? "bg-background text-high-emphasis shadow-sm"
+                              : "text-muted-foreground hover:bg-background/60 hover:text-high-emphasis",
+                          )}
+                          onClick={() => void setEditorState({ page: key })}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <div>
+                      <p className="text-sm font-medium text-high-emphasis">{selectedPageLabel}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {selectedPageFields.length} editable fields
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                      Live
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {selectedPageFields.map(({ key, label, optional, multiline }) => {
+                      const error = fieldError(`pages.${selectedPage}.${key}`);
+                      const controlProps = {
+                        id: `page-${selectedPage}-${key}`,
+                        value: selectedPageValues[key] ?? "",
+                        maxLength: 200,
+                        "aria-invalid": !!error,
+                        onChange: (
+                          event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+                        ) =>
+                          updatePage(
+                            key,
+                            optional && !event.target.value ? null : event.target.value,
+                          ),
+                      };
+                      return (
+                        <div key={key} className={cn("space-y-1.5", multiline && "sm:col-span-2")}>
+                          <Label htmlFor={controlProps.id} className="text-xs">
+                            {label}
+                            {!optional && <span className="text-destructive"> *</span>}
+                          </Label>
+                          {multiline ? (
+                            <Textarea {...controlProps} className="min-h-24 resize-y shadow-none" />
+                          ) : (
+                            <Input {...controlProps} className="shadow-none" />
+                          )}
+                          {error && (
+                            <p className="text-xs text-destructive" role="alert">
+                              {label} {error}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
+                    <Label htmlFor="page-shared-footerText" className="text-xs">
+                      Footer <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="page-shared-footerText"
+                      value={draft.pages.shared.footerText}
+                      maxLength={200}
+                      onChange={(event) => {
+                        setDraft((current) =>
+                          current
+                            ? {
+                                ...current,
+                                pages: {
+                                  ...current.pages,
+                                  shared: { footerText: event.target.value },
+                                },
+                              }
+                            : current,
+                        );
+                        clearServerFieldError("pages.shared.footerText");
+                      }}
+                      aria-invalid={!!fieldError("pages.shared.footerText")}
+                      className="bg-background shadow-none"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Shared by every page. Use {"{year}"} for the current year.
+                    </p>
+                    {fieldError("pages.shared.footerText") && (
+                      <p className="text-xs text-destructive" role="alert">
+                        Footer {fieldError("pages.shared.footerText")}
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+              </div>
+            </ScrollArea>
+          </section>
+
+          <section className="min-w-0 bg-muted/20">
+            <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 py-3 sm:px-5">
+              <div>
+                <h2 className="text-sm font-semibold text-high-emphasis">Live preview</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {selectedPageLabel} page · updates instantly
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden />
+                Previewing
+              </div>
+            </div>
+            <div className="flex min-h-[570px] items-center justify-center p-3 sm:p-5 xl:h-[min(680px,calc(100vh-14rem))] xl:p-6">
+              <div className="w-full max-w-[42rem] overflow-hidden rounded-2xl border border-border bg-background p-2 shadow-sm sm:p-3">
+                <OidcTemplatePreview
+                  template={previewTemplate}
+                  selectedPage={selectedPage}
+                  previewMode={previewMode}
+                  onPreviewModeChange={handlePreviewModeChange}
+                  showAuto={editorTab !== "theme"}
+                />
+              </div>
+            </div>
+          </section>
+        </Tabs>
       </CardContent>
     </Card>
   );

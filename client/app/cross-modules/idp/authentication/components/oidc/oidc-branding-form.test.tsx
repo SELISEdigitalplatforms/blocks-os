@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -87,9 +88,16 @@ const latestActions = () => {
   return calls.at(-1)?.[0] as HeaderActions;
 };
 
-const renderForm = async () => {
-  render(<OidcBrandingForm />);
-  await screen.findByDisplayValue(DEFAULT_OIDC_UI_TEMPLATE.branding.brandName);
+const renderOidcForm = (searchParams = "", onUrlUpdate?: OnUrlUpdateFunction) =>
+  render(
+    <NuqsTestingAdapter hasMemory searchParams={searchParams} onUrlUpdate={onUrlUpdate}>
+      <OidcBrandingForm />
+    </NuqsTestingAdapter>,
+  );
+
+const renderForm = async (searchParams = "", onUrlUpdate?: OnUrlUpdateFunction) => {
+  renderOidcForm(searchParams, onUrlUpdate);
+  await screen.findByText("Template studio");
   await waitFor(() => expect(latestActions()).toBeTruthy());
 };
 
@@ -108,11 +116,12 @@ beforeEach(() => {
 describe("OidcBrandingForm", () => {
   it("preserves the loading and GET-unavailable states", () => {
     h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: true, isError: false });
-    const { container, rerender } = render(<OidcBrandingForm />);
+    const { container, unmount } = renderOidcForm();
     expect(container.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
 
+    unmount();
     h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: false, isError: true });
-    rerender(<OidcBrandingForm />);
+    renderOidcForm();
     expect(screen.getByRole("alert").textContent).toContain("Unable to load the OIDC template");
   });
 
@@ -125,6 +134,25 @@ describe("OidcBrandingForm", () => {
     expect(screen.getByRole("tab", { name: "Pages" })).toBeTruthy();
     expect(latestActions().isDirty).toBe(false);
     expect(latestActions().isValid).toBe(true);
+  });
+
+  it("restores the editor context from the URL and persists subsequent tab choices", async () => {
+    const onUrlUpdate = vi.fn<OnUrlUpdateFunction>();
+    const user = userEvent.setup();
+    await renderForm("?section=theme&palette=dark&preview=dark&page=signup", onUrlUpdate);
+
+    expect(screen.getByRole("tab", { name: "Theme" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tab", { name: "Dark" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByLabelText("Dark Primary")).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+    expect(screen.getByRole("tab", { name: "Signup" }).getAttribute("aria-selected")).toBe("true");
+    await user.click(screen.getByRole("tab", { name: "Account Selector" }));
+
+    await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
+    const latestUpdate = onUrlUpdate.mock.calls.at(-1)?.[0];
+    expect(latestUpdate?.searchParams.get("section")).toBe("pages");
+    expect(latestUpdate?.searchParams.get("page")).toBe("accountSelector");
   });
 
   it("shows the compiled-in constants when GET succeeds with a null template", async () => {
