@@ -19,6 +19,9 @@ vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useDebounce: (value: unknown) => value,
 }));
 vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
+vi.mock("@/hooks/use-project-access", () => ({
+  useProjectPermissions: () => ({ isOwner: true, can: () => true, menus: [] }),
+}));
 vi.mock("@/hooks/use-project", () => ({
   useGetAssets: (id: string, page: number, pageSize: number, search: string) =>
     h.useGetAssets(id, page, pageSize, search),

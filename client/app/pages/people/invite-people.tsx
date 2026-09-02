@@ -59,10 +59,15 @@ type InvitePeopleFormValues = z.infer<typeof formSchema>;
 
 interface InvitePeopleProps {
   existingEmails?: string[];
-  isViewerOwner?: boolean;
+  /**
+   * Inviting is a grant, not a privilege of ownership — an owner can hand `people::invite` to
+   * a contributor, and the endpoint honours it. Gating this on ownership meant the grant could
+   * be given and had no visible effect.
+   */
+  canInvite?: boolean;
 }
 
-export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: InvitePeopleProps) => {
+export const InvitePeople = ({ existingEmails = [], canInvite = false }: InvitePeopleProps) => {
   const { isPending, mutateAsync } = useInvitePeople();
   const groupId = useProjectStore().selectedTenantGroup;
   const { data: projectsData } = useGetProjects({
@@ -205,7 +210,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
     }
   };
 
-  if (!isViewerOwner) return null;
+  if (!canInvite) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -219,16 +224,19 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
         <DialogHeader>
           <DialogTitle>Invite people</DialogTitle>
           <DialogDescription className="!mt-2 text-sm text-medium-emphasis">
-            Invite new people to the project
+            They get an email invitation, and nothing is shared until they accept it. Each person
+            gets the environments picked on their own row.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex min-h-0 flex-col">
             <div className="flex-1 overflow-y-auto p-1 pr-2">
               <div className="space-y-6">
+                {/* Two lists side by side with no stated relationship left it unclear whether
+                    you were pairing them up or applying one to all. The pairing is per row. */}
                 <div className="hidden w-full gap-4 text-sm font-medium text-muted-foreground sm:flex">
-                  <div className="w-[45%]">Recipient(s)</div>
-                  <div className="w-[45%]">Environments</div>
+                  <div className="w-[45%]">Email address</div>
+                  <div className="w-[45%]">Environments they can work in</div>
                   <div className="w-[10%]" />
                 </div>
                 {fields.map(
@@ -244,7 +252,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
                           render={({ field: emailField, fieldState }) => (
                             <FormItem className="w-full">
                               <FormControl>
-                                <Input {...emailField} placeholder="Enter email" />
+                                <Input {...emailField} placeholder="name@company.com" />
                               </FormControl>
                               {fieldState.isTouched && <FormMessage />}
                             </FormItem>
@@ -303,7 +311,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
                   onClick={() => append({ recipients: "", projectKeys: [] })}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add another
+                  Add another person
                 </Button>
               </div>
             </div>
@@ -314,7 +322,7 @@ export const InvitePeople = ({ existingEmails = [], isViewerOwner = false }: Inv
                 </Button>
               </DialogClose>
               <Button disabled={isPending || !form.formState.isValid} type="submit">
-                Send
+                {isPending ? "Sending..." : "Send invitation"}
               </Button>
             </DialogFooter>
           </form>

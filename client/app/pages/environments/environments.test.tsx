@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   useGetProjects: vi.fn(),
   useGetPeople: vi.fn(),
   useGetMigrationStatus: vi.fn(),
+  useProjectPermissions: vi.fn(),
   notificationListener: vi.fn(),
 }));
 
@@ -27,6 +28,10 @@ vi.mock("@/hooks/use-project", () => ({
 }));
 vi.mock("@/hooks/use-people", () => ({
   useGetPeople: (args: unknown) => h.useGetPeople(args),
+}));
+// Standing now comes from the project-access endpoint rather than People/Gets.
+vi.mock("@/hooks/use-project-access", () => ({
+  useProjectPermissions: () => h.useProjectPermissions(),
 }));
 vi.mock("@/cross-modules/communication/hooks/use-notification-listener", () => ({
   useNotificationListener: (...args: unknown[]) => h.notificationListener(...args),
@@ -73,6 +78,7 @@ describe("EnvironmentsPage", () => {
       isFetching: false,
     });
     h.useGetPeople.mockReturnValue({ data: { isOwner: true } });
+    h.useProjectPermissions.mockReturnValue({ isOwner: true, can: () => true });
     h.useGetMigrationStatus.mockReturnValue({ data: [], refetch: vi.fn() });
   });
 
@@ -97,9 +103,32 @@ describe("EnvironmentsPage", () => {
   });
 
   it("hides the New Environment action when the viewer is not an owner", () => {
-    h.useGetPeople.mockReturnValue({ data: { isOwner: false } });
+    // Creating an environment is owner-only and absent from the grant catalog, so a
+    // contributor never sees it however much else they have been granted.
+    h.useProjectPermissions.mockReturnValue({ isOwner: false, can: () => true });
     renderPage();
     expect(screen.queryByRole("button", { name: /New Environment/i })).toBeNull();
+  });
+
+  it("keeps a contributor without the migrate grant off the wizard page", () => {
+    // /app/data-migration sits outside the project routes, so the gated button is not the
+    // only way in — a bookmark reaches the wizard directly.
+    h.useProjectPermissions.mockReturnValue({ isLoading: false, isOwner: false, can: () => false });
+    render(
+      <MemoryRouter initialEntries={["/app/data-migration"]}>
+        <Routes>
+          <Route path="/app/data-migration" element={<EnvironmentMigrationPage />} />
+          <Route path="/app/console" element={<div>console page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("console page")).toBeTruthy();
+  });
+
+  it("hides Start Migration when the viewer has not been granted it", () => {
+    h.useProjectPermissions.mockReturnValue({ isOwner: false, can: () => false });
+    renderPage();
+    expect(screen.queryByRole("button", { name: /Start Migration/i })).toBeNull();
   });
 
   it("hides the New Environment action once the project cap is reached", () => {

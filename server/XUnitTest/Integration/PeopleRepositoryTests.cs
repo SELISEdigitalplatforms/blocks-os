@@ -275,5 +275,12 @@ namespace XUnitTest.Integration
             (await repo.UpdateProjectPeopleOwnerShipAsync(new List<string> { person.ItemId }, false)).Should().BeTrue();
             (await repo.IsOwner(user, new List<string> { tenant })).Should().BeFalse();
         }
+
+        [Fact]
+        public async Task IsOwner_IsFalse_ForAnEmptyTenantList()
+        {
+            using var _ = new IntegrationContext("ctx-" + Guid.NewGuid().ToString("N"));
+            (await NewRepository().IsOwner("u1", new List<string>())).Should().BeFalse();
+        }
     }
 }

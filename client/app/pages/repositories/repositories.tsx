@@ -1,5 +1,6 @@
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetAssets, useAddAssets, useDeleteAsset } from "@/hooks/use-project";
+import { useProjectPermissions } from "@/hooks/use-project-access";
 import { Plus, Github, FolderGit2, Trash2 } from "lucide-react";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { formatDate } from "@/lib/utils";
@@ -90,6 +91,12 @@ export const RepositoriesPage = () => {
   const { data: _isAuthenticated, refetch: refetchAuthorization } = useValidateAuthorization();
   const { mutateAsync } = useAddAssets();
   const { mutateAsync: deleteAsset, isPending: isRemoving } = useDeleteAsset();
+
+  // Adding and removing a repository are separate grants, and removing one also tears down
+  // its running deployments — so the two buttons are gated apart.
+  const { can } = useProjectPermissions(groupId ?? undefined);
+  const canAdd = can("repositories", "add");
+  const canDelete = can("repositories", "delete");
   // Handler for Add Repository button click
   const handleAddRepositoryClick = async () => {
     try {
@@ -227,15 +234,17 @@ export const RepositoriesPage = () => {
         header: () => <span className="sr-only">Actions</span>,
         cell: (repos) => (
           <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-              aria-label={`Remove ${repos.row.original.name}`}
-              onClick={() => setRepositoryToRemove(repos.row.original)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                aria-label={`Remove ${repos.row.original.name}`}
+                onClick={() => setRepositoryToRemove(repos.row.original)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         ),
       },
@@ -320,17 +329,24 @@ export const RepositoriesPage = () => {
 
   return (
     <main className="p-6">
-      <div className="flex flex-row justify-between md:items-center">
-        <h4 className="text-lg font-semibold md:text-xl">Repositories</h4>
-        <Button
-          size="sm"
-          variant="default"
-          className="h-10 text-sm text-primary-foreground"
-          onClick={handleAddRepositoryClick}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          <span>Add</span>
-        </Button>
+      <div className="flex flex-wrap items-end justify-between gap-4 md:items-end">
+        <div>
+          <h4 className="text-lg font-semibold md:text-xl">Repositories</h4>
+          <p className="mt-0.5 text-sm text-medium-emphasis">
+            Code that builds and deploys into every environment of this project
+          </p>
+        </div>
+        {canAdd && (
+          <Button
+            size="sm"
+            variant="default"
+            className="h-10 text-sm text-primary-foreground"
+            onClick={handleAddRepositoryClick}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            <span>Add repository</span>
+          </Button>
+        )}
       </div>
       <div className="mt-4">
         {isEmptyWithoutSearch ? (
