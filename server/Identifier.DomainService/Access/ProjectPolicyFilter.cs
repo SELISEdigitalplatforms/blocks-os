@@ -108,47 +108,79 @@ namespace DomainService.Access
         /// </summary>
         private async Task<string?> ResolveGroupAsync(ActionExecutingContext context)
         {
+            var namesAProject = false;
+
             foreach (var name in GroupNames)
             {
-                if (Find(context, name) is { Length: > 0 } groupId) return groupId;
+                if (!TryFind(context, name, out var groupId)) continue;
+
+                namesAProject = true;
+                if (!string.IsNullOrWhiteSpace(groupId)) return groupId;
             }
 
             foreach (var name in ProjectNames)
             {
-                if (Find(context, name) is { Length: > 0 } projectRef)
-                {
-                    var groupId = await _access.ResolveGroupOfProjectAsync(projectRef);
-                    if (!string.IsNullOrWhiteSpace(groupId)) return groupId;
-                }
+                if (!TryFind(context, name, out var projectRef)) continue;
+
+                namesAProject = true;
+                if (string.IsNullOrWhiteSpace(projectRef)) continue;
+
+                var groupId = await _access.ResolveGroupOfProjectAsync(projectRef);
+                if (!string.IsNullOrWhiteSpace(groupId)) return groupId;
             }
 
-            // Endpoints naming no project, acting on whichever one the caller is currently in —
-            // Project/Disable, whose request object is empty.
+            // A request that carries a project field but left it blank is deliberately unscoped,
+            // and is not the same thing as a request with no field to fill in. Project/Create
+            // with no TenantGroupId is a brand-new project, which belongs to nobody yet; falling
+            // through to the caller's ambient tenant authorized it against whichever project
+            // they had open, and refused them the creation of their own project.
+            if (namesAProject) return null;
+
+            // Endpoints naming no project at all, acting on whichever one the caller is currently
+            // in — Project/Disable, whose request object is empty.
             return await _access.ResolveGroupOfProjectAsync(BlocksContext.GetContext()?.TenantId ?? string.Empty);
         }
 
-        private static string? Find(ActionExecutingContext context, string wanted)
+        /// <summary>
+        /// Looks for <paramref name="wanted"/> on the bound request. Returns whether the request
+        /// carries it at all, which is separate from whether it was filled in — see
+        /// <see cref="ResolveGroupAsync"/>, where the difference decides between "no project" and
+        /// "the project the caller is in".
+        /// </summary>
+        private static bool TryFind(ActionExecutingContext context, string wanted, out string? value)
         {
+            value = null;
+            var found = false;
+
             foreach (var (argumentName, argument) in context.ActionArguments)
             {
-                if (argument is null) continue;
-
-                if (argument is string text)
+                // A bare [FromQuery] string binds to null when it is absent from the query
+                // string, so the argument's presence — not its value — is what declares it.
+                if (argumentName.Equals(wanted, StringComparison.OrdinalIgnoreCase)
+                    && argument is string or null)
                 {
-                    if (argumentName.Equals(wanted, StringComparison.OrdinalIgnoreCase)) return text;
+                    found = true;
+                    value = argument as string;
+                    if (!string.IsNullOrWhiteSpace(value)) return true;
                     continue;
                 }
+
+                if (argument is null or string) continue;
 
                 var property = argument.GetType().GetProperty(wanted,
                     BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
-                if (property?.GetValue(argument) is string value && !string.IsNullOrWhiteSpace(value))
+                if (property is null || property.PropertyType != typeof(string)) continue;
+
+                found = true;
+                if (property.GetValue(argument) is string text && !string.IsNullOrWhiteSpace(text))
                 {
-                    return value;
+                    value = text;
+                    return true;
                 }
             }
 
-            return null;
+            return found;
         }
 
         /// <summary>

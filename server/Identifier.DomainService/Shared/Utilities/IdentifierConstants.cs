@@ -19,6 +19,13 @@ namespace DomainService.Shared
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string ThirdPartyJWTClaimsCollectionName = "ThirdPartyJWTClaims";
 
+        /// <summary>
+        /// The one database every cross-project collection lives in. ProjectPeoples in
+        /// particular is only ever written here, so anything deciding project membership or
+        /// ownership has to read it from here too rather than from the caller's tenant database.
+        /// </summary>
+        public const string RootDatabaseName = "BlocksRootDb";
+
         public const string IdentifierQueueName = "blocks_project_listener";
         public const string DataCleanupQueue = "blocks_data_cleanup_listener";
         public const string LanguageDataMigrationQueue = "blocks_localization_environment_data_migration_listener";
