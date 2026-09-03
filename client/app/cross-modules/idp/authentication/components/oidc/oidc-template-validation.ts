@@ -40,8 +40,8 @@ export const THEME_FIELDS: Array<{
 export type OidcPageKey = Exclude<keyof IOidcUiTemplate["pages"], "shared">;
 
 export const PAGE_OPTIONS: Array<{ key: OidcPageKey; label: string }> = [
-  { key: "login", label: "Login" },
   { key: "signup", label: "Signup" },
+  { key: "login", label: "Login" },
   { key: "forgotPassword", label: "Forgot Password" },
   { key: "resetPassword", label: "Reset Password" },
   { key: "activation", label: "Activation" },

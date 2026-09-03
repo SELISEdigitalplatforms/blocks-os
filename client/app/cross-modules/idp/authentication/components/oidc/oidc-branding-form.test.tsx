@@ -172,7 +172,7 @@ describe("OidcBrandingForm", () => {
     await user.click(screen.getByRole("tab", { name: "Pages" }));
     expect(screen.getByLabelText(/Heading/)).toHaveProperty(
       "value",
-      DEFAULT_OIDC_UI_TEMPLATE.pages.login.heading,
+      DEFAULT_OIDC_UI_TEMPLATE.pages.signup.heading,
     );
     expect(latestActions().isDirty).toBe(false);
     expect(latestActions().isValid).toBe(true);
@@ -221,15 +221,16 @@ describe("OidcBrandingForm", () => {
     ]) {
       expect(screen.getByRole("tab", { name })).toBeTruthy();
     }
-    expect(screen.getByLabelText(/Activation error title/)).toBeTruthy();
-    expect(screen.queryByLabelText(/First name label/)).toBeNull();
-    expect(screen.getByLabelText(/Footer/)).toBeTruthy();
-
-    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    expect(screen.getByTestId("preview").getAttribute("data-page")).toBe("signup");
     expect(screen.getByLabelText(/First name label/)).toBeTruthy();
     expect(screen.queryByLabelText(/Activation error title/)).toBeNull();
     expect(screen.getByLabelText(/Footer/)).toBeTruthy();
-    expect(screen.getByTestId("preview").getAttribute("data-page")).toBe("signup");
+
+    await user.click(screen.getByRole("tab", { name: "Login" }));
+    expect(screen.getByLabelText(/Activation error title/)).toBeTruthy();
+    expect(screen.queryByLabelText(/First name label/)).toBeNull();
+    expect(screen.getByLabelText(/Footer/)).toBeTruthy();
+    expect(screen.getByTestId("preview").getAttribute("data-page")).toBe("login");
   });
 
   it("updates page previews live and retains unsaved copy while switching pages", async () => {
@@ -238,12 +239,12 @@ describe("OidcBrandingForm", () => {
     await user.click(screen.getByRole("tab", { name: "Pages" }));
     const heading = screen.getByLabelText(/Heading/);
     await user.clear(heading);
-    await user.type(heading, "Unsaved login heading");
-    expect(screen.getByText("Unsaved login heading")).toBeTruthy();
+    await user.type(heading, "Unsaved signup heading");
+    expect(screen.getByText("Unsaved signup heading")).toBeTruthy();
 
-    await user.click(screen.getByRole("tab", { name: "Signup" }));
     await user.click(screen.getByRole("tab", { name: "Login" }));
-    expect(screen.getByLabelText(/Heading/)).toHaveProperty("value", "Unsaved login heading");
+    await user.click(screen.getByRole("tab", { name: "Signup" }));
+    expect(screen.getByLabelText(/Heading/)).toHaveProperty("value", "Unsaved signup heading");
   });
 
   it("keeps the Theme sub-switcher and preview mode synchronized in both directions", async () => {

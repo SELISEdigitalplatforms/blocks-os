@@ -119,7 +119,7 @@ const colorPickerValue = (value: string) => {
 const TemplateSkeleton = () => (
   <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
     <CardContent>
-      <div className="grid min-h-[34rem] min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-[38rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="grid min-h-[34rem] min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:max-h-[46rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section className="flex border-b xl:border-b-0 xl:border-r">
           <div className="hidden w-[5.5rem] shrink-0 space-y-2 border-r bg-muted/20 p-2 xl:block">
             {[0, 1, 2].map((item) => (
@@ -226,7 +226,9 @@ export const OidcBrandingForm = () => {
   ] = useQueryStates(
     {
       section: parseAsStringLiteral(EDITOR_TAB_VALUES).withDefault("branding"),
-      page: parseAsStringEnum<OidcPageKey>(PAGE_OPTIONS.map(({ key }) => key)).withDefault("login"),
+      page: parseAsStringEnum<OidcPageKey>(PAGE_OPTIONS.map(({ key }) => key)).withDefault(
+        "signup",
+      ),
       palette: parseAsStringLiteral(["light", "dark"] as const).withDefault("light"),
       preview: parseAsStringLiteral(PREVIEW_MODE_VALUES).withDefault("system"),
     },
@@ -480,7 +482,7 @@ export const OidcBrandingForm = () => {
     });
   };
 
-  const selectedPageLabel = PAGE_OPTIONS.find(({ key }) => key === selectedPage)?.label ?? "Login";
+  const selectedPageLabel = PAGE_OPTIONS.find(({ key }) => key === selectedPage)?.label ?? "Signup";
 
   return (
     <Card className="overflow-hidden rounded-xl bg-card p-0 shadow-sm">
@@ -488,7 +490,7 @@ export const OidcBrandingForm = () => {
         <Tabs
           value={editorTab}
           onValueChange={handleEditorTabChange}
-          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:max-h-[38rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:max-h-[46rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
         >
           <section className="flex min-h-0 min-w-0 flex-col border-b border-border bg-card xl:flex-row xl:border-b-0 xl:border-r">
             <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-[5.5rem] xl:border-b-0 xl:border-r">
@@ -729,7 +731,7 @@ export const OidcBrandingForm = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="w-full overflow-x-auto pb-2 [scrollbar-width:thin]">
+                  <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <div
                       role="tablist"
                       aria-label="OIDC page"
