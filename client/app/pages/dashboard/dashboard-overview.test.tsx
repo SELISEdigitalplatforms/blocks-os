@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import type { IDomain, IEnvRepository } from "@seliseblocks/genesis-os/models";
+import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 
 // `useGetProject` stays disabled until the impersonation store reports a resolved
 // tenant, so that store is stubbed. The package barrels are stubbed the way the rest of
@@ -62,6 +63,8 @@ vi.mock("@seliseblocks/genesis-os/utils", () => ({
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
 }));
+
+vi.mock("@/lib/http/http-client", () => mockHttpClientFactory());
 
 // Dialogs and the sibling header sections are not what this test is about; the tables,
 // their hooks and the query client stay real.
