@@ -1,7 +1,5 @@
 using Azure;
-using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Blocks.Secrets;
@@ -10,9 +8,10 @@ namespace Blocks.Secrets;
 /// Azure Key Vault backed value store.
 /// </summary>
 /// <remarks>
-/// Follows the same shape as <c>Identifier.DomainService</c>'s certificate upload: bind the
-/// <c>KeyVault</c> environment section, take <c>KeyVaultUrl</c>, and authenticate with
-/// <see cref="DefaultAzureCredential"/>.
+/// Binds the <c>KeyVault</c> environment section and authenticates with whatever
+/// <see cref="KeyVaultCredentialFactory"/> resolves — the default Azure credential chain, with a
+/// service-principal fallback when <c>ClientId</c>, <c>ClientSecret</c>, and <c>TenantId</c> are
+/// configured.
 /// <para>
 /// Registered as a singleton — <see cref="SecretClient"/> is thread-safe and pools connections
 /// and tokens internally, so building one per request would throw away that caching.
@@ -110,33 +109,8 @@ public sealed class KeyVaultSecretValueStore : ISecretValueStore
 
     private static SecretClient CreateClient(ILogger logger)
     {
-        var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-        var cloudConfig = new Dictionary<string, string>();
-        configuration.GetSection("KeyVault").Bind(cloudConfig);
-        cloudConfig.TryGetValue("KeyVaultUrl", out var keyVaultUrl);
+        var connection = KeyVaultCredentialFactory.Create(logger);
 
-        if (string.IsNullOrWhiteSpace(keyVaultUrl))
-        {
-            logger.LogError("KeyVault:KeyVaultUrl is missing. Secret management cannot start without it.");
-            throw new InvalidOperationException(
-                "Required Azure config value 'KeyVault:KeyVaultUrl' is missing. Please check your environment configuration.");
-        }
-
-        var credentialOptions = new DefaultAzureCredentialOptions();
-
-        // A developer machine has no IMDS endpoint, so the managed-identity probe burns six
-        // retries against an unreachable link-local address (169.254.169.254) before the chain
-        // moves on — every vault write stalls for seconds and then fails outright. Azure hosts
-        // keep it enabled; only Development opts out. Blocks.Genesis excludes it for the same
-        // reason when reading startup configuration.
-        if (string.Equals(
-                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
-                "Development",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            credentialOptions.ExcludeManagedIdentityCredential = true;
-        }
-
-        return new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential(credentialOptions));
+        return new SecretClient(connection.VaultUri, connection.Credential);
     }
 }

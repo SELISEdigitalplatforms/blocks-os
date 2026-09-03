@@ -1,5 +1,26 @@
 # SeliseBlocks.Secrets.OS
 
+## Configuration
+
+Values live in Azure Key Vault, configured through the `KeyVault` environment section — the same
+keys `Blocks.Genesis` reads, so a host already configured for Genesis needs nothing extra.
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `KeyVault__KeyVaultUrl` | yes | Vault URL, e.g. `https://my-vault.vault.azure.net/` |
+| `KeyVault__ClientId` | no | Service-principal application id |
+| `KeyVault__ClientSecret` | no | Service-principal secret |
+| `KeyVault__TenantId` | no | Directory tenant id |
+
+Authentication tries `DefaultAzureCredential` first — managed identity on Azure, `az login` /
+Visual Studio / `AZURE_*` environment variables locally. When that chain has nothing available and
+all three of `ClientId`, `ClientSecret`, and `TenantId` are set, it falls back to those. Set them on
+hosts with no CLI login and no managed identity. A partially filled set is ignored.
+
+Bad credentials surface on the first vault call, not at startup: resolution happens in a
+synchronous singleton constructor, so probing the token there would block container build on a
+network round trip and take the host down on a transient AAD blip.
+
 ## Setup
 
 ```csharp
