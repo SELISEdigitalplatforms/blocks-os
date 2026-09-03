@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { UsersTable } from "./users-table";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useGetUsers } from "@blocks-idp/iam/hooks/use-user";
+import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   UsersDateFilters,
@@ -14,6 +15,10 @@ export const Users = () => {
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
   const { sortQueryParams } = useUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  const organizationIds =
+    orgConfig?.isMultiOrgEnabled === true ? (queryParams.organizationIds ?? []) : [];
+  const roles = queryParams.roles ?? [];
 
   const searchText =
     queryParams["selected-filter"] === "email"
@@ -31,6 +36,8 @@ export const Users = () => {
       joinedOn: queryParams["joinedOn-start"] || undefined,
       lastLogin: queryParams["lastLogin-start"] || undefined,
       lastUpdatedDate: queryParams["lastUpdatedDate-start"] || undefined,
+      ...(organizationIds.length > 0 ? { organizationIds } : {}),
+      ...(roles.length > 0 ? { roles } : {}),
     },
     sort: sortQueryParams,
   });

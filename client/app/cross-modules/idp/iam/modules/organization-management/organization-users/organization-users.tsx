@@ -25,6 +25,7 @@ export const OrganizationUsers = ({
   const { queryParams, setQueryParams } = useOrganizationUsersFilterQueryParams();
   const { sortQueryParams } = useOrganizationUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const roles = queryParams.roles ?? [];
 
   const { isLoading, isFetching, data } = useGetUsers({
     page: queryParams.page,
@@ -34,6 +35,7 @@ export const OrganizationUsers = ({
       email: queryParams.email,
       name: queryParams.name,
       organizationIds: [organizationId],
+      ...(roles.length > 0 ? { roles } : {}),
     },
     sort: sortQueryParams,
   });
@@ -55,7 +57,7 @@ export const OrganizationUsers = ({
         )}
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <OrganizationUsersFilterToolbar />
+            <OrganizationUsersFilterToolbar organizationId={organizationId} />
           </div>
           <div className="flex shrink-0 items-center gap-3">{action}</div>
         </div>

@@ -7,9 +7,16 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("nuqs", () => ({
-  parseAsInteger: { withDefault: (d: number) => ({ _d: d }) },
-  parseAsString: { withDefault: (d: string) => ({ _d: d }) },
+  parseAsArrayOf: () => ({ withDefault: (d: unknown) => ({ _d: d }) }),
+  parseAsInteger: { withDefault: (d: unknown) => ({ _d: d }) },
+  parseAsString: { withDefault: (d: unknown) => ({ _d: d }) },
   useQueryStates: () => [h.queryParams, h.setQueryParams],
+}));
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
+vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
+  useGetRoleFilterOptions: () => ({ data: [{ label: "Admin", value: "admin" }], isLoading: false }),
 }));
 vi.mock("@/components/filter-toolbar", () => ({
   FilterToolbar: ({
@@ -26,6 +33,7 @@ vi.mock("@/components/filter-toolbar", () => ({
       <button onClick={() => onChange("search", { selected: "email", value: "a@b.co" })}>
         change-email
       </button>
+      <button onClick={() => onChange("roles", ["admin"])}>change-roles</button>
       <button onClick={() => onChange("other", "x")}>change-other</button>
       <button onClick={onReset}>reset</button>
     </div>
@@ -37,12 +45,17 @@ import { OrganizationUsersFilterToolbar } from "./organization-users-filter-tool
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.queryParams = { "selected-filter": "name", name: "", email: "" };
+  h.queryParams = {
+    "selected-filter": "name",
+    name: "",
+    email: "",
+    roles: [],
+  } as unknown as Record<string, string>;
 });
 
 describe("OrganizationUsersFilterToolbar", () => {
   it("maps a name search into the name query param", () => {
-    render(<OrganizationUsersFilterToolbar />);
+    render(<OrganizationUsersFilterToolbar organizationId="org-1" />);
     fireEvent.click(screen.getByText("change-name"));
     const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
     expect(updater({})).toEqual({
@@ -54,7 +67,7 @@ describe("OrganizationUsersFilterToolbar", () => {
   });
 
   it("maps an email search into the email query param", () => {
-    render(<OrganizationUsersFilterToolbar />);
+    render(<OrganizationUsersFilterToolbar organizationId="org-1" />);
     fireEvent.click(screen.getByText("change-email"));
     const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
     expect(updater({})).toEqual({
@@ -66,15 +79,22 @@ describe("OrganizationUsersFilterToolbar", () => {
   });
 
   it("handles non-search keys generically", () => {
-    render(<OrganizationUsersFilterToolbar />);
+    render(<OrganizationUsersFilterToolbar organizationId="org-1" />);
     fireEvent.click(screen.getByText("change-other"));
     const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
     expect(updater({})).toEqual({ other: "x", page: 0 });
   });
 
   it("resets all query params", () => {
-    render(<OrganizationUsersFilterToolbar />);
+    render(<OrganizationUsersFilterToolbar organizationId="org-1" />);
     fireEvent.click(screen.getByText("reset"));
     expect(h.setQueryParams).toHaveBeenCalledWith(null);
+  });
+
+  it("updates selected roles", () => {
+    render(<OrganizationUsersFilterToolbar organizationId="org-1" />);
+    fireEvent.click(screen.getByText("change-roles"));
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({})).toEqual({ roles: ["admin"], page: 0 });
   });
 });

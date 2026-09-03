@@ -9,7 +9,8 @@ const h = vi.hoisted(() => ({
   isLoading: false,
   isFetching: false,
   data: { data: [], totalCount: 0 } as { data: unknown[]; totalCount: number },
-  queryParams: {} as Record<string, string | number>,
+  queryParams: {} as Record<string, string | number | string[]>,
+  isMultiOrgEnabled: true,
   lastQuery: null as Record<string, unknown> | null,
   tableProps: null as Record<string, unknown> | null,
 }));
@@ -19,6 +20,9 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
     h.lastQuery = q;
     return { isLoading: h.isLoading, isFetching: h.isFetching, data: h.data };
   },
+}));
+vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
+  useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: h.isMultiOrgEnabled } }),
 }));
 vi.mock("@/store/useProjectStore", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "t1" } }),
@@ -49,7 +53,10 @@ beforeEach(() => {
     "selected-filter": "name",
     name: "alice",
     email: "a@b.co",
+    organizationIds: [],
+    roles: [],
   };
+  h.isMultiOrgEnabled = true;
 });
 
 describe("Users", () => {
@@ -76,5 +83,25 @@ describe("Users", () => {
     h.isFetching = true;
     render(<Users />);
     expect(h.tableProps?.isLoading).toBe(true);
+  });
+
+  it("sends selected organization ids and roles", () => {
+    h.queryParams.organizationIds = ["org-1", "org-2"];
+    h.queryParams.roles = ["admin"];
+    render(<Users />);
+    expect((h.lastQuery?.filter as { organizationIds?: string[] }).organizationIds).toEqual([
+      "org-1",
+      "org-2",
+    ]);
+    expect((h.lastQuery?.filter as { roles?: string[] }).roles).toEqual(["admin"]);
+  });
+
+  it("omits stale organization ids when multi-org is disabled but still sends roles", () => {
+    h.isMultiOrgEnabled = false;
+    h.queryParams.organizationIds = ["org-1"];
+    h.queryParams.roles = ["auditor"];
+    render(<Users />);
+    expect((h.lastQuery?.filter as { organizationIds?: string[] }).organizationIds).toBeUndefined();
+    expect((h.lastQuery?.filter as { roles?: string[] }).roles).toEqual(["auditor"]);
   });
 });

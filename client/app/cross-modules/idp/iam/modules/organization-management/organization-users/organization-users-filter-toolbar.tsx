@@ -1,9 +1,12 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
+import { useGetRoleFilterOptions } from "@blocks-idp/iam/hooks/use-roles";
 import { Mail, User } from "lucide-react";
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 
 type OrganizationUsersFilter = {
   search: { selected: string; value: string };
+  roles: string[];
 };
 
 export const useOrganizationUsersFilterQueryParams = () => {
@@ -13,6 +16,7 @@ export const useOrganizationUsersFilterQueryParams = () => {
     "selected-filter": parseAsString.withDefault("name"),
     name: parseAsString.withDefault(""),
     email: parseAsString.withDefault(""),
+    roles: parseAsArrayOf(parseAsString).withDefault([]),
   });
   return { queryParams, setQueryParams };
 };
@@ -22,8 +26,14 @@ export const useOrganizationUsersSortQueryParams = () =>
     initial: { property: "FirstName", isDescending: false },
   });
 
-export const OrganizationUsersFilterToolbar = () => {
+export const OrganizationUsersFilterToolbar = ({ organizationId }: { organizationId: string }) => {
   const { queryParams, setQueryParams } = useOrganizationUsersFilterQueryParams();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const selectedRoles = queryParams.roles ?? [];
+  const { data: roleOptions = [], isLoading: isRolesLoading } = useGetRoleFilterOptions(
+    { projectKey: tenantId, organizationIds: [organizationId] },
+    { enabled: !!tenantId && !!organizationId },
+  );
 
   const changeHandler = (key: string, value: unknown) => {
     if (key === "search") {
@@ -68,14 +78,24 @@ export const OrganizationUsersFilterToolbar = () => {
             ],
           },
         },
+        {
+          key: "roles",
+          type: "MultiSelect",
+          label: "Roles",
+          props: {
+            options: roleOptions,
+            disabled: isRolesLoading,
+          },
+        },
       ]}
       values={{
         search: {
           selected: queryParams["selected-filter"],
           value: queryParams["selected-filter"] === "email" ? queryParams.email : queryParams.name,
         },
+        roles: selectedRoles,
       }}
-      defaultValues={{ search: { selected: "name", value: "" } }}
+      defaultValues={{ search: { selected: "name", value: "" }, roles: [] }}
       onChange={changeHandler}
       onReset={resetHandler}
       hideGlobalResetButton
