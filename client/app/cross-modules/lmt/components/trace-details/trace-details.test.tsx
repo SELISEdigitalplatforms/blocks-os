@@ -41,6 +41,14 @@ vi.mock("@blocks-lmt/hooks/use-trace", () => ({
     isError: h.isError,
     data: h.trace ? { data: h.trace } : undefined,
   }),
+  // Not exercised by these tests -- none pass a `requestId` search param -- but the component
+  // calls it unconditionally, so the mock module must still export it.
+  useGetRestoredTraceById: () => ({
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    data: undefined,
+  }),
 }));
 vi.mock("@blocks-lmt/hooks/use-log", () => ({
   useGetLogs: () => ({ isLoading: h.logsLoading, isFetching: false, data: { data: h.logs } }),

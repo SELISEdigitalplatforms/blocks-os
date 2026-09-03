@@ -10,6 +10,7 @@ import { PERMISSION_ENDPOINTS, ROLE_ENDPOINTS } from "@blocks-idp/iam/constants/
 import { ArchiveAction } from "@blocks-idp/iam/components/archive-action";
 import { permissionService } from "./permission.service";
 import { roleService } from "./role.service";
+import { createWrapper } from "@/test-utils/test-providers/query-client";
 
 // See the mock for why the tooltip barrel cannot be imported under jsdom.
 vi.mock(
@@ -143,9 +144,10 @@ describe("archive endpoint contract", () => {
           entity="role"
           name="Administrator"
           itemId="role-1"
-          archive={(id) => roleService.deleteRole(id) as Promise<unknown>}
+          archive={({ id }) => roleService.deleteRole(id) as Promise<unknown>}
           isPending={false}
         />,
+        { wrapper: createWrapper() },
       );
 
     const confirm = async () => {
@@ -155,13 +157,18 @@ describe("archive endpoint contract", () => {
     };
 
     it("shows the mapped copy for a rejected archive", async () => {
+      // The dialog issues an impact GET before the confirm click's DELETE, so the stub must hand
+      // back a fresh Response per call -- a Response body can only be read once, and
+      // `mockResolvedValue` would reuse the same instance for both requests.
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(
-          jsonResponse(400, {
-            isSuccess: false,
-            errors: { dependency: "Role_Has_Child_Roles" },
-          }),
+        vi.fn().mockImplementation(() =>
+          Promise.resolve(
+            jsonResponse(400, {
+              isSuccess: false,
+              errors: { dependency: "Role_Has_Child_Roles" },
+            }),
+          ),
         ),
       );
 
@@ -177,8 +184,10 @@ describe("archive endpoint contract", () => {
       // C7: drift degrades to the code rather than a blank or generic toast.
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(
-          jsonResponse(400, { isSuccess: false, errors: { forbidden: "Some_Future_Code" } }),
+        vi.fn().mockImplementation(() =>
+          Promise.resolve(
+            jsonResponse(400, { isSuccess: false, errors: { forbidden: "Some_Future_Code" } }),
+          ),
         ),
       );
 
@@ -193,8 +202,8 @@ describe("archive endpoint contract", () => {
       // render one empty line in the toast, which reads as a silent failure.
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(
-          jsonResponse(400, { isSuccess: false, errors: { dependency: "" } }),
+        vi.fn().mockImplementation(() =>
+          Promise.resolve(jsonResponse(400, { isSuccess: false, errors: { dependency: "" } })),
         ),
       );
 
@@ -207,11 +216,13 @@ describe("archive endpoint contract", () => {
     it("maps reason codes that arrive as an array", async () => {
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(
-          jsonResponse(400, {
-            isSuccess: false,
-            errors: { dependency: ["Role_Has_Child_Roles", "Role_Has_Active_User_Assignments"] },
-          }),
+        vi.fn().mockImplementation(() =>
+          Promise.resolve(
+            jsonResponse(400, {
+              isSuccess: false,
+              errors: { dependency: ["Role_Has_Child_Roles", "Role_Has_Active_User_Assignments"] },
+            }),
+          ),
         ),
       );
 
