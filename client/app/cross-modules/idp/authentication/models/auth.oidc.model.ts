@@ -190,6 +190,12 @@ export interface ISaveClientCredentialPayload {
   roles: string[];
   permissions: string[];
   projectKey: string;
+  /**
+   * The organization the credential is issued for. Sent on create only, and only when
+   * multi-org is enabled — the server ignores it on update, because re-scoping a live
+   * credential would change the reach of tokens running services already hold.
+   */
+  organizationId?: string;
 }
 
 export interface ISaveClientCredentialResponse {

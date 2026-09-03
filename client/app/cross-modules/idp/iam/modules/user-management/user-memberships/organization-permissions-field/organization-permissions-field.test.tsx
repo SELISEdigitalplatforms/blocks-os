@@ -5,12 +5,15 @@ import type { IPermission } from "@blocks-idp/iam/models/permission";
 const h = vi.hoisted(() => ({ addProps: null as Record<string, unknown> | null }));
 
 vi.mock("./add-organization-permission", () => ({
+  // The real component hands `onAdd` the whole final selection -- existing permissions plus
+  // whatever was newly picked -- not just the new ones, so the stub mirrors that contract.
   AddOrganizationPermission: (props: Record<string, unknown>) => {
     h.addProps = props;
     return (
       <button
         onClick={() =>
           (props.onAdd as (p: IPermission[]) => void)([
+            ...(props.permissions as IPermission[]),
             { itemId: "n1", resource: "new:res", name: "New" } as IPermission,
           ])
         }

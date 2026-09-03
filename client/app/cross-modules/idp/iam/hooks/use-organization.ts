@@ -7,6 +7,10 @@ import {
 import { IOrganizationConfigPayload } from "@blocks-idp/iam/models/organization-config.model";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 
+const DEFAULT_ORGANIZATION_ID = "default";
+const DEFAULT_ORGANIZATION_NAME = "Default";
+const ORGANIZATION_OPTIONS_PAGE_SIZE = 100;
+
 export const useGetOrganizations = (options: IOrganizationFilter) => {
   const { enabled: _enabled, ...queryKeyOptions } = options;
   return useQuery({
@@ -63,6 +67,58 @@ export const useGetOrganizationConfig = (projectKey: string) => {
     queryKey: ["organization", "config", projectKey],
     queryFn: () => iamService.organization.getOrganizationConfig(projectKey),
     enabled: !!projectKey,
+  });
+};
+
+export const useGetAllEnabledOrganizations = (
+  projectKey: string,
+  { enabled = true }: { enabled?: boolean } = {},
+) => {
+  return useQuery({
+    queryKey: ["organizations", "enabled-options", projectKey],
+    queryFn: async () => {
+      const organizations = [];
+      let page = 0;
+      let totalCount = 0;
+
+      do {
+        const response = await iamService.organization.getOrganizations({
+          projectKey,
+          page,
+          pageSize: ORGANIZATION_OPTIONS_PAGE_SIZE,
+        });
+        const pageOrganizations = response.organizations ?? [];
+        organizations.push(...pageOrganizations);
+        totalCount = response.totalCount ?? organizations.length;
+        page += 1;
+      } while (organizations.length < totalCount);
+
+      const enabledOrganizations = organizations.filter(
+        (organization) => organization.isDisabled !== true && organization.isEnable !== false,
+      );
+      const organizationById = new Map(
+        enabledOrganizations.map((organization) => [organization.itemId, organization]),
+      );
+
+      if (organizationById.size > 0 && !organizationById.has(DEFAULT_ORGANIZATION_ID)) {
+        organizationById.set(DEFAULT_ORGANIZATION_ID, {
+          itemId: DEFAULT_ORGANIZATION_ID,
+          name: DEFAULT_ORGANIZATION_NAME,
+          isEnable: true,
+          isDisabled: false,
+          createdDate: "",
+          lastUpdatedDate: "",
+          createdBy: "",
+          lastUpdatedBy: "",
+          language: null,
+          organizationIds: [],
+          tags: [],
+        });
+      }
+
+      return [...organizationById.values()];
+    },
+    enabled: enabled && !!projectKey,
   });
 };
 

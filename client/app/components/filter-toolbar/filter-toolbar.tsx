@@ -33,11 +33,13 @@ type FilterToolbarProps<T extends Record<string, unknown>> = {
   onChange: FilterChangeHandler<T>;
   onReset?: (values?: T) => void;
   hideGlobalResetButton?: boolean;
+  showFirstFilterOnMobile?: boolean;
 };
 type ViewType = {
   Components: ReactNode[];
   onReset?: () => void;
   showReset: boolean;
+  showFirstFilterOnMobile?: boolean;
 };
 const FilterToolbarDesktopView = ({ Components, showReset, onReset }: ViewType) => {
   return (
@@ -53,11 +55,21 @@ const FilterToolbarDesktopView = ({ Components, showReset, onReset }: ViewType) 
     </div>
   );
 };
-export const FilterToolBarMobileView = ({ Components, showReset, onReset }: ViewType) => {
+export const FilterToolBarMobileView = ({
+  Components,
+  showReset,
+  onReset,
+  showFirstFilterOnMobile = true,
+}: ViewType) => {
+  const inlineComponents = showFirstFilterOnMobile ? Components.slice(0, 1) : [];
+  const sheetComponents = showFirstFilterOnMobile ? Components.slice(1) : Components;
+
   return (
-    <div className={"flex items-center justify-between gap-2 md:hidden"}>
-      <div className="min-w-0 max-w-72 flex-1">{Components[0]}</div>
-      {Components.length > 1 && (
+    <div className="flex items-center justify-end gap-2 md:hidden">
+      {inlineComponents.length > 0 && (
+        <div className="min-w-0 max-w-72 flex-1">{inlineComponents[0]}</div>
+      )}
+      {sheetComponents.length > 0 && (
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" className="relative h-8 w-8 p-0">
@@ -73,7 +85,7 @@ export const FilterToolBarMobileView = ({ Components, showReset, onReset }: View
             <SheetTitle className="mb-4">Filter</SheetTitle>
             <SheetDescription></SheetDescription>
             <div className="flex flex-col space-y-4">
-              {Components.slice(1).map((item) => item)}
+              {sheetComponents.map((item) => item)}
               <SheetClose asChild>
                 <Button className="mt-4" size="sm">
                   Show Results
@@ -100,6 +112,7 @@ export const FilterToolbar = <T extends Record<string, unknown>>({
   onReset,
   defaultValues,
   hideGlobalResetButton = false,
+  showFirstFilterOnMobile = true,
 }: FilterToolbarProps<T>) => {
   // Frozen snapshot of the first render's defaults. useState (not useRef) so it can be read
   // during render; both keep only the initial value, so behaviour is unchanged.
@@ -134,6 +147,7 @@ export const FilterToolbar = <T extends Record<string, unknown>>({
         Components={controllers}
         showReset={showReset}
         onReset={() => onReset && onReset(initialValues)}
+        showFirstFilterOnMobile={showFirstFilterOnMobile}
       />
     </>
   );
