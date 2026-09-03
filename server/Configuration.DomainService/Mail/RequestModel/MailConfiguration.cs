@@ -18,6 +18,7 @@ namespace Configuration.DomainService.Mail.RequestModel
         public DateTime LastUpdatedDate { get; set; }
         public bool IsInbound { get; set; }
         public MailServiceProvider Provider { get; set; }
+        public bool IsEnableSnsConfiguration { get; set; } = false;
     }
 
 }

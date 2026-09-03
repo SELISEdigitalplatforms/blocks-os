@@ -13,6 +13,10 @@ namespace DomainService.Dtos
         public bool IsCreator { get; set; }
         
         public string Enviroment { get; set; }
+
+        /// <summary>The grants stored on this row. Unioned per person by the service.</summary>
+        public List<string> AccessPolicies { get; set; } = [];
+
         public PeopleDetails peopleDetails { get; set; }
     }
 

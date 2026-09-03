@@ -90,13 +90,37 @@ describe("PeopleEnvironmentsTab", () => {
     expect(screen.getByText("UAT")).toBeTruthy();
   });
 
+  it("shows every environment as available to an owner", () => {
+    const owner = {
+      role: "owner",
+      sharedEnviroments: [
+        { enviroment: "dev", tenantId: "t-dev", isCreator: true },
+      ],
+    } as unknown as PeopleGroupedByEnvironments;
+
+    render(
+      <PeopleEnvironmentsTab
+        user={user}
+        person={owner}
+        environmentList={environmentList}
+      />,
+    );
+
+    expect(screen.getByText("Development")).toBeTruthy();
+    expect(screen.getByText("Testing")).toBeTruthy();
+    expect(screen.getByText("Staging")).toBeTruthy();
+    expect(screen.getByText("UAT")).toBeTruthy();
+    expect(screen.getByText("Has access to all environments")).toBeTruthy();
+  });
+
   it("does not render action buttons when viewer is not owner", () => {
     render(
       <PeopleEnvironmentsTab
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner={false}
+        canRemove={false}
+        canInvite={false}
       />,
     );
     expect(screen.queryByLabelText(/Remove access from/)).toBeNull();
@@ -110,7 +134,8 @@ describe("PeopleEnvironmentsTab", () => {
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner
+        canRemove
+        canInvite
       />,
     );
     await userEvent.click(screen.getByLabelText("Grant access to Staging"));
@@ -133,7 +158,8 @@ describe("PeopleEnvironmentsTab", () => {
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner
+        canRemove
+        canInvite
       />,
     );
     await userEvent.click(screen.getByLabelText("Remove access from Development"));
@@ -157,7 +183,8 @@ describe("PeopleEnvironmentsTab", () => {
         user={user}
         peopleData={peopleData}
         environmentList={environmentList}
-        isViewerOwner
+        canRemove
+        canInvite
       />,
     );
     await userEvent.click(screen.getByLabelText("Grant access to Staging"));

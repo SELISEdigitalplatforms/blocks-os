@@ -1,10 +1,11 @@
-using Blocks.Extensions.DependencyInjection;
+﻿using Blocks.Extensions.DependencyInjection;
 using Blocks.Genesis;
 using Blocks.Secrets;
 using BlocksOs.Api;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using Configuration.DomainService.Shared.Utilities;
+using DomainService.Access;
 using DomainService.Shared;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -44,6 +45,12 @@ builder.Services.Configure<MvcOptions>(options =>
     // Turns secret-domain exceptions into status codes. Registered here rather than inside
     // Blocks.Secrets so the package stays usable from workers with no HTTP pipeline.
     options.Filters.Add<SecretExceptionFilter>();
+
+    // Project access grants. An action filter, so it always runs after the authorization
+    // middleware has applied [Authorize]/[ProtectedEndPoint] — owner passes, contributor is
+    // checked against what the owner granted them. An endpoint without [ProjectPolicy] is
+    // simply not project-scoped and passes straight through.
+    options.Filters.Add<ProjectPolicyFilter>();
 });
 
 var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");

@@ -34,10 +34,11 @@ describe("PeopleDetailsTab", () => {
 
     render(<PeopleDetailsTab user={user} />);
 
-    const img = screen.getByAltText("Profile") as HTMLImageElement;
+    const img = screen.getByAltText("Ada Lovelace profile") as HTMLImageElement;
     expect(img.getAttribute("src")).toBe("https://cdn.test/ada.png");
-    // Nested basic-info card renders too.
-    expect(screen.getByText("Basic Information")).toBeTruthy();
+    expect(screen.getByText("ada@example.com")).toBeTruthy();
+    expect(screen.getByText("Latest login")).toBeTruthy();
+    expect(screen.queryByText("Basic information")).toBeNull();
   });
 
   it("renders the fallback avatar when no image is available", () => {
@@ -51,6 +52,20 @@ describe("PeopleDetailsTab", () => {
     render(<PeopleDetailsTab user={user} />);
 
     expect(screen.queryByAltText("Profile")).toBeNull();
-    expect(screen.getByText("grace@example.com")).toBeTruthy();
+    expect(screen.getAllByText("grace@example.com")).toHaveLength(1);
+    expect(screen.getByLabelText("Profile initials").textContent).toBe("GH");
+  });
+
+  it("shows the project membership beside the avatar without repeating the name", () => {
+    const user = {
+      firstName: "Ada",
+      lastName: "Lovelace",
+      email: "ada@example.com",
+    } as unknown as User;
+
+    render(<PeopleDetailsTab user={user} projectRole="Owner" />);
+
+    expect(screen.getByText("Owner")).toBeTruthy();
+    expect(screen.queryAllByText("Ada Lovelace")).toHaveLength(0);
   });
 });

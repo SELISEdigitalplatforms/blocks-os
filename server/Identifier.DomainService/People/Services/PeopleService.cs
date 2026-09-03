@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Projects;
@@ -95,6 +95,13 @@ namespace DomainService.People
                     .Select(g => new GetPeoples
                     {
                         peopleDetails = g.Key,
+                        // Grants are group-wide but stored per environment row, so the union is
+                        // the person's answer. Owners hold everything implicitly and store none.
+                        Role = g.Any(p => p.IsCreator) ? "owner" : "contributor",
+                        AccessPolicies = [.. g.SelectMany(p => p.AccessPolicies ?? [])
+                                             .Where(policy => !string.IsNullOrWhiteSpace(policy))
+                                             .Distinct(StringComparer.Ordinal)
+                                             .OrderBy(policy => policy, StringComparer.Ordinal)],
                         SharedEnviroments = g.Select(p => new SharedEnviroment
                         {
                             ItemId = p.ItemId,
@@ -159,19 +166,10 @@ namespace DomainService.People
                     };
                 }
 
+                // Ownership is no longer checked here: [ProjectPolicy("people::invite")] on the
+                // endpoint does it, before this method is reached, and grants a contributor the
+                // same ability when the owner has given it to them.
                 var userId = BlocksContext.GetContext()?.UserId ?? string.Empty;
-
-                if (!await _peopleRepository.IsOwner(userId, tenants))
-                {
-                    return new InviteResponse
-                    {
-                        IsSuccess = false,
-                        Errors = new Dictionary<string, string>
-                        {
-                            { "own_project", "You are not allowed to share this projects" }
-                        }
-                    };
-                }
 
                 // IAM stores every email lowercased, so an address typed with different casing would otherwise
                 // miss the lookup below and have a duplicate account created for it.
@@ -302,7 +300,7 @@ namespace DomainService.People
 
             if (hasAcceptedInvitation)
             {
-                await _peopleRepository.InsertPeoplesAsync(BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: true));
+                await _peopleRepository.InsertPeoplesAsync(BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: true, existingPeople));
                 _logger.LogInformation("Granted {Count} environments to already-accepted user: {Email}", newEnviroments.Count, user.Email);
                 return InvitationOutcomes.AccessGranted;
             }
@@ -317,7 +315,7 @@ namespace DomainService.People
             }
 
             // They have to accept and can already sign in: no key needed, so blocks-os owns the whole invitation.
-            var projectPeoples = BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: false);
+            var projectPeoples = BuildProjectPeoples(user, newEnviroments, isInvitationConfirmed: false, existingPeople);
 
             await _peopleRepository.InsertPeoplesAsync(projectPeoples);
             _logger.LogInformation("Inserted {Count} project people records for email: {Email}", projectPeoples.Count, email);
@@ -336,8 +334,14 @@ namespace DomainService.People
             return invitationSent ? InvitationOutcomes.Invited : InvitationOutcomes.InvitationNotSent;
         }
 
-        private static List<ProjectPeople> BuildProjectPeoples(User user, List<EnviromentDetails> enviromentDetails, bool isInvitationConfirmed)
+        private static List<ProjectPeople> BuildProjectPeoples(User user, List<EnviromentDetails> enviromentDetails, bool isInvitationConfirmed, IEnumerable<ProjectPeople>? existingRows = null)
         {
+            // Grants are group-wide but the rows are per-environment, so a row added for a
+            // further environment inherits what the member already holds elsewhere in the group.
+            // Without this, adding someone to a new environment would leave one row disagreeing
+            // with its siblings about what they may do.
+            var seededPolicies = SeedPolicies(existingRows);
+
             return enviromentDetails
                 .Select(env => new ProjectPeople
                 {
@@ -347,9 +351,24 @@ namespace DomainService.People
                     IsInvitationSent = true,
                     IsInvitationConfirmed = isInvitationConfirmed,
                     UserId = user.ItemId,
-                    Roles = env.Roles
+                    Roles = env.Roles,
+                    AccessPolicies = [.. seededPolicies]
                 })
                 .ToList();
+        }
+
+        /// <summary>Union of the grants a member already holds on their rows in this group.</summary>
+        private static List<string> SeedPolicies(IEnumerable<ProjectPeople>? existingRows)
+        {
+            if (existingRows is null) return [];
+
+            return [.. existingRows
+                .Where(row => row.AccessPolicies is not null)
+                .SelectMany(row => row.AccessPolicies)
+                .Where(policy => !string.IsNullOrWhiteSpace(policy))
+                .Select(policy => policy.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(policy => policy, StringComparer.Ordinal)];
         }
 
         private ProjectPeople CreateProjectPeople(User user, string tenantId, string email, List<string> roles)
@@ -623,19 +642,9 @@ namespace DomainService.People
                 };
             }
 
+            // Ownership is no longer checked here: [ProjectPolicy("people::remove")] on the
+            // endpoint does it, before this method is reached.
             var userId = BlocksContext.GetContext()?.UserId ?? string.Empty;
-
-            if (!await _peopleRepository.IsOwner(userId, tenants))
-            {
-                return new InviteResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
-                        {
-                            { "own_project", "You are not allowed to share this projects" }
-                        }
-                };
-            }
 
             try
             {
@@ -936,19 +945,9 @@ namespace DomainService.People
                     };
                 }
 
+                // Ownership is no longer checked here: [ProjectPolicy("people::invite")] on the
+                // endpoint does it, before this method is reached.
                 var bc = BlocksContext.GetContext();
-
-                if (!await _peopleRepository.IsOwner(bc.UserId, tenants))
-                {
-                    return new InviteResponse
-                    {
-                        IsSuccess = false,
-                        Errors = new Dictionary<string, string>
-                        {
-                            { "own_project", "You are not allowed to share this projects" }
-                        }
-                    };
-                }
 
                 var existingUsers = await _peopleRepository.GetUsersByEmailAsync(new List<string> { request.Email });
                 var user = existingUsers?.FirstOrDefault(u => u.Email == request.Email);
@@ -1058,7 +1057,10 @@ namespace DomainService.People
             var tenantids = await _projectRepository.GetProjectIdsByGroupId(request.TenantGroupId);
             var bc = BlocksContext.GetContext();
 
-            if (!await _peopleRepository.IsOwner(bc.UserId, tenantids) || NormalizeEmail(bc.UserName) == request.TransferToUserEmail)
+            // The ownership half of this check moved to [ProjectPolicy(OwnerOnly = true)] on the
+            // endpoint. Refusing a transfer to yourself is a business rule, not authorization,
+            // so it stays here.
+            if (NormalizeEmail(bc.UserName) == request.TransferToUserEmail)
             {
                 return new BaseResponse { Errors = new Dictionary<string, string> { { "own_project", "You are not allowed to transfer ownership of this projects" } } };
             }

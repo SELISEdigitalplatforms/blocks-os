@@ -14,9 +14,32 @@ namespace DomainService.People
         private readonly IDbContextProvider _dbContextProvider;
         private readonly ITenants _tenants;
         private readonly IProjectRepository _projectRepository;
+        private readonly IMongoDatabase _rootDb;
 
         private const string _userCollectionName = "Users";
         private const string _peopleCollectionName = "ProjectPeoples";
+
+        /// <summary>
+        /// ProjectPeoples lives in the root database and nowhere else: every write to it — the
+        /// creator row provisioning stamps, the invite inserts, the disable cleanup — goes
+        /// through <see cref="IProjectRepository"/>, which pins the collection to BlocksRootDb.
+        /// </summary>
+        /// <remarks>
+        /// Read through the plain <see cref="IDbContextProvider.GetCollection{T}(string)"/>
+        /// instead and the handle resolves to <c>BlocksContext.TenantId</c>'s own database. Once
+        /// the console has impersonated a project — which Project/Disable relies on, since it
+        /// takes the impersonated tenant as the project to disable — that is the project's own
+        /// tenant database, where these rows have never been written. Every read came back
+        /// empty, and because <c>ProjectAccessService</c> decides ownership from exactly these
+        /// rows, the owner of a project was refused as a non-member of it: "Only the project
+        /// owner can do this", with <c>rows=0; ownerRows=0</c>.
+        ///
+        /// The writes were wrong in the same direction and less visibly: an invite, an access
+        /// grant or a remove-access issued from inside a project landed in (or matched nothing
+        /// in) the project's tenant database, leaving rows split across two databases.
+        /// </remarks>
+        private IMongoCollection<ProjectPeople> PeopleCollection =>
+            _rootDb.GetCollection<ProjectPeople>(_peopleCollectionName);
 
         // Shortest search term that will actually query; below this the filter is ignored (all people returned).
         private const int MinSearchTermLength = 3;
@@ -35,16 +58,20 @@ namespace DomainService.People
             { "_id", 1 }
         });
 
-        public PeopleRepository(IDbContextProvider dbContextProvider, ITenants tenants, IProjectRepository projectRepository)
+        public PeopleRepository(IDbContextProvider dbContextProvider,
+                               ITenants tenants,
+                               IProjectRepository projectRepository,
+                               IBlocksSecret blocksSecret)
         {
             _dbContextProvider = dbContextProvider;
             _tenants = tenants;
             _projectRepository = projectRepository;
+            _rootDb = dbContextProvider.GetDatabase(blocksSecret.DatabaseConnectionString, IdentifierConstants.RootDatabaseName);
         }
 
         public async Task<(List<GetProjectPeople> peoples, long totalCount, long peoplesTotalCount, bool isOwner)> GetPeoplesAsync(GetPeoplesRequest request)
         {
-            var peopleCollection = _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName);
+            var peopleCollection = PeopleCollection;
             var userCollection = _dbContextProvider.GetCollection<User>(_userCollectionName);
 
             var projectIds = await _projectRepository.GetProjectIdsByGroupId(request.ProjectGroupId);
@@ -100,7 +127,7 @@ namespace DomainService.People
                 }
             }
 
-            var isOwner = await IsOwner(BlocksContext.GetContext().UserId ?? "", projectIds);
+            var isOwner = await IsOwner(BlocksContext.GetContext()?.UserId ?? "", projectIds);
 
             // TotalCount counts (person, environment) rows; the list itself is paged by distinct person.
             var totalCount = await peopleCollection.CountDocumentsAsync(projectPeopleFilter);
@@ -154,6 +181,7 @@ namespace DomainService.People
                         IsInvitationSent = x.IsInvitationSent,
                         IsInvitationConfirmed = x.IsInvitationConfirmed,
                         IsCreator = x.IsCreator,
+                        AccessPolicies = x.AccessPolicies ?? [],
                         Enviroment = _tenants.GetTenantByID(x.TenantId)?.Environment ?? string.Empty,
                     };
 
@@ -192,7 +220,7 @@ namespace DomainService.People
 
         public async Task<bool> InsertPeoplesAsync(List<ProjectPeople> projectPeoples)
         {
-            await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).InsertManyAsync(projectPeoples);
+            await PeopleCollection.InsertManyAsync(projectPeoples);
             return true;
         }
 
@@ -200,7 +228,7 @@ namespace DomainService.People
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.Email, email)
                 & Builders<ProjectPeople>.Filter.In(x => x.TenantId, tenantIds);
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).DeleteManyAsync(filter);
+            var result = await PeopleCollection.DeleteManyAsync(filter);
             return result.IsAcknowledged;
         }
 
@@ -208,30 +236,52 @@ namespace DomainService.People
         {
             var filter = Builders<ProjectPeople>.Filter.In(x => x.ItemId, ids);
             var update = Builders<ProjectPeople>.Update.Set(x => x.IsInvitationConfirmed, true);
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).UpdateManyAsync(filter, update);
+            var result = await PeopleCollection.UpdateManyAsync(filter, update);
             return result.IsAcknowledged;
         }
 
         public async Task<List<ProjectPeople>> GetProjectPeoplesAsync(string userId, List<string> tenantIds)
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId) & Builders<ProjectPeople>.Filter.In(x => x.TenantId, tenantIds);
-            return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).Find(filter).ToListAsync();
+            return await PeopleCollection.Find(filter).ToListAsync();
         }
 
         public async Task<ProjectPeople> GetProjectPeopleAsync(string id)
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.ItemId, id);
-            return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).Find(filter).FirstOrDefaultAsync();
+            return await PeopleCollection.Find(filter).FirstOrDefaultAsync();
         }
 
+        /// <summary>
+        /// Holds an <c>IsCreator</c> row on any tenant in the group. Matches what the
+        /// authorization filter decides, so a button this list shows is one the server honours.
+        /// </summary>
         public async Task<bool> IsOwner(string userId, List<string> tenantIds)
         {
-            var filter = Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId) & Builders<ProjectPeople>.Filter.In(x => x.TenantId, tenantIds)
-                & Builders<ProjectPeople>.Filter.Eq(x => x.IsCreator, true);
+            if (tenantIds is null || tenantIds.Count == 0 || string.IsNullOrWhiteSpace(userId)) return false;
 
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).CountDocumentsAsync(filter);
+            var filter = Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId)
+                       & Builders<ProjectPeople>.Filter.In(x => x.TenantId, tenantIds)
+                       & Builders<ProjectPeople>.Filter.Eq(x => x.IsCreator, true);
 
-            return result > 0;
+            return await PeopleCollection
+                .CountDocumentsAsync(filter) > 0;
+        }
+
+        public async Task<bool> UpdateAccessPoliciesAsync(List<string> itemIds, List<string> accessPolicies)
+        {
+            if (itemIds is null || itemIds.Count == 0) return false;
+
+            var filter = Builders<ProjectPeople>.Filter.In(x => x.ItemId, itemIds);
+            var update = Builders<ProjectPeople>.Update
+                .Set(x => x.AccessPolicies, accessPolicies ?? [])
+                .Set(x => x.LastUpdatedDate, DateTime.UtcNow)
+                .Set(x => x.LastUpdatedBy, BlocksContext.GetContext()?.UserId);
+
+            var result = await PeopleCollection
+                .UpdateManyAsync(filter, update);
+
+            return result.MatchedCount > 0;
         }
 
         public async Task<bool> UpdateProjectPeopleOwnerShipAsync(List<string> ids, bool ownerShipStatus)
@@ -240,14 +290,14 @@ namespace DomainService.People
             var update = Builders<ProjectPeople>.Update.Set(x => x.IsCreator, ownerShipStatus)
                                                        .Set(x => x.IsInvitationConfirmed, true)
                                                        .Set(x => x.IsInvitationSent, true);
-            var result = await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).UpdateManyAsync(filter, update);
+            var result = await PeopleCollection.UpdateManyAsync(filter, update);
             return result.IsAcknowledged;
         }
 
         public async Task<ProjectPeople> GetProjectPeopleByTenantIdAndUserIdAsync(string tenantId, string userId)
         {
             var filter = Builders<ProjectPeople>.Filter.Eq(x => x.TenantId, tenantId) & Builders<ProjectPeople>.Filter.Eq(x => x.UserId, userId);
-            return await _dbContextProvider.GetCollection<ProjectPeople>(_peopleCollectionName).Find(filter).FirstOrDefaultAsync();
+            return await PeopleCollection.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<User> GetUserByEmailAsync(string email)

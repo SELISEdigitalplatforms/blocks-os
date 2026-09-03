@@ -83,6 +83,65 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task SaveProjectAsync_NewGroup_RecordsTheCreatorBeforeQueueingTheProject()
+        {
+            // Provisioning is asynchronous, so the creator row used to be written only once the
+            // worker picked the project up. Until it did, the group had environments and no
+            // owner, and every [ProjectPolicy(OwnerOnly)] endpoint refused the person who had
+            // just created it -- adding an environment and deleting the project among them.
+            using var _ = new BlocksTestContext(userId: "creator-1", userName: "creator@blocks.com");
+
+            var written = new List<ProjectPeople>();
+            _repo.Setup(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()))
+                 .Callback<ProjectPeople>(written.Add)
+                 .Returns(Task.CompletedTask);
+
+            var request = new CreateProjectRequest
+            {
+                Name = "Proj",
+                applicationContexts = new List<ApplicationContext>
+                {
+                    new() { Environment = "dev", Domain = "https://dev.example.com" },
+                    new() { Environment = "prod", Domain = "https://example.com" }
+                }
+            };
+
+            await Service().SaveProjectAsync(request);
+
+            // One per environment, so ownership survives any single environment being disabled.
+            written.Should().HaveCount(2);
+            written.Should().OnlyContain(row => row.IsCreator
+                                                && row.UserId == "creator-1"
+                                                && row.Email == "creator@blocks.com"
+                                                && row.IsInvitationConfirmed);
+            written.Select(row => row.TenantId).Should().OnlyHaveUniqueItems();
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_ExistingGroup_DoesNotStampTheCallerAsOwner()
+        {
+            // Appending an environment must leave ownership where it is. Stamping the caller
+            // here would hand the whole group to anyone who could add an environment to it.
+            using var _ = new BlocksTestContext(userId: "not-the-owner");
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("existing-group"))
+                 .ReturnsAsync(new TenantAsset { Resources = new List<Resource>() });
+
+            var request = new CreateProjectRequest
+            {
+                Name = "Proj",
+                TenantGroupId = "existing-group",
+                applicationContexts = new List<ApplicationContext>
+                {
+                    new() { Environment = "test", Domain = "https://test.example.com" }
+                }
+            };
+
+            await Service().SaveProjectAsync(request);
+
+            _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
+        }
+
+        [Fact]
         public async Task SaveProjectAsync_ExistingGroup_LoadsAssetsInsteadOfCreating()
         {
             using var _ = new BlocksTestContext();
@@ -1212,6 +1271,23 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.CreateDefaultConfigurationAsync(It.IsAny<ProjectStatusTracer>(), project), Times.Once);
             // Public certificate download URL should be persisted on the project.
             project.JwtTokenParameters.PublicCertificatePath.Should().Be("https://download/cert");
+        }
+
+        [Fact]
+        public async Task ConfigureProjectAsync_DoesNotWriteASecondCreatorRow_WhenTheEnvironmentAlreadyHasAnOwner()
+        {
+            // The API now records ownership of a brand-new group before queueing it, so the
+            // worker arrives at an environment that already has a creator row. The tracer flag
+            // does not cover this -- it is a fresh tracer -- and neither does it cover a resumed
+            // run that wrote the row and crashed before the flag was saved. Two creator rows for
+            // one person on one tenant is what both used to produce.
+            using var _ = new BlocksTestContext();
+            SetupCertificatePipeline();
+            _repo.Setup(r => r.GetOwnerUserIdAsync("t1")).ReturnsAsync("creator-1");
+
+            await Service().ConfigureProjectAsync(NewTenantForConfigure());
+
+            _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
         }
 
         [Fact]
