@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
     label: string;
     props?: { disabled?: boolean };
   }>,
+  lastShowFirstFilterOnMobile: undefined as boolean | undefined,
   lastRoleOptionsPayload: null as { organizationIds: string[] } | null,
 }));
 
@@ -50,6 +51,7 @@ vi.mock("@/components/filter-toolbar", () => ({
     filters,
     onChange,
     onReset,
+    showFirstFilterOnMobile,
   }: {
     filters: Array<{
       key: string;
@@ -59,8 +61,10 @@ vi.mock("@/components/filter-toolbar", () => ({
     }>;
     onChange: (key: string, value: unknown) => void;
     onReset: () => void;
+    showFirstFilterOnMobile?: boolean;
   }) => {
     h.lastFilters = filters;
+    h.lastShowFirstFilterOnMobile = showFirstFilterOnMobile;
     return (
       <div>
         <button onClick={() => onChange("search", { selected: "email", value: "abc" })}>
@@ -99,6 +103,7 @@ beforeEach(() => {
     { itemId: "org-1", name: "Acme" },
   ];
   h.lastFilters = [];
+  h.lastShowFirstFilterOnMobile = undefined;
   h.lastRoleOptionsPayload = null;
 });
 
@@ -177,6 +182,11 @@ describe("UsersDateFilters", () => {
     const rolesFilter = h.lastFilters.find((filter) => filter.key === "roles");
     expect(rolesFilter?.props?.disabled).toBe(true);
     expect(h.lastRoleOptionsPayload?.organizationIds).toEqual([]);
+  });
+
+  it("keeps all date-toolbar filters inside the mobile filter sheet", () => {
+    render(<UsersDateFilters />);
+    expect(h.lastShowFirstFilterOnMobile).toBe(false);
   });
 
   it("loads role options for selected organizations", () => {

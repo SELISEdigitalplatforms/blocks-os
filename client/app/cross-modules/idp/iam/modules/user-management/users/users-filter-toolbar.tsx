@@ -289,6 +289,7 @@ export const UsersDateFilters = () => {
       onChange={changeHandler}
       onReset={resetHandler}
       hideGlobalResetButton
+      showFirstFilterOnMobile={false}
     />
   );
 };
