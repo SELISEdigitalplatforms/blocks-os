@@ -71,6 +71,14 @@ describe("Users", () => {
     expect((screen.getByTestId("users-table") as HTMLElement).textContent).toContain("rows:2");
   });
 
+  it("keeps search and advanced filters in one justified mobile row", () => {
+    render(<Users />);
+    expect(screen.getByTestId("users-filter-row").className).toContain("flex-row");
+    expect(screen.getByTestId("users-filter-row").className).toContain("justify-between");
+    expect(screen.getByTestId("users-search-filter-slot").className).toContain("flex-1");
+    expect(screen.getByTestId("users-advanced-filter-slot").className).toContain("shrink-0");
+  });
+
   it("uses the name as query text when the name filter is selected", () => {
     render(<Users />);
     expect(h.lastQuery?.query).toBe("alice");

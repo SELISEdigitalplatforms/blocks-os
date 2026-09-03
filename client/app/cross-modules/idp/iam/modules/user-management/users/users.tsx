@@ -64,9 +64,16 @@ export const Users = () => {
   return (
     <Card>
       <CardContent>
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <UsersSearchFilter />
-          <UsersDateFilters />
+        <div
+          data-testid="users-filter-row"
+          className="mb-6 flex flex-row items-start justify-between gap-3"
+        >
+          <div data-testid="users-search-filter-slot" className="min-w-0 flex-1">
+            <UsersSearchFilter />
+          </div>
+          <div data-testid="users-advanced-filter-slot" className="shrink-0">
+            <UsersDateFilters />
+          </div>
         </div>
         <UsersTable users={data?.data || []} isLoading={isUserLoading} />
         {!isUserLoading && data && data.totalCount > queryParams.pageSize && (
