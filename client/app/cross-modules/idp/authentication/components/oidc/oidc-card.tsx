@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { format } from "date-fns";
-import { ChevronRight, LayoutTemplate, RotateCw, Shield, Trash2 } from "lucide-react";
+import { ChevronRight, RotateCw, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import {
@@ -42,8 +40,6 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
   const [showRotateDialog, setShowRotateDialog] = useState(false);
   const [showRotatedSecretDialog, setShowRotatedSecretDialog] = useState(false);
   const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const scoped = useScopedPath();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync: deleteOidc, isPending: isDeleting } = useDeleteAuthOidc({
     projectKey: tenantId,
@@ -209,20 +205,6 @@ const OIDCRow = ({ item, defaultExpanded = false }: OIDCRowProps) => {
         </TableCell>
         <TableCell className="py-3.5 pl-4 text-left" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-start gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-high-emphasis"
-                  aria-label="Template"
-                  onClick={() => navigate(scoped(`secret-management/oidc/${item.itemId}/branding`))}
-                >
-                  <LayoutTemplate className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Template</TooltipContent>
-            </Tooltip>
             <CreateOIDC itemId={item.itemId} triggerVariant="ghost" />
             {!item.isDeviceFlowClient && (
               <Tooltip>

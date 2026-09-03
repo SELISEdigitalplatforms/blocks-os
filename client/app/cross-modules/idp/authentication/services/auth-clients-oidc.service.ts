@@ -5,13 +5,16 @@ import {
   IDeleteOidcClientResponse,
   IGetOidcPayload,
   IGetOidcCredentialsResponse,
+  IGetOidcUiTemplateResponse,
   IRotateOidcClientSecretPayload,
   IRotateOidcClientSecretResponse,
   ISaveOidcCredentialPayload,
   ISaveOidcCredentialResponse,
+  IOidcUiTemplate,
+  ISaveOidcUiTemplateResponse,
   IOidcConfig,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { AUTH_OIDC_ENDPOINTS } from "../constants/endpoint.constant";
+import { AUTH_OIDC_ENDPOINTS, AUTH_OIDC_TEMPLATE_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class AuthOidc {
   async getOidcCredentials(): Promise<IGetOidcCredentialsResponse> {
@@ -55,6 +58,23 @@ export class AuthOidc {
       undefined,
       { absoluteUrl: true },
     );
+  }
+
+  async getOidcTemplate(): Promise<IOidcUiTemplate | null> {
+    const response: IGetOidcUiTemplateResponse = await http.get(
+      AUTH_OIDC_TEMPLATE_ENDPOINTS.GET_OIDC_TEMPLATE,
+      undefined,
+      {
+        absoluteUrl: true,
+      },
+    );
+    return response.template;
+  }
+
+  saveOidcTemplate(payload: IOidcUiTemplate): Promise<ISaveOidcUiTemplateResponse> {
+    return http.put(AUTH_OIDC_TEMPLATE_ENDPOINTS.SAVE_OIDC_TEMPLATE, payload, undefined, {
+      absoluteUrl: true,
+    });
   }
 }
 

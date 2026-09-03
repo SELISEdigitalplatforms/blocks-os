@@ -156,6 +156,12 @@ const ClientCredentialRow = ({
   }[] = [
     { key: "Client Id", value: item.itemId ?? "", copyable: true },
     { key: "Client Secret", value: item.clientSecret ?? "", sensitive: true },
+    // Shown even when it is the tenant-wide "default", because that is the most privileged
+    // scope a credential can have and is worth seeing rather than inferring from an absence.
+    {
+      key: "Organization",
+      value: item.organizationId === "default" ? "Default (tenant-wide)" : (item.organizationId ?? ""),
+    },
     { key: "Token Lifetime", value: formatLifetime(item.accessTokenValidForNumberMinutes) },
     { key: "Role(s)", value: item.roles?.length ? item.roles.join(", ") : "" },
     { key: "Permission(s)", value: item.permissions?.length ? item.permissions.join(", ") : "" },
