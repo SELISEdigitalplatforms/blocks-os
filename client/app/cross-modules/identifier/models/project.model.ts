@@ -175,6 +175,12 @@ export interface IMigrationInitiateResponse {
 export interface IVerifyMigrationRequest {
   verificationId: string;
   verificationCode: string;
+  /**
+   * The project group being migrated. Carried so the second step of the wizard is guarded by
+   * the same grant as the first — a verification id alone tells the server nothing about which
+   * project the call is about.
+   */
+  tenantGroupId: string;
 }
 
 export interface IMigrationVerificationResponse {

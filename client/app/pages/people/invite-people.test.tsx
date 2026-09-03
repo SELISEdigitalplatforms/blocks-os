@@ -47,51 +47,51 @@ describe("InvitePeople", () => {
   });
 
   it("renders nothing when the viewer is not an owner", () => {
-    const { container } = render(<InvitePeople isViewerOwner={false} />);
+    const { container } = render(<InvitePeople canInvite={false} />);
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the invite trigger for an owner", () => {
-    render(<InvitePeople isViewerOwner />);
+  it("renders the invite trigger for anyone granted people::invite", () => {
+    render(<InvitePeople canInvite />);
     expect(screen.getByRole("button", { name: /Invite/ })).toBeTruthy();
   });
 
   it("opens the dialog with one invitation row and a disabled Send button", async () => {
     const user = userEvent.setup();
-    render(<InvitePeople isViewerOwner />);
+    render(<InvitePeople canInvite />);
     await user.click(screen.getByRole("button", { name: /Invite/ }));
     expect(await screen.findByText("Invite people")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Enter email")).toBeTruthy();
-    const send = screen.getByRole("button", { name: "Send" }) as HTMLButtonElement;
+    expect(screen.getByPlaceholderText("name@company.com")).toBeTruthy();
+    const send = screen.getByRole("button", { name: /Send invitation/ }) as HTMLButtonElement;
     expect(send.disabled).toBe(true);
   });
 
   it("adds and removes invitation rows", async () => {
     const user = userEvent.setup();
-    render(<InvitePeople isViewerOwner />);
+    render(<InvitePeople canInvite />);
     await user.click(screen.getByRole("button", { name: /Invite/ }));
     await user.click(screen.getByRole("button", { name: /Add another/ }));
-    expect(screen.getAllByPlaceholderText("Enter email")).toHaveLength(2);
+    expect(screen.getAllByPlaceholderText("name@company.com")).toHaveLength(2);
     // remove buttons appear once there is more than one row
     const removeButtons = screen.getAllByRole("button").filter((b) => b.querySelector("svg.lucide-trash2"));
     await user.click(removeButtons[0]);
-    await waitFor(() => expect(screen.getAllByPlaceholderText("Enter email")).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByPlaceholderText("name@company.com")).toHaveLength(1));
   });
 
   it("submits a valid invitation and shows a success toast", async () => {
     mutateAsync.mockResolvedValueOnce({ results: { "new@x.com": "invited" } });
     const user = userEvent.setup();
-    render(<InvitePeople isViewerOwner />);
+    render(<InvitePeople canInvite />);
     await user.click(screen.getByRole("button", { name: /Invite/ }));
 
-    await user.type(screen.getByPlaceholderText("Enter email"), "new@x.com");
+    await user.type(screen.getByPlaceholderText("name@company.com"), "new@x.com");
 
     // pick an environment from the MultiSelect
     await user.click(screen.getByRole("button", { name: /Select environments/ }));
     const devOption = await screen.findByText("Development");
     await user.click(devOption);
 
-    const send = screen.getByRole("button", { name: "Send" }) as HTMLButtonElement;
+    const send = screen.getByRole("button", { name: /Send invitation/ }) as HTMLButtonElement;
     await waitFor(() => expect(send.disabled).toBe(false));
     await user.click(send);
 
@@ -105,12 +105,12 @@ describe("InvitePeople", () => {
   it("shows an error toast when every recipient is skipped", async () => {
     mutateAsync.mockResolvedValueOnce({ results: { "new@x.com": "already_has_access" } });
     const user = userEvent.setup();
-    render(<InvitePeople isViewerOwner />);
+    render(<InvitePeople canInvite />);
     await user.click(screen.getByRole("button", { name: /Invite/ }));
-    await user.type(screen.getByPlaceholderText("Enter email"), "new@x.com");
+    await user.type(screen.getByPlaceholderText("name@company.com"), "new@x.com");
     await user.click(screen.getByRole("button", { name: /Select environments/ }));
     await user.click(await screen.findByText("Development"));
-    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(screen.getByRole("button", { name: /Send invitation/ }));
     await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
     expect(showSuccessToast).not.toHaveBeenCalled();
   });
@@ -118,12 +118,12 @@ describe("InvitePeople", () => {
   it("surfaces a limit error message from a failed mutation", async () => {
     mutateAsync.mockRejectedValueOnce({ errors: { exceed_limit: "Seat limit reached" } });
     const user = userEvent.setup();
-    render(<InvitePeople isViewerOwner />);
+    render(<InvitePeople canInvite />);
     await user.click(screen.getByRole("button", { name: /Invite/ }));
-    await user.type(screen.getByPlaceholderText("Enter email"), "new@x.com");
+    await user.type(screen.getByPlaceholderText("name@company.com"), "new@x.com");
     await user.click(screen.getByRole("button", { name: /Select environments/ }));
     await user.click(await screen.findByText("Development"));
-    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(screen.getByRole("button", { name: /Send invitation/ }));
     await waitFor(() =>
       expect(showErrorToast).toHaveBeenCalledWith({ errors: "Seat limit reached" }),
     );
@@ -131,12 +131,12 @@ describe("InvitePeople", () => {
 
   it("blocks an invalid email format", async () => {
     const user = userEvent.setup();
-    render(<InvitePeople isViewerOwner />);
+    render(<InvitePeople canInvite />);
     await user.click(screen.getByRole("button", { name: /Invite/ }));
-    const input = screen.getByPlaceholderText("Enter email");
+    const input = screen.getByPlaceholderText("name@company.com");
     await user.type(input, "bad-email");
     await user.tab();
     expect(await screen.findByText("Invalid email format")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Send" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /Send invitation/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

@@ -26,7 +26,13 @@ namespace DomainService.People
         Task<Tenant> GetProjectByIdAsync(string tenantId);
         Task<User> GetUserByIdAsync(string userId);
         Task<bool> UpdateProjectPeoples(List<string> ids);
-        Task<bool> IsOwner(string email, List<string> tenantIds);
+        Task<bool> IsOwner(string userId, List<string> tenantIds);
+        /// <summary>
+        /// Replaces <c>AccessPolicies</c> on every one of a member's rows in a group. Called
+        /// only from <c>SaveAccessPolicy</c>: grants are group-wide, so a single-row write would
+        /// leave that member's rows disagreeing with each other.
+        /// </summary>
+        Task<bool> UpdateAccessPoliciesAsync(List<string> itemIds, List<string> accessPolicies);
         Task<bool> UpdateProjectPeopleOwnerShipAsync(List<string> ids, bool ownerShipStatus);
         Task<ProjectPeople> GetProjectPeopleByTenantIdAndUserIdAsync(string tenantId, string userId);
         Task<User> GetUserByEmailAsync(string email);

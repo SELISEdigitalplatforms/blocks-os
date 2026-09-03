@@ -6,6 +6,7 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { ConfirmationModal } from "@/components/confirmation-modal/confirmation-modal";
 import { IProject } from "@/models/project.model";
 import { useGetProjectStatus, useRestoreProject } from "@/hooks/use-project";
+import { useProjectPermissions } from "@/hooks/use-project-access";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useStartImpersonation } from "@seliseblocks/genesis-os/hooks";
 import {
@@ -16,6 +17,10 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { isErrorWithErrors, showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { environmentOptions } from "@/constants/environment-options";
+import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
+import { MaskedText } from "@/components/masked-text";
+import { Badge } from "@/components/ui-kits/badge/badge";
+import { formatDate } from "@/lib/utils";
 type EnvironmentCardProps = {
   project: IProject;
   isMigrationOngoing?: boolean;
@@ -33,7 +38,19 @@ export const EnvironmentCard = ({
   const { mutateAsync: restoreProject, isPending: isRestoring } = useRestoreProject();
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
+  // Repair posts Project/Restore, which re-runs the whole provisioning routine and is
+  // [ProjectPolicy(OwnerOnly = true)] — absent from the grant catalog on purpose. A
+  // contributor still sees the "setup pending" warning; they just cannot act on it.
+  const { isOwner } = useProjectPermissions(project.tenantGroupId);
+  const canRepair = isOwner;
+
   const setupPending = isSetupComplete === false;
+
+  // An environment carries a generated domain plus any custom ones, so the card shows the
+  // first and counts the rest rather than implying there is only one.
+  const [primaryApplication, ...otherApplications] = project.applications ?? [];
+  const primaryDomain = primaryApplication?.domain?.replace(/^https?:\/\//, "") ?? "";
+  const extraDomains = otherApplications.length;
 
   const onClickHandler = async (): Promise<void> => {
     try {
@@ -129,7 +146,7 @@ export const EnvironmentCard = ({
                 </Tooltip>
               </TooltipProvider>
             )}
-            {setupPending && (
+            {setupPending && canRepair && (
               <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
                 <DialogTrigger asChild>
                   <button
@@ -177,12 +194,42 @@ export const EnvironmentCard = ({
             )}
           </div>
         </CardHeader>
-        <div className="mt-2">
-          <div className="flex flex-wrap items-center gap-1.5 py-0.5 text-xs sm:py-1 md:py-1.5">
-            <span className="font-semibold text-muted-foreground">X-Blocks-Key:</span>
-            <span className="truncate font-mono text-muted-foreground">{project?.tenantId}</span>
+        {/* The card used to carry a name and a raw key and nothing else, while Project
+            Settings had the domains, the created date and a masked key all along. Same
+            facts, one presentation — including the masking, which only one of the two
+            was applying to the same secret. */}
+        <dl className="mt-3 flex flex-col gap-1.5 text-xs">
+          {primaryDomain && (
+            <div className="flex items-center gap-2">
+              <dt className="w-[86px] shrink-0 text-muted-foreground">Domain</dt>
+              <dd className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate">{primaryDomain}</span>
+                {extraDomains > 0 && (
+                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                    +{extraDomains}
+                  </Badge>
+                )}
+              </dd>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <dt className="w-[86px] shrink-0 text-muted-foreground">X-Blocks-Key</dt>
+            <dd
+              className="flex min-w-0 items-center gap-1 font-mono text-muted-foreground"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <CopyToClipboardButton textToCopy={project.tenantId}>
+                <MaskedText text={project.tenantId} showFirstN={3} showLastN={3} length={20} />
+              </CopyToClipboardButton>
+            </dd>
           </div>
-        </div>
+          {project.createdDate && (
+            <div className="flex items-center gap-2">
+              <dt className="w-[86px] shrink-0 text-muted-foreground">Created</dt>
+              <dd className="truncate text-muted-foreground">{formatDate(new Date(project.createdDate))}</dd>
+            </div>
+          )}
+        </dl>
       </Card>
       {isMigrationOngoing && (
         <ConfirmationModal

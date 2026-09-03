@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { X, Plus } from "lucide-react";
+import { CircleMinus, Plus } from "lucide-react";
 import { User } from "@blocks-idp/iam/models/user";
 import { useRemoveEnvironmentAccess, useInvitePeople } from "@/hooks/use-people";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
@@ -16,9 +16,16 @@ import { buildInvitePeoplePayload } from "./invite-people-utils";
 
 interface PeopleEnvironmentsTabProps {
   user?: User;
+  /** The exact People/Gets row selected by the detail page. */
+  person?: PeopleGroupedByEnvironments;
   peopleData?: PeopleGroupedByEnvironments[];
   environmentList?: IProjectGroup[];
-  isViewerOwner?: boolean;
+  /**
+   * Removing someone from an environment and adding them to one are two different grants —
+   * `people::remove` and `people::invite` — not one privilege of ownership.
+   */
+  canRemove?: boolean;
+  canInvite?: boolean;
 }
 
 type PendingAction = {
@@ -28,16 +35,34 @@ type PendingAction = {
 
 export const PeopleEnvironmentsTab = ({
   user,
+  person,
   peopleData,
   environmentList,
-  isViewerOwner = false,
+  canRemove = false,
+  canInvite = false,
 }: PeopleEnvironmentsTabProps) => {
-  const userEnvironmentData = peopleData?.[0];
+  // Prefer the row selected by the parent. Falling back to a user-id match keeps this component
+  // safe for its existing callers without accidentally using the first row of a broad search.
+  const userEnvironmentData =
+    person ??
+    peopleData?.find(
+      (candidate) =>
+        candidate.peopleDetails?.userId?.toLowerCase() === user?.itemId?.toLowerCase(),
+    ) ??
+    peopleData?.find(
+      (candidate) =>
+        !!user?.email &&
+        candidate.peopleDetails?.email?.trim().toLowerCase() ===
+          user.email.trim().toLowerCase(),
+    ) ??
+    (peopleData?.length === 1 ? peopleData[0] : undefined);
   const sharedEnvironments = useMemo(
     () => userEnvironmentData?.sharedEnviroments || [],
     [userEnvironmentData?.sharedEnviroments],
   );
-  const isProfileUserOwner = sharedEnvironments.some((env) => env.isCreator);
+  const isProfileUserOwner =
+    userEnvironmentData?.role?.toLowerCase() === "owner" ||
+    sharedEnvironments.some((env) => env.isCreator);
 
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -54,8 +79,11 @@ export const PeopleEnvironmentsTab = ({
     return Array.from(new Set([...projects, ...nonShared]));
   }, [environmentList]);
 
+  // An owner reaches every environment in the group. Their own rows are unioned in so the
+  // list still shows what they hold even when the project list has not loaded or omits one.
   const currentAvailableEnvironments = useMemo(() => {
-    if (isProfileUserOwner) return allAvailableEnvironments;
+    if (isProfileUserOwner)
+      return Array.from(new Set([...allAvailableEnvironments, ...withAccessEnvironments]));
     return withAccessEnvironments;
   }, [isProfileUserOwner, allAvailableEnvironments, withAccessEnvironments]);
 
@@ -151,14 +179,15 @@ export const PeopleEnvironmentsTab = ({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <Card className="overflow-hidden p-0">
+        <CardHeader className="mb-0 flex flex-row items-center justify-between border-b px-5 py-4 sm:px-6">
           <CardTitle>Environment Access</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground">With access to</div>
-            <div className="flex flex-wrap gap-3">
+        <CardContent className="px-5 py-5 sm:px-6">
+          <div className="grid grid-cols-1 gap-7 lg:grid-cols-2 lg:gap-10">
+            <section className="min-w-0 space-y-4 lg:border-r lg:pr-10">
+              <h3 className="text-sm font-semibold text-foreground">With access to</h3>
+              <div className="flex flex-wrap gap-2.5">
               {currentAvailableEnvironments.length > 0 ? (
                 currentAvailableEnvironments.map((envValue) => (
                   <div
@@ -166,7 +195,7 @@ export const PeopleEnvironmentsTab = ({
                     className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
                   >
                     <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
-                    {isViewerOwner && !isProfileUserOwner && (
+                    {canRemove && !isProfileUserOwner && (
                       <button
                         type="button"
                         onClick={() => {
@@ -178,7 +207,7 @@ export const PeopleEnvironmentsTab = ({
                         title="Remove access"
                         aria-label={`Remove access from ${getEnvironmentLabel(envValue)}`}
                       >
-                        <X className="h-4 w-4" />
+                        <CircleMinus className="h-4 w-4" />
                       </button>
                     )}
                   </div>
@@ -188,41 +217,42 @@ export const PeopleEnvironmentsTab = ({
                   No environments with access yet
                 </div>
               )}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground">Without access to</div>
-            <div className="flex flex-wrap gap-3">
-              {withoutAccessEnvironments.length > 0 ? (
-                withoutAccessEnvironments.map((envValue) => (
-                  <div
-                    key={envValue}
-                    className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
-                  >
-                    <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
-                    {isViewerOwner && !isProfileUserOwner && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPendingAction({ type: "add", envValue });
-                          setIsConfirmDialogOpen(true);
-                        }}
-                        disabled={isProcessing}
-                        className="ml-2 cursor-pointer p-1 text-primary transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Grant access"
-                        aria-label={`Grant access to ${getEnvironmentLabel(envValue)}`}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    )}
+              </div>
+            </section>
+            <section className="min-w-0 space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Without access to</h3>
+              <div className="flex flex-wrap gap-2.5">
+                {withoutAccessEnvironments.length > 0 ? (
+                  withoutAccessEnvironments.map((envValue) => (
+                    <div
+                      key={envValue}
+                      className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 shadow-sm transition-colors hover:bg-muted/50"
+                    >
+                      <span className="text-sm font-medium">{getEnvironmentLabel(envValue)}</span>
+                      {canInvite && !isProfileUserOwner && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingAction({ type: "add", envValue });
+                            setIsConfirmDialogOpen(true);
+                          }}
+                          disabled={isProcessing}
+                          className="ml-2 cursor-pointer p-1 text-primary transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Grant access"
+                          aria-label={`Grant access to ${getEnvironmentLabel(envValue)}`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-2 text-sm italic text-muted-foreground">
+                    Has access to all environments
                   </div>
-                ))
-              ) : (
-                <div className="py-2 text-sm italic text-muted-foreground">
-                  Has access to all environments
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </section>
           </div>
         </CardContent>
       </Card>

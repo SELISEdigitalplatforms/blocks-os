@@ -7,6 +7,7 @@ using DomainService.ManagedService.Services;
 using DomainService.People;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using DomainService.Access.Services;
 using Moq;
 
 namespace XUnitTest.Controllers
@@ -14,7 +15,12 @@ namespace XUnitTest.Controllers
     public class PeopleControllerTests
     {
         private readonly Mock<IPeopleService> _service = new();
-        private PeopleController Controller() => new(_service.Object);
+
+        // The controller gained the access service for the three grant endpoints; these tests
+        // exercise the invite/remove ones, so a bare mock is enough.
+        private readonly Mock<IProjectAccessService> _access = new();
+
+        private PeopleController Controller() => new(_service.Object, _access.Object);
 
         [Fact]
         public async Task Invite_NoInvitations_ReturnsBadRequest()

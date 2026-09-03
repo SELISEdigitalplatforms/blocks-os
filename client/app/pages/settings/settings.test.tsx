@@ -20,6 +20,9 @@ vi.mock("@seliseblocks/genesis-os", () => ({
     setSelectedProject: h.setSelectedProject,
   }),
 }));
+vi.mock("@/hooks/use-project-access", () => ({
+  useProjectPermissions: () => ({ isOwner: true, can: () => true, menus: [] }),
+}));
 vi.mock("@/hooks/use-project", () => ({
   useGetProjects: () => ({ data: h.projectsData, isLoading: h.isLoading }),
   useUpdateTenantGroup: () => ({ mutateAsync: h.updateTenantGroup, isPending: h.isUpdating }),

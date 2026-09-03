@@ -218,13 +218,13 @@ describe("PeopleTable", () => {
     const { rerender } = renderTable({
       people: [makePerson()],
       isLoading: false,
-      isViewerOwner: false,
+      canInvite: false, canRemove: false, isOwner: false,
     });
     expect(screen.queryByRole("button", { name: "Open menu" })).toBeNull();
 
     rerender(
       <MemoryRouter>
-        <PeopleTable people={[makePerson()]} isLoading={false} isViewerOwner />
+        <PeopleTable people={[makePerson()]} isLoading={false} canInvite canRemove isOwner />
       </MemoryRouter>,
     );
     expect(screen.getByRole("button", { name: "Open menu" })).toBeTruthy();
@@ -234,7 +234,7 @@ describe("PeopleTable", () => {
     renderTable({
       people: [makePerson({}, [makeEnv({ isCreator: true })])],
       isLoading: false,
-      isViewerOwner: true,
+      canInvite: true, canRemove: true, isOwner: true,
     });
     // isRowUserOwner short-circuits the cell to null, so no menu button.
     expect(screen.queryByRole("button", { name: "Open menu" })).toBeNull();
@@ -245,7 +245,7 @@ describe("PeopleTable", () => {
 
     it("resends an invitation and shows a success toast", async () => {
       const user = userEvent.setup();
-      renderTable({ people: [pending()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [pending()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Resend Invitation"));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
@@ -263,7 +263,7 @@ describe("PeopleTable", () => {
     it("shows an error toast when resend invitation fails", async () => {
       h.resendInvitation.mockRejectedValueOnce(new Error("boom"));
       const user = userEvent.setup();
-      renderTable({ people: [pending()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [pending()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Resend Invitation"));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
@@ -272,7 +272,7 @@ describe("PeopleTable", () => {
 
     it("cancels the resend invitation dialog", async () => {
       const user = userEvent.setup();
-      renderTable({ people: [pending()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [pending()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Resend Invitation"));
       const cancel = await screen.findByRole("button", { name: "Cancel" });
@@ -286,7 +286,7 @@ describe("PeopleTable", () => {
 
     it("resends activation mail and shows a success toast", async () => {
       const user = userEvent.setup();
-      renderTable({ people: [activatable()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [activatable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Resend Activation"));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
@@ -304,7 +304,7 @@ describe("PeopleTable", () => {
     it("shows an error toast when resend activation fails", async () => {
       h.resendActivation.mockRejectedValueOnce(new Error("boom"));
       const user = userEvent.setup();
-      renderTable({ people: [activatable()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [activatable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Resend Activation"));
       await user.click(await screen.findByRole("button", { name: "Resend" }));
@@ -313,7 +313,7 @@ describe("PeopleTable", () => {
 
     it("cancels the resend activation dialog", async () => {
       const user = userEvent.setup();
-      renderTable({ people: [activatable()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [activatable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Resend Activation"));
       await user.click(await screen.findByRole("button", { name: "Cancel" }));
@@ -327,7 +327,7 @@ describe("PeopleTable", () => {
 
     it("transfers ownership and shows a success toast", async () => {
       const user = userEvent.setup();
-      renderTable({ people: [transferable()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Transfer Ownership"));
       await user.click(await screen.findByRole("button", { name: "Transfer" }));
@@ -345,7 +345,7 @@ describe("PeopleTable", () => {
     it("shows an error toast when transfer ownership fails", async () => {
       h.transferOwnership.mockRejectedValueOnce(new Error("boom"));
       const user = userEvent.setup();
-      renderTable({ people: [transferable()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Transfer Ownership"));
       await user.click(await screen.findByRole("button", { name: "Transfer" }));
@@ -354,7 +354,7 @@ describe("PeopleTable", () => {
 
     it("cancels the transfer ownership dialog", async () => {
       const user = userEvent.setup();
-      renderTable({ people: [transferable()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Transfer Ownership"));
       await user.click(await screen.findByRole("button", { name: "Cancel" }));
@@ -364,7 +364,7 @@ describe("PeopleTable", () => {
     it("disables the buttons and shows a pending label while transferring", async () => {
       h.isTransferring = true;
       const user = userEvent.setup();
-      renderTable({ people: [transferable()], isLoading: false, isViewerOwner: true });
+      renderTable({ people: [transferable()], isLoading: false, canInvite: true, canRemove: true, isOwner: true });
       await user.click(screen.getByRole("button", { name: "Open menu" }));
       await user.click(await screen.findByText("Transfer Ownership"));
       const transferring = await screen.findByRole("button", { name: "Transferring..." });
