@@ -27,7 +27,7 @@ public sealed class BlobStorage : IBlobStorage
                 "Configure the 'LmtBlobStorageConnectionString' secret in the vault for this environment; blob archive/restore operations cannot proceed without it.");
             throw new InvalidOperationException("LmtBlobStorageConnectionString secret is missing or empty. Configure it in the vault for this environment.");
         }
-        _logger.LogInformation($"ConnectionString for BlobStorage initialized: {_connectionString}");
+        
         _connectionString = blocksSecret.LmtBlobStorageConnectionString;
     }
 
