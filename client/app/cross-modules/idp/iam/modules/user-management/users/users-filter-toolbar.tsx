@@ -1,6 +1,15 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
+import {
+  useGetAllEnabledOrganizations,
+  useGetOrganizationConfig,
+} from "@blocks-idp/iam/hooks/use-organization";
+import { useGetRoleFilterOptions } from "@blocks-idp/iam/hooks/use-roles";
 import { Mail, User } from "lucide-react";
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useProjectStore } from "@seliseblocks/genesis-os";
+import { useMemo } from "react";
+
+const DEFAULT_ORGANIZATION_ID = "default";
 
 type DateRange = { from?: Date | string; to?: Date | string };
 
@@ -9,6 +18,8 @@ type SearchFilter = {
 };
 
 type DateFilters = {
+  organizationIds: string[];
+  roles: string[];
   joinedOn: DateRange;
   lastLogin: DateRange;
   lastUpdatedDate: DateRange;
@@ -21,6 +32,8 @@ export const useUsersFilterQueryParams = () => {
     "selected-filter": parseAsString.withDefault("name"),
     name: parseAsString.withDefault(""),
     email: parseAsString.withDefault(""),
+    organizationIds: parseAsArrayOf(parseAsString).withDefault([]),
+    roles: parseAsArrayOf(parseAsString).withDefault([]),
     "joinedOn-start": parseAsString.withDefault(""),
     "joinedOn-end": parseAsString.withDefault(""),
     "lastLogin-start": parseAsString.withDefault(""),
@@ -116,6 +129,44 @@ export const UsersSearchFilter = () => {
 
 export const UsersDateFilters = () => {
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  const showOrganizationFilter = orgConfig?.isMultiOrgEnabled === true;
+  const selectedOrganizationIds = useMemo(
+    () => queryParams.organizationIds ?? [],
+    [queryParams.organizationIds],
+  );
+  const selectedRoles = queryParams.roles ?? [];
+  const { data: organizations = [], isLoading: isOrganizationsLoading } =
+    useGetAllEnabledOrganizations(tenantId, {
+      enabled: showOrganizationFilter || orgConfig?.isMultiOrgEnabled === false,
+    });
+
+  const organizationOptions = useMemo(
+    () =>
+      organizations.map((organization) => ({
+        label: organization.name,
+        value: organization.itemId,
+      })),
+    [organizations],
+  );
+  const hasOrganizationOptions = organizationOptions.length > 0;
+  const showOrganizationSelection = showOrganizationFilter && hasOrganizationOptions;
+  const showRoleSelection = hasOrganizationOptions;
+  const isRoleSelectionWaitingForOrganizations =
+    showOrganizationSelection && selectedOrganizationIds.length === 0;
+
+  const roleOrganizationIds = useMemo(() => {
+    if (!hasOrganizationOptions) return [];
+    if (showOrganizationFilter && selectedOrganizationIds.length === 0) return [];
+    if (!showOrganizationFilter) return [DEFAULT_ORGANIZATION_ID];
+    return selectedOrganizationIds;
+  }, [hasOrganizationOptions, selectedOrganizationIds, showOrganizationFilter]);
+
+  const { data: roleOptions = [], isLoading: isRolesLoading } = useGetRoleFilterOptions(
+    { projectKey: tenantId, organizationIds: roleOrganizationIds },
+    { enabled: !!tenantId && roleOrganizationIds.length > 0 },
+  );
 
   const setRangeQueryParams = (
     key: "joinedOn" | "lastLogin" | "lastUpdatedDate",
@@ -131,6 +182,15 @@ export const UsersDateFilters = () => {
   };
 
   const changeHandler = (key: string, value: unknown) => {
+    if (key === "organizationIds") {
+      return setQueryParams((params) => ({
+        ...params,
+        organizationIds: value as string[],
+        roles: [],
+        page: 0,
+      }));
+    }
+
     if (
       key === "joinedOn" ||
       key === "lastLogin" ||
@@ -155,6 +215,32 @@ export const UsersDateFilters = () => {
   return (
     <FilterToolbar<DateFilters>
       filters={[
+        ...(showOrganizationSelection
+          ? [
+              {
+                key: "organizationIds" as const,
+                type: "MultiSelect" as const,
+                label: "Organizations",
+                props: {
+                  options: organizationOptions,
+                  disabled: isOrganizationsLoading,
+                },
+              },
+            ]
+          : []),
+        ...(showRoleSelection
+          ? [
+              {
+                key: "roles" as const,
+                type: "MultiSelect" as const,
+                label: "Roles",
+                props: {
+                  options: roleOptions,
+                  disabled: isRoleSelectionWaitingForOrganizations || isRolesLoading,
+                },
+              },
+            ]
+          : []),
         {
           key: "joinedOn",
           type: "DateRange",
@@ -175,6 +261,11 @@ export const UsersDateFilters = () => {
         },
       ]}
       values={{
+        organizationIds: showOrganizationSelection ? selectedOrganizationIds : [],
+        roles:
+          showRoleSelection && !isRoleSelectionWaitingForOrganizations
+            ? selectedRoles
+            : [],
         joinedOn: isoToRange(
           queryParams["joinedOn-start"],
           queryParams["joinedOn-end"],
@@ -189,6 +280,8 @@ export const UsersDateFilters = () => {
         ),
       }}
       defaultValues={{
+        organizationIds: [],
+        roles: [],
         joinedOn: { from: undefined, to: undefined },
         lastLogin: { from: undefined, to: undefined },
         lastUpdatedDate: { from: undefined, to: undefined },
