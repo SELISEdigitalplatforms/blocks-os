@@ -20,6 +20,7 @@ namespace Configuration.DomainService.Mail.Entities
         public bool IsDefault { get; set; }
         public bool IsInbound { get; set; }
         public MailServiceProvider Provider { get; set; }
+        public bool IsEnableSnsConfiguration { get; set; } = false;
     }
 
     /// <summary>
