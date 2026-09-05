@@ -48,7 +48,22 @@ test.describe("flows", () => {
 
     await test.step("Cancel closes the dialog without saving", async () => {
       await page.locator("#name").fill(`${projectName} discarded`);
-      await page.getByRole("button", { name: "Cancel" }).click();
+
+      // Observed once: the Cancel button transiently detaches mid re-render
+      // ("element was detached from the DOM, retrying"), and Playwright's own
+      // actionability retry then silently burns the whole test timeout on a
+      // single click. A bounded retry with a short per-attempt timeout fails
+      // fast and recovers instead.
+      const cancelButton = page.getByRole("button", { name: "Cancel" });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await cancelButton.click({ timeout: 10_000 });
+          break;
+        } catch (error) {
+          if (attempt === 2) throw error;
+          await page.waitForTimeout(500);
+        }
+      }
       await expect(page.getByRole("heading", { name: "Edit Project" })).toBeHidden({
         timeout: 10000,
       });
@@ -85,7 +100,13 @@ test.describe("flows", () => {
       await expect(updateButton).toBeDisabled();
     });
 
-    const renamedProject = `${projectName} Renamed`;
+    // The shared project is reused across runs (fixtures/os-project.json
+    // persists this test's rename below), so `projectName` can already carry
+    // a "Renamed" suffix from a prior run — appending unconditionally would
+    // stack "Renamed Renamed Renamed…" indefinitely. Normalize to the base
+    // name first so every rerun lands on the same stable "<name> Renamed".
+    const baseProjectName = projectName.replace(/(?: Renamed)+$/, "");
+    const renamedProject = `${baseProjectName} Renamed`;
 
     await test.step("Rename the project and save", async () => {
       const nameInput = page.locator("#name");

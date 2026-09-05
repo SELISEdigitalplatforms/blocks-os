@@ -1,5 +1,28 @@
+import { type Page } from "@playwright/test";
 import { test, expect } from "../../support/test-base";
 import { openSecretManagement } from "../../support/os-helpers";
+
+/**
+ * service-list.tsx paginates at 10 per page and sorts oldest-first, so once
+ * the (reused) project already has 10+ services from prior runs, a newly
+ * registered one lands on a later page instead of the currently-visible one.
+ * Page forward until it turns up, rather than assuming page 1 always has it.
+ */
+async function findServiceTrigger(page: Page, name: string) {
+  const trigger = page.getByRole("button", { name: new RegExp(name) });
+  const nextPageButton = page.locator("button:has(svg.lucide-chevron-right)").first();
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if (await trigger.isVisible({ timeout: 3000 }).catch(() => false)) {
+      return trigger;
+    }
+    if (!(await nextPageButton.isVisible({ timeout: 2000 }).catch(() => false))) break;
+    if (await nextPageButton.isDisabled().catch(() => true)) break;
+    await nextPageButton.click();
+  }
+
+  return trigger;
+}
 
 // The Secrets & Configs sidebar submenu is a flyout that has repeatedly
 // proven flaky to drive via click-to-expand-then-click-link — navigate
@@ -71,9 +94,10 @@ test.describe("flows", () => {
         .catch(() => {});
     });
 
-    const serviceTrigger = page.getByRole("button", { name: new RegExp(serviceName) });
+    let serviceTrigger = page.getByRole("button", { name: new RegExp(serviceName) });
 
     await test.step("Find the new service and expand its accordion row", async () => {
+      serviceTrigger = await findServiceTrigger(page, serviceName);
       await expect(serviceTrigger).toBeVisible({ timeout: 15000 });
       await serviceTrigger.click();
       await expect(page.getByText("Service ID")).toBeVisible({ timeout: 10000 });
@@ -175,7 +199,7 @@ test.describe("flows", () => {
         .toBeVisible({ timeout: 15000 })
         .catch(() => {});
 
-      const frontendTrigger = page.getByRole("button", { name: new RegExp(frontendServiceName) });
+      const frontendTrigger = await findServiceTrigger(page, frontendServiceName);
       await expect(frontendTrigger).toBeVisible({ timeout: 15000 });
       await frontendTrigger.click();
       await expect(page.getByText("Service ID").last()).toBeVisible({ timeout: 10000 });
@@ -207,7 +231,7 @@ test.describe("flows", () => {
       await page.getByRole("option", { name: "Backend", exact: true }).click();
       await page.getByRole("button", { name: "Save", exact: true }).click();
 
-      const serviceTrigger = page.getByRole("button", { name: new RegExp(serviceName) });
+      const serviceTrigger = await findServiceTrigger(page, serviceName);
       await expect(serviceTrigger).toBeVisible({ timeout: 15000 });
       await serviceTrigger.click();
 

@@ -1,5 +1,5 @@
 import { test, expect } from "../../support/test-base";
-import { openSecretManagement } from "../../support/os-helpers";
+import { openOidcTemplate, openSecretManagement } from "../../support/os-helpers";
 
 import path from "path";
 
@@ -8,18 +8,20 @@ import path from "path";
 // straight to the section's URL instead.
 
 // OIDC flow: a single continuous journey — strict validation on creating a
-// new client (Add stays disabled until the form is dirty and valid), save
-// it, expand its row into the KV details panel, rotate its secret, reopen
-// it for editing, then delete it as the closing stage.
+// new client, expand its KV details, cover Manage Template (tenant branding
+// Branding/Theme/Pages editor), rotate secret, edit, then delete.
 test.describe("flows", () => {
 
-  test("OIDC flow: strict validation -> create -> expand details -> rotate secret -> edit -> delete", async ({
+  test("OIDC flow: strict validation -> create -> expand details -> manage template -> rotate secret -> edit -> delete", async ({
     page,
   }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(240_000);
 
     await test.step("Navigate to OIDC", async () => {
       await openSecretManagement(page, "oidc", "OIDC");
+      await expect(page.getByRole("button", { name: "Manage Template" })).toBeVisible({
+        timeout: 15000,
+      });
     });
 
     await test.step("A fresh project starts with no OIDC clients", async () => {
@@ -113,85 +115,194 @@ test.describe("flows", () => {
       await expect(page.getByText("Allowed Response Types")).toBeVisible();
     });
 
-    let onBrandingPage = false;
-
-    await test.step("'Template' opens the branding page", async () => {
-      const templateButton = clientRow.getByRole("button", { name: "Template" });
-      if (await templateButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await templateButton.click();
-        onBrandingPage = await page
-          .getByRole("heading", { name: "Configuration" })
-          .isVisible({ timeout: 15000 })
-          .catch(() => false);
-        if (onBrandingPage) {
-          await expect(
-            page.getByText("Upload a client logo and set a brand color."),
-          ).toBeVisible();
-          await expect(page.getByRole("heading", { name: "Live Preview" })).toBeVisible();
-        }
-      }
-    });
-
+    // Locators below match snapshots/oidc-branding.yml (+ theme/pages).
+    // Template is tenant-level (header Manage Template) — not a per-row action.
+    const templateSections = page.getByRole("tablist", { name: "Template sections" });
+    const themePalette = page.getByRole("tablist", { name: "Theme palette" });
+    const oidcPages = page.getByRole("tablist", { name: "OIDC page" });
     const brandingSaveButton = page.getByRole("button", { name: "Save", exact: true });
     const brandingUndoButton = page.getByRole("button", { name: "Undo", exact: true });
+    const brandNameInput = page.getByRole("textbox", { name: /Brand name/ });
     const brandingLogoInput = page.locator("#client-logo-upload");
 
+    await test.step("'Manage Template' opens the Branding / Theme / Pages editor", async () => {
+      await openOidcTemplate(page);
+      await expect(templateSections).toBeVisible();
+      await expect(templateSections.getByRole("tab", { name: "Branding" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      await expect(templateSections.getByRole("tab", { name: "Theme" })).toBeVisible();
+      await expect(templateSections.getByRole("tab", { name: "Pages" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Brand identity" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Live preview" })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Template");
+      await expect(brandingUndoButton).toBeDisabled();
+      await expect(brandingSaveButton).toBeDisabled();
+      await expect(brandNameInput).toBeVisible();
+      await expect(page.getByRole("button", { name: "Browse files" })).toBeVisible();
+    });
+
+    const originalBrandName = (await brandNameInput.inputValue()) || "Blocks IAM";
+
+    await test.step("Branding: clearing Brand name blocks Save", async () => {
+      await brandNameInput.fill("");
+      await expect(page.getByText("Brand name must be between 1 and 80 characters")).toBeVisible({
+        timeout: 5000,
+      });
+      await expect(brandingSaveButton).toBeDisabled();
+      await brandNameInput.fill(originalBrandName);
+    });
+
+    await test.step("Branding: changing Brand name updates the live preview and enables Save", async () => {
+      const previewName = `Flow Brand ${Date.now()}`;
+      await brandNameInput.fill(previewName);
+      await expect(page.getByText(previewName).first()).toBeVisible({ timeout: 10000 });
+      await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+      await brandingUndoButton.click();
+      await expect(brandNameInput).toHaveValue(originalBrandName);
+      await expect(brandingSaveButton).toBeDisabled();
+      await expect(brandingUndoButton).toBeDisabled();
+    });
+
     await test.step("Logo upload rejects a non-image file", async () => {
-      if (!onBrandingPage) return;
       await brandingLogoInput.setInputFiles({
         name: "not-an-image.txt",
         mimeType: "text/plain",
         buffer: Buffer.from("not an image"),
       });
-      await expect(page.getByText("Only PNG, JPG, SVG, and WebP images are allowed"))
-        .toBeVisible({ timeout: 5000 })
-        .catch(() => {});
+      // exact: true — Radix Toast renders the description twice (the visible
+      // toast + an aria-live announcer prefixed "Notification Failed…"),
+      // and the announcer's text is a superset that would otherwise also
+      // match this substring, hitting a strict-mode violation.
+      await expect(
+        page.getByText("Only PNG, JPG, SVG, and WebP images are allowed", { exact: true }),
+      ).toBeVisible({
+        timeout: 5000,
+      });
       await expect(brandingSaveButton).toBeDisabled();
     });
 
     await test.step("Logo upload rejects an oversized image", async () => {
-      if (!onBrandingPage) return;
       await brandingLogoInput.setInputFiles({
         name: "oversized.png",
         mimeType: "image/png",
         buffer: Buffer.alloc(3 * 1024 * 1024),
       });
-      await expect(page.getByText("Logo must be smaller than 2MB"))
-        .toBeVisible({ timeout: 5000 })
-        .catch(() => {});
+      // exact: true — same toast/announcer duplicate-text issue as the
+      // non-image-file case above.
+      await expect(page.getByText("Logo must be smaller than 2MB", { exact: true })).toBeVisible({
+        timeout: 5000,
+      });
       await expect(brandingSaveButton).toBeDisabled();
     });
 
     await test.step("Upload a valid logo — preview updates and Save enables", async () => {
-      if (!onBrandingPage) return;
       await brandingLogoInput.setInputFiles(path.resolve(__dirname, "../../fixtures/test-avatar.png"));
       await expect(page.getByAltText("Logo preview")).toBeVisible({ timeout: 10000 });
       await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+      await expect(brandingUndoButton).toBeEnabled();
     });
 
-    await test.step("Undo reverts unsaved logo/color changes", async () => {
-      if (!onBrandingPage) return;
+    await test.step("Undo reverts unsaved logo changes", async () => {
       await brandingUndoButton.click();
-      await expect(page.getByAltText("Logo preview")).toHaveCount(0);
+      // Prior suite runs may already have a saved logo URL — Undo restores
+      // that baseline. Dirty-state (Save/Undo disabled) is the signal.
+      await expect(brandingSaveButton).toBeDisabled();
+      await expect(brandingUndoButton).toBeDisabled();
+    });
+
+    await test.step("Theme tab: an invalid hex value blocks Save", async () => {
+      await templateSections.getByRole("tab", { name: "Theme" }).click();
+      await expect(page.getByRole("heading", { name: "Color system" })).toBeVisible();
+      await expect(themePalette).toBeVisible();
+      await expect(themePalette.getByRole("tab", { name: "Light" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+
+      // Do not use bare getByRole('tab', { name: 'Dark' }) — Live preview also
+      // has a "Preview theme" tablist with Light/Dark.
+      //
+      // exact: true on the color textboxes — the snapshot shows each field as
+      // TWO textboxes with overlapping accessible names, e.g. "Light Primary"
+      // and "Light Primary color picker" (the color swatch input); a
+      // substring match resolves both and hits a strict-mode violation.
+      await page.getByRole("textbox", { name: "Light Primary", exact: true }).fill("not-a-color");
+      await expect(
+        page.getByText("Light Primary must be a valid hex color (#RGB or #RRGGBB)"),
+      ).toBeVisible({ timeout: 5000 });
       await expect(brandingSaveButton).toBeDisabled();
     });
 
-    await test.step("Change and save the brand color", async () => {
-      if (!onBrandingPage) return;
-      const colorPicker = page.locator("#brand-color");
-      const colorHexInput = colorPicker.locator("xpath=following-sibling::input").first();
-      await colorHexInput.fill("#FF0000");
-
+    await test.step("Theme tab: fix the light Primary color, then set a dark Primary color", async () => {
+      // Run-unique hex — a prior save of #ff0000/#00ff00 makes fill() restore the
+      // saved baseline (isDirty=false), so Save stays disabled even though valid.
+      const lightHex = `#${(Date.now() & 0xffffff).toString(16).padStart(6, "0")}`;
+      const lightPrimary = page.getByRole("textbox", { name: "Light Primary", exact: true });
+      await lightPrimary.fill(lightHex);
+      await expect(
+        page.getByText("Light Primary must be a valid hex color (#RGB or #RRGGBB)"),
+      ).toBeHidden({ timeout: 5000 });
       await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
-      await brandingSaveButton.click();
 
-      await expect(page.getByText("Template saved successfully"))
-        .toBeVisible({ timeout: 15000 })
-        .catch(() => {});
+      await themePalette.getByRole("tab", { name: "Dark" }).click();
+      const darkPrimary = page.getByRole("textbox", { name: "Dark Primary", exact: true });
+      await expect(darkPrimary).toBeVisible();
+      const darkHex = `#${((Date.now() + 0xabcdef) & 0xffffff).toString(16).padStart(6, "0")}`;
+      await darkPrimary.fill(darkHex);
+      await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+    });
+
+    await test.step("Pages tab: edit the Login page heading", async () => {
+      await templateSections.getByRole("tab", { name: "Pages" }).click();
+      await expect(page.getByRole("heading", { name: "Page content" })).toBeVisible();
+      await expect(oidcPages).toBeVisible();
+      // Default page is Signup (query default) — switch to Login for this step.
+      await oidcPages.getByRole("tab", { name: "Login" }).click();
+      const headingInput = page.locator("#page-login-heading");
+      await expect(headingInput).toBeVisible();
+      await headingInput.fill("Welcome back");
+      await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+    });
+
+    await test.step("Pages tab: clearing a required field blocks Save", async () => {
+      await page.locator("#page-login-heading").fill("");
+      await expect(page.getByText("Heading must be between 1 and 200 characters")).toBeVisible({
+        timeout: 5000,
+      });
+      await expect(brandingSaveButton).toBeDisabled();
+
+      await page.locator("#page-login-heading").fill("Welcome back");
+      await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+    });
+
+    await test.step("Pages tab: Signup heading drives the live preview", async () => {
+      await oidcPages.getByRole("tab", { name: "Signup" }).click();
+      const signupHeading = page.locator("#page-signup-heading");
+      await expect(signupHeading).toBeVisible();
+      const signupTitle = `Create Your Flow Account ${Date.now()}`;
+      await signupHeading.fill(signupTitle);
+      await expect(page.getByRole("heading", { name: signupTitle })).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(brandingSaveButton).toBeEnabled({ timeout: 10000 });
+    });
+
+    await test.step("Save the template changes and return to the OIDC list", async () => {
+      await brandingSaveButton.click();
+      // exact: true — same toast/announcer duplicate-text issue as the logo
+      // validation messages above.
+      await expect(
+        page.getByText("Template saved successfully", { exact: true }),
+      ).toBeVisible({ timeout: 15000 });
 
       // goBack is unreliable from the branding client-route — deep-link back
       // to the OIDC list so later row actions (rotate/edit/delete) still work.
       await openSecretManagement(page, "oidc", "OIDC");
+      await expect(page.getByRole("button", { name: "Manage Template" })).toBeVisible({
+        timeout: 15000,
+      });
       await expect(clientRow).toBeVisible({ timeout: 15000 });
     });
 
@@ -219,8 +330,8 @@ test.describe("flows", () => {
       }
       const rotateButton = clientRow.getByRole("button", { name: "Rotate client secret" });
       if (await rotateButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        // The row re-renders while expanded (and a layout shift can land on
-        // Template instead). Retry a bounded click rather than waiting out
+        // The row re-renders while expanded (layout shift can detach the
+        // rotate control). Retry a bounded click rather than waiting out
         // the whole test timeout on a detaching button.
         for (let attempt = 0; attempt < 3; attempt++) {
           try {

@@ -36,10 +36,35 @@ test.describe("flows", () => {
 
     await test.step("Open 'Add'", async () => {
       await expect(page.getByRole("button", { name: "Add" })).toBeVisible({ timeout: 15000 });
+
+      // handleAddRepositoryClick (repositories.tsx) always opens one of the
+      // two dialogs, success or failure — but only after awaiting a real GET
+      // .../release/isAuthorized round trip (checkAlreadyAuthorization),
+      // which proxies through to a downstream build/devops service, not
+      // something purely client-side. A slow response there can outlast a
+      // short client-side wait for either heading even though the handler
+      // itself never actually gets stuck. Observe the request directly so a
+      // genuine hang gives a clear diagnostic instead of a bare
+      // heading-visibility timeout.
+      const authCheckPromise = page
+        .waitForResponse((response) => /\/release\/isAuthorized\/?$/i.test(response.url()), {
+          timeout: 45000,
+        })
+        .catch(() => null);
+
       await page.getByRole("button", { name: "Add" }).click();
+
+      const authCheckResponse = await authCheckPromise;
+      if (!authCheckResponse) {
+        throw new Error(
+          "GET .../release/isAuthorized never completed within 45s after clicking 'Add repository' " +
+            "— the GitHub-authorization check this depends on is unresponsive.",
+        );
+      }
+
       await Promise.race([
-        connectHeading.waitFor({ state: "visible", timeout: 20000 }),
-        selectHeading.waitFor({ state: "visible", timeout: 20000 }),
+        connectHeading.waitFor({ state: "visible", timeout: 15000 }),
+        selectHeading.waitFor({ state: "visible", timeout: 15000 }),
       ]);
     });
 

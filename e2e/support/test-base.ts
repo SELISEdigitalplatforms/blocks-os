@@ -1,5 +1,4 @@
 import { test as base, expect } from "@playwright/test"
-import { markSuiteTestFailed } from "./run-outcome"
 import { refreshSuiteSessionIfStale } from "./session-lifecycle"
 
 // Shared `test` for the whole suite. Specs import from here instead of
@@ -54,12 +53,6 @@ export const test = base.extend<{ pauseAfterEachTest: void; refreshStaleSuiteSes
       if (ms > 0) testInfo.setTimeout(testInfo.timeout + ms)
 
       await use()
-
-      if (testInfo.project.name === "os") {
-        if (testInfo.status !== "passed" && testInfo.status !== "skipped") {
-          markSuiteTestFailed()
-        }
-      }
 
       if (ms > 0 && !page.isClosed()) {
         await page.waitForTimeout(ms)

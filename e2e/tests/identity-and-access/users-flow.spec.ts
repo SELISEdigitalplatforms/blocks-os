@@ -83,32 +83,54 @@ test.describe("flows", () => {
       const inviteDialog = page.getByRole("dialog").filter({ hasText: "Invite User" });
       await inviteDialog.getByPlaceholder("name@company.com").fill(inviteEmail);
 
-      // Multi-org workspaces require an organization before submit (zod min 1).
-      // A prior Organizations flow on the shared project leaves extra orgs, which
-      // disables the automatic "default" seed — pick Default (or the first org).
+      // Multi-org: Organization combobox mounts only after email is filled (and
+      // after org config loads). Wait for Default to seed — or pick it — before
+      // Send; clicking Send too early leaves the dialog open with no toast.
       const orgTrigger = inviteDialog.getByRole("combobox");
-      if (await orgTrigger.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await expect(orgTrigger).toBeVisible({ timeout: 15000 });
+      const orgAlreadyDefault = await orgTrigger
+        .getByText("Default", { exact: true })
+        .isVisible()
+        .catch(() => false);
+      if (!orgAlreadyDefault) {
         await orgTrigger.click();
-        const defaultOrg = page.getByRole("button", { name: "Default", exact: true });
-        if (await defaultOrg.isVisible({ timeout: 5000 }).catch(() => false)) {
+        const defaultOrg = page.getByRole("option", { name: "Default", exact: true });
+        if (await defaultOrg.isVisible({ timeout: 8000 }).catch(() => false)) {
           await defaultOrg.click();
         } else {
-          const firstOrg = page.locator("[data-radix-popper-content-wrapper] button").first();
-          if (await firstOrg.isVisible({ timeout: 3000 }).catch(() => false)) {
-            await firstOrg.click();
-          } else {
-            await page.keyboard.press("Escape");
-          }
+          const firstOrg = page
+            .getByTestId("organization-options-list")
+            .getByRole("option")
+            .first();
+          await expect(firstOrg).toBeVisible({ timeout: 8000 });
+          await firstOrg.click();
         }
       }
+      await expect(orgTrigger).not.toHaveText("Select organization", { timeout: 5000 });
 
       const sendButton = inviteDialog.getByRole("button", { name: /Send invite|Grant access/ });
-      await expect(sendButton).toBeEnabled({ timeout: 15000 }).catch(() => {});
+      await expect(sendButton).toBeEnabled({ timeout: 15000 });
+
+      const createResponsePromise = page.waitForResponse(
+        (response) =>
+          /\/api\/iam\/users\/create\/?$/i.test(response.url()) &&
+          response.request().method() === "POST",
+        { timeout: 20000 },
+      );
+
       await sendButton.click();
-      await expect(page.getByText(/Invitation is sent|User granted access to the organization/))
-        .toBeVisible({ timeout: 15000 })
-        .catch(() => {});
-      await expect(inviteDialog).toBeHidden({ timeout: 15000 }).catch(() => {});
+
+      const createResponse = await createResponsePromise.catch(() => null);
+      if (createResponse && createResponse.status() >= 400) {
+        throw new Error(
+          `Invite User API rejected create with HTTP ${createResponse.status()} — dialog stayed open.`,
+        );
+      }
+
+      await expect(
+        page.getByText(/Invitation is sent|User granted access to the organization/),
+      ).toBeVisible({ timeout: 15000 });
+      await expect(inviteDialog).toBeHidden({ timeout: 15000 });
     });
 
     // Each row renders as a single button whose accessible name includes
@@ -120,21 +142,37 @@ test.describe("flows", () => {
     });
 
     await test.step("Find the new user and open their details page", async () => {
-      // Invited users have no first/last name, so the row label is the email
-      // local part. Search that rather than the full address (the default
-      // filter is by name, not email).
-      const searchInput = page.getByPlaceholder("Minimum 3 characters…");
-      const nameQuery = inviteEmail.split("@")[0] ?? inviteEmail;
-      if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await searchInput.fill(nameQuery);
+      // Invited users have empty FirstName/LastName. The default search filter
+      // is "name", which queries those fields — not the email-local-part used
+      // as the display label — so searching the local part yields
+      // "No users found." Switch to the email filter (icon-only Select: email
+      // is the first option) and search the full address.
+      const searchType = page.getByRole("combobox").first();
+      if (await searchType.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await searchType.click();
+        await page.getByRole("listbox").getByRole("option").first().click();
       }
-      if (!(await userRow.isVisible({ timeout: 15000 }).catch(() => false))) {
-        // The Users list can race its own refetch right after a fresh
-        // invite — one reload clears it, same pattern as people-flow.
+      const searchInput = page.getByPlaceholder("Minimum 3 characters…");
+      if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await searchInput.fill(inviteEmail);
+      }
+
+      // Invite → list insert can lag past one refetch; poll with reloads
+      // (same idea as waitForInvitedPersonRow in people-flow).
+      for (let attempt = 0; attempt < 6; attempt++) {
+        if (await userRow.isVisible({ timeout: 10_000 }).catch(() => false)) break;
+        if (attempt === 5) break;
+        await page.waitForTimeout(5_000);
         await page.reload({ waitUntil: "domcontentloaded" });
-        await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({ timeout: 30000 });
+        await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({
+          timeout: 30_000,
+        });
+        if (await searchType.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await searchType.click();
+          await page.getByRole("listbox").getByRole("option").first().click();
+        }
         if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await searchInput.fill(nameQuery);
+          await searchInput.fill(inviteEmail);
         }
       }
       await expect(userRow).toBeVisible({ timeout: 15000 });

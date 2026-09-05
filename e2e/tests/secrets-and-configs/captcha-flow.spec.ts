@@ -15,6 +15,39 @@ test.describe("flows", () => {
       await expect(page.getByRole("button", { name: "Add Configuration" })).toBeVisible();
     });
 
+    // This project is reused across runs (fixtures/os-project.json) and
+    // captcha configs aren't a singleton — a run that failed before reaching
+    // its own "Delete the configuration" step at the end leaves a card
+    // behind. A leftover card duplicates the provider heading, which makes
+    // captchaProviderCard's div/heading `has` filter match a shared ancestor
+    // of multiple cards (and therefore both cards' "Site Key"/"Secret Key"
+    // text) — a strict-mode violation. Reset to empty before assuming a
+    // fresh project rather than compounding leftovers run after run.
+    await test.step("Start from a clean state (delete any captcha config left by a prior run)", async () => {
+      for (let guard = 0; guard < 10; guard++) {
+        const deleteButton = page.getByRole("button", { name: "Delete" }).first();
+        if (!(await deleteButton.isVisible({ timeout: 3000 }).catch(() => false))) break;
+        await deleteButton.click();
+        await expect(
+          page.getByRole("heading", { name: "Delete CAPTCHA configuration?" }),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Yes, delete" }).click();
+        await expect(page.getByText(/configuration deleted successfully/))
+          .toBeVisible({ timeout: 15000 })
+          .catch(() => {});
+        // A prior run still left 2 cards behind despite this same loop
+        // reporting nothing left to delete — the list's own post-delete
+        // refetch isn't guaranteed to have landed by the time the toast is
+        // gone (same staleness class as the People list elsewhere in this
+        // suite). Reload before the next isVisible check so it reflects a
+        // real fetch, not a stale client-cache view.
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await expect(page.getByRole("button", { name: "Add Configuration" })).toBeVisible({
+          timeout: 15000,
+        });
+      }
+    });
+
     await test.step("A fresh project starts with no captcha configured", async () => {
       await expect(page.getByText("Captcha is not configured"))
         .toBeVisible({ timeout: 10000 })

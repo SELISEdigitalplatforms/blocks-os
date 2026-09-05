@@ -24,7 +24,14 @@ import { OS_SESSION_PATH, readOsProject } from "./os-project"
  */
 const SESSION_META_PATH = path.resolve(__dirname, "../fixtures/os-session-meta.json")
 
-const DEFAULT_REFRESH_INTERVAL_MS = 600_000 // 10 minutes — conservative vs. typical short-lived JWT TTLs
+// 5 minutes. Was 10 — too close to (or past) the real access-token TTL in
+// practice: three unrelated flows (organizations, environments, people) all
+// hit a 401 mid-test in the same long serial run at that interval. The
+// app's own silent refresh can't recover from that (genesis-os posts a
+// hardcoded empty refresh_token — see the comment above), so every 401 is
+// terminal for whatever request hit it. Shrinking the window is the only
+// lever available from the test side.
+const DEFAULT_REFRESH_INTERVAL_MS = 300_000
 
 function refreshIntervalMs(): number {
   const configured = Number(process.env.E2E_SESSION_REFRESH_INTERVAL_MS)
