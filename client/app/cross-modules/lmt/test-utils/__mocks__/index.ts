@@ -182,6 +182,7 @@ export const mockLmtServiceFactory = () => ({
   lmtService: {
     log: {
       getLogs: vi.fn(),
+      getRestoredLogs: vi.fn(),
       getLogsByDate: vi.fn(),
       getLiveLog: vi.fn(),
       getBlocksServices: vi.fn(),

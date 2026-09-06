@@ -339,7 +339,8 @@ namespace Configuration.DomainService.Shared.Services
                 SmtpClient = config.SmtpClient,
                 IsDefault = config.IsDefault,
                 Provider = config.Provider,
-                IsInbound = config.IsInbound
+                IsInbound = config.IsInbound,
+                IsEnableSnsConfiguration = config.IsEnableSnsConfiguration
             };
 
             await _configurationRepository.SaveMailConfigurationAsync(newConfig);
@@ -367,6 +368,7 @@ namespace Configuration.DomainService.Shared.Services
             repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "";
             repoConfiguration.IsInbound = configuration.IsInbound;
             repoConfiguration.Provider = configuration.Provider;
+            repoConfiguration.IsEnableSnsConfiguration = configuration.IsEnableSnsConfiguration;
             return repoConfiguration;
         }
 

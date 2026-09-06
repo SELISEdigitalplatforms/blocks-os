@@ -8,7 +8,7 @@ import {
   mockGetLogsPayload,
 } from "../test-utils/__mocks__";
 import { lmtService } from "../services/lmt.service";
-import { useGetLogs, useGetLiveLogs, useGetBlocksServices } from "./use-log";
+import { useGetLogs, useGetLiveLogs, useGetBlocksServices, useGetRestoredLogs } from "./use-log";
 
 vi.mock("@blocks-lmt/services/lmt.service", () => mockLmtServiceFactory());
 vi.mock("@seliseblocks/genesis-os", () => mockProjectStoreFactory());
@@ -30,6 +30,21 @@ describe("use-log hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockLogsResponse);
       expect(lmtService.log.getLogs).toHaveBeenCalledWith(mockGetLogsPayload);
+    });
+  });
+
+  describe("useGetRestoredLogs", () => {
+    it("should fetch restored logs successfully", async () => {
+      const restoredPayload = { ...mockGetLogsPayload, requestId: "request-1" };
+      vi.mocked(lmtService.log.getRestoredLogs).mockResolvedValue(mockLogsResponse);
+
+      const { result } = renderHook(() => useGetRestoredLogs(restoredPayload), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockLogsResponse);
+      expect(lmtService.log.getRestoredLogs).toHaveBeenCalledWith(restoredPayload);
     });
   });
 

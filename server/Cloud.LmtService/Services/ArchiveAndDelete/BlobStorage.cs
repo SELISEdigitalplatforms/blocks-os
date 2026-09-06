@@ -9,29 +9,29 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete;
 
 public sealed class BlobStorage : IBlobStorage
 {
-    private readonly string _connectionString;
-    private readonly ILmtArchiveRestoreConfigurationRepository _configurationRepository;
-    private readonly ILogger<BlobStorage> _logger;
-    private BlobContainerClient? _container;
-    private readonly SemaphoreSlim _initLock = new(1, 1);
+  private readonly string _connectionString;
+  private readonly ILmtArchiveRestoreConfigurationRepository _configurationRepository;
+  private readonly ILogger<BlobStorage> _logger;
+  private BlobContainerClient? _container;
+  private readonly SemaphoreSlim _initLock = new(1, 1);
 
-    public BlobStorage(IBlocksSecret blocksSecret, ILmtArchiveRestoreConfigurationRepository configurationRepository, ILogger<BlobStorage> logger)
+  public BlobStorage ( IBlocksSecret blocksSecret, ILmtArchiveRestoreConfigurationRepository configurationRepository, ILogger<BlobStorage> logger )
+  {
+    _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
+
+    if (string.IsNullOrWhiteSpace(blocksSecret.LmtBlobStorageConnectionString))
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
-
-        if (string.IsNullOrWhiteSpace(blocksSecret.LmtBlobStorageConnectionString))
-        {
-            _logger.LogError(
-                "BlobStorage - LmtBlobStorageConnectionString secret is missing or empty. " +
-                "Configure the 'LmtBlobStorageConnectionString' secret in the vault for this environment; blob archive/restore operations cannot proceed without it.");
-            throw new InvalidOperationException("LmtBlobStorageConnectionString secret is missing or empty. Configure it in the vault for this environment.");
-        }
-        
-        _connectionString = blocksSecret.LmtBlobStorageConnectionString;
+     _logger.LogError(
+         "BlobStorage - LmtBlobStorageConnectionString secret is missing or empty. " +
+         "Configure the 'LmtBlobStorageConnectionString' secret in the vault for this environment; blob archive/restore operations cannot proceed without it.");
+     throw new InvalidOperationException("LmtBlobStorageConnectionString secret is missing or empty. Configure it in the vault for this environment.");
     }
 
-    private async Task<BlobContainerClient> GetContainerAsync(CancellationToken ct = default)
+   _connectionString = blocksSecret.LmtBlobStorageConnectionString;
+  }
+
+ private async Task<BlobContainerClient> GetContainerAsync(CancellationToken ct = default)
     {
         if (_container is not null) return _container;
 

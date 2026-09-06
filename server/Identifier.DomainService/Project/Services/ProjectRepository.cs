@@ -21,6 +21,8 @@ namespace DomainService.Projects
         private IMongoDatabase _clientDb;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
+        private const string _legacyDefaultUserRoleSlug = "user";
+        private const string _cloudUserRoleSlug = "clouduser";
 
         public ProjectRepository(IDbContextProvider dbContextProvider,
                                  IConfiguration configuration,
@@ -432,14 +434,106 @@ namespace DomainService.Projects
             var sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
             var documents = await (await sourceCollection.FindAsync(_ => true)).ToListAsync();
 
+            var copiedCloudUserRole = false;
             foreach (var document in documents)
             {
+                NormalizeCopiedDefaultRole(collectionName, document);
+                if (IsCloudUserRole(collectionName, document))
+                {
+                    if (copiedCloudUserRole)
+                    {
+                        continue;
+                    }
+
+                    copiedCloudUserRole = true;
+                }
+
                 document["CreatedBy"] = project.CreatedBy;
                 document["LastUpdatedBy"] = project.CreatedBy;
                 var targetCollection = targetDb.GetCollection<BsonDocument>(collectionName);
                 await targetCollection.InsertOneAsync(document);
             }
 
+        }
+
+        private static void NormalizeCopiedDefaultRole(string collectionName, BsonDocument document)
+        {
+            if (!collectionName.Equals("Roles", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            NormalizeLegacyUserRoleValues(document);
+        }
+
+        private static void NormalizeLegacyUserRoleValues(BsonDocument document)
+        {
+            foreach (var element in document.ToList())
+            {
+                if (IsLegacyUserRoleValue(element.Value))
+                {
+                    document[element.Name] = _cloudUserRoleSlug;
+                    continue;
+                }
+
+                if (element.Value is BsonDocument nestedDocument)
+                {
+                    NormalizeLegacyUserRoleValues(nestedDocument);
+                    continue;
+                }
+
+                if (element.Value is BsonArray array)
+                {
+                    NormalizeLegacyUserRoleValues(array);
+                }
+            }
+        }
+
+        private static void NormalizeLegacyUserRoleValues(BsonArray array)
+        {
+            for (var index = 0; index < array.Count; index++)
+            {
+                if (IsLegacyUserRoleValue(array[index]))
+                {
+                    array[index] = _cloudUserRoleSlug;
+                    continue;
+                }
+
+                if (array[index] is BsonDocument nestedDocument)
+                {
+                    NormalizeLegacyUserRoleValues(nestedDocument);
+                    continue;
+                }
+
+                if (array[index] is BsonArray nestedArray)
+                {
+                    NormalizeLegacyUserRoleValues(nestedArray);
+                }
+            }
+        }
+
+        private static bool IsLegacyUserRoleValue(BsonValue value) =>
+            value.IsString
+            && value.AsString.Equals(_legacyDefaultUserRoleSlug, StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsCloudUserRole(string collectionName, BsonDocument document)
+        {
+            if (!collectionName.Equals("Roles", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            foreach (var fieldName in new[] { "Slug", "slug", "Fid", "fid", "FId", "FID" })
+            {
+                if (document.TryGetValue(fieldName, out var value)
+                    && value.IsString
+                    && value.AsString.Equals(_cloudUserRoleSlug, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private async Task CopyAndCustomizeIdentityConfigurationAsync(IMongoDatabase sourceDb, IMongoDatabase targetDb, Tenant project)

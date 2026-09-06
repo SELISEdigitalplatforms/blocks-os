@@ -7,8 +7,10 @@ import {
   IGetFileByFileIDResponse,
   IGetFilesInfoPayload,
   IGetFilesInfoResponse,
+  IGetFilesPayload,
   IGetPreSignedUrlForUploadPayload,
   IGetPreSignedUrlForUploadResponse,
+  IStorageFileResponse,
   IUpdateFileAdditionalInfoPayload,
   IUpdateFileAdditionalInfoResponse,
 } from "../models/storage.model";
@@ -45,6 +47,12 @@ export class StorageFile {
 
   getFilesInfoUrlForUpload(payload: IGetFilesInfoPayload): Promise<IGetFilesInfoResponse> {
     return http.post(STORAGE_FILE_ENDPOINTS.GET_FILES_INFO, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  getFiles(payload: IGetFilesPayload): Promise<IStorageFileResponse[]> {
+    return http.post(STORAGE_FILE_ENDPOINTS.GET_FILES, payload, undefined, {
       absoluteUrl: true,
     });
   }

@@ -55,6 +55,11 @@ describe("UsersTable", () => {
     expect(screen.getByText("Active")).toBeTruthy();
   });
 
+  // it("does not render the last-updated column", () => {
+  //   renderTable();
+  //   expect(screen.queryByText("Last updated")).toBeNull();
+  // });
+
   it("renders the inactive badge for inactive users", () => {
     renderTable({ users: [user({ active: false })] });
     expect(screen.getByText("Inactive")).toBeTruthy();
@@ -130,12 +135,16 @@ describe("UsersTable", () => {
   it("shows the empty state when there are no users", () => {
     renderTable({ users: [] });
     expect(screen.getByText("No users found.")).toBeTruthy();
+    // Sort headers live only on the populated table — empty state has no "Name".
+    expect(screen.queryByText("Name")).toBeNull();
   });
 
   it("renders the loading skeleton while loading", () => {
     const { container } = renderTable({ isLoading: true });
     expect(container.querySelector(".flex-col")).not.toBeNull();
     expect(screen.queryByText("Ada Lovelace")).toBeNull();
+    expect(screen.queryByText("Name")).toBeNull();
+    expect(screen.queryByText("No users found.")).toBeNull();
   });
 
   it("navigates to the user detail on row click", () => {

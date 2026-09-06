@@ -59,9 +59,9 @@ export interface IGetPreSignedUrlForUploadPayload {
   itemId?: string;
   name: string;
   configurationName: string;
-  projectKey: string;
+  projectKey?: string;
   metaData: string;
-  parentDirectoryId: string;
+  parentDirectoryId: string | null;
   tags: string;
   accessModifier: string;
   agentId?: string;
@@ -78,7 +78,8 @@ export interface IGetPreSignedUrlForUploadResponse {
 
 export interface IGetFileByFileIDPayload {
   itemId: string;
-  projectKey: string;
+  /** Not on the server contract -- the tenant comes from the caller's token. */
+  projectKey?: string;
   configurationName?: string;
 }
 
@@ -124,7 +125,8 @@ export interface IUploadFileToLocalStorage {
 }
 
 export interface IDeleteResourceBasePayload {
-  projectKey: string;
+  /** Not on the server contract -- the tenant comes from the caller's token. */
+  projectKey?: string;
   configurationName?: string;
 }
 
@@ -148,13 +150,47 @@ export interface IGetFilesInfoPayload {
     isDescending: boolean;
   };
   filter?: {
+    /** Exact match, not a substring search. */
     name?: string;
-    additionalProperties?: {
-      agentId?: string;
-      agentStatus?: string;
-    };
+    tenantId?: string;
+    /**
+     * Each entry becomes an `AdditionalProperties.<key> == <value>` term,
+     * AND-ed together -- the one server-side way to select a subset of files.
+     */
+    additionalProperties?: Record<string, string>;
   };
-  projectKey: string;
+}
+
+/**
+ * The current Logic storage API resolves files from the authenticated project.
+ * It requires a fileIds array (empty for the root library) and accepts a
+ * storage configuration rather than the
+ * retired, server-side paginated GetFilesInfo request.
+ */
+export interface IGetFilesPayload {
+  fileIds: string[];
+  configurationName?: string;
+}
+
+export interface IStorageFileResponse {
+  itemId: string;
+  name: string;
+  url: string;
+  sizeInBytes?: number;
+  /**
+   * Directory the file lives in. The live /Storage API exposes no endpoint
+   * that creates a directory, so this is the only way a client can discover a
+   * usable one.
+   */
+  parentDirectoryID?: string;
+  /**
+   * Tags stamped at upload. GetFiles takes no filter inputs, so tags are the
+   * only marker a caller can both write and read back -- AdditionalProperties
+   * is persisted but absent from this response.
+   */
+  tags?: string[];
+  /** Owning tenant, resolved server-side from the caller's token. */
+  tenantId?: string;
 }
 
 export type IFile = {
@@ -175,7 +211,7 @@ export type IFile = {
       value: string;
     };
   };
-  additionalProperties: Record<string, unknown>;
+  additionalProperties: Record<string, string>;
   name: string;
   parentDirectoryID: string;
   systemName: string;
@@ -296,4 +332,21 @@ export interface ICreateDmsFolderPayload {
   fileStorageId: string;
   projectKey: string;
   configurationName: string;
+}
+
+/** Mirrors DomainService.Storage.Dms.CreateDirectoryRequest. */
+export interface ICreateDirectoryPayload {
+  name: string;
+  /** Blank creates the directory at the root of the tenant. */
+  parentDirectoryId?: string;
+  description?: string;
+  configurationName?: string;
+  moduleName?: number;
+  allowedFileExtensions?: string[];
+}
+
+/** DirectoryOperationResult: Status is "Succeeded" when DirectoryId is set. */
+export interface ICreateDirectoryResponse {
+  status?: string;
+  directoryId?: string;
 }

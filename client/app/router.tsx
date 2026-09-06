@@ -59,6 +59,7 @@ import MyServicesPage from "@/pages/my-services/my-services";
 import OidcBrandingPage from "@/pages/auth/oidc/oidc-branding";
 import SecretManagementLayout from "@/pages/secret-management/secret-management";
 import { ProjectOverviewRoute } from "@/routes/project-overview/project-overview-route";
+import { OIDC_BRANDING_ROUTE_PATH } from "@/routes/oidc-branding-route";
 import { IdentityProviderPage } from "@blocks-idp/authentication/components/identity-provider/identity-provider";
 import { EmailPage } from "@/pages/email-management/email";
 import { EmailCommunicationDetailsPage } from "@/pages/email-management/email-communication-details";
@@ -237,7 +238,7 @@ export const router = createBrowserRouter([
                             element: <OIDC />,
                           },
                           {
-                            path: ":clientId/branding",
+                            path: OIDC_BRANDING_ROUTE_PATH,
                             element: <OidcBrandingPage />,
                           },
                         ],
@@ -469,8 +470,10 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // ── Root redirect: authenticated users go to console ──
-          // { path: "/", element: <Navigate to="/console" replace /> },
+          // Entering the local app at the bare origin should always begin at
+          // the public login route. PublicGuard will forward an already
+          // authenticated user to the application as usual.
+          { path: "/", element: <Navigate to="/login" replace /> },
           // ── Catch-all: redirect to login ──
 
           { path: "*", element: <Navigate to="/app/console" replace /> },

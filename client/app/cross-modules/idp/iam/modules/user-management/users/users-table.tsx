@@ -45,8 +45,8 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
 
   return (
     <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
-      <div className="flex flex-col gap-3 md:min-w-[1080px]">
-        <div className="hidden grid-cols-[200px_minmax(0,1fr)_90px_130px_130px_140px] items-center gap-4 px-4 md:grid">
+      <div className="flex flex-col gap-3 md:min-w-[940px]">
+        <div className="hidden grid-cols-[200px_minmax(0,1fr)_90px_130px_140px] items-center gap-4 px-4 md:grid">
           <div className="min-w-0">
             <FilterControls.SortHeader
               id="FirstName"
@@ -81,14 +81,6 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
           </div>
           <div className="shrink-0">
             <FilterControls.SortHeader
-              id="LastUpdatedDate"
-              label="Last updated"
-              value={sortQueryParams}
-              onChange={setSortQueryParams}
-            />
-          </div>
-          <div className="shrink-0">
-            <FilterControls.SortHeader
               id="LastLoggedInTime"
               label="Last login"
               value={sortQueryParams}
@@ -101,7 +93,6 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
           const fullName = getUserDisplayName(user);
           const hasLastLogin = checkValidDate(user.lastLoggedInTime);
           const hasCreated = checkValidDate(user.createdDate);
-          const hasUpdated = checkValidDate(user.lastUpdatedDate);
 
           return (
             <div
@@ -112,7 +103,7 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") handleRowClick(user.itemId);
               }}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary/30 md:grid md:grid-cols-[200px_minmax(0,1fr)_90px_130px_130px_140px] md:items-center md:gap-4"
+              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary/30 md:grid md:grid-cols-[200px_minmax(0,1fr)_90px_130px_140px] md:items-center md:gap-4"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -145,9 +136,9 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
                 )}
               </div>
 
-              {/* Status + dates: paired on one row on mobile; on md+ this
+              {/* Status + dates: grouped on one row on mobile; on md+ this
                   wrapper becomes `contents` so its children fall back into
-                  their own grid columns (3-6), matching the header. */}
+                  their own grid columns (3-5), matching the header. */}
               <div className="flex flex-wrap items-center justify-between gap-3 md:contents">
                 <div className="flex flex-wrap items-center gap-1 md:shrink-0">
                   <Badge variant={user.active ? "success" : "error"} className="w-fit">
@@ -163,13 +154,6 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
                   <span className="block text-xs text-muted-foreground md:hidden">Created on</span>
                   {hasCreated ? formatDate(parseDateString(user.createdDate)) : "-"}
-                </div>
-
-                <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">
-                  <span className="block text-xs text-muted-foreground md:hidden">
-                    Last updated
-                  </span>
-                  {hasUpdated ? formatDate(parseDateString(user.lastUpdatedDate)) : "-"}
                 </div>
 
                 <div className="text-right md:shrink-0 md:text-left md:text-sm md:text-muted-foreground">

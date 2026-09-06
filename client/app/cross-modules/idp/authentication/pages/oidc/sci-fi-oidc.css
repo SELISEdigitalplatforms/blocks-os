@@ -245,6 +245,15 @@
     0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
+/* Keep the editor preview compact without changing the real authentication pages. */
+.oidc-scifi-root.oidc-login-preview-embed .oidc-sci-fi-input {
+  padding: 9px 12px;
+}
+
+.oidc-scifi-root.oidc-login-preview-embed .oidc-sci-fi-btn {
+  padding: 11px 24px;
+}
+
 /* ─────────────────────────────────────────────────────────────
    Utility classes (scoped to .oidc-scifi-root children)
    ───────────────────────────────────────────────────────────── */

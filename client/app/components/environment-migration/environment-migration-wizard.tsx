@@ -23,7 +23,7 @@ export const EnvironmentMigrationWizard = () => (
 const EnvironmentMigrationWizardContent = () => {
   const { resetFormData } = useDataMigrationFormState();
   const { currentStep } = useStepper();
-  const selectedTenantGroup = useProjectStore((state) => state.selectedTenantGroup);
+  const { selectedTenantGroup } = useProjectStore();
   const environmentsPath = selectedTenantGroup
     ? `/app/project/${selectedTenantGroup}/environments`
     : "/app/console";
