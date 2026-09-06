@@ -1,212 +1,83 @@
-import { type Page } from "@playwright/test";
-import { test, expect } from "../../support/test-base";
-import { openSecretManagement } from "../../support/os-helpers";
-
-const captchaProviderCard = (page: Page, provider: string) =>
-  page.locator("div").filter({ has: page.getByRole("heading", { name: provider }) });
+import { test } from "../../support/test-base";
+import {
+  addSecondCaptchaProviderFlow,
+  clearLeftoverCaptchaConfigsFlow,
+  deleteCaptchaConfigFlow,
+  disableAndReenableCaptchaFlow,
+  editCaptchaFlow,
+  fillAndSaveCaptchaFlow,
+  navigateToCaptchaFlow,
+  openAddCaptchaDialogFlow,
+  openEditCaptchaAndCloseFlow,
+  switchCaptchaGeneratorToHardFlow,
+  verifyEmptyCaptchaStateFlow,
+  verifyProviderCardVisibleFlow,
+  verifyStrictValidationFlow,
+} from "../../pages/secrets-and-configs/captcha";
 
 test.describe("flows", () => {
-
   test("Captcha flow: strict validation -> add -> edit -> disable -> delete", async ({ page }) => {
     test.setTimeout(180_000);
 
     await test.step("Navigate to Captcha", async () => {
-      await openSecretManagement(page, "captcha", "Captcha");
-      await expect(page.getByRole("button", { name: "Add Configuration" })).toBeVisible();
+      await navigateToCaptchaFlow(page);
     });
 
-    // This project is reused across runs (fixtures/os-project.json) and
-    // captcha configs aren't a singleton — a run that failed before reaching
-    // its own "Delete the configuration" step at the end leaves a card
-    // behind. A leftover card duplicates the provider heading, which makes
-    // captchaProviderCard's div/heading `has` filter match a shared ancestor
-    // of multiple cards (and therefore both cards' "Site Key"/"Secret Key"
-    // text) — a strict-mode violation. Reset to empty before assuming a
-    // fresh project rather than compounding leftovers run after run.
-    await test.step("Start from a clean state (delete any captcha config left by a prior run)", async () => {
-      for (let guard = 0; guard < 10; guard++) {
-        const deleteButton = page.getByRole("button", { name: "Delete" }).first();
-        if (!(await deleteButton.isVisible({ timeout: 3000 }).catch(() => false))) break;
-        await deleteButton.click();
-        await expect(
-          page.getByRole("heading", { name: "Delete CAPTCHA configuration?" }),
-        ).toBeVisible();
-        await page.getByRole("button", { name: "Yes, delete" }).click();
-        await expect(page.getByText(/configuration deleted successfully/))
-          .toBeVisible({ timeout: 15000 })
-          .catch(() => {});
-        // A prior run still left 2 cards behind despite this same loop
-        // reporting nothing left to delete — the list's own post-delete
-        // refetch isn't guaranteed to have landed by the time the toast is
-        // gone (same staleness class as the People list elsewhere in this
-        // suite). Reload before the next isVisible check so it reflects a
-        // real fetch, not a stale client-cache view.
-        await page.reload({ waitUntil: "domcontentloaded" });
-        await expect(page.getByRole("button", { name: "Add Configuration" })).toBeVisible({
-          timeout: 15000,
-        });
-      }
+    await test.step("Start from a clean state", async () => {
+      await clearLeftoverCaptchaConfigsFlow(page);
     });
 
     await test.step("A fresh project starts with no captcha configured", async () => {
-      await expect(page.getByText("Captcha is not configured"))
-        .toBeVisible({ timeout: 10000 })
-        .catch(() => {});
+      await verifyEmptyCaptchaStateFlow(page);
     });
 
     await test.step("Open the Add Captcha Configuration dialog", async () => {
-      await page.getByRole("button", { name: "Add Configuration" }).click();
-      await expect(page.getByRole("heading", { name: "Add Captcha Configuration" })).toBeVisible();
+      await openAddCaptchaDialogFlow(page);
     });
 
     await test.step("Strict validation: Provider, Site key and Secret key are required", async () => {
-      const providerSelect = page.getByRole("dialog").getByRole("combobox").first();
-      await providerSelect.click();
-      await page.getByRole("option", { name: "Google reCAPTCHA" }).click();
-
-      const siteKeyInput = page.getByPlaceholder("Enter site key");
-      await siteKeyInput.fill("x");
-      await siteKeyInput.fill("");
-      await expect(page.getByText("Site key is required"))
-        .toBeVisible()
-        .catch(() => {});
-
-      const secretKeyInput = page.getByPlaceholder("Enter secret key");
-      await secretKeyInput.fill("x");
-      await secretKeyInput.fill("");
-      await expect(page.getByText("Secret key is required"))
-        .toBeVisible()
-        .catch(() => {});
+      await verifyStrictValidationFlow(page);
     });
 
     await test.step("CAPTCHA Generator type can be switched to Hard", async () => {
-      const generatorSelect = page.getByRole("dialog").getByRole("combobox").nth(1);
-      await generatorSelect.click();
-      await page.getByRole("option", { name: "Hard" }).click();
-      await expect(generatorSelect).toHaveText(/Hard/);
+      await switchCaptchaGeneratorToHardFlow(page);
     });
 
     await test.step("Fill a valid configuration and save", async () => {
-      await page.getByPlaceholder("Enter site key").fill("flow-site-key");
-      await page.getByPlaceholder("Enter secret key").fill("flow-secret-key");
-
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Captcha added successfully"))
-        .toBeVisible({ timeout: 15000 })
-        .catch(() => {});
-      await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15000 });
+      await fillAndSaveCaptchaFlow(page, "flow-site-key", "flow-secret-key");
     });
 
     await test.step("Card shows the masked Site Key and 'Configured' Secret Key", async () => {
-      const googleCard = captchaProviderCard(page, "Google reCAPTCHA");
-      await expect(googleCard.getByText("Site Key", { exact: true })).toBeVisible({
-        timeout: 15000,
-      });
-      await expect(googleCard.getByText("Secret Key", { exact: true })).toBeVisible();
+      await verifyProviderCardVisibleFlow(page, "Google reCAPTCHA");
     });
 
-    await test.step("Open Edit for the configuration and close without changes", async () => {
-      const editButton = page.getByRole("button", { name: "Edit" }).first();
-      if (await editButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await editButton.click();
-        await expect(page.getByRole("heading", { name: /Edit Google reCAPTCHA/ })).toBeVisible();
-        await page.getByRole("button", { name: "Cancel" }).click();
-      }
+    await test.step("Open Edit and close without changes", async () => {
+      await openEditCaptchaAndCloseFlow(page, /Edit Google reCAPTCHA/);
     });
 
-    await test.step("Edit the configuration and actually save the change", async () => {
-      const editButton = page.getByRole("button", { name: "Edit" }).first();
-      if (await editButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await editButton.click();
-        await expect(page.getByRole("heading", { name: /Edit Google reCAPTCHA/ })).toBeVisible();
-
-        // Secret field is write-only (never pre-filled) — leaving it blank
-        // keeps the previously-saved secret, so only the site key changes.
-        await page.getByPlaceholder("Enter site key").fill("flow-site-key-updated");
-        const updateButton = page.getByRole("button", { name: "Update Changes" });
-        await expect(updateButton).toBeEnabled();
-        await updateButton.click();
-
-        await expect(page.getByText("Captcha updated successfully"))
-          .toBeVisible({ timeout: 15000 })
-          .catch(() => {});
-      }
+    await test.step("Edit the configuration and save the change", async () => {
+      await editCaptchaFlow(page, "flow-site-key-updated");
     });
 
-    await test.step("Disable then re-enable the configuration via its toggle action", async () => {
-      const disableButton = page.getByRole("button", { name: "Disable" }).first();
-      if (await disableButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await disableButton.click();
-        await expect(page.getByRole("heading", { name: "Disable CAPTCHA?" })).toBeVisible();
-        await page.getByRole("button", { name: "Yes" }).click();
-        await expect(page.getByText(/is disabled successfully/))
-          .toBeVisible({ timeout: 15000 })
-          .catch(() => {});
-
-        const enableButton = page.getByRole("button", { name: "Enable" }).first();
-        if (await enableButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-          await enableButton.click();
-          await expect(page.getByRole("heading", { name: "Enable CAPTCHA?" })).toBeVisible();
-          await page.getByRole("button", { name: "Yes" }).click();
-          await expect(page.getByText(/is enabled successfully/))
-            .toBeVisible({ timeout: 15000 })
-            .catch(() => {});
-        }
-      }
+    await test.step("Disable then re-enable the configuration", async () => {
+      await disableAndReenableCaptchaFlow(page);
     });
 
     await test.step("Add a second configuration for the hCAPTCHA provider", async () => {
-      await page.getByRole("button", { name: "Add Configuration" }).click();
-      await expect(page.getByRole("heading", { name: "Add Captcha Configuration" })).toBeVisible();
-
-      const providerSelect = page.getByRole("dialog").getByRole("combobox").first();
-      await providerSelect.click();
-      await page.getByRole("option", { name: "hCAPTCHA" }).click();
-
-      await page.getByPlaceholder("Enter site key").fill("flow-hcaptcha-site-key");
-      await page.getByPlaceholder("Enter secret key").fill("flow-hcaptcha-secret-key");
-
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Captcha added successfully"))
-        .toBeVisible({ timeout: 15000 })
-        .catch(() => {});
-
-      // Both provider cards should now render independently.
-      await expect(page.getByRole("heading", { name: /Google reCAPTCHA/ }))
-        .toBeVisible({ timeout: 10000 })
-        .catch(() => {});
-      await expect(page.getByRole("heading", { name: /hCAPTCHA/ }))
-        .toBeVisible({ timeout: 10000 })
-        .catch(() => {});
+      await addSecondCaptchaProviderFlow(
+        page,
+        "hCAPTCHA",
+        "flow-hcaptcha-site-key",
+        "flow-hcaptcha-secret-key",
+      );
     });
 
     await test.step("Delete the hCAPTCHA configuration", async () => {
-      const deleteButtons = page.getByRole("button", { name: "Delete" });
-      const lastDeleteButton = deleteButtons.last();
-      if (await lastDeleteButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await lastDeleteButton.click();
-        await expect(
-          page.getByRole("heading", { name: "Delete CAPTCHA configuration?" }),
-        ).toBeVisible();
-        await page.getByRole("button", { name: "Yes, delete" }).click();
-        await expect(page.getByText(/configuration deleted successfully/))
-          .toBeVisible({ timeout: 15000 })
-          .catch(() => {});
-      }
+      await deleteCaptchaConfigFlow(page, "last");
     });
 
-    await test.step("Delete the configuration via its Delete action", async () => {
-      const deleteButton = page.getByRole("button", { name: "Delete" }).first();
-      if (await deleteButton.isVisible({ timeout: 8000 }).catch(() => false)) {
-        await deleteButton.click();
-        await expect(
-          page.getByRole("heading", { name: "Delete CAPTCHA configuration?" }),
-        ).toBeVisible();
-        await page.getByRole("button", { name: "Yes, delete" }).click();
-        await expect(page.getByText(/configuration deleted successfully/))
-          .toBeVisible({ timeout: 15000 })
-          .catch(() => {});
-      }
+    await test.step("Delete the Google reCAPTCHA configuration", async () => {
+      await deleteCaptchaConfigFlow(page, "first");
     });
   });
 });

@@ -282,3 +282,8 @@ scripts/deploy.ps1
 scripts/th_transform.py
 scripts/secrets.local.ps1
 deploy.log
+
+# --- local Playwright MCP and npm caches (never commit) ---
+.playwright-mcp/
+npm-cache/
+test-results/
