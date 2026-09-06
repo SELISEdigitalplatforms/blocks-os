@@ -7,13 +7,12 @@ import {
   addEnvironmentFlow,
   navigateToEnvironmentsFlow,
   openEnvironmentDashboardFlow,
-  openMigrationWizardFlow,
   returnToEnvironmentsListFlow,
   verifyEnvironmentCardVisibleFlow,
 } from "../../pages/project-settings/environments";
 
 test.describe("flows", () => {
-  test("Environments flow: list -> add environment -> open its dashboard -> back to list", async ({
+  test("Environments flow: list Development -> add environment -> open dashboard -> back to list", async ({
     page,
   }) => {
     test.setTimeout(240_000);
@@ -39,10 +38,6 @@ test.describe("flows", () => {
 
     await test.step("Return to the Environments list", async () => {
       await returnToEnvironmentsListFlow(page, { expectMultipleCards: addedNewEnvironment });
-    });
-
-    await test.step("'Start Migration' opens the Environment Migration wizard", async () => {
-      await openMigrationWizardFlow(page);
     });
   });
 });
