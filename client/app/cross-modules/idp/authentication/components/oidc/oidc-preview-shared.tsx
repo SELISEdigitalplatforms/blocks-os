@@ -101,7 +101,7 @@ export const OidcPreviewShell = ({
   children,
 }: OidcPagePreviewProps & { pageLabel: string; children: ReactNode }) => (
   <div
-    className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[460px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] xl:h-full xl:min-h-0"
+    className="oidc-scifi-root oidc-login-preview-embed pointer-events-none relative flex min-h-[500px] select-none flex-col overflow-hidden rounded-lg bg-[var(--bg)] xl:h-full xl:min-h-0"
     data-theme={resolvedTheme}
     style={buildOidcBrandCssVars(palette)}
     aria-label={`${pageLabel} page preview`}
@@ -116,14 +116,14 @@ export const OidcPreviewShell = ({
       }}
       aria-hidden
     />
-    <div className="relative z-10 flex min-h-0 flex-1 items-stretch justify-center p-3 sm:p-4">
-      <div className="oidc-login-preview-card flex min-h-0 w-full max-w-[26rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl">
+    <div className="relative z-10 flex min-h-0 flex-1 items-stretch justify-center p-3 sm:p-4 2xl:p-6">
+      <div className="oidc-login-preview-card flex min-h-0 w-full max-w-[30rem] flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-xl">
         <div
-          className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-4 pt-4 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] sm:px-6"
+          className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 py-5 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] sm:px-7 sm:py-6 2xl:px-9 2xl:py-8"
           tabIndex={0}
           aria-label={`${pageLabel} preview content`}
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-5 2xl:mb-6">
             <div className="flex min-w-0 items-center gap-3">
               {template.branding.logoUrl ? (
                 <img
@@ -146,7 +146,7 @@ export const OidcPreviewShell = ({
             />
           </div>
           <div className="flex flex-col">{children}</div>
-          <p className="mt-3 shrink-0 text-xs text-[var(--muted)]">
+          <p className="mt-auto shrink-0 pt-5 text-xs text-[var(--muted)] sm:pt-6 2xl:pt-8">
             {template.pages.shared.footerText.replaceAll(
               "{year}",
               String(new Date().getFullYear()),
@@ -159,7 +159,7 @@ export const OidcPreviewShell = ({
 );
 
 export const PreviewHeading = ({ children }: { children: ReactNode }) => (
-  <h1 className="mb-4 text-xl font-semibold leading-snug tracking-tight text-[var(--fg)] sm:text-2xl">
+  <h1 className="mb-4 text-xl font-semibold leading-snug tracking-tight text-[var(--fg)] sm:mb-5 sm:text-2xl 2xl:mb-6">
     {children}
   </h1>
 );
@@ -171,7 +171,7 @@ export const PreviewField = ({
   label: string;
   password?: boolean;
 }) => (
-  <div className="flex flex-col gap-1.5">
+  <div className="flex flex-col gap-1.5 sm:gap-2">
     <span className="oidc-sci-fi-label">{label}</span>
     <div className="relative">
       <input
@@ -192,7 +192,7 @@ export const PreviewButton = ({ children }: { children: ReactNode }) => (
   <button
     type="button"
     disabled
-    className="oidc-sci-fi-btn mt-2 flex w-full items-center justify-center gap-2"
+    className="oidc-sci-fi-btn mt-5 flex w-full items-center justify-center gap-2 sm:mt-6 2xl:mt-8"
   >
     <span>{children}</span>
     <ArrowRight size={16} />
@@ -200,7 +200,7 @@ export const PreviewButton = ({ children }: { children: ReactNode }) => (
 );
 
 export const PreviewSuccess = ({ title, subtitle }: { title: string; subtitle: string }) => (
-  <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--accent-soft)] p-3">
+  <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--accent-soft)] p-3 sm:mt-5">
     <p className="text-sm font-semibold text-[var(--success)]">{title}</p>
     <p className="text-xs text-[var(--muted)]">{subtitle}</p>
   </div>

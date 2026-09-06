@@ -136,6 +136,15 @@ describe("OidcBrandingForm", () => {
     expect(latestActions().isValid).toBe(true);
   });
 
+  it("gives the live preview enough room to avoid a congested page layout", async () => {
+    await renderForm("?section=pages");
+    const previewFrame = screen.getByTestId("preview").parentElement;
+
+    expect(previewFrame?.className).toContain("max-w-[42rem]");
+    expect(previewFrame?.parentElement?.className).toContain("min-h-[500px]");
+    expect(previewFrame?.parentElement?.className).toContain("lg:min-h-[620px]");
+  });
+
   it("restores the editor context from the URL and persists subsequent tab choices", async () => {
     const onUrlUpdate = vi.fn<OnUrlUpdateFunction>();
     const user = userEvent.setup();

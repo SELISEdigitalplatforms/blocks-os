@@ -52,11 +52,7 @@ export const useUsersSortQueryParams = () =>
 const rangeToIso = (value: DateRange | null | undefined) => {
   if (!value) return { from: undefined, to: undefined };
   const toIso = (v: Date | string | undefined) =>
-    v
-      ? typeof v === "string"
-        ? v
-        : v.toISOString()
-      : undefined;
+    v ? (typeof v === "string" ? v : v.toISOString()) : undefined;
   return { from: toIso(value.from), to: toIso(value.to) };
 };
 
@@ -102,6 +98,7 @@ export const UsersSearchFilter = () => {
             className: {
               selectContent: "min-w-fit",
               SelectItem: "[&>*:first-child]:hidden flex justify-center px-2",
+              input: "w-full sm:w-52",
             },
             options: [
               { label: <Mail className="aspect-square w-4" />, value: "email" },
@@ -113,10 +110,7 @@ export const UsersSearchFilter = () => {
       values={{
         search: {
           selected: queryParams["selected-filter"] as "name" | "email",
-          value:
-            queryParams["selected-filter"] === "email"
-              ? queryParams.email
-              : queryParams.name,
+          value: queryParams["selected-filter"] === "email" ? queryParams.email : queryParams.name,
         },
       }}
       defaultValues={{ search: { selected: "name", value: "" } }}
@@ -191,15 +185,8 @@ export const UsersDateFilters = () => {
       }));
     }
 
-    if (
-      key === "joinedOn" ||
-      key === "lastLogin" ||
-      key === "lastUpdatedDate"
-    ) {
-      return setRangeQueryParams(
-        key,
-        value as { from?: Date; to?: Date } | null,
-      );
+    if (key === "joinedOn" || key === "lastLogin" || key === "lastUpdatedDate") {
+      return setRangeQueryParams(key, value as { from?: Date; to?: Date } | null);
     }
 
     setQueryParams((params) => ({
@@ -209,7 +196,18 @@ export const UsersDateFilters = () => {
     }));
   };
   const resetHandler = () => {
-    setQueryParams(null);
+    setQueryParams((params) => ({
+      ...params,
+      organizationIds: [],
+      roles: [],
+      "joinedOn-start": "",
+      "joinedOn-end": "",
+      "lastLogin-start": "",
+      "lastLogin-end": "",
+      "lastUpdatedDate-start": "",
+      "lastUpdatedDate-end": "",
+      page: 0,
+    }));
   };
 
   return (
@@ -245,35 +243,26 @@ export const UsersDateFilters = () => {
           key: "joinedOn",
           type: "DateRange",
           label: "Created date",
-          props: {},
+          props: { numberOfMonths: 1 },
         },
         {
           key: "lastLogin",
           type: "DateRange",
           label: "Last login",
-          props: {},
+          props: { numberOfMonths: 1 },
         },
         {
           key: "lastUpdatedDate",
           type: "DateRange",
           label: "Last updated",
-          props: {},
+          props: { numberOfMonths: 1 },
         },
       ]}
       values={{
         organizationIds: showOrganizationSelection ? selectedOrganizationIds : [],
-        roles:
-          showRoleSelection && !isRoleSelectionWaitingForOrganizations
-            ? selectedRoles
-            : [],
-        joinedOn: isoToRange(
-          queryParams["joinedOn-start"],
-          queryParams["joinedOn-end"],
-        ),
-        lastLogin: isoToRange(
-          queryParams["lastLogin-start"],
-          queryParams["lastLogin-end"],
-        ),
+        roles: showRoleSelection && !isRoleSelectionWaitingForOrganizations ? selectedRoles : [],
+        joinedOn: isoToRange(queryParams["joinedOn-start"], queryParams["joinedOn-end"]),
+        lastLogin: isoToRange(queryParams["lastLogin-start"], queryParams["lastLogin-end"]),
         lastUpdatedDate: isoToRange(
           queryParams["lastUpdatedDate-start"],
           queryParams["lastUpdatedDate-end"],
@@ -288,8 +277,8 @@ export const UsersDateFilters = () => {
       }}
       onChange={changeHandler}
       onReset={resetHandler}
-      hideGlobalResetButton
-      showFirstFilterOnMobile={false}
+      displayMode="sheet"
+      sheetTriggerLabel="Filters"
     />
   );
 };

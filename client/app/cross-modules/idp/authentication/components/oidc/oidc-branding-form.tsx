@@ -490,7 +490,7 @@ export const OidcBrandingForm = () => {
         <Tabs
           value={editorTab}
           onValueChange={handleEditorTabChange}
-          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:max-h-[46rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+          className="grid min-w-0 grid-cols-1 xl:h-[calc(100dvh-10rem)] xl:min-h-[34rem] xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
         >
           <section className="flex min-h-0 min-w-0 flex-col border-b border-border bg-card xl:flex-row xl:border-b-0 xl:border-r">
             <div className="shrink-0 border-b border-border bg-muted/20 p-2 xl:w-[5.5rem] xl:border-b-0 xl:border-r">
@@ -868,8 +868,8 @@ export const OidcBrandingForm = () => {
                 {isDirty ? "Unsaved" : "Saved"}
               </div>
             </div>
-            <div className="flex min-h-[500px] flex-1 items-center justify-center p-2 sm:p-3 xl:min-h-0 xl:p-2">
-              <div className="h-full max-h-full w-full max-w-[38rem] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+            <div className="flex min-h-[500px] flex-1 items-center justify-center p-3 sm:min-h-[560px] sm:p-4 lg:min-h-[620px] xl:min-h-0 xl:p-3">
+              <div className="h-full max-h-full w-full max-w-[42rem] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
                 <OidcTemplatePreview
                   template={previewTemplate}
                   selectedPage={selectedPage}
