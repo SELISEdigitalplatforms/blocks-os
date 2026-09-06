@@ -251,12 +251,12 @@ export const UsersDateFilters = () => {
           label: "Last login",
           props: { numberOfMonths: 1 },
         },
-        // {
-        //   key: "lastUpdatedDate",
-        //   type: "DateRange",
-        //   label: "Last updated",
-        //   props: { numberOfMonths: 1 },
-        // },
+        {
+          key: "lastUpdatedDate",
+          type: "DateRange",
+          label: "Last updated",
+          props: { numberOfMonths: 1 },
+        },
       ]}
       values={{
         organizationIds: showOrganizationSelection ? selectedOrganizationIds : [],
