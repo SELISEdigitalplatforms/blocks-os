@@ -3,6 +3,7 @@ import {
   openEmailManagement,
   openIam,
   openLmt,
+  openOidcTemplate,
   openOsDashboard,
   openProjectOverview,
   openSecretManagement,
@@ -41,6 +42,44 @@ export const SNAPSHOT_ROUTES: SnapshotRoute[] = [
     id: "organizations",
     name: "Identity & Access — Organizations",
     navigate: (page) => openIam(page, "organization", /^Organizations$/),
+    waitForReady: async (page) => {
+      await expect(page.getByRole("button", { name: "Add Organization" })).toBeVisible({
+        timeout: 30_000,
+      })
+      await expect(page.getByRole("button", { name: "Configure Organization" })).toBeVisible({
+        timeout: 15_000,
+      })
+    },
+  },
+  {
+    id: "organizations-add-dialog",
+    name: "Identity & Access — Organizations · Add dialog",
+    navigate: async (page) => {
+      await openIam(page, "organization", /^Organizations$/)
+      const add = page.getByRole("button", { name: "Add Organization" })
+      await expect(add).toBeEnabled({ timeout: 30_000 })
+      await add.click()
+      await expect(page.getByRole("dialog", { name: "Add Organization" })).toBeVisible({
+        timeout: 15_000,
+      })
+    },
+  },
+  {
+    id: "organizations-add-validation",
+    name: "Identity & Access — Organizations · Add max-length validation",
+    navigate: async (page) => {
+      await openIam(page, "organization", /^Organizations$/)
+      const add = page.getByRole("button", { name: "Add Organization" })
+      await expect(add).toBeEnabled({ timeout: 30_000 })
+      await add.click()
+      const dialog = page.getByRole("dialog", { name: "Add Organization" })
+      await expect(dialog).toBeVisible({ timeout: 15_000 })
+      await dialog.getByRole("textbox", { name: "Name" }).fill("a".repeat(101))
+      await dialog.getByRole("button", { name: "Add", exact: true }).click()
+      await expect(
+        dialog.getByText("Name must be at most 100 characters", { exact: true }),
+      ).toBeVisible({ timeout: 10_000 })
+    },
   },
   {
     id: "iam-settings",
@@ -56,6 +95,46 @@ export const SNAPSHOT_ROUTES: SnapshotRoute[] = [
     id: "oidc",
     name: "Secrets & Configs — OIDC",
     navigate: (page) => openSecretManagement(page, "oidc", "OIDC"),
+    waitForReady: async (page) => {
+      await expect(page.getByRole("button", { name: "Manage Template" })).toBeVisible({
+        timeout: 30_000,
+      })
+    },
+  },
+  {
+    id: "oidc-branding",
+    name: "Secrets & Configs — OIDC Template (Manage Template)",
+    navigate: (page) => openOidcTemplate(page),
+    waitForReady: async (page) => {
+      await expect(page.getByRole("tablist", { name: "Template sections" })).toBeVisible({
+        timeout: 30_000,
+      })
+      await expect(page.getByRole("heading", { name: "Live preview" })).toBeVisible({
+        timeout: 15_000,
+      })
+    },
+  },
+  {
+    id: "oidc-branding-theme",
+    name: "Secrets & Configs — OIDC Template · Theme",
+    navigate: async (page) => {
+      await openOidcTemplate(page)
+      await page.getByRole("tablist", { name: "Template sections" }).getByRole("tab", { name: "Theme" }).click()
+      await expect(page.getByRole("heading", { name: "Color system" })).toBeVisible({
+        timeout: 15_000,
+      })
+    },
+  },
+  {
+    id: "oidc-branding-pages",
+    name: "Secrets & Configs — OIDC Template · Pages",
+    navigate: async (page) => {
+      await openOidcTemplate(page)
+      await page.getByRole("tablist", { name: "Template sections" }).getByRole("tab", { name: "Pages" }).click()
+      await expect(page.getByRole("heading", { name: "Page content" })).toBeVisible({
+        timeout: 15_000,
+      })
+    },
   },
   {
     id: "client-credentials",

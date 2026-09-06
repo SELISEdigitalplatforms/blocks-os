@@ -73,7 +73,7 @@ Re-run after UI changes or when the shared project/session is refreshed.
 
 ```bash
 cd e2e
-npm test              # os-setup + feature specs + os-teardown
+npm test              # os-setup + feature specs, then globalTeardown deletes the shared project
 npm run test:features # ordered subset from features.mjs
 ```
 
@@ -125,7 +125,9 @@ npm run report        # from e2e/
 
 ## Lifecycle
 
-Playwright projects: **`os-setup` → `os` → `os-teardown`**
+Playwright projects: **`os-setup` → `os`**, plus a config-level `globalTeardown`
+(`global-teardown.ts`) that always runs once per `playwright test` invocation —
+unlike a "project", it isn't skipped by a `--project` or file/path filter.
 
 ### Previously vs now
 
@@ -133,13 +135,16 @@ Playwright projects: **`os-setup` → `os` → `os-teardown`**
 `afterEach` → `deleteCreatedProject()` (one project per test).
 
 **Now:** **one shared project** for the whole suite — created (or reused) once in
-`os-setup`, used by all feature tests via direct URLs + `os-helpers`, deleted once
-in `os-teardown` when every test passes.
+`os-setup`, used by all feature tests via direct URLs + `os-helpers`, deleted every
+run by `globalTeardown` regardless of pass/fail (unless `E2E_KEEP_PROJECT=1`).
+Deleting a project means deleting every one of its environments one at a time
+(there's no single "delete the whole project" action) — see
+`deleteProject()` in `support/create-and-delete-project.ts`.
 
 1. **Suite setup** — OIDC login on OS, reuse or create one shared project **on OS**, write `os-project.json`, save `os-session.json` **after** the dashboard is open.
 2. **Features** — use session; open routes with direct `goto` via `os-helpers`.
 3. **Recovery** — login gate or console bounce → re-auth if needed, one env-chip open to reseed localStorage, persist session (never create a new project).
-4. **Suite teardown** — delete on OS only when every `os` test passed (unless `E2E_KEEP_PROJECT=1`).
+4. **Global teardown** — delete every environment of the shared project on OS, every run, pass or fail (unless `E2E_KEEP_PROJECT=1`).
 
 ## Layout
 
@@ -150,7 +155,6 @@ e2e/
     auth/login.spec.ts
     suite/
       suite.setup.spec.ts
-      suite.teardown.spec.ts
     overview/
     identity-and-access/
     secrets-and-configs/
