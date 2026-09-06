@@ -12,7 +12,11 @@ node_modules/
 /.cursor/
 
 /fixtures/*.json
+/fixtures/.run.lock
 
 # Local secrets — never commit real credentials
 .env.e2e
 !.env.e2e.example
+
+.rtk/
+.specify/

@@ -23,8 +23,22 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   timeout: 180_000,
-  reporter: [["html", { open: "never" }], ["list"]],
+  // "json" feeds scripts/test-report.mjs (npm run test:report) — a compact
+  // pass/fail summary with the failure reason for every test, instead of
+  // scrolling back through the list reporter's scattered per-test blocks.
+  reporter: [
+    ["html", { open: "never" }],
+    ["list"],
+    ["json", { outputFile: "test-results/results.json" }],
+  ],
   globalSetup: "./global-setup.ts",
+  // Deletes the shared project every run, pass or fail — a globalTeardown
+  // always runs once per invocation regardless of which project/file/grep
+  // filter was passed on the command line. The old "os-teardown" project
+  // (see git history) only ran when it was actually selected, which a
+  // filtered `playwright test tests/some-file.spec.ts` never does — that
+  // was silently skipping cleanup on anything but a bare full-suite run.
+  globalTeardown: "./global-teardown.ts",
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -67,17 +81,15 @@ export default defineConfig({
     {
       name: "os",
       testMatch: /.*\.spec\.ts/,
-      testIgnore: [/auth[\\/]login\.spec\.ts/, /suite\.(setup|teardown)\.spec\.ts/],
+      // capture-snapshots.spec.ts belongs only to the dedicated
+      // "snapshot-capture" project below: it's a slow 25-route walk that
+      // needs that project's 900s timeout (this project only gets the
+      // config-level 180s default), and it isn't a correctness test — it
+      // regenerates reference .yml snapshots, run on demand via `npm run
+      // snapshots:capture`, not on every default suite run. Without this it
+      // silently ran twice, back-to-back, on every `npm test`.
+      testIgnore: [/auth[\\/]login\.spec\.ts/, /suite\.setup\.spec\.ts/, /capture-snapshots\.spec\.ts/],
       dependencies: ["os-setup"],
-      use: {
-        ...devices["Desktop Chrome"],
-        ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
-      },
-    },
-    {
-      name: "os-teardown",
-      testMatch: /suite\.teardown\.spec\.ts/,
-      dependencies: ["os"],
       use: {
         ...devices["Desktop Chrome"],
         ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),

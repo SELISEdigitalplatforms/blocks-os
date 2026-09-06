@@ -7,7 +7,10 @@ export function environmentCard(page: Page, label: string) {
   return page
     .locator('[class*="cursor-pointer"]')
     .filter({ has: page.getByText(label, { exact: true }) })
-    .filter({ hasText: "X-Blocks-Key:" })
+    // environment-card.tsx (bf9d3e2f) moved this label into a <dt>/<dd> pair
+    // and dropped the trailing colon — match without it so this still finds
+    // the card regardless of which variant is rendered.
+    .filter({ hasText: "X-Blocks-Key" })
     .first()
 }
 
@@ -41,7 +44,7 @@ export async function waitForEnvironmentsListReady(page: Page) {
   await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible({
     timeout: 60_000,
   })
-  await expect(page.getByText("X-Blocks-Key:").first()).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText("X-Blocks-Key").first()).toBeVisible({ timeout: 30_000 })
 }
 
 async function ensureEnvironmentsList(page: Page) {
@@ -74,7 +77,7 @@ export async function openEnvironmentCardDashboard(page: Page, label = "Developm
     }
   }
 
-  const maxAttempts = 3
+  const maxAttempts = 4
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await ensureEnvironmentsList(page)
@@ -84,7 +87,7 @@ export async function openEnvironmentCardDashboard(page: Page, label = "Developm
     try {
       // The suite session can expire mid-click: the card navigation bounces
       // through /login (sometimes twice) before settling on /app/console.
-      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 25_000 })
+      await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 30_000 })
       return
     } catch (error) {
       if (isEnvDashboardUrl(page)) {
@@ -105,6 +108,14 @@ export async function openEnvironmentCardDashboard(page: Page, label = "Developm
         // login instead, or every retry clicks with the same bad token and
         // fails identically.
         await refreshSuiteSession(page)
+
+        // refreshSuiteSession reopens the project's own default ("Development")
+        // environment dashboard directly as part of reseeding — if that's the
+        // one we were after, we're already there and don't need another
+        // card click that risks hitting the exact same bounce again.
+        if (label === "Development" && isEnvDashboardUrl(page)) {
+          return
+        }
       }
       if (attempt === maxAttempts - 1) {
         throw error
