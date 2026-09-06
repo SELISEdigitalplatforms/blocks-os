@@ -66,6 +66,12 @@ describe("validateOidcUiTemplate", () => {
     }
   });
 
+  it("orders signup consent fields before the submit-button field", () => {
+    const keys = PAGE_FIELDS.signup.map(({ key }) => key);
+    expect(keys.indexOf("termsPrefix")).toBeLessThan(keys.indexOf("submitButton"));
+    expect(keys.indexOf("privacyLinkText")).toBeLessThan(keys.indexOf("submitButton"));
+  });
+
   it("enforces the 200-character page and shared-footer limit", () => {
     const draft = template();
     draft.pages.signup.heading = "x".repeat(201);

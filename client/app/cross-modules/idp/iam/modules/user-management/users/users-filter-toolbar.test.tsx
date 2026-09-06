@@ -1,31 +1,94 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ setQueryParams: vi.fn(), queryParams: {} as Record<string, string> }));
+const h = vi.hoisted(() => ({
+  setQueryParams: vi.fn(),
+  queryParams: {} as Record<string, string>,
+  organizations: [
+    { itemId: "default", name: "Default" },
+    { itemId: "org-1", name: "Acme" },
+  ] as unknown[],
+  lastFilters: [] as Array<{
+    key: string;
+    type: string;
+    label: string;
+    props?: { disabled?: boolean; numberOfMonths?: number };
+  }>,
+  lastShowFirstFilterOnMobile: undefined as boolean | undefined,
+  lastDisplayMode: undefined as "responsive" | "sheet" | undefined,
+  lastSheetTriggerLabel: undefined as string | undefined,
+  lastRoleOptionsPayload: null as { organizationIds: string[] } | null,
+}));
 
 vi.mock("nuqs", () => ({
-  parseAsInteger: { withDefault: (d: number) => ({ _d: d }) },
-  parseAsString: { withDefault: (d: string) => ({ _d: d }) },
+  parseAsArrayOf: () => ({ withDefault: (d: unknown) => ({ _d: d }) }),
+  parseAsInteger: { withDefault: (d: unknown) => ({ _d: d }) },
+  parseAsString: { withDefault: (d: unknown) => ({ _d: d }) },
   useQueryStates: () => [h.queryParams, h.setQueryParams],
+}));
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
+vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
+  useGetAllEnabledOrganizations: () => ({
+    data: h.organizations,
+    isLoading: false,
+  }),
+  useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: true } }),
+}));
+vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
+  useGetRoleFilterOptions: (payload: { organizationIds: string[] }) => {
+    h.lastRoleOptionsPayload = payload;
+    return {
+      data: [
+        { label: "Admin", value: "admin" },
+        { label: "Auditor", value: "auditor" },
+      ],
+      isLoading: false,
+    };
+  },
 }));
 vi.mock("@/components/filter-toolbar", () => ({
   FilterToolbar: ({
+    filters,
     onChange,
     onReset,
+    showFirstFilterOnMobile,
+    displayMode,
+    sheetTriggerLabel,
   }: {
+    filters: Array<{
+      key: string;
+      type: string;
+      label: string;
+      props?: { disabled?: boolean; numberOfMonths?: number };
+    }>;
     onChange: (key: string, value: unknown) => void;
     onReset: () => void;
-  }) => (
-    <div>
-      <button onClick={() => onChange("search", { selected: "email", value: "abc" })}>
-        change-search
-      </button>
-      <button onClick={() => onChange("joinedOn", { from: new Date("2020-01-01"), to: undefined })}>
-        change-date
-      </button>
-      <button onClick={onReset}>reset</button>
-    </div>
-  ),
+    showFirstFilterOnMobile?: boolean;
+    displayMode?: "responsive" | "sheet";
+    sheetTriggerLabel?: string;
+  }) => {
+    h.lastFilters = filters;
+    h.lastShowFirstFilterOnMobile = showFirstFilterOnMobile;
+    h.lastDisplayMode = displayMode;
+    h.lastSheetTriggerLabel = sheetTriggerLabel;
+    return (
+      <div>
+        <button onClick={() => onChange("search", { selected: "email", value: "abc" })}>
+          change-search
+        </button>
+        <button
+          onClick={() => onChange("joinedOn", { from: new Date("2020-01-01"), to: undefined })}
+        >
+          change-date
+        </button>
+        <button onClick={() => onChange("organizationIds", ["org-1"])}>change-orgs</button>
+        <button onClick={() => onChange("roles", ["admin"])}>change-roles</button>
+        <button onClick={onReset}>reset</button>
+      </div>
+    );
+  },
   useSortQueryParams: () => ({ sortQueryParams: {}, setSortQueryParams: vi.fn() }),
 }));
 
@@ -38,7 +101,22 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.queryParams = { "selected-filter": "name", name: "", email: "" };
+  h.queryParams = {
+    "selected-filter": "name",
+    name: "",
+    email: "",
+    organizationIds: [],
+    roles: [],
+  } as unknown as Record<string, string>;
+  h.organizations = [
+    { itemId: "default", name: "Default" },
+    { itemId: "org-1", name: "Acme" },
+  ];
+  h.lastFilters = [];
+  h.lastShowFirstFilterOnMobile = undefined;
+  h.lastDisplayMode = undefined;
+  h.lastSheetTriggerLabel = undefined;
+  h.lastRoleOptionsPayload = null;
 });
 
 describe("users-filter-toolbar helpers", () => {
@@ -79,9 +157,79 @@ describe("UsersDateFilters", () => {
     expect(h.setQueryParams).toHaveBeenCalled();
   });
 
+  it("clears roles when the organization filter changes", () => {
+    render(<UsersDateFilters />);
+    fireEvent.click(screen.getByText("change-orgs"));
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({ roles: ["admin"], page: 2 })).toEqual({
+      roles: [],
+      page: 0,
+      organizationIds: ["org-1"],
+    });
+  });
+
+  it("updates roles without changing organizations", () => {
+    render(<UsersDateFilters />);
+    fireEvent.click(screen.getByText("change-roles"));
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({ organizationIds: ["org-1"] })).toEqual({
+      organizationIds: ["org-1"],
+      roles: ["admin"],
+      page: 0,
+    });
+  });
+
+  it("hides organization and role filters when no organizations are available", () => {
+    h.organizations = [];
+    render(<UsersDateFilters />);
+    expect(h.lastFilters.map((filter) => filter.key)).toEqual([
+      "joinedOn",
+      "lastLogin",
+      "lastUpdatedDate",
+    ]);
+  });
+
+  it("disables roles and skips role option loading until an organization is selected", () => {
+    render(<UsersDateFilters />);
+    const rolesFilter = h.lastFilters.find((filter) => filter.key === "roles");
+    expect(rolesFilter?.props?.disabled).toBe(true);
+    expect(h.lastRoleOptionsPayload?.organizationIds).toEqual([]);
+  });
+
+  it("keeps all advanced filters inside one sheet at every breakpoint", () => {
+    render(<UsersDateFilters />);
+    expect(h.lastDisplayMode).toBe("sheet");
+    expect(h.lastSheetTriggerLabel).toBe("Filters");
+    expect(
+      h.lastFilters
+        .filter((filter) => filter.type === "DateRange")
+        .every((filter) => filter.props?.numberOfMonths === 1),
+    ).toBe(true);
+  });
+
+  it("loads role options for selected organizations", () => {
+    h.queryParams.organizationIds = ["org-1"] as unknown as string;
+    render(<UsersDateFilters />);
+    const rolesFilter = h.lastFilters.find((filter) => filter.key === "roles");
+    expect(rolesFilter?.props?.disabled).toBe(false);
+    expect(h.lastRoleOptionsPayload?.organizationIds).toEqual(["org-1"]);
+  });
+
   it("resets the date query params", () => {
     render(<UsersDateFilters />);
     fireEvent.click(screen.getByText("reset"));
-    expect(h.setQueryParams).toHaveBeenCalledWith(null);
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({ name: "alice", page: 3 })).toEqual({
+      name: "alice",
+      organizationIds: [],
+      roles: [],
+      "joinedOn-start": "",
+      "joinedOn-end": "",
+      "lastLogin-start": "",
+      "lastLogin-end": "",
+      "lastUpdatedDate-start": "",
+      "lastUpdatedDate-end": "",
+      page: 0,
+    });
   });
 });

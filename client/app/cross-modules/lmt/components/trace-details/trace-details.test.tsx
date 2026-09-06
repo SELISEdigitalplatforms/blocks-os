@@ -13,6 +13,8 @@ const h = vi.hoisted(() => ({
   logs: [] as unknown[],
   logsLoading: false,
   tenantId: "tenant-1",
+  getLogs: vi.fn(),
+  getRestoredLogs: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-lmt-base-path", () => ({
@@ -41,9 +43,18 @@ vi.mock("@blocks-lmt/hooks/use-trace", () => ({
     isError: h.isError,
     data: h.trace ? { data: h.trace } : undefined,
   }),
+  // Not exercised by these tests -- none pass a `requestId` search param -- but the component
+  // calls it unconditionally, so the mock module must still export it.
+  useGetRestoredTraceById: () => ({
+    isLoading: false,
+    isFetching: false,
+    isError: h.isError,
+    data: h.trace ? { data: h.trace } : undefined,
+  }),
 }));
 vi.mock("@blocks-lmt/hooks/use-log", () => ({
-  useGetLogs: () => ({ isLoading: h.logsLoading, isFetching: false, data: { data: h.logs } }),
+  useGetLogs: h.getLogs,
+  useGetRestoredLogs: h.getRestoredLogs,
 }));
 
 import { TraceDetails } from "./trace-details";
@@ -101,6 +112,13 @@ const renderPage = (id = "trace-1") =>
     </MemoryRouter>,
   );
 
+const renderRestoredPage = (id = "trace-1") =>
+  render(
+    <MemoryRouter initialEntries={[`/tracing/${id}?requestId=request-1`]}>
+      <TraceDetails id={id} />
+    </MemoryRouter>,
+  );
+
 describe("TraceDetails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,9 +127,26 @@ describe("TraceDetails", () => {
     h.isFetching = false;
     h.isError = false;
     h.isMobile = false;
-    h.logs = [{ timestamp: "2024-01-01T10:00:00.000Z", level: "INFO", traceId: "trace-1", message: "hello world" }];
+    h.logs = [
+      {
+        timestamp: "2024-01-01T10:00:00.000Z",
+        level: "INFO",
+        traceId: "trace-1",
+        message: "hello world",
+      },
+    ];
     h.logsLoading = false;
     h.tenantId = "tenant-1";
+    h.getLogs.mockImplementation(() => ({
+      isLoading: h.logsLoading,
+      isFetching: false,
+      data: { data: h.logs },
+    }));
+    h.getRestoredLogs.mockImplementation(() => ({
+      isLoading: h.logsLoading,
+      isFetching: false,
+      data: { data: h.logs },
+    }));
   });
 
   it("shows a not-found state when no trace exists", () => {
@@ -181,6 +216,23 @@ describe("TraceDetails", () => {
 
     await user.click(screen.getByRole("tab", { name: "Log" }));
     expect(await screen.findByText("No data")).toBeTruthy();
+  });
+
+  it("uses restored logs when a restored request id is present", async () => {
+    const user = userEvent.setup();
+    renderRestoredPage();
+    await screen.findByText("Timeline");
+
+    await user.click(screen.getByRole("tab", { name: "Log" }));
+
+    expect(h.getRestoredLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: "request-1" }),
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(h.getLogs).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
   });
 
   it("collapses the insights panel when toggled", async () => {

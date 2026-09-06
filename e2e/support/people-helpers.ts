@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
 import { ensureAuthenticated, isLoginSurface } from "./login-helper"
 import { refreshSuiteSession } from "./session-lifecycle"
 
@@ -54,4 +54,54 @@ export async function waitForPeopleOwnerReady(
   }
 
   await expect(invite).toBeVisible({ timeout: 30_000 })
+}
+
+/**
+ * Inviting a brand-new / inactive email often does not insert its ProjectPeople
+ * row synchronously: the backend may return invitation_requested or
+ * user_creation_requested and only insert after IAM posts back. The People
+ * flow's pass criterion is "invite was sent", not "row is listed" — so this
+ * helper only polls briefly and returns whether the row appeared.
+ */
+export async function tryWaitForInvitedPersonRow(
+  page: Page,
+  personRow: Locator,
+  reopen?: () => Promise<void>,
+): Promise<boolean> {
+  const maxAttempts = 3
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (await personRow.isVisible({ timeout: 8_000 }).catch(() => false)) {
+      return true
+    }
+    if (attempt === maxAttempts - 1) break
+
+    await page.waitForTimeout(3_000)
+    if (reopen) {
+      await reopen()
+    } else {
+      await page.reload({ waitUntil: "domcontentloaded" })
+    }
+    await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
+      timeout: 30_000,
+    })
+  }
+
+  return personRow.isVisible({ timeout: 5_000 }).catch(() => false)
+}
+
+/** @deprecated Prefer tryWaitForInvitedPersonRow — invite-send is the pass criterion. */
+export async function waitForInvitedPersonRow(
+  page: Page,
+  personRow: Locator,
+  reopen?: () => Promise<void>,
+) {
+  const found = await tryWaitForInvitedPersonRow(page, personRow, reopen)
+  if (!found) {
+    throw new Error(
+      "Invited person's row never appeared after a short poll. " +
+        "If People/Invite already returned isSuccess, treat invite-send as the pass criterion " +
+        "instead of requiring the async ProjectPeople row.",
+    )
+  }
 }

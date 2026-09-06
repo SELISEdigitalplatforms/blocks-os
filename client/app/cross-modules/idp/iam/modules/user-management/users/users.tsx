@@ -2,6 +2,10 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { UsersTable } from "./users-table";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useGetUsers } from "@blocks-idp/iam/hooks/use-user";
+import {
+  useGetAllEnabledOrganizations,
+  useGetOrganizationConfig,
+} from "@blocks-idp/iam/hooks/use-organization";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   UsersDateFilters,
@@ -14,11 +18,21 @@ export const Users = () => {
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
   const { sortQueryParams } = useUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  const { data: orgConfig } = useGetOrganizationConfig(tenantId);
+  const { data: organizations = [] } = useGetAllEnabledOrganizations(tenantId, {
+    enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
+  });
+  const hasOrganizationOptions = organizations.length > 0;
+  const organizationIds =
+    orgConfig?.isMultiOrgEnabled === true && hasOrganizationOptions
+      ? (queryParams.organizationIds ?? [])
+      : [];
+  const canFilterByRoles =
+    hasOrganizationOptions && (orgConfig?.isMultiOrgEnabled !== true || organizationIds.length > 0);
+  const roles = canFilterByRoles ? (queryParams.roles ?? []) : [];
 
   const searchText =
-    queryParams["selected-filter"] === "email"
-      ? queryParams.email
-      : queryParams.name;
+    queryParams["selected-filter"] === "email" ? queryParams.email : queryParams.name;
 
   const { isLoading, isFetching, data } = useGetUsers({
     page: queryParams.page,
@@ -31,6 +45,8 @@ export const Users = () => {
       joinedOn: queryParams["joinedOn-start"] || undefined,
       lastLogin: queryParams["lastLogin-start"] || undefined,
       lastUpdatedDate: queryParams["lastUpdatedDate-start"] || undefined,
+      ...(organizationIds.length > 0 ? { organizationIds } : {}),
+      ...(roles.length > 0 ? { roles } : {}),
     },
     sort: sortQueryParams,
   });
@@ -44,9 +60,19 @@ export const Users = () => {
   return (
     <Card>
       <CardContent>
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <UsersSearchFilter />
-          <UsersDateFilters />
+        <div
+          data-testid="users-filter-row"
+          className="mb-6 flex w-full min-w-0 flex-row items-center gap-2"
+        >
+          <div
+            data-testid="users-search-filter-slot"
+            className="min-w-0 flex-1 overflow-hidden sm:flex-none"
+          >
+            <UsersSearchFilter />
+          </div>
+          <div data-testid="users-advanced-filter-slot" className="shrink-0">
+            <UsersDateFilters />
+          </div>
         </div>
         <UsersTable users={data?.data || []} isLoading={isUserLoading} />
         {!isUserLoading && data && data.totalCount > queryParams.pageSize && (
@@ -58,7 +84,9 @@ export const Users = () => {
               totalCount={data?.totalCount || 0}
               pageSizeOptions={[5, 10]}
               onChange={onPageChangeHandler}
-              onPageSizeChange={(pageSize) => setQueryParams((params) => ({ ...params, pageSize, page: 1 }))}
+              onPageSizeChange={(pageSize) =>
+                setQueryParams((params) => ({ ...params, pageSize, page: 1 }))
+              }
             />
           </div>
         )}

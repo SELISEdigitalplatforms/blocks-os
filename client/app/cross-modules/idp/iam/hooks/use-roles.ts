@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { normalizeArchiveErrors } from "../constants/archive-error-messages";
 import { roleService } from "@blocks-idp/iam/services/role.service";
-import { GetRolesPayload } from "@blocks-idp/iam/models/role";
+import { GetRolesPayload, IRole } from "@blocks-idp/iam/models/role";
+
+const DEFAULT_ORGANIZATION_ID = "default";
+const ROLE_OPTIONS_PAGE_SIZE = 100;
 
 export const useGetRoles = (
   option: GetRolesPayload,
@@ -11,6 +14,55 @@ export const useGetRoles = (
     queryKey: ["roles", option],
     queryFn: () => roleService.getRoles(option),
     enabled,
+  });
+};
+
+export const useGetRoleFilterOptions = (
+  option: { projectKey: string; organizationIds: string[] },
+  { enabled = true }: { enabled?: boolean } = {},
+) => {
+  const organizationIds = [...new Set(option.organizationIds)].filter(Boolean);
+
+  return useQuery({
+    queryKey: ["roles", "filter-options", option.projectKey, organizationIds],
+    queryFn: async () => {
+      const roles: IRole[] = [];
+
+      for (const organizationId of organizationIds) {
+        let page = 0;
+        let totalCount = 0;
+        const organizationRoles: IRole[] = [];
+
+        do {
+          const response = await roleService.getRoles({
+            projectKey: option.projectKey,
+            organizationId,
+            page,
+            pageSize: ROLE_OPTIONS_PAGE_SIZE,
+          });
+          const pageRoles = response.data ?? [];
+          organizationRoles.push(...pageRoles);
+          totalCount = response.totalCount ?? organizationRoles.length;
+          page += 1;
+        } while (organizationRoles.length < totalCount);
+
+        roles.push(...organizationRoles);
+      }
+
+      const bySlug = new Map<string, IRole>();
+      roles.forEach((role) => {
+        const existing = bySlug.get(role.slug);
+        if (!existing || role.organizationId === DEFAULT_ORGANIZATION_ID) {
+          bySlug.set(role.slug, role);
+        }
+      });
+
+      return [...bySlug.values()].map((role) => ({
+        label: role.name,
+        value: role.slug,
+      }));
+    },
+    enabled: enabled && !!option.projectKey && organizationIds.length > 0,
   });
 };
 

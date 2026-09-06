@@ -3,9 +3,16 @@ import path from "path"
 
 export type OsProjectFixture = {
   projectName: string
+  /** Primary / default environment item id (usually Development). */
   itemId: string
   tenantGroupId: string
   dashboardUrl: string
+  /**
+   * Every environment itemId under this project group. Teardown deletes by
+   * navigating `/app/{id}/dashboard` directly — no console chip clicks.
+   * Kept in sync when envs are created or discovered via Project/Gets.
+   */
+  environmentIds?: string[]
 }
 
 const FIXTURE_PATH = path.resolve(__dirname, "../fixtures/os-project.json")

@@ -34,6 +34,10 @@ describe("OidcLoginPreview", () => {
     const scrollRegion = screen.getByLabelText("Login preview content");
     expect(scrollRegion.getAttribute("tabindex")).toBe("0");
     expect(scrollRegion.className).toContain("overflow-y-auto");
+    expect(scrollRegion.className).toContain("sm:py-6");
+    expect(scrollRegion.parentElement?.className).toContain("max-w-[30rem]");
+    expect(screen.getByText(/SELISE Digital Platforms/).className).toContain("mt-auto");
+    expect(screen.getByRole("button", { name: "Login" }).className).toContain("sm:mt-6");
   });
 
   it("reflects in-progress template changes on rerender", () => {

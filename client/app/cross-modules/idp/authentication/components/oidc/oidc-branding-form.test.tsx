@@ -113,7 +113,10 @@ beforeEach(() => {
   globalThis.URL.revokeObjectURL = vi.fn();
 });
 
-describe("OidcBrandingForm", () => {
+// The live preview re-renders on every draft keystroke. Under a busy jsdom
+// worker that exceeds the default 5s budget even though the same cases pass
+// in isolation in ~2s.
+describe("OidcBrandingForm", { timeout: 15_000 }, () => {
   it("preserves the loading and GET-unavailable states", () => {
     h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     const { container, unmount } = renderOidcForm();
@@ -134,6 +137,15 @@ describe("OidcBrandingForm", () => {
     expect(screen.getByRole("tab", { name: "Pages" })).toBeTruthy();
     expect(latestActions().isDirty).toBe(false);
     expect(latestActions().isValid).toBe(true);
+  });
+
+  it("gives the live preview enough room to avoid a congested page layout", async () => {
+    await renderForm("?section=pages");
+    const previewFrame = screen.getByTestId("preview").parentElement;
+
+    expect(previewFrame?.className).toContain("max-w-[42rem]");
+    expect(previewFrame?.parentElement?.className).toContain("min-h-[500px]");
+    expect(previewFrame?.parentElement?.className).toContain("lg:min-h-[620px]");
   });
 
   it("restores the editor context from the URL and persists subsequent tab choices", async () => {

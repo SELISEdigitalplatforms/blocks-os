@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { OIDCRowExport } from "./oidc-card";
+import { useFindSecrets } from "@/cross-modules/secrets/hooks/use-secret-management";
 
 const LoadingSkeleton = () => (
   <Card>
@@ -50,6 +51,9 @@ export const OidcList = () => {
   const { isLoading, isFetching, data } = useGetAuthOidcCredentials({
     projectKey: tenantId,
   });
+  // OIDC client credentials are backed by Secret Management. Keep its default list query
+  // active so create/update invalidation immediately refreshes the sibling Secret page.
+  useFindSecrets({ pageNumber: 1, pageSize: 10 }, !!tenantId);
   const sortedOidcData = useMemo(() => {
     if (!data || !data.oIDCClientCredentials) return [];
     const dataArray = Array.isArray(data.oIDCClientCredentials)

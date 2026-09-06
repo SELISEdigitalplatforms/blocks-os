@@ -470,8 +470,10 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // ── Root redirect: authenticated users go to console ──
-          // { path: "/", element: <Navigate to="/console" replace /> },
+          // Entering the local app at the bare origin should always begin at
+          // the public login route. PublicGuard will forward an already
+          // authenticated user to the application as usual.
+          { path: "/", element: <Navigate to="/login" replace /> },
           // ── Catch-all: redirect to login ──
 
           { path: "*", element: <Navigate to="/app/console" replace /> },
