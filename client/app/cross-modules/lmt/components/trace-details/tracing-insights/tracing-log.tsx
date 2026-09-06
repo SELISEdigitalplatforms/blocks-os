@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useGetLogs } from "@blocks-lmt/hooks/use-log";
+import { useGetLogs, useGetRestoredLogs } from "@blocks-lmt/hooks/use-log";
 import {
   ColumnDef,
   flexRender,
@@ -13,6 +13,7 @@ import { timelineContext } from "../trace-details";
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
 import { ILog } from "@blocks-lmt/models/log.model";
 import { FilterControls } from "@/components/filter-toolbar";
+import { useSearchParams } from "react-router";
 const LoadingSkelton = () => (
   <>
     {Array.from({ length: 10 }).map((_, index) => (
@@ -55,9 +56,11 @@ export const TracingLog = () => {
   const {
     current: { traceId, spanId, serviceName },
   } = traceHistory[traceHistory?.length - 1];
+  const [searchParams] = useSearchParams();
+  const requestId = searchParams.get("requestId");
   const [search, setSearch] = useState<string>("");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
-  const { isLoading, isFetching, data } = useGetLogs({
+  const logsPayload = {
     page: 0,
     pageSize: 200,
     serviceName,
@@ -66,7 +69,20 @@ export const TracingLog = () => {
       traceId: traceId,
       spanId: spanId,
     },
+  };
+  const normalLogs = useGetLogs(logsPayload, {
+    enabled: !requestId,
   });
+  const restoredLogs = useGetRestoredLogs(
+    {
+      ...logsPayload,
+      requestId: requestId || "",
+    },
+    {
+      enabled: Boolean(requestId),
+    },
+  );
+  const { isLoading, isFetching, data } = requestId ? restoredLogs : normalLogs;
   const logs = useMemo(() => {
     if (!data) return [];
     return data.data.filter((item: ILog) => item.message.toLowerCase().includes(search));
