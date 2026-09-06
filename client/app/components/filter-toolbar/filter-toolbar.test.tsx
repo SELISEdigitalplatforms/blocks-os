@@ -132,6 +132,11 @@ describe("FilterToolbar", () => {
     expect(screen.getByPlaceholderText("Search here")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Show Results" }).className).toContain("h-8");
     expect(screen.getByRole("button", { name: "Reset" }).className).toContain("h-8");
-    expect(document.querySelector(".bg-transparent")).toBeTruthy();
+    const overlay = document.querySelector(".bg-transparent");
+    expect(overlay).toBeTruthy();
+    expect(overlay?.className).toContain("top-[60px]");
+    const sheet = screen.getByRole("dialog");
+    expect(sheet.className).toContain("top-[60px]");
+    expect(sheet.className).toContain("h-[calc(100dvh-60px)]");
   });
 });
