@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import {
   mockCaptchaServiceFactory,
@@ -48,6 +49,7 @@ describe("use-captcha-config hooks", () => {
 
   describe("useSaveCaptcha", () => {
     it("should save captcha config successfully", async () => {
+      const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
       vi.mocked(captchaService.saveCaptcha).mockResolvedValue(mockCaptchaConfig);
 
       const { result } = renderHook(() => useSaveCaptcha(), {
@@ -60,6 +62,8 @@ describe("use-captcha-config hooks", () => {
         mockSaveCaptchaPayload,
         expect.anything(),
       );
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["captcha-config"] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["secrets", "list"] });
     });
   });
 

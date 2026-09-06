@@ -29,7 +29,10 @@ export function e2eCredentials(): { email: string; password: string } {
 
 /** Domain for synthetic addresses created during tests (invites, new users). */
 export function e2eTestEmailDomain(): string {
-  return process.env.E2E_TEST_EMAIL_DOMAIN ?? "example.com"
+  // Accept "yopmail.com" or accidental "@yopmail.com" / "user@yopmail.com" values.
+  const raw = (process.env.E2E_TEST_EMAIL_DOMAIN ?? "example.com").trim()
+  const at = raw.lastIndexOf("@")
+  return (at >= 0 ? raw.slice(at + 1) : raw).replace(/^\.+/, "") || "example.com"
 }
 
 export function uniqueTestEmail(localPart = "e2e"): string {

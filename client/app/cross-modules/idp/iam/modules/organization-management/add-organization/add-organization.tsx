@@ -73,7 +73,11 @@ export const AddOrganization = ({ disabled }: AddOrganizationProps) => {
       form.reset();
     } catch (error: unknown) {
       if (error && typeof error === "object" && "errors" in error) {
-        showErrorToast({ errors: error.errors });
+        showErrorToast({ errors: (error as { errors: unknown }).errors });
+      } else {
+        // Empty-body 4xx/5xx (e.g. 403 with Content-Length: 0) still need a
+        // user-visible failure — otherwise the dialog just sits open.
+        showErrorToast({ errors: "Something went wrong" });
       }
     }
   };

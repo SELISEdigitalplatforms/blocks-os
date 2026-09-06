@@ -113,6 +113,8 @@ describe("CreateOIDC", () => {
     expect(payload.redirectUris).toEqual(["https://app.example.com/callback"]);
     expect(payload.isDeviceFlowClient).toBe(false);
     expect(payload.allowedResponseTypes).toEqual(["code"]);
+    expect(payload).not.toHaveProperty("clientBrandColor");
+    expect(payload).not.toHaveProperty("clientLogoUrl");
   });
 
   it("restores Auto Redirect unchecked after Device Flow is turned back off", async () => {
@@ -181,6 +183,8 @@ describe("CreateOIDC", () => {
     expect(h.saveOidc.mock.calls[0][0].isDeviceFlowClient).toBe(true);
     expect(h.saveOidc.mock.calls[0][0].allowedResponseTypes).toEqual([]);
     expect(h.saveOidc.mock.calls[0][0].isAutoRedirect).toBe(false);
+    expect(h.saveOidc.mock.calls[0][0]).not.toHaveProperty("clientBrandColor");
+    expect(h.saveOidc.mock.calls[0][0]).not.toHaveProperty("clientLogoUrl");
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "OIDC Client updated successfully",
     });

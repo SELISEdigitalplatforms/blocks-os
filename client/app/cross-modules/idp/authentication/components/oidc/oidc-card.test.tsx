@@ -3,20 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  navigate: vi.fn(),
   deleteOidc: vi.fn(),
   rotateSecret: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
 }));
 
-vi.mock("react-router", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("react-router")>()),
-  useNavigate: () => h.navigate,
-}));
-vi.mock("@seliseblocks/genesis-os/hooks", () => ({
-  useScopedPath: () => (p: string) => `/scoped/${p}`,
-}));
 vi.mock("@seliseblocks/genesis-os", () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   return {
@@ -84,11 +76,9 @@ describe("OIDCCard", () => {
     expect(screen.getByText("Device Flow")).toBeTruthy();
   });
 
-  it("navigates to the branding template", async () => {
-    const user = userEvent.setup();
+  it("does not render a per-row Template action", () => {
     renderCard();
-    await user.click(screen.getByRole("button", { name: "Template" }));
-    expect(h.navigate).toHaveBeenCalledWith("/scoped/secret-management/oidc/oidc-123/branding");
+    expect(screen.queryByRole("button", { name: "Template" })).toBeNull();
   });
 
   it("rotates the client secret and shows the new secret dialog", async () => {

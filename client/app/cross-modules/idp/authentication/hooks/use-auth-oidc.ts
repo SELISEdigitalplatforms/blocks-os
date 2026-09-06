@@ -45,6 +45,7 @@ export const useSaveAuthOidc = () => {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["identity-providers"] });
+      queryClient.invalidateQueries({ queryKey: ["secrets", "list"] });
     },
   });
 };
@@ -61,6 +62,7 @@ export const useDeleteAuthOidc = (options: { projectKey: string }) => {
       queryClient.invalidateQueries({
         queryKey: ["authentication", "auth-oidc", options],
       });
+      queryClient.invalidateQueries({ queryKey: ["secrets", "list"] });
     },
   });
 };
@@ -77,6 +79,7 @@ export const useRotateAuthOidcSecret = (options: { projectKey: string }) => {
       queryClient.invalidateQueries({
         queryKey: ["authentication", "auth-oidc", options],
       });
+      queryClient.invalidateQueries({ queryKey: ["secrets", "list"] });
     },
   });
 };

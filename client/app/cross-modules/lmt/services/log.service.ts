@@ -4,14 +4,19 @@ import {
   IGetLiveLogsPayload,
   IGetLogsByDatePayload,
   IGetLogsPayload,
+  IGetRestoredLogsPayload,
   ILog,
 } from "../models/log.model";
 import { IAPIResponse } from "@/models/api-response";
-import { LOG_ENDPOINTS } from "../constants/endpoint.constant";
+import { LOG_ENDPOINTS, RESTORE_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class LogService {
   async getLogs(payload: IGetLogsPayload): Promise<IAPIResponse<ILog[]>> {
     return http.post<IAPIResponse<ILog[]>>(LOG_ENDPOINTS.GET_LOGS, payload);
+  }
+
+  async getRestoredLogs(payload: IGetRestoredLogsPayload): Promise<IAPIResponse<ILog[]>> {
+    return http.post<IAPIResponse<ILog[]>>(RESTORE_ENDPOINTS.GET_RESTORED_LOGS, payload);
   }
 
   async getLogsByDate(payload: IGetLogsByDatePayload): Promise<IAPIResponse<ILog[]>> {

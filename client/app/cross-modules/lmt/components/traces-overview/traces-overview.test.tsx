@@ -143,7 +143,11 @@ describe("TracesOverview", () => {
       isFetching: false,
     });
     renderOverview();
-    await waitFor(() => expect(screen.getByText("OS")).toBeTruthy());
+    // "OS" also appears in the services filter's selected-value chip -- the "os" option is the
+    // implicit default selection -- so this looks for the row's own cell, not just any match.
+    await waitFor(() =>
+      expect(screen.getByRole("cell", { name: "OS" })).toBeTruthy(),
+    );
   });
 
   it("shows the no-data state when there are no traces and no filter", () => {
@@ -225,7 +229,9 @@ describe("TracesOverview", () => {
     renderOverview();
     await user.click(screen.getByRole("button", { name: /Service/i }));
     await user.click(await screen.findByRole("button", { name: "Expand OS" }));
-    await user.click(screen.getByLabelText("Worker"));
+    // "os" is the default selection, so both children start checked; unchecking API is what
+    // narrows the selection down to Worker alone.
+    await user.click(screen.getByLabelText("API"));
     await waitFor(() =>
       expect(h.useGetTraces).toHaveBeenLastCalledWith(
         expect.objectContaining({

@@ -95,13 +95,30 @@ describe("AddOrganizationPermission UI", () => {
     openDialog();
 
     expect(await screen.findByLabelText("5 out of 5 permissions selected")).toBeTruthy();
+    // An already-assigned permission stays enabled -- unchecking it is how a slot is freed --
+    // so page 1's checkboxes (all five assigned) are still clickable.
     expect(
       (
         screen.getByRole("checkbox", {
-          name: /permission 1 already assigned/i,
+          name: /deselect permission 1/i,
         }) as HTMLButtonElement
       ).disabled,
-    ).toBe(true);
+    ).toBe(false);
+
+    const pagination = screen.getByText(/page 1 of 2/i).closest("div")?.parentElement;
+    const navButtons = within(pagination as HTMLElement).getAllByRole("button");
+    fireEvent.click(navButtons[2]);
+
+    // Permission 6 is unassigned and the selection is already at the max, so it is blocked.
+    await waitFor(() => {
+      expect(
+        (
+          screen.getByRole("checkbox", {
+            name: /permission 6 unavailable/i,
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true);
+    });
   });
 
   it("TC-19: cancel closes without calling onAdd", async () => {
@@ -118,19 +135,19 @@ describe("AddOrganizationPermission UI", () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it("TC-30: add button stays disabled until a new permission is selected", async () => {
+  it("TC-30: save button stays disabled until a new permission is selected", async () => {
     render(<AddOrganizationPermission permissions={[]} onAdd={vi.fn()} />, {
       wrapper: createWrapper(),
     });
 
     openDialog();
 
-    expect((await screen.findByRole("button", { name: /^add$/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect((await screen.findByRole("button", { name: /^save$/i }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByRole("checkbox", { name: /select permission 1/i }));
 
     await waitFor(() => {
-      expect((screen.getByRole("button", { name: /^add$/i }) as HTMLButtonElement).disabled).toBe(false);
+      expect((screen.getByRole("button", { name: /^save$/i }) as HTMLButtonElement).disabled).toBe(false);
     });
   });
 
@@ -143,7 +160,7 @@ describe("AddOrganizationPermission UI", () => {
     );
     openDialog();
     fireEvent.click(await screen.findByRole("checkbox", { name: /select permission 1/i }));
-    fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
     expect(onAdd).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ itemId: "perm-1" })]),
     );

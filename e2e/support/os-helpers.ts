@@ -64,7 +64,11 @@ async function gotoItemRoute(page: Page, route: string, ready?: { heading: strin
   }
 
   if (ready) {
-    await expect(page.getByRole("heading", { name: ready.heading })).toBeVisible({
+    // exact: true — Playwright's default name match is substring/case-insensitive,
+    // so a route heading like "Captcha" also matches a "Google reCAPTCHA" card
+    // heading once one exists on the project ("reCAPTCHA" contains "Captcha"),
+    // hitting a strict-mode violation. The page-level heading should match exactly.
+    await expect(page.getByRole("heading", { name: ready.heading, exact: true })).toBeVisible({
       timeout: 30_000,
     })
   }
@@ -148,6 +152,16 @@ export async function openSecretManagement(
   headingName: string | RegExp,
 ) {
   await gotoItemRoute(page, `secret-management/${subpath}`, { heading: headingName })
+}
+
+/** Tenant OIDC template editor (Manage Template → Branding / Theme / Pages). */
+export async function openOidcTemplate(page: Page) {
+  await openSecretManagement(page, "oidc", "OIDC")
+  await page.getByRole("button", { name: "Manage Template" }).click()
+  await expect(page).toHaveURL(/\/secret-management\/oidc\/branding/, { timeout: 15_000 })
+  await expect(page.getByRole("heading", { name: "Brand identity" })).toBeVisible({
+    timeout: 30_000,
+  })
 }
 
 export async function openLmt(page: Page, subpath: "logs" | "tracing" | "usage") {

@@ -45,7 +45,6 @@ type CreateOIDCProps = {
 
 export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCProps) => {
   const [open, setOpen] = useState<boolean>(false);
-  const [clientLogoUrl] = useState<string>("");
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { mutateAsync, isPending } = useSaveAuthOidc();
   const { data: existingOidc, isLoading: _isLoadingOidc } = useGetAuthOidcCredential(
@@ -89,9 +88,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
       form.reset({
         redirectUris: uris.map((u) => ({ value: u })),
         scope: credential.scope || "openid",
-        clientBrandColor: credential.clientBrandColor || "#124091",
         clientDisplayName: credential.clientDisplayName || "",
-        isAutoRedirect: credential.isDeviceFlowClient ? false : (credential.isAutoRedirect ?? false),
+        isAutoRedirect: credential.isDeviceFlowClient
+          ? false
+          : (credential.isAutoRedirect ?? false),
         isActive: credential.isActive ?? true,
         requirePkce: credential.requirePkce ?? true,
         registerAsIdentityProvider: credential.registerAsIdentityProvider ?? false,
@@ -103,17 +103,14 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
             : ["code"],
       });
     } else if (!isEditMode && open) {
-      form.reset({
-        ...createOIDCFormDefaultValue,
-        clientBrandColor: "#124091",
-      });
+      form.reset(createOIDCFormDefaultValue);
     }
   }, [existingOidc, isEditMode, open, form]);
 
   const onSubmit = async (data: CreateOIDCFormValues) => {
     const isDeviceFlowClient = data.isDeviceFlowClient;
     const redirectResult = isDeviceFlowClient
-      ? { success: true } as const
+      ? ({ success: true } as const)
       : redirectUriSubmitSchema.safeParse(data.redirectUris);
     if (!redirectResult.success) {
       redirectResult.error.issues.forEach((issue) => {
@@ -139,8 +136,6 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
         isDeviceFlowClient,
         allowedResponseTypes: isDeviceFlowClient ? [] : data.allowedResponseTypes,
         itemId: isEditMode ? itemId : "",
-        clientLogoUrl: clientLogoUrl || undefined,
-        clientBrandColor: data.clientBrandColor || undefined,
         clientDisplayName: data.clientDisplayName,
       };
       const res = await mutateAsync(payload);
@@ -437,10 +432,10 @@ export const CreateOIDC = ({ itemId, triggerVariant = "default" }: CreateOIDCPro
                           <TooltipContent side="top" className="max-w-xs">
                             <p className="text-xs leading-relaxed">
                               Adds a matching <span className="font-medium">Blocks OIDC</span> entry
-                              under Identity Provider, so other Blocks projects can offer this project
-                              as a sign-in option and federate their users to it. Uncheck if this
-                              client is only used by your own app to sign users in — you can always
-                              add the provider later.
+                              under Identity Provider, so other Blocks projects can offer this
+                              project as a sign-in option and federate their users to it. Uncheck if
+                              this client is only used by your own app to sign users in — you can
+                              always add the provider later.
                             </p>
                           </TooltipContent>
                         </Tooltip>

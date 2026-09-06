@@ -16,6 +16,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 const alias = {
+  "/assets": path.resolve(__dirname, "./public/assets"),
   "@": path.resolve(__dirname, "./app"),
   "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
   "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
@@ -74,6 +75,9 @@ const shared = {
   globals: true,
   setupFiles: ["./app/test-utils/vitest.setup.ts"],
   alias,
+  // Force this dep through Vite's transform pipeline instead of Node's native ESM loader --
+  // externalised, its dist bundle's `import.meta.env` reads never get replaced and throw.
+  server: { deps: { inline: ["@seliseblocks/genesis-os"] } },
 };
 
 export default defineConfig({

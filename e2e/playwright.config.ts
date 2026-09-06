@@ -23,8 +23,22 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   timeout: 180_000,
-  reporter: [["html", { open: "never" }], ["list"]],
+  // "json" feeds scripts/test-report.mjs (npm run test:report) — a compact
+  // pass/fail summary with the failure reason for every test, instead of
+  // scrolling back through the list reporter's scattered per-test blocks.
+  reporter: [
+    ["html", { open: "never" }],
+    ["list"],
+    ["json", { outputFile: "test-results/results.json" }],
+  ],
   globalSetup: "./global-setup.ts",
+  // Deletes the shared project every run, pass or fail — a globalTeardown
+  // always runs once per invocation regardless of which project/file/grep
+  // filter was passed on the command line. The old "os-teardown" project
+  // (see git history) only ran when it was actually selected, which a
+  // filtered `playwright test tests/some-file.spec.ts` never does — that
+  // was silently skipping cleanup on anything but a bare full-suite run.
+  globalTeardown: "./global-teardown.ts",
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -67,31 +81,31 @@ export default defineConfig({
     {
       name: "os",
       testMatch: /.*\.spec\.ts/,
-      testIgnore: [/auth[\\/]login\.spec\.ts/, /suite\.(setup|teardown)\.spec\.ts/],
+      // capture-snapshots.spec.ts is not a correctness test — it regenerates
+      // reference .yml snapshots on demand via `npm run snapshots:capture`.
+      testIgnore: [/auth[\\/]login\.spec\.ts/, /suite\.setup\.spec\.ts/, /capture-snapshots\.spec\.ts/],
       dependencies: ["os-setup"],
       use: {
         ...devices["Desktop Chrome"],
         ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
       },
     },
-    {
-      name: "os-teardown",
-      testMatch: /suite\.teardown\.spec\.ts/,
-      dependencies: ["os"],
-      use: {
-        ...devices["Desktop Chrome"],
-        ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
-      },
-    },
-    {
-      name: "snapshot-capture",
-      testMatch: /capture-snapshots\.spec\.ts/,
-      dependencies: ["os-setup"],
-      timeout: 900_000,
-      use: {
-        ...devices["Desktop Chrome"],
-        ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
-      },
-    },
+    // Opt-in only. A bare `playwright test` / `npm test` must not run this
+    // 25-route walk (it was suite test #28 and added ~1.5m plus a stale
+    // token for globalTeardown). `npm run snapshots:capture` sets the env.
+    ...(process.env.E2E_CAPTURE_SNAPSHOTS === "1"
+      ? [
+          {
+            name: "snapshot-capture",
+            testMatch: /capture-snapshots\.spec\.ts/,
+            dependencies: ["os-setup"],
+            timeout: 900_000,
+            use: {
+              ...devices["Desktop Chrome"],
+              ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
+            },
+          },
+        ]
+      : []),
   ],
 })

@@ -31,13 +31,15 @@ import {
   ISaveClientCredentialPayload,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
 import {
+  buildCreateClientSchema,
   CreateClientModalFormDefaultValues,
   CreateClientModalFormValues,
-  createClientSchema,
 } from "./utils";
 import { isErrorWithErrors } from "@/lib/error";
 import { ClientCredentialRolesSection } from "./client-credential-roles-section";
 import { ClientCredentialPermissionsSection } from "./client-credential-permissions-section";
+import { useGetOrganizationConfig } from "@blocks-idp/iam/hooks/use-organization";
+import { OrganizationCombobox } from "@blocks-idp/iam/components/organization-combobox";
 
 const MAX_PERMISSIONS = 10;
 
@@ -88,8 +90,17 @@ export const CreateClientCredential = ({
     projectKey: tenantId,
   });
 
+  const { data: organizationConfig, isLoading: isConfigLoading } =
+    useGetOrganizationConfig(tenantId);
+  const isMultiOrgEnabled = organizationConfig?.isMultiOrgEnabled ?? false;
+
+  // The organization is fixed when the credential is created: it becomes the organization_id
+  // claim on every token the client_credentials grant later mints, and the token endpoint
+  // authenticates a client id and secret with no caller context that could re-scope it.
+  const showOrganizationPicker = isMultiOrgEnabled && !isEdit;
+
   const form = useForm<CreateClientModalFormValues>({
-    resolver: zodResolver(createClientSchema),
+    resolver: zodResolver(buildCreateClientSchema(isMultiOrgEnabled, isEdit)),
     defaultValues: CreateClientModalFormDefaultValues,
     mode: "onChange",
   });
@@ -107,6 +118,7 @@ export const CreateClientCredential = ({
         clientNameService: editClient.name,
         accessTokenValidForNumberMinutes: editClient.accessTokenValidForNumberMinutes,
         isActive: editClient.isActive,
+        organizationId: editClient.organizationId ?? "",
         roles: editClient.roles ?? [],
         permissions: editClient.permissions ?? [],
       });
@@ -136,6 +148,11 @@ export const CreateClientCredential = ({
         roles: data.roles,
         permissions: data.permissions,
         projectKey: tenantId,
+        // Omitted on edit and when multi-org is off. The server ignores it in both cases;
+        // sending it anyway would suggest the update re-scopes the credential, which it does not.
+        ...(showOrganizationPicker && data.organizationId
+          ? { organizationId: data.organizationId }
+          : {}),
       };
       const res = await saveServiceClient(payload);
       if (!res?.isSuccess) {
@@ -241,6 +258,34 @@ export const CreateClientCredential = ({
                     </FormItem>
                   )}
                 />
+                {showOrganizationPicker && !isConfigLoading && (
+                  <FormField
+                    control={form.control}
+                    name="organizationId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Organization <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <OrganizationCombobox
+                          projectKey={tenantId}
+                          value={field.value ?? ""}
+                          onValueChange={(organizationId) =>
+                            form.setValue("organizationId", organizationId, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            })
+                          }
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Tokens issued for this credential are scoped to this organization. It
+                          cannot be changed later.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={form.control}
                   name="isActive"
@@ -305,7 +350,7 @@ export const CreateClientCredential = ({
                   Cancel
                 </Button>
               </DialogClose>
-              <Button disabled={isPending || !isDirty || !isValid} type="submit">
+              <Button disabled={isPending || isConfigLoading || !isDirty || !isValid} type="submit">
                 {isPending
                   ? isEdit
                     ? "Updating..."

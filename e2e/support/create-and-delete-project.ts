@@ -1,8 +1,8 @@
 import { Page, expect, test } from "@playwright/test"
 import { e2eBaseUrl } from "./env"
-import { ensureAuthenticated, isLoginSurface } from "./login-helper"
+import { ensureAuthenticated, isLoginSurface, loginFresh } from "./login-helper"
 import { gotoE2e, resolveE2eUrl } from "./navigation"
-import { readOsProject } from "./os-project"
+import { readOsProject, writeOsProject } from "./os-project"
 
 function getBaseProjectName(): string {
   return process.env.PROJECT_NAME?.trim() || "Test Project"
@@ -16,7 +16,15 @@ function orphanProjectPatterns(): RegExp[] {
   const prefixes = new Set(["Test Project"])
   const configured = process.env.PROJECT_NAME?.trim()
   if (configured) prefixes.add(configured)
-  return [...prefixes].map((prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+`, "g"))
+  // project-settings-flow renames the shared project to "<name> Renamed" (and
+  // can compound to "... Renamed Renamed" across repeated reuse) without ever
+  // changing its numeric id — capture that suffix too, or the truncated name
+  // handed to namedProjectCard()'s exact-text match never matches the (now
+  // longer) rendered label again, and reuseOrCreateSharedProject silently
+  // abandons the project and creates a brand-new one on every subsequent run.
+  return [...prefixes].map(
+    (prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+(?: Renamed)*`, "g"),
+  )
 }
 
 async function listOrphanProjectNames(page: Page): Promise<string[]> {
@@ -28,6 +36,13 @@ async function listOrphanProjectNames(page: Page): Promise<string[]> {
     }
   }
   return [...names]
+}
+
+/** Visible e2e project names on the console (DEV-TEST / PROJECT_NAME orphans). */
+export async function listE2eProjectNamesOnConsole(page: Page): Promise<string[]> {
+  await ensureConsole(page)
+  await waitForConsoleProjectsReady(page)
+  return listOrphanProjectNames(page)
 }
 
 const consoleProjectsHeading = (page: Page) =>
@@ -176,7 +191,10 @@ export async function createProject(page: Page) {
     const developmentCard = page
       .locator('[class*="cursor-pointer"]')
       .filter({ has: page.getByText("Development", { exact: true }) })
-      .filter({ hasText: "X-Blocks-Key:" })
+      // environment-card.tsx (bf9d3e2f) moved this label into a <dt>/<dd>
+      // pair and dropped the trailing colon — match without it so this still
+      // finds the card regardless of which variant is rendered.
+      .filter({ hasText: "X-Blocks-Key" })
       .first()
 
     await expect(developmentCard).toBeVisible({ timeout: 30000 })
@@ -452,6 +470,32 @@ async function openProjectById(page: Page, projectId: string) {
   }
 }
 
+/**
+ * Reuse the project from a previous local run's fixture by id, when it still
+ * resolves. Sidesteps name-based DOM matching entirely (immune to renames,
+ * truncation, or rendering flakiness) — the fixture is local-only (gitignored)
+ * so this is a same-machine fast path, not something CI can rely on.
+ */
+async function tryReuseFixtureProject(page: Page): Promise<{
+  projectName: string
+  dashboardUrl: string
+  itemId: string
+  tenantGroupId: string
+} | null> {
+  const fixture = readOsProject()
+  if (!fixture?.itemId || !fixture.tenantGroupId) return null
+
+  try {
+    await page.goto(`${e2eBaseUrl()}/app/${fixture.itemId}/dashboard`, {
+      waitUntil: "domcontentloaded",
+    })
+    await waitForOsDashboardReady(page, fixture.projectName)
+    return { ...fixture, dashboardUrl: page.url() }
+  } catch {
+    return null
+  }
+}
+
 /** Reuse an existing OS project, or create one natively on Blocks OS. */
 export async function reuseOrCreateSharedProject(page: Page): Promise<{
   projectName: string
@@ -465,6 +509,9 @@ export async function reuseOrCreateSharedProject(page: Page): Promise<{
   if (configuredProjectId) {
     return openProjectById(page, configuredProjectId)
   }
+
+  const reusedFromFixture = await tryReuseFixtureProject(page)
+  if (reusedFromFixture) return reusedFromFixture
 
   await ensureConsole(page)
   await waitForConsoleProjectsReady(page)
@@ -542,15 +589,28 @@ export async function ensureConsole(page: Page) {
   const pathname = new URL(page.url()).pathname
   if (/\/app\/console\/?$/.test(pathname)) {
     await expect(consoleProjectsHeading(page)).toBeVisible({ timeout: 30_000 })
+    await clearConsoleProjectSearch(page)
     return
   }
 
   await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
   if (await isLoginSurface(page)) {
     await ensureAuthenticated(page)
+    await clearConsoleProjectSearch(page)
     return
   }
   await expect(consoleProjectsHeading(page)).toBeVisible({ timeout: 30_000 })
+  await clearConsoleProjectSearch(page)
+}
+
+/** A leftover Search projects… filter hides cards and makes teardown think the project is gone. */
+async function clearConsoleProjectSearch(page: Page) {
+  const search = page.getByRole("textbox", { name: /Search projects/i })
+  if (!(await search.isVisible({ timeout: 2_000 }).catch(() => false))) return
+  const value = await search.inputValue().catch(() => "")
+  if (!value) return
+  await search.fill("")
+  await page.waitForTimeout(500)
 }
 
 export async function openNamedProjectDashboard(
@@ -568,20 +628,31 @@ export async function openNamedProjectDashboard(
     }
   }
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await ensureConsole(page)
-    await waitForConsoleProjectsReady(page)
-    const card = namedProjectCard(page, projectName)
-    await expect(card).toBeVisible({ timeout: 30_000 })
-    const development = card.getByRole("button", { name: ENV_BUTTON }).first()
-    await expect(development).toBeVisible({ timeout: 15_000 })
-    await development.click({ force: true })
+  const maxAttempts = 3
 
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
+      await ensureConsole(page)
+      if (attempt > 0) {
+        // A slow-to-paint project grid can leave this specific card invisible
+        // even after waitForConsoleProjectsReady resolves (that only waits for
+        // the *first* card/heading, not this one) — force a fresh render
+        // before checking again instead of re-polling the same stale DOM.
+        await page.reload({ waitUntil: "domcontentloaded" })
+      }
+      await waitForConsoleProjectsReady(page)
+      const card = namedProjectCard(page, projectName)
+      await expect(card).toBeVisible({ timeout: 30_000 })
+      const development = card.getByRole("button", { name: ENV_BUTTON }).first()
+      await expect(development).toBeVisible({ timeout: 15_000 })
+      await development.click({ force: true })
+
       await waitForOsDashboardReady(page, projectName)
       return
     } catch (error) {
-      if (attempt === 2) throw error
+      if (attempt === maxAttempts - 1) throw error
+      // Card not (yet) visible, or the click didn't land on the dashboard —
+      // retry with a fresh console render.
     }
   }
 }
@@ -597,13 +668,12 @@ export async function openProjectConfigure(page: Page, projectName: string) {
 export async function deleteCreatedProject(
   page: Page,
   projectName?: string,
-  options?: { itemId?: string },
+  options?: { itemId?: string; tenantGroupId?: string; environmentIds?: string[] },
 ): Promise<boolean> {
   if (!projectName) return false
-  void options
 
   try {
-    await deleteProject(page, projectName)
+    await deleteProject(page, projectName, options)
     await ensureConsole(page)
     await expect(page.getByText(projectName, { exact: true })).toHaveCount(0, {
       timeout: 10_000,
@@ -615,94 +685,314 @@ export async function deleteCreatedProject(
   }
 }
 
-export async function deleteProject(page: Page, projectName: string) {
+/** Item id from `/app/{itemId}/…` (not `/app/project/…`). */
+export function extractEnvironmentItemId(url: string): string | null {
+  try {
+    const segment = new URL(url).pathname.split("/")[2] ?? ""
+    if (!segment || segment === "project" || segment === "console") return null
+    return segment
+  } catch {
+    return null
+  }
+}
+
+function itemIdsFromProjectGetsBody(body: unknown): string[] {
+  const groups = Array.isArray(body)
+    ? body
+    : body && typeof body === "object" && Array.isArray((body as { data?: unknown }).data)
+      ? (body as { data: unknown[] }).data
+      : []
+
+  const ids = new Set<string>()
+  for (const group of groups) {
+    if (!group || typeof group !== "object") continue
+    const record = group as { projects?: unknown[]; nonSharedProject?: unknown[] }
+    for (const list of [record.projects, record.nonSharedProject]) {
+      if (!Array.isArray(list)) continue
+      for (const project of list) {
+        const itemId =
+          project && typeof project === "object"
+            ? (project as { itemId?: unknown }).itemId
+            : undefined
+        if (typeof itemId === "string" && itemId.length > 0) ids.add(itemId)
+      }
+    }
+  }
+  return [...ids]
+}
+
+function projectsMatchingNameFromGets(
+  body: unknown,
+  projectName: string,
+): { tenantGroupId: string; itemIds: string[] } | null {
+  const groups = Array.isArray(body)
+    ? body
+    : body && typeof body === "object" && Array.isArray((body as { data?: unknown }).data)
+      ? (body as { data: unknown[] }).data
+      : []
+
+  for (const group of groups) {
+    if (!group || typeof group !== "object") continue
+    const record = group as {
+      tenantGroupId?: string
+      projects?: Array<{ itemId?: string; name?: string }>
+      nonSharedProject?: Array<{ itemId?: string; name?: string }>
+    }
+    const projects = [...(record.projects ?? []), ...(record.nonSharedProject ?? [])]
+    const matched = projects.filter((p) => p.name === projectName && typeof p.itemId === "string")
+    if (matched.length === 0 || !record.tenantGroupId) continue
+    return {
+      tenantGroupId: record.tenantGroupId,
+      itemIds: matched.map((p) => p.itemId!).filter(Boolean),
+    }
+  }
+  return null
+}
+
+/**
+ * List every environment itemId under a tenant group via Project/Gets while
+ * opening the Environments overview (no console chip clicks).
+ */
+export async function listEnvironmentItemIds(
+  page: Page,
+  tenantGroupId: string,
+): Promise<string[]> {
+  const getsMatcher = (response: { url: () => string; ok: () => boolean }) =>
+    /\/api\/Project\/Gets/i.test(response.url()) &&
+    response.url().includes(`tenantGroupId=${tenantGroupId}`) &&
+    response.ok()
+
+  const responsePromise = page.waitForResponse(getsMatcher, { timeout: 45_000 })
+  await page.goto(`${e2eBaseUrl()}/app/project/${tenantGroupId}/environments`, {
+    waitUntil: "domcontentloaded",
+  })
+  if (await isLoginSurface(page)) {
+    await ensureAuthenticated(page)
+    const retry = page.waitForResponse(getsMatcher, { timeout: 45_000 })
+    await page.goto(`${e2eBaseUrl()}/app/project/${tenantGroupId}/environments`, {
+      waitUntil: "domcontentloaded",
+    })
+    const response = await retry
+    return itemIdsFromProjectGetsBody(await response.json())
+  }
+  const response = await responsePromise
+  return itemIdsFromProjectGetsBody(await response.json())
+}
+
+/** Persist known environment ids on the shared fixture (create / add-env flows). */
+export function recordEnvironmentIds(itemIds: string[]) {
+  const fixture = readOsProject()
+  if (!fixture) return
+  const merged = [...new Set([...(fixture.environmentIds ?? []), ...itemIds, fixture.itemId])]
+  writeOsProject({ ...fixture, environmentIds: merged })
+}
+
+/** Refresh fixture.environmentIds from Project/Gets for the shared tenant group. */
+export async function syncEnvironmentIdsToFixture(page: Page): Promise<string[]> {
+  const fixture = readOsProject()
+  if (!fixture?.tenantGroupId) return []
+  const ids = await listEnvironmentItemIds(page, fixture.tenantGroupId)
+  if (ids.length === 0) return fixture.environmentIds ?? [fixture.itemId]
+  writeOsProject({
+    ...fixture,
+    environmentIds: ids,
+    // Keep primary itemId if still present; otherwise first remaining id.
+    itemId: ids.includes(fixture.itemId) ? fixture.itemId : ids[0]!,
+    dashboardUrl: `${e2eBaseUrl()}/app/${ids.includes(fixture.itemId) ? fixture.itemId : ids[0]}/dashboard`,
+  })
+  return ids
+}
+
+/**
+ * Open `/app/{itemId}/dashboard` and delete that one environment (Overview Delete).
+ * No console card / env-chip navigation.
+ */
+async function deleteEnvironmentByDashboard(
+  page: Page,
+  itemId: string,
+  projectName: string,
+): Promise<void> {
+  const dashboardUrl = `${e2eBaseUrl()}/app/${itemId}/dashboard`
+  const maxAttempts = 3
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(
+      `[e2e] Teardown: open dashboard ${dashboardUrl} ` +
+        `(attempt ${attempt + 1}/${maxAttempts}) for "${projectName}"…`,
+    )
+    await page.goto(dashboardUrl, { waitUntil: "domcontentloaded" })
+
+    if (await isLoginSurface(page)) {
+      await ensureAuthenticated(page)
+      await page.goto(dashboardUrl, { waitUntil: "domcontentloaded" })
+    }
+
+    try {
+      await waitForOsDashboardReady(page, projectName)
+      // Overview's owner-only Archive control — not a domain-row "Delete domain".
+      const overviewDelete = page.getByRole("button", { name: "Delete", exact: true }).first()
+      await expect(overviewDelete).toBeVisible({ timeout: 30_000 })
+
+      await overviewDelete.click()
+      await expect(page.getByRole("heading", { name: "Delete this environment?" })).toBeVisible({
+        timeout: 15_000,
+      })
+      await expect(
+        page.getByText("Are you sure you want to delete this environment?"),
+      ).toBeVisible()
+      await page.getByRole("button", { name: "Delete", exact: true }).last().click()
+      await expect(page.getByText("Successfully deleted", { exact: true })).toBeVisible({
+        timeout: 20_000,
+      })
+      await expect(page).toHaveURL(/\/app\/console$/, { timeout: 20_000 })
+      console.log(`[e2e] Teardown: deleted environment itemId=${itemId} of "${projectName}".`)
+      return
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      const onConsole =
+        /\/app\/console\/?$/i.test(new URL(page.url()).pathname) ||
+        (await consoleProjectsHeading(page).isVisible({ timeout: 500 }).catch(() => false))
+
+      // Already gone (404 / bounce) — treat as deleted only after the console
+      // grid has actually painted. A leftover Search filter or a slow card
+      // render used to look like "gone" and skip the remaining environments.
+      if (onConsole) {
+        await waitForConsoleProjectsReady(page).catch(() => {})
+        await clearConsoleProjectSearch(page)
+        const stillListed = await namedProjectCard(page, projectName)
+          .isVisible({ timeout: 5_000 })
+          .catch(() => false)
+        if (!stillListed) {
+          console.log(
+            `[e2e] Teardown: itemId=${itemId} already gone (console, no project card).`,
+          )
+          return
+        }
+      }
+
+      console.warn(
+        `[e2e] Teardown: could not delete itemId=${itemId}` +
+          `${onConsole ? " (on console)" : ""}: ${detail}`,
+      )
+      if (attempt >= 1) {
+        console.warn(`[e2e] Teardown: forcing fresh OIDC login before retry…`)
+        await loginFresh(page)
+        await openNamedProjectDashboard(page, projectName).catch(() => {})
+      }
+      if (attempt === maxAttempts - 1) {
+        throw new Error(
+          `Teardown could not delete environment itemId=${itemId} of "${projectName}" after ` +
+            `${maxAttempts} direct dashboard attempts. Last error: ${detail}`,
+        )
+      }
+    }
+  }
+}
+
+async function resolveEnvironmentIdsForDelete(
+  page: Page,
+  projectName: string,
+  options?: { itemId?: string; tenantGroupId?: string; environmentIds?: string[] },
+): Promise<{ tenantGroupId?: string; environmentIds: string[] }> {
+  const fixture = readOsProject()
+  const fixtureMatches = fixture?.projectName === projectName
+
+  let tenantGroupId =
+    options?.tenantGroupId || (fixtureMatches ? fixture?.tenantGroupId : undefined)
+
+  let environmentIds = [
+    ...new Set(
+      [
+        ...(options?.environmentIds ?? []),
+        ...(fixtureMatches ? (fixture?.environmentIds ?? []) : []),
+        options?.itemId,
+        fixtureMatches ? fixture?.itemId : undefined,
+      ].filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  ]
+
+  // Authoritative: Project/Gets for the tenant group.
+  if (tenantGroupId) {
+    try {
+      const discovered = await listEnvironmentItemIds(page, tenantGroupId)
+      if (discovered.length > 0) {
+        environmentIds = discovered
+        if (fixtureMatches && fixture) {
+          writeOsProject({ ...fixture, environmentIds: discovered })
+        }
+      }
+    } catch (error) {
+      console.warn(
+        `[e2e] Teardown: Project/Gets discovery failed for ${tenantGroupId}:`,
+        error instanceof Error ? error.message : error,
+      )
+    }
+  }
+
+  // Orphan path: discover group + ids from console Project/Gets by project name.
+  if (environmentIds.length === 0 || !tenantGroupId) {
+    try {
+      const getsMatcher = (response: { url: () => string; ok: () => boolean }) =>
+        /\/api\/Project\/Gets/i.test(response.url()) && response.ok()
+      const responsePromise = page.waitForResponse(getsMatcher, { timeout: 45_000 })
+      await ensureConsole(page)
+      await page.reload({ waitUntil: "domcontentloaded" })
+      const body = await (await responsePromise).json()
+      const matched = projectsMatchingNameFromGets(body, projectName)
+      if (matched) {
+        tenantGroupId = matched.tenantGroupId
+        environmentIds = matched.itemIds
+        console.log(
+          `[e2e] Teardown: discovered ${environmentIds.length} env id(s) for "${projectName}" ` +
+            `via console Project/Gets (tenantGroupId=${tenantGroupId}).`,
+        )
+      }
+    } catch (error) {
+      console.warn(
+        `[e2e] Teardown: console Project/Gets discovery failed:`,
+        error instanceof Error ? error.message : error,
+      )
+    }
+  }
+
+  return { tenantGroupId, environmentIds }
+}
+
+/**
+ * Delete every environment under a project by opening each
+ * `/app/{itemId}/dashboard` directly (Overview → Delete). Does not click
+ * console environment chips.
+ *
+ * Prefer fixture / options environmentIds; otherwise discover via Project/Gets.
+ * Must NOT use test.step() — called from globalTeardown outside any test.
+ */
+export async function deleteProject(
+  page: Page,
+  projectName: string,
+  options?: { itemId?: string; tenantGroupId?: string; environmentIds?: string[] },
+) {
   if (!projectName) {
     throw new Error("deleteProject requires the created project name")
   }
 
-  await test.step("Return to console before deleting the project", async () => {
-    await ensureConsole(page)
-  })
+  const { environmentIds } = await resolveEnvironmentIdsForDelete(page, projectName, options)
 
-  await test.step("Open the created project from 'Your Blocks Projects'", async () => {
-    await openNamedProjectDashboard(page, projectName)
-  })
+  if (environmentIds.length === 0) {
+    console.log(
+      `[e2e] Teardown: no environment ids for "${projectName}" — treating as already deleted.`,
+    )
+    return { projectName }
+  }
 
-  await test.step("'Delete' is visible on the Overview page for the project owner", async () => {
-    await expect(
-      page.getByRole("button", {
-        name: "Delete",
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 30000,
-    })
-  })
+  console.log(
+    `[e2e] Teardown: deleting ${environmentIds.length} environment(s) by dashboard URL ` +
+      `for "${projectName}"…`,
+  )
 
-  await test.step("Clicking 'Delete' opens the exact confirmation dialog", async () => {
-    await page
-      .getByRole("button", {
-        name: "Delete",
-        exact: true,
-      })
-      .click()
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Delete this environment?",
-      }),
-    ).toBeVisible()
-
-    await expect(page.getByText("Are you sure you want to delete this environment?")).toBeVisible()
-
-    await expect(
-      page.getByText(
-        "This will permanently delete the environment and you'll need to contact support to recover it.",
-      ),
-    ).toBeVisible()
-
-    await expect(
-      page.getByRole("button", {
-        name: "Cancel",
-      }),
-    ).toBeVisible()
-
-    await expect(
-      page
-        .getByRole("button", {
-          name: "Delete",
-          exact: true,
-        })
-        .last(),
-    ).toBeVisible()
-  })
-
-  await test.step("Confirming delete shows the success toast and redirects to the console", async () => {
-    const confirmDeleteButton = page
-      .getByRole("button", {
-        name: "Delete",
-        exact: true,
-      })
-      .last()
-
-    await confirmDeleteButton.click()
-
-    await expect(
-      page.getByText("Successfully deleted", {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 20000,
-    })
-
-    await expect(page).toHaveURL(/\/app\/console$/, {
-      timeout: 20000,
-    })
-  })
-
-  await test.step("The deleted project no longer appears in the project list", async () => {
-    await expect(page.getByText(projectName, { exact: true })).toHaveCount(0)
-  })
+  for (const itemId of environmentIds) {
+    await deleteEnvironmentByDashboard(page, itemId, projectName)
+  }
 
   return { projectName }
 }
+

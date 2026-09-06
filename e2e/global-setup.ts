@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { assertE2eHostResolvable } from "./support/navigation";
+import { acquireRunLock } from "./support/run-lock";
 
 /**
  * Point the locally-served Blocks OS at itself (:5000), not the remote dev host.
@@ -18,6 +19,10 @@ import { assertE2eHostResolvable } from "./support/navigation";
  * playwright.config.ts is `run.sh -b` (no FE rebuild), nothing overwrites it.
  */
 export default async function globalSetup() {
+  // First — refuse to start if another e2e invocation is already running
+  // against the same shared project (see support/run-lock.ts for why).
+  acquireRunLock();
+
   const baseURL = process.env.E2E_BASE_URL;
   if (!baseURL) return; // playwright.config.ts already throws when unset
 

@@ -70,6 +70,7 @@ export interface IGetUsersPayload {
     lastLogin?: string;
     lastUpdatedDate?: string;
     organizationIds?: string[];
+    roles?: string[];
   };
   projectKey: string;
 }

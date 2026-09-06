@@ -82,4 +82,20 @@ describe("AddOrganization", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() => expect(h.showError).toHaveBeenCalledWith({ errors: "duplicate" }));
   });
+
+  it("shows a fallback toast when create throws without an errors payload (e.g. empty 403)", async () => {
+    h.mutateAsync.mockRejectedValue(new Error("Forbidden"));
+    render(<AddOrganization />);
+    fireEvent.click(screen.getByText("Add Organization"));
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("Enter organization name")).toBeTruthy(),
+    );
+    fireEvent.input(screen.getByPlaceholderText("Enter organization name"), {
+      target: { value: "Acme Inc" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(h.showError).toHaveBeenCalledWith({ errors: "Something went wrong" }),
+    );
+  });
 });

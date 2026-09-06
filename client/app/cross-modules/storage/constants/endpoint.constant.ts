@@ -15,11 +15,15 @@ export const STORAGE_FILE_ENDPOINTS = {
   DELETE_FILE: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/DeleteFile`,
   DELETE_FOLDER: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/DeleteFolder`,
   GET_PRESIGNED_URL: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/GetPreSignedUrlForUpload`,
+  GET_FILES: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/GetFiles`,
   GET_FILES_INFO: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/GetFilesInfo`,
   UPDATE_FILE_ADDITIONAL_INFO: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/updateFileAdditionalInfo`,
   UPLOAD_TO_LOCAL_STORAGE: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/UploadFileToLocalStorage`,
   GET_DMS_FILE_AND_FOLDER: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/GetDmsFileAndFolder`,
   UPLOAD_DMS_FILE: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/UploadFile`,
   CREATE_FOLDER: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/CreateFolder`,
+  // Present in the blocks-logic StorageController but commented out; calling
+  // it 404s until that action is enabled and deployed.
+  CREATE_DIRECTORY: `${API_BASES.LOGIC}${STORAGE_SUBPATH}/CreateDirectory`,
   UPLOAD_PUBLIC_CERTIFICATE: `${API_BASES.LOGIC}/Certificate/UploadCertificate`,
 } as const;

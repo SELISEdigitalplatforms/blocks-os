@@ -43,6 +43,10 @@ export interface IGetLogsPayload {
   projectKey: string;
 }
 
+export interface IGetRestoredLogsPayload extends IGetLogsPayload {
+  requestId: string;
+}
+
 export interface IGetLiveLogsPayload {
   serviceName: string;
   serviceNames?: string[];

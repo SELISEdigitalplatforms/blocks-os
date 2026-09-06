@@ -1,24 +1,12 @@
-import fs from "fs"
-import path from "path"
-
-const OUTCOME_PATH = path.resolve(__dirname, "../fixtures/run-outcome.json")
-
-let suiteTestsFailed = false
-
-export function markSuiteTestFailed() {
-  suiteTestsFailed = true
-  fs.mkdirSync(path.dirname(OUTCOME_PATH), { recursive: true })
-  fs.writeFileSync(OUTCOME_PATH, JSON.stringify({ failed: true }))
-}
-
-/** Delete shared project only when every suite test passed. */
+/**
+ * The shared project is reused across runs and gets reset every time
+ * regardless of whether this run's tests passed or failed — leftover
+ * captcha configs, services, organizations, invites, etc. from a failed run
+ * are exactly the kind of state that makes the NEXT run flaky, so keeping
+ * the project around "to inspect a failure" does more harm than good by
+ * default. Set E2E_KEEP_PROJECT=1 to opt out when you deliberately want to
+ * inspect post-failure state.
+ */
 export function shouldDeleteSharedProject(): boolean {
-  if (process.env.E2E_KEEP_PROJECT === "1") return false
-  if (fs.existsSync(OUTCOME_PATH)) return false
-  return !suiteTestsFailed
-}
-
-export function resetRunOutcome() {
-  suiteTestsFailed = false
-  if (fs.existsSync(OUTCOME_PATH)) fs.unlinkSync(OUTCOME_PATH)
+  return process.env.E2E_KEEP_PROJECT !== "1"
 }
