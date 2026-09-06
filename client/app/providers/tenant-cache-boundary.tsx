@@ -19,9 +19,8 @@ import { isForeignTenantQuery } from "@/lib/query/tenant-query-scope";
  */
 export const TenantCacheBoundary = () => {
   const queryClient = useQueryClient();
-  const tenantId = useImpersonateStore(
-    (state) => (state.isImpersonated ? state.impersonatedTenantId : state.originalTenantId) ?? "",
-  );
+  const { isImpersonated, impersonatedTenantId, originalTenantId } = useImpersonateStore();
+  const tenantId = (isImpersonated ? impersonatedTenantId : originalTenantId) ?? "";
   const previousTenantId = useRef(tenantId);
 
   useEffect(() => {

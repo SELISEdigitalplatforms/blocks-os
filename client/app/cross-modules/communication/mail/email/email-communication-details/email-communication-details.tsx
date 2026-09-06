@@ -27,7 +27,7 @@ export function EmailCommunicationDetails({
 }) {
   const { id } = params;
   const { isLoading, isFetching, data } = useGetEmailTemplate(id);
-  const userDetails = useUserStore((state) => state.userDetails);
+  const { userDetails } = useUserStore();
   const [emailDetails, setEmailDetails] = useState<IEmailTemplate | null>(null);
   const {
     isLoading: isConfigsLoading,

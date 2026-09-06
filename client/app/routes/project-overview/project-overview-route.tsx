@@ -109,8 +109,7 @@ export function ProjectOverviewRoute({
     hasAnyAccess,
     menuIds,
   } = useProjectPermissions(tenantGroupId);
-  const setTenantGroup = useProjectStore((state) => state.setTenantGroup);
-  const setSelectedProject = useProjectStore((state) => state.setSelectedProject);
+  const { setTenantGroup, setSelectedProject } = useProjectStore();
 
   // Make the URL the source of truth for the selected project: once the id
   // resolves to a real group, push it into the shared store so the sub-pages
