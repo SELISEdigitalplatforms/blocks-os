@@ -116,8 +116,12 @@ export const FilterToolBarMobileView = ({
           </SheetTrigger>
           <SheetContent
             side="right"
-            className={alwaysVisible ? "flex w-full flex-col sm:max-w-md" : "w-full"}
-            overlayClassName={alwaysVisible ? "bg-transparent" : undefined}
+            className={
+              alwaysVisible
+                ? "top-[60px] flex h-[calc(100dvh-60px)] w-full flex-col sm:max-w-md"
+                : "w-full"
+            }
+            overlayClassName={alwaysVisible ? "top-[60px] bg-transparent" : undefined}
             aria-describedby="filter-description"
           >
             <SheetTitle className={alwaysVisible ? undefined : "mb-4"}>

@@ -55,6 +55,11 @@ describe("UsersTable", () => {
     expect(screen.getByText("Active")).toBeTruthy();
   });
 
+  // it("does not render the last-updated column", () => {
+  //   renderTable();
+  //   expect(screen.queryByText("Last updated")).toBeNull();
+  // });
+
   it("renders the inactive badge for inactive users", () => {
     renderTable({ users: [user({ active: false })] });
     expect(screen.getByText("Inactive")).toBeTruthy();

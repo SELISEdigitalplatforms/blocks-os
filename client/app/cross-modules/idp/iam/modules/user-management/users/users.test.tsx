@@ -93,6 +93,17 @@ describe("Users", () => {
     expect(h.lastQuery?.query).toBe("a@b.co");
   });
 
+  it("sends the created-date selection using the API joinedOn field", () => {
+    h.queryParams["joinedOn-start"] = "2026-09-01T00:00:00.000Z";
+    render(<Users />);
+    const filter = h.lastQuery?.filter as {
+      createdDate?: string;
+      joinedOn?: string;
+    };
+    expect(filter.joinedOn).toBe("2026-09-01T00:00:00.000Z");
+    expect(filter.createdDate).toBeUndefined();
+  });
+
   it("marks the table as loading while fetching", () => {
     h.isFetching = true;
     render(<Users />);

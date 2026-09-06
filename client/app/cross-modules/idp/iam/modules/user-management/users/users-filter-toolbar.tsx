@@ -242,7 +242,7 @@ export const UsersDateFilters = () => {
         {
           key: "joinedOn",
           type: "DateRange",
-          label: "Created date",
+          label: "Created On",
           props: { numberOfMonths: 1 },
         },
         {
