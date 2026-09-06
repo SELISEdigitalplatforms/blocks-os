@@ -1,40 +1,85 @@
 import { expect, type Page } from "@playwright/test";
 import { openIam } from "../../support/os-helpers";
 
+function usersEmptyState(page: Page) {
+  return page.getByText("No users found.");
+}
+
+function usersNameSortHeader(page: Page) {
+  return page.getByText("Name", { exact: true }).first();
+}
+
+/**
+ * UsersTable renders a skeleton while isLoading || isFetching, the empty copy
+ * when the fetch returns [], and the Name sort header only when there is at
+ * least one row. Wait for either settled state so later steps do not race the
+ * skeleton (neither empty copy nor Name exists during fetch).
+ */
+export async function waitForUsersListSettledFlow(page: Page) {
+  await expect(usersEmptyState(page).or(usersNameSortHeader(page))).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
 export async function navigateToUsersFlow(page: Page) {
   await openIam(page, "user", "Users");
   await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({ timeout: 30_000 });
+  await waitForUsersListSettledFlow(page);
 }
 
 export async function searchUsersFlow(page: Page) {
   const searchInput = page.getByPlaceholder("Minimum 3 characters…").first();
   await expect(searchInput).toBeVisible({ timeout: 5_000 });
   await searchInput.fill("no-such-user-xyz");
-  await expect(page.getByText("No users found.")).toBeVisible({ timeout: 8_000 });
+  await expect(usersEmptyState(page)).toBeVisible({ timeout: 8_000 });
   await searchInput.fill("");
+  await waitForUsersListSettledFlow(page);
 }
 
 export async function filterByCreatedDateFlow(page: Page) {
-  const createdDateButton = page.getByRole("button", { name: /^Created date$/i });
+  // UsersDateFilters now renders with displayMode="sheet" (fe/oidc-template),
+  // so org/role/date controls live inside a closed-by-default Sheet at every
+  // breakpoint instead of sitting inline on the page — open it first via its
+  // "Filters" trigger.
+  const filtersTrigger = page.getByRole("button", { name: "Filters" });
+  await expect(filtersTrigger).toBeVisible({ timeout: 5_000 });
+  await filtersTrigger.click();
+
+  // Filter sheet label is "Created On" (users-filter-toolbar); the table
+  // column is "Created on". Match both.
+  const createdDateButton = page.getByRole("button", { name: /^Created on$/i });
   await expect(createdDateButton).toBeVisible({ timeout: 5_000 });
   await createdDateButton.click();
   const today = page.getByRole("gridcell", { selected: false }).first();
   if (await today.isVisible({ timeout: 3_000 })) {
     await today.click();
+    // DateRange only commits the pick to the parent filter state on Apply —
+    // picking a day alone leaves the popover open with nothing applied.
+    await page.getByRole("button", { name: "Apply" }).click();
   } else {
     await page.keyboard.press("Escape");
   }
+
+  // Close the filter sheet the same way a user would.
+  const showResults = page.getByRole("button", { name: "Show Results" });
+  if (await showResults.isVisible({ timeout: 3_000 })) {
+    await showResults.click();
+  } else {
+    await page.keyboard.press("Escape");
+  }
+
   await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({ timeout: 8_000 });
   await openIam(page, "user", "Users");
   await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({ timeout: 30_000 });
+  await waitForUsersListSettledFlow(page);
 }
 
 export async function sortUsersByNameFlow(page: Page) {
-  const emptyState = page.getByText("No users found.");
-  if (await emptyState.isVisible({ timeout: 2_000 })) {
+  await waitForUsersListSettledFlow(page);
+  if (await usersEmptyState(page).isVisible()) {
     return;
   }
-  const nameHeader = page.getByText("Name", { exact: true }).first();
+  const nameHeader = usersNameSortHeader(page);
   await expect(nameHeader).toBeVisible({ timeout: 5_000 });
   await nameHeader.click();
   await expect(page).toHaveURL(/sort-property=FirstName/, { timeout: 8_000 });

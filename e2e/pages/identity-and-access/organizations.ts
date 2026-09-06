@@ -112,7 +112,12 @@ export async function createOrganizationFlow(page: Page, orgName: string) {
     const status = createResponse?.status() ?? 0;
 
     if (status >= 400) {
-      const looksLikeAuth = status === 401;
+      // The app's own silent token refresh is broken (see session-lifecycle.ts):
+      // a token that goes stale right after enableMultiOrgFlow just saved new
+      // settings can get this endpoint to answer 403 instead of a clean 401.
+      // Give a stale session one recovery attempt on either status before
+      // treating it as a real policy failure.
+      const looksLikeAuth = status === 401 || status === 403;
       if (attempt < maxAttempts - 1 && looksLikeAuth) {
         await refreshSuiteSession(page);
         await openIam(page, "organization", "Organizations");
@@ -127,7 +132,7 @@ export async function createOrganizationFlow(page: Page, orgName: string) {
         `Add Organization API rejected create with HTTP ${status}. ` +
           `Dialog remained open (see snapshots/organizations-add-after-submit.yml). ` +
           (status === 403
-            ? "403 Forbidden is a real permission/policy failure — e2e must fail."
+            ? "403 Forbidden persisted after a session refresh — a real permission/policy failure."
             : "Create must return 2xx for this flow to pass."),
       );
     }

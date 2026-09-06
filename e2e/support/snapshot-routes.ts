@@ -1,4 +1,6 @@
 import { expect, type Page } from "@playwright/test"
+import { waitForUsersListSettledFlow } from "../pages/identity-and-access/users"
+import { waitForOidcListSettledFlow } from "../pages/secrets-and-configs/oidc"
 import {
   openEmailManagement,
   openIam,
@@ -27,6 +29,15 @@ export const SNAPSHOT_ROUTES: SnapshotRoute[] = [
     id: "users",
     name: "Identity & Access — Users",
     navigate: (page) => openIam(page, "user", "Users"),
+    waitForReady: async (page) => {
+      await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({
+        timeout: 30_000,
+      })
+      await expect(page.getByRole("button", { name: "Filters" })).toBeVisible({
+        timeout: 15_000,
+      })
+      await waitForUsersListSettledFlow(page)
+    },
   },
   {
     id: "roles",
@@ -96,6 +107,7 @@ export const SNAPSHOT_ROUTES: SnapshotRoute[] = [
     name: "Secrets & Configs — OIDC",
     navigate: (page) => openSecretManagement(page, "oidc", "OIDC"),
     waitForReady: async (page) => {
+      await waitForOidcListSettledFlow(page)
       await expect(page.getByRole("button", { name: "Manage Template" })).toBeVisible({
         timeout: 30_000,
       })
@@ -235,7 +247,7 @@ export const SNAPSHOT_ROUTES: SnapshotRoute[] = [
     name: "Logs & Traces — Usage",
     navigate: (page) => openLmt(page, "usage"),
     waitForReady: async (page) => {
-      await expect(page.getByText("Global overview")).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByText("Total API calls")).toBeVisible({ timeout: 30_000 })
     },
   },
   {

@@ -829,7 +829,8 @@ async function deleteEnvironmentByDashboard(
 
     try {
       await waitForOsDashboardReady(page, projectName)
-      const overviewDelete = page.getByRole("button", { name: "Delete", exact: true })
+      // Overview's owner-only Archive control — not a domain-row "Delete domain".
+      const overviewDelete = page.getByRole("button", { name: "Delete", exact: true }).first()
       await expect(overviewDelete).toBeVisible({ timeout: 30_000 })
 
       await overviewDelete.click()
@@ -852,14 +853,15 @@ async function deleteEnvironmentByDashboard(
         /\/app\/console\/?$/i.test(new URL(page.url()).pathname) ||
         (await consoleProjectsHeading(page).isVisible({ timeout: 500 }).catch(() => false))
 
-      // Already gone (404 / bounce) — treat as deleted.
-      if (onConsole && attempt === 0) {
-        const stillListed = await page
-          .getByText(projectName, { exact: true })
-          .first()
-          .isVisible({ timeout: 2_000 })
+      // Already gone (404 / bounce) — treat as deleted only after the console
+      // grid has actually painted. A leftover Search filter or a slow card
+      // render used to look like "gone" and skip the remaining environments.
+      if (onConsole) {
+        await waitForConsoleProjectsReady(page).catch(() => {})
+        await clearConsoleProjectSearch(page)
+        const stillListed = await namedProjectCard(page, projectName)
+          .isVisible({ timeout: 5_000 })
           .catch(() => false)
-        // If dashboard bounce but project still on console, retry with fresh login.
         if (!stillListed) {
           console.log(
             `[e2e] Teardown: itemId=${itemId} already gone (console, no project card).`,
@@ -875,6 +877,7 @@ async function deleteEnvironmentByDashboard(
       if (attempt >= 1) {
         console.warn(`[e2e] Teardown: forcing fresh OIDC login before retry…`)
         await loginFresh(page)
+        await openNamedProjectDashboard(page, projectName).catch(() => {})
       }
       if (attempt === maxAttempts - 1) {
         throw new Error(

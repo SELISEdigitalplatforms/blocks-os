@@ -26,7 +26,18 @@ function main() {
   const specs = features.map((feature) => feature.spec)
   const result = spawnSync(
     "npx",
-    ["playwright", "test", ...specs, "--max-failures=1"],
+    [
+      "playwright",
+      "test",
+      "--project",
+      "setup",
+      "--project",
+      "os-setup",
+      "--project",
+      "os",
+      ...specs,
+      "--max-failures=1",
+    ],
     {
       cwd: __dirname,
       stdio: "inherit",
