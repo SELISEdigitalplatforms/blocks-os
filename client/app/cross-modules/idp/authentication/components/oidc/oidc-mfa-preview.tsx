@@ -10,11 +10,11 @@ export const OidcMfaPreview = (props: OidcPagePreviewProps) => {
   return (
     <OidcPreviewShell {...props} pageLabel="MFA">
       <PreviewHeading>{copy.heading}</PreviewHeading>
-      <div className="flex justify-between gap-2">
+      <div className="flex min-w-0 justify-between gap-2">
         {Array.from({ length: 6 }, (_, index) => (
           <span
             key={index}
-            className="flex h-11 w-11 items-center justify-center rounded border border-[var(--border)] text-[var(--fg)]"
+            className="flex h-11 min-w-0 flex-1 items-center justify-center rounded border border-[var(--border)] text-[var(--fg)] sm:max-w-[2.75rem]"
           >
             {index < 3 ? "•" : ""}
           </span>

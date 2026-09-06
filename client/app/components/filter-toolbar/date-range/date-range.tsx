@@ -5,22 +5,19 @@ import { CalendarIcon } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { MouseEvent, useEffect, useState } from "react";
+import { MouseEvent, useState } from "react";
 type DateRangeType = { from?: Date; to?: Date } | null;
 interface DateRangeFilterProps {
   label: string;
   value: DateRangeType;
   onChange: (date: DateRangeType) => void;
+  numberOfMonths?: number;
 }
-export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
+export function DateRange({ label, value, onChange, numberOfMonths }: DateRangeFilterProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState<boolean>(false);
   const [date, setDate] = useState<DateRangeType>(value);
-  useEffect(() => {
-    if (!open) {
-      setDate(value);
-    }
-  }, [open, value]);
+  const displayedDate = open ? date : value;
   const handleDateSelect = (selectedDateRange: DateRangeType | undefined) => {
     if (!selectedDateRange) return setDate(null);
     setDate(selectedDateRange);
@@ -49,14 +46,14 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
               <CalendarIcon className="mr-2 h-4 w-4" />
               <span>{label}</span>
             </div>
-            {date?.from && (
+            {displayedDate?.from && (
               <>
                 <Separator orientation="vertical" className="hidden h-4 sm:mx-2 sm:block" />
-                {formatDate(date.from, true)}
-                {date.to && (
+                {formatDate(displayedDate.from, true)}
+                {displayedDate.to && (
                   <>
                     {" - "}
-                    {formatDate(date.to, true)}
+                    {formatDate(displayedDate.to, true)}
                   </>
                 )}
               </>
@@ -71,7 +68,7 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
           defaultMonth={date?.from}
           selected={date?.from ? { from: date.from, to: date.to } : undefined}
           onSelect={handleDateSelect}
-          numberOfMonths={isMobile ? 1 : 2}
+          numberOfMonths={numberOfMonths ?? (isMobile ? 1 : 2)}
         />
         <div className="flex items-center gap-4 px-3 pb-4">
           <Button type="button" variant="outline" className="w-full" onClick={resetBtnHandler}>

@@ -83,7 +83,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
     onChange({ selected: value, value: nextValue });
   };
   return (
-    <div className="flex items-center gap-2 rounded-md border pr-2">
+    <div className="flex min-w-0 items-center gap-2 rounded-md border pr-2">
       <Select onValueChange={handleSelect} value={state.selected}>
         <SelectTrigger className="h-8 w-fit gap-1 rounded-e-none border-0 border-r focus:ring-0 focus:ring-ring focus:ring-offset-0">
           <SelectValue></SelectValue>
@@ -102,7 +102,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
         value={state.value}
         onChange={handleChange}
         className={cn(
-          "h-8 w-52 border-none p-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+          "h-8 min-w-0 w-52 border-none p-0 focus-visible:ring-0 focus-visible:ring-offset-0",
           className?.input,
         )}
       />

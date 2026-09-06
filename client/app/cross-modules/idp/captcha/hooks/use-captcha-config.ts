@@ -20,6 +20,9 @@ export const useSaveCaptcha = () => {
     mutationFn: captchaService.saveCaptcha,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["captcha-config"] });
+      // The backend creates or rotates the linked service secret as part of a captcha save.
+      // Invalidate the active Secret page query so its GET runs again immediately.
+      queryClient.invalidateQueries({ queryKey: ["secrets", "list"] });
     },
   });
 };

@@ -12,9 +12,11 @@ const h = vi.hoisted(() => ({
     key: string;
     type: string;
     label: string;
-    props?: { disabled?: boolean };
+    props?: { disabled?: boolean; numberOfMonths?: number };
   }>,
   lastShowFirstFilterOnMobile: undefined as boolean | undefined,
+  lastDisplayMode: undefined as "responsive" | "sheet" | undefined,
+  lastSheetTriggerLabel: undefined as string | undefined,
   lastRoleOptionsPayload: null as { organizationIds: string[] } | null,
 }));
 
@@ -52,25 +54,33 @@ vi.mock("@/components/filter-toolbar", () => ({
     onChange,
     onReset,
     showFirstFilterOnMobile,
+    displayMode,
+    sheetTriggerLabel,
   }: {
     filters: Array<{
       key: string;
       type: string;
       label: string;
-      props?: { disabled?: boolean };
+      props?: { disabled?: boolean; numberOfMonths?: number };
     }>;
     onChange: (key: string, value: unknown) => void;
     onReset: () => void;
     showFirstFilterOnMobile?: boolean;
+    displayMode?: "responsive" | "sheet";
+    sheetTriggerLabel?: string;
   }) => {
     h.lastFilters = filters;
     h.lastShowFirstFilterOnMobile = showFirstFilterOnMobile;
+    h.lastDisplayMode = displayMode;
+    h.lastSheetTriggerLabel = sheetTriggerLabel;
     return (
       <div>
         <button onClick={() => onChange("search", { selected: "email", value: "abc" })}>
           change-search
         </button>
-        <button onClick={() => onChange("joinedOn", { from: new Date("2020-01-01"), to: undefined })}>
+        <button
+          onClick={() => onChange("joinedOn", { from: new Date("2020-01-01"), to: undefined })}
+        >
           change-date
         </button>
         <button onClick={() => onChange("organizationIds", ["org-1"])}>change-orgs</button>
@@ -104,6 +114,8 @@ beforeEach(() => {
   ];
   h.lastFilters = [];
   h.lastShowFirstFilterOnMobile = undefined;
+  h.lastDisplayMode = undefined;
+  h.lastSheetTriggerLabel = undefined;
   h.lastRoleOptionsPayload = null;
 });
 
@@ -184,9 +196,15 @@ describe("UsersDateFilters", () => {
     expect(h.lastRoleOptionsPayload?.organizationIds).toEqual([]);
   });
 
-  it("keeps all date-toolbar filters inside the mobile filter sheet", () => {
+  it("keeps all advanced filters inside one sheet at every breakpoint", () => {
     render(<UsersDateFilters />);
-    expect(h.lastShowFirstFilterOnMobile).toBe(false);
+    expect(h.lastDisplayMode).toBe("sheet");
+    expect(h.lastSheetTriggerLabel).toBe("Filters");
+    expect(
+      h.lastFilters
+        .filter((filter) => filter.type === "DateRange")
+        .every((filter) => filter.props?.numberOfMonths === 1),
+    ).toBe(true);
   });
 
   it("loads role options for selected organizations", () => {
@@ -200,6 +218,18 @@ describe("UsersDateFilters", () => {
   it("resets the date query params", () => {
     render(<UsersDateFilters />);
     fireEvent.click(screen.getByText("reset"));
-    expect(h.setQueryParams).toHaveBeenCalledWith(null);
+    const updater = h.setQueryParams.mock.calls[0][0] as (p: object) => object;
+    expect(updater({ name: "alice", page: 3 })).toEqual({
+      name: "alice",
+      organizationIds: [],
+      roles: [],
+      "joinedOn-start": "",
+      "joinedOn-end": "",
+      "lastLogin-start": "",
+      "lastLogin-end": "",
+      "lastUpdatedDate-start": "",
+      "lastUpdatedDate-end": "",
+      page: 0,
+    });
   });
 });

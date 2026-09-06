@@ -20,8 +20,7 @@ export const Users = () => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: orgConfig } = useGetOrganizationConfig(tenantId);
   const { data: organizations = [] } = useGetAllEnabledOrganizations(tenantId, {
-    enabled:
-      orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
+    enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
   });
   const hasOrganizationOptions = organizations.length > 0;
   const organizationIds =
@@ -29,14 +28,11 @@ export const Users = () => {
       ? (queryParams.organizationIds ?? [])
       : [];
   const canFilterByRoles =
-    hasOrganizationOptions &&
-    (orgConfig?.isMultiOrgEnabled !== true || organizationIds.length > 0);
+    hasOrganizationOptions && (orgConfig?.isMultiOrgEnabled !== true || organizationIds.length > 0);
   const roles = canFilterByRoles ? (queryParams.roles ?? []) : [];
 
   const searchText =
-    queryParams["selected-filter"] === "email"
-      ? queryParams.email
-      : queryParams.name;
+    queryParams["selected-filter"] === "email" ? queryParams.email : queryParams.name;
 
   const { isLoading, isFetching, data } = useGetUsers({
     page: queryParams.page,
@@ -66,9 +62,12 @@ export const Users = () => {
       <CardContent>
         <div
           data-testid="users-filter-row"
-          className="mb-6 flex flex-row items-start justify-between gap-3"
+          className="mb-6 flex w-full min-w-0 flex-row items-center gap-2"
         >
-          <div data-testid="users-search-filter-slot" className="min-w-0 flex-1">
+          <div
+            data-testid="users-search-filter-slot"
+            className="min-w-0 flex-1 overflow-hidden sm:flex-none"
+          >
             <UsersSearchFilter />
           </div>
           <div data-testid="users-advanced-filter-slot" className="shrink-0">
@@ -85,7 +84,9 @@ export const Users = () => {
               totalCount={data?.totalCount || 0}
               pageSizeOptions={[5, 10]}
               onChange={onPageChangeHandler}
-              onPageSizeChange={(pageSize) => setQueryParams((params) => ({ ...params, pageSize, page: 1 }))}
+              onPageSizeChange={(pageSize) =>
+                setQueryParams((params) => ({ ...params, pageSize, page: 1 }))
+              }
             />
           </div>
         )}
