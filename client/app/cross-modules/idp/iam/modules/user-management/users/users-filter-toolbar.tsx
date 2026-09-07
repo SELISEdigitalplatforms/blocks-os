@@ -146,16 +146,22 @@ export const UsersDateFilters = () => {
   );
   const hasOrganizationOptions = organizationOptions.length > 0;
   const showOrganizationSelection = showOrganizationFilter && hasOrganizationOptions;
-  const showRoleSelection = hasOrganizationOptions;
+  const showRoleSelection =
+    orgConfig?.isMultiOrgEnabled === false || hasOrganizationOptions;
   const isRoleSelectionWaitingForOrganizations =
     showOrganizationSelection && selectedOrganizationIds.length === 0;
 
   const roleOrganizationIds = useMemo(() => {
+    if (orgConfig?.isMultiOrgEnabled === false) return [DEFAULT_ORGANIZATION_ID];
     if (!hasOrganizationOptions) return [];
     if (showOrganizationFilter && selectedOrganizationIds.length === 0) return [];
-    if (!showOrganizationFilter) return [DEFAULT_ORGANIZATION_ID];
     return selectedOrganizationIds;
-  }, [hasOrganizationOptions, selectedOrganizationIds, showOrganizationFilter]);
+  }, [
+    hasOrganizationOptions,
+    orgConfig?.isMultiOrgEnabled,
+    selectedOrganizationIds,
+    showOrganizationFilter,
+  ]);
 
   const { data: roleOptions = [], isLoading: isRolesLoading } = useGetRoleFilterOptions(
     { projectKey: tenantId, organizationIds: roleOrganizationIds },

@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
     { itemId: "default", name: "Default" },
     { itemId: "org-1", name: "Acme" },
   ] as unknown[],
+  isMultiOrgEnabled: true,
   lastFilters: [] as Array<{
     key: string;
     type: string;
@@ -34,7 +35,7 @@ vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
     data: h.organizations,
     isLoading: false,
   }),
-  useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: true } }),
+  useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: h.isMultiOrgEnabled } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
   useGetRoleFilterOptions: (payload: { organizationIds: string[] }) => {
@@ -112,6 +113,7 @@ beforeEach(() => {
     { itemId: "default", name: "Default" },
     { itemId: "org-1", name: "Acme" },
   ];
+  h.isMultiOrgEnabled = true;
   h.lastFilters = [];
   h.lastShowFirstFilterOnMobile = undefined;
   h.lastDisplayMode = undefined;
@@ -187,6 +189,17 @@ describe("UsersDateFilters", () => {
       "lastLogin",
       "lastUpdatedDate",
     ]);
+  });
+
+  it("shows roles for the default organization when multi-org is disabled", () => {
+    h.isMultiOrgEnabled = false;
+    h.organizations = [];
+    render(<UsersDateFilters />);
+
+    expect(h.lastFilters.map((filter) => filter.key)).toContain("roles");
+    expect(h.lastFilters.map((filter) => filter.key)).not.toContain("organizationIds");
+    expect(h.lastRoleOptionsPayload?.organizationIds).toEqual(["default"]);
+    expect(h.lastFilters.find((filter) => filter.key === "roles")?.props?.disabled).toBe(false);
   });
 
   it("disables roles and skips role option loading until an organization is selected", () => {
