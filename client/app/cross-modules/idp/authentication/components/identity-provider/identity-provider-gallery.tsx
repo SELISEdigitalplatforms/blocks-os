@@ -265,7 +265,6 @@ export const GallerySkeleton = () => (
 );
 
 export interface IdentityProviderGalleryProps {
-  showHowItWorks: boolean;
   googleEntry?: IdentityProvider;
   microsoftEntry?: IdentityProvider;
   blocksOidcEntries: IdentityProvider[];
@@ -277,7 +276,6 @@ export interface IdentityProviderGalleryProps {
 }
 
 export function IdentityProviderGallery({
-  showHowItWorks,
   googleEntry,
   microsoftEntry,
   blocksOidcEntries,
@@ -289,7 +287,7 @@ export function IdentityProviderGallery({
 }: IdentityProviderGalleryProps) {
   return (
     <div className="space-y-6">
-      {showHowItWorks && <FederatedFlow />}
+      <FederatedFlow />
 
       <section className="space-y-3">
         <SectionHeading

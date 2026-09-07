@@ -38,7 +38,6 @@ const blocksOidcEntry = {
 } as unknown as IdentityProvider;
 
 const baseProps = {
-  showHowItWorks: false,
   blocksOidcEntries: [],
   byosEntries: [],
   onSelectGoogle: vi.fn(),
@@ -48,15 +47,21 @@ const baseProps = {
 };
 
 describe("IdentityProviderGallery", () => {
-  it("shows the federated sign-in explainer only when there is nothing configured yet", () => {
-    const { rerender } = render(<IdentityProviderGallery {...baseProps} showHowItWorks />);
+  it("always shows the federated sign-in explainer, configured or not", () => {
+    const { rerender } = render(<IdentityProviderGallery {...baseProps} />);
     expect(screen.getByText("How a federated sign-in works")).toBeTruthy();
     expect(screen.getByText("Your user")).toBeTruthy();
     expect(screen.getByText("Blocks OS")).toBeTruthy();
     expect(screen.getByText("Identity provider")).toBeTruthy();
 
-    rerender(<IdentityProviderGallery {...baseProps} showHowItWorks={false} />);
-    expect(screen.queryByText("How a federated sign-in works")).toBeNull();
+    rerender(
+      <IdentityProviderGallery
+        {...baseProps}
+        googleEntry={googleEntry}
+        byosEntries={[byosEntry]}
+      />,
+    );
+    expect(screen.getByText("How a federated sign-in works")).toBeTruthy();
   });
 
   it("always renders both gallery sections, with their hint copy", () => {
