@@ -109,5 +109,11 @@ export const normalizeAuthConfigResponse = (
       "passwordStrengthCheckerRegex",
       "PasswordStrengthCheckerRegex",
     ),
+    collectPasswordOnActivation: readBoolean(
+      raw,
+      true,
+      "collectPasswordOnActivation",
+      "CollectPasswordOnActivation",
+    ),
   };
 };

@@ -77,6 +77,27 @@ const props = (mode: "light" | "dark"): OidcPagePreviewProps => ({
   showAuto: true,
 });
 
+describe("Activation preview password step", () => {
+  const activationProps = () => props("light");
+
+  it("shows the password fields when the tenant collects a password", () => {
+    render(<OidcActivationPreview {...activationProps()} collectPasswordOnActivation />);
+    const previewText = screen.getByLabelText("Activation page preview").textContent;
+    expect(previewText).toContain(DEFAULT_OIDC_UI_TEMPLATE.pages.activation.passwordLabel);
+    expect(previewText).toContain(DEFAULT_OIDC_UI_TEMPLATE.pages.activation.confirmPasswordLabel);
+  });
+
+  it("drops the password fields when the tenant turns that step off", () => {
+    render(<OidcActivationPreview {...activationProps()} collectPasswordOnActivation={false} />);
+    const previewText = screen.getByLabelText("Activation page preview").textContent;
+    expect(screen.getByText("First Name")).toBeTruthy();
+    expect(previewText).not.toContain(DEFAULT_OIDC_UI_TEMPLATE.pages.activation.passwordLabel);
+    expect(previewText).not.toContain(
+      DEFAULT_OIDC_UI_TEMPLATE.pages.activation.confirmPasswordLabel,
+    );
+  });
+});
+
 describe.each(cases)("$label preview", ({ label, Component, copy, update }) => {
   it("renders its default copy and shared footer", () => {
     render(<Component {...props("light")} />);
