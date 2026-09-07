@@ -47,7 +47,6 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
 
   const [galleryPick, setGalleryPick] = useState<GalleryPick | null>(null);
 
-  const hasAnyProvider = providers.length > 0;
   const googleEntry = providers.find((p) => p.providerType === "social" && p.provider === "google");
   const microsoftEntry = providers.find(
     (p) => p.providerType === "social" && p.provider === "microsoft",
@@ -90,7 +89,6 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
         <LoadError onRetry={() => refetch()} />
       ) : (
         <IdentityProviderGallery
-          showHowItWorks={!hasAnyProvider}
           googleEntry={googleEntry}
           microsoftEntry={microsoftEntry}
           blocksOidcEntries={blocksOidcEntries}

@@ -16,7 +16,6 @@ vi.mock("@blocks-idp/authentication/hooks/use-identity-provider", () => ({
 vi.mock("./identity-provider-gallery", () => ({
   GallerySkeleton: () => <div data-testid="idp-loading" />,
   IdentityProviderGallery: (props: {
-    showHowItWorks: boolean;
     blocksOidcEntries: { itemId?: string }[];
     byosEntries: { itemId?: string }[];
     onSelectGoogle: () => void;
@@ -26,7 +25,6 @@ vi.mock("./identity-provider-gallery", () => ({
   }) => (
     <div
       data-testid="idp-gallery"
-      data-how-it-works={String(props.showHowItWorks)}
       data-blocks-oidc-count={props.blocksOidcEntries.length}
       data-byos-count={props.byosEntries.length}
     >
@@ -102,16 +100,15 @@ describe("IdentityProviders (page)", () => {
     });
   });
 
-  it("shows the gallery with how-it-works and no separate table when nothing is configured", () => {
+  it("shows the gallery with no separate table when nothing is configured", () => {
     renderPage();
     expect(screen.queryByText("Configured providers")).toBeNull();
     const gallery = screen.getByTestId("idp-gallery");
-    expect(gallery.getAttribute("data-how-it-works")).toBe("true");
     expect(gallery.getAttribute("data-blocks-oidc-count")).toBe("0");
     expect(gallery.getAttribute("data-byos-count")).toBe("0");
   });
 
-  it("hides how-it-works once a provider exists, with the gallery as the only view", () => {
+  it("keeps the gallery as the only view once a provider exists", () => {
     h.useGetIdentityProviders.mockReturnValue({
       data: { data: [googleProvider] },
       isLoading: false,
@@ -120,7 +117,7 @@ describe("IdentityProviders (page)", () => {
     });
     renderPage();
     expect(screen.queryByText("Configured providers")).toBeNull();
-    expect(screen.getByTestId("idp-gallery").getAttribute("data-how-it-works")).toBe("false");
+    expect(screen.getByTestId("idp-gallery")).toBeTruthy();
   });
 
   it("routes each enterprise entry to its own type's gallery card", () => {
