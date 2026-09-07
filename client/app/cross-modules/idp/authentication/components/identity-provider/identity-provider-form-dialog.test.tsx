@@ -222,7 +222,9 @@ describe("IdentityProviderFormDialog", () => {
     render(<IdentityProviderFormDialog open onOpenChange={onOpenChange} editId="idp-1" />);
 
     // Existing redirect uris are hydrated into the form.
-    await waitFor(() => expect(screen.getAllByDisplayValue(/app\.example\.com/)).toHaveLength(2));
+    await waitFor(() =>
+      expect(screen.getAllByDisplayValue(/^https?:\/\/app\.example\.com(?:\/.*)?$/)).toHaveLength(2),
+    );
     const clientId = screen.getByPlaceholderText("Enter client ID") as HTMLInputElement;
     expect(clientId.value).toBe("client-abc");
     expect(clientId.disabled).toBe(true);
