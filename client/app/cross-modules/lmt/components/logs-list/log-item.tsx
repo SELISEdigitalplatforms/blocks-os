@@ -5,6 +5,7 @@ import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
 import { useContext, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
+import { LogStackTrace } from "../log-stack-trace";
 import { ILog } from "../../models/log.model";
 
 export const LogItem = ({ log }: { log: ILog }) => {
@@ -73,6 +74,8 @@ export const LogItem = ({ log }: { log: ILog }) => {
       >
         {log.message}
       </div>
+
+      <LogStackTrace exception={log.exception} />
     </div>
   );
 };

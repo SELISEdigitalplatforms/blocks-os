@@ -105,6 +105,10 @@ namespace Cloud.LmtService.Services.ColdRestore
                 var spanIdColumn      = await ReadStringColumnAsync(rowGroupReader, schema, "SpanId",      ct);
                 var serviceNameColumn = await ReadStringColumnAsync(rowGroupReader, schema, "ServiceName", ct);
                 var actionNameColumn  = await ReadStringColumnAsync(rowGroupReader, schema, "ActionName",  ct);
+                // Archives written before the stack trace was surfaced have no Exception column.
+                // ReadStringColumnAsync returns an empty list for a column the schema lacks, and
+                // GetStringValue is bounds-checked, so those rows simply restore with no trace.
+                var exceptionColumn   = await ReadStringColumnAsync(rowGroupReader, schema, "Exception",   ct);
 
                 // Drive row count from Timestamp only — same rationale as ReadTracesCoreAsync.
                 var rowCount = timestampColumn.Count;
@@ -123,6 +127,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                         SpanId      = GetStringValue(spanIdColumn,      i),
                         ServiceName = GetStringValue(serviceNameColumn, i),
                         ActionName  = GetStringValue(actionNameColumn,  i),
+                        Exception   = GetStringValue(exceptionColumn,   i),
                     };
                 }
             }

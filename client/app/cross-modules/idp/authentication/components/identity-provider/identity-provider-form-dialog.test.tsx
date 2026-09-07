@@ -29,14 +29,11 @@ vi.mock("@blocks-idp/authentication/hooks/use-identity-provider", () => ({
 // The SSO role/permission pickers pull in their own paginated queries; they are
 // tested separately. Replace them with lightweight stubs so this suite stays
 // focused on the dialog behaviour.
-vi.mock(
-  "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles",
-  () => ({
-    SSOInitialRoles: ({ roles }: { roles: unknown[] }) => (
-      <div data-testid="sso-roles" data-count={roles.length} />
-    ),
-  }),
-);
+vi.mock("@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles", () => ({
+  SSOInitialRoles: ({ roles }: { roles: unknown[] }) => (
+    <div data-testid="sso-roles" data-count={roles.length} />
+  ),
+}));
 vi.mock(
   "@blocks-idp/authentication/components/sso-initial-permissions/sso-initial-permissions",
   () => ({
@@ -226,7 +223,7 @@ describe("IdentityProviderFormDialog", () => {
 
     // Existing redirect uris are hydrated into the form.
     await waitFor(() =>
-      expect(screen.getAllByDisplayValue(/app\.example\.com/)).toHaveLength(2),
+      expect(screen.getAllByDisplayValue(/^https?:\/\/app\.example\.com(?:\/.*)?$/)).toHaveLength(2),
     );
     const clientId = screen.getByPlaceholderText("Enter client ID") as HTMLInputElement;
     expect(clientId.value).toBe("client-abc");
@@ -283,5 +280,161 @@ describe("IdentityProviderFormDialog", () => {
     render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} />);
     const saving = screen.getByRole("button", { name: /Saving/ }) as HTMLButtonElement;
     expect(saving.disabled).toBe(true);
+  });
+
+  it("preselects Select Provider and Provider Name from presetProviderType/presetProvider", () => {
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    expect(screen.getAllByText("Google").length).toBeGreaterThan(0);
+  });
+
+  it("preselects Blocks OIDC via presetProviderType and reveals its Well Known URL", () => {
+    render(
+      <IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="blocks-oidc" />,
+    );
+    expect(screen.getByLabelText("Well Known URL")).toBeTruthy();
+  });
+
+  it("C5: hides an already-configured social provider from the Provider Name picker", async () => {
+    const user = userEvent.setup();
+    render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} isGoogleConfigured />);
+    const providerNameSelect = screen.getByRole("combobox", { name: /Provider Name/i });
+    await user.click(providerNameSelect);
+    expect(await screen.findByRole("option", { name: /Microsoft/i })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Google/i })).toBeNull();
+  });
+
+  it("C6: hides Social from Select Provider once both Google and Microsoft are configured", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        isGoogleConfigured
+        isMicrosoftConfigured
+      />,
+    );
+    const providerTypeSelect = screen.getByRole("combobox", { name: /Select Provider/i });
+    await user.click(providerTypeSelect);
+    expect(screen.queryByRole("option", { name: "Social" })).toBeNull();
+    expect(await screen.findByRole("option", { name: "Blocks OIDC" })).toBeTruthy();
+  });
+
+  it("H1/H2: shows the pre-fill banner and help box for a gallery-picked social provider", () => {
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    expect(screen.getByText("You picked Google")).toBeTruthy();
+    expect(
+      screen.getByText("Allow your users to seamlessly log in with their trusted Google Account."),
+    ).toBeTruthy();
+    expect(screen.getByText("Where do I find these?")).toBeTruthy();
+    expect(screen.getByText(/Google Cloud Console/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change" })).toBeTruthy();
+  });
+
+  it("H1/H2: shows the pre-fill banner and help box for a gallery-picked Blocks OIDC", () => {
+    render(
+      <IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="blocks-oidc" />,
+    );
+    expect(screen.getByText("You picked Blocks OIDC")).toBeTruthy();
+    expect(screen.getByText("Federate against another Blocks project.")).toBeTruthy();
+    expect(screen.getByText(/OIDC issuer/)).toBeTruthy();
+  });
+
+  it("H3: shows the help box (but not the banner) for a manual pick with no gallery preset", async () => {
+    const user = userEvent.setup();
+    render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} />);
+    expect(screen.queryByText(/You picked/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+
+    await user.click(screen.getByRole("combobox", { name: /Select Provider/i }));
+    await user.click(await screen.findByRole("option", { name: "Blocks OIDC" }));
+
+    expect(await screen.findByText(/OIDC issuer/)).toBeTruthy();
+    expect(screen.queryByText(/You picked/)).toBeNull();
+  });
+
+  it("H4/C5: Change clears the banner/help box and resets to the blank-dialog state", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Change" }));
+
+    expect(screen.queryByText(/You picked/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+    expect(screen.queryByText("Where do I find these?")).toBeNull();
+    const submit = screen.getByRole("button", { name: "Add Provider" }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+  });
+
+  it("C2: manually re-picking the same provider after Change shows help but not the banner", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Change" }));
+
+    await user.click(screen.getByRole("combobox", { name: /Provider Name/i }));
+    await user.click(await screen.findByRole("option", { name: /Google/i }));
+
+    expect(await screen.findByText(/Google Cloud Console/)).toBeTruthy();
+    expect(screen.queryByText(/You picked/)).toBeNull();
+  });
+
+  it("H5/C4: edit mode never shows the banner, Change button, or help box, even with presets set", async () => {
+    h.useGetIdentityProviderById.mockReturnValue({ ...idleState, data: successResponse });
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        editId="idp-1"
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    await waitFor(() => expect(screen.getByText("Edit Identity Provider")).toBeTruthy());
+    expect(screen.queryByText(/You picked/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+    expect(screen.queryByText("Where do I find these?")).toBeNull();
+  });
+
+  it("C1: reopening the dialog shows the banner again, even if it was dismissed before", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="byos" />,
+    );
+    expect(screen.getByText("You picked Bring your own SSO")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Change" }));
+    expect(screen.queryByText(/You picked/)).toBeNull();
+
+    rerender(
+      <IdentityProviderFormDialog open={false} onOpenChange={vi.fn()} presetProviderType="byos" />,
+    );
+    rerender(<IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="byos" />);
+
+    expect(await screen.findByText("You picked Bring your own SSO")).toBeTruthy();
   });
 });

@@ -10,8 +10,8 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { formatDate, parseDateString } from "@/lib/utils";
-import { TraceTree, getTypeColor } from "@blocks-lmt/models/trace.model";
+import { getTraceFormatTimestamp } from "@blocks-lmt/utils";
+import { TraceTree, getTraceStatus, getTypeColor } from "@blocks-lmt/models/trace.model";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
@@ -66,6 +66,21 @@ export function TracesList({
         },
       },
       {
+        accessorKey: "status",
+        // Not sortable: the server sorts on the raw Mongo field, which is the span status,
+        // while this column shows the HTTP code. A control that reordered by something other
+        // than what is displayed would be worse than no control.
+        header: () => <span className="font-bold text-medium-emphasis">Status</span>,
+        cell: ({ row }) => {
+          const status = getTraceStatus(row.original);
+          return (
+            <div className={`ml-2 flex w-[80px] items-center font-semibold sm:ml-0 ${status.className}`}>
+              {status.label}
+            </div>
+          );
+        },
+      },
+      {
         accessorKey: "service",
         header: () => (
           <FilterControls.SortHeader
@@ -107,10 +122,11 @@ export function TracesList({
             onChange={setSortQueryParams}
           />
         ),
-        cell: ({ row }) => {
-          const dateValue = parseDateString(row.original.timestamp);
-          return <div className="ml-2 w-[180px] lowercase sm:ml-0">{formatDate(dateValue)}</div>;
-        },
+        cell: ({ row }) => (
+          <div className="ml-2 w-[200px] tabular-nums sm:ml-0">
+            {getTraceFormatTimestamp(row.original.timestamp)}
+          </div>
+        ),
       },
     ],
     [serviceLabels, setSortQueryParams, sortQueryParams],
