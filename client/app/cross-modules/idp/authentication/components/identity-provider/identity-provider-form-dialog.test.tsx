@@ -284,4 +284,48 @@ describe("IdentityProviderFormDialog", () => {
     const saving = screen.getByRole("button", { name: /Saving/ }) as HTMLButtonElement;
     expect(saving.disabled).toBe(true);
   });
+
+  it("preselects Select Provider and Provider Name from presetProviderType/presetProvider", () => {
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        presetProviderType="social"
+        presetProvider="google"
+      />,
+    );
+    expect(screen.getAllByText("Google").length).toBeGreaterThan(0);
+  });
+
+  it("preselects Blocks OIDC via presetProviderType and reveals its Well Known URL", () => {
+    render(
+      <IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="blocks-oidc" />,
+    );
+    expect(screen.getByLabelText("Well Known URL")).toBeTruthy();
+  });
+
+  it("C5: hides an already-configured social provider from the Provider Name picker", async () => {
+    const user = userEvent.setup();
+    render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} isGoogleConfigured />);
+    const providerNameSelect = screen.getByRole("combobox", { name: /Provider Name/i });
+    await user.click(providerNameSelect);
+    expect(await screen.findByRole("option", { name: /Microsoft/i })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Google/i })).toBeNull();
+  });
+
+  it("C6: hides Social from Select Provider once both Google and Microsoft are configured", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderFormDialog
+        open
+        onOpenChange={vi.fn()}
+        isGoogleConfigured
+        isMicrosoftConfigured
+      />,
+    );
+    const providerTypeSelect = screen.getByRole("combobox", { name: /Select Provider/i });
+    await user.click(providerTypeSelect);
+    expect(screen.queryByRole("option", { name: "Social" })).toBeNull();
+    expect(await screen.findByRole("option", { name: "Blocks OIDC" })).toBeTruthy();
+  });
 });

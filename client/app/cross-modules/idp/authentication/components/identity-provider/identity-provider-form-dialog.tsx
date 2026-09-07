@@ -69,6 +69,13 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editId?: string;
+  /** Preselects "Select Provider" when opening in add mode. Ignored while editing. */
+  presetProviderType?: string;
+  /** Preselects "Provider Name" (social only) when opening in add mode. Ignored while editing. */
+  presetProvider?: string;
+  /** Hides Google/Microsoft from the Social "Provider Name" picker once each already has an entry. */
+  isGoogleConfigured?: boolean;
+  isMicrosoftConfigured?: boolean;
 };
 
 const BLANK_FORM: FormValues = {
@@ -112,7 +119,15 @@ const toFormValues = (provider: IdentityProvider): FormValues => {
   };
 };
 
-export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props) {
+export function IdentityProviderFormDialog({
+  open,
+  onOpenChange,
+  editId,
+  presetProviderType,
+  presetProvider,
+  isGoogleConfigured = false,
+  isMicrosoftConfigured = false,
+}: Props) {
   const isEditing = !!editId;
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
@@ -158,6 +173,21 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
   const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
 
+  // While adding (never while editing), hide social providers that already have
+  // an entry - each of Google/Microsoft may only be configured once per project.
+  const providerOptions = PROVIDER_OPTIONS.filter((option) => {
+    if (option.value !== "social" || isEditing) return true;
+    return !(isGoogleConfigured && isMicrosoftConfigured);
+  });
+  const socialProviderOptions = Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
+    .filter((c) => c.provider === "google" || c.provider === "microsoft")
+    .filter((c) => {
+      if (isEditing) return true;
+      if (c.provider === "google") return !isGoogleConfigured;
+      if (c.provider === "microsoft") return !isMicrosoftConfigured;
+      return true;
+    });
+
   useEffect(() => {
     if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
       setValue("wellKnownUrl", blocksOidcWellKnownUrl, { shouldValidate: true });
@@ -171,7 +201,13 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     }
 
     if (!isEditing) {
-      reset(BLANK_FORM);
+      const bothSocialConfigured = isGoogleConfigured && isMicrosoftConfigured;
+      reset({
+        ...BLANK_FORM,
+        providerType:
+          presetProviderType ?? (bothSocialConfigured ? "blocks-oidc" : BLANK_FORM.providerType),
+        provider: presetProvider ?? BLANK_FORM.provider,
+      });
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
@@ -203,7 +239,19 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     setRequirePkce(!!editedProvider.requirePkce);
     setRedirectUrisError(null);
     setIsFormReady(true);
-  }, [open, isEditing, isLoadingProvider, providerResponse, editedProvider, reset, onOpenChange]);
+  }, [
+    open,
+    isEditing,
+    isLoadingProvider,
+    providerResponse,
+    editedProvider,
+    reset,
+    onOpenChange,
+    presetProviderType,
+    presetProvider,
+    isGoogleConfigured,
+    isMicrosoftConfigured,
+  ]);
 
   useEffect(() => {
     if (!open || !isEditing || !isProviderFetchError) return;
@@ -299,7 +347,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                     <SelectValue placeholder="Select Provider" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROVIDER_OPTIONS.map((t) => (
+                    {providerOptions.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
                         {t.label}
                       </SelectItem>
@@ -338,20 +386,18 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
-                        .filter((c) => c.provider === "google" || c.provider === "microsoft")
-                        .map((config) => (
-                          <SelectItem key={config.provider} value={config.provider}>
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={config.imageSrc}
-                                alt={config.label}
-                                className="h-5 w-5 object-contain"
-                              />
-                              <span>{config.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                      {socialProviderOptions.map((config) => (
+                        <SelectItem key={config.provider} value={config.provider}>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={config.imageSrc}
+                              alt={config.label}
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span>{config.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 ) : (

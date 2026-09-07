@@ -9,6 +9,8 @@ import {
   navigateToIdentityProvidersFlow,
   openAddIdentityProviderDialogFlow,
   openEditIdentityProviderFlow,
+  openEnterpriseGalleryCardFlow,
+  openGoogleGalleryCardFlow,
   reloadAndFindProviderRowFlow,
   verifyAddProviderDisabledFlow,
   verifyBlocksOidcWellKnownUrlFlow,
@@ -24,8 +26,16 @@ test.describe("flows", () => {
       await navigateToIdentityProvidersFlow(page);
     });
 
-    await test.step("A fresh project starts with no identity providers", async () => {
+    await test.step("A fresh project starts with the empty-state gallery", async () => {
       await verifyEmptyStateFlow(page);
+    });
+
+    await test.step("Clicking the Google gallery card opens the dialog preset to Social/Google", async () => {
+      await openGoogleGalleryCardFlow(page);
+    });
+
+    await test.step("Clicking the Blocks OIDC gallery card opens a blank add dialog preset to it", async () => {
+      await openEnterpriseGalleryCardFlow(page, "Blocks OIDC");
     });
 
     await test.step("Open the Add Identity Provider dialog", async () => {
