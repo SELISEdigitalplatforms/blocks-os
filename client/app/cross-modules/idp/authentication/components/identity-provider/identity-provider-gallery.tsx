@@ -1,13 +1,15 @@
-import { ListChecks, MousePointerClick, Save } from "lucide-react";
+import { ListChecks, MousePointerClick, Plus, Save } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { cn } from "@/lib/utils";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import {
   SOCIAL_AUTH_PROVIDERS_CONFIG,
   SSO_PROVIDERS,
 } from "@blocks-idp/authentication/constants/sso-providers.constant";
+import { ProviderEntryItem } from "./identity-provider-entry-item";
 import { PROVIDER_CONFIG } from "./identity-provider-visual.constant";
 
 const HOW_IT_WORKS_STEPS = [
@@ -114,51 +116,101 @@ interface EnterpriseProviderCardProps {
   providerType: "blocks-oidc" | "byos";
   label: string;
   description: string;
-  onSelect: () => void;
+  entries: IdentityProvider[];
+  onAdd: () => void;
 }
 
 function EnterpriseProviderCard({
   providerType,
   label,
   description,
-  onSelect,
+  entries,
+  onAdd,
 }: EnterpriseProviderCardProps) {
   const cfg = PROVIDER_CONFIG[providerType];
   const Icon = cfg.Icon;
 
   return (
     <Card>
-      <CardContent className="flex items-start gap-3 p-4">
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-            cfg.iconBg,
-          )}
-        >
-          <Icon className={cn("h-5 w-5", cfg.iconColor)} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-high-emphasis">{label}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3 h-7 px-2.5 text-xs"
-            onClick={onSelect}
+      <CardContent className="flex flex-col gap-3 p-4">
+        <div className="flex items-start gap-3">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+              cfg.iconBg,
+            )}
           >
-            Configure
-          </Button>
+            <Icon className={cn("h-5 w-5", cfg.iconColor)} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-high-emphasis">{label}</p>
+              {entries.length > 0 && (
+                <Badge
+                  variant="outline"
+                  className="w-fit shrink-0 border-transparent bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                >
+                  {entries.length} configured
+                </Badge>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          </div>
         </div>
+
+        {entries.length > 0 && (
+          <ul aria-label={`Configured ${label} providers`} className="space-y-2">
+            {entries.map((entry) => (
+              <ProviderEntryItem key={entry.itemId} item={entry} />
+            ))}
+          </ul>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 self-start px-2.5 text-xs"
+          onClick={onAdd}
+        >
+          <Plus className="h-3 w-3" />
+          Add {label}
+        </Button>
       </CardContent>
     </Card>
   );
 }
 
+export const GallerySkeleton = () => (
+  <div className="space-y-6">
+    {["social", "enterprise"].map((section) => (
+      <div key={section} className="space-y-3">
+        <Skeleton className="h-4 w-28" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[0, 1].map((i) => (
+            <Card key={i}>
+              <CardContent className="flex items-start gap-3 p-4">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="mt-3 h-7 w-28" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 export interface IdentityProviderGalleryProps {
   showHowItWorks: boolean;
   googleEntry?: IdentityProvider;
   microsoftEntry?: IdentityProvider;
+  blocksOidcEntries: IdentityProvider[];
+  byosEntries: IdentityProvider[];
   onSelectGoogle: () => void;
   onSelectMicrosoft: () => void;
   onSelectBlocksOidc: () => void;
@@ -169,6 +221,8 @@ export function IdentityProviderGallery({
   showHowItWorks,
   googleEntry,
   microsoftEntry,
+  blocksOidcEntries,
+  byosEntries,
   onSelectGoogle,
   onSelectMicrosoft,
   onSelectBlocksOidc,
@@ -201,13 +255,15 @@ export function IdentityProviderGallery({
             providerType="blocks-oidc"
             label="Blocks OIDC"
             description="Use your project's built-in Blocks OIDC provider for first-party sign-in."
-            onSelect={onSelectBlocksOidc}
+            entries={blocksOidcEntries}
+            onAdd={onSelectBlocksOidc}
           />
           <EnterpriseProviderCard
             providerType="byos"
             label="Bring your own SSO"
             description={byosDescription}
-            onSelect={onSelectByos}
+            entries={byosEntries}
+            onAdd={onSelectByos}
           />
         </div>
       </div>
