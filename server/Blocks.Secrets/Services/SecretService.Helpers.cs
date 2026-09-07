@@ -261,7 +261,9 @@ public sealed partial class SecretService
         SecretId = secret.ItemId,
         Name = secret.Name,
         Description = secret.Description,
-        Tags = secret.Tags,
+        // Coalesced: a secret stored before tags existed carries no Tags element, and the
+        // client types this as a plain array.
+        Tags = secret.Tags ?? [],
         Type = secret.Type,
         Status = secret.Status,
         OrganizationId = secret.OrganizationId,

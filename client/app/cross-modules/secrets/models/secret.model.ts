@@ -27,7 +27,7 @@ export type SecretType = (typeof SECRET_TYPE)[keyof typeof SECRET_TYPE];
 export type SecretStatus = (typeof SECRET_STATUS)[keyof typeof SECRET_STATUS];
 
 /**
- * What each category means to a person.
+ * What each type means to a person.
  *
  * The wire values stay `api` / `service` — the backend compares them ordinally — but "API" and
  * "Service" say nothing about which one you want, so nothing user-facing shows them.
@@ -347,6 +347,16 @@ export const toSecretTagKey = (input: string): string =>
 
 export const isValidSecretTag = (tag: string): boolean =>
   tag.length > 0 && tag.length <= SECRET_TAG_MAX_LENGTH && SECRET_TAG_PATTERN.test(tag);
+
+/**
+ * A secret's tags, tolerating their absence.
+ *
+ * The field is newer than the secrets themselves: a document written before tags existed has
+ * no `Tags` element, and an API build predating the feature omits the property entirely. The
+ * server coalesces to an empty array, but a UI that dereferences `.length` on whatever arrives
+ * would white-screen the whole list if it ever met a response that did not.
+ */
+export const secretTags = (secret: Pick<SecretResult, "tags">): string[] => secret.tags ?? [];
 
 /** Display text for a tag key, falling back to the key when the catalogue has no entry. */
 export const secretTagLabel = (key: string, catalogue: SecretTagEntry[]): string =>

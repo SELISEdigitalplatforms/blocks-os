@@ -2,7 +2,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SECRET_TYPE } from "@/cross-modules/secrets/models/secret.model";
+import {
+  SECRET_TYPE,
+  SECRET_TYPE_DESCRIPTION,
+} from "@/cross-modules/secrets/models/secret.model";
 import type { SecretAccess } from "@/cross-modules/secrets/models/secret.model";
 import { FakeHttpError, SECRET_ID, makeSecret } from "@/cross-modules/secrets/test-utils/secret.fixtures";
 
@@ -155,12 +158,33 @@ describe("SecretFormModal — create", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("offers all three categories", () => {
+  it("offers all three types as radios, each carrying its description", () => {
+    // The one-word label does not say which one you want, so the explaining sentence is part
+    // of the option rather than help text somewhere else.
     renderCreate();
 
-    expect(screen.getByRole("radio", { name: /Application/ })).toBeTruthy();
+    const application = screen.getByRole("radio", { name: /Application/ });
+    expect(application).toBeTruthy();
+    expect(application.getAttribute("aria-checked")).toBe("true");
+
     expect(screen.getByRole("radio", { name: /Platform service/ })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /^Both/ })).toBeTruthy();
+
+    for (const description of Object.values(SECRET_TYPE_DESCRIPTION)) {
+      expect(screen.getByText(description)).toBeTruthy();
+    }
+  });
+
+  it("selects a type by clicking its radio", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+
+    await user.click(screen.getByRole("radio", { name: /^Both/ }));
+
+    expect(screen.getByRole("radio", { name: /^Both/ }).getAttribute("aria-checked")).toBe("true");
+    expect(
+      screen.getByRole("radio", { name: /Application/ }).getAttribute("aria-checked"),
+    ).toBe("false");
   });
 
   it("sends access: null and hides the picker for a platform secret", async () => {

@@ -18,6 +18,7 @@ import {
 import {
   SECRET_TYPE,
   secretTagLabel,
+  secretTags,
   type SecretResult,
 } from "@/cross-modules/secrets/models/secret.model";
 import { useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
@@ -92,9 +93,9 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
   const userNames = useResolvedUserNames(isApi ? access.userIds : []);
   const roleNames = useResolvedRoleNames(isApi ? access.roles : []);
 
+  const tags = secretTags(secret);
   // Cached and shared with the toolbar and the form, so an expanded row costs no extra fetch.
-  const { data: tagCatalogue = [] } = useSecretTags(secret.tags.length > 0);
-  const tags = secret.tags ?? [];
+  const { data: tagCatalogue = [] } = useSecretTags(tags.length > 0);
 
   const hasAccessEntries = access.userIds.length > 0 || access.roles.length > 0;
 

@@ -15,6 +15,7 @@ import {
   toSecretTagKey,
   isValidSecretTag,
   secretTagLabel,
+  secretTags,
   SECRET_TAG_MAX_LENGTH,
   SECRET_TYPE_LABEL,
   SECRET_TYPE_DESCRIPTION,
@@ -164,6 +165,13 @@ describe("secret model", () => {
       expect(isValidSecretTag("has space")).toBe(false);
       expect(isValidSecretTag("")).toBe(false);
       expect(isValidSecretTag("a".repeat(SECRET_TAG_MAX_LENGTH + 1))).toBe(false);
+    });
+
+    it("tolerates a secret whose tags field is absent", () => {
+      // A document written before tags existed, or a response from an API build that predates
+      // the field. Dereferencing .length on that would white-screen the whole list.
+      expect(secretTags({ tags: undefined as unknown as string[] })).toEqual([]);
+      expect(secretTags({ tags: ["iam"] })).toEqual(["iam"]);
     });
 
     it("resolves a key to its catalogue label, falling back to the key", () => {

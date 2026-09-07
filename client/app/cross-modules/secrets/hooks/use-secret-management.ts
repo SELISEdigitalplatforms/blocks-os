@@ -3,6 +3,7 @@ import { useProjectStore } from "@seliseblocks/genesis-os";
 import { secretManagementService } from "@/cross-modules/secrets/services/secret-management.service";
 import {
   looksLikeSecretId,
+  secretTags,
   type SecretAccess,
   type SecretAuditFilter,
   type SecretAuditListResult,
@@ -62,7 +63,7 @@ export const useFindSecrets = (filter: SecretFilter = {}, enabled = true) => {
         const matchesStatus = !filter.status || secret.status === filter.status;
         // Any-of, matching the server: the row survives if it carries at least one selected tag.
         const matchesTags =
-          !filter.tags?.length || filter.tags.some((tag) => secret.tags?.includes(tag));
+          !filter.tags?.length || filter.tags.some((tag) => secretTags(secret).includes(tag));
         return matchesType && matchesStatus && matchesTags
           ? { data: [secret], totalCount: 1 }
           : { data: [], totalCount: 0 };

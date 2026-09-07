@@ -36,6 +36,7 @@ import {
   SECRET_STATUS_LABEL,
   SECRET_TYPE_LABEL,
   secretTagLabel,
+  secretTags,
   supportsValueReveal,
   type SecretResult,
   type SecretStatus,
@@ -142,7 +143,8 @@ export function SecretRow({ secret }: SecretRowProps) {
 
   const { mutateAsync: readValue, isPending: isCopying } = useRevealSecret();
   // Shared cache with the toolbar, so rendering labels here costs no extra request.
-  const { data: tagCatalogue = [] } = useSecretTags(secret.tags.length > 0);
+  const tags = secretTags(secret);
+  const { data: tagCatalogue = [] } = useSecretTags(tags.length > 0);
 
   const isDeleted = secret.status === SECRET_STATUS.Deleted;
   const isLocked = secret.status === SECRET_STATUS.Locked;
@@ -181,11 +183,11 @@ export function SecretRow({ secret }: SecretRowProps) {
         <TableCell className="py-3.5">
           {/* Name and tags. The description lives in the expanded panel, where it has room. */}
           <p className="truncate font-medium text-high-emphasis">{secret.name}</p>
-          {secret.tags.length > 0 && (
+          {tags.length > 0 && (
             <div className="mt-1 flex flex-wrap items-center gap-1">
               {/* Capped at three: a heavily tagged secret would otherwise set the row height
                   for the whole table. The rest are in the expanded panel. */}
-              {secret.tags.slice(0, 3).map((key) => (
+              {tags.slice(0, 3).map((key) => (
                 <Badge
                   key={key}
                   variant="outline"
@@ -194,10 +196,8 @@ export function SecretRow({ secret }: SecretRowProps) {
                   {secretTagLabel(key, tagCatalogue)}
                 </Badge>
               ))}
-              {secret.tags.length > 3 && (
-                <span className="text-[10px] text-muted-foreground">
-                  +{secret.tags.length - 3}
-                </span>
+              {tags.length > 3 && (
+                <span className="text-[10px] text-muted-foreground">+{tags.length - 3}</span>
               )}
             </div>
           )}
