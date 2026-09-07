@@ -27,22 +27,31 @@ export async function enableMultiOrgFlow(page: Page) {
 
   const multiOrgSwitch = page.getByLabel("Multi-Organization Environment");
   await expect(multiOrgSwitch).toBeVisible({ timeout: 20_000 });
-  await multiOrgSwitch.click();
-  await expect(page.getByRole("heading", { name: "Enable multi-organization mode?" })).toBeVisible({
-    timeout: 10_000,
-  });
-  await page.getByRole("button", { name: "Enable", exact: true }).first().click();
-  await expect(multiOrgSwitch).toBeChecked({ timeout: 10_000 });
+
+  // Once saved, the product locks this switch on — reused projects already have
+  // it checked+disabled, so clicking would hang until the test timeout.
+  if (!(await multiOrgSwitch.isChecked())) {
+    await multiOrgSwitch.click();
+    await expect(page.getByRole("heading", { name: "Enable multi-organization mode?" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.getByRole("button", { name: "Enable", exact: true }).first().click();
+    await expect(multiOrgSwitch).toBeChecked({ timeout: 10_000 });
+  }
 
   const cloudWorkflowSwitch = page.getByLabel("Allow Creation from OS");
   await expect(cloudWorkflowSwitch).toBeVisible({ timeout: 15_000 });
-  await cloudWorkflowSwitch.click();
+  if (!(await cloudWorkflowSwitch.isChecked())) {
+    await cloudWorkflowSwitch.click();
+  }
+
   const saveButton = page.getByRole("button", { name: "Save" }).first();
-  await expect(saveButton).toBeEnabled({ timeout: 10_000 });
-  await saveButton.click();
-  await expect(
-    page.getByText("Organization configuration updated successfully", { exact: true }),
-  ).toBeVisible({ timeout: 15_000 });
+  if (await saveButton.isEnabled()) {
+    await saveButton.click();
+    await expect(
+      page.getByText("Organization configuration updated successfully", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+  }
 }
 
 export async function verifyAddOrgButtonEnabledFlow(page: Page) {
