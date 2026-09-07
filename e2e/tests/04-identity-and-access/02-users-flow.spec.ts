@@ -1,9 +1,23 @@
 import { test } from "../../support/test-base";
 import { uniqueTestEmail } from "../../support/env";
+import { openIam } from "../../support/os-helpers";
+import {
+  enableMultiOrgFlow,
+  verifyAddOrgButtonEnabledFlow,
+  nameMaxLengthValidationFlow,
+  createOrganizationFlow,
+  selectOrgInSidebarFlow,
+  verifyMembersTabFlow,
+  inviteOrgMemberFlow,
+  renameOrganizationFlow,
+  disableReEnableOrganizationFlow,
+  searchOrganizationsFlow,
+  statusFilterFlow,
+} from "../../pages/identity-and-access/organizations";
 import {
   navigateToUsersFlow,
   searchUsersFlow,
-  filterByCreatedDateFlow,
+  filterByOrganizationThenRolesFlow,
   sortUsersByNameFlow,
   openInviteUserDialogFlow,
   inviteEmailValidationFlow,
@@ -22,28 +36,44 @@ import {
   paginateHistoryListFlow,
 } from "../../pages/identity-and-access/users";
 
-// Users flow: strict validation on Invite User, invite a fresh user, open
-// their details page, and walk its Access -> Sessions -> History tabs.
 test.describe("flows", () => {
-  test("Users flow: strict validation -> invite -> open details -> Access/Sessions/History tabs", async ({
+  test("Users & Organizations: enable org -> invite member -> invite user into org -> search/filter -> details", async ({
     page,
   }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(360_000);
+
+    await test.step("Enable multi-organization environment", async () => {
+      await enableMultiOrgFlow(page);
+    });
+
+    await test.step("Verify Add Organization button is enabled", async () => {
+      await verifyAddOrgButtonEnabledFlow(page);
+    });
+
+    await test.step("Name max-length validation rejects 101 characters", async () => {
+      await nameMaxLengthValidationFlow(page);
+    });
+
+    let orgName = `Flow Org ${Date.now()}`;
+    await test.step(`Create organization "${orgName}"`, async () => {
+      await createOrganizationFlow(page, orgName);
+    });
+
+    await test.step("Select the new organization in the sidebar", async () => {
+      await selectOrgInSidebarFlow(page, orgName);
+    });
+
+    await test.step("Verify Members tab shows Invite action", async () => {
+      await verifyMembersTabFlow(page);
+    });
+
+    const orgMemberEmail = uniqueTestEmail("flow-org-member");
+    await test.step("Invite a member from the organization (send invitation only)", async () => {
+      await inviteOrgMemberFlow(page, orgMemberEmail, orgName);
+    });
 
     await test.step("Navigate to Users", async () => {
       await navigateToUsersFlow(page);
-    });
-
-    await test.step("Search filters the users list by name", async () => {
-      await searchUsersFlow(page);
-    });
-
-    await test.step("Date filters narrow the users list", async () => {
-      await filterByCreatedDateFlow(page);
-    });
-
-    await test.step("Sort by the Name column header", async () => {
-      await sortUsersByNameFlow(page);
     });
 
     await test.step("Open the Invite User dialog", async () => {
@@ -55,9 +85,20 @@ test.describe("flows", () => {
     });
 
     const inviteEmail = uniqueTestEmail("flow-user");
+    await test.step(`Invite a new user into organization "${orgName}"`, async () => {
+      await sendInviteFlow(page, inviteEmail, orgName);
+    });
 
-    await test.step("Fill a valid, fresh email and send the invite", async () => {
-      await sendInviteFlow(page, inviteEmail);
+    await test.step("Search filters the users list by name", async () => {
+      await searchUsersFlow(page);
+    });
+
+    await test.step("Filters: select organization then Roles appears, then date filter", async () => {
+      await filterByOrganizationThenRolesFlow(page, orgName);
+    });
+
+    await test.step("Sort by the Name column header", async () => {
+      await sortUsersByNameFlow(page);
     });
 
     await test.step("Find the new user and open their details page", async () => {
@@ -110,6 +151,27 @@ test.describe("flows", () => {
 
     await test.step("Paginate the History list, if more than one page exists", async () => {
       await paginateHistoryListFlow(page);
+    });
+
+    await test.step("Return to Organizations and select the created org", async () => {
+      await openIam(page, "organization", "Organizations");
+      await selectOrgInSidebarFlow(page, orgName);
+    });
+
+    orgName = await test.step(`Rename organization to "${orgName} Renamed"`, async () => {
+      return await renameOrganizationFlow(page, orgName);
+    });
+
+    await test.step("Disable then re-enable the organization", async () => {
+      await disableReEnableOrganizationFlow(page);
+    });
+
+    await test.step("Search organizations honors 3-char minimum and filters", async () => {
+      await searchOrganizationsFlow(page, orgName);
+    });
+
+    await test.step("Status filter narrows the sidebar list", async () => {
+      await statusFilterFlow(page, orgName);
     });
   });
 });

@@ -192,6 +192,54 @@ export async function verifyMembersTabFlow(page: Page) {
   await page.getByRole("tab", { name: "Details" }).first().click();
 }
 
+export async function inviteOrgMemberFlow(page: Page, inviteEmail: string, organizationName: string) {
+  const membersTab = page.getByRole("tab", { name: /Members/ }).first();
+  await membersTab.click();
+  await expect(membersTab).toHaveAttribute("data-state", "active");
+  await page.getByRole("button", { name: /Invite Member/i }).first().click();
+
+  const dialog = page.getByRole("dialog").filter({ hasText: "Invite Member" });
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await dialog.getByPlaceholder("name@company.com").fill(inviteEmail);
+
+  const orgTrigger = dialog.getByRole("combobox");
+  if (await orgTrigger.isVisible({ timeout: 8_000 })) {
+    const alreadySelected = await orgTrigger.getByText(organizationName, { exact: true }).isVisible();
+    if (!alreadySelected) {
+      await orgTrigger.click();
+      const search = page.getByPlaceholder("Search organizations...");
+      if (await search.isVisible({ timeout: 3_000 })) {
+        await search.fill(organizationName);
+      }
+      await page.getByRole("option", { name: organizationName, exact: true }).click();
+    }
+  }
+
+  const sendButton = dialog.getByRole("button", { name: /Send invite|Grant access/ });
+  await expect(sendButton).toBeEnabled({ timeout: 15_000 });
+
+  const createResponsePromise = page.waitForResponse(
+    (response) =>
+      /\/api\/iam\/users\/create\/?$/i.test(response.url()) &&
+      response.request().method() === "POST",
+    { timeout: 20_000 },
+  );
+  await sendButton.click();
+
+  const createResponse = await createResponsePromise.catch(() => null);
+  if (createResponse && createResponse.status() >= 400) {
+    throw new Error(
+      `Invite Member API rejected create with HTTP ${createResponse.status()} — dialog stayed open.`,
+    );
+  }
+
+  const inviteToast = page
+    .getByRole("region", { name: /Notifications/i })
+    .getByText(/Invitation is sent|User granted access to the organization/);
+  await expect(inviteToast).toBeVisible({ timeout: 15_000 });
+  await expect(dialog).toBeHidden({ timeout: 15_000 });
+}
+
 export async function renameOrganizationFlow(page: Page, currentName: string): Promise<string> {
   await kebabMenuButton(page).click();
   await page.getByRole("menuitem", { name: "Rename" }).click();

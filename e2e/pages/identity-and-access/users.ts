@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { openIam } from "../../support/os-helpers";
 
 function usersEmptyState(page: Page) {
@@ -36,32 +36,46 @@ export async function searchUsersFlow(page: Page) {
   await waitForUsersListSettledFlow(page);
 }
 
-export async function filterByCreatedDateFlow(page: Page) {
-  // UsersDateFilters now renders with displayMode="sheet" (fe/oidc-template),
-  // so org/role/date controls live inside a closed-by-default Sheet at every
-  // breakpoint instead of sitting inline on the page — open it first via its
-  // "Filters" trigger.
+export async function filterByOrganizationThenRolesFlow(page: Page, organizationName: string) {
   const filtersTrigger = page.getByRole("button", { name: "Filters" });
   await expect(filtersTrigger).toBeVisible({ timeout: 5_000 });
   await filtersTrigger.click();
 
-  // Filter sheet label is "Created On" (users-filter-toolbar); the table
-  // column is "Created on". Match both.
-  const createdDateButton = page.getByRole("button", { name: /^Created on$/i });
+  const sheet = page.getByRole("dialog", { name: "Filters" });
+  await expect(sheet).toBeVisible({ timeout: 8_000 });
+
+  const orgFilter = sheet.getByRole("button", { name: /^Organizations/ });
+  const rolesFilter = sheet.getByRole("button", { name: /^Roles/ });
+  await expect(orgFilter).toBeVisible({ timeout: 8_000 });
+  await expect(rolesFilter).toBeVisible({ timeout: 5_000 });
+  await expect(rolesFilter).toBeDisabled();
+
+  await orgFilter.click();
+  const orgSearch = page.getByPlaceholder("Organizations");
+  await expect(orgSearch).toBeVisible({ timeout: 5_000 });
+  await orgSearch.fill(organizationName);
+  const orgOption = page.getByRole("option", { name: organizationName, exact: true });
+  await expect(orgOption).toBeVisible({ timeout: 10_000 });
+  await orgOption.click();
+  await page.keyboard.press("Escape");
+
+  await expect(rolesFilter).toBeEnabled({ timeout: 10_000 });
+  await rolesFilter.click();
+  await expect(page.getByPlaceholder("Roles")).toBeVisible({ timeout: 8_000 });
+  await page.keyboard.press("Escape");
+
+  const createdDateButton = sheet.getByRole("button", { name: /^Created on$/i });
   await expect(createdDateButton).toBeVisible({ timeout: 5_000 });
   await createdDateButton.click();
   const today = page.getByRole("gridcell", { selected: false }).first();
   if (await today.isVisible({ timeout: 3_000 })) {
     await today.click();
-    // DateRange only commits the pick to the parent filter state on Apply —
-    // picking a day alone leaves the popover open with nothing applied.
     await page.getByRole("button", { name: "Apply" }).click();
   } else {
     await page.keyboard.press("Escape");
   }
 
-  // Close the filter sheet the same way a user would.
-  const showResults = page.getByRole("button", { name: "Show Results" });
+  const showResults = sheet.getByRole("button", { name: "Show Results" });
   if (await showResults.isVisible({ timeout: 3_000 })) {
     await showResults.click();
   } else {
@@ -81,10 +95,12 @@ export async function sortUsersByNameFlow(page: Page) {
   }
   const nameHeader = usersNameSortHeader(page);
   await expect(nameHeader).toBeVisible({ timeout: 5_000 });
-  await nameHeader.click();
-  await expect(page).toHaveURL(/sort-property=FirstName/, { timeout: 8_000 });
+  // Name is the default sort, so nuqs omits sort-property=FirstName from the URL.
+  // The first click only flips the default ascending sort to descending.
   await nameHeader.click();
   await expect(page).toHaveURL(/sort-isDescending=true/, { timeout: 8_000 });
+  await nameHeader.click();
+  await expect(page).not.toHaveURL(/sort-isDescending=true/, { timeout: 8_000 });
 }
 
 export async function openInviteUserDialogFlow(page: Page) {
@@ -102,26 +118,48 @@ export async function inviteEmailValidationFlow(page: Page) {
   await expect(page.getByText("Please enter a valid email address")).toBeVisible();
 }
 
-export async function sendInviteFlow(page: Page, inviteEmail: string) {
-  const inviteDialog = page.getByRole("dialog").filter({ hasText: "Invite User" });
-  await inviteDialog.getByPlaceholder("name@company.com").fill(inviteEmail);
+async function selectInviteOrganization(page: Page, inviteDialog: Locator, organizationName?: string) {
   const orgTrigger = inviteDialog.getByRole("combobox");
   const orgComboboxVisible = await orgTrigger.isVisible({ timeout: 8_000 });
-  if (orgComboboxVisible) {
-    const orgAlreadyDefault = await orgTrigger.getByText("Default", { exact: true }).isVisible();
-    if (!orgAlreadyDefault) {
-      await orgTrigger.click();
-      const defaultOrg = page.getByRole("option", { name: "Default", exact: true });
-      if (await defaultOrg.isVisible({ timeout: 8_000 })) {
-        await defaultOrg.click();
-      } else {
-        const firstOrg = page.getByTestId("organization-options-list").getByRole("option").first();
-        await expect(firstOrg).toBeVisible({ timeout: 8_000 });
-        await firstOrg.click();
-      }
+  if (!orgComboboxVisible) {
+    if (organizationName) {
+      throw new Error(
+        `Invite User dialog has no organization picker — cannot assign "${organizationName}".`,
+      );
     }
-    await expect(orgTrigger).not.toHaveText("Select organization", { timeout: 5_000 });
+    return;
   }
+
+  const targetName = organizationName ?? "Default";
+  const alreadySelected = await orgTrigger.getByText(targetName, { exact: true }).isVisible();
+  if (!alreadySelected) {
+    await orgTrigger.click();
+    const search = page.getByPlaceholder("Search organizations...");
+    if (await search.isVisible({ timeout: 3_000 })) {
+      await search.fill(targetName);
+    }
+    const option = page.getByRole("option", { name: targetName, exact: true });
+    if (await option.isVisible({ timeout: 8_000 })) {
+      await option.click();
+    } else if (!organizationName) {
+      const firstOrg = page.getByTestId("organization-options-list").getByRole("option").first();
+      await expect(firstOrg).toBeVisible({ timeout: 8_000 });
+      await firstOrg.click();
+    } else {
+      throw new Error(`Organization "${organizationName}" not in Invite User picker.`);
+    }
+  }
+
+  await expect(orgTrigger).not.toHaveText("Select organization", { timeout: 5_000 });
+  if (organizationName) {
+    await expect(orgTrigger).toContainText(organizationName, { timeout: 5_000 });
+  }
+}
+
+export async function sendInviteFlow(page: Page, inviteEmail: string, organizationName?: string) {
+  const inviteDialog = page.getByRole("dialog").filter({ hasText: "Invite User" });
+  await inviteDialog.getByPlaceholder("name@company.com").fill(inviteEmail);
+  await selectInviteOrganization(page, inviteDialog, organizationName);
 
   const sendButton = inviteDialog.getByRole("button", { name: /Send invite|Grant access/ });
   await expect(sendButton).toBeEnabled({ timeout: 15_000 });

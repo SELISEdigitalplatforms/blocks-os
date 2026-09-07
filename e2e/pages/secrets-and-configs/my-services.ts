@@ -2,7 +2,11 @@ import { type Locator, type Page, expect } from "@playwright/test";
 import { openSecretManagement } from "../../support/os-helpers";
 
 export async function findServiceTriggerFlow(page: Page, name: string): Promise<Locator> {
-  const trigger = page.getByRole("button", { name: new RegExp(name) });
+  // AccordionTrigger is a button that also wraps Logs/Traces buttons. Scope to
+  // the trigger that contains the service heading so those nested buttons
+  // don't steal the accessible name match.
+  const heading = page.getByRole("heading", { name, exact: true });
+  const trigger = page.getByRole("button").filter({ has: heading });
   const nextPageButton = page.locator("button:has(svg.lucide-chevron-right)").first();
 
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -22,9 +26,9 @@ export async function navigateToMyServicesFlow(page: Page) {
 }
 
 export async function verifyEmptyStateFlow(page: Page) {
-  if (await page.getByText("No services yet").isVisible({ timeout: 10000 })) {
-    await expect(page.getByText("No services yet")).toBeVisible();
-  }
+  const empty = page.getByText("No services yet");
+  const serviceHeading = page.getByRole("heading", { level: 3 });
+  await expect(empty.or(serviceHeading.first())).toBeVisible({ timeout: 20_000 });
 }
 
 export async function openRegisterServiceDialogFlow(page: Page) {

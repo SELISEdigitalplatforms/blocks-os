@@ -7,11 +7,24 @@ export async function navigateToIdentityProvidersFlow(page: Page) {
 
 /** The "Enterprise & custom" gallery section, which holds the Blocks OIDC / BYOS cards. */
 function enterpriseSection(page: Page) {
-  return page.getByRole("heading", { name: "Enterprise & custom" }).locator("..");
+  return page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Enterprise & custom" }),
+  });
+}
+
+/** Banner-only. Without exact, Playwright also matches "Save Changes". */
+function changeBannerButton(page: Page) {
+  return page.getByRole("dialog").getByRole("button", { name: "Change", exact: true });
 }
 
 export async function verifyEmptyStateFlow(page: Page) {
-  await expect(page.getByText("How a federated sign-in works")).toBeVisible({ timeout: 10000 });
+  const gallery = page.getByText("How a federated sign-in works");
+  const loadError = page.getByText("Couldn't load identity providers");
+  await expect(gallery.or(loadError)).toBeVisible({ timeout: 20_000 });
+  if (await loadError.isVisible()) {
+    throw new Error("Identity Provider gallery never rendered — providers request failed.");
+  }
+  await expect(gallery).toBeVisible();
   await expect(page.getByText("Social logins")).toBeVisible();
   await expect(page.getByText("Enterprise & custom")).toBeVisible();
   // Nothing configured yet, so no entries are listed inside the enterprise cards.
@@ -21,7 +34,7 @@ export async function verifyEmptyStateFlow(page: Page) {
 export async function openGoogleGalleryCardFlow(page: Page, { cancel = true } = {}) {
   await page.getByRole("button", { name: "Configure Google" }).click();
   await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Change" })).toBeVisible();
+  await expect(changeBannerButton(page)).toBeVisible();
   await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeVisible();
   await expect(page.getByRole("dialog").getByText(/Google Cloud Console/)).toBeVisible();
   if (cancel) {
@@ -40,8 +53,8 @@ export async function openEnterpriseGalleryCardFlow(
     .getByRole("button", { name: `Add ${cardLabel}`, exact: true })
     .click();
   await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Change" })).toBeVisible();
-  await expect(page.getByRole("dialog").getByText(cardLabel, { exact: true })).toBeVisible();
+  await expect(changeBannerButton(page)).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(cardLabel, { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeHidden({
@@ -50,8 +63,8 @@ export async function openEnterpriseGalleryCardFlow(
 }
 
 export async function changeProviderPickFlow(page: Page) {
-  await page.getByRole("dialog").getByRole("button", { name: "Change" }).click();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Change" })).toBeHidden();
+  await changeBannerButton(page).click();
+  await expect(changeBannerButton(page)).toBeHidden();
   await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeHidden();
   // Provider Name is back to unset, matching the page-level "Add" button's blank dialog.
   await expect(page.getByRole("dialog").getByText("Select a provider")).toBeVisible();
@@ -62,7 +75,7 @@ export async function pickManualBlocksOidcHelpFlow(page: Page) {
   await providerTypeSelect.click();
   await page.getByRole("option", { name: "Blocks OIDC" }).click();
   await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeVisible();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Change" })).toBeHidden();
+  await expect(changeBannerButton(page)).toBeHidden();
   await expect(page.locator("#generatedWellKnownUrl")).toBeVisible();
 }
 
@@ -167,10 +180,11 @@ export async function expandProviderRowKvFlow(
   providerRow: ReturnType<Page["getByRole"]>,
 ) {
   await providerRow.click();
-  if (
-    await page.getByText("Client Id").or(page.getByText("Client ID")).isVisible({ timeout: 10000 })
-  ) {
-    await expect(page.getByText("Client Id").or(page.getByText("Client ID"))).toBeVisible();
+  const clientIdLabel = providerRow
+    .getByText("Client Id", { exact: true })
+    .or(providerRow.getByText("Client ID", { exact: true }));
+  if (await clientIdLabel.isVisible({ timeout: 10000 })) {
+    await expect(clientIdLabel).toBeVisible();
   }
 }
 
@@ -188,7 +202,10 @@ export async function openEditIdentityProviderFlow(
   await expect(page.getByPlaceholder("my-identity-provider")).toBeDisabled();
   await expect(page.getByPlaceholder("Enter client ID")).toBeDisabled();
   await expect(page.getByPlaceholder("••••••••••••")).toHaveValue("");
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Change" })).toBeHidden();
+  await expect(changeBannerButton(page)).toBeHidden();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Save Changes", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeHidden();
   await page.getByRole("button", { name: "Cancel" }).click();
 }

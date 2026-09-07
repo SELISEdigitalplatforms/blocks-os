@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { e2eDebugLog } from "../../support/env";
 import { openSecretManagement } from "../../support/os-helpers";
 
 export async function navigateToStorageFlow(page: Page) {
@@ -50,7 +51,7 @@ export async function saveDialogAndConfirmClosedFlow(
     .getByRole("heading", { name: "Add Storage Configuration" })
     .isHidden({ timeout: 15000 });
   if (!closed) {
-    console.log(
+    e2eDebugLog(
       `[storage-flow] [${providerLabel}] Save did not close the dialog — backend may have rejected this fake-test-credential configuration. Force-closing to continue.`,
     );
     await page.keyboard.press("Escape");
@@ -97,6 +98,10 @@ export async function verifyAwsRequiredFieldsFlow(page: Page, awsName: string) {
 }
 
 export async function fillAndSaveAwsFlow(page: Page, awsName: string): Promise<boolean> {
+  const nameField = page.getByPlaceholder("Enter name");
+  if (!(await nameField.inputValue())) {
+    await nameField.fill(awsName);
+  }
   await page.getByPlaceholder("Enter access key").fill("AKIA_TEST_KEY");
   await page.getByPlaceholder("Enter secret key").fill("test-secret-value");
   await page.getByPlaceholder("Enter region endpoint").fill("us-east-1");
@@ -306,11 +311,11 @@ export async function verifyCardClickRegressionGuardFlow(page: Page, s3Compatibl
     .isVisible();
 
   if (urlAfterClick === urlBeforeClick && !detailsHeadingVisible) {
-    console.log(
+    e2eDebugLog(
       "[storage-flow] Provider card is NOT triggering on click — onClick is still unwired in storage-contents.tsx.",
     );
   } else {
-    console.log(
+    e2eDebugLog(
       "[storage-flow] Provider card IS triggering on click now — rewrite this flow's card-click step to follow it into whatever view it now opens.",
     );
   }

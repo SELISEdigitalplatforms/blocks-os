@@ -15,16 +15,18 @@ export async function navigateToPeopleFlow(page: Page) {
 }
 
 export async function verifyOwnerVisibleFlow(page: Page) {
-  if (!(await page.getByText("Owner").first().isVisible({ timeout: 15000 }))) {
+  const ownerBadge = page.getByText("Owner", { exact: true }).first();
+  const invite = page.getByRole("button", { name: "Invite" });
+  if (!(await ownerBadge.isVisible({ timeout: 15_000 }))) {
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "People" })).toBeVisible({
-      timeout: 30000,
-    });
-    await expect(page.getByRole("button", { name: "Invite" })).toBeVisible({
-      timeout: 30000,
+      timeout: 30_000,
     });
   }
-  await expect(page.getByText("Owner").first()).toBeVisible({ timeout: 20000 });
+  await expect(invite).toBeVisible({ timeout: 30_000 });
+  // Owner display name/email can be "null" / "-" on a fresh project (product
+  // bug). The role badge is the contract, not a hydrated profile.
+  await expect(ownerBadge).toBeVisible({ timeout: 20_000 });
 }
 
 export async function exercisePaginationFlow(page: Page): Promise<boolean> {
@@ -94,7 +96,7 @@ export async function sendInviteFlow(page: Page, inviteEmail: string) {
 
   await envTrigger.click();
   const developmentOption = page.getByRole("option", { name: "Development" });
-  await expect(developmentOption).toBeVisible({ timeout: 10000 });
+  await expect(developmentOption).toBeVisible({ timeout: 20_000 });
   for (let attempt = 0; attempt < 3; attempt++) {
     await developmentOption.click();
     if (await envTrigger.getByText("Development", { exact: true }).isVisible()) {
