@@ -245,7 +245,12 @@ export async function removeEnvironmentAccessFlow(page: Page): Promise<boolean> 
     return false;
   }
   await removeButton.click();
-  await expect(page.getByText("Remove Access")).toBeVisible({ timeout: 10000 });
+  // Strict: a hidden "Remove access" icon label also sits in the DOM behind
+  // the dialog, and getByText's default case-insensitive match collides with
+  // it — scope to the dialog's heading role to disambiguate.
+  await expect(page.getByRole("heading", { name: "Remove Access", exact: true })).toBeVisible({
+    timeout: 10000,
+  });
   await page.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
     page

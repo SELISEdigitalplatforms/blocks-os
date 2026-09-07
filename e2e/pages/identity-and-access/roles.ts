@@ -199,10 +199,15 @@ export async function saveEditPermissionsFlow(page: Page) {
   }
 
   // Strict: a successful save MUST surface the permissions-updated toast.
-  // The toast text also gets echoed into an aria-live status span, so
-  // use exact:true to disambiguate from the slightly different status text.
+  // The toast text also gets echoed into an aria-live status span, so anchor
+  // the pattern to disambiguate from the slightly different status text.
+  // Wording depends on whether multi-organization mode is active in this
+  // session (see organizations.ts's enableMultiOrgFlow): a single-org project
+  // says "...updated successfully", while applying to all organizations
+  // (the "Apply to all organizations" branch above) says "...updated across
+  // all organizations" instead.
   await expect(
-    page.getByText("Role permissions updated successfully", { exact: true }),
+    page.getByText(/^Role permissions updated (successfully|across all organizations)$/),
   ).toBeVisible({ timeout: 15_000 });
   await expect(editPermissionsButton).toBeVisible({ timeout: 15_000 });
 }

@@ -1,22 +1,35 @@
-import fs from "fs"
 import { chromium } from "@playwright/test"
 import {
   deleteCreatedProject,
   listE2eProjectNamesOnConsole,
+  openNamedProjectDashboard,
 } from "./support/create-and-delete-project"
-import { ensureAuthenticated } from "./support/login-helper"
-import { clearOsProject, clearOsSession, OS_SESSION_PATH, readOsProject } from "./support/os-project"
+import { loginFresh } from "./support/login-helper"
+import { clearOsProject, clearOsSession, readOsProject } from "./support/os-project"
+import { releaseRunLock } from "./support/run-lock"
 import { shouldDeleteSharedProject } from "./support/run-outcome"
-import { refreshSuiteSession } from "./support/session-lifecycle"
 
 /**
  * After every suite run (pass or fail), delete each environment by opening
  * `/app/{itemId}/dashboard` directly (no console chip clicks). Env ids come
  * from fixtures/os-project.json (recorded at create / add-env) or Project/Gets.
  *
+ * Starts from an empty browser context and a real OIDC login. Reusing the
+ * suite's storageState here is what used to fail teardown: the access token
+ * is often already expired (see session-lifecycle.ts), but the console HTML
+ * still paints, so loginFresh skipped OIDC and every delete API then 401'd.
+ *
  * Opt out only with E2E_KEEP_PROJECT=1.
  */
 export default async function globalTeardown() {
+  try {
+    await runTeardown()
+  } finally {
+    releaseRunLock()
+  }
+}
+
+async function runTeardown() {
   const fixture = readOsProject()
   if (!fixture && process.env.E2E_KEEP_PROJECT === "1") {
     console.log("[e2e] Teardown: no fixture and E2E_KEEP_PROJECT=1 — skipping.")
@@ -32,24 +45,22 @@ export default async function globalTeardown() {
 
   const browser = await chromium.launch()
   try {
-    const context = await browser.newContext({
-      ignoreHTTPSErrors: true,
-      ...(fs.existsSync(OS_SESSION_PATH) ? { storageState: OS_SESSION_PATH } : {}),
-    })
+    const context = await browser.newContext({ ignoreHTTPSErrors: true })
     const page = await context.newPage()
 
-    try {
-      if (fixture?.projectName) {
-        await refreshSuiteSession(page)
-      } else {
-        await ensureAuthenticated(page)
+    await loginFresh(page)
+
+    // Seed project/environment localStorage from the console card so later
+    // `/app/{itemId}/dashboard` navigations actually land on Overview.
+    if (fixture?.projectName) {
+      try {
+        await openNamedProjectDashboard(page, fixture.projectName)
+      } catch (error) {
+        console.warn(
+          "[e2e] Teardown: could not reseed project dashboard — continuing from console:",
+          error instanceof Error ? error.message : error,
+        )
       }
-    } catch (error) {
-      console.warn(
-        "[e2e] Teardown: refreshSuiteSession failed — falling back to ensureAuthenticated:",
-        error instanceof Error ? error.message : error,
-      )
-      await ensureAuthenticated(page)
     }
 
     const namesToDelete = new Set<string>()

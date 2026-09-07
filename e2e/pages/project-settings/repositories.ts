@@ -17,33 +17,18 @@ export async function verifyEmptyStateFlow(page: Page) {
 export type RepositoryDialogKind = "connect" | "select";
 
 export async function openAddRepositoryDialogFlow(page: Page): Promise<RepositoryDialogKind> {
-  await expect(page.getByRole("button", { name: "Add" })).toBeVisible({ timeout: 15000 });
+  const addButton = page.getByRole("button", { name: "Add repository" });
+  await expect(addButton).toBeVisible({ timeout: 15_000 });
+  await addButton.click();
 
-  // Genuine hang in the auth check would otherwise surface as a bare
-  // heading-visibility timeout; observe the round trip directly so the
-  // diagnostic is clear.
-  const authCheckPromise = page
-    .waitForResponse((response) => /\/release\/isAuthorized\/?$/i.test(response.url()), {
-      timeout: 45000,
-    })
-    .catch(() => null);
-
-  await page.getByRole("button", { name: "Add" }).click();
-
-  const authCheckResponse = await authCheckPromise;
-  if (!authCheckResponse) {
-    throw new Error(
-      "GET .../release/isAuthorized never completed within 45s after clicking 'Add repository' " +
-        "— the GitHub-authorization check this depends on is unresponsive.",
-    );
-  }
-
+  // Click runs refetchAuthorization() and then opens Connect (not authorized)
+  // or Select (already authorized). useValidateAuthorization() also fetches
+  // isAuthorized on page mount — waiting for that URL after click can resolve
+  // on the leftover mount request, then Promise.race(15s) loses while the
+  // click's refetch is still in flight. Wait for the dialog the click opens.
   const connectHeading = page.getByRole("heading", { name: "Connect repository" });
   const selectHeading = page.getByRole("heading", { name: "Select repository" });
-  await Promise.race([
-    connectHeading.waitFor({ state: "visible", timeout: 15000 }),
-    selectHeading.waitFor({ state: "visible", timeout: 15000 }),
-  ]);
+  await expect(connectHeading.or(selectHeading)).toBeVisible({ timeout: 45_000 });
 
   return (await connectHeading.isVisible()) ? "connect" : "select";
 }

@@ -11,22 +11,24 @@
 import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { orderedSuiteSpecs } from "../features.mjs"
 
 const e2eDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const forwardedArgs = process.argv.slice(2)
 
-// "snapshot-capture" isn't a correctness test (see playwright.config.ts) and
-// is only meant to run on demand via `npm run snapshots:capture` — a bare
-// `playwright test` still runs every declared project unless told
-// otherwise, so default to the real test projects here too, unless the
-// caller already picked project(s) of their own.
-const DEFAULT_PROJECTS = ["setup", "os-setup", "os"]
+const looksLikeSpecArg = (arg) =>
+  arg.endsWith(".spec.ts") || arg.startsWith("tests/") || arg.startsWith("e2e/tests/")
+
 const hasOwnProjectFilter = forwardedArgs.some((arg) => arg === "--project" || arg.startsWith("--project="))
+const hasSpecFilter = forwardedArgs.some(looksLikeSpecArg)
+
+const DEFAULT_PROJECTS = ["setup", "os-setup", "os"]
 const projectArgs = hasOwnProjectFilter
   ? []
-  : DEFAULT_PROJECTS.flatMap((name) => ["--project", name])
+  : DEFAULT_PROJECTS.map((name) => `--project=${name}`)
+const specArgs = hasSpecFilter ? [] : orderedSuiteSpecs()
 
-const playwrightRun = spawnSync("npx", ["playwright", "test", ...projectArgs, ...forwardedArgs], {
+const playwrightRun = spawnSync("npx", ["playwright", "test", ...forwardedArgs, ...projectArgs, ...specArgs], {
   cwd: e2eDir,
   stdio: "inherit",
   shell: process.platform === "win32",

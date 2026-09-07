@@ -52,14 +52,16 @@ export async function addTemplateFlow(page: Page) {
   await expect(page.getByRole("heading", { name: "Template design" })).toBeVisible();
 
   // ---------- Step 2 UI ----------
-  // The Bee editor iframe is rendered in the DOM. We don't try to drive it
-  // (drag/drop content-block insertion is plugin-version dependent and too
-  // fragile for e2e).
-  const beeEditor = page
-    .locator("#bee-plugin-container, #bee-plugin-container__bee-plugin-frame")
-    .first();
-  await expect(beeEditor).toBeAttached();
-  await expect(page.getByRole("button", { name: "Preview" })).toBeVisible();
+  // The template body is built with the MailCraft editor, a custom element
+  // (<mailcraft-editor>, from @seliseblocks/mailcraft) mounted client-side —
+  // not the legacy BEE plugin iframe this used to assert on. We don't try to
+  // drive it (drag/drop content-block insertion is editor-version dependent
+  // and too fragile for e2e).
+  const mailcraftEditor = page.locator("mailcraft-editor").first();
+  await expect(mailcraftEditor).toBeAttached();
+  // "Preview" also substring-matches the toolbar's "Edit the raw HTML with a
+  // live preview" (Code) button — use the full aria-label to disambiguate.
+  await expect(page.getByRole("button", { name: "Preview the email" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save template" })).toBeVisible();
 
   // ---------- Abandon wizard — back to Email Management ----------

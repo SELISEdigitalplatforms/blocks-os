@@ -113,7 +113,10 @@ beforeEach(() => {
   globalThis.URL.revokeObjectURL = vi.fn();
 });
 
-describe("OidcBrandingForm", () => {
+// The live preview re-renders on every draft keystroke. Under a busy jsdom
+// worker that exceeds the default 5s budget even though the same cases pass
+// in isolation in ~2s.
+describe("OidcBrandingForm", { timeout: 15_000 }, () => {
   it("preserves the loading and GET-unavailable states", () => {
     h.useGetOidcTemplate.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     const { container, unmount } = renderOidcForm();

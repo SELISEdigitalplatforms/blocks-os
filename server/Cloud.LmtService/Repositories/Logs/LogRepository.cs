@@ -81,10 +81,21 @@ namespace Cloud.LmtService.Repositories.Logs
 
             var logs = await Task.WhenAll(logTasks);
 
-            return logs
+            var liveLogs = logs
                 .SelectMany(result => result.Logs)
                 .OrderByDescending(log => log.Timestamp)
-                .AsQueryable();
+                .ToList();
+
+            // Stack traces are withheld from the live tail on purpose. This query runs with no
+            // result limit and the client polls it every few seconds, so carrying kilobyte-sized
+            // traces here would dwarf every other response in the module. The paged endpoints
+            // (GetLogs / GetLogsByDate) return the trace, and that is where the UI expands it.
+            foreach (var log in liveLogs)
+            {
+                log.Exception = string.Empty;
+            }
+
+            return liveLogs.AsQueryable();
         }
 
         public async Task<(IQueryable<LogProjection>, long)> GetLogs(GetLogsRequest query)

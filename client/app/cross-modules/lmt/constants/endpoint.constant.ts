@@ -30,6 +30,7 @@ export const RESTORE_ENDPOINTS = {
   GET_TRACE_STATUS: `/api${RESTORE_SUBPATH}/Status`,
   GET_RESTORED_TRACES: `/api${RESTORE_SUBPATH}/GetRestoredTraces`,
   GET_RESTORED_TRACE: `/api${RESTORE_SUBPATH}/GetRestoredTrace`,
+  GET_RESTORED_LOGS: `/api${RESTORE_SUBPATH}/GetRestoredLogs`,
   GET_RESTORED_LOGS_BY_TRACE: `/api${RESTORE_SUBPATH}/GetRestoredLogsByTrace`,
   GET_RESTORED_DATA_RETENTION_DAYS: `/api${RESTORE_SUBPATH}/GetHotDataBlobUploadInDays`,
 } as const;
