@@ -48,22 +48,36 @@ const baseProps = {
 };
 
 describe("IdentityProviderGallery", () => {
-  it("shows How it works only when there is nothing configured yet", () => {
+  it("shows the federated sign-in explainer only when there is nothing configured yet", () => {
     const { rerender } = render(<IdentityProviderGallery {...baseProps} showHowItWorks />);
-    expect(screen.getByText("How it works")).toBeTruthy();
+    expect(screen.getByText("How a federated sign-in works")).toBeTruthy();
+    expect(screen.getByText("Your user")).toBeTruthy();
+    expect(screen.getByText("Blocks OS")).toBeTruthy();
+    expect(screen.getByText("Identity provider")).toBeTruthy();
 
     rerender(<IdentityProviderGallery {...baseProps} showHowItWorks={false} />);
-    expect(screen.queryByText("How it works")).toBeNull();
+    expect(screen.queryByText("How a federated sign-in works")).toBeNull();
   });
 
-  it("always renders both gallery sections", () => {
+  it("always renders both gallery sections, with their hint copy", () => {
     render(<IdentityProviderGallery {...baseProps} />);
     expect(screen.getByText("Social logins")).toBeTruthy();
+    expect(
+      screen.getByText("Pick a provider to configure it — no forms to hunt through."),
+    ).toBeTruthy();
     expect(screen.getByText("Enterprise & custom")).toBeTruthy();
+    expect(screen.getByText("For providers that aren't a public social login.")).toBeTruthy();
     expect(screen.getByText("Google")).toBeTruthy();
     expect(screen.getByText("Microsoft")).toBeTruthy();
     expect(screen.getByText("Blocks OIDC")).toBeTruthy();
     expect(screen.getByText("Bring your own SSO")).toBeTruthy();
+  });
+
+  it("shows capability tags on each social card", () => {
+    render(<IdentityProviderGallery {...baseProps} />);
+    expect(screen.getByText("OAuth 2.0 / OIDC")).toBeTruthy();
+    expect(screen.getByText("Entra ID")).toBeTruthy();
+    expect(screen.getAllByText("Client ID + Secret")).toHaveLength(2);
   });
 
   it("shows Not configured + Configure for an unconfigured social provider", async () => {

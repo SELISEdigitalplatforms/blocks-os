@@ -72,7 +72,7 @@ export const SECRET_MANAGEMENT_NAV_GROUPS: NavGroup[] = [
         label: "Identity Provider",
         value: "identity-providers",
         icon: Building2,
-        desc: "Federated external identity providers",
+        desc: "Let people sign in to your app with accounts they already have.",
       },
       {
         id: "sso",
