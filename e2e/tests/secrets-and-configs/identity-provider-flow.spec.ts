@@ -2,6 +2,8 @@ import { test } from "../../support/test-base";
 import {
   addAndRemoveRedirectUriRowFlow,
   cancelIdentityProviderDialogFlow,
+  changeProviderPickFlow,
+  closeDialogFlow,
   createByosProviderFlow,
   deleteIdentityProviderFlow,
   disableAndReenableProviderFlow,
@@ -11,6 +13,7 @@ import {
   openEditIdentityProviderFlow,
   openEnterpriseGalleryCardFlow,
   openGoogleGalleryCardFlow,
+  pickManualBlocksOidcHelpFlow,
   reloadAndFindProviderRowFlow,
   verifyAddProviderDisabledFlow,
   verifyBlocksOidcWellKnownUrlFlow,
@@ -30,11 +33,27 @@ test.describe("flows", () => {
       await verifyEmptyStateFlow(page);
     });
 
-    await test.step("Clicking the Google gallery card opens the dialog preset to Social/Google", async () => {
-      await openGoogleGalleryCardFlow(page);
+    await test.step("Clicking the Google gallery card opens the dialog with a pre-fill banner and help", async () => {
+      await openGoogleGalleryCardFlow(page, { cancel: false });
     });
 
-    await test.step("Clicking the Blocks OIDC gallery card opens a blank add dialog preset to it", async () => {
+    await test.step("Change clears the banner/help and resets to the blank dialog state", async () => {
+      await changeProviderPickFlow(page);
+    });
+
+    await test.step("Manually picking Blocks OIDC shows its help box without a banner", async () => {
+      await pickManualBlocksOidcHelpFlow(page);
+    });
+
+    await test.step("Close this dialog", async () => {
+      await closeDialogFlow(page);
+    });
+
+    await test.step("Clicking the Blocks OIDC gallery card opens a blank add dialog preset to it, with its own banner/help", async () => {
+      await openEnterpriseGalleryCardFlow(page, "Blocks OIDC");
+    });
+
+    await test.step("Reopening the Blocks OIDC gallery card shows the banner again (not permanently dismissed)", async () => {
       await openEnterpriseGalleryCardFlow(page, "Blocks OIDC");
     });
 

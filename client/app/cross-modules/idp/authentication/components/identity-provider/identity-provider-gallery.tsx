@@ -129,7 +129,12 @@ function EnterpriseProviderCard({
   return (
     <Card>
       <CardContent className="flex items-start gap-3 p-4">
-        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", cfg.iconBg)}>
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+            cfg.iconBg,
+          )}
+        >
           <Icon className={cn("h-5 w-5", cfg.iconColor)} />
         </div>
         <div className="min-w-0 flex-1">
@@ -170,7 +175,8 @@ export function IdentityProviderGallery({
   onSelectByos,
 }: IdentityProviderGalleryProps) {
   const byosDescription =
-    SOCIAL_AUTH_PROVIDERS_CONFIG[SSO_PROVIDERS.ownsso]?.description ?? "Bring your own SSO provider";
+    SOCIAL_AUTH_PROVIDERS_CONFIG[SSO_PROVIDERS.ownsso]?.description ??
+    "Bring your own SSO provider";
 
   return (
     <div className="space-y-6">

@@ -16,8 +16,7 @@ type Props = {
 };
 
 type GalleryPick =
-  | { kind: "add"; providerType: string; provider?: string }
-  | { kind: "edit"; editId: string };
+  { kind: "add"; providerType: string; provider?: string } | { kind: "edit"; editId: string };
 
 function LoadError({ onRetry }: { onRetry: () => void }) {
   return (
@@ -50,9 +49,7 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
   const [galleryPick, setGalleryPick] = useState<GalleryPick | null>(null);
 
   const hasAnyProvider = providers.length > 0;
-  const googleEntry = providers.find(
-    (p) => p.providerType === "social" && p.provider === "google",
-  );
+  const googleEntry = providers.find((p) => p.providerType === "social" && p.provider === "google");
   const microsoftEntry = providers.find(
     (p) => p.providerType === "social" && p.provider === "microsoft",
   );

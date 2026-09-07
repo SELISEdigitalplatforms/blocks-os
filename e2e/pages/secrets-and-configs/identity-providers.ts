@@ -12,14 +12,18 @@ export async function verifyEmptyStateFlow(page: Page) {
   await expect(page.getByText("Configured providers")).toHaveCount(0);
 }
 
-export async function openGoogleGalleryCardFlow(page: Page) {
+export async function openGoogleGalleryCardFlow(page: Page, { cancel = true } = {}) {
   await page.getByRole("button", { name: "Configure Google" }).click();
   await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
-  await expect(page.getByRole("dialog").getByText("Google")).toBeVisible();
-  await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeHidden({
-    timeout: 10000,
-  });
+  await expect(page.getByRole("dialog").getByText("You picked Google")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(/Google Cloud Console/)).toBeVisible();
+  if (cancel) {
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeHidden({
+      timeout: 10000,
+    });
+  }
 }
 
 export async function openEnterpriseGalleryCardFlow(
@@ -27,8 +31,38 @@ export async function openEnterpriseGalleryCardFlow(
   cardLabel: "Blocks OIDC" | "Bring your own SSO",
 ) {
   const section = page.getByRole("heading", { name: "Enterprise & custom" }).locator("..");
-  await section.getByText(cardLabel, { exact: true }).locator("..").getByRole("button", { name: "Configure" }).click();
+  await section
+    .getByText(cardLabel, { exact: true })
+    .locator("..")
+    .getByRole("button", { name: "Configure" })
+    .click();
   await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(`You picked ${cardLabel}`)).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeHidden({
+    timeout: 10000,
+  });
+}
+
+export async function changeProviderPickFlow(page: Page) {
+  await page.getByRole("dialog").getByRole("button", { name: "Change" }).click();
+  await expect(page.getByRole("dialog").getByText(/You picked/)).toBeHidden();
+  await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeHidden();
+  // Provider Name is back to unset, matching the page-level "Add" button's blank dialog.
+  await expect(page.getByRole("dialog").getByText("Select a provider")).toBeVisible();
+}
+
+export async function pickManualBlocksOidcHelpFlow(page: Page) {
+  const providerTypeSelect = page.getByRole("dialog").getByRole("combobox").first();
+  await providerTypeSelect.click();
+  await page.getByRole("option", { name: "Blocks OIDC" }).click();
+  await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(/You picked/)).toBeHidden();
+  await expect(page.locator("#generatedWellKnownUrl")).toBeVisible();
+}
+
+export async function closeDialogFlow(page: Page) {
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeHidden({
     timeout: 10000,
@@ -144,6 +178,8 @@ export async function openEditIdentityProviderFlow(page: Page, providerRow: Retu
   await expect(page.getByPlaceholder("my-identity-provider")).toBeDisabled();
   await expect(page.getByPlaceholder("Enter client ID")).toBeDisabled();
   await expect(page.getByPlaceholder("••••••••••••")).toHaveValue("");
+  await expect(page.getByRole("dialog").getByText(/You picked/)).toBeHidden();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Change" })).toBeHidden();
   await page.getByRole("button", { name: "Cancel" }).click();
 }
 
