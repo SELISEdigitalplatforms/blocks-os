@@ -37,8 +37,14 @@ public interface ISecretService
     /// <summary>Reads metadata. Returns null when the secret does not exist in this tenant.</summary>
     Task<SecretResult?> GetAsync(string secretId, CancellationToken cancellationToken = default);
 
-    /// <summary>Lists metadata for the calling tenant.</summary>
+    /// <summary>Lists metadata for the calling tenant, optionally narrowed by tag.</summary>
     Task<SecretListResult> FindAsync(SecretFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The tenant's tag catalogue — what a tag picker offers. Carries no secret data, so it is
+    /// not audited.
+    /// </summary>
+    Task<IReadOnlyList<SecretTagEntry>> GetTagsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Reads a plaintext value. Always audited.</summary>
     /// <exception cref="SecretNotFoundException">No such secret in this tenant, or its value is gone from the vault.</exception>
@@ -52,7 +58,7 @@ public interface ISecretService
     /// </summary>
     Task<IReadOnlyDictionary<string, string>> GetValuesAsync(IReadOnlyCollection<string> secretIds, CancellationToken cancellationToken = default);
 
-    /// <summary>Updates name and description. Does not touch the value — use <see cref="RotateAsync"/>.</summary>
+    /// <summary>Updates name, description and tags. Does not touch the value — use <see cref="RotateAsync"/>.</summary>
     Task UpdateAsync(string secretId, UpdateSecretRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Replaces the stored value.</summary>

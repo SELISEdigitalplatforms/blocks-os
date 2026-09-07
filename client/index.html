@@ -26,6 +26,8 @@ Do NOT hardcode environment values here.
 NOTE: for local `vite` dev (served without the .NET host, so no
 replacement runs) temporarily fill in real DEV values, or provide
 them another way — but never commit real values back into this file.
+
+The one exception is BLOCKS_OS_BASE_URL: see the comment at that key.
 ========================================================= */
 
    window.__BLOCKS_ENV__ = {
@@ -49,7 +51,13 @@ them another way — but never commit real values back into this file.
     BLOCKS_DATA_BASE_URL: "__BLOCKS_DATA_BASE_URL__",
     BLOCKS_DATA_CALLBACK_URL: "__BLOCKS_DATA_CALLBACK_URL__",
     BLOCKS_DATA_CLIENT_ID: "__BLOCKS_DATA_CLIENT_ID__",
-    BLOCKS_OS_BASE_URL: "__BLOCKS_OS_BASE_URL__",
+    // Not a placeholder: the OS API serves this SPA from its own wwwroot, so the OS base URL is
+    // always the origin this page was loaded from. Deriving it here -- in a classic script, before
+    // any module executes -- is what lets a preview host (e.g. dev-os-546.blocksdevelopers.com)
+    // call its own backend instead of whatever host the shared environment secret names. It also
+    // covers consumers that read __BLOCKS_ENV__ / window.process.env directly, including
+    // @seliseblocks/genesis-os, which reads this key at module scope.
+    BLOCKS_OS_BASE_URL: window.location.origin,
     BLOCKS_OS_CALLBACK_URL: "__BLOCKS_OS_CALLBACK_URL__",
     BLOCKS_OS_CLIENT_ID: "__BLOCKS_OS_CLIENT_ID__",
     BLOCKS_UTILITIES_BASE_URL: "__BLOCKS_UTILITIES_BASE_URL__",

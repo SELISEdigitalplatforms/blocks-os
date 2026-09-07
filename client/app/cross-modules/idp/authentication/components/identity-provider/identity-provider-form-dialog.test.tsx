@@ -223,7 +223,9 @@ describe("IdentityProviderFormDialog", () => {
 
     // Existing redirect uris are hydrated into the form.
     await waitFor(() =>
-      expect(screen.getAllByDisplayValue(/^https?:\/\/app\.example\.com(?:\/.*)?$/)).toHaveLength(2),
+      expect(screen.getAllByDisplayValue(/^https?:\/\/app\.example\.com(?:\/.*)?$/)).toHaveLength(
+        2,
+      ),
     );
     const clientId = screen.getByPlaceholderText("Enter client ID") as HTMLInputElement;
     expect(clientId.value).toBe("client-abc");
@@ -335,35 +337,37 @@ describe("IdentityProviderFormDialog", () => {
         presetProvider="google"
       />,
     );
-    expect(screen.getByText("You picked Google")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change" })).toBeTruthy();
     expect(
       screen.getByText("Allow your users to seamlessly log in with their trusted Google Account."),
     ).toBeTruthy();
     expect(screen.getByText("Where do I find these?")).toBeTruthy();
     expect(screen.getByText(/Google Cloud Console/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Change" })).toBeTruthy();
   });
 
   it("H1/H2: shows the pre-fill banner and help box for a gallery-picked Blocks OIDC", () => {
     render(
       <IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="blocks-oidc" />,
     );
-    expect(screen.getByText("You picked Blocks OIDC")).toBeTruthy();
-    expect(screen.getByText("Federate against another Blocks project.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change" })).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Federate against another Blocks project. The discovery URL is filled in for you.",
+      ),
+    ).toBeTruthy();
     expect(screen.getByText(/OIDC issuer/)).toBeTruthy();
   });
 
   it("H3: shows the help box (but not the banner) for a manual pick with no gallery preset", async () => {
     const user = userEvent.setup();
     render(<IdentityProviderFormDialog open onOpenChange={vi.fn()} />);
-    expect(screen.queryByText(/You picked/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
 
     await user.click(screen.getByRole("combobox", { name: /Select Provider/i }));
     await user.click(await screen.findByRole("option", { name: "Blocks OIDC" }));
 
     expect(await screen.findByText(/OIDC issuer/)).toBeTruthy();
-    expect(screen.queryByText(/You picked/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
   });
 
   it("H4/C5: Change clears the banner/help box and resets to the blank-dialog state", async () => {
@@ -378,7 +382,6 @@ describe("IdentityProviderFormDialog", () => {
     );
     await user.click(screen.getByRole("button", { name: "Change" }));
 
-    expect(screen.queryByText(/You picked/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
     expect(screen.queryByText("Where do I find these?")).toBeNull();
     const submit = screen.getByRole("button", { name: "Add Provider" }) as HTMLButtonElement;
@@ -401,7 +404,7 @@ describe("IdentityProviderFormDialog", () => {
     await user.click(await screen.findByRole("option", { name: /Google/i }));
 
     expect(await screen.findByText(/Google Cloud Console/)).toBeTruthy();
-    expect(screen.queryByText(/You picked/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
   });
 
   it("H5/C4: edit mode never shows the banner, Change button, or help box, even with presets set", async () => {
@@ -416,7 +419,6 @@ describe("IdentityProviderFormDialog", () => {
       />,
     );
     await waitFor(() => expect(screen.getByText("Edit Identity Provider")).toBeTruthy());
-    expect(screen.queryByText(/You picked/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
     expect(screen.queryByText("Where do I find these?")).toBeNull();
   });
@@ -426,15 +428,15 @@ describe("IdentityProviderFormDialog", () => {
     const { rerender } = render(
       <IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="byos" />,
     );
-    expect(screen.getByText("You picked Bring your own SSO")).toBeTruthy();
+    expect(screen.getByText("Bring your own SSO")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Change" }));
-    expect(screen.queryByText(/You picked/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
 
     rerender(
       <IdentityProviderFormDialog open={false} onOpenChange={vi.fn()} presetProviderType="byos" />,
     );
     rerender(<IdentityProviderFormDialog open onOpenChange={vi.fn()} presetProviderType="byos" />);
 
-    expect(await screen.findByText("You picked Bring your own SSO")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Change" })).toBeTruthy();
   });
 });

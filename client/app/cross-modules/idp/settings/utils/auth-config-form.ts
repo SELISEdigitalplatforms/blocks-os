@@ -43,6 +43,7 @@ export const iamConfigFormSchema = z
     logoutOnPasswordChange: z.boolean(),
     isOidcEnabled: z.boolean(),
     passwordStrengthCheckerRegex: z.string(),
+    collectPasswordOnActivation: z.boolean(),
   })
   .superRefine((values, ctx) => {
     if (values.isOidcEnabled || values.accountActionBaseUrl.trim()) return;
@@ -89,6 +90,7 @@ export const toIamConfigFormValues = (config: {
   logoutOnPasswordChange: boolean;
   isOidcEnabled: boolean;
   passwordStrengthCheckerRegex: string;
+  collectPasswordOnActivation: boolean;
 }): IamConfigFormValues => ({
   accountActivationPath: config.accountActivationPath,
   accountVerificationPath: config.accountVerificationPath,
@@ -102,6 +104,7 @@ export const toIamConfigFormValues = (config: {
   logoutOnPasswordChange: config.logoutOnPasswordChange,
   isOidcEnabled: config.isOidcEnabled,
   passwordStrengthCheckerRegex: config.passwordStrengthCheckerRegex,
+  collectPasswordOnActivation: config.collectPasswordOnActivation,
 });
 
 /** Under OIDC the server builds action links from its own host, so the stored base URL is the
@@ -135,6 +138,7 @@ export const buildSavePayload = (
     recoverAccountUrlLifetimeInMinutes: number;
     logoutOnPasswordChange: boolean;
     passwordStrengthCheckerRegex: string;
+    collectPasswordOnActivation: boolean;
     allowedGrantTypes: string[];
   },
   overrides: Partial<{
@@ -156,6 +160,7 @@ export const buildSavePayload = (
     recoverAccountUrlLifetimeInMinutes: number;
     logoutOnPasswordChange: boolean;
     passwordStrengthCheckerRegex: string;
+    collectPasswordOnActivation: boolean;
     allowedGrantTypes: string[];
   }>,
 ) => ({
@@ -190,5 +195,7 @@ export const buildSavePayload = (
   logoutOnPasswordChange: overrides.logoutOnPasswordChange ?? config.logoutOnPasswordChange,
   passwordStrengthCheckerRegex:
     overrides.passwordStrengthCheckerRegex ?? config.passwordStrengthCheckerRegex,
+  collectPasswordOnActivation:
+    overrides.collectPasswordOnActivation ?? config.collectPasswordOnActivation,
   allowedGrantTypes: overrides.allowedGrantTypes ?? config.allowedGrantTypes,
 });

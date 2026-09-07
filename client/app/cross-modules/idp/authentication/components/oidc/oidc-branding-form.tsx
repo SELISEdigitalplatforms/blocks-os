@@ -13,6 +13,7 @@ import { ModuleName } from "@/constants/modules.constants";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import { useGetAuthConfig } from "@blocks-idp/authentication/hooks/use-auth-config";
 import { useOidcBrandingHeader } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import {
   useGetOidcTemplate,
@@ -212,6 +213,9 @@ export const OidcBrandingForm = () => {
   const { setActions } = useOidcBrandingHeader();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: template, isLoading, isError } = useGetOidcTemplate();
+  // The activation preview drops its password fields when the tenant has turned that
+  // step off, so what is previewed matches what users are served.
+  const { data: authConfig } = useGetAuthConfig({ projectKey: tenantId });
   const { mutateAsync: saveTemplate, isPending: isSaving } = useSaveOidcTemplate();
   const { mutateAsync: getPresignedUrl } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -876,6 +880,7 @@ export const OidcBrandingForm = () => {
                   previewMode={previewMode}
                   onPreviewModeChange={handlePreviewModeChange}
                   showAuto={editorTab !== "theme"}
+                  collectPasswordOnActivation={authConfig?.collectPasswordOnActivation}
                 />
               </div>
             </div>

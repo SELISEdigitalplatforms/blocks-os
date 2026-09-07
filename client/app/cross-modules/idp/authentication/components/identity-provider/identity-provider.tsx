@@ -6,9 +6,8 @@ import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import { useGetIdentityProviders } from "@blocks-idp/authentication/hooks/use-identity-provider";
-import { IdentityProviderList, LoadingSkeleton } from "./identity-provider-list";
 import { IdentityProviderFormDialog } from "./identity-provider-form-dialog";
-import { IdentityProviderGallery } from "./identity-provider-gallery";
+import { GallerySkeleton, IdentityProviderGallery } from "./identity-provider-gallery";
 
 type Props = {
   addOpen: boolean;
@@ -48,11 +47,12 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
 
   const [galleryPick, setGalleryPick] = useState<GalleryPick | null>(null);
 
-  const hasAnyProvider = providers.length > 0;
   const googleEntry = providers.find((p) => p.providerType === "social" && p.provider === "google");
   const microsoftEntry = providers.find(
     (p) => p.providerType === "social" && p.provider === "microsoft",
   );
+  const blocksOidcEntries = providers.filter((p) => p.providerType === "blocks-oidc");
+  const byosEntries = providers.filter((p) => p.providerType === "byos");
   const isGoogleConfigured = !!googleEntry;
   const isMicrosoftConfigured = !!microsoftEntry;
 
@@ -84,32 +84,20 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
   return (
     <div className="space-y-4">
       {isLoading ? (
-        <LoadingSkeleton />
+        <GallerySkeleton />
       ) : isError ? (
         <LoadError onRetry={() => refetch()} />
       ) : (
-        <>
-          {hasAnyProvider && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-high-emphasis">Configured providers</h2>
-                <span className="text-xs text-muted-foreground">
-                  {providers.length} provider{providers.length === 1 ? "" : "s"} active
-                </span>
-              </div>
-              <IdentityProviderList providers={providers} />
-            </div>
-          )}
-          <IdentityProviderGallery
-            showHowItWorks={!hasAnyProvider}
-            googleEntry={googleEntry}
-            microsoftEntry={microsoftEntry}
-            onSelectGoogle={() => handleSelectSocial("google")}
-            onSelectMicrosoft={() => handleSelectSocial("microsoft")}
-            onSelectBlocksOidc={() => handleSelectEnterprise("blocks-oidc")}
-            onSelectByos={() => handleSelectEnterprise("byos")}
-          />
-        </>
+        <IdentityProviderGallery
+          googleEntry={googleEntry}
+          microsoftEntry={microsoftEntry}
+          blocksOidcEntries={blocksOidcEntries}
+          byosEntries={byosEntries}
+          onSelectGoogle={() => handleSelectSocial("google")}
+          onSelectMicrosoft={() => handleSelectSocial("microsoft")}
+          onSelectBlocksOidc={() => handleSelectEnterprise("blocks-oidc")}
+          onSelectByos={() => handleSelectEnterprise("byos")}
+        />
       )}
 
       <IdentityProviderFormDialog
