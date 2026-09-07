@@ -27,9 +27,12 @@ import {
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import {
+  BLOCKS_OIDC_HELP,
+  BYOS_HELP,
   SOCIAL_AUTH_PROVIDERS_CONFIG,
   SSO_PROVIDERS,
 } from "@blocks-idp/authentication/constants/sso-providers.constant";
+import { PROVIDER_CONFIG } from "./identity-provider-visual.constant";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
@@ -55,6 +58,19 @@ const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   // { value: "github", label: "GitHub" },
 ];
 
+/** Banner copy for the two non-social provider types, shown when picked from the gallery. */
+const ENTERPRISE_PICK_INFO: Record<"blocks-oidc" | "byos", { label: string; description: string }> =
+  {
+    "blocks-oidc": {
+      label: "Blocks OIDC",
+      description: "Federate against another Blocks project.",
+    },
+    byos: {
+      label: "Bring your own SSO",
+      description: "Any OIDC-compliant provider — Okta, Auth0, Keycloak, your own gateway.",
+    },
+  };
+
 type FormValues = {
   displayName: string;
   providerType: string;
@@ -69,6 +85,13 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editId?: string;
+  /** Preselects "Select Provider" when opening in add mode. Ignored while editing. */
+  presetProviderType?: string;
+  /** Preselects "Provider Name" (social only) when opening in add mode. Ignored while editing. */
+  presetProvider?: string;
+  /** Hides Google/Microsoft from the Social "Provider Name" picker once each already has an entry. */
+  isGoogleConfigured?: boolean;
+  isMicrosoftConfigured?: boolean;
 };
 
 const BLANK_FORM: FormValues = {
@@ -112,7 +135,15 @@ const toFormValues = (provider: IdentityProvider): FormValues => {
   };
 };
 
-export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props) {
+export function IdentityProviderFormDialog({
+  open,
+  onOpenChange,
+  editId,
+  presetProviderType,
+  presetProvider,
+  isGoogleConfigured = false,
+  isMicrosoftConfigured = false,
+}: Props) {
   const isEditing = !!editId;
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
@@ -141,6 +172,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   const [scopes, setScopes] = useState<string[]>(["openid"]);
   const [requirePkce, setRequirePkce] = useState(false);
   const [redirectUrisError, setRedirectUrisError] = useState<string | null>(null);
+  // Whether "Change" has been clicked on the pre-fill banner for the current open dialog
+  // session - reset every time the dialog freshly opens in add mode (see the effect below).
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const {
     register,
@@ -158,6 +192,21 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
   const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
 
+  // While adding (never while editing), hide social providers that already have
+  // an entry - each of Google/Microsoft may only be configured once per project.
+  const providerOptions = PROVIDER_OPTIONS.filter((option) => {
+    if (option.value !== "social" || isEditing) return true;
+    return !(isGoogleConfigured && isMicrosoftConfigured);
+  });
+  const socialProviderOptions = Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
+    .filter((c) => c.provider === "google" || c.provider === "microsoft")
+    .filter((c) => {
+      if (isEditing) return true;
+      if (c.provider === "google") return !isGoogleConfigured;
+      if (c.provider === "microsoft") return !isMicrosoftConfigured;
+      return true;
+    });
+
   useEffect(() => {
     if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
       setValue("wellKnownUrl", blocksOidcWellKnownUrl, { shouldValidate: true });
@@ -171,13 +220,20 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     }
 
     if (!isEditing) {
-      reset(BLANK_FORM);
+      const bothSocialConfigured = isGoogleConfigured && isMicrosoftConfigured;
+      reset({
+        ...BLANK_FORM,
+        providerType:
+          presetProviderType ?? (bothSocialConfigured ? "blocks-oidc" : BLANK_FORM.providerType),
+        provider: presetProvider ?? BLANK_FORM.provider,
+      });
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setScopes(["openid"]);
       setRequirePkce(false);
       setRedirectUrisError(null);
+      setBannerDismissed(false);
       setIsFormReady(true);
       return;
     }
@@ -203,7 +259,19 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     setRequirePkce(!!editedProvider.requirePkce);
     setRedirectUrisError(null);
     setIsFormReady(true);
-  }, [open, isEditing, isLoadingProvider, providerResponse, editedProvider, reset, onOpenChange]);
+  }, [
+    open,
+    isEditing,
+    isLoadingProvider,
+    providerResponse,
+    editedProvider,
+    reset,
+    onOpenChange,
+    presetProviderType,
+    presetProvider,
+    isGoogleConfigured,
+    isMicrosoftConfigured,
+  ]);
 
   useEffect(() => {
     if (!open || !isEditing || !isProviderFetchError) return;
@@ -214,6 +282,49 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     }
     onOpenChange(false);
   }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange]);
+
+  // The pre-fill banner reflects what was picked from the gallery (the original preset
+  // props), not the live form value - it stays put even if the admin starts tweaking the
+  // dropdowns, and only "Change" (below) clears it.
+  const hasPreset = !isEditing && (!!presetProviderType || !!presetProvider);
+  const showBanner = hasPreset && !bannerDismissed;
+  const pickedSocialMeta = presetProvider
+    ? SOCIAL_AUTH_PROVIDERS_CONFIG[presetProvider as SSO_PROVIDERS]
+    : undefined;
+  const pickedEnterpriseMeta =
+    presetProviderType === "blocks-oidc" || presetProviderType === "byos"
+      ? ENTERPRISE_PICK_INFO[presetProviderType]
+      : undefined;
+
+  // The help box, by contrast, tracks the live selection - it shows for a manual pick too
+  // (H3), not just a gallery pre-fill, and disappears again in edit mode. Defensive per C6:
+  // never render a box with a missing/empty title or body.
+  const helpContent = ((): { title: string; body: string } | undefined => {
+    if (isEditing) return undefined;
+    if (providerType === "social") {
+      const meta = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
+      return meta?.helpTitle && meta?.helpBody
+        ? { title: meta.helpTitle, body: meta.helpBody }
+        : undefined;
+    }
+    const staticHelp =
+      providerType === "blocks-oidc"
+        ? BLOCKS_OIDC_HELP
+        : providerType === "byos"
+          ? BYOS_HELP
+          : undefined;
+    return staticHelp?.title && staticHelp?.body ? staticHelp : undefined;
+  })();
+
+  const handleChangeProvider = () => {
+    const bothSocialConfigured = isGoogleConfigured && isMicrosoftConfigured;
+    reset({
+      ...BLANK_FORM,
+      providerType: bothSocialConfigured ? "blocks-oidc" : BLANK_FORM.providerType,
+      provider: "",
+    });
+    setBannerDismissed(true);
+  };
 
   const { mutateAsync: create, isPending: isCreating } = useCreateIdentityProvider();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIdentityProvider();
@@ -285,6 +396,43 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Pre-fill confirmation banner - add mode + picked from the gallery only */}
+              {showBanner && (
+                <div className="flex items-start gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background">
+                    {pickedSocialMeta ? (
+                      <img
+                        src={pickedSocialMeta.imageSrc}
+                        alt={pickedSocialMeta.label}
+                        className="h-5 w-5 object-contain"
+                      />
+                    ) : pickedEnterpriseMeta && presetProviderType ? (
+                      (() => {
+                        const Icon = PROVIDER_CONFIG[presetProviderType]?.Icon;
+                        return Icon ? <Icon className="h-4 w-4 text-primary" /> : null;
+                      })()
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-high-emphasis">
+                      You picked {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {pickedSocialMeta?.description ?? pickedEnterpriseMeta?.description}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 shrink-0 px-2 text-xs"
+                    onClick={handleChangeProvider}
+                  >
+                    Change
+                  </Button>
+                </div>
+              )}
+
               {/* Select Provider */}
               <div className="space-y-1.5">
                 <Label htmlFor="providerType">
@@ -299,7 +447,7 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                     <SelectValue placeholder="Select Provider" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROVIDER_OPTIONS.map((t) => (
+                    {providerOptions.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
                         {t.label}
                       </SelectItem>
@@ -338,20 +486,18 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
-                        .filter((c) => c.provider === "google" || c.provider === "microsoft")
-                        .map((config) => (
-                          <SelectItem key={config.provider} value={config.provider}>
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={config.imageSrc}
-                                alt={config.label}
-                                className="h-5 w-5 object-contain"
-                              />
-                              <span>{config.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                      {socialProviderOptions.map((config) => (
+                        <SelectItem key={config.provider} value={config.provider}>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={config.imageSrc}
+                              alt={config.label}
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span>{config.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 ) : (
@@ -445,6 +591,14 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
               {...register("audience")}
             />
           </div> */}
+
+              {/* Contextual help - shown for the currently selected provider, add mode only */}
+              {helpContent && (
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <p className="text-xs font-semibold text-high-emphasis">{helpContent.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{helpContent.body}</p>
+                </div>
+              )}
 
               {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
               {providerType === "blocks-oidc" && (

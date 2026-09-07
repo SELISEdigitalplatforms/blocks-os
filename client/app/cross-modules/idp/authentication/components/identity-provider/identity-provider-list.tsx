@@ -1,19 +1,8 @@
 import { useState } from "react";
-import {
-  Building2,
-  ChevronRight,
-  Pencil,
-  Power,
-  PowerOff,
-  Shield,
-  Trash2,
-  Users,
-  Key,
-} from "lucide-react";
+import { ChevronRight, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
-import { EmptyState } from "@/components/ui-kits/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -38,51 +27,16 @@ import { cn } from "@/lib/utils";
 import { IdentityProvider } from "@blocks-idp/authentication/models/identity-provider.model";
 import {
   useDeleteIdentityProvider,
-  useGetIdentityProviders,
   useUpdateIdentityProviderStatus,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import { KVDetailItem } from "../kv-detail-item";
 import { IdentityProviderFormDialog } from "./identity-provider-form-dialog";
+import {
+  DEFAULT_PROVIDER_CONFIG,
+  PROVIDER_CONFIG,
+  PROVIDER_STATUS_DOT,
+} from "./identity-provider-visual.constant";
 import { format } from "date-fns";
-import { useProjectStore } from "@seliseblocks/genesis-os/store";
-
-const PROVIDER_CONFIG: Record<
-  string,
-  { label: string; Icon: React.ElementType; iconBg: string; iconColor: string }
-> = {
-  social: {
-    label: "Social",
-    Icon: Users,
-    iconBg: "bg-blue-100 dark:bg-blue-950",
-    iconColor: "text-blue-600 dark:text-blue-400",
-  },
-  byos: {
-    label: "BYOS",
-    Icon: Key,
-    iconBg: "bg-purple-100 dark:bg-purple-950",
-    iconColor: "text-purple-600 dark:text-purple-400",
-  },
-  "blocks-oidc": {
-    label: "Blocks OIDC",
-    Icon: Shield,
-    iconBg: "bg-emerald-100 dark:bg-emerald-950",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-  },
-};
-
-const DEFAULT_PROVIDER_CONFIG = {
-  label: "OIDC",
-  Icon: Shield,
-  iconBg: "bg-muted",
-  iconColor: "text-muted-foreground",
-  statusDot: "bg-muted-foreground/40",
-};
-
-const PROVIDER_STATUS_DOT: Record<string, string> = {
-  social: "bg-blue-500",
-  byos: "bg-purple-500",
-  "blocks-oidc": "bg-emerald-500",
-};
 
 const SKELETON_ROWS = 3;
 
@@ -182,7 +136,8 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
           expanded && kvPairs.length > 0 ? "border-b-0" : "border-b-2 border-border",
           !isActive && "opacity-75",
         )}
-        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}>
+        onClick={() => kvPairs.length > 0 && setExpanded((e) => !e)}
+      >
         <TableCell className="w-8 py-3.5 pl-4">
           {kvPairs.length > 0 ? (
             <ChevronRight
@@ -211,7 +166,8 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
         <TableCell className="hidden py-3.5 sm:table-cell">
           <Badge
             variant="outline"
-            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis">
+            className="w-fit gap-1.5 border-transparent bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-high-emphasis"
+          >
             <span
               className={cn(
                 "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -233,7 +189,8 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
                   size="sm"
                   className="h-7 w-7 p-0"
                   aria-label="Edit provider"
-                  onClick={() => setShowEditModal(true)}>
+                  onClick={() => setShowEditModal(true)}
+                >
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -252,7 +209,8 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
                   )}
                   aria-label={isActive ? "Disable provider" : "Enable provider"}
                   onClick={() => setShowStatusDialog(true)}
-                  disabled={isUpdating}>
+                  disabled={isUpdating}
+                >
                   {isActive ? (
                     <Power className="h-3.5 w-3.5" />
                   ) : (
@@ -271,7 +229,8 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   aria-label="Delete provider"
                   onClick={() => setShowDeleteDialog(true)}
-                  disabled={isDeleting}>
+                  disabled={isDeleting}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -314,9 +273,7 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {willEnable
-                ? "Enable identity provider"
-                : "Disable identity provider"}
+              {willEnable ? "Enable identity provider" : "Disable identity provider"}
             </DialogTitle>
             <DialogDescription>
               {willEnable ? (
@@ -337,14 +294,16 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
               variant="outline"
               size="sm"
               onClick={() => setShowStatusDialog(false)}
-              disabled={isUpdating}>
+              disabled={isUpdating}
+            >
               Cancel
             </Button>
             <Button
               variant={willEnable ? "default" : "destructive"}
               size="sm"
               onClick={handleConfirmStatusChange}
-              disabled={isUpdating}>
+              disabled={isUpdating}
+            >
               {isUpdating
                 ? willEnable
                   ? "Enabling…"
@@ -380,14 +339,16 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
               variant="outline"
               size="sm"
               onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}>
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={handleConfirmDelete}
-              disabled={isDeleting}>
+              disabled={isDeleting}
+            >
               {isDeleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
@@ -397,7 +358,7 @@ const IdentityProviderRow = ({ item, defaultExpanded = false }: IdentityProvider
   );
 };
 
-const LoadingSkeleton = () => (
+export const LoadingSkeleton = () => (
   <Card>
     <CardContent className="p-0">
       <div className="flex items-center gap-4 border-b bg-muted/40 px-4 py-3">
@@ -429,24 +390,11 @@ const LoadingSkeleton = () => (
   </Card>
 );
 
-export function IdentityProviderList() {
- const projectId = useProjectStore().selectedProject?.itemId || "";
-  const { data, isLoading } = useGetIdentityProviders({projectId});
+interface IdentityProviderListProps {
+  providers: IdentityProvider[];
+}
 
-  const providers = data?.data ?? [];
-
-  if (isLoading) return <LoadingSkeleton />;
-
-  if (providers.length === 0) {
-    return (
-      <EmptyState
-        icon={Building2}
-        title="No identity providers yet"
-        description="Add your first identity provider to get started."
-      />
-    );
-  }
-
+export function IdentityProviderList({ providers }: IdentityProviderListProps) {
   return (
     <Card>
       <CardContent className="overflow-x-clip p-0 sm:overflow-x-auto">
