@@ -2,7 +2,8 @@ import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
-import { useContext, useMemo } from "react";
+import { ChevronRight } from "lucide-react";
+import { useContext, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 import { ILog } from "../../models/log.model";
@@ -11,6 +12,8 @@ export const LogItem = ({ log }: { log: ILog }) => {
   const { logsRouteServiceName, selectedService, useGenericTraceLinks, isSourceBlocks, services } =
     useContext(LogsViewerContext);
   const [searchParams] = useSearchParams();
+  const [isTraceOpen, setIsTraceOpen] = useState(false);
+  const stackTrace = log.exception?.trim() ?? "";
   const activeTab = searchParams.get("tab") ?? selectedService?.serviceName;
   const LMT_BASE_PATH = useLmtBasePath();
   const traceHref = log.traceId
@@ -73,6 +76,40 @@ export const LogItem = ({ log }: { log: ILog }) => {
       >
         {log.message}
       </div>
+
+      {stackTrace && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setIsTraceOpen((open) => !open)}
+            aria-expanded={isTraceOpen}
+            className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-error hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronRight
+              aria-hidden="true"
+              className={`h-3.5 w-3.5 transition-transform motion-reduce:transition-none ${
+                isTraceOpen ? "rotate-90" : ""
+              }`}
+            />
+            {isTraceOpen ? "Hide stack trace" : "Show stack trace"}
+          </button>
+
+          {isTraceOpen && (
+            <div className="mt-2 rounded-sm border border-border bg-muted/40">
+              <div className="flex items-center border-b border-border px-3 py-1.5">
+                <CopyToClipboardButton textToCopy={stackTrace} label="Copy stack trace">
+                  <span className="text-xs font-medium uppercase tracking-wide text-medium-emphasis">
+                    Exception
+                  </span>
+                </CopyToClipboardButton>
+              </div>
+              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-3 py-2 text-xs leading-relaxed text-medium-emphasis">
+                {stackTrace}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

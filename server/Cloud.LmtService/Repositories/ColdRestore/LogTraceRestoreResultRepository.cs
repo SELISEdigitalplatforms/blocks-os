@@ -274,7 +274,8 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                     Level = x.Level,
                     Message = x.Message,
                     TraceId = x.TraceId,
-                    SpanId = x.SpanId
+                    SpanId = x.SpanId,
+                    Exception = x.Exception
                 })
                 .AsQueryable();
 
@@ -415,6 +416,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                 Level = x.Level,
                 Message = x.Message,
                 ActionName = x.ActionName,
+                Exception = x.Exception,
                 ExpireAt = DateTime.UtcNow.AddDays(retentionDays)
             }).ToList();
 
@@ -551,7 +553,8 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                     TraceId = x.TraceId,
                     SpanId = x.SpanId,
                     ServiceName = x.ServiceName,
-                    ActionName = x.ActionName
+                    ActionName = x.ActionName,
+                    Exception = x.Exception
                 })
                 .AsQueryable();
 

@@ -90,9 +90,12 @@ export const LogsList = () => {
             }}
             pollingInterval={5000}
             pollingFn={(item) => fetchNewLogsHandler(item?.timestamp)}
-            renderItem={(log, index) => (
+            renderItem={(log) => (
+              // Keyed on the log's own identity rather than its position: polling prepends new
+              // rows every few seconds, so an index-based key would hand a row's expanded stack
+              // trace to whichever log later lands at that index.
               <div
-                key={log.traceId + "-" + index}
+                key={`${log.timestamp}-${log.spanId ?? ""}`}
                 className="w-full cursor-default p-3 text-sm text-muted-foreground hover:bg-muted/50"
               >
                 <LogItem log={log} />

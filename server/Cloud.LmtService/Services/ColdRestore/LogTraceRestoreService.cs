@@ -706,6 +706,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     SpanId      = log.SpanId,
                     ServiceName = log.ServiceName,
                     ActionName  = log.ActionName,
+                    Exception   = log.Exception,
                     BlobPath    = file.BlobPath,
                     ExpireAt    = DateTime.UtcNow.AddDays(_retentionDays),
                 });
