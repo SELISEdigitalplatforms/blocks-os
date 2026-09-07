@@ -94,6 +94,9 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
     imageSrc: Google,
     isAvailable: true,
     isConfigured: false,
+    helpTitle: "Where do I find these?",
+    helpBody:
+      "Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs. Add the redirect URI below to the client's authorised redirect URIs.",
   }),
   microsoft: createProviderConfig(SSO_PROVIDERS.microsoft, {
     label: "Microsoft",
@@ -101,6 +104,9 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
     imageSrc: Microsoft,
     isAvailable: true,
     isConfigured: false,
+    helpTitle: "Where do I find these?",
+    helpBody:
+      "Entra ID admin centre → App registrations → your app → Certificates & secrets. Register the redirect URI below under Authentication.",
   }),
   // linkedin: createProviderConfig(SSO_PROVIDERS.linkedin, {
   //   label: "LinkedIn",
@@ -140,4 +146,19 @@ export const SOCIAL_AUTH_PROVIDERS_CONFIG: Partial<
     isAvailable: false,
     isConfigured: false,
   }),
+};
+
+/**
+ * Contextual "Where do I find these?" help copy for the "Add Identity Provider" dialog.
+ * Blocks OIDC and Bring-your-own-SSO aren't social providers, so their help copy lives here
+ * rather than in `SOCIAL_AUTH_PROVIDERS_CONFIG`.
+ */
+export const BLOCKS_OIDC_HELP: { title: string; body: string } = {
+  title: "Where do I find these?",
+  body: "This connects to another Blocks project's OIDC issuer. The discovery (well-known) URL below is generated for you — add the Client ID and Client Secret from that project's OIDC client registration, and the redirect URI your app should receive the callback on.",
+};
+
+export const BYOS_HELP: { title: string; body: string } = {
+  title: "Where do I find these?",
+  body: "Works with any OpenID Connect–compliant provider — Okta, Auth0, Keycloak, or your own identity gateway. You'll need that provider's Client ID and Client Secret, plus either its well-known discovery URL or its Authorization/Token/User Info endpoints.",
 };
