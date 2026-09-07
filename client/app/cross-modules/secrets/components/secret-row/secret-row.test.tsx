@@ -14,10 +14,12 @@ const hoisted = vi.hoisted(() => ({
   revealMutate: vi.fn(),
   showSuccessToast: vi.fn(),
   showErrorToast: vi.fn(),
+  tagCatalogue: [{ key: "iam", label: "Blocks Iam" }],
 }));
 
 vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
   useRevealSecret: () => ({ mutateAsync: hoisted.revealMutate, isPending: false }),
+  useSecretTags: () => ({ data: hoisted.tagCatalogue, isLoading: false }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: hoisted.showSuccessToast,

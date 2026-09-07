@@ -20,12 +20,14 @@ public sealed partial class SecretService
 
         ValidateName(request.Name);
         ValidateDescription(request.Description);
+        ValidateTags(request.Tags);
         ValidateValue(request.Value);
 
         if (!SecretTypes.IsValid(request.Type))
         {
             throw new SecretValidationException(
-                $"'{request.Type}' is not a valid secret type. Expected '{SecretTypes.Api}' or '{SecretTypes.Service}'.", "INVALID_TYPE");
+                $"'{request.Type}' is not a valid secret type. Expected '{SecretTypes.Api}', '{SecretTypes.Service}' or '{SecretTypes.Both}'.",
+                "INVALID_TYPE");
         }
     }
 
@@ -55,6 +57,61 @@ public sealed partial class SecretService
         {
             throw new SecretValidationException($"A description may be at most {MaxDescriptionLength} characters.", "DESCRIPTION_TOO_LONG");
         }
+    }
+
+    /// <summary>
+    /// Validates the normalized form, so a caller is never rejected for casing or padding that
+    /// the write would have removed anyway.
+    /// </summary>
+    private static void ValidateTags(IReadOnlyCollection<string>? tags)
+    {
+        if (tags is null)
+        {
+            return;
+        }
+
+        var normalized = SecretTag.NormalizeAll(tags);
+
+        if (normalized.Count > SecretTag.MaxPerSecret)
+        {
+            throw new SecretValidationException(
+                $"A secret may carry at most {SecretTag.MaxPerSecret} tags; {normalized.Count} were supplied.", "TOO_MANY_TAGS");
+        }
+
+        var malformed = normalized.FirstOrDefault(tag => !SecretTag.IsWellFormed(tag));
+        if (malformed is not null)
+        {
+            throw new SecretValidationException(
+                $"'{malformed}' is not a valid tag. A tag must start with a letter or digit, may contain only letters, " +
+                $"digits, dot, underscore, hyphen and colon, and may be at most {SecretTag.MaxLength} characters.",
+                "TAG_INVALID");
+        }
+    }
+
+    /// <summary>
+    /// Normalizes the tags on a list filter and caps how many one query may carry.
+    /// </summary>
+    /// <remarks>
+    /// A malformed tag is not rejected here, unlike on a write: a filter value that cannot
+    /// match anything is an empty result, not a bad request, and a filter bar that 400s
+    /// because of what someone typed is worse than one that shows nothing.
+    /// </remarks>
+    private static List<string>? NormalizeFilterTags(IReadOnlyCollection<string>? tags)
+    {
+        if (tags is null || tags.Count == 0)
+        {
+            return null;
+        }
+
+        var normalized = SecretTag.NormalizeAll(tags);
+
+        if (normalized.Count > SecretTag.MaxPerFilter)
+        {
+            throw new SecretValidationException(
+                $"At most {SecretTag.MaxPerFilter} tags may be supplied in a filter; {normalized.Count} were.", "TOO_MANY_TAGS");
+        }
+
+        return normalized;
     }
 
     private static void ValidateValue(string? value)
@@ -102,7 +159,7 @@ public sealed partial class SecretService
 
         EnsureTransitionAllowed(secret, actionLabel, [SecretStatuses.Active, SecretStatuses.Locked]);
 
-        if (!caller.IsRoot && !string.Equals(secret.Type, SecretTypes.Service, StringComparison.Ordinal))
+        if (!caller.IsRoot && SecretTypes.HasAccessList(secret.Type))
         {
             var denial = CheckMutationAccess(caller, secret);
             if (denial is not null)
@@ -174,7 +231,6 @@ public sealed partial class SecretService
     private static Secret BuildSecret(SecretCallerContext caller, SetSecretRequest request, string organizationId)
     {
         var now = DateTime.UtcNow;
-        var isService = string.Equals(request.Type, SecretTypes.Service, StringComparison.Ordinal);
 
         return new Secret
         {
@@ -185,12 +241,13 @@ public sealed partial class SecretService
             Name = request.Name,
             NameLower = SecretName.Normalize(request.Name),
             Description = request.Description,
+            Tags = SecretTag.NormalizeAll(request.Tags),
             Type = request.Type,
             Status = SecretStatuses.Active,
 
-            // Service secrets have no access list; carrying one would imply a check that is
-            // never performed.
-            Access = isService ? null : request.Access,
+            // Types without an access list must not carry one; a stored list would imply a
+            // check that is never performed.
+            Access = SecretTypes.HasAccessList(request.Type) ? request.Access : null,
 
             CreatedBy = caller.UserId,
             CreatedDate = now,
@@ -204,6 +261,7 @@ public sealed partial class SecretService
         SecretId = secret.ItemId,
         Name = secret.Name,
         Description = secret.Description,
+        Tags = secret.Tags,
         Type = secret.Type,
         Status = secret.Status,
         OrganizationId = secret.OrganizationId,

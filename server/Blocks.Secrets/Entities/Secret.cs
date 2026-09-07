@@ -29,6 +29,12 @@ public class Secret : BaseEntity
 
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Free-form labels, stored in the canonical form produced by <see cref="SecretTag.Normalize"/>.
+    /// Purely for grouping and lookup; they carry no authorization meaning.
+    /// </summary>
+    public List<string> Tags { get; set; } = [];
+
     public string Type { get; set; } = SecretTypes.Api;
 
     public string Status { get; set; } = SecretStatuses.Active;

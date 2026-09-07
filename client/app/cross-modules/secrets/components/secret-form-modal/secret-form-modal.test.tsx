@@ -16,6 +16,7 @@ vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
   useSetSecret: () => ({ mutateAsync: hoisted.create, isPending: false }),
   useUpdateSecret: () => ({ mutateAsync: hoisted.update, isPending: false }),
   useUpdateSecretAccess: () => ({ mutateAsync: hoisted.updateAccess, isPending: false }),
+  useSecretTags: () => ({ data: [{ key: "iam", label: "Blocks Iam" }], isLoading: false }),
 }));
 
 // The picker's IAM lookups are exercised in its own suite; here it only needs to let a test
@@ -147,39 +148,56 @@ describe("SecretFormModal — create", () => {
         description: undefined,
         value: "s3cret",
         type: "api",
+        tags: [],
         access: { userIds: [], roles: ["admin"] },
       }),
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("offers Application as the only category", () => {
-    // Creating a service secret is not accepted from the UI for now; the card is commented
-    // out in CREATE_TYPE_OPTIONS, so nothing but Application can be chosen.
+  it("offers all three categories", () => {
     renderCreate();
 
     expect(screen.getByRole("radio", { name: /Application/ })).toBeTruthy();
-    expect(screen.queryByRole("radio", { name: /Platform service/ })).toBeNull();
+    expect(screen.getByRole("radio", { name: /Platform service/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /^Both/ })).toBeTruthy();
   });
 
-  // Restore alongside SECRET_TYPE.Service in CREATE_TYPE_OPTIONS — the submit path still sends
-  // access: null for a service secret, it is just unreachable from the form.
-  // it("sends access: null for a service secret and hides the picker", async () => {
-  //   const user = userEvent.setup();
-  //   renderCreate();
-  //
-  //   await user.click(screen.getByRole("radio", { name: /Platform service/ }));
-  //   expect(screen.queryByTestId("access-summary")).toBeNull();
-  //
-  //   await fillCreate(user);
-  //   await user.click(screen.getByRole("button", { name: "Save" }));
-  //
-  //   await waitFor(() =>
-  //     expect(hoisted.create).toHaveBeenCalledWith(
-  //       expect.objectContaining({ type: "service", access: null }),
-  //     ),
-  //   );
-  // });
+  it("sends access: null and hides the picker for a platform secret", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+
+    await user.click(screen.getByRole("radio", { name: /Platform service/ }));
+    expect(screen.queryByTestId("access-summary")).toBeNull();
+
+    await fillCreate(user);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(hoisted.create).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "service", access: null }),
+      ),
+    );
+  });
+
+  it("sends access: null and hides the picker for a both secret", async () => {
+    // Both has no access list either — anyone in the environment can read it, which is the
+    // whole point of the category.
+    const user = userEvent.setup();
+    renderCreate();
+
+    await user.click(screen.getByRole("radio", { name: /^Both/ }));
+    expect(screen.queryByTestId("access-summary")).toBeNull();
+
+    await fillCreate(user);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(hoisted.create).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "both", access: null }),
+      ),
+    );
+  });
 
   it("maps a field reason code onto the name field rather than a generic banner", async () => {
     const user = userEvent.setup();
@@ -249,6 +267,9 @@ describe("SecretFormModal — edit", () => {
         secretId: SECRET_ID,
         name: "renamed-key",
         description: "Used by the checkout service",
+        // Always sent: the request replaces the whole set, so omitting it on an edit that
+        // cleared every chip would leave the old tags in place.
+        tags: [],
       }),
     );
     // ::access is separately permissioned; firing it when nothing changed can fail for a user

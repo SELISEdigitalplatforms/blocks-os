@@ -38,12 +38,14 @@ import {
   type SecretType,
 } from "@/cross-modules/secrets/models/secret.model";
 import {
+  useSecretTags,
   useSetSecret,
   useUpdateSecret,
   useUpdateSecretAccess,
 } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { UserRolePicker } from "../user-role-picker/user-role-picker";
+import { SecretTagInput } from "../secret-tag-input/secret-tag-input";
 
 // Mirrors SecretService.Helpers.cs so the user sees the problem before a round trip. The
 // server re-validates regardless; this only saves a failed request.
@@ -89,14 +91,15 @@ type FormValues = { name: string; description?: string; value?: string };
 /**
  * Categories offered when creating a secret.
  *
- * Only `Application` is accepted from the UI for now — `Service` stays commented out rather
- * than deleted because the backend still accepts it and the card is meant to come back.
- * Existing service secrets are unaffected: edit mode reads the category off the secret and
- * renders it read-only, so this list is never consulted there.
+ * All three, and the choice is permanent: there is no category transition on the backend,
+ * because converting one in place would silently move an existing credential between access
+ * models. Edit mode reads the category off the secret and renders it read-only, so this list
+ * is never consulted there.
  */
 const CREATE_TYPE_OPTIONS: SecretType[] = [
   SECRET_TYPE.Api,
-  // SECRET_TYPE.Service,
+  SECRET_TYPE.Service,
+  SECRET_TYPE.Both,
 ];
 
 const emptyAccess = (): SecretAccess => ({ userIds: [], roles: [] });
@@ -140,6 +143,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
       ? { userIds: [...secret.access.userIds], roles: [...secret.access.roles] }
       : emptyAccess(),
   );
+  const [tags, setTags] = useState<string[]>(() => [...(secret?.tags ?? [])]);
   const [formError, setFormError] = useState<string | null>(null);
   /** Set when metadata saved but the access call did not — changes what a retry has to do. */
   const [metadataSaved, setMetadataSaved] = useState(false);
@@ -147,6 +151,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
   const { mutateAsync: createSecret, isPending: isCreating } = useSetSecret();
   const { mutateAsync: updateSecret, isPending: isUpdating } = useUpdateSecret();
   const { mutateAsync: updateAccess, isPending: isUpdatingAccess } = useUpdateSecretAccess();
+  const { data: tagCatalogue = [] } = useSecretTags(open);
   const isPending = isCreating || isUpdating || isUpdatingAccess;
 
   const form = useForm<FormValues>({
@@ -184,8 +189,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
         description: values.description?.trim() || undefined,
         value: values.value ?? "",
         type,
-        // Service secrets must not carry an access list — it would imply a check that is never
-        // performed for them.
+        tags,
+        // Only an Application secret carries an access list — for the other categories a
+        // stored list would imply a check that is never performed.
         access: isApi ? access : null,
       });
       onOpenChange(false);
@@ -204,6 +210,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
           secretId: secret.secretId,
           name: values.name.trim(),
           description: values.description?.trim() ?? "",
+          // Always sent, because the request replaces the whole set: omitting it on an edit
+          // that cleared every chip would leave the old tags in place.
+          tags,
         });
       } catch (error) {
         applyError(error, "Could not save the secret.");
@@ -250,7 +259,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
           <DialogTitle className="text-left">{isEdit ? "Edit secret" : "Create secret"}</DialogTitle>
           <DialogDescription className="text-left">
             {isEdit
-              ? "Update the name, description and access list. Use Rotate to change the value."
+              ? "Update the name, description, tags and access list. Use Rotate to change the value."
               : "Store a new secret. The value goes straight to the secret store and is never shown in a list."}
           </DialogDescription>
         </DialogHeader>
@@ -374,6 +383,19 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                   )}
                 />
               )}
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <p className="text-xs text-muted-foreground">
+                  For grouping and filtering only — tags never affect who can read a secret.
+                </p>
+                <SecretTagInput
+                  value={tags}
+                  onChange={setTags}
+                  catalogue={tagCatalogue}
+                  disabled={isPending}
+                />
+              </div>
 
               {isApi && (
                 <div className="space-y-2">
