@@ -109,7 +109,11 @@ export const InfiniteScroll = <T,>({
   }, []);
   return (
     <div className="relative flex h-full flex-col">
-      <div ref={scrollContainerRef} className="h-full overflow-scroll">
+      <div
+        ref={scrollContainerRef}
+        data-testid="infinite-scroll-container"
+        className="h-full overflow-y-auto overflow-x-hidden"
+      >
         {data.length ? (
           <>
             {isLoading && loadingIndicator}

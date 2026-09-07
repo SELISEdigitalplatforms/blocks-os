@@ -98,7 +98,7 @@ describe("LogItem", () => {
     );
     // No href resolvable -> the trace id is shown as plain text, not a link.
     expect(screen.queryByRole("link")).toBeNull();
-    expect(screen.getByText("[trace-9]")).toBeTruthy();
+    expect(screen.getByText("trace-9")).toBeTruthy();
   });
 
   describe("stack trace", () => {

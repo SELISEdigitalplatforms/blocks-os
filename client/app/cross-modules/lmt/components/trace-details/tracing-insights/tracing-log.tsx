@@ -10,7 +10,8 @@ import {
 } from "@tanstack/react-table";
 import { useContext, useMemo, useState } from "react";
 import { timelineContext } from "../trace-details";
-import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
+import { getLogFormatTimestamp, getLogLevelBadgeVariant } from "@blocks-lmt/utils";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { ILog } from "@blocks-lmt/models/log.model";
 import { LogStackTrace } from "../../log-stack-trace";
 import { FilterControls } from "@/components/filter-toolbar";
@@ -29,23 +30,25 @@ const LoadingSkelton = () => (
 const columns: ColumnDef<ILog>[] = [
   {
     id: "Trace",
+    // Same anatomy as a row in the main logs list -- monospace timestamp, level chip, then the
+    // message -- so moving between the two views does not mean relearning the layout.
     cell: ({ row }) => (
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-5">
-            <span className="text-high-emphasis">
-              {getLogFormatTimestamp(row.original.timestamp)}
-            </span>
-            <span className={`text-sm uppercase ${getLogLevelClassName(row.original.level)}`}>
-              {row.original.level}
-            </span>
-          </div>
-          <span className="text-sm text-warning-700">[{row.original.traceId}]</span>
-          <div className="break-all text-justify text-sm text-medium-emphasis">
-            {row.original.message}
-          </div>
-          <LogStackTrace exception={row.original.exception} />
+      <div className="flex w-full flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="shrink-0 text-xs tabular-nums text-medium-emphasis">
+            {getLogFormatTimestamp(row.original.timestamp)}
+          </span>
+          <Badge
+            variant={getLogLevelBadgeVariant(row.original.level)}
+            className="w-[84px] shrink-0 py-0 text-[10px] uppercase tracking-wider"
+          >
+            {row.original.level}
+          </Badge>
         </div>
+        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-high-emphasis">
+          {row.original.message}
+        </div>
+        <LogStackTrace exception={row.original.exception} />
       </div>
     ),
     filterFn: (_value) => {
@@ -107,9 +110,9 @@ export const TracingLog = () => {
         className="h-fit w-full py-2.5"
       />
       <div className="mt-4 h-[calc(100vh-375px)] overflow-hidden">
-        <div className="flex h-full flex-col gap-6 overflow-auto">
+        <div className="flex h-full flex-col gap-4 overflow-auto pr-1">
           {table.getFilteredRowModel().rows.map((row) => (
-            <div key={row.id} className="flex flex-wrap gap-6">
+            <div key={row.id} className="flex flex-wrap border-b border-border/60 pb-4 last:border-b-0">
               {row
                 .getVisibleCells()
                 .map((cell) => flexRender(cell.column.columnDef.cell, cell.getContext()))}

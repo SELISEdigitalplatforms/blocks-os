@@ -55,7 +55,7 @@ const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError
           : `No trace data exists for this ID in the current project. The trace may have expired, or it may not have been recorded yet.`}
       </p>
       {traceId ? (
-        <p className="mt-4 break-all font-mono text-xs text-low-emphasis">{traceId}</p>
+        <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p>
       ) : null}
     </CardContent>
   </Card>

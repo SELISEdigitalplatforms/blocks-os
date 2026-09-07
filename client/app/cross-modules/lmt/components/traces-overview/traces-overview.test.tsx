@@ -131,7 +131,8 @@ describe("TracesOverview", () => {
     renderOverview();
     expect(await screen.findByText("GetUsers")).toBeTruthy();
     expect(screen.getByText("get")).toBeTruthy();
-    expect(screen.getByText("125ms")).toBeTruthy();
+    // Durations render to two decimals with a unit, not raw driver precision.
+    expect(screen.getByText("125.00 ms")).toBeTruthy();
     // Registered service name resolves from the serviceId.
     await waitFor(() => expect(screen.getByText("Service One")).toBeTruthy());
   });

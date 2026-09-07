@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LOG_LEVEL,
+  formatDurationMs,
   getLogFormatTimestamp,
   getLogLevelClassName,
   getTraceFormatTimestamp,
@@ -82,6 +83,27 @@ describe("lmt/utils index", () => {
       const before = getRangeStartDate("5m", new Date("2026-09-07T20:48:59.999Z"));
       const after = getRangeStartDate("5m", new Date("2026-09-07T20:49:00.000Z"));
       expect(after).not.toBe(before);
+    });
+  });
+
+  describe("formatDurationMs", () => {
+    it("trims driver precision to two decimals", () => {
+      expect(formatDurationMs(10.6521)).toBe("10.65 ms");
+      expect(formatDurationMs(0)).toBe("0.00 ms");
+    });
+
+    it("switches to seconds once milliseconds stop being readable", () => {
+      expect(formatDurationMs(1000)).toBe("1.00 s");
+      expect(formatDurationMs(1016.0493)).toBe("1.02 s");
+    });
+
+    it("parses a numeric string, which the restore path can produce", () => {
+      expect(formatDurationMs("125")).toBe("125.00 ms");
+    });
+
+    it("falls back to a dash for a value it cannot read", () => {
+      expect(formatDurationMs("not-a-number")).toBe("—");
+      expect(formatDurationMs(Number.NaN)).toBe("—");
     });
   });
 });

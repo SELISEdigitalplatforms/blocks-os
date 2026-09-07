@@ -1,7 +1,7 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
+import { getLogFormatTimestamp, getLogLevelBadgeVariant } from "@blocks-lmt/utils";
 import { useContext, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
@@ -41,37 +41,47 @@ export const LogItem = ({ log }: { log: ILog }) => {
   }, [log.serviceName, isSourceBlocks, services]);
 
   return (
-    <div className="flex flex-col">
-      <div className="flex flex-col md:flex-row md:items-center gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-high-emphasis">{getLogFormatTimestamp(log.timestamp)}</span>
-          {serviceBadgeText && <Badge variant="secondary">{serviceBadgeText}</Badge>}
-          <span className={`text-sm uppercase ${getLogLevelClassName(log.level)}`}>
-            {log.level}
-          </span>
-        </div>
-        <div className="flex h-6 items-center">
+    <div className="flex flex-col gap-1.5">
+      {/* Metadata reads as columns rather than a sentence: a fixed-width monospace timestamp
+          and a fixed-width level chip line up down the list, so the eye can scan severity and
+          time without re-reading each row. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="shrink-0 text-xs tabular-nums text-medium-emphasis">
+          {getLogFormatTimestamp(log.timestamp)}
+        </span>
+        <Badge
+          variant={getLogLevelBadgeVariant(log.level)}
+          className="w-[84px] shrink-0 py-0 text-[10px] uppercase tracking-wider"
+        >
+          {log.level}
+        </Badge>
+        {serviceBadgeText && (
+          <Badge variant="secondary" className="shrink-0 py-0 text-[10px] font-medium">
+            {serviceBadgeText}
+          </Badge>
+        )}
+        <div className="flex min-w-0 items-center">
           {traceHref ? (
             <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
               <Link
                 to={traceHref}
-                className="text-warning-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="truncate text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={`View trace details for ${log.traceId}`}
               >
-                [{log.traceId}]
+                {log.traceId}
               </Link>
             </CopyToClipboardButton>
           ) : (
             <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
-              <span className="text-warning-700">[{log.traceId}]</span>
+              <span className="truncate text-xs text-medium-emphasis">{log.traceId}</span>
             </CopyToClipboardButton>
           )}
         </div>
       </div>
-      <div
-        className="whitespace-pre-wrap break-words text-left text-sm text-medium-emphasis"
-        style={{ width: "calc(80vw - 120px)" }}
-      >
+
+      {/* Width comes from the container, not the viewport. The previous calc(80vw - 120px)
+          ignored the actual column and was what forced the list to scroll sideways. */}
+      <div className="whitespace-pre-wrap break-words text-left text-sm leading-relaxed text-high-emphasis">
         {log.message}
       </div>
 

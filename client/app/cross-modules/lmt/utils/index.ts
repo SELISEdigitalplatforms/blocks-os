@@ -65,6 +65,37 @@ export const getTraceFormatTimestamp = (timestamp: string) => {
   return `${day}, ${time}.${pad(date.getMilliseconds(), 3)}`;
 };
 
+/**
+ * Log level as a design-system badge variant. Levels are a small closed set with clear
+ * severity, so they read faster as a chip than as coloured text in the flow of the row.
+ */
+export const getLogLevelBadgeVariant = (level: string) => {
+  switch (level) {
+    case "Error":
+    case "Fatal":
+      return "error" as const;
+    case "Warning":
+      return "warning" as const;
+    case "Information":
+      return "success" as const;
+    default:
+      return "secondary" as const;
+  }
+};
+
+/**
+ * Durations arrive with sub-microsecond precision (10.6521ms), which is noise at this scale
+ * and makes a column impossible to compare down. Two decimals, and seconds once a request
+ * is slow enough that milliseconds stop being readable.
+ */
+export const formatDurationMs = (duration: number | string) => {
+  // Coerced rather than trusted: the restore path stores some numeric fields as strings, and
+  // rendering a dash for a perfectly good "125" would be a worse answer than parsing it.
+  const value = typeof duration === "string" ? Number(duration) : duration;
+  if (!Number.isFinite(value)) return "—";
+  return value >= 1000 ? `${(value / 1000).toFixed(2)} s` : `${value.toFixed(2)} ms`;
+};
+
 export const getLogLevelClassName = (level: string) => {
   switch (level) {
     case "Warning":

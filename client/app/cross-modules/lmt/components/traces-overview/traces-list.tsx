@@ -10,7 +10,8 @@ import {
   TableRow,
 } from "@/components/ui-kits/table/table";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { getTraceFormatTimestamp } from "@blocks-lmt/utils";
+import { formatDurationMs, getTraceFormatTimestamp } from "@blocks-lmt/utils";
+import { Badge } from "@/components/ui-kits/badge/badge";
 import { TraceTree, getTraceStatus, getTypeColor } from "@blocks-lmt/models/trace.model";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
@@ -74,8 +75,10 @@ export function TracesList({
         cell: ({ row }) => {
           const status = getTraceStatus(row.original);
           return (
-            <div className={`ml-2 flex w-[80px] items-center font-semibold sm:ml-0 ${status.className}`}>
-              {status.label}
+            <div className="ml-2 flex w-[90px] items-center sm:ml-0">
+              <Badge variant={status.variant} className="py-0 tabular-nums">
+                {status.label}
+              </Badge>
             </div>
           );
         },
@@ -107,8 +110,8 @@ export function TracesList({
           />
         ),
         cell: ({ row }) => (
-          <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
-            {row.original.duration}ms
+          <div className="ml-2 flex w-[180px] items-center tabular-nums sm:ml-0 sm:w-[150px]">
+            {formatDurationMs(row.original.duration)}
           </div>
         ),
       },

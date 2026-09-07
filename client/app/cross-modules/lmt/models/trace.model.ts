@@ -14,11 +14,11 @@ export const getTypeColor = (type: string) => {
   }
 };
 
-const getStatusCodeColor = (code: number) => {
-  if (code >= 500) return "text-error";
-  if (code >= 400) return "text-warning";
-  if (code >= 300) return "text-medium-emphasis";
-  return "text-success";
+const getStatusCodeVariant = (code: number) => {
+  if (code >= 500) return "error" as const;
+  if (code >= 400) return "warning" as const;
+  if (code >= 300) return "secondary" as const;
+  return "success" as const;
 };
 
 /**
@@ -35,16 +35,16 @@ export const getTraceStatus = (trace: { attributes?: IAttributes; status?: strin
   const code = typeof raw === "string" ? Number(raw) : raw;
 
   if (typeof code === "number" && Number.isFinite(code)) {
-    return { label: String(code), className: getStatusCodeColor(code) };
+    return { label: String(code), variant: getStatusCodeVariant(code) };
   }
 
   switch (trace.status) {
     case "Error":
-      return { label: "Error", className: "text-error" };
+      return { label: "Error", variant: "error" as const };
     case "Ok":
-      return { label: "OK", className: "text-success" };
+      return { label: "OK", variant: "success" as const };
     default:
-      return { label: "—", className: "text-low-emphasis" };
+      return { label: "Unknown", variant: "secondary" as const };
   }
 };
 

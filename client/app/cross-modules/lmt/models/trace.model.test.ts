@@ -18,14 +18,14 @@ describe("getTraceStatus", () => {
   it("prefers the HTTP response code the status-code filter queries", () => {
     expect(getTraceStatus({ attributes: { "response.status.code": 500 }, status: "Ok" })).toEqual({
       label: "500",
-      className: "text-error",
+      variant: "error",
     });
   });
 
   it("falls back to the OpenTelemetry attribute name", () => {
     expect(getTraceStatus({ attributes: { "http.response.status_code": 404 } })).toEqual({
       label: "404",
-      className: "text-warning",
+      variant: "warning",
     });
   });
 
@@ -34,27 +34,25 @@ describe("getTraceStatus", () => {
   });
 
   it.each([
-    [200, "text-success"],
-    [301, "text-medium-emphasis"],
-    [404, "text-warning"],
-    [503, "text-error"],
-  ])("colours %s by status class", (code, expected) => {
-    expect(getTraceStatus({ attributes: { "response.status.code": code } }).className).toBe(
-      expected,
-    );
+    [200, "success"],
+    [301, "secondary"],
+    [404, "warning"],
+    [503, "error"],
+  ])("maps %s to its severity variant", (code, expected) => {
+    expect(getTraceStatus({ attributes: { "response.status.code": code } }).variant).toBe(expected);
   });
 
   it("uses the span status for non-HTTP entry points such as message workers", () => {
     expect(getTraceStatus({ status: "Error" })).toEqual({
       label: "Error",
-      className: "text-error",
+      variant: "error",
     });
-    expect(getTraceStatus({ status: "Ok" })).toEqual({ label: "OK", className: "text-success" });
+    expect(getTraceStatus({ status: "Ok" })).toEqual({ label: "OK", variant: "success" });
   });
 
   it("reports unknown rather than claiming success it cannot vouch for", () => {
     // "Unset" is OpenTelemetry's default for a span nobody marked -- not an assertion of success.
-    expect(getTraceStatus({ status: "Unset" }).label).toBe("—");
-    expect(getTraceStatus({}).label).toBe("—");
+    expect(getTraceStatus({ status: "Unset" }).label).toBe("Unknown");
+    expect(getTraceStatus({}).label).toBe("Unknown");
   });
 });

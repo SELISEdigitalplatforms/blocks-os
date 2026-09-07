@@ -106,7 +106,7 @@ export const LogsList = () => {
               // trace to whichever log later lands at that index.
               <div
                 key={`${log.timestamp}-${log.spanId ?? ""}`}
-                className="w-full cursor-default p-3 text-sm text-muted-foreground hover:bg-muted/50"
+                className="w-full cursor-default border-b border-border/60 px-3 py-2.5 text-sm text-muted-foreground last:border-b-0 hover:bg-muted/40"
               >
                 <LogItem log={log} />
               </div>
