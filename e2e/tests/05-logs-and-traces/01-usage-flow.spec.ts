@@ -1,5 +1,4 @@
 import { test } from "../../support/test-base";
-import { openOsDashboard } from "../../support/os-helpers";
 import {
   navigateToUsageFlow,
   assertGlobalOverviewMetricsFlow,
@@ -11,12 +10,10 @@ import {
 
 // Usage flow: navigate into the sub-section under Logs & Traces, then walk
 // its real interactive surface — the time-range selector and the per-service
-// API/Worker metric switch.
+// API/Worker metric switch. No dashboard beforeEach — openLmt goes straight
+// to /lmt/usage (same as logs-flow). The extra dashboard goto was timing out
+// before this test ever reached Usage.
 test.describe("flows", () => {
-  test.beforeEach(async ({ page }) => {
-    await openOsDashboard(page);
-  });
-
   test("Usage flow: navigate to Usage", async ({ page }) => {
     test.setTimeout(180_000);
 

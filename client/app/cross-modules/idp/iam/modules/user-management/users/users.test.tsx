@@ -71,11 +71,14 @@ describe("Users", () => {
     expect((screen.getByTestId("users-table") as HTMLElement).textContent).toContain("rows:2");
   });
 
-  it("keeps search and advanced filters in one justified mobile row", () => {
+  it("keeps search and advanced filters in one responsive toolbar", () => {
     render(<Users />);
     expect(screen.getByTestId("users-filter-row").className).toContain("flex-row");
-    expect(screen.getByTestId("users-filter-row").className).toContain("justify-between");
+    expect(screen.getByTestId("users-filter-row").className).not.toContain("border");
+    expect(screen.getByTestId("users-filter-row").className).toContain("min-w-0");
     expect(screen.getByTestId("users-search-filter-slot").className).toContain("flex-1");
+    expect(screen.getByTestId("users-search-filter-slot").className).toContain("sm:flex-none");
+    expect(screen.getByTestId("users-search-filter-slot").className).toContain("overflow-hidden");
     expect(screen.getByTestId("users-advanced-filter-slot").className).toContain("shrink-0");
   });
 
@@ -88,6 +91,17 @@ describe("Users", () => {
     h.queryParams["selected-filter"] = "email";
     render(<Users />);
     expect(h.lastQuery?.query).toBe("a@b.co");
+  });
+
+  it("sends the created-date selection using the API joinedOn field", () => {
+    h.queryParams["joinedOn-start"] = "2026-09-01T00:00:00.000Z";
+    render(<Users />);
+    const filter = h.lastQuery?.filter as {
+      createdDate?: string;
+      joinedOn?: string;
+    };
+    expect(filter.joinedOn).toBe("2026-09-01T00:00:00.000Z");
+    expect(filter.createdDate).toBeUndefined();
   });
 
   it("marks the table as loading while fetching", () => {
@@ -131,5 +145,15 @@ describe("Users", () => {
     render(<Users />);
     expect((h.lastQuery?.filter as { organizationIds?: string[] }).organizationIds).toBeUndefined();
     expect((h.lastQuery?.filter as { roles?: string[] }).roles).toBeUndefined();
+  });
+
+  it("sends roles without organization options when multi-org is disabled", () => {
+    h.isMultiOrgEnabled = false;
+    h.organizations = [];
+    h.queryParams.roles = ["auditor"];
+    render(<Users />);
+
+    expect((h.lastQuery?.filter as { organizationIds?: string[] }).organizationIds).toBeUndefined();
+    expect((h.lastQuery?.filter as { roles?: string[] }).roles).toEqual(["auditor"]);
   });
 });

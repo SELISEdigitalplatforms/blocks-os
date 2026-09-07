@@ -119,6 +119,20 @@ describe.each(cases)("$label preview", ({ label, Component, copy, update }) => {
 });
 
 describe("optional page preview copy", () => {
+  it("places signup consent immediately above Create Account", () => {
+    render(<OidcSignupPreview {...props("light")} />);
+    const createAccount = screen.getByRole("button", { name: "Create Account" });
+
+    expect(createAccount.previousElementSibling?.textContent).toContain("I agree to the");
+  });
+
+  it("places logout-from-devices immediately above Set Password", () => {
+    render(<OidcResetPasswordPreview {...props("light")} />);
+    const setPassword = screen.getByRole("button", { name: "Set Password" });
+
+    expect(setPassword.previousElementSibling?.textContent).toContain("Logout from all devices");
+  });
+
   it("omits a cleared MFA resend action", () => {
     const input = props("light");
     input.template.pages.mfa.resendButton = null;

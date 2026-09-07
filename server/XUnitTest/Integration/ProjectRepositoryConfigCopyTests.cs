@@ -90,6 +90,52 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task CreateDefaultConfigurationAsync_KeepsOnlyCloudUserDefaultRole()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var _ = new IntegrationContext(suffix);
+            var project = NewProject(suffix);
+
+            var source = SourceDb();
+            await source.GetCollection<BsonDocument>("Roles")
+                .InsertManyAsync(new[]
+                {
+                    new BsonDocument
+                    {
+                        { "_id", "role-user-" + suffix },
+                        { "Name", "User" },
+                        { "Slug", "user" },
+                        { "fid", "user" },
+                        { "ParentRoleSlug", "user" },
+                        { "AncestorRoleSlugs", new BsonArray { "user" } },
+                        { "Metadata", new BsonDocument { { "DefaultRole", "user" } } }
+                    },
+                    new BsonDocument
+                    {
+                        { "_id", "role-clouduser-" + suffix },
+                        { "Name", "Cloud User" },
+                        { "Slug", "clouduser" },
+                        { "fid", "clouduser" }
+                    }
+                });
+
+            var tracer = new ProjectStatusTracer { ProjectId = project.ItemId };
+            await NewRepository().CreateDefaultConfigurationAsync(tracer, project);
+
+            var copiedRoles = await TargetDb(project).GetCollection<BsonDocument>("Roles")
+                .Find(Builders<BsonDocument>.Filter.In("_id", new[] { "role-user-" + suffix, "role-clouduser-" + suffix }))
+                .ToListAsync();
+
+            copiedRoles.Should().ContainSingle();
+            copiedRoles[0]["Name"].AsString.Should().Be("clouduser");
+            copiedRoles[0]["Slug"].AsString.Should().Be("clouduser");
+            copiedRoles[0]["fid"].AsString.Should().Be("clouduser");
+            copiedRoles[0]["ParentRoleSlug"].AsString.Should().Be("clouduser");
+            copiedRoles[0]["AncestorRoleSlugs"].AsBsonArray[0].AsString.Should().Be("clouduser");
+            copiedRoles[0]["Metadata"].AsBsonDocument["DefaultRole"].AsString.Should().Be("clouduser");
+        }
+
+        [Fact]
         public async Task CreateDefaultConfigurationAsync_WhenAlreadyCopied_IsNoOp()
         {
             var suffix = Guid.NewGuid().ToString("N");

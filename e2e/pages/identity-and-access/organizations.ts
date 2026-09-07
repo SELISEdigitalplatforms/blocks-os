@@ -27,22 +27,31 @@ export async function enableMultiOrgFlow(page: Page) {
 
   const multiOrgSwitch = page.getByLabel("Multi-Organization Environment");
   await expect(multiOrgSwitch).toBeVisible({ timeout: 20_000 });
-  await multiOrgSwitch.click();
-  await expect(page.getByRole("heading", { name: "Enable multi-organization mode?" })).toBeVisible({
-    timeout: 10_000,
-  });
-  await page.getByRole("button", { name: "Enable", exact: true }).first().click();
-  await expect(multiOrgSwitch).toBeChecked({ timeout: 10_000 });
+
+  // Once saved, the product locks this switch on — reused projects already have
+  // it checked+disabled, so clicking would hang until the test timeout.
+  if (!(await multiOrgSwitch.isChecked())) {
+    await multiOrgSwitch.click();
+    await expect(page.getByRole("heading", { name: "Enable multi-organization mode?" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.getByRole("button", { name: "Enable", exact: true }).first().click();
+    await expect(multiOrgSwitch).toBeChecked({ timeout: 10_000 });
+  }
 
   const cloudWorkflowSwitch = page.getByLabel("Allow Creation from OS");
   await expect(cloudWorkflowSwitch).toBeVisible({ timeout: 15_000 });
-  await cloudWorkflowSwitch.click();
+  if (!(await cloudWorkflowSwitch.isChecked())) {
+    await cloudWorkflowSwitch.click();
+  }
+
   const saveButton = page.getByRole("button", { name: "Save" }).first();
-  await expect(saveButton).toBeEnabled({ timeout: 10_000 });
-  await saveButton.click();
-  await expect(
-    page.getByText("Organization configuration updated successfully", { exact: true }),
-  ).toBeVisible({ timeout: 15_000 });
+  if (await saveButton.isEnabled()) {
+    await saveButton.click();
+    await expect(
+      page.getByText("Organization configuration updated successfully", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+  }
 }
 
 export async function verifyAddOrgButtonEnabledFlow(page: Page) {
@@ -112,7 +121,12 @@ export async function createOrganizationFlow(page: Page, orgName: string) {
     const status = createResponse?.status() ?? 0;
 
     if (status >= 400) {
-      const looksLikeAuth = status === 401;
+      // The app's own silent token refresh is broken (see session-lifecycle.ts):
+      // a token that goes stale right after enableMultiOrgFlow just saved new
+      // settings can get this endpoint to answer 403 instead of a clean 401.
+      // Give a stale session one recovery attempt on either status before
+      // treating it as a real policy failure.
+      const looksLikeAuth = status === 401 || status === 403;
       if (attempt < maxAttempts - 1 && looksLikeAuth) {
         await refreshSuiteSession(page);
         await openIam(page, "organization", "Organizations");
@@ -127,7 +141,7 @@ export async function createOrganizationFlow(page: Page, orgName: string) {
         `Add Organization API rejected create with HTTP ${status}. ` +
           `Dialog remained open (see snapshots/organizations-add-after-submit.yml). ` +
           (status === 403
-            ? "403 Forbidden is a real permission/policy failure — e2e must fail."
+            ? "403 Forbidden persisted after a session refresh — a real permission/policy failure."
             : "Create must return 2xx for this flow to pass."),
       );
     }

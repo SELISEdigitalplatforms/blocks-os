@@ -41,6 +41,15 @@ describe("DateRange", () => {
     expect(screen.getByRole("button", { name: "Reset" })).toBeTruthy();
   });
 
+  it("honors a single-month layout for narrow filter sheets", async () => {
+    const user = userEvent.setup();
+    render(<DateRange label="Created" value={null} onChange={vi.fn()} numberOfMonths={1} />);
+
+    await user.click(screen.getByRole("button", { name: /Created/ }));
+
+    expect(screen.getAllByRole("grid")).toHaveLength(1);
+  });
+
   it("applies the current value on Apply", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

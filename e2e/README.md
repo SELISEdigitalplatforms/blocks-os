@@ -73,8 +73,8 @@ Re-run after UI changes or when the shared project/session is refreshed.
 
 ```bash
 cd e2e
-npm test              # os-setup + feature specs, then globalTeardown deletes the shared project
-npm run test:features # ordered subset from features.mjs
+npm test              # sidebar order on Development, then env → people → migration
+npm run test:features # same ordered runner (subset with E2E_FEATURES=…)
 ```
 
 Select features:
@@ -142,7 +142,7 @@ Deleting a project means deleting every one of its environments one at a time
 `deleteProject()` in `support/create-and-delete-project.ts`.
 
 1. **Suite setup** — OIDC login on OS, reuse or create one shared project **on OS**, write `os-project.json`, save `os-session.json` **after** the dashboard is open.
-2. **Features** — use session; open routes with direct `goto` via `os-helpers`.
+2. **Features** — sidebar order on Development (`features.mjs`), then add environment → people invite → start migration.
 3. **Recovery** — login gate or console bounce → re-auth if needed, one env-chip open to reseed localStorage, persist session (never create a new project).
 4. **Global teardown** — delete every environment of the shared project on OS, every run, pass or fail (unless `E2E_KEEP_PROJECT=1`).
 
@@ -150,17 +150,17 @@ Deleting a project means deleting every one of its environments one at a time
 
 ```
 e2e/
-  features.mjs / run-e2e.mjs  # npm run test:features
+  features.mjs / run-e2e.mjs  # npm test (sidebar order)
   tests/
     auth/login.spec.ts
     suite/
       suite.setup.spec.ts
-    overview/
-    identity-and-access/
-    secrets-and-configs/
-    project-settings/
-    logs-and-traces/
-    email-management/
+    01-overview/
+    02-secrets-and-configs/
+    03-email-management/
+    04-identity-and-access/
+    05-logs-and-traces/
+    06-project-settings/      # add env → people invite → migration last
   support/
     os-project.ts
     suite-helpers.ts

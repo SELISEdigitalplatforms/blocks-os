@@ -81,13 +81,8 @@ export default defineConfig({
     {
       name: "os",
       testMatch: /.*\.spec\.ts/,
-      // capture-snapshots.spec.ts belongs only to the dedicated
-      // "snapshot-capture" project below: it's a slow 25-route walk that
-      // needs that project's 900s timeout (this project only gets the
-      // config-level 180s default), and it isn't a correctness test — it
-      // regenerates reference .yml snapshots, run on demand via `npm run
-      // snapshots:capture`, not on every default suite run. Without this it
-      // silently ran twice, back-to-back, on every `npm test`.
+      // capture-snapshots.spec.ts is not a correctness test — it regenerates
+      // reference .yml snapshots on demand via `npm run snapshots:capture`.
       testIgnore: [/auth[\\/]login\.spec\.ts/, /suite\.setup\.spec\.ts/, /capture-snapshots\.spec\.ts/],
       dependencies: ["os-setup"],
       use: {
@@ -95,15 +90,22 @@ export default defineConfig({
         ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
       },
     },
-    {
-      name: "snapshot-capture",
-      testMatch: /capture-snapshots\.spec\.ts/,
-      dependencies: ["os-setup"],
-      timeout: 900_000,
-      use: {
-        ...devices["Desktop Chrome"],
-        ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
-      },
-    },
+    // Opt-in only. A bare `playwright test` / `npm test` must not run this
+    // 25-route walk (it was suite test #28 and added ~1.5m plus a stale
+    // token for globalTeardown). `npm run snapshots:capture` sets the env.
+    ...(process.env.E2E_CAPTURE_SNAPSHOTS === "1"
+      ? [
+          {
+            name: "snapshot-capture",
+            testMatch: /capture-snapshots\.spec\.ts/,
+            dependencies: ["os-setup"],
+            timeout: 900_000,
+            use: {
+              ...devices["Desktop Chrome"],
+              ...(fs.existsSync(osSessionPath) ? { storageState: "fixtures/os-session.json" } : {}),
+            },
+          },
+        ]
+      : []),
   ],
 })

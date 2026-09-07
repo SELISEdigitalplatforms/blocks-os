@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Run enabled OS features in order (suite setup/teardown via playwright projects).
+ * Run enabled OS features in sidebar order (suite setup/teardown via playwright projects).
  * Edit features.mjs or set E2E_FEATURES=overview,users
+ *
+ * Extra CLI args are forwarded to Playwright (e.g. --headed, --ui, --debug).
  */
 import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { resolveEnabledFeatures } from "./features.mjs"
+import { orderedSuiteSpecs, resolveEnabledFeatures } from "./features.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -18,15 +20,28 @@ function main() {
     process.exit(1)
   }
 
-  console.log(`[e2e] Running ${features.length} feature(s) in order:`)
+  console.log(`[e2e] Running ${features.length} feature(s) in sidebar order:`)
   for (const feature of features) {
     console.log(`  - ${feature.id}: ${feature.name}`)
   }
 
-  const specs = features.map((feature) => feature.spec)
+  const forwardedArgs = process.argv.slice(2)
+  const looksLikeSpecArg = (arg) =>
+    arg.endsWith(".spec.ts") || arg.startsWith("tests/")
+  const hasSpecFilter = forwardedArgs.some(looksLikeSpecArg)
+  const specArgs = hasSpecFilter ? [] : orderedSuiteSpecs()
+
   const result = spawnSync(
     "npx",
-    ["playwright", "test", ...specs, "--max-failures=1"],
+    [
+      "playwright",
+      "test",
+      ...forwardedArgs,
+      "--project=setup",
+      "--project=os-setup",
+      "--project=os",
+      ...specArgs,
+    ],
     {
       cwd: __dirname,
       stdio: "inherit",

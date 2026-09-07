@@ -4,13 +4,35 @@ import { openOidcTemplate, openSecretManagement } from "../../support/os-helpers
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+function oidcEmptyState(page: Page) {
+  return page.getByText("No OIDC clients yet");
+}
+
+function oidcClientHeader(page: Page) {
+  return page.getByText("Client", { exact: true });
+}
+
+/**
+ * OidcList renders a skeleton while isLoading || isFetching, the empty copy
+ * when there are no credentials, and the Client column header only when there
+ * is at least one row. Wait for either settled state so later steps do not
+ * race the skeleton (neither empty copy nor Client exists during fetch).
+ */
+export async function waitForOidcListSettledFlow(page: Page) {
+  await expect(oidcEmptyState(page).or(oidcClientHeader(page))).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
 export async function navigateToOidcFlow(page: Page) {
   await openSecretManagement(page, "oidc", "OIDC");
+  await waitForOidcListSettledFlow(page);
 }
 
 export async function verifyEmptyOidcStateFlow(page: Page) {
-  if (await page.getByText("No OIDC clients yet").isVisible({ timeout: 10000 })) {
-    await expect(page.getByText("No OIDC clients yet")).toBeVisible();
+  await waitForOidcListSettledFlow(page);
+  if (await oidcEmptyState(page).isVisible()) {
+    await expect(oidcEmptyState(page)).toBeVisible();
   }
 }
 
@@ -76,9 +98,11 @@ export async function createOidcClientFlow(page: Page, clientName: string) {
   ) {
     await expect(page.getByText("OIDC Client created successfully")).toBeVisible();
   }
+  await waitForOidcListSettledFlow(page);
 }
 
 export async function findOidcClientRowFlow(page: Page, clientName: string): Promise<Locator> {
+  await waitForOidcListSettledFlow(page);
   const clientRow = page.getByRole("row").filter({ hasText: clientName });
   await expect(clientRow).toBeVisible({ timeout: 15000 });
   const alreadyExpanded = await page.getByText("Client Id").isVisible({ timeout: 3000 });
@@ -305,6 +329,7 @@ export async function saveTemplateAndReturnToOidcListFlow(
     timeout: 15000,
   });
   await openSecretManagement(page, "oidc", "OIDC");
+  await waitForOidcListSettledFlow(page);
   await expect(page.getByRole("button", { name: "Manage Template" })).toBeVisible({
     timeout: 15000,
   });
@@ -314,6 +339,7 @@ export async function saveTemplateAndReturnToOidcListFlow(
 export async function ensureOidcClientRowVisibleFlow(page: Page, clientRow: Locator) {
   if (!(await clientRow.isVisible({ timeout: 5000 }))) {
     await openSecretManagement(page, "oidc", "OIDC");
+    await waitForOidcListSettledFlow(page);
     await expect(clientRow).toBeVisible({ timeout: 15000 });
   }
 }
@@ -348,6 +374,7 @@ export async function rotateClientSecretFlow(page: Page, clientRow: Locator, cli
       if (attempt === 2) return;
       if (/\/branding/.test(page.url())) {
         await openSecretManagement(page, "oidc", "OIDC");
+        await waitForOidcListSettledFlow(page);
         await expect(clientRow).toBeVisible({ timeout: 15000 });
       }
       await page.waitForTimeout(500);
