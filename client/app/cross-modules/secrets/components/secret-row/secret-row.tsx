@@ -35,6 +35,7 @@ import {
   SECRET_STATUS,
   SECRET_STATUS_LABEL,
   SECRET_TYPE_LABEL,
+  displaySecretName,
   secretTagLabel,
   secretTags,
   supportsValueReveal,
@@ -182,7 +183,9 @@ export function SecretRow({ secret }: SecretRowProps) {
 
         <TableCell className="py-3.5">
           {/* Name and tags. The description lives in the expanded panel, where it has room. */}
-          <p className="truncate font-medium text-high-emphasis">{secret.name}</p>
+          <p className="truncate font-medium text-high-emphasis" title={secret.name}>
+            {displaySecretName(secret.name)}
+          </p>
           {tags.length > 0 && (
             <div className="mt-1 flex flex-wrap items-center gap-1">
               {/* Capped at three: a heavily tagged secret would otherwise set the row height

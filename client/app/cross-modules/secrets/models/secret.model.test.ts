@@ -15,6 +15,8 @@ import {
   toSecretTagKey,
   isValidSecretTag,
   secretTagLabel,
+  displaySecretName,
+  SECRET_NAME_DISPLAY_MAX_LENGTH,
   secretTags,
   SECRET_TAG_MAX_LENGTH,
   SECRET_TYPE_LABEL,
@@ -121,6 +123,27 @@ describe("secret model", () => {
         expect(SECRET_TYPE_LABEL[type]).toBeTruthy();
         expect(SECRET_TYPE_DESCRIPTION[type]).toBeTruthy();
       }
+    });
+  });
+
+  describe("display name", () => {
+    it("leaves a name within the cap alone", () => {
+      expect(displaySecretName("payment-gateway-key")).toBe("payment-gateway-key");
+    });
+
+    it("leaves a name exactly at the cap alone", () => {
+      const exact = "a".repeat(SECRET_NAME_DISPLAY_MAX_LENGTH);
+      expect(displaySecretName(exact)).toBe(exact);
+    });
+
+    it("cuts a longer name to the cap and marks the cut", () => {
+      // The row has a truncate class, but it only bites once the cell has a width to overflow;
+      // the table sizes itself to its content, so a long name stretches the column instead.
+      const long = "b".repeat(SECRET_NAME_DISPLAY_MAX_LENGTH + 25);
+      const shown = displaySecretName(long);
+
+      expect(shown).toBe(`${"b".repeat(SECRET_NAME_DISPLAY_MAX_LENGTH)}…`);
+      expect(shown.length).toBe(SECRET_NAME_DISPLAY_MAX_LENGTH + 1);
     });
   });
 

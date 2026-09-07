@@ -349,6 +349,25 @@ export const isValidSecretTag = (tag: string): boolean =>
   tag.length > 0 && tag.length <= SECRET_TAG_MAX_LENGTH && SECRET_TAG_PATTERN.test(tag);
 
 /**
+ * Longest secret name rendered in full in a list row.
+ *
+ * Names are allowed 100 characters, and the list row has a `truncate` class, but that only
+ * bites once the cell has a width to overflow — the table sizes itself to its content, so a
+ * long name stretches the column and pushes the later ones off the edge instead. Capping the
+ * text is what keeps the row layout independent of the data.
+ */
+export const SECRET_NAME_DISPLAY_MAX_LENGTH = 40;
+
+/**
+ * Shortens a name for a list row. Always render it with the full name as a `title`, so the
+ * part that was cut is still reachable.
+ */
+export const displaySecretName = (name: string): string =>
+  name.length > SECRET_NAME_DISPLAY_MAX_LENGTH
+    ? `${name.slice(0, SECRET_NAME_DISPLAY_MAX_LENGTH)}…`
+    : name;
+
+/**
  * A secret's tags, tolerating their absence.
  *
  * The field is newer than the secrets themselves: a document written before tags existed has
