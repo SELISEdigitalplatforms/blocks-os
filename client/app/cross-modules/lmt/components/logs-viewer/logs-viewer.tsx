@@ -30,11 +30,21 @@ export interface Service {
 }
 export interface LogFilter {
   search: string;
+  /** Absolute window from the Date picker. Mutually exclusive with {@link LogFilter.range}. */
   startDate: string;
   endDate: string;
+  /**
+   * Relative window preset such as "30m". Held separately from startDate rather than
+   * resolved into it, because the live tail stops polling whenever an absolute window is
+   * set -- and a relative window must keep streaming, since new logs are always inside it.
+   */
+  range: string;
   level: string;
   service: string;
 }
+
+/** The logs list opens on a relative window rather than on the whole retention period. */
+export const DEFAULT_LOG_FILTER: Partial<LogFilter> = { range: "30m" };
 interface LogsViewerContextType {
   pageSize: number;
   services: Service[];
@@ -146,7 +156,7 @@ export const LogsViewer = ({
     [selectedServices],
   );
 
-  const [filter, setFilter] = useState<Partial<LogFilter> | null>(null);
+  const [filter, setFilter] = useState<Partial<LogFilter> | null>(DEFAULT_LOG_FILTER);
 
   // Drop services that no longer exist once the service list loads or changes.
   useEffect(() => {
@@ -183,8 +193,10 @@ export const LogsViewer = ({
     [defaultServiceId, setServiceKey],
   );
 
+  // Reset returns to the default window rather than clearing it, so the list never falls
+  // back to querying the entire retention period by accident.
   const resetFilter = () => {
-    setFilter(null);
+    setFilter(DEFAULT_LOG_FILTER);
   };
   return (
     <LogsViewerContext.Provider

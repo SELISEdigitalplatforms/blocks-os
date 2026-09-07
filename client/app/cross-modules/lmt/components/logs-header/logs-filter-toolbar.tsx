@@ -1,23 +1,25 @@
 import { FilterItem, FilterToolbar } from "@/components/filter-toolbar";
 import { useContext, useMemo } from "react";
-import { LogsViewerContext } from "../logs-viewer";
-import { LOG_LEVEL, serviceKeyToTreeValues } from "../../utils";
+import { DEFAULT_LOG_FILTER, LogsViewerContext } from "../logs-viewer";
+import { LMT_TIME_RANGES, LOG_LEVEL, serviceKeyToTreeValues } from "../../utils";
 
 type LogsFilterValues = {
   search?: string;
   level?: string;
   service: string[];
   date: { from?: Date; to?: Date } | null;
+  range: string;
 };
 
 export const LogsFilterToolbar = () => {
   const { services, serviceFilterValue, changeServices, filter, setFilter, resetFilter } =
     useContext(LogsViewerContext);
-  const { level, startDate, endDate, search } = filter || {
+  const { level, startDate, endDate, search, range } = filter || {
     level: "",
     startDate: "",
     endDate: "",
     search: "",
+    range: "",
   };
   const levels = Object.entries(LOG_LEVEL).map((item) => ({
     label: item[0],
@@ -34,12 +36,22 @@ export const LogsFilterToolbar = () => {
       [key]: value,
     }));
   };
+  // An absolute range and a relative preset would otherwise both apply and fight over the
+  // same window, so choosing either one clears the other.
   const updateDate = (value: { from?: Date; to?: Date } | null) => {
     const { from, to } = value || {};
     setFilter((filter) => ({
       ...filter,
       startDate: from ? from.toISOString() : "",
       endDate: to ? to.toISOString() : "",
+      range: "",
+    }));
+  };
+  const updateRange = (value: string | null) => {
+    setFilter((filter) => ({
+      ...filter,
+      range: value ?? "",
+      ...(value ? { startDate: "", endDate: "" } : {}),
     }));
   };
   const handleServiceChange = (serviceKeys: string[] | null) => {
@@ -56,6 +68,7 @@ export const LogsFilterToolbar = () => {
   ) => {
     if (key === "service") return handleServiceChange(value as string[] | null);
     if (key === "date") return updateDate(value as { from?: Date; to?: Date } | null);
+    if (key === "range") return updateRange(value as string | null);
     return updateFilter(key as keyof typeof filter, value);
   };
 
@@ -65,6 +78,7 @@ export const LogsFilterToolbar = () => {
       level: "",
       service: [],
       date: null,
+      range: DEFAULT_LOG_FILTER.range ?? "",
     }),
     [], // static — never changes
   );
@@ -81,8 +95,9 @@ export const LogsFilterToolbar = () => {
               to: endDate ? new Date(endDate) : undefined,
             }
           : null,
+      range: range ?? "",
     }),
-    [search, level, serviceFilterValue, startDate, endDate], // re-compute only when these change
+    [search, level, serviceFilterValue, startDate, endDate, range], // re-compute only when these change
   );
 
   // The whole first service is what the page starts on, so that selection counts as
@@ -100,10 +115,11 @@ export const LogsFilterToolbar = () => {
     const dateChanged =
       (currentValues.date?.from?.getTime() ?? 0) !== (defaultValues.date?.from?.getTime() ?? 0) ||
       (currentValues.date?.to?.getTime() ?? 0) !== (defaultValues.date?.to?.getTime() ?? 0);
+    const rangeChanged = currentValues.range !== defaultValues.range;
     const serviceChanged =
       currentValues.service.length !== defaultServiceSelection.length ||
       currentValues.service.some((value, index) => value !== defaultServiceSelection[index]);
-    return !searchChanged && !levelChanged && !dateChanged && !serviceChanged;
+    return !searchChanged && !levelChanged && !dateChanged && !rangeChanged && !serviceChanged;
   }, [currentValues, defaultValues, defaultServiceSelection]);
 
   const handleReset = () => {
@@ -115,6 +131,12 @@ export const LogsFilterToolbar = () => {
   // ✅ Use FilterItem<LogsFilterValues> directly — it's already the right discriminated union
   const filters: FilterItem<LogsFilterValues>[] = [
     { key: "search", type: "SearchInput", label: "label" },
+    {
+      key: "range",
+      type: "Radio",
+      label: "Time",
+      props: { options: LMT_TIME_RANGES.map(({ label, value }) => ({ label, value })) },
+    },
     { key: "date", type: "DateRange", label: "Date", props: {} },
     {
       key: "service",

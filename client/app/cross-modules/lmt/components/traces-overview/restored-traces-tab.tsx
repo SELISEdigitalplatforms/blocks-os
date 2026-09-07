@@ -19,14 +19,12 @@ import { AlertTriangle, History, Loader2, Plus, RefreshCw } from "lucide-react";
 import { TracesFilterToolbar, useTracesFilterQueryParams } from "./traces-filter-toolbar";
 import { RequestTracesModal } from "./request-traces-modal";
 import { TracesList } from "./traces-list";
-import type { ServiceOption } from "./traces-filter-toolbar";
+import type { ServiceOption, TraceFilter } from "./traces-filter-toolbar";
 
 interface RestoredTracesTabProps {
   sourceType: TRACE_REQUEST_SOURCE_TYPE;
   projectKey: string;
-  queryParams: {
-    search: string;
-    services: string[];
+  queryParams: TraceFilter & {
     page: number;
     pageSize: number;
   };
@@ -215,6 +213,7 @@ export function RestoredTracesTab({
                 queryParams={queryParams}
                 setQueryParams={setQueryParams}
                 serviceOptions={serviceOptions}
+                showTimeRange={false}
               />
             </div>
             <div className="ml-4">

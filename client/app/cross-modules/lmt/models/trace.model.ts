@@ -268,6 +268,7 @@ export interface IGetTracesPayload {
     endDate?: string;
     services: string[];
     excepts: string[];
+    statusCodeClasses?: number[];
   };
   search: string;
   projectKey: string;

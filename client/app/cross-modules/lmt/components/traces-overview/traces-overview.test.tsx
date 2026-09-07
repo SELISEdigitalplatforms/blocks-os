@@ -218,7 +218,12 @@ describe("TracesOverview", () => {
     await waitFor(() =>
       expect(h.useGetTraces).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          filter: { services: ["blocks-os", "blocks-os-worker"], excepts: ["blocks-lmt-api"] },
+          // objectContaining: this test is about how a service selection resolves to
+          // collection names, not about which other filters the payload carries.
+          filter: expect.objectContaining({
+            services: ["blocks-os", "blocks-os-worker"],
+            excepts: ["blocks-lmt-api"],
+          }),
         }),
       ),
     );
@@ -235,7 +240,12 @@ describe("TracesOverview", () => {
     await waitFor(() =>
       expect(h.useGetTraces).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          filter: { services: ["blocks-os-worker"], excepts: ["blocks-lmt-api"] },
+          // objectContaining: this test is about how a service selection resolves to
+          // collection names, not about which other filters the payload carries.
+          filter: expect.objectContaining({
+            services: ["blocks-os-worker"],
+            excepts: ["blocks-lmt-api"],
+          }),
         }),
       ),
     );

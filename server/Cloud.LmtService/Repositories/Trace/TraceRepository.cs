@@ -96,6 +96,32 @@ namespace Cloud.LmtService.Repositories.Trace
                 filter &= new BsonDocumentFilterDefinition<BsonDocument>(exprFilter);
             }
 
+            if (query.Filter?.StatusCodeClasses != null && query.Filter.StatusCodeClasses.Count > 0)
+            {
+                // $getField because the attribute key itself contains dots.
+                var statusCodeField = new BsonDocument("$getField", new BsonDocument
+                {
+                    { "field", "response.status.code" },
+                    { "input", "$Attributes" }
+                });
+
+                // Guarded by $isNumber: roots with no HTTP code at all (message-worker consumers)
+                // and any code stored as a string would otherwise make $divide throw and fail the
+                // whole query. Those spans resolve to null, which matches no class -- correct for
+                // a filter that asks about HTTP status.
+                var codeClass = new BsonDocument("$cond", new BsonArray
+                {
+                    new BsonDocument("$isNumber", statusCodeField),
+                    new BsonDocument("$floor", new BsonDocument("$divide", new BsonArray { statusCodeField, 100 })),
+                    BsonNull.Value
+                });
+
+                var classArray = new BsonArray(query.Filter.StatusCodeClasses);
+                var exprFilter = new BsonDocument("$expr", new BsonDocument("$in", new BsonArray { codeClass, classArray }));
+
+                filter &= new BsonDocumentFilterDefinition<BsonDocument>(exprFilter);
+            }
+
             var sort = query.Sort != null
                 ? (query.Sort.IsDescending
                     ? Builders<BsonDocument>.Sort.Descending(query.Sort.Property)

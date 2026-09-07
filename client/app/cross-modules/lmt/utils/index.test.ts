@@ -4,6 +4,7 @@ import {
   getLogFormatTimestamp,
   getLogLevelClassName,
   getTraceFormatTimestamp,
+  getRangeStartDate,
 } from "./index";
 
 describe("lmt/utils index", () => {
@@ -53,6 +54,34 @@ describe("lmt/utils index", () => {
 
     it("returns the original string when it is not a valid date", () => {
       expect(getTraceFormatTimestamp("not-a-timestamp")).toBe("not-a-timestamp");
+    });
+  });
+
+  describe("getRangeStartDate", () => {
+    it("returns undefined when no range is selected", () => {
+      expect(getRangeStartDate("")).toBeUndefined();
+      expect(getRangeStartDate("nonsense")).toBeUndefined();
+    });
+
+    it("subtracts the preset window from now", () => {
+      const now = new Date("2026-09-07T20:48:13.017Z");
+      expect(getRangeStartDate("15m", now)).toBe("2026-09-07T20:33:00.000Z");
+      expect(getRangeStartDate("1h", now)).toBe("2026-09-07T19:48:00.000Z");
+      expect(getRangeStartDate("24h", now)).toBe("2026-09-06T20:48:00.000Z");
+    });
+
+    it("floors to the minute so the react-query key is stable between renders", () => {
+      // Without this, every render would produce a new start date, a new query key, and a
+      // refetch loop. Two moments in the same minute must resolve identically.
+      const early = getRangeStartDate("5m", new Date("2026-09-07T20:48:00.001Z"));
+      const late = getRangeStartDate("5m", new Date("2026-09-07T20:48:59.999Z"));
+      expect(early).toBe(late);
+    });
+
+    it("rolls over at the minute boundary so the window keeps tracking now", () => {
+      const before = getRangeStartDate("5m", new Date("2026-09-07T20:48:59.999Z"));
+      const after = getRangeStartDate("5m", new Date("2026-09-07T20:49:00.000Z"));
+      expect(after).not.toBe(before);
     });
   });
 });

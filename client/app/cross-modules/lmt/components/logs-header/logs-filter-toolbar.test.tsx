@@ -83,7 +83,10 @@ describe("LogsFilterToolbar", () => {
   afterEach(() => cleanup());
 
   it("hides the reset button while every filter is at its default", () => {
-    renderToolbar(makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "" } }));
+    // The list opens on the default relative window, so that counts as pristine.
+    renderToolbar(
+      makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "", range: "30m" } }),
+    );
     expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("true");
   });
 
@@ -168,6 +171,8 @@ describe("LogsFilterToolbar", () => {
     expect(updater({})).toEqual({
       startDate: from.toISOString(),
       endDate: to.toISOString(),
+      // An absolute window supersedes the relative preset rather than stacking with it.
+      range: "",
     });
   });
 
@@ -176,7 +181,31 @@ describe("LogsFilterToolbar", () => {
     renderToolbar(ctx);
     h.captured?.onChange("date", null);
     const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(updater({})).toEqual({ startDate: "", endDate: "" });
+    expect(updater({})).toEqual({ startDate: "", endDate: "", range: "" });
+  });
+
+  it("clears an absolute window when a relative preset is chosen", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    h.captured?.onChange("range", "15m");
+    const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(updater({ startDate: "x", endDate: "y" })).toEqual({
+      startDate: "",
+      endDate: "",
+      range: "15m",
+    });
+  });
+
+  it("clears the preset without touching an absolute window when it is cleared", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    h.captured?.onChange("range", null);
+    const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(updater({ startDate: "x", endDate: "y" })).toEqual({
+      startDate: "x",
+      endDate: "y",
+      range: "",
+    });
   });
 
   it("updates a plain filter key such as search", () => {

@@ -6,6 +6,7 @@ import { InfiniteScroll } from "@/components/infinite-scroller";
 import { useContext, useMemo } from "react";
 import { LogsViewerContext } from "../logs-viewer";
 import { useLogs } from "../../hooks/use-logs";
+import { getRangeStartDate } from "../../utils";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
 import { ILog } from "../../models/log.model";
 // UI: New Data Available Indicator
@@ -29,12 +30,18 @@ const OldDataFetchingIndicator = () => (
 export const LogsList = () => {
   const { selectedService, selectedServiceNames, filter, pageSize, isServicesLoading, services } =
     useContext(LogsViewerContext);
-  const { level, startDate, endDate, search } = filter || {
+  const { level, startDate, endDate, search, range } = filter || {
     level: "",
     startDate: "",
     endDate: "",
     search: "",
+    range: "",
   };
+  // Resolved once per preset change rather than on every render. Recomputing it live would
+  // shift the window every minute, and each shift restarts the query -- wiping the loaded
+  // rows and the scroll position mid-read. Pinning it means "the 30 minutes before you
+  // chose this", with the poller appending anything newer.
+  const rangeStartDate = useMemo(() => getRangeStartDate(range ?? ""), [range]);
   // serviceNames spans every selected service; serviceName stays the primary one so the
   // API keeps a single-collection fallback when nothing is narrowed.
   const serviceName = selectedService?.serviceName ?? "";
@@ -45,11 +52,14 @@ export const LogsList = () => {
     serviceNames,
     search: search,
     level,
-    startDate,
+    startDate: rangeStartDate ?? startDate,
     endDate: initialTimeStamp,
     pageSize,
   });
   const fetchNewLogsHandler = async (lastItemTimestamp: string = initialTimeStamp) => {
+    // `range` is deliberately absent from this guard. An absolute window has an end, so
+    // streaming past it would be wrong; a relative window does not, and every new log falls
+    // inside it -- so the default 30-minute view still tails live.
     if (search || level || startDate || endDate) return [];
     return await fetchNewLogs(lastItemTimestamp);
   };
