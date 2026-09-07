@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff, Plus, X } from "lucide-react";
+import { Eye, EyeOff, Info, Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ import {
   SOCIAL_AUTH_PROVIDERS_CONFIG,
   SSO_PROVIDERS,
 } from "@blocks-idp/authentication/constants/sso-providers.constant";
-import { PROVIDER_CONFIG } from "./identity-provider-visual.constant";
+import { ENTERPRISE_CARD_INFO, PROVIDER_CONFIG } from "./identity-provider-visual.constant";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
@@ -57,19 +57,6 @@ const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   // { value: "linkedin", label: "LinkedIn" },
   // { value: "github", label: "GitHub" },
 ];
-
-/** Banner copy for the two non-social provider types, shown when picked from the gallery. */
-const ENTERPRISE_PICK_INFO: Record<"blocks-oidc" | "byos", { label: string; description: string }> =
-  {
-    "blocks-oidc": {
-      label: "Blocks OIDC",
-      description: "Federate against another Blocks project.",
-    },
-    byos: {
-      label: "Bring your own SSO",
-      description: "Any OIDC-compliant provider — Okta, Auth0, Keycloak, your own gateway.",
-    },
-  };
 
 type FormValues = {
   displayName: string;
@@ -293,7 +280,7 @@ export function IdentityProviderFormDialog({
     : undefined;
   const pickedEnterpriseMeta =
     presetProviderType === "blocks-oidc" || presetProviderType === "byos"
-      ? ENTERPRISE_PICK_INFO[presetProviderType]
+      ? ENTERPRISE_CARD_INFO[presetProviderType]
       : undefined;
 
   // The help box, by contrast, tracks the live selection - it shows for a manual pick too
@@ -398,34 +385,34 @@ export function IdentityProviderFormDialog({
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Pre-fill confirmation banner - add mode + picked from the gallery only */}
               {showBanner && (
-                <div className="flex items-start gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background">
+                <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/[0.04] p-3.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
                     {pickedSocialMeta ? (
                       <img
                         src={pickedSocialMeta.imageSrc}
                         alt={pickedSocialMeta.label}
-                        className="h-5 w-5 object-contain"
+                        className="h-[22px] w-[22px] object-contain"
                       />
                     ) : pickedEnterpriseMeta && presetProviderType ? (
                       (() => {
                         const Icon = PROVIDER_CONFIG[presetProviderType]?.Icon;
-                        return Icon ? <Icon className="h-4 w-4 text-primary" /> : null;
+                        return Icon ? <Icon className="h-[18px] w-[18px] text-primary" /> : null;
                       })()
                     ) : null}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-high-emphasis">
-                      You picked {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
+                    <p className="text-sm font-semibold text-primary">
+                      {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                       {pickedSocialMeta?.description ?? pickedEnterpriseMeta?.description}
                     </p>
                   </div>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-7 shrink-0 px-2 text-xs"
+                    className="h-7 shrink-0 border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/5 hover:text-primary"
                     onClick={handleChangeProvider}
                   >
                     Change
@@ -594,9 +581,14 @@ export function IdentityProviderFormDialog({
 
               {/* Contextual help - shown for the currently selected provider, add mode only */}
               {helpContent && (
-                <div className="rounded-md border bg-muted/30 p-3">
-                  <p className="text-xs font-semibold text-high-emphasis">{helpContent.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{helpContent.body}</p>
+                <div className="flex gap-3 rounded-lg border border-dashed bg-muted/40 p-3.5">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-high-emphasis">{helpContent.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {helpContent.body}
+                    </p>
+                  </div>
                 </div>
               )}
 

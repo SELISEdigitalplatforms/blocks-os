@@ -13,21 +13,23 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 vi.mock("@blocks-idp/authentication/hooks/use-identity-provider", () => ({
   useGetIdentityProviders: h.useGetIdentityProviders,
 }));
-vi.mock("./identity-provider-list", () => ({
-  IdentityProviderList: ({ providers }: { providers: { itemId?: string }[] }) => (
-    <div data-testid="idp-table" data-count={providers.length} />
-  ),
-  LoadingSkeleton: () => <div data-testid="idp-loading" />,
-}));
 vi.mock("./identity-provider-gallery", () => ({
+  GallerySkeleton: () => <div data-testid="idp-loading" />,
   IdentityProviderGallery: (props: {
     showHowItWorks: boolean;
+    blocksOidcEntries: { itemId?: string }[];
+    byosEntries: { itemId?: string }[];
     onSelectGoogle: () => void;
     onSelectMicrosoft: () => void;
     onSelectBlocksOidc: () => void;
     onSelectByos: () => void;
   }) => (
-    <div data-testid="idp-gallery" data-how-it-works={String(props.showHowItWorks)}>
+    <div
+      data-testid="idp-gallery"
+      data-how-it-works={String(props.showHowItWorks)}
+      data-blocks-oidc-count={props.blocksOidcEntries.length}
+      data-byos-count={props.byosEntries.length}
+    >
       <button onClick={props.onSelectGoogle}>pick-google</button>
       <button onClick={props.onSelectMicrosoft}>pick-microsoft</button>
       <button onClick={props.onSelectBlocksOidc}>pick-blocks-oidc</button>
@@ -78,6 +80,14 @@ const byosProvider = {
   isActive: true,
 } as unknown as IdentityProvider;
 
+const blocksOidcProvider = {
+  itemId: "idp-blocks",
+  providerType: "blocks-oidc",
+  provider: "sibling-project",
+  displayName: "Sibling Project",
+  isActive: true,
+} as unknown as IdentityProvider;
+
 const renderPage = (addOpen = false) =>
   render(<IdentityProviders addOpen={addOpen} onAddOpenChange={vi.fn()} />);
 
@@ -92,14 +102,16 @@ describe("IdentityProviders (page)", () => {
     });
   });
 
-  it("H1: shows the gallery with how-it-works and no table when nothing is configured", () => {
+  it("shows the gallery with how-it-works and no separate table when nothing is configured", () => {
     renderPage();
     expect(screen.queryByText("Configured providers")).toBeNull();
-    expect(screen.queryByTestId("idp-table")).toBeNull();
-    expect(screen.getByTestId("idp-gallery").getAttribute("data-how-it-works")).toBe("true");
+    const gallery = screen.getByTestId("idp-gallery");
+    expect(gallery.getAttribute("data-how-it-works")).toBe("true");
+    expect(gallery.getAttribute("data-blocks-oidc-count")).toBe("0");
+    expect(gallery.getAttribute("data-byos-count")).toBe("0");
   });
 
-  it("H2: shows the configured providers table above the gallery once a provider exists", () => {
+  it("hides how-it-works once a provider exists, with the gallery as the only view", () => {
     h.useGetIdentityProviders.mockReturnValue({
       data: { data: [googleProvider] },
       isLoading: false,
@@ -107,21 +119,23 @@ describe("IdentityProviders (page)", () => {
       refetch: h.refetch,
     });
     renderPage();
-    expect(screen.getByText("Configured providers")).toBeTruthy();
-    expect(screen.getByText("1 provider active")).toBeTruthy();
-    expect(screen.getByTestId("idp-table").getAttribute("data-count")).toBe("1");
+    expect(screen.queryByText("Configured providers")).toBeNull();
     expect(screen.getByTestId("idp-gallery").getAttribute("data-how-it-works")).toBe("false");
   });
 
-  it("pluralizes the summary for multiple providers", () => {
+  it("routes each enterprise entry to its own type's gallery card", () => {
     h.useGetIdentityProviders.mockReturnValue({
-      data: { data: [googleProvider, byosProvider] },
+      data: {
+        data: [googleProvider, byosProvider, blocksOidcProvider, { ...byosProvider, itemId: "b2" }],
+      },
       isLoading: false,
       isError: false,
       refetch: h.refetch,
     });
     renderPage();
-    expect(screen.getByText("2 providers active")).toBeTruthy();
+    const gallery = screen.getByTestId("idp-gallery");
+    expect(gallery.getAttribute("data-byos-count")).toBe("2");
+    expect(gallery.getAttribute("data-blocks-oidc-count")).toBe("1");
   });
 
   it("C4: shows a loading skeleton and not the empty-state framing while loading", () => {
@@ -136,7 +150,7 @@ describe("IdentityProviders (page)", () => {
     expect(screen.queryByTestId("idp-gallery")).toBeNull();
   });
 
-  it("C1/C2: shows an inline error with Retry and hides gallery/table content", () => {
+  it("C1/C2: shows an inline error with Retry and hides the gallery content", () => {
     h.useGetIdentityProviders.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -147,7 +161,6 @@ describe("IdentityProviders (page)", () => {
     expect(screen.getByText("Couldn't load identity providers")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(screen.queryByTestId("idp-gallery")).toBeNull();
-    expect(screen.queryByTestId("idp-table")).toBeNull();
   });
 
   it("C3: clicking Retry re-fetches the list", async () => {
