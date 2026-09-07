@@ -37,3 +37,24 @@ export const PROVIDER_STATUS_DOT: Record<string, string> = {
   byos: "bg-purple-500",
   "blocks-oidc": "bg-emerald-500",
 };
+
+/** At-a-glance capability tags shown on each social login's gallery card. */
+export const SOCIAL_CARD_TAGS: Record<"google" | "microsoft", string[]> = {
+  google: ["OAuth 2.0 / OIDC", "Client ID + Secret"],
+  microsoft: ["Entra ID", "Client ID + Secret"],
+};
+
+/** Gallery copy for the two provider types that aren't public social logins. */
+export const ENTERPRISE_CARD_INFO: Record<
+  "blocks-oidc" | "byos",
+  { label: string; description: string }
+> = {
+  "blocks-oidc": {
+    label: "Blocks OIDC",
+    description: "Federate against another Blocks project. The discovery URL is filled in for you.",
+  },
+  byos: {
+    label: "Bring your own SSO",
+    description: "Any OIDC-compliant provider — Okta, Auth0, Keycloak, your own gateway.",
+  },
+};
