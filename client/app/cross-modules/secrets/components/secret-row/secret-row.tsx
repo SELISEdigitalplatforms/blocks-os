@@ -35,11 +35,14 @@ import {
   SECRET_STATUS,
   SECRET_STATUS_LABEL,
   SECRET_TYPE_LABEL,
+  displaySecretName,
+  secretTagLabel,
+  secretTags,
   supportsValueReveal,
   type SecretResult,
   type SecretStatus,
 } from "@/cross-modules/secrets/models/secret.model";
-import { useRevealSecret } from "@/cross-modules/secrets/hooks/use-secret-management";
+import { useRevealSecret, useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { SecretDetail } from "../secret-detail/secret-detail";
 import { RevealSecretModal } from "../reveal-secret-modal/reveal-secret-modal";
@@ -140,6 +143,9 @@ export function SecretRow({ secret }: SecretRowProps) {
   const [lifecycleAction, setLifecycleAction] = useState<SecretLifecycleAction | null>(null);
 
   const { mutateAsync: readValue, isPending: isCopying } = useRevealSecret();
+  // Shared cache with the toolbar, so rendering labels here costs no extra request.
+  const tags = secretTags(secret);
+  const { data: tagCatalogue = [] } = useSecretTags(tags.length > 0);
 
   const isDeleted = secret.status === SECRET_STATUS.Deleted;
   const isLocked = secret.status === SECRET_STATUS.Locked;
@@ -176,8 +182,28 @@ export function SecretRow({ secret }: SecretRowProps) {
         </TableCell>
 
         <TableCell className="py-3.5">
-          {/* Name only — the description lives in the expanded panel, where it has room. */}
-          <p className="truncate font-medium text-high-emphasis">{secret.name}</p>
+          {/* Name and tags. The description lives in the expanded panel, where it has room. */}
+          <p className="truncate font-medium text-high-emphasis" title={secret.name}>
+            {displaySecretName(secret.name)}
+          </p>
+          {tags.length > 0 && (
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              {/* Capped at three: a heavily tagged secret would otherwise set the row height
+                  for the whole table. The rest are in the expanded panel. */}
+              {tags.slice(0, 3).map((key) => (
+                <Badge
+                  key={key}
+                  variant="outline"
+                  className="w-fit max-w-[140px] truncate px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+                >
+                  {secretTagLabel(key, tagCatalogue)}
+                </Badge>
+              ))}
+              {tags.length > 3 && (
+                <span className="text-[10px] text-muted-foreground">+{tags.length - 3}</span>
+              )}
+            </div>
+          )}
         </TableCell>
 
         <TableCell className="py-3.5">

@@ -6,6 +6,9 @@ public sealed class SetSecretRequest
 
     public string? Description { get; set; }
 
+    /// <summary>Labels for grouping and lookup. Normalized and de-duplicated on write.</summary>
+    public IReadOnlyCollection<string>? Tags { get; set; }
+
     /// <summary>Plaintext. Goes to the vault and is never persisted to Mongo.</summary>
     public string Value { get; set; } = string.Empty;
 
