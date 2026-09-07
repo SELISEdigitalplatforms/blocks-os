@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { LOG_LEVEL, getLogFormatTimestamp, getLogLevelClassName } from "./index";
+import {
+  LOG_LEVEL,
+  getLogFormatTimestamp,
+  getLogLevelClassName,
+  getTraceFormatTimestamp,
+} from "./index";
 
 describe("lmt/utils index", () => {
   describe("LOG_LEVEL", () => {
@@ -33,6 +38,21 @@ describe("lmt/utils index", () => {
 
     it("falls back to high-emphasis for unknown levels", () => {
       expect(getLogLevelClassName("Debug")).toBe("text-high-emphasis");
+    });
+  });
+
+  describe("getTraceFormatTimestamp", () => {
+    it("keeps seconds and milliseconds so same-minute traces stay distinguishable", () => {
+      const first = getTraceFormatTimestamp(new Date(2026, 8, 7, 20, 25, 3, 7).toISOString());
+      const second = getTraceFormatTimestamp(new Date(2026, 8, 7, 20, 25, 3, 41).toISOString());
+
+      expect(first).toBe("07/09/2026, 20:25:03.007");
+      expect(second).toBe("07/09/2026, 20:25:03.041");
+      expect(first).not.toBe(second);
+    });
+
+    it("returns the original string when it is not a valid date", () => {
+      expect(getTraceFormatTimestamp("not-a-timestamp")).toBe("not-a-timestamp");
     });
   });
 });

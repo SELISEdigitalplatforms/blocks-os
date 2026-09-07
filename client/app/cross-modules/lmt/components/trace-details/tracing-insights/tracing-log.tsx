@@ -12,6 +12,7 @@ import { useContext, useMemo, useState } from "react";
 import { timelineContext } from "../trace-details";
 import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
 import { ILog } from "@blocks-lmt/models/log.model";
+import { LogStackTrace } from "../../log-stack-trace";
 import { FilterControls } from "@/components/filter-toolbar";
 import { useSearchParams } from "react-router";
 const LoadingSkelton = () => (
@@ -43,6 +44,7 @@ const columns: ColumnDef<ILog>[] = [
           <div className="break-all text-justify text-sm text-medium-emphasis">
             {row.original.message}
           </div>
+          <LogStackTrace exception={row.original.exception} />
         </div>
       </div>
     ),
