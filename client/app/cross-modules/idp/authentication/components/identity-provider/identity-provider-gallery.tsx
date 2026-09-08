@@ -137,10 +137,11 @@ function AddProviderButton({ label, onAdd }: { label: string; onAdd: () => void 
 }
 
 /**
- * The card's status pill - sits in the header, next to the title, in the same spot
- * whether the type is unconfigured or already has entries. With entries, it doubles as
- * the collapse toggle for the list rendered below (see `ProviderEntriesList`), so "Not
- * configured" and "N configured" never jump between two different positions on a card.
+ * The card's status pill - sits in a footer strip at the bottom of the card, in the
+ * same spot whether the type is unconfigured or already has entries. With entries, it
+ * doubles as the collapse toggle for the list rendered above it (see
+ * `ProviderEntriesList`), so "Not configured" and "N configured" never jump between two
+ * different positions on a card.
  */
 function ConfigurationStatus({
   count,
@@ -218,15 +219,7 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
             <img src={config.imageSrc} alt={config.label} className="h-5 w-5 object-contain" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[14.5px] font-semibold text-high-emphasis">{config.label}</p>
-              <ConfigurationStatus
-                count={entries.length}
-                expanded={expanded}
-                onToggle={() => setExpanded((e) => !e)}
-                listId={listId}
-              />
-            </div>
+            <p className="text-[14.5px] font-semibold text-high-emphasis">{config.label}</p>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               {config.description}
             </p>
@@ -250,6 +243,15 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
           expanded={expanded}
           listId={listId}
         />
+
+        <div className="border-t pt-3">
+          <ConfigurationStatus
+            count={entries.length}
+            expanded={expanded}
+            onToggle={() => setExpanded((e) => !e)}
+            listId={listId}
+          />
+        </div>
       </CardContent>
     </Card>
   );
@@ -281,21 +283,22 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
             <Icon className={cn("h-[18px] w-[18px]", cfg.iconColor)} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
-              <ConfigurationStatus
-                count={entries.length}
-                expanded={expanded}
-                onToggle={() => setExpanded((e) => !e)}
-                listId={listId}
-              />
-            </div>
+            <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</p>
           </div>
           <AddProviderButton label={label} onAdd={onAdd} />
         </div>
 
         <ProviderEntriesList label={label} entries={entries} expanded={expanded} listId={listId} />
+
+        <div className="border-t pt-3">
+          <ConfigurationStatus
+            count={entries.length}
+            expanded={expanded}
+            onToggle={() => setExpanded((e) => !e)}
+            listId={listId}
+          />
+        </div>
       </CardContent>
     </Card>
   );
