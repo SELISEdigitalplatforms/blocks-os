@@ -105,78 +105,106 @@ function SectionHeading({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-function StatusPill({ isConfigured }: { isConfigured: boolean }) {
+function ConfiguredCountBadge({ count }: { count: number }) {
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-        isConfigured
-          ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-          : "bg-muted text-medium-emphasis",
-      )}
-    >
-      <span
-        className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full",
-          isConfigured ? "bg-emerald-500" : "bg-low-emphasis",
-        )}
-      />
-      {isConfigured ? "Connected" : "Not configured"}
+    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
+      {count} configured
     </span>
+  );
+}
+
+function NotConfiguredPill() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-low-emphasis" />
+      Not configured
+    </span>
+  );
+}
+
+/**
+ * The configured entries and the "Add …" action, shared by every gallery card — each
+ * provider (Google and Microsoft included) can hold more than one entry, so a card
+ * always lists what exists and keeps the add action available.
+ */
+function ProviderEntries({
+  label,
+  entries,
+  onAdd,
+}: {
+  label: string;
+  entries: IdentityProvider[];
+  onAdd: () => void;
+}) {
+  return (
+    <>
+      {entries.length > 0 && (
+        <ul aria-label={`Configured ${label} providers`} className="space-y-2">
+          {entries.map((entry) => (
+            <ProviderEntryItem key={entry.itemId} item={entry} />
+          ))}
+        </ul>
+      )}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-auto h-8 gap-1.5 self-start px-3 text-xs font-semibold hover:border-primary hover:bg-transparent hover:text-primary"
+        onClick={onAdd}
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Add {label}
+      </Button>
+    </>
   );
 }
 
 interface SocialProviderCardProps {
   provider: "google" | "microsoft";
-  entry?: IdentityProvider;
-  onSelect: () => void;
+  entries: IdentityProvider[];
+  onAdd: () => void;
 }
 
-function SocialProviderCard({ provider, entry, onSelect }: SocialProviderCardProps) {
+function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProps) {
   const config = SOCIAL_AUTH_PROVIDERS_CONFIG[provider as SSO_PROVIDERS];
   if (!config) return null;
-  const isConfigured = !!entry;
-  const cta = isConfigured ? "Manage" : `Configure ${config.label}`;
 
   return (
-    <button
-      type="button"
-      aria-label={cta}
-      onClick={onSelect}
-      className="group w-full cursor-pointer rounded-sm border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-    >
-      <div className="flex items-start gap-3.5">
-        <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl border bg-background">
-          <img src={config.imageSrc} alt={config.label} className="h-7 w-7 object-contain" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-base font-semibold text-high-emphasis">{config.label}</p>
-            <StatusPill isConfigured={isConfigured} />
+    <Card className="flex flex-col p-0">
+      <CardContent className="flex flex-1 flex-col gap-3.5 p-4 sm:p-5">
+        <div className="flex items-start gap-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
+            <img src={config.imageSrc} alt={config.label} className="h-5 w-5 object-contain" />
           </div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-            {config.description}
-          </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[14.5px] font-semibold text-high-emphasis">{config.label}</p>
+              {entries.length > 0 ? (
+                <ConfiguredCountBadge count={entries.length} />
+              ) : (
+                <NotConfiguredPill />
+              )}
+            </div>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+              {config.description}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {SOCIAL_CARD_TAGS[provider].map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-sm bg-muted px-2 py-0.5 text-[11px] font-medium text-medium-emphasis"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3.5">
-        <div className="flex flex-wrap gap-1.5">
-          {SOCIAL_CARD_TAGS[provider].map((tag) => (
-            <span
-              key={tag}
-              className="rounded-sm bg-muted px-2 py-0.5 text-[11px] font-medium text-medium-emphasis"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
-          {cta}
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-        </span>
-      </div>
-    </button>
+        <ProviderEntries label={config.label} entries={entries} onAdd={onAdd} />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -206,34 +234,13 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
-              {entries.length > 0 && (
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
-                  {entries.length} configured
-                </span>
-              )}
+              {entries.length > 0 && <ConfiguredCountBadge count={entries.length} />}
             </div>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</p>
           </div>
         </div>
 
-        {entries.length > 0 && (
-          <ul aria-label={`Configured ${label} providers`} className="space-y-2">
-            {entries.map((entry) => (
-              <ProviderEntryItem key={entry.itemId} item={entry} />
-            ))}
-          </ul>
-        )}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-auto h-8 gap-1.5 self-start px-3 text-xs font-semibold hover:border-primary hover:bg-transparent hover:text-primary"
-          onClick={onAdd}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add {label}
-        </Button>
+        <ProviderEntries label={label} entries={entries} onAdd={onAdd} />
       </CardContent>
     </Card>
   );
@@ -265,8 +272,8 @@ export const GallerySkeleton = () => (
 );
 
 export interface IdentityProviderGalleryProps {
-  googleEntry?: IdentityProvider;
-  microsoftEntry?: IdentityProvider;
+  googleEntries: IdentityProvider[];
+  microsoftEntries: IdentityProvider[];
   blocksOidcEntries: IdentityProvider[];
   byosEntries: IdentityProvider[];
   onSelectGoogle: () => void;
@@ -276,8 +283,8 @@ export interface IdentityProviderGalleryProps {
 }
 
 export function IdentityProviderGallery({
-  googleEntry,
-  microsoftEntry,
+  googleEntries,
+  microsoftEntries,
   blocksOidcEntries,
   byosEntries,
   onSelectGoogle,
@@ -294,12 +301,12 @@ export function IdentityProviderGallery({
           title="Social logins"
           hint="Pick a provider to configure it — no forms to hunt through."
         />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SocialProviderCard provider="google" entry={googleEntry} onSelect={onSelectGoogle} />
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          <SocialProviderCard provider="google" entries={googleEntries} onAdd={onSelectGoogle} />
           <SocialProviderCard
             provider="microsoft"
-            entry={microsoftEntry}
-            onSelect={onSelectMicrosoft}
+            entries={microsoftEntries}
+            onAdd={onSelectMicrosoft}
           />
         </div>
       </section>

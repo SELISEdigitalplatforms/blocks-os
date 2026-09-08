@@ -38,6 +38,8 @@ const blocksOidcEntry = {
 } as unknown as IdentityProvider;
 
 const baseProps = {
+  googleEntries: [],
+  microsoftEntries: [],
   blocksOidcEntries: [],
   byosEntries: [],
   onSelectGoogle: vi.fn(),
@@ -57,7 +59,7 @@ describe("IdentityProviderGallery", () => {
     rerender(
       <IdentityProviderGallery
         {...baseProps}
-        googleEntry={googleEntry}
+        googleEntries={[googleEntry]}
         byosEntries={[byosEntry]}
       />,
     );
@@ -85,27 +87,46 @@ describe("IdentityProviderGallery", () => {
     expect(screen.getAllByText("Client ID + Secret")).toHaveLength(2);
   });
 
-  it("shows Not configured + Configure for an unconfigured social provider", async () => {
+  it("shows Not configured + Add for an unconfigured social provider", async () => {
     const user = userEvent.setup();
     const onSelectGoogle = vi.fn();
     render(<IdentityProviderGallery {...baseProps} onSelectGoogle={onSelectGoogle} />);
-    expect(screen.getAllByText("Not configured").length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: "Configure Google" }));
+    expect(screen.getAllByText("Not configured")).toHaveLength(2);
+    expect(screen.queryAllByTestId("idp-entry")).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: /Add Google/ }));
     expect(onSelectGoogle).toHaveBeenCalled();
   });
 
-  it("shows Connected + Manage for a configured social provider", async () => {
+  it("lists every configured entry inline under its social card, with a count", () => {
+    render(
+      <IdentityProviderGallery
+        {...baseProps}
+        googleEntries={[
+          { ...googleEntry, displayName: "Google Prod" },
+          { ...googleEntry, itemId: "idp-google-2", displayName: "Google Staging" },
+        ]}
+      />,
+    );
+    const entries = screen.getAllByTestId("idp-entry");
+    expect(entries).toHaveLength(2);
+    expect(screen.getByText("Google Prod")).toBeTruthy();
+    expect(screen.getByText("Google Staging")).toBeTruthy();
+    expect(screen.getByText("2 configured")).toBeTruthy();
+    // Microsoft is untouched by Google's entries.
+    expect(screen.getAllByText("Not configured")).toHaveLength(1);
+  });
+
+  it("Add stays available on a social card that already has entries", async () => {
     const user = userEvent.setup();
     const onSelectGoogle = vi.fn();
     render(
       <IdentityProviderGallery
         {...baseProps}
-        googleEntry={googleEntry}
+        googleEntries={[googleEntry]}
         onSelectGoogle={onSelectGoogle}
       />,
     );
-    expect(screen.getByText("Connected")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Manage" }));
+    await user.click(screen.getByRole("button", { name: /Add Google/ }));
     expect(onSelectGoogle).toHaveBeenCalled();
   });
 

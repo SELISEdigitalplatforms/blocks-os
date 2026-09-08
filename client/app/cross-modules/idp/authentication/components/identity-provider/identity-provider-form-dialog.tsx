@@ -76,9 +76,6 @@ type Props = {
   presetProviderType?: string;
   /** Preselects "Provider Name" (social only) when opening in add mode. Ignored while editing. */
   presetProvider?: string;
-  /** Hides Google/Microsoft from the Social "Provider Name" picker once each already has an entry. */
-  isGoogleConfigured?: boolean;
-  isMicrosoftConfigured?: boolean;
 };
 
 const BLANK_FORM: FormValues = {
@@ -128,8 +125,6 @@ export function IdentityProviderFormDialog({
   editId,
   presetProviderType,
   presetProvider,
-  isGoogleConfigured = false,
-  isMicrosoftConfigured = false,
 }: Props) {
   const isEditing = !!editId;
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
@@ -179,20 +174,11 @@ export function IdentityProviderFormDialog({
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
   const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
 
-  // While adding (never while editing), hide social providers that already have
-  // an entry - each of Google/Microsoft may only be configured once per project.
-  const providerOptions = PROVIDER_OPTIONS.filter((option) => {
-    if (option.value !== "social" || isEditing) return true;
-    return !(isGoogleConfigured && isMicrosoftConfigured);
-  });
-  const socialProviderOptions = Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
-    .filter((c) => c.provider === "google" || c.provider === "microsoft")
-    .filter((c) => {
-      if (isEditing) return true;
-      if (c.provider === "google") return !isGoogleConfigured;
-      if (c.provider === "microsoft") return !isMicrosoftConfigured;
-      return true;
-    });
+  // Google and Microsoft can each hold several entries (one per app registration), so
+  // both stay selectable no matter what is already configured.
+  const socialProviderOptions = Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG).filter(
+    (c) => c.provider === "google" || c.provider === "microsoft",
+  );
 
   useEffect(() => {
     if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
@@ -207,11 +193,9 @@ export function IdentityProviderFormDialog({
     }
 
     if (!isEditing) {
-      const bothSocialConfigured = isGoogleConfigured && isMicrosoftConfigured;
       reset({
         ...BLANK_FORM,
-        providerType:
-          presetProviderType ?? (bothSocialConfigured ? "blocks-oidc" : BLANK_FORM.providerType),
+        providerType: presetProviderType ?? BLANK_FORM.providerType,
         provider: presetProvider ?? BLANK_FORM.provider,
       });
       setRedirectUris([""]);
@@ -256,8 +240,6 @@ export function IdentityProviderFormDialog({
     onOpenChange,
     presetProviderType,
     presetProvider,
-    isGoogleConfigured,
-    isMicrosoftConfigured,
   ]);
 
   useEffect(() => {
@@ -304,10 +286,8 @@ export function IdentityProviderFormDialog({
   })();
 
   const handleChangeProvider = () => {
-    const bothSocialConfigured = isGoogleConfigured && isMicrosoftConfigured;
     reset({
       ...BLANK_FORM,
-      providerType: bothSocialConfigured ? "blocks-oidc" : BLANK_FORM.providerType,
       provider: "",
     });
     setBannerDismissed(true);
@@ -434,7 +414,7 @@ export function IdentityProviderFormDialog({
                     <SelectValue placeholder="Select Provider" />
                   </SelectTrigger>
                   <SelectContent>
-                    {providerOptions.map((t) => (
+                    {PROVIDER_OPTIONS.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
                         {t.label}
                       </SelectItem>
