@@ -123,40 +123,35 @@ function NotConfiguredPill() {
 }
 
 /**
- * The configured entries and the "Add …" action, shared by every gallery card — each
- * provider (Google and Microsoft included) can hold more than one entry, so a card
- * always lists what exists and keeps the add action available.
+ * The add action for a card's provider type, sitting opposite the card title — every
+ * type (Google and Microsoft included) can hold more than one entry, so it stays
+ * available no matter how many are already configured.
  */
-function ProviderEntries({
-  label,
-  entries,
-  onAdd,
-}: {
-  label: string;
-  entries: IdentityProvider[];
-  onAdd: () => void;
-}) {
+function AddProviderButton({ label, onAdd }: { label: string; onAdd: () => void }) {
   return (
-    <>
-      {entries.length > 0 && (
-        <ul aria-label={`Configured ${label} providers`} className="space-y-2">
-          {entries.map((entry) => (
-            <ProviderEntryItem key={entry.itemId} item={entry} />
-          ))}
-        </ul>
-      )}
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      aria-label={`Add ${label}`}
+      title={`Add ${label}`}
+      className="h-7 w-7 shrink-0 p-0 hover:border-primary hover:bg-transparent hover:text-primary"
+      onClick={onAdd}
+    >
+      <Plus className="h-3.5 w-3.5" />
+    </Button>
+  );
+}
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="mt-auto h-8 gap-1.5 self-start px-3 text-xs font-semibold hover:border-primary hover:bg-transparent hover:text-primary"
-        onClick={onAdd}
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Add {label}
-      </Button>
-    </>
+/** The configured entries of one provider type, listed inline on its card. */
+function ProviderEntries({ label, entries }: { label: string; entries: IdentityProvider[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <ul aria-label={`Configured ${label} providers`} className="space-y-2">
+      {entries.map((entry) => (
+        <ProviderEntryItem key={entry.itemId} item={entry} />
+      ))}
+    </ul>
   );
 }
 
@@ -200,9 +195,10 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
               ))}
             </div>
           </div>
+          <AddProviderButton label={config.label} onAdd={onAdd} />
         </div>
 
-        <ProviderEntries label={config.label} entries={entries} onAdd={onAdd} />
+        <ProviderEntries label={config.label} entries={entries} />
       </CardContent>
     </Card>
   );
@@ -238,9 +234,10 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
             </div>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</p>
           </div>
+          <AddProviderButton label={label} onAdd={onAdd} />
         </div>
 
-        <ProviderEntries label={label} entries={entries} onAdd={onAdd} />
+        <ProviderEntries label={label} entries={entries} />
       </CardContent>
     </Card>
   );
