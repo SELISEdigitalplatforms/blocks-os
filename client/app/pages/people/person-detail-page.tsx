@@ -14,6 +14,7 @@ import { useGetPeople } from "@/hooks/use-people";
 import { useGetProjects } from "@/hooks/use-project";
 import { useProjectPermissions } from "@/hooks/use-project-access";
 import { PeopleGroupedByEnvironments } from "@/models/people";
+import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 // Devices tab temporarily disabled.
 // import { UserDevices } from "@blocks-idp/iam/modules/user-management/user-devices"
 // import { getRuntimeEnv } from "@/lib/runtime-env"
@@ -62,7 +63,7 @@ export const PersonDetailPage = () => {
     projectKey: "",
   });
   const user = userResponse?.data;
-  const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
+  const fullName = user ? getUserDisplayName(user) : "";
 
   // People/Gets is the only source for this person's row, and its server-side email search
   // does not return every row it should — an owner's own row comes back empty from it — which

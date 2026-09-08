@@ -14,8 +14,8 @@ type Props = {
   onAddOpenChange: (open: boolean) => void;
 };
 
-type GalleryPick =
-  { kind: "add"; providerType: string; provider?: string } | { kind: "edit"; editId: string };
+/** What the admin picked from the gallery - always a blank add for that provider type. */
+type GalleryPick = { providerType: string; provider?: string };
 
 function LoadError({ onRetry }: { onRetry: () => void }) {
   return (
@@ -47,26 +47,21 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
 
   const [galleryPick, setGalleryPick] = useState<GalleryPick | null>(null);
 
-  const googleEntry = providers.find((p) => p.providerType === "social" && p.provider === "google");
-  const microsoftEntry = providers.find(
-    (p) => p.providerType === "social" && p.provider === "microsoft",
-  );
+  const socialEntries = (provider: "google" | "microsoft") =>
+    providers.filter((p) => p.providerType === "social" && p.provider === provider);
+  const googleEntries = socialEntries("google");
+  const microsoftEntries = socialEntries("microsoft");
   const blocksOidcEntries = providers.filter((p) => p.providerType === "blocks-oidc");
   const byosEntries = providers.filter((p) => p.providerType === "byos");
-  const isGoogleConfigured = !!googleEntry;
-  const isMicrosoftConfigured = !!microsoftEntry;
 
+  // Every provider type - social included - can hold more than one entry, so picking a
+  // card always opens a blank add dialog; editing happens from the entry row itself.
   const handleSelectSocial = (provider: "google" | "microsoft") => {
-    const entry = provider === "google" ? googleEntry : microsoftEntry;
-    setGalleryPick(
-      entry
-        ? { kind: "edit", editId: entry.itemId! }
-        : { kind: "add", providerType: "social", provider },
-    );
+    setGalleryPick({ providerType: "social", provider });
   };
 
   const handleSelectEnterprise = (providerType: "blocks-oidc" | "byos") => {
-    setGalleryPick({ kind: "add", providerType });
+    setGalleryPick({ providerType });
   };
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -77,9 +72,6 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
   };
 
   const dialogOpen = addOpen || galleryPick !== null;
-  const editId = galleryPick?.kind === "edit" ? galleryPick.editId : undefined;
-  const presetProviderType = galleryPick?.kind === "add" ? galleryPick.providerType : undefined;
-  const presetProvider = galleryPick?.kind === "add" ? galleryPick.provider : undefined;
 
   return (
     <div className="space-y-4">
@@ -89,8 +81,8 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
         <LoadError onRetry={() => refetch()} />
       ) : (
         <IdentityProviderGallery
-          googleEntry={googleEntry}
-          microsoftEntry={microsoftEntry}
+          googleEntries={googleEntries}
+          microsoftEntries={microsoftEntries}
           blocksOidcEntries={blocksOidcEntries}
           byosEntries={byosEntries}
           onSelectGoogle={() => handleSelectSocial("google")}
@@ -103,11 +95,8 @@ export function IdentityProviders({ addOpen, onAddOpenChange }: Props) {
       <IdentityProviderFormDialog
         open={dialogOpen}
         onOpenChange={handleDialogOpenChange}
-        editId={editId}
-        presetProviderType={presetProviderType}
-        presetProvider={presetProvider}
-        isGoogleConfigured={isGoogleConfigured}
-        isMicrosoftConfigured={isMicrosoftConfigured}
+        presetProviderType={galleryPick?.providerType}
+        presetProvider={galleryPick?.provider}
       />
     </div>
   );

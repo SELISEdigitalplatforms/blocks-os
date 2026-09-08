@@ -26,7 +26,7 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
             </li>
           </ul>
           <p className="mt-2 text-sm text-muted-foreground">
-            You can browse & filter these traces directly in the list view. No admin action
+            You can browse {"&"} filter these traces directly in the list view. No admin action
             required.
           </p>
         </div>
@@ -76,7 +76,7 @@ export const TraceGuideSteps: Record<TRACE_PROVIDERS, Step[]> = {
             files.
           </p>
           <ul className="mt-2 list-inside list-disc text-sm">
-            <li>Optimized for cost & analytical scans, not millisecond lookups.</li>
+            <li>Optimized for cost {"&"} analytical scans, not millisecond lookups.</li>
             <li>
               Accessible via on‑demand query adapters (Spark / DuckDB / Azure Data Lake query).
             </li>

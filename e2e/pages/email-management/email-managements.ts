@@ -33,19 +33,34 @@ export async function addTemplateFlow(page: Page) {
   await nameInput.fill(templateName);
   await subjectInput.fill(templateSubject);
 
+  // Secrets email flow often creates a named outbound config and Default may be
+  // inbound-only (filtered out of this dropdown). Prefer Default when present,
+  // otherwise take the first available outbound configuration.
   await page
     .getByRole("combobox")
     .filter({ hasText: /configuration/i })
     .click();
-  await expect(page.getByRole("option", { name: "Default" })).toBeVisible();
-  await page.getByRole("option", { name: "Default" }).click();
+  const configListbox = page.getByRole("listbox");
+  await expect(configListbox.getByRole("option").first()).toBeVisible({ timeout: 10_000 });
+  const defaultConfig = configListbox.getByRole("option", { name: "Default", exact: true });
+  if (await defaultConfig.isVisible()) {
+    await defaultConfig.click();
+  } else {
+    await configListbox.getByRole("option").first().click();
+  }
 
   await page
     .getByRole("combobox")
     .filter({ hasText: /language/i })
     .click();
-  await expect(page.getByRole("option", { name: "English" })).toBeVisible();
-  await page.getByRole("option", { name: "English" }).click();
+  const languageListbox = page.getByRole("listbox");
+  await expect(languageListbox.getByRole("option").first()).toBeVisible({ timeout: 10_000 });
+  const englishOption = languageListbox.getByRole("option", { name: "English", exact: true });
+  if (await englishOption.isVisible()) {
+    await englishOption.click();
+  } else {
+    await languageListbox.getByRole("option").first().click();
+  }
 
   // ---------- Step 1 → Step 2 ----------
   await page.getByRole("button", { name: "Save & continue" }).click();

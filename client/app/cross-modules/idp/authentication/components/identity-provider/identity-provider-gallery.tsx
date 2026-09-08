@@ -1,4 +1,5 @@
-import { ArrowRight, Building2, Plus, Route, User } from "lucide-react";
+import { useId, useState } from "react";
+import { ArrowRight, Building2, ChevronRight, Plus, Route, User } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -105,78 +106,154 @@ function SectionHeading({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-function StatusPill({ isConfigured }: { isConfigured: boolean }) {
+function NotConfiguredPill() {
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-        isConfigured
-          ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-          : "bg-muted text-medium-emphasis",
-      )}
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-low-emphasis" />
+      Not configured
+    </span>
+  );
+}
+
+/**
+ * The add action for a card's provider type, sitting opposite the card title — every
+ * type (Google and Microsoft included) can hold more than one entry, so it stays
+ * available no matter how many are already configured.
+ */
+function AddProviderButton({ label, onAdd }: { label: string; onAdd: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      aria-label={`Add ${label}`}
+      title={`Add ${label}`}
+      className="h-7 w-7 shrink-0 p-0 hover:border-primary hover:bg-transparent hover:text-primary"
+      onClick={onAdd}
     >
-      <span
+      <Plus className="h-3.5 w-3.5" />
+    </Button>
+  );
+}
+
+/**
+ * The card's status pill - sits in a footer strip at the bottom of the card, in the
+ * same spot whether the type is unconfigured or already has entries. With entries, it
+ * doubles as the collapse toggle for the list rendered above it (see
+ * `ProviderEntriesList`), so "Not configured" and "N configured" never jump between two
+ * different positions on a card.
+ */
+function ConfigurationStatus({
+  count,
+  expanded,
+  onToggle,
+  listId,
+}: {
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+  listId: string;
+}) {
+  if (count === 0) return <NotConfiguredPill />;
+
+  return (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={listId}
+      onClick={onToggle}
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <ChevronRight
         className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full",
-          isConfigured ? "bg-emerald-500" : "bg-low-emphasis",
+          "h-3 w-3 shrink-0 transition-transform duration-200",
+          expanded && "rotate-90",
         )}
       />
-      {isConfigured ? "Connected" : "Not configured"}
-    </span>
+      {count} configured
+    </button>
+  );
+}
+
+/** The configured entries of one provider type, listed inline on its card - folded away
+ * when `expanded` is false (toggled from the `ConfigurationStatus` pill in the header). */
+function ProviderEntriesList({
+  label,
+  entries,
+  expanded,
+  listId,
+}: {
+  label: string;
+  entries: IdentityProvider[];
+  expanded: boolean;
+  listId: string;
+}) {
+  if (entries.length === 0 || !expanded) return null;
+
+  return (
+    <ul id={listId} aria-label={`Configured ${label} providers`} className="space-y-2">
+      {entries.map((entry) => (
+        <ProviderEntryItem key={entry.itemId} item={entry} />
+      ))}
+    </ul>
   );
 }
 
 interface SocialProviderCardProps {
   provider: "google" | "microsoft";
-  entry?: IdentityProvider;
-  onSelect: () => void;
+  entries: IdentityProvider[];
+  onAdd: () => void;
 }
 
-function SocialProviderCard({ provider, entry, onSelect }: SocialProviderCardProps) {
+function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProps) {
   const config = SOCIAL_AUTH_PROVIDERS_CONFIG[provider as SSO_PROVIDERS];
+  const [expanded, setExpanded] = useState(true);
+  const listId = useId();
   if (!config) return null;
-  const isConfigured = !!entry;
-  const cta = isConfigured ? "Manage" : `Configure ${config.label}`;
 
   return (
-    <button
-      type="button"
-      aria-label={cta}
-      onClick={onSelect}
-      className="group w-full cursor-pointer rounded-sm border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-    >
-      <div className="flex items-start gap-3.5">
-        <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl border bg-background">
-          <img src={config.imageSrc} alt={config.label} className="h-7 w-7 object-contain" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-base font-semibold text-high-emphasis">{config.label}</p>
-            <StatusPill isConfigured={isConfigured} />
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-3.5 p-4 sm:p-5">
+        <div className="flex items-start gap-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
+            <img src={config.imageSrc} alt={config.label} className="h-5 w-5 object-contain" />
           </div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-            {config.description}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px] font-semibold text-high-emphasis">{config.label}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+              {config.description}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {SOCIAL_CARD_TAGS[provider].map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-sm bg-muted px-2 py-0.5 text-[11px] font-medium text-medium-emphasis"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+          <AddProviderButton label={config.label} onAdd={onAdd} />
         </div>
-      </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3.5">
-        <div className="flex flex-wrap gap-1.5">
-          {SOCIAL_CARD_TAGS[provider].map((tag) => (
-            <span
-              key={tag}
-              className="rounded-sm bg-muted px-2 py-0.5 text-[11px] font-medium text-medium-emphasis"
-            >
-              {tag}
-            </span>
-          ))}
+        <ProviderEntriesList
+          label={config.label}
+          entries={entries}
+          expanded={expanded}
+          listId={listId}
+        />
+
+        <div className="border-t pt-3">
+          <ConfigurationStatus
+            count={entries.length}
+            expanded={expanded}
+            onToggle={() => setExpanded((e) => !e)}
+            listId={listId}
+          />
         </div>
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
-          {cta}
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-        </span>
-      </div>
-    </button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -190,10 +267,12 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
   const cfg = PROVIDER_CONFIG[providerType];
   const { label, description } = ENTERPRISE_CARD_INFO[providerType];
   const Icon = cfg.Icon;
+  const [expanded, setExpanded] = useState(true);
+  const listId = useId();
 
   return (
-    <Card className="flex flex-col p-0">
-      <CardContent className="flex flex-1 flex-col gap-3.5 p-4 sm:p-5">
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-3.5 p-4 sm:p-5">
         <div className="flex items-start gap-3.5">
           <div
             className={cn(
@@ -204,36 +283,22 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
             <Icon className={cn("h-[18px] w-[18px]", cfg.iconColor)} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
-              {entries.length > 0 && (
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
-                  {entries.length} configured
-                </span>
-              )}
-            </div>
+            <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</p>
           </div>
+          <AddProviderButton label={label} onAdd={onAdd} />
         </div>
 
-        {entries.length > 0 && (
-          <ul aria-label={`Configured ${label} providers`} className="space-y-2">
-            {entries.map((entry) => (
-              <ProviderEntryItem key={entry.itemId} item={entry} />
-            ))}
-          </ul>
-        )}
+        <ProviderEntriesList label={label} entries={entries} expanded={expanded} listId={listId} />
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-auto h-8 gap-1.5 self-start px-3 text-xs font-semibold hover:border-primary hover:bg-transparent hover:text-primary"
-          onClick={onAdd}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add {label}
-        </Button>
+        <div className="border-t pt-3">
+          <ConfigurationStatus
+            count={entries.length}
+            expanded={expanded}
+            onToggle={() => setExpanded((e) => !e)}
+            listId={listId}
+          />
+        </div>
       </CardContent>
     </Card>
   );
@@ -265,8 +330,8 @@ export const GallerySkeleton = () => (
 );
 
 export interface IdentityProviderGalleryProps {
-  googleEntry?: IdentityProvider;
-  microsoftEntry?: IdentityProvider;
+  googleEntries: IdentityProvider[];
+  microsoftEntries: IdentityProvider[];
   blocksOidcEntries: IdentityProvider[];
   byosEntries: IdentityProvider[];
   onSelectGoogle: () => void;
@@ -276,8 +341,8 @@ export interface IdentityProviderGalleryProps {
 }
 
 export function IdentityProviderGallery({
-  googleEntry,
-  microsoftEntry,
+  googleEntries,
+  microsoftEntries,
   blocksOidcEntries,
   byosEntries,
   onSelectGoogle,
@@ -294,12 +359,12 @@ export function IdentityProviderGallery({
           title="Social logins"
           hint="Pick a provider to configure it — no forms to hunt through."
         />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SocialProviderCard provider="google" entry={googleEntry} onSelect={onSelectGoogle} />
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          <SocialProviderCard provider="google" entries={googleEntries} onAdd={onSelectGoogle} />
           <SocialProviderCard
             provider="microsoft"
-            entry={microsoftEntry}
-            onSelect={onSelectMicrosoft}
+            entries={microsoftEntries}
+            onAdd={onSelectMicrosoft}
           />
         </div>
       </section>

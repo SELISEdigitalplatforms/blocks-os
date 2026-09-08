@@ -26,10 +26,15 @@ export async function switchSettingsTabFlow(page: Page, tabName: string) {
 export async function lockoutValidationFlow(page: Page) {
   const lockoutInput = page.getByLabel("Maximum Failed Login Attempts");
   await expect(lockoutInput).toBeVisible({ timeout: 8_000 });
+  // Save stays disabled while the form is pristine. Fresh projects often load
+  // lockout as 0 already — filling "0" again does not set isDirty. Bump to a
+  // valid value first so the subsequent 0 is a real edit.
+  await lockoutInput.fill("1");
+  const saveButton = page.getByRole("button", { name: "Save" });
+  await expect(saveButton).toBeEnabled({ timeout: 10_000 });
   await lockoutInput.fill("0");
   // The form's zod resolver runs on submit only — no onBlur/onChange mode is
   // set — so clicking Save is what surfaces the validation message.
-  const saveButton = page.getByRole("button", { name: "Save" });
   await expect(saveButton).toBeEnabled({ timeout: 10_000 });
   await saveButton.click();
   // Strict: zero MUST surface the validation error.

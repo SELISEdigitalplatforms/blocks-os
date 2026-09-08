@@ -38,6 +38,8 @@ const blocksOidcEntry = {
 } as unknown as IdentityProvider;
 
 const baseProps = {
+  googleEntries: [],
+  microsoftEntries: [],
   blocksOidcEntries: [],
   byosEntries: [],
   onSelectGoogle: vi.fn(),
@@ -57,7 +59,7 @@ describe("IdentityProviderGallery", () => {
     rerender(
       <IdentityProviderGallery
         {...baseProps}
-        googleEntry={googleEntry}
+        googleEntries={[googleEntry]}
         byosEntries={[byosEntry]}
       />,
     );
@@ -85,27 +87,79 @@ describe("IdentityProviderGallery", () => {
     expect(screen.getAllByText("Client ID + Secret")).toHaveLength(2);
   });
 
-  it("shows Not configured + Configure for an unconfigured social provider", async () => {
+  it("shows Not configured + Add for an unconfigured social provider", async () => {
     const user = userEvent.setup();
     const onSelectGoogle = vi.fn();
     render(<IdentityProviderGallery {...baseProps} onSelectGoogle={onSelectGoogle} />);
-    expect(screen.getAllByText("Not configured").length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: "Configure Google" }));
+    // Not configured shows for all four empty cards - same status pill, same header spot.
+    expect(screen.getAllByText("Not configured")).toHaveLength(4);
+    expect(screen.queryAllByTestId("idp-entry")).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: /Add Google/ }));
     expect(onSelectGoogle).toHaveBeenCalled();
   });
 
-  it("shows Connected + Manage for a configured social provider", async () => {
+  it("lists every configured entry inline under its social card, with a count", () => {
+    render(
+      <IdentityProviderGallery
+        {...baseProps}
+        googleEntries={[
+          { ...googleEntry, displayName: "Google Prod" },
+          { ...googleEntry, itemId: "idp-google-2", displayName: "Google Staging" },
+        ]}
+      />,
+    );
+    const entries = screen.getAllByTestId("idp-entry");
+    expect(entries).toHaveLength(2);
+    expect(screen.getByText("Google Prod")).toBeTruthy();
+    expect(screen.getByText("Google Staging")).toBeTruthy();
+    expect(screen.getByText("2 configured")).toBeTruthy();
+    // Microsoft, Blocks OIDC and BYOS are untouched by Google's entries.
+    expect(screen.getAllByText("Not configured")).toHaveLength(3);
+  });
+
+  it("keeps the status pill in the same footer slot whether empty or configured", () => {
+    // The status pill sits in the card's unconditional footer strip (`border-t`), last
+    // in the DOM regardless of state, so its container persists across a rerender.
+    const { rerender } = render(<IdentityProviderGallery {...baseProps} />);
+    const footer = screen.getAllByText("Not configured")[0].closest(".border-t");
+    expect(footer).toBeTruthy();
+
+    rerender(<IdentityProviderGallery {...baseProps} googleEntries={[googleEntry]} />);
+    const sameFooter = screen.getByRole("button", { name: /1 configured/ }).closest(".border-t");
+    expect(sameFooter).toBe(footer);
+  });
+
+  it("collapses and re-expands a card's entry list from its count summary", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderGallery
+        {...baseProps}
+        byosEntries={[byosEntry, { ...byosEntry, itemId: "idp-byos-2", displayName: "Auth0 Stg" }]}
+      />,
+    );
+    const summary = screen.getByRole("button", { name: /2 configured/ });
+    expect(summary.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getAllByTestId("idp-entry")).toHaveLength(2);
+
+    await user.click(summary);
+    expect(summary.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryAllByTestId("idp-entry")).toHaveLength(0);
+
+    await user.click(summary);
+    expect(screen.getAllByTestId("idp-entry")).toHaveLength(2);
+  });
+
+  it("Add stays available on a social card that already has entries", async () => {
     const user = userEvent.setup();
     const onSelectGoogle = vi.fn();
     render(
       <IdentityProviderGallery
         {...baseProps}
-        googleEntry={googleEntry}
+        googleEntries={[googleEntry]}
         onSelectGoogle={onSelectGoogle}
       />,
     );
-    expect(screen.getByText("Connected")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Manage" }));
+    await user.click(screen.getByRole("button", { name: /Add Google/ }));
     expect(onSelectGoogle).toHaveBeenCalled();
   });
 

@@ -2,7 +2,11 @@ import { type Locator, type Page, expect } from "@playwright/test";
 import { openSecretManagement } from "../../support/os-helpers";
 
 export async function findServiceTriggerFlow(page: Page, name: string): Promise<Locator> {
-  const trigger = page.getByRole("button", { name: new RegExp(name) });
+  // AccordionTrigger is a button that also wraps Logs/Traces buttons. Scope to
+  // the trigger that contains the service heading so those nested buttons
+  // don't steal the accessible name match.
+  const heading = page.getByRole("heading", { name, exact: true });
+  const trigger = page.getByRole("button").filter({ has: heading });
   const nextPageButton = page.locator("button:has(svg.lucide-chevron-right)").first();
 
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -22,9 +26,9 @@ export async function navigateToMyServicesFlow(page: Page) {
 }
 
 export async function verifyEmptyStateFlow(page: Page) {
-  if (await page.getByText("No services yet").isVisible({ timeout: 10000 })) {
-    await expect(page.getByText("No services yet")).toBeVisible();
-  }
+  const empty = page.getByText("No services yet");
+  const serviceHeading = page.getByRole("heading", { level: 3 });
+  await expect(empty.or(serviceHeading.first())).toBeVisible({ timeout: 20_000 });
 }
 
 export async function openRegisterServiceDialogFlow(page: Page) {
@@ -98,13 +102,41 @@ export async function verifyNavAwayFromMyServicesFlow(
   page: Page,
   linkName: "Logs" | "Traces",
 ): Promise<boolean> {
-  const button = page.getByRole("button", { name: linkName }).first();
+  // exact: true — substring "Logs" otherwise matches sidebar "Logs & Traces",
+  // whose parent click navigates to the first child (Usage).
+  const button = page.getByRole("button", { name: linkName, exact: true }).first();
   if (!(await button.isVisible({ timeout: 5000 }))) return false;
   await button.click();
-  await expect(page).toHaveURL(/\/lmt\//, { timeout: 15000 });
+  if (linkName === "Logs") {
+    await expect(page).toHaveURL(/\/lmt\/logs/, { timeout: 15_000 });
+  } else {
+    await expect(page).toHaveURL(/\/lmt\/tracing/, { timeout: 15_000 });
+  }
   await page.goBack();
   await expect(page.getByRole("heading", { name: "My Services" })).toBeVisible({ timeout: 15000 });
   return true;
+}
+
+/**
+ * Click Logs on the named service card and assert the managed-service logs URL.
+ * Scopes the click to that card so sidebar "Logs & Traces" cannot steal it.
+ */
+export async function openServiceScopedLogsFlow(page: Page, serviceName: string) {
+  const heading = page.getByRole("heading", { name: serviceName, exact: true });
+  const trigger = await findServiceTriggerFlow(page, serviceName);
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+
+  // Accordion item wraps the trigger + content; prefer Logs inside that item.
+  const item = page.locator("[data-state]").filter({ has: heading }).first();
+  const logsInItem = item.getByRole("button", { name: "Logs", exact: true });
+  const logsInTrigger = trigger.getByRole("button", { name: "Logs", exact: true });
+  const logsButton = (await logsInItem.count()) > 0 ? logsInItem.first() : logsInTrigger.first();
+
+  await expect(logsButton).toBeVisible({ timeout: 5_000 });
+  await logsButton.click();
+  await expect(page).toHaveURL(/\/lmt\/logs\?/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/source=managed/);
+  await expect(page).toHaveURL(/[?&]service=/);
 }
 
 export async function openDocsInNewTabFlow(page: Page): Promise<boolean> {
