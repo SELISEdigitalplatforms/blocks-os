@@ -14,6 +14,40 @@ export const getTypeColor = (type: string) => {
   }
 };
 
+const getStatusCodeVariant = (code: number) => {
+  if (code >= 500) return "error" as const;
+  if (code >= 400) return "warning" as const;
+  if (code >= 300) return "secondary" as const;
+  return "success" as const;
+};
+
+/**
+ * The status shown for a trace. Prefers the HTTP response code, which is what the list's
+ * status-code filter already queries, and falls back to the span's own status for entry
+ * points that are not HTTP requests -- message-worker consumers, for example.
+ *
+ * A span status of "Unset" is OpenTelemetry's default for a span nobody marked, so it is
+ * rendered as unknown rather than as a success it cannot vouch for.
+ */
+export const getTraceStatus = (trace: { attributes?: IAttributes; status?: string }) => {
+  const raw =
+    trace.attributes?.["response.status.code"] ?? trace.attributes?.["http.response.status_code"];
+  const code = typeof raw === "string" ? Number(raw) : raw;
+
+  if (typeof code === "number" && Number.isFinite(code)) {
+    return { label: String(code), variant: getStatusCodeVariant(code) };
+  }
+
+  switch (trace.status) {
+    case "Error":
+      return { label: "Error", variant: "error" as const };
+    case "Ok":
+      return { label: "OK", variant: "success" as const };
+    default:
+      return { label: "Unknown", variant: "secondary" as const };
+  }
+};
+
 export interface ITags {
   ecosystem: string;
   habitat: string;
@@ -234,6 +268,7 @@ export interface IGetTracesPayload {
     endDate?: string;
     services: string[];
     excepts: string[];
+    statusCodeClasses?: number[];
   };
   search: string;
   projectKey: string;

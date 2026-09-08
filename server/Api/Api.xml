@@ -91,6 +91,15 @@
             </para>
             </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.SecretsController.Tags(System.Threading.CancellationToken)">
+            <summary>
+            The tenant's tag catalogue, for a tag picker or a tag filter.
+            </summary>
+            <remarks>
+            Shares the list permission rather than having its own: the catalogue is a list of
+            labels, and anyone who may see the secret list may see the labels on it.
+            </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.SecretsController.Value(System.String,System.Threading.CancellationToken)">
             <summary>
             Reads a secret's plaintext value. Always audited.

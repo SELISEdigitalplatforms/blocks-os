@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff, Plus, X } from "lucide-react";
+import { Eye, EyeOff, Info, Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,9 +27,12 @@ import {
   useUpdateIdentityProvider,
 } from "@blocks-idp/authentication/hooks/use-identity-provider";
 import {
+  BLOCKS_OIDC_HELP,
+  BYOS_HELP,
   SOCIAL_AUTH_PROVIDERS_CONFIG,
   SSO_PROVIDERS,
 } from "@blocks-idp/authentication/constants/sso-providers.constant";
+import { ENTERPRISE_CARD_INFO, PROVIDER_CONFIG } from "./identity-provider-visual.constant";
 import { IRole } from "@blocks-idp/iam/models/role";
 import { IPermission } from "@blocks-idp/iam/models/permission";
 import { SSOInitialRoles } from "@blocks-idp/authentication/components/sso-initial-roles/sso-initial-roles";
@@ -69,6 +72,10 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editId?: string;
+  /** Preselects "Select Provider" when opening in add mode. Ignored while editing. */
+  presetProviderType?: string;
+  /** Preselects "Provider Name" (social only) when opening in add mode. Ignored while editing. */
+  presetProvider?: string;
 };
 
 const BLANK_FORM: FormValues = {
@@ -112,7 +119,13 @@ const toFormValues = (provider: IdentityProvider): FormValues => {
   };
 };
 
-export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props) {
+export function IdentityProviderFormDialog({
+  open,
+  onOpenChange,
+  editId,
+  presetProviderType,
+  presetProvider,
+}: Props) {
   const isEditing = !!editId;
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
 
@@ -141,6 +154,9 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   const [scopes, setScopes] = useState<string[]>(["openid"]);
   const [requirePkce, setRequirePkce] = useState(false);
   const [redirectUrisError, setRedirectUrisError] = useState<string | null>(null);
+  // Whether "Change" has been clicked on the pre-fill banner for the current open dialog
+  // session - reset every time the dialog freshly opens in add mode (see the effect below).
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const {
     register,
@@ -158,6 +174,12 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
   const blocksOidcWellKnownUrl = tenantId ? getBlocksOidcWellKnownUrl(tenantId) : "";
   const selectedSocialProvider = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
 
+  // Google and Microsoft can each hold several entries (one per app registration), so
+  // both stay selectable no matter what is already configured.
+  const socialProviderOptions = Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG).filter(
+    (c) => c.provider === "google" || c.provider === "microsoft",
+  );
+
   useEffect(() => {
     if (providerType === "blocks-oidc" && blocksOidcWellKnownUrl) {
       setValue("wellKnownUrl", blocksOidcWellKnownUrl, { shouldValidate: true });
@@ -171,13 +193,18 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     }
 
     if (!isEditing) {
-      reset(BLANK_FORM);
+      reset({
+        ...BLANK_FORM,
+        providerType: presetProviderType ?? BLANK_FORM.providerType,
+        provider: presetProvider ?? BLANK_FORM.provider,
+      });
       setRedirectUris([""]);
       setSelectedRoles([]);
       setSelectedPermissions([]);
       setScopes(["openid"]);
       setRequirePkce(false);
       setRedirectUrisError(null);
+      setBannerDismissed(false);
       setIsFormReady(true);
       return;
     }
@@ -203,7 +230,17 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     setRequirePkce(!!editedProvider.requirePkce);
     setRedirectUrisError(null);
     setIsFormReady(true);
-  }, [open, isEditing, isLoadingProvider, providerResponse, editedProvider, reset, onOpenChange]);
+  }, [
+    open,
+    isEditing,
+    isLoadingProvider,
+    providerResponse,
+    editedProvider,
+    reset,
+    onOpenChange,
+    presetProviderType,
+    presetProvider,
+  ]);
 
   useEffect(() => {
     if (!open || !isEditing || !isProviderFetchError) return;
@@ -214,6 +251,47 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
     }
     onOpenChange(false);
   }, [open, isEditing, isProviderFetchError, providerFetchError, onOpenChange]);
+
+  // The pre-fill banner reflects what was picked from the gallery (the original preset
+  // props), not the live form value - it stays put even if the admin starts tweaking the
+  // dropdowns, and only "Change" (below) clears it.
+  const hasPreset = !isEditing && (!!presetProviderType || !!presetProvider);
+  const showBanner = hasPreset && !bannerDismissed;
+  const pickedSocialMeta = presetProvider
+    ? SOCIAL_AUTH_PROVIDERS_CONFIG[presetProvider as SSO_PROVIDERS]
+    : undefined;
+  const pickedEnterpriseMeta =
+    presetProviderType === "blocks-oidc" || presetProviderType === "byos"
+      ? ENTERPRISE_CARD_INFO[presetProviderType]
+      : undefined;
+
+  // The help box, by contrast, tracks the live selection - it shows for a manual pick too
+  // (H3), not just a gallery pre-fill, and disappears again in edit mode. Defensive per C6:
+  // never render a box with a missing/empty title or body.
+  const helpContent = ((): { title: string; body: string } | undefined => {
+    if (isEditing) return undefined;
+    if (providerType === "social") {
+      const meta = SOCIAL_AUTH_PROVIDERS_CONFIG[watch("provider") as SSO_PROVIDERS];
+      return meta?.helpTitle && meta?.helpBody
+        ? { title: meta.helpTitle, body: meta.helpBody }
+        : undefined;
+    }
+    const staticHelp =
+      providerType === "blocks-oidc"
+        ? BLOCKS_OIDC_HELP
+        : providerType === "byos"
+          ? BYOS_HELP
+          : undefined;
+    return staticHelp?.title && staticHelp?.body ? staticHelp : undefined;
+  })();
+
+  const handleChangeProvider = () => {
+    reset({
+      ...BLANK_FORM,
+      provider: "",
+    });
+    setBannerDismissed(true);
+  };
 
   const { mutateAsync: create, isPending: isCreating } = useCreateIdentityProvider();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIdentityProvider();
@@ -285,6 +363,43 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Pre-fill confirmation banner - add mode + picked from the gallery only */}
+              {showBanner && (
+                <div className="flex items-center gap-3.5 rounded-lg border border-primary/25 bg-primary/[0.04] p-3.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
+                    {pickedSocialMeta ? (
+                      <img
+                        src={pickedSocialMeta.imageSrc}
+                        alt={pickedSocialMeta.label}
+                        className="h-[22px] w-[22px] object-contain"
+                      />
+                    ) : pickedEnterpriseMeta && presetProviderType ? (
+                      (() => {
+                        const Icon = PROVIDER_CONFIG[presetProviderType]?.Icon;
+                        return Icon ? <Icon className="h-[18px] w-[18px] text-primary" /> : null;
+                      })()
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-primary">
+                      {pickedSocialMeta?.label ?? pickedEnterpriseMeta?.label}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                      {pickedSocialMeta?.description ?? pickedEnterpriseMeta?.description}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 shrink-0 border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/5 hover:text-primary"
+                    onClick={handleChangeProvider}
+                  >
+                    Change
+                  </Button>
+                </div>
+              )}
+
               {/* Select Provider */}
               <div className="space-y-1.5">
                 <Label htmlFor="providerType">
@@ -338,20 +453,18 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(SOCIAL_AUTH_PROVIDERS_CONFIG)
-                        .filter((c) => c.provider === "google" || c.provider === "microsoft")
-                        .map((config) => (
-                          <SelectItem key={config.provider} value={config.provider}>
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={config.imageSrc}
-                                alt={config.label}
-                                className="h-5 w-5 object-contain"
-                              />
-                              <span>{config.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                      {socialProviderOptions.map((config) => (
+                        <SelectItem key={config.provider} value={config.provider}>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={config.imageSrc}
+                              alt={config.label}
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span>{config.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 ) : (
@@ -445,6 +558,19 @@ export function IdentityProviderFormDialog({ open, onOpenChange, editId }: Props
               {...register("audience")}
             />
           </div> */}
+
+              {/* Contextual help - shown for the currently selected provider, add mode only */}
+              {helpContent && (
+                <div className="flex gap-3 rounded-lg border border-dashed bg-muted/40 p-3.5">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-high-emphasis">{helpContent.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {helpContent.body}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Well Known URL (auto-generated) - shown only for Blocks OIDC */}
               {providerType === "blocks-oidc" && (

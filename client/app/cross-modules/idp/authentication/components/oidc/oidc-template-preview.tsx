@@ -29,12 +29,14 @@ export const OidcTemplatePreview = ({
   previewMode,
   onPreviewModeChange,
   showAuto,
+  collectPasswordOnActivation,
 }: {
   template: IOidcUiTemplate;
   selectedPage: OidcPageKey;
   previewMode: OidcPreviewThemeMode;
   onPreviewModeChange: (mode: OidcPreviewThemeMode) => void;
   showAuto: boolean;
+  collectPasswordOnActivation?: boolean;
 }) => {
   const resolvedTheme = useResolvedPreviewTheme(previewMode);
   const Preview = PREVIEWS[selectedPage];
@@ -46,6 +48,7 @@ export const OidcTemplatePreview = ({
       previewMode={previewMode}
       onPreviewModeChange={onPreviewModeChange}
       showAuto={showAuto}
+      collectPasswordOnActivation={collectPasswordOnActivation}
     />
   );
 };

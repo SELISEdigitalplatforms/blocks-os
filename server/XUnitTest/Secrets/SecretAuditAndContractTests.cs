@@ -157,6 +157,38 @@ namespace XUnitTest.Secrets
         }
 
         [Fact]
+        public void TheSecretEntityShadowsNoBaseEntityProperty()
+        {
+            // Redeclaring an inherited property gives Mongo two members mapped to one element,
+            // and the driver refuses the whole class map rather than just that field — every
+            // read and write on the collection then fails with a 500. Tags did exactly this.
+            var inherited = typeof(Blocks.Genesis.BaseEntity)
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(p => p.Name)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var shadowed = typeof(Secret)
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Select(p => p.Name)
+                .Where(inherited.Contains)
+                .ToList();
+
+            shadowed.Should().BeEmpty(
+                "Secret must not redeclare a BaseEntity property; use the inherited one");
+        }
+
+        [Fact]
+        public void TheSecretEntityRegistersWithMongo()
+        {
+            // The failure this guards is at class-map registration, so only a real serialization
+            // round trip reaches it — a property-name check alone would miss a future clash
+            // introduced some other way.
+            var act = () => MongoDB.Bson.BsonExtensionMethods.ToBson(new Secret { ItemId = "s-1", Tags = ["iam"] });
+
+            act.Should().NotThrow();
+        }
+
+        [Fact]
         public void TheStoreLivesInItsOwnDatabase()
         {
             // A dedicated database is what keeps this `Secrets` collection clear of the

@@ -390,6 +390,22 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
 
           <SettingsFormSection title="Security">
             <div className={SETTINGS_FORM_LAYOUT.stackedFields}>
+              {/* Only the IAM-hosted OIDC activation page reads this, so it is offered only
+                  while OIDC is on. App-hosted activation pages own their own form. */}
+              {isOidcEnabled ? (
+                <FormField
+                  name="collectPasswordOnActivation"
+                  control={form.control}
+                  render={({ field }) => (
+                    <SwitchRow
+                      label="Set Password During Activation"
+                      description="Ask users to create a password on the activation page. Turn this off to activate on confirmation alone and send users to login."
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+              ) : null}
               <FormField
                 name="logoutOnPasswordChange"
                 control={form.control}

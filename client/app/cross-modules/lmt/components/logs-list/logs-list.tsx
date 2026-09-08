@@ -6,6 +6,7 @@ import { InfiniteScroll } from "@/components/infinite-scroller";
 import { useContext, useMemo } from "react";
 import { LogsViewerContext } from "../logs-viewer";
 import { useLogs } from "../../hooks/use-logs";
+import { getRangeStartDate } from "../../utils";
 import { LogsFilterToolbar } from "../logs-header/logs-filter-toolbar";
 import { ILog } from "../../models/log.model";
 // UI: New Data Available Indicator
@@ -29,12 +30,18 @@ const OldDataFetchingIndicator = () => (
 export const LogsList = () => {
   const { selectedService, selectedServiceNames, filter, pageSize, isServicesLoading, services } =
     useContext(LogsViewerContext);
-  const { level, startDate, endDate, search } = filter || {
+  const { level, startDate, endDate, search, range } = filter || {
     level: "",
     startDate: "",
     endDate: "",
     search: "",
+    range: "",
   };
+  // Resolved once per preset change rather than on every render. Recomputing it live would
+  // shift the window every minute, and each shift restarts the query -- wiping the loaded
+  // rows and the scroll position mid-read. Pinning it means "the 30 minutes before you
+  // chose this", with the poller appending anything newer.
+  const rangeStartDate = useMemo(() => getRangeStartDate(range ?? ""), [range]);
   // serviceNames spans every selected service; serviceName stays the primary one so the
   // API keeps a single-collection fallback when nothing is narrowed.
   const serviceName = selectedService?.serviceName ?? "";
@@ -45,12 +52,15 @@ export const LogsList = () => {
     serviceNames,
     search: search,
     level,
-    startDate,
+    startDate: rangeStartDate ?? startDate,
     endDate: initialTimeStamp,
     pageSize,
   });
   const fetchNewLogsHandler = async (lastItemTimestamp: string = initialTimeStamp) => {
-    if (search || level || startDate || endDate) return [];
+    // Only a pinned end stops the stream: streaming past the end of a closed window would
+    // return logs the reader excluded. A window left open at the end -- the default view
+    // included -- contains every log that arrives next, so it keeps tailing.
+    if (search || level || endDate) return [];
     return await fetchNewLogs(lastItemTimestamp);
   };
 
@@ -90,10 +100,13 @@ export const LogsList = () => {
             }}
             pollingInterval={5000}
             pollingFn={(item) => fetchNewLogsHandler(item?.timestamp)}
-            renderItem={(log, index) => (
+            renderItem={(log) => (
+              // Keyed on the log's own identity rather than its position: polling prepends new
+              // rows every few seconds, so an index-based key would hand a row's expanded stack
+              // trace to whichever log later lands at that index.
               <div
-                key={log.traceId + "-" + index}
-                className="w-full cursor-default p-3 text-sm text-muted-foreground hover:bg-muted/50"
+                key={`${log.timestamp}-${log.spanId ?? ""}`}
+                className="w-full cursor-default border-b border-border/60 px-3 py-2.5 text-sm text-muted-foreground last:border-b-0 hover:bg-muted/40"
               >
                 <LogItem log={log} />
               </div>

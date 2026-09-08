@@ -11,6 +11,16 @@ import {
   looksLikeSecretId,
   secretValueByteLength,
   supportsValueReveal,
+  normalizeSecretTag,
+  toSecretTagKey,
+  isValidSecretTag,
+  secretTagLabel,
+  displaySecretName,
+  SECRET_NAME_DISPLAY_MAX_LENGTH,
+  secretTags,
+  SECRET_TAG_MAX_LENGTH,
+  SECRET_TYPE_LABEL,
+  SECRET_TYPE_DESCRIPTION,
 } from "./secret.model";
 
 describe("secret model", () => {
@@ -96,9 +106,101 @@ describe("secret model", () => {
       expect(isDeleted({ status: SECRET_STATUS.Active })).toBe(false);
     });
 
-    it("offers value reveal for api secrets only", () => {
+    it("offers value reveal for api and both secrets, but not platform ones", () => {
+      // `both` exists precisely to opt into showing the affordance; it reads identically to
+      // `service` server-side.
       expect(supportsValueReveal({ type: SECRET_TYPE.Api })).toBe(true);
+      expect(supportsValueReveal({ type: SECRET_TYPE.Both })).toBe(true);
       expect(supportsValueReveal({ type: SECRET_TYPE.Service })).toBe(false);
+    });
+
+    it("treats both as having no access list", () => {
+      expect(isApiSecret({ type: SECRET_TYPE.Both })).toBe(false);
+    });
+
+    it("labels and describes every category", () => {
+      for (const type of Object.values(SECRET_TYPE)) {
+        expect(SECRET_TYPE_LABEL[type]).toBeTruthy();
+        expect(SECRET_TYPE_DESCRIPTION[type]).toBeTruthy();
+      }
+    });
+  });
+
+  describe("display name", () => {
+    it("leaves a name within the cap alone", () => {
+      expect(displaySecretName("payment-gateway-key")).toBe("payment-gateway-key");
+    });
+
+    it("leaves a name exactly at the cap alone", () => {
+      const exact = "a".repeat(SECRET_NAME_DISPLAY_MAX_LENGTH);
+      expect(displaySecretName(exact)).toBe(exact);
+    });
+
+    it("cuts a longer name to the cap and marks the cut", () => {
+      // The row has a truncate class, but it only bites once the cell has a width to overflow;
+      // the table sizes itself to its content, so a long name stretches the column instead.
+      const long = "b".repeat(SECRET_NAME_DISPLAY_MAX_LENGTH + 25);
+      const shown = displaySecretName(long);
+
+      expect(shown).toBe(`${"b".repeat(SECRET_NAME_DISPLAY_MAX_LENGTH)}…`);
+      expect(shown.length).toBe(SECRET_NAME_DISPLAY_MAX_LENGTH + 1);
+    });
+  });
+
+  describe("tags", () => {
+    it("lowercases and trims a tag, matching SecretTag.Normalize", () => {
+      expect(normalizeSecretTag("  Payments  ")).toBe("payments");
+      expect(normalizeSecretTag("ENV:PROD")).toBe("env:prod");
+    });
+
+    it("slugifies free text so a typed phrase is usable", () => {
+      expect(toSecretTagKey("Payments Team")).toBe("payments-team");
+      expect(toSecretTagKey("Blocks / IAM")).toBe("blocks-iam");
+      expect(toSecretTagKey("env:prod")).toBe("env:prod");
+    });
+
+    it("strips leading punctuation, which the server would reject", () => {
+      expect(toSecretTagKey("--leading")).toBe("leading");
+      expect(toSecretTagKey(":prod")).toBe("prod");
+    });
+
+    it("drops trailing separators", () => {
+      expect(toSecretTagKey("payments-")).toBe("payments");
+      expect(toSecretTagKey("payments...")).toBe("payments");
+    });
+
+    it("yields nothing usable from punctuation alone", () => {
+      expect(toSecretTagKey("---")).toBe("");
+      expect(toSecretTagKey("   ")).toBe("");
+    });
+
+    it("caps a slug at the server's length limit", () => {
+      expect(toSecretTagKey("a".repeat(SECRET_TAG_MAX_LENGTH + 10)).length).toBe(
+        SECRET_TAG_MAX_LENGTH,
+      );
+    });
+
+    it("accepts only what the server accepts", () => {
+      expect(isValidSecretTag("payments")).toBe(true);
+      expect(isValidSecretTag("env:prod")).toBe(true);
+      expect(isValidSecretTag("team-payments_v2.1")).toBe(true);
+      expect(isValidSecretTag("-leading")).toBe(false);
+      expect(isValidSecretTag("has space")).toBe(false);
+      expect(isValidSecretTag("")).toBe(false);
+      expect(isValidSecretTag("a".repeat(SECRET_TAG_MAX_LENGTH + 1))).toBe(false);
+    });
+
+    it("tolerates a secret whose tags field is absent", () => {
+      // A document written before tags existed, or a response from an API build that predates
+      // the field. Dereferencing .length on that would white-screen the whole list.
+      expect(secretTags({ tags: undefined as unknown as string[] })).toEqual([]);
+      expect(secretTags({ tags: ["iam"] })).toEqual(["iam"]);
+    });
+
+    it("resolves a key to its catalogue label, falling back to the key", () => {
+      const catalogue = [{ key: "iam", label: "Blocks Iam" }];
+      expect(secretTagLabel("iam", catalogue)).toBe("Blocks Iam");
+      expect(secretTagLabel("payments", catalogue)).toBe("payments");
     });
   });
 });

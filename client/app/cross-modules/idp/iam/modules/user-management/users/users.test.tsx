@@ -146,4 +146,14 @@ describe("Users", () => {
     expect((h.lastQuery?.filter as { organizationIds?: string[] }).organizationIds).toBeUndefined();
     expect((h.lastQuery?.filter as { roles?: string[] }).roles).toBeUndefined();
   });
+
+  it("sends roles without organization options when multi-org is disabled", () => {
+    h.isMultiOrgEnabled = false;
+    h.organizations = [];
+    h.queryParams.roles = ["auditor"];
+    render(<Users />);
+
+    expect((h.lastQuery?.filter as { organizationIds?: string[] }).organizationIds).toBeUndefined();
+    expect((h.lastQuery?.filter as { roles?: string[] }).roles).toEqual(["auditor"]);
+  });
 });

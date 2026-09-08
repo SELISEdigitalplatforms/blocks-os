@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SECRET_STATUS, SECRET_TYPE } from "@/cross-modules/secrets/models/secret.model";
 import { SECRET_ID, makeSecret } from "@/cross-modules/secrets/test-utils/secret.fixtures";
 
+vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
+  useSecretTags: () => ({ data: [{ key: "iam", label: "Blocks Iam" }], isLoading: false }),
+}));
+
 vi.mock("@/cross-modules/secrets/hooks/use-access-labels", () => ({
   useResolvedUserNames: (ids: string[]) =>
     Object.fromEntries(ids.map((id) => [id, id === "u-1" ? "Ada Lovelace" : id])),

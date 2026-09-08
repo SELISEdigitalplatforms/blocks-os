@@ -152,6 +152,11 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     filter: {
       services: selectedServiceNames,
       excepts: ["blocks-lmt-api"],
+      statusCodeClasses: queryParams.status.map(Number),
+      // Each end is sent only when it was chosen: an omitted one leaves that side unbounded
+      // rather than pinning it to a timestamp the reader never asked for.
+      startDate: queryParams.startDate || undefined,
+      endDate: queryParams.endDate || undefined,
     },
   });
   const loading = isLoading || isFetching;
@@ -164,7 +169,12 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const tabChangedHandler = (value: keyof typeof TRACE_PROVIDERS) => {
     setQueryParams((params) => ({ ...params, tab: value, page: 0 }));
   };
-  const hasActiveFilter = queryParams.search.trim().length > 0 || queryParams.services.length > 0;
+  const hasActiveFilter =
+    queryParams.search.trim().length > 0 ||
+    queryParams.services.length > 0 ||
+    queryParams.status.length > 0 ||
+    queryParams.startDate.length > 0 ||
+    queryParams.endDate.length > 0;
   return (
     <main>
       <Tabs

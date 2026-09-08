@@ -6,6 +6,7 @@ import { Radio } from "./radio/radio";
 import { ResetButton } from "./reset-button/reset-button";
 import { SearchInput } from "./search-input/search-input";
 import { SortHeader } from "./sort-header/sort-header";
+import { TimeRange } from "./time-range/time-range";
 
 export const FilterControls = {
   Radio,
@@ -14,6 +15,7 @@ export const FilterControls = {
   SearchInput,
   DropdownSearchInput,
   DateRange,
+  TimeRange,
   ResetButton,
   SortHeader,
 };

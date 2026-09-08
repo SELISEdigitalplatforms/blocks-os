@@ -1,5 +1,23 @@
+import fs from "node:fs"
+import path from "node:path"
+
 function stripTrailingSlash(url: string): string {
   return url.replace(/\/$/, "")
+}
+
+/** Append-only debug trail. Never writes to stdout — teardown/storage stay quiet in the reporter. */
+export function e2eDebugLog(message: string, extra?: unknown) {
+  const suffix =
+    extra === undefined
+      ? ""
+      : ` ${extra instanceof Error ? extra.message : String(extra)}`
+  try {
+    const logPath = path.resolve(process.cwd(), "test-results/e2e-debug.log")
+    fs.mkdirSync(path.dirname(logPath), { recursive: true })
+    fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}${suffix}\n`)
+  } catch {
+    // Ignore disk errors — a missing debug log must not fail the suite.
+  }
 }
 
 export function requireEnv(name: string): string {

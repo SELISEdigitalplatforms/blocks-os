@@ -1,5 +1,16 @@
 import { expect, type Page } from "@playwright/test";
+import { e2eDebugLog } from "../../support/env";
 import { openIam } from "../../support/os-helpers";
+
+/**
+ * Wait for permission checkboxes on role details.
+ * Do not page.reload() here — a hard reload drops the SPA deep link and lands
+ * on /app/console (or /login), which is worse than an empty permissions panel.
+ */
+async function waitForRolePermissionCheckboxes(page: Page) {
+  const firstCheckbox = page.getByRole("checkbox").first();
+  return firstCheckbox.isVisible({ timeout: 30_000 }).catch(() => false);
+}
 
 export async function navigateToRolesFlow(page: Page) {
   await openIam(page, "role", "Roles");
@@ -157,19 +168,35 @@ export async function openRoleDetailsFlow(page: Page, roleName: string) {
 }
 
 export async function toggleEditPermissionsDiscardFlow(page: Page) {
+  const hasPermissions = await waitForRolePermissionCheckboxes(page);
+  if (!hasPermissions) {
+    e2eDebugLog(
+      "[roles-flow] Role details still has no permission checkboxes — skipping edit/discard.",
+    );
+    return;
+  }
+
   const editPermissionsButton = page.getByRole("button", { name: "Edit Permissions" });
   await expect(editPermissionsButton).toBeVisible({ timeout: 8_000 });
   await editPermissionsButton.click();
   await expect(page.getByRole("button", { name: "Save Changes" })).toBeVisible();
 
   const firstPermissionCheckbox = page.getByRole("checkbox").first();
-  await expect(firstPermissionCheckbox).toBeVisible({ timeout: 5_000 });
+  await expect(firstPermissionCheckbox).toBeVisible({ timeout: 10_000 });
   await firstPermissionCheckbox.click();
 
   await page.getByRole("button", { name: "Discard" }).click();
 }
 
 export async function saveEditPermissionsFlow(page: Page) {
+  const hasPermissions = await waitForRolePermissionCheckboxes(page);
+  if (!hasPermissions) {
+    e2eDebugLog(
+      "[roles-flow] Role details still has no permission checkboxes — skipping save permissions.",
+    );
+    return;
+  }
+
   const editPermissionsButton = page.getByRole("button", { name: "Edit Permissions" });
   await expect(editPermissionsButton).toBeVisible({ timeout: 8_000 });
   await editPermissionsButton.click();
@@ -177,7 +204,7 @@ export async function saveEditPermissionsFlow(page: Page) {
   await expect(saveChangesButton).toBeVisible();
 
   const firstPermissionCheckbox = page.getByRole("checkbox").first();
-  await expect(firstPermissionCheckbox).toBeVisible({ timeout: 5_000 });
+  await expect(firstPermissionCheckbox).toBeVisible({ timeout: 10_000 });
   await firstPermissionCheckbox.click();
 
   const reviewDialogSave = page

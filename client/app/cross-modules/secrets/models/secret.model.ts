@@ -14,6 +14,7 @@
 export const SECRET_TYPE = {
   Api: "api",
   Service: "service",
+  Both: "both",
 } as const;
 
 export const SECRET_STATUS = {
@@ -26,7 +27,7 @@ export type SecretType = (typeof SECRET_TYPE)[keyof typeof SECRET_TYPE];
 export type SecretStatus = (typeof SECRET_STATUS)[keyof typeof SECRET_STATUS];
 
 /**
- * What each category means to a person.
+ * What each type means to a person.
  *
  * The wire values stay `api` / `service` — the backend compares them ordinally — but "API" and
  * "Service" say nothing about which one you want, so nothing user-facing shows them.
@@ -34,11 +35,15 @@ export type SecretStatus = (typeof SECRET_STATUS)[keyof typeof SECRET_STATUS];
 export const SECRET_TYPE_LABEL: Record<SecretType, string> = {
   api: "Application",
   service: "Platform service",
+  both: "Both",
 };
 
 export const SECRET_TYPE_DESCRIPTION: Record<SecretType, string> = {
   api: "A key or credential your team uses. You choose exactly who can read it.",
   service: "A credential consumed by backend services. It has no per-person access list.",
+  both:
+    "A backend credential your team also manages here. Anyone in this environment can read " +
+    "and rotate it, so it has no per-person access list.",
 };
 
 export const SECRET_STATUS_LABEL: Record<SecretStatus, string> = {
@@ -52,6 +57,7 @@ export const SECRET_TYPE_OPTIONS = [
   { value: "", label: "All" },
   { value: SECRET_TYPE.Api, label: SECRET_TYPE_LABEL.api },
   { value: SECRET_TYPE.Service, label: SECRET_TYPE_LABEL.service },
+  { value: SECRET_TYPE.Both, label: SECRET_TYPE_LABEL.both },
 ] as const;
 
 export const SECRET_STATUS_OPTIONS = [
@@ -72,6 +78,8 @@ export interface SecretResult {
   secretId: string;
   name: string;
   description?: string | null;
+  /** Canonical tag keys. Resolve them to labels through the tag catalogue. */
+  tags: string[];
   type: SecretType;
   status: SecretStatus;
   organizationId: string;
@@ -130,7 +138,9 @@ export interface SetSecretRequest {
   description?: string;
   value: string;
   type: SecretType;
-  /** Must be null/omitted for service secrets; the backend drops it either way. */
+  /** Canonical tag keys. New ones are added to the tenant catalogue server-side. */
+  tags?: string[];
+  /** Only kept for `api` secrets; the backend drops it for the other types either way. */
   access?: SecretAccess | null;
   /** Omit — defaults to the caller's organization. */
   organizationId?: string;
@@ -144,12 +154,22 @@ export interface SetSecretRequest {
 export interface UpdateSecretRequest {
   name?: string;
   description?: string;
+  /**
+   * Replaces the whole set. Omit to leave the existing tags alone; send an empty array to
+   * clear them. There is no add-one or remove-one verb, so send what the chip list holds.
+   */
+  tags?: string[];
 }
 
 export interface SecretFilter {
   search?: string;
   type?: SecretType;
   status?: SecretStatus;
+  /**
+   * Matches a secret carrying **any** of these tags — picking a second chip widens the
+   * result. Capped server-side at {@link SECRET_TAG_MAX_PER_FILTER}.
+   */
+  tags?: string[];
   includeDeleted?: boolean;
   organizationId?: string;
   /** 1-based. */
@@ -193,6 +213,20 @@ export interface SecretAuditListResult {
   totalCount: number;
 }
 
+// ─── Tags ─────────────────────────────────────────────────────────────────────
+
+/**
+ * One tag in the tenant tag catalogue.
+ *
+ * A secret stores only the `key`. The `label` exists so an entry can read as "Blocks Iam"
+ * while the value stored on every secret — indexed, filtered on, sent in requests — stays the
+ * short canonical `iam`.
+ */
+export interface SecretTagEntry {
+  key: string;
+  label: string;
+}
+
 // ─── Audit vocabulary ─────────────────────────────────────────────────────────
 // Mirrors SecretAuditActions / SecretAuditOutcomes on the server.
 
@@ -217,6 +251,8 @@ export const SECRET_AUDIT_REASON_LABEL: Record<string, string> = {
   METADATA_WRITE_FAILED: "Metadata write failed",
   CLEANUP_FAILED: "Cleanup failed",
   ACCESS_NOT_APPLICABLE: "Access list not applicable",
+  TAG_INVALID: "Invalid tag",
+  TOO_MANY_TAGS: "Too many tags",
 };
 
 // ─── Validation, mirrored from the backend ────────────────────────────────────
@@ -229,6 +265,12 @@ export const SECRET_DESCRIPTION_MAX_LENGTH = 1000;
 /** Azure Key Vault caps values at 25 KB. Measured in UTF-8 bytes, not characters. */
 export const SECRET_VALUE_MAX_BYTES = 25 * 1024;
 
+/** Mirrors `SecretTag`. Colon is allowed so a tag can be namespaced as `env:prod`. */
+export const SECRET_TAG_PATTERN = /^[a-z0-9][a-z0-9._:-]*$/;
+export const SECRET_TAG_MAX_LENGTH = 50;
+export const SECRET_TAG_MAX_PER_SECRET = 20;
+export const SECRET_TAG_MAX_PER_FILTER = 10;
+
 /** Backend validation reason codes, surfaced in `errors.reason` on a 400. */
 export const SECRET_ERROR_REASON = {
   NameRequired: "NAME_REQUIRED",
@@ -240,6 +282,8 @@ export const SECRET_ERROR_REASON = {
   InvalidType: "INVALID_TYPE",
   BatchTooLarge: "BATCH_TOO_LARGE",
   DuplicateNameInBatch: "DUPLICATE_NAME_IN_BATCH",
+  TagInvalid: "TAG_INVALID",
+  TooManyTags: "TOO_MANY_TAGS",
 } as const;
 
 /**
@@ -267,10 +311,72 @@ export const isDeleted = (secret: Pick<SecretResult, "status">): boolean =>
 /**
  * Whether the UI should offer a Reveal/Copy affordance at all.
  *
- * Service secrets hide it because a person has no reason to read a backend credential from
- * this screen — NOT because the backend refuses. `CheckValueRead` lets any authenticated
- * caller in the tenant read a `service` value, and the `::get-value` endpoint permission is
- * not type-aware. This is a UX choice, so nothing in the UI should present it as a guarantee.
+ * `service` hides it because a person has no reason to read a backend credential from this
+ * screen — NOT because the backend refuses. `CheckValueRead` lets any authenticated caller in
+ * the tenant read a `service` value, and the `::get-value` endpoint permission is not
+ * type-aware. This is a UX choice, so nothing in the UI should present it as a guarantee.
+ *
+ * `both` is the type that exists to opt into showing it. It reads identically to `service`
+ * server-side; choosing it at creation is how someone says "this one is also ours to manage".
  */
 export const supportsValueReveal = (secret: Pick<SecretResult, "type">): boolean =>
-  secret.type === SECRET_TYPE.Api;
+  secret.type === SECRET_TYPE.Api || secret.type === SECRET_TYPE.Both;
+
+/**
+ * Canonical form of a tag, matching `SecretTag.Normalize` server-side.
+ *
+ * Applied before a tag is sent so what the chip shows is what gets stored — the server
+ * lowercases regardless, and a chip reading "Payments" that persists as `payments` looks like
+ * a bug the next time the row is loaded.
+ */
+export const normalizeSecretTag = (tag: string): string => tag.trim().toLowerCase();
+
+/**
+ * Turns free text into a usable tag key: spaces and runs of punctuation become single hyphens.
+ *
+ * Lets someone type "Payments Team" and get `payments-team` rather than being told their tag
+ * is invalid. Returns an empty string when nothing usable is left.
+ */
+export const toSecretTagKey = (input: string): string =>
+  normalizeSecretTag(input)
+    .replace(/[^a-z0-9._:-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[^a-z0-9]+/, "")
+    .replace(/[-_.:]+$/, "")
+    .slice(0, SECRET_TAG_MAX_LENGTH);
+
+export const isValidSecretTag = (tag: string): boolean =>
+  tag.length > 0 && tag.length <= SECRET_TAG_MAX_LENGTH && SECRET_TAG_PATTERN.test(tag);
+
+/**
+ * Longest secret name rendered in full in a list row.
+ *
+ * Names are allowed 100 characters, and the list row has a `truncate` class, but that only
+ * bites once the cell has a width to overflow — the table sizes itself to its content, so a
+ * long name stretches the column and pushes the later ones off the edge instead. Capping the
+ * text is what keeps the row layout independent of the data.
+ */
+export const SECRET_NAME_DISPLAY_MAX_LENGTH = 40;
+
+/**
+ * Shortens a name for a list row. Always render it with the full name as a `title`, so the
+ * part that was cut is still reachable.
+ */
+export const displaySecretName = (name: string): string =>
+  name.length > SECRET_NAME_DISPLAY_MAX_LENGTH
+    ? `${name.slice(0, SECRET_NAME_DISPLAY_MAX_LENGTH)}…`
+    : name;
+
+/**
+ * A secret's tags, tolerating their absence.
+ *
+ * The field is newer than the secrets themselves: a document written before tags existed has
+ * no `Tags` element, and an API build predating the feature omits the property entirely. The
+ * server coalesces to an empty array, but a UI that dereferences `.length` on whatever arrives
+ * would white-screen the whole list if it ever met a response that did not.
+ */
+export const secretTags = (secret: Pick<SecretResult, "tags">): string[] => secret.tags ?? [];
+
+/** Display text for a tag key, falling back to the key when the catalogue has no entry. */
+export const secretTagLabel = (key: string, catalogue: SecretTagEntry[]): string =>
+  catalogue.find((entry) => entry.key === key)?.label ?? key;
