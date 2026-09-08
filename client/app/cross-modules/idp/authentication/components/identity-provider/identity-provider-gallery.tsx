@@ -1,4 +1,5 @@
-import { ArrowRight, Building2, Plus, Route, User } from "lucide-react";
+import { useId, useState } from "react";
+import { ArrowRight, Building2, ChevronRight, Plus, Route, User } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
@@ -105,14 +106,6 @@ function SectionHeading({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-function ConfiguredCountBadge({ count }: { count: number }) {
-  return (
-    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
-      {count} configured
-    </span>
-  );
-}
-
 function NotConfiguredPill() {
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis">
@@ -143,15 +136,43 @@ function AddProviderButton({ label, onAdd }: { label: string; onAdd: () => void 
   );
 }
 
-/** The configured entries of one provider type, listed inline on its card. */
+/**
+ * The configured entries of one provider type, listed inline on its card behind a
+ * collapsible summary - a card holding several entries can be folded back down to
+ * its count so the gallery stays scannable.
+ */
 function ProviderEntries({ label, entries }: { label: string; entries: IdentityProvider[] }) {
+  const [expanded, setExpanded] = useState(true);
+  const listId = useId();
+
   if (entries.length === 0) return null;
+
   return (
-    <ul aria-label={`Configured ${label} providers`} className="space-y-2">
-      {entries.map((entry) => (
-        <ProviderEntryItem key={entry.itemId} item={entry} />
-      ))}
-    </ul>
+    <div className="space-y-2">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={listId}
+        onClick={() => setExpanded((e) => !e)}
+        className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <ChevronRight
+          className={cn(
+            "h-3 w-3 shrink-0 transition-transform duration-200",
+            expanded && "rotate-90",
+          )}
+        />
+        {entries.length} configured
+      </button>
+
+      {expanded && (
+        <ul id={listId} aria-label={`Configured ${label} providers`} className="space-y-2">
+          {entries.map((entry) => (
+            <ProviderEntryItem key={entry.itemId} item={entry} />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -166,8 +187,8 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
   if (!config) return null;
 
   return (
-    <Card className="flex flex-col p-0">
-      <CardContent className="flex flex-1 flex-col gap-3.5 p-4 sm:p-5">
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-3.5 p-4 sm:p-5">
         <div className="flex items-start gap-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border bg-background">
             <img src={config.imageSrc} alt={config.label} className="h-5 w-5 object-contain" />
@@ -175,11 +196,7 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[14.5px] font-semibold text-high-emphasis">{config.label}</p>
-              {entries.length > 0 ? (
-                <ConfiguredCountBadge count={entries.length} />
-              ) : (
-                <NotConfiguredPill />
-              )}
+              {entries.length === 0 && <NotConfiguredPill />}
             </div>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               {config.description}
@@ -216,8 +233,8 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
   const Icon = cfg.Icon;
 
   return (
-    <Card className="flex flex-col p-0">
-      <CardContent className="flex flex-1 flex-col gap-3.5 p-4 sm:p-5">
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-3.5 p-4 sm:p-5">
         <div className="flex items-start gap-3.5">
           <div
             className={cn(
@@ -228,10 +245,7 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
             <Icon className={cn("h-[18px] w-[18px]", cfg.iconColor)} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
-              {entries.length > 0 && <ConfiguredCountBadge count={entries.length} />}
-            </div>
+            <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</p>
           </div>
           <AddProviderButton label={label} onAdd={onAdd} />

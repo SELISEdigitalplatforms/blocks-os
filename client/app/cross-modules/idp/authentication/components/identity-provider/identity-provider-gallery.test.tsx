@@ -116,6 +116,26 @@ describe("IdentityProviderGallery", () => {
     expect(screen.getAllByText("Not configured")).toHaveLength(1);
   });
 
+  it("collapses and re-expands a card's entry list from its count summary", async () => {
+    const user = userEvent.setup();
+    render(
+      <IdentityProviderGallery
+        {...baseProps}
+        byosEntries={[byosEntry, { ...byosEntry, itemId: "idp-byos-2", displayName: "Auth0 Stg" }]}
+      />,
+    );
+    const summary = screen.getByRole("button", { name: /2 configured/ });
+    expect(summary.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getAllByTestId("idp-entry")).toHaveLength(2);
+
+    await user.click(summary);
+    expect(summary.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryAllByTestId("idp-entry")).toHaveLength(0);
+
+    await user.click(summary);
+    expect(screen.getAllByTestId("idp-entry")).toHaveLength(2);
+  });
+
   it("Add stays available on a social card that already has entries", async () => {
     const user = userEvent.setup();
     const onSelectGoogle = vi.fn();
