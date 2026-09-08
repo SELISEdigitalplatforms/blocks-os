@@ -4,6 +4,7 @@ import {
   formatDurationMs,
   getLogFormatTimestamp,
   getLogLevelClassName,
+  getLogLevelLabel,
   getTraceFormatTimestamp,
   getRangeStartDate,
 } from "./index";
@@ -40,6 +41,20 @@ describe("lmt/utils index", () => {
 
     it("falls back to high-emphasis for unknown levels", () => {
       expect(getLogLevelClassName("Debug")).toBe("text-high-emphasis");
+    });
+  });
+
+  describe("getLogLevelLabel", () => {
+    it("shortens Information to INFO", () => {
+      expect(getLogLevelLabel("Information")).toBe("INFO");
+    });
+
+    it("shortens Warning to WARN", () => {
+      expect(getLogLevelLabel("Warning")).toBe("WARN");
+    });
+
+    it("leaves already-short levels unchanged", () => {
+      expect(getLogLevelLabel("Error")).toBe("Error");
     });
   });
 

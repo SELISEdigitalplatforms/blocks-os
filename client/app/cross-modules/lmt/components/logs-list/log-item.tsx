@@ -1,7 +1,7 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { getLogFormatTimestamp, getLogLevelBadgeVariant } from "@blocks-lmt/utils";
+import { getLogFormatTimestamp, getLogLevelBadgeVariant, getLogLevelLabel } from "@blocks-lmt/utils";
 import { useContext, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
@@ -53,7 +53,7 @@ export const LogItem = ({ log }: { log: ILog }) => {
           variant={getLogLevelBadgeVariant(log.level)}
           className="w-[84px] shrink-0 py-0 text-[10px] uppercase tracking-wider"
         >
-          {log.level}
+          {getLogLevelLabel(log.level)}
         </Badge>
         {serviceBadgeText && (
           <Badge variant="secondary" className="shrink-0 py-0 text-[10px] font-medium">

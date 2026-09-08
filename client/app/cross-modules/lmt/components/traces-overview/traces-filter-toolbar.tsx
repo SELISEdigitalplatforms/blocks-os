@@ -1,13 +1,24 @@
 import { FilterItem, FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
-import { TRACE_STATUS_CLASSES, LMT_TIME_RANGES } from "@blocks-lmt/utils";
+import type { TimeRangeValue } from "@/components/filter-toolbar/time-range/time-range";
+import { TRACE_STATUS_CLASSES } from "@blocks-lmt/utils";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 
+/** The filter as it is held in the URL. */
 export type TraceFilter = {
   search: string;
   services: string[];
   status: string[];
-  range: string;
+  startDate: string;
+  endDate: string;
+};
+
+/** The filter as the controls bind to it: one window control over the two stored ends. */
+type TraceFilterValues = {
+  search: string;
+  services: string[];
+  status: string[];
+  timeRange: TimeRangeValue;
 };
 
 export type ServiceOption = {
@@ -32,9 +43,10 @@ export const useTracesFilterQueryParams = () => {
     services: parseAsArrayOf(parseAsString).withDefault([]),
     // Leading digits of the HTTP status ("2", "5"), not whole codes -- see StatusCodeClasses.
     status: parseAsArrayOf(parseAsString).withDefault([]),
-    // A preset key such as "15m". The window is resolved to a start date at query time so it
-    // stays relative to now rather than to whenever the URL was written.
-    range: parseAsString.withDefault(""),
+    // The ends of the chosen window, as ISO instants. Empty means unbounded on that side,
+    // so an empty pair is "every trace" -- which is what the list opens on.
+    startDate: parseAsString.withDefault(""),
+    endDate: parseAsString.withDefault(""),
     page: parseAsInteger.withDefault(0),
     pageSize: parseAsInteger.withDefault(10),
   });
@@ -68,7 +80,17 @@ export function TracesFilterToolbar({
         : defaultServiceSelection(serviceOptions),
     [queryParams.services, serviceOptions],
   );
+  // Both ends live in the URL as their own params, so the one control writes them together.
+  const changeTimeRange = (value: TimeRangeValue) => {
+    setQueryParams((params) => ({
+      ...params,
+      startDate: value?.from ? value.from.toISOString() : "",
+      endDate: value?.to ? value.to.toISOString() : "",
+      page: 0,
+    }));
+  };
   const changeHandler = (key: string, value: unknown) => {
+    if (key === "timeRange") return changeTimeRange(value as TimeRangeValue);
     setQueryParams((params) => ({
       ...params,
       [key]: Array.isArray(value) ? [...value] : value,
@@ -77,17 +99,19 @@ export function TracesFilterToolbar({
   };
   const resetHandler = () => setQueryParams(null);
 
-  const filters: FilterItem<TraceFilter>[] = [
+  const filters: FilterItem<TraceFilterValues>[] = [
     { key: "search", type: "SearchInput", label: "" },
     ...(showTimeRange
       ? ([
           {
-            key: "range",
-            type: "Radio",
-            label: "Time",
-            props: { options: LMT_TIME_RANGES.map(({ label, value }) => ({ label, value })) },
+            key: "timeRange",
+            type: "TimeRange",
+            label: "Time range",
+            // Trace timestamps are listed in local time, not UTC, so the window is written
+            // in local time too -- otherwise it would not line up with the column beside it.
+            props: { timeZone: "local" },
           },
-        ] as FilterItem<TraceFilter>[])
+        ] as FilterItem<TraceFilterValues>[])
       : []),
     {
       key: "status",
@@ -104,19 +128,25 @@ export function TracesFilterToolbar({
   ];
 
   return (
-    <FilterToolbar<TraceFilter>
+    <FilterToolbar<TraceFilterValues>
       filters={filters}
       values={{
         search: queryParams.search,
         services: displayedServices,
         status: queryParams.status,
-        range: queryParams.range,
+        timeRange:
+          queryParams.startDate || queryParams.endDate
+            ? {
+                from: queryParams.startDate ? new Date(queryParams.startDate) : undefined,
+                to: queryParams.endDate ? new Date(queryParams.endDate) : undefined,
+              }
+            : null,
       }}
       defaultValues={{
         search: "",
         services: defaultServiceSelection(serviceOptions),
         status: [],
-        range: "",
+        timeRange: null,
       }}
       onChange={(key, value) => changeHandler(String(key), value)}
       onReset={resetHandler}

@@ -30,13 +30,17 @@ export interface Service {
 }
 export interface LogFilter {
   search: string;
-  /** Absolute window from the Date picker. Mutually exclusive with {@link LogFilter.range}. */
+  /**
+   * Absolute window from the time-range picker, in UTC. Mutually exclusive with
+   * {@link LogFilter.range}. An empty endDate means the window runs to the present moment,
+   * which is what lets the list keep tailing; a pinned endDate stops it.
+   */
   startDate: string;
   endDate: string;
   /**
-   * Relative window preset such as "30m". Held separately from startDate rather than
-   * resolved into it, because the live tail stops polling whenever an absolute window is
-   * set -- and a relative window must keep streaming, since new logs are always inside it.
+   * Relative window such as "30m", used only for the window the page opens on -- the picker
+   * offers absolute windows exclusively. Held separately from startDate rather than resolved
+   * into it, so that the opening view has no end to stream past and keeps tailing.
    */
   range: string;
   level: string;

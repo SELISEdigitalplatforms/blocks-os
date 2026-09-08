@@ -50,11 +50,16 @@ export const TracingInfo = () => {
           {formatDurationMs(trace.duration)}
         </span>
       </div>
-      <p className="mt-2 flex flex-wrap items-baseline gap-2 break-all text-lg font-normal text-high-emphasis md:text-xl">
-        <span className={`font-semibold uppercase ${getTypeColor(trace?.entryPoint?.method)}`}>
+      {/* A side-panel heading, so emphasis comes from weight and the method's colour rather
+          than from size: at the previous text-lg/xl it outsized the page title next to it,
+          and a long path then broke across three lines. */}
+      <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 break-all text-sm text-high-emphasis">
+        <span
+          className={`text-xs font-semibold uppercase tracking-wide ${getTypeColor(trace?.entryPoint?.method)}`}
+        >
           {trace?.entryPoint?.method}
         </span>
-        <span className="text-base md:text-lg">{trace?.entryPoint?.actionName}</span>
+        <span className="font-semibold">{trace?.entryPoint?.actionName}</span>
       </p>
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
         <Field label="Kind">{trace?.kind}</Field>
@@ -70,53 +75,40 @@ export const TracingInfo = () => {
       <Separator className="my-5" />
       <Accordion type="multiple">
         <AccordionItem value="annotation" className="last:border-none">
-          <AccordionTrigger className="font-medium hover:no-underline">Annotation</AccordionTrigger>
+          <AccordionTrigger className="text-sm font-medium hover:no-underline">
+            Annotation
+          </AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-col py-[12px]">
               <div className="mb-[12px]">
                 <AnnotationBar annotationDuration={trace?.duration} />
               </div>
+              {/* Each row reuses Field, the same control the panel's KIND/SERVICE pairs use, so
+                  the annotations sit on one type scale with the rest of the panel instead of a
+                  step larger -- and cannot drift away from it again. */}
               <div className="mb-[12px] grid grid-cols-2 gap-2">
-                <div className="flex items-center">0ms</div>
-                <div className="flex flex-col">
-                  <div className="mb-[8px]">
-                    <h3 className="text-sm font-medium text-low-emphasis">Start time</h3>
-                    <p className="text-base font-normal text-high-emphasis">
-                      {formatDate(parseDateString(trace?.startTime?.toString()))}
-                    </p>
-                  </div>
-                  <div className="mb-[8px]">
-                    <h3 className="text-sm font-medium text-low-emphasis">Value</h3>
-                    <p className="text-base font-normal text-high-emphasis">Server Start</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-low-emphasis">Address</h3>
-                    <p className="text-base font-normal text-high-emphasis">
-                      {trace?.entryPoint?.method}
-                    </p>
-                  </div>
+                <div className="flex items-center text-xs tabular-nums text-medium-emphasis">
+                  0ms
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Field label="Start time">
+                    {formatDate(parseDateString(trace?.startTime?.toString()))}
+                  </Field>
+                  <Field label="Value">Server Start</Field>
+                  <Field label="Address">{trace?.entryPoint?.method}</Field>
                 </div>
               </div>
               <Separator />
               <div className="mt-[12px] grid grid-cols-2 gap-2">
-                <div className="flex items-center tabular-nums">{formatDurationMs(trace.duration)}</div>
-                <div className="flex flex-col">
-                  <div className="mb-[8px]">
-                    <h3 className="text-sm font-medium text-low-emphasis">Start time</h3>
-                    <p className="text-base font-normal text-high-emphasis">
-                      {formatDate(parseDateString(trace?.endTime?.toString()))}
-                    </p>
-                  </div>
-                  <div className="mb-[8px]">
-                    <h3 className="text-sm font-medium text-low-emphasis">Value</h3>
-                    <p className="text-base font-normal text-high-emphasis">Server Finish</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-low-emphasis">Address</h3>
-                    <p className="text-base font-normal text-high-emphasis">
-                      {trace?.entryPoint?.method}
-                    </p>
-                  </div>
+                <div className="flex items-center text-xs tabular-nums text-medium-emphasis">
+                  {formatDurationMs(trace.duration)}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Field label="End time">
+                    {formatDate(parseDateString(trace?.endTime?.toString()))}
+                  </Field>
+                  <Field label="Value">Server Finish</Field>
+                  <Field label="Address">{trace?.entryPoint?.method}</Field>
                 </div>
               </div>
             </div>
@@ -124,7 +116,7 @@ export const TracingInfo = () => {
         </AccordionItem>
         {Object.keys(trace.attributes).length > 0 && (
           <AccordionItem value="attributes" className="last:border-none">
-            <AccordionTrigger className="font-medium hover:no-underline">
+            <AccordionTrigger className="text-sm font-medium hover:no-underline">
               Attributes
             </AccordionTrigger>
             <AccordionContent className="flex flex-col">

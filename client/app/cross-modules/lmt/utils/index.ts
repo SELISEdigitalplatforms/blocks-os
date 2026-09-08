@@ -96,6 +96,17 @@ export const formatDurationMs = (duration: number | string) => {
   return value >= 1000 ? `${(value / 1000).toFixed(2)} s` : `${value.toFixed(2)} ms`;
 };
 
+export const getLogLevelLabel = (level: string) => {
+  switch (level) {
+    case "Information":
+      return "INFO";
+    case "Warning":
+      return "WARN";
+    default:
+      return level;
+  }
+};
+
 export const getLogLevelClassName = (level: string) => {
   switch (level) {
     case "Warning":

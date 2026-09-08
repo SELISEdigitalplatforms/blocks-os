@@ -57,10 +57,10 @@ export const LogsList = () => {
     pageSize,
   });
   const fetchNewLogsHandler = async (lastItemTimestamp: string = initialTimeStamp) => {
-    // `range` is deliberately absent from this guard. An absolute window has an end, so
-    // streaming past it would be wrong; a relative window does not, and every new log falls
-    // inside it -- so the default 30-minute view still tails live.
-    if (search || level || startDate || endDate) return [];
+    // Only a pinned end stops the stream: streaming past the end of a closed window would
+    // return logs the reader excluded. A window left open at the end -- the default view
+    // included -- contains every log that arrives next, so it keeps tailing.
+    if (search || level || endDate) return [];
     return await fetchNewLogs(lastItemTimestamp);
   };
 

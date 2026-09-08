@@ -76,11 +76,13 @@ namespace Cloud.LmtService.Repositories.Trace
             if (query.Filter?.Excepts != null && query.Filter.Excepts.Count > 0)
                 filter &= Builders<BsonDocument>.Filter.Nin("ServiceName", query.Filter.Excepts);
 
+            // See the note on LogTimeRange: unmarked (Kind.Unspecified) dates must be read as
+            // UTC, otherwise Mongo's serializer shifts them by the server's offset.
             if (query.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", query.Filter.StartDate);
+                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.Filter.StartDate));
 
             if (query.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", query.Filter.EndDate);
+                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", LogTimeRange.AsUtc(query.Filter.EndDate));
 
             if (query.Filter?.StatusCodes != null && query.Filter.StatusCodes.Count > 0)
             {

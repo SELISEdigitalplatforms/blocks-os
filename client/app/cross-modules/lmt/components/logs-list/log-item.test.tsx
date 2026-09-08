@@ -57,6 +57,30 @@ describe("LogItem", () => {
     expect(link.getAttribute("href")).toBe("/app/proj/lmt/tracing/trace-1");
   });
 
+  it("shows the shortened label for the Information level", () => {
+    renderItem({
+      traceId: "trace-2",
+      level: "Information",
+      message: "All good",
+      serviceName: "blocks-iam-api",
+      timestamp: "2024-01-01T00:00:00Z",
+    });
+    expect(screen.getByText("INFO")).toBeTruthy();
+    expect(screen.queryByText("Information")).toBeNull();
+  });
+
+  it("shows the shortened label for the Warning level", () => {
+    renderItem({
+      traceId: "trace-3",
+      level: "Warning",
+      message: "Careful",
+      serviceName: "blocks-iam-api",
+      timestamp: "2024-01-01T00:00:00Z",
+    });
+    expect(screen.getByText("WARN")).toBeTruthy();
+    expect(screen.queryByText("Warning")).toBeNull();
+  });
+
   it("formats a blocks service badge by stripping the blocks prefix", () => {
     renderItem({
       traceId: "t",

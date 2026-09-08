@@ -73,8 +73,12 @@ namespace Cloud.LmtService.Repositories.Logs
         public async Task<IQueryable<LogProjection>> GetLogs(LiveLogRequest query)
         {
             var bc = BlocksContext.GetContext();
+            // Timestamps are stored in UTC. Mongo's DateTimeSerializer calls ToUniversalTime()
+            // on serialize, so a Kind.Unspecified value (any caller that omits the trailing 'Z')
+            // would be read as server-local and shift the window. LogTimeRange.AsUtc pins the
+            // contract: unmarked input is UTC, not server-local.
             var filter = Builders<BsonDocument>.Filter.Eq("TenantId", bc?.TenantId)
-                & Builders<BsonDocument>.Filter.Gt("Timestamp", query.LastDate);
+                & Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.LastDate));
             var serviceNames = GetServiceNames(query.Name, query.ServiceNames);
             var logTasks = serviceNames.Select(serviceName =>
                 QueryCollectionAsync(serviceName, filter, int.MaxValue));
@@ -118,11 +122,13 @@ namespace Cloud.LmtService.Repositories.Logs
             if (!string.IsNullOrWhiteSpace(query.Filter?.Level))
                 filter &= Builders<BsonDocument>.Filter.Eq("Level", query.Filter.Level);
 
+            // See the note in GetLogs(LiveLogRequest): unmarked (Kind.Unspecified) dates must be
+            // read as UTC, otherwise Mongo's serializer shifts them by the server's offset.
             if (query.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", query.Filter.StartDate);
+                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.Filter.StartDate));
 
             if (query.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", query.Filter.EndDate);
+                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", LogTimeRange.AsUtc(query.Filter.EndDate));
 
             var serviceNames = GetServiceNames(query.ServiceName, query.ServiceNames);
             var page = Math.Max(query.Page, 0);
@@ -161,11 +167,13 @@ namespace Cloud.LmtService.Repositories.Logs
             if (!string.IsNullOrWhiteSpace(request.Filter?.Level))
                 filter &= Builders<BsonDocument>.Filter.Eq("Level", request.Filter.Level);
 
+            // See the note in GetLogs(LiveLogRequest): unmarked (Kind.Unspecified) dates must be
+            // read as UTC, otherwise Mongo's serializer shifts them by the server's offset.
             if (request.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gte("Timestamp", request.Filter.StartDate);
+                filter &= Builders<BsonDocument>.Filter.Gte("Timestamp", LogTimeRange.AsUtc(request.Filter.StartDate));
 
             if (request.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lt("Timestamp", request.Filter.EndDate);
+                filter &= Builders<BsonDocument>.Filter.Lt("Timestamp", LogTimeRange.AsUtc(request.Filter.EndDate));
 
             var serviceNames = GetServiceNames(request.ServiceName, request.ServiceNames);
             var pageSize = Math.Max(request.PageSize, 1);

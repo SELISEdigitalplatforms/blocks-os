@@ -15,7 +15,6 @@ import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
 import { TraceProviderSetupGuideLine } from "@blocks-lmt/components/trace-guideline/trace-provider-guideline";
 import { TRACE_PROVIDERS, TRACE_REQUEST_SOURCE_TYPE } from "@blocks-lmt/constants/trace.constant";
 import { useGetBlocksServices, useGetTraces } from "@blocks-lmt/hooks/use-trace";
-import { getRangeStartDate } from "@blocks-lmt/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Archive, BookOpenText, Flame, Snowflake } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -154,10 +153,10 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       services: selectedServiceNames,
       excepts: ["blocks-lmt-api"],
       statusCodeClasses: queryParams.status.map(Number),
-      // Resolved on every render rather than memoised, so the window keeps tracking "now".
-      // getRangeStartDate floors to the minute, which keeps this value -- and therefore
-      // the react-query key -- stable within a minute instead of refetching on every render.
-      startDate: getRangeStartDate(queryParams.range),
+      // Each end is sent only when it was chosen: an omitted one leaves that side unbounded
+      // rather than pinning it to a timestamp the reader never asked for.
+      startDate: queryParams.startDate || undefined,
+      endDate: queryParams.endDate || undefined,
     },
   });
   const loading = isLoading || isFetching;
@@ -174,7 +173,8 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     queryParams.search.trim().length > 0 ||
     queryParams.services.length > 0 ||
     queryParams.status.length > 0 ||
-    queryParams.range.length > 0;
+    queryParams.startDate.length > 0 ||
+    queryParams.endDate.length > 0;
   return (
     <main>
       <Tabs

@@ -10,7 +10,11 @@ import {
 } from "@tanstack/react-table";
 import { useContext, useMemo, useState } from "react";
 import { timelineContext } from "../trace-details";
-import { getLogFormatTimestamp, getLogLevelBadgeVariant } from "@blocks-lmt/utils";
+import {
+  getLogFormatTimestamp,
+  getLogLevelBadgeVariant,
+  getLogLevelLabel,
+} from "@blocks-lmt/utils";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { ILog } from "@blocks-lmt/models/log.model";
 import { LogStackTrace } from "../../log-stack-trace";
@@ -42,7 +46,7 @@ const columns: ColumnDef<ILog>[] = [
             variant={getLogLevelBadgeVariant(row.original.level)}
             className="w-[84px] shrink-0 py-0 text-[10px] uppercase tracking-wider"
           >
-            {row.original.level}
+            {getLogLevelLabel(row.original.level)}
           </Badge>
         </div>
         <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-high-emphasis">
