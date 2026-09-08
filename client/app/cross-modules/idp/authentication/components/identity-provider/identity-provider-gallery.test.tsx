@@ -91,7 +91,8 @@ describe("IdentityProviderGallery", () => {
     const user = userEvent.setup();
     const onSelectGoogle = vi.fn();
     render(<IdentityProviderGallery {...baseProps} onSelectGoogle={onSelectGoogle} />);
-    expect(screen.getAllByText("Not configured")).toHaveLength(2);
+    // Not configured shows for all four empty cards - same status pill, same header spot.
+    expect(screen.getAllByText("Not configured")).toHaveLength(4);
     expect(screen.queryAllByTestId("idp-entry")).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: /Add Google/ }));
     expect(onSelectGoogle).toHaveBeenCalled();
@@ -112,8 +113,21 @@ describe("IdentityProviderGallery", () => {
     expect(screen.getByText("Google Prod")).toBeTruthy();
     expect(screen.getByText("Google Staging")).toBeTruthy();
     expect(screen.getByText("2 configured")).toBeTruthy();
-    // Microsoft is untouched by Google's entries.
-    expect(screen.getAllByText("Not configured")).toHaveLength(1);
+    // Microsoft, Blocks OIDC and BYOS are untouched by Google's entries.
+    expect(screen.getAllByText("Not configured")).toHaveLength(3);
+  });
+
+  it("keeps the status pill in the same header slot whether empty or configured", () => {
+    // The title paragraph renders before any entry list in the DOM, so index 0 is
+    // always the card's own heading, never a (possibly same-named) entry row below it.
+    const { rerender } = render(<IdentityProviderGallery {...baseProps} />);
+    const titleRow = screen.getAllByText("Google")[0].parentElement;
+    expect(titleRow?.textContent).toContain("Not configured");
+
+    rerender(<IdentityProviderGallery {...baseProps} googleEntries={[googleEntry]} />);
+    const sameTitleRow = screen.getAllByText("Google")[0].parentElement;
+    expect(sameTitleRow?.textContent).toContain("1 configured");
+    expect(sameTitleRow).toBe(titleRow);
   });
 
   it("collapses and re-expands a card's entry list from its count summary", async () => {

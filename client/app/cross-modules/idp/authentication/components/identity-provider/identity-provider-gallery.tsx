@@ -137,42 +137,64 @@ function AddProviderButton({ label, onAdd }: { label: string; onAdd: () => void 
 }
 
 /**
- * The configured entries of one provider type, listed inline on its card behind a
- * collapsible summary - a card holding several entries can be folded back down to
- * its count so the gallery stays scannable.
+ * The card's status pill - sits in the header, next to the title, in the same spot
+ * whether the type is unconfigured or already has entries. With entries, it doubles as
+ * the collapse toggle for the list rendered below (see `ProviderEntriesList`), so "Not
+ * configured" and "N configured" never jump between two different positions on a card.
  */
-function ProviderEntries({ label, entries }: { label: string; entries: IdentityProvider[] }) {
-  const [expanded, setExpanded] = useState(true);
-  const listId = useId();
-
-  if (entries.length === 0) return null;
+function ConfigurationStatus({
+  count,
+  expanded,
+  onToggle,
+  listId,
+}: {
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+  listId: string;
+}) {
+  if (count === 0) return <NotConfiguredPill />;
 
   return (
-    <div className="space-y-2">
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls={listId}
-        onClick={() => setExpanded((e) => !e)}
-        className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
-        <ChevronRight
-          className={cn(
-            "h-3 w-3 shrink-0 transition-transform duration-200",
-            expanded && "rotate-90",
-          )}
-        />
-        {entries.length} configured
-      </button>
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={listId}
+      onClick={onToggle}
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-medium-emphasis transition-colors hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <ChevronRight
+        className={cn(
+          "h-3 w-3 shrink-0 transition-transform duration-200",
+          expanded && "rotate-90",
+        )}
+      />
+      {count} configured
+    </button>
+  );
+}
 
-      {expanded && (
-        <ul id={listId} aria-label={`Configured ${label} providers`} className="space-y-2">
-          {entries.map((entry) => (
-            <ProviderEntryItem key={entry.itemId} item={entry} />
-          ))}
-        </ul>
-      )}
-    </div>
+/** The configured entries of one provider type, listed inline on its card - folded away
+ * when `expanded` is false (toggled from the `ConfigurationStatus` pill in the header). */
+function ProviderEntriesList({
+  label,
+  entries,
+  expanded,
+  listId,
+}: {
+  label: string;
+  entries: IdentityProvider[];
+  expanded: boolean;
+  listId: string;
+}) {
+  if (entries.length === 0 || !expanded) return null;
+
+  return (
+    <ul id={listId} aria-label={`Configured ${label} providers`} className="space-y-2">
+      {entries.map((entry) => (
+        <ProviderEntryItem key={entry.itemId} item={entry} />
+      ))}
+    </ul>
   );
 }
 
@@ -184,6 +206,8 @@ interface SocialProviderCardProps {
 
 function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProps) {
   const config = SOCIAL_AUTH_PROVIDERS_CONFIG[provider as SSO_PROVIDERS];
+  const [expanded, setExpanded] = useState(true);
+  const listId = useId();
   if (!config) return null;
 
   return (
@@ -196,7 +220,12 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[14.5px] font-semibold text-high-emphasis">{config.label}</p>
-              {entries.length === 0 && <NotConfiguredPill />}
+              <ConfigurationStatus
+                count={entries.length}
+                expanded={expanded}
+                onToggle={() => setExpanded((e) => !e)}
+                listId={listId}
+              />
             </div>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               {config.description}
@@ -215,7 +244,12 @@ function SocialProviderCard({ provider, entries, onAdd }: SocialProviderCardProp
           <AddProviderButton label={config.label} onAdd={onAdd} />
         </div>
 
-        <ProviderEntries label={config.label} entries={entries} />
+        <ProviderEntriesList
+          label={config.label}
+          entries={entries}
+          expanded={expanded}
+          listId={listId}
+        />
       </CardContent>
     </Card>
   );
@@ -231,6 +265,8 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
   const cfg = PROVIDER_CONFIG[providerType];
   const { label, description } = ENTERPRISE_CARD_INFO[providerType];
   const Icon = cfg.Icon;
+  const [expanded, setExpanded] = useState(true);
+  const listId = useId();
 
   return (
     <Card className="p-0">
@@ -245,13 +281,21 @@ function EnterpriseProviderCard({ providerType, entries, onAdd }: EnterpriseProv
             <Icon className={cn("h-[18px] w-[18px]", cfg.iconColor)} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[14.5px] font-semibold text-high-emphasis">{label}</p>
+              <ConfigurationStatus
+                count={entries.length}
+                expanded={expanded}
+                onToggle={() => setExpanded((e) => !e)}
+                listId={listId}
+              />
+            </div>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</p>
           </div>
           <AddProviderButton label={label} onAdd={onAdd} />
         </div>
 
-        <ProviderEntries label={label} entries={entries} />
+        <ProviderEntriesList label={label} entries={entries} expanded={expanded} listId={listId} />
       </CardContent>
     </Card>
   );
