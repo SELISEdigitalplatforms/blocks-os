@@ -22,6 +22,8 @@ export interface IAuthConfiguration {
   recoverAccountUrlLifetimeInMinutes?: number;
   logoutOnPasswordChange?: boolean;
   passwordStrengthCheckerRegex?: string;
+  /** Absent on servers predating the setting, where a password is always collected. */
+  collectPasswordOnActivation?: boolean;
 }
 
 export interface IAuthConfigPayload {

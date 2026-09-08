@@ -137,6 +137,49 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task GetTraces_List_TreatsUnmarkedFilterDatesAsUtcNotServerLocal()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+
+            // Stored timestamps are UTC and callers of this API send UTC. A caller that omits
+            // the trailing 'Z' hands the repository a Kind.Unspecified DateTime, which Mongo's
+            // default serializer would run through ToUniversalTime() -- reading it as
+            // server-local and shifting the whole window by the server's offset.
+            var insideUtc = new DateTime(2026, 3, 14, 9, 30, 0, DateTimeKind.Utc);
+            var localOffset = TimeZoneInfo.Local.GetUtcOffset(insideUtc);
+
+            // Where the requested window lands if the unmarked dates are (incorrectly) read
+            // as server-local: a trace at this instant must NOT come back.
+            var shiftedUtc = insideUtc - localOffset;
+
+            await SeedAsync(tenant,
+                Trace("t-inside-window", "GET /inside", "tz-svc", insideUtc, parentId: ""),
+                Trace("t-shifted-window", "GET /shifted", "tz-svc", shiftedUtc, parentId: ""));
+
+            using var _ = new IntegrationContext(tenant);
+            var (traces, count) = await NewRepository().GetTraces(new GetTracesRequest
+            {
+                Page = 0,
+                PageSize = 10,
+                Filter = new GetTracesRequestFilter
+                {
+                    Services = new List<string> { "tz-svc" },
+                    StartDate = new DateTime(2026, 3, 14, 9, 25, 0, DateTimeKind.Unspecified),
+                    EndDate = new DateTime(2026, 3, 14, 9, 35, 0, DateTimeKind.Unspecified)
+                }
+            });
+
+            // On a machine whose local offset is zero both candidates are the same instant, so
+            // the window legitimately returns both; anywhere else only the UTC reading matches.
+            var expected = localOffset == TimeSpan.Zero
+                ? new[] { "t-inside-window", "t-shifted-window" }
+                : new[] { "t-inside-window" };
+
+            traces.Select(t => t.TraceId).Should().BeEquivalentTo(expected);
+            count.Should().Be(expected.Length);
+        }
+
+        [Fact]
         public async Task GetServiceAnalytics_AggregatesUsageTaggedTraces()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();

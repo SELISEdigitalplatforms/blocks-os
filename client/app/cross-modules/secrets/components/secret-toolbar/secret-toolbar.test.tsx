@@ -1,9 +1,24 @@
 import { render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
-import { SECRET_STATUS, SECRET_TYPE } from "@/cross-modules/secrets/models/secret.model";
+import {
+  SECRET_STATUS,
+  SECRET_TAG_MAX_PER_FILTER,
+  SECRET_TYPE,
+} from "@/cross-modules/secrets/models/secret.model";
+
+vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
+  useSecretTags: () => ({
+    data: [
+      { key: "iam", label: "Blocks Iam" },
+      { key: "os", label: "Blocks Logic" },
+    ],
+    isLoading: false,
+  }),
+}));
+
 import { SecretToolbar, useSecretFilterQueryParams } from "./secret-toolbar";
 
 const withParams = (searchParams: string) => {
@@ -46,11 +61,28 @@ describe("useSecretFilterQueryParams", () => {
     expect(readFilter("?secretPage=4").filter.pageNumber).toBe(5);
   });
 
+  it("sends the selected tags as an array", () => {
+    // Any-of on the server, so a second chip widens the result rather than narrowing it.
+    expect(readFilter("?secretTags=iam,os").filter.tags).toEqual(["iam", "os"]);
+  });
+
+  it("omits the tag filter when nothing is selected", () => {
+    expect(readFilter().filter.tags).toBeUndefined();
+  });
+
+  it("trims the tag filter to the server cap rather than sending over it", () => {
+    // Sending more would 400 the whole list instead of just ignoring the extra chips.
+    const tags = Array.from({ length: SECRET_TAG_MAX_PER_FILTER + 3 }, (_, i) => `tag-${i}`);
+    const { filter } = readFilter(`?secretTags=${tags.join(",")}`);
+    expect(filter.tags).toHaveLength(SECRET_TAG_MAX_PER_FILTER);
+  });
+
   it("exposes the raw values for the toolbar controls", () => {
     expect(readFilter("?secretSearch=gateway&secretType=service").values).toEqual({
       search: "gateway",
       type: "service",
       status: "",
+      tags: [],
     });
   });
 });

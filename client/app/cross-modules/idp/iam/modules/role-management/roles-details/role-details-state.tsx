@@ -46,7 +46,7 @@ const createRoleDetailsStore = () => {
       const permissionMap: PermissionMap = new Map();
       const pendingParents = new Map<string, string[]>();
       for (const p of permissions) {
-        const isInitiallyAssigned = p.roles.includes(role.slug);
+        const isInitiallyAssigned = (p.roles ?? []).includes(role.slug);
         const parents = pendingParents.get(p.resource) || [];
         permissionMap.set(p.resource, {
           ...p,
@@ -56,7 +56,7 @@ const createRoleDetailsStore = () => {
           parents: [...parents],
         });
         // register this permission as a parent for its dependents
-        for (const depResource of p.dependentPermissions) {
+        for (const depResource of p.dependentPermissions ?? []) {
           if (permissionMap.has(depResource)) {
             const depPerm = permissionMap.get(depResource)!;
             depPerm.parents = [...depPerm.parents, p.resource];

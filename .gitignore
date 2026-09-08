@@ -287,3 +287,4 @@ deploy.log
 .playwright-mcp/
 npm-cache/
 test-results/
+/server/_tmpbuild/Debug/net10.0

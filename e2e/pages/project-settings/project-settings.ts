@@ -107,13 +107,17 @@ export async function verifyEnvironmentsTableFlow(page: Page) {
   await expect(page.getByRole("columnheader", { name: "Domain" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Created On" })).toBeVisible();
 
-  const firstRow = page.getByRole("row").nth(1);
-  await expect(firstRow.getByText("Development")).toBeVisible();
+  // Skeleton rows have no labels. Wait for the Development badge (or the empty
+  // copy) instead of asserting on row 1 while EnvironmentsTableLoading is up.
+  const developmentRow = page.getByRole("row").filter({ hasText: "Development" });
+  const empty = page.getByText("No environments found for this project.");
+  await expect(developmentRow.or(empty)).toBeVisible({ timeout: 30_000 });
+  await expect(developmentRow).toBeVisible();
 }
 
 export async function copyEnvironmentKeyFlow(page: Page): Promise<boolean> {
   const copyButton = page.locator('button:has(svg.lucide-copy)').first();
-  if (!(await copyButton.isVisible({ timeout: 5000 }))) {
+  if (!(await copyButton.isVisible({ timeout: 15_000 }))) {
     return false;
   }
   // CopyToClipboardButton uses navigator.clipboard.writeText when the page is
@@ -130,5 +134,5 @@ export async function copyEnvironmentKeyFlow(page: Page): Promise<boolean> {
 }
 
 export async function verifyNotDeployedBadgeFlow(page: Page) {
-  await expect(page.getByText("Not deployed").first()).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText("Not deployed").first()).toBeVisible({ timeout: 15_000 });
 }

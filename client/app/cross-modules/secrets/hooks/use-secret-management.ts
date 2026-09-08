@@ -3,12 +3,14 @@ import { useProjectStore } from "@seliseblocks/genesis-os";
 import { secretManagementService } from "@/cross-modules/secrets/services/secret-management.service";
 import {
   looksLikeSecretId,
+  secretTags,
   type SecretAccess,
   type SecretAuditFilter,
   type SecretAuditListResult,
   type SecretFilter,
   type SecretListResult,
   type SecretResult,
+  type SecretTagEntry,
   type SetSecretRequest,
   type UpdateSecretRequest,
 } from "@/cross-modules/secrets/models/secret.model";
@@ -29,6 +31,7 @@ export const secretQueryKeys = {
       ? (["secrets", "list", tenantId] as const)
       : (["secrets", "list", tenantId, filter] as const),
   item: (tenantId: string, secretId: string) => ["secrets", "item", tenantId, secretId] as const,
+  tags: (tenantId: string) => ["secrets", "tags", tenantId] as const,
   audit: (tenantId: string, secretId: string, filter?: unknown) =>
     ["secrets", "audit", tenantId, secretId, filter] as const,
 };
@@ -58,7 +61,10 @@ export const useFindSecrets = (filter: SecretFilter = {}, enabled = true) => {
         const secret = await secretManagementService.get(search);
         const matchesType = !filter.type || secret.type === filter.type;
         const matchesStatus = !filter.status || secret.status === filter.status;
-        return matchesType && matchesStatus
+        // Any-of, matching the server: the row survives if it carries at least one selected tag.
+        const matchesTags =
+          !filter.tags?.length || filter.tags.some((tag) => secretTags(secret).includes(tag));
+        return matchesType && matchesStatus && matchesTags
           ? { data: [secret], totalCount: 1 }
           : { data: [], totalCount: 0 };
       } catch (error) {
@@ -77,6 +83,22 @@ export const useGetSecret = (secretId: string, enabled = true) => {
     queryKey: secretQueryKeys.item(tenantId, secretId),
     queryFn: () => secretManagementService.get(secretId),
     enabled: enabled && !!secretId && !!tenantId,
+  });
+};
+
+/**
+ * The tenant tag catalogue, for the tag picker and the tag filter.
+ *
+ * Long-lived in cache: it is a small list of labels that changes only when someone introduces
+ * a tag, and the mutations that can do that invalidate it themselves.
+ */
+export const useSecretTags = (enabled = true) => {
+  const tenantId = useTenantId();
+  return useQuery<SecretTagEntry[]>({
+    queryKey: secretQueryKeys.tags(tenantId),
+    queryFn: () => secretManagementService.getTags(),
+    enabled: enabled && !!tenantId,
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -102,6 +124,9 @@ const useSecretMutationHelpers = () => {
       queryClient.invalidateQueries({ queryKey: secretQueryKeys.list(tenantId) }),
     invalidateItem: (secretId: string) =>
       queryClient.invalidateQueries({ queryKey: secretQueryKeys.item(tenantId, secretId) }),
+    // A write can introduce a tag the catalogue has not seen, and the server adds it there.
+    invalidateTags: () =>
+      queryClient.invalidateQueries({ queryKey: secretQueryKeys.tags(tenantId) }),
     toastError: (error: unknown, fallback?: string) =>
       showErrorToast({ errors: describeSecretError(error, fallback).message }),
   };
@@ -125,11 +150,12 @@ export const useRevealSecret = () => {
 };
 
 export const useSetSecret = () => {
-  const { invalidateList } = useSecretMutationHelpers();
+  const { invalidateList, invalidateTags } = useSecretMutationHelpers();
   return useMutation({
     mutationFn: (payload: SetSecretRequest) => secretManagementService.set(payload),
     onSuccess: () => {
       invalidateList();
+      invalidateTags();
       showSuccessToast({ description: "Secret created." });
     },
     // Errors surface as inline field messages in the form (NAME_INVALID maps onto the name
@@ -138,13 +164,14 @@ export const useSetSecret = () => {
 };
 
 export const useUpdateSecret = () => {
-  const { invalidateList, invalidateItem } = useSecretMutationHelpers();
+  const { invalidateList, invalidateItem, invalidateTags } = useSecretMutationHelpers();
   return useMutation({
     mutationFn: ({ secretId, ...payload }: UpdateSecretRequest & { secretId: string }) =>
       secretManagementService.update(secretId, payload),
     onSuccess: (_, variables) => {
       invalidateList();
       invalidateItem(variables.secretId);
+      if (variables.tags) invalidateTags();
     },
   });
 };

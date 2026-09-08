@@ -88,6 +88,11 @@ export type OidcPagePreviewProps = {
   previewMode: OidcPreviewThemeMode;
   onPreviewModeChange: (mode: OidcPreviewThemeMode) => void;
   showAuto?: boolean;
+  /**
+   * Mirrors the tenant's IAM setting so the activation preview shows the page users will
+   * actually get. Undefined means "collect a password", the server-side default.
+   */
+  collectPasswordOnActivation?: boolean;
 };
 
 export const OidcPreviewShell = ({

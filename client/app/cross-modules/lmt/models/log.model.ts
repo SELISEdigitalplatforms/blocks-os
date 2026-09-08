@@ -21,6 +21,11 @@ export interface ILog {
   message: string;
   traceId: string;
   serviceName?: string;
+  // Returned by every log endpoint, but only ever used as part of a row's identity.
+  spanId?: string;
+  // The full ex.ToString() -- message, frames and inner exceptions. Absent on logs that
+  // carried no exception, and deliberately omitted from the live tail response.
+  exception?: string;
 }
 
 export interface IGetLogsPayload {

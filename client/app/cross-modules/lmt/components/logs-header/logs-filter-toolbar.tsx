@@ -1,13 +1,20 @@
 import { FilterItem, FilterToolbar } from "@/components/filter-toolbar";
+import { TimeRangeValue } from "@/components/filter-toolbar/time-range/time-range";
+import { deepEqual } from "@/lib/utils";
 import { useContext, useMemo } from "react";
-import { LogsViewerContext } from "../logs-viewer";
-import { LOG_LEVEL, serviceKeyToTreeValues } from "../../utils";
+import { DEFAULT_LOG_FILTER, LogsViewerContext } from "../logs-viewer";
+import {
+  LOG_LEVEL,
+  getLogLevelLabel,
+  getRangeStartDate,
+  serviceKeyToTreeValues,
+} from "../../utils";
 
 type LogsFilterValues = {
   search?: string;
   level?: string;
   service: string[];
-  date: { from?: Date; to?: Date } | null;
+  timeRange: TimeRangeValue;
 };
 
 export const LogsFilterToolbar = () => {
@@ -20,7 +27,7 @@ export const LogsFilterToolbar = () => {
     search: "",
   };
   const levels = Object.entries(LOG_LEVEL).map((item) => ({
-    label: item[0],
+    label: getLogLevelLabel(item[0]),
     value: item[1],
   }));
   const serviceOptions = services.map((s) => ({
@@ -34,12 +41,24 @@ export const LogsFilterToolbar = () => {
       [key]: value,
     }));
   };
-  const updateDate = (value: { from?: Date; to?: Date } | null) => {
-    const { from, to } = value || {};
+  // The relative default and an explicit window would otherwise both apply and fight over the
+  // same period, so applying a window clears the default and resetting restores it. The
+  // default stays relative because that is what lets the list keep tailing new logs.
+  const updateTimeRange = (value: TimeRangeValue) => {
+    if (!value) {
+      setFilter((filter) => ({
+        ...filter,
+        range: DEFAULT_LOG_FILTER.range ?? "",
+        startDate: "",
+        endDate: "",
+      }));
+      return;
+    }
     setFilter((filter) => ({
       ...filter,
-      startDate: from ? from.toISOString() : "",
-      endDate: to ? to.toISOString() : "",
+      range: "",
+      startDate: value.from ? value.from.toISOString() : "",
+      endDate: value.to ? value.to.toISOString() : "",
     }));
   };
   const handleServiceChange = (serviceKeys: string[] | null) => {
@@ -55,7 +74,7 @@ export const LogsFilterToolbar = () => {
     value: LogsFilterValues[keyof LogsFilterValues],
   ) => {
     if (key === "service") return handleServiceChange(value as string[] | null);
-    if (key === "date") return updateDate(value as { from?: Date; to?: Date } | null);
+    if (key === "timeRange") return updateTimeRange(value as TimeRangeValue);
     return updateFilter(key as keyof typeof filter, value);
   };
 
@@ -64,7 +83,7 @@ export const LogsFilterToolbar = () => {
       search: "",
       level: "",
       service: [],
-      date: null,
+      timeRange: null,
     }),
     [], // static — never changes
   );
@@ -74,7 +93,9 @@ export const LogsFilterToolbar = () => {
       search,
       level,
       service: serviceKeyToTreeValues(serviceFilterValue),
-      date:
+      // The relative default counts as "no window chosen", so the Reset chip stays hidden
+      // until someone picks one -- and the picker shows the default rather than owning it.
+      timeRange:
         startDate || endDate
           ? {
               from: startDate ? new Date(startDate) : undefined,
@@ -84,6 +105,14 @@ export const LogsFilterToolbar = () => {
     }),
     [search, level, serviceFilterValue, startDate, endDate], // re-compute only when these change
   );
+
+  // What the list is actually showing while no window is chosen: the last 30 minutes, left
+  // open at the end. Pinned to the relative default rather than recomputed per render, so
+  // the popover does not drift while it is open.
+  const defaultRange = useMemo<TimeRangeValue>(() => {
+    const start = getRangeStartDate(DEFAULT_LOG_FILTER.range ?? "");
+    return start ? { from: new Date(start) } : null;
+  }, []);
 
   // The whole first service is what the page starts on, so that selection counts as
   // "no service filter applied" for the Reset button.
@@ -97,13 +126,11 @@ export const LogsFilterToolbar = () => {
   const isPristine = useMemo(() => {
     const searchChanged = currentValues.search !== defaultValues.search;
     const levelChanged = currentValues.level !== defaultValues.level;
-    const dateChanged =
-      (currentValues.date?.from?.getTime() ?? 0) !== (defaultValues.date?.from?.getTime() ?? 0) ||
-      (currentValues.date?.to?.getTime() ?? 0) !== (defaultValues.date?.to?.getTime() ?? 0);
+    const timeRangeChanged = !deepEqual(currentValues.timeRange, defaultValues.timeRange);
     const serviceChanged =
       currentValues.service.length !== defaultServiceSelection.length ||
       currentValues.service.some((value, index) => value !== defaultServiceSelection[index]);
-    return !searchChanged && !levelChanged && !dateChanged && !serviceChanged;
+    return !searchChanged && !levelChanged && !timeRangeChanged && !serviceChanged;
   }, [currentValues, defaultValues, defaultServiceSelection]);
 
   const handleReset = () => {
@@ -115,7 +142,13 @@ export const LogsFilterToolbar = () => {
   // ✅ Use FilterItem<LogsFilterValues> directly — it's already the right discriminated union
   const filters: FilterItem<LogsFilterValues>[] = [
     { key: "search", type: "SearchInput", label: "label" },
-    { key: "date", type: "DateRange", label: "Date", props: {} },
+    {
+      key: "timeRange",
+      type: "TimeRange",
+      label: "Time range",
+      // Log rows are rendered in UTC, so the window has to be written in UTC to match them.
+      props: { defaultRange, timeZone: "utc", openEndHint: "now — keeps streaming" },
+    },
     {
       key: "service",
       type: "CheckboxTree",

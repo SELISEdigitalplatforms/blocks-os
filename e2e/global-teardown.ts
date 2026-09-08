@@ -5,6 +5,7 @@ import {
   openNamedProjectDashboard,
 } from "./support/create-and-delete-project"
 import { loginFresh } from "./support/login-helper"
+import { e2eDebugLog } from "./support/env"
 import { clearOsProject, clearOsSession, readOsProject } from "./support/os-project"
 import { releaseRunLock } from "./support/run-lock"
 import { shouldDeleteSharedProject } from "./support/run-outcome"
@@ -32,12 +33,12 @@ export default async function globalTeardown() {
 async function runTeardown() {
   const fixture = readOsProject()
   if (!fixture && process.env.E2E_KEEP_PROJECT === "1") {
-    console.log("[e2e] Teardown: no fixture and E2E_KEEP_PROJECT=1 — skipping.")
+    e2eDebugLog("[e2e] Teardown: no fixture and E2E_KEEP_PROJECT=1 — skipping.")
     return
   }
 
   if (!shouldDeleteSharedProject()) {
-    console.log(
+    e2eDebugLog(
       `[e2e] Keeping project "${fixture?.projectName ?? "(unknown)"}" on the console (E2E_KEEP_PROJECT=1).`,
     )
     return
@@ -56,7 +57,7 @@ async function runTeardown() {
       try {
         await openNamedProjectDashboard(page, fixture.projectName)
       } catch (error) {
-        console.warn(
+        e2eDebugLog(
           "[e2e] Teardown: could not reseed project dashboard — continuing from console:",
           error instanceof Error ? error.message : error,
         )
@@ -70,16 +71,17 @@ async function runTeardown() {
     for (const name of onConsole) namesToDelete.add(name)
 
     if (namesToDelete.size === 0) {
-      console.log("[e2e] Teardown: no e2e projects on the console — nothing to delete.")
+      e2eDebugLog("[e2e] Teardown: no e2e projects on the console — nothing to delete.")
       clearOsProject()
       clearOsSession()
+      console.log("[teardown] Removed all the environments with project.")
       return
     }
 
     let allDeleted = true
     for (const projectName of namesToDelete) {
       const isFixtureProject = fixture?.projectName === projectName
-      console.log(
+      e2eDebugLog(
         `[e2e] Teardown: deleting every environment on "${projectName}" via dashboard URLs ` +
           "(pass/fail does not matter)…",
       )
@@ -96,18 +98,19 @@ async function runTeardown() {
       )
       if (!deleted) {
         allDeleted = false
-        console.log(
+        e2eDebugLog(
           `[e2e] Project "${projectName}" was not fully deleted — ` +
             "remove remaining environments manually from the console if needed.",
         )
       } else {
-        console.log(`[e2e] Teardown complete: deleted all environments for "${projectName}".`)
+        e2eDebugLog(`[e2e] Teardown complete: deleted all environments for "${projectName}".`)
       }
     }
 
     if (allDeleted) {
       clearOsProject()
       clearOsSession()
+      console.log("[teardown] Removed all the environments with project.")
     }
   } finally {
     await browser.close()

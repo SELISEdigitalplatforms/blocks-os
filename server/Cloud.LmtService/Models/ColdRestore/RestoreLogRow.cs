@@ -15,5 +15,7 @@ namespace Cloud.LmtService.Models.ColdRestore
         public string ServiceName { get; set; } = string.Empty;
 
         public string ActionName { get; set; } = string.Empty;
+
+        public string Exception { get; set; } = string.Empty;
     }
 }

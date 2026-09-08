@@ -55,7 +55,7 @@ const TraceDetailsEmptyState = ({ traceId, isError }: { traceId: string; isError
           : `No trace data exists for this ID in the current project. The trace may have expired, or it may not have been recorded yet.`}
       </p>
       {traceId ? (
-        <p className="mt-4 break-all font-mono text-xs text-low-emphasis">{traceId}</p>
+        <p className="mt-4 break-all text-xs text-low-emphasis">{traceId}</p>
       ) : null}
     </CardContent>
   </Card>
@@ -192,8 +192,11 @@ export const TraceDetails = ({
             <Card className="h-min rounded-sm shadow-none">
               <CardHeader>
                 <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
-                  <CardTitle className="text-xl">
-                    {isPending ? <Skeleton className="h-6 w-28" /> : "Timeline"}
+                  {/* Sized as a panel heading rather than a page title: the breadcrumb above
+                      already names the trace, and at text-xl this competed with it while
+                      dwarfing the 12px metadata sitting on the same row. */}
+                  <CardTitle className="text-base">
+                    {isPending ? <Skeleton className="h-5 w-28" /> : "Timeline"}
                   </CardTitle>
                   {isPending ? (
                     <Skeleton className="h-6 w-64" />

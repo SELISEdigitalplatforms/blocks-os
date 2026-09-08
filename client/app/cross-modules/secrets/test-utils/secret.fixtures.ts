@@ -12,6 +12,7 @@ export const makeSecret = (overrides: Partial<SecretResult> = {}): SecretResult 
   secretId: SECRET_ID,
   name: "payment-gateway-key",
   description: "Used by the checkout service",
+  tags: [],
   type: SECRET_TYPE.Api,
   status: SECRET_STATUS.Active,
   organizationId: "default",

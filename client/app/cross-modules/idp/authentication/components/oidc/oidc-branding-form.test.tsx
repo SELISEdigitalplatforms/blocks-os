@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   getFileByFileId: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
+  authConfig: undefined as unknown,
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -23,6 +24,9 @@ vi.mock("@blocks-idp/authentication/contexts/oidc-branding-header-context", () =
 vi.mock("@blocks-idp/authentication/hooks/use-oidc-template", () => ({
   useGetOidcTemplate: h.useGetOidcTemplate,
   useSaveOidcTemplate: () => ({ mutateAsync: h.saveTemplate, isPending: false }),
+}));
+vi.mock("@blocks-idp/authentication/hooks/use-auth-config", () => ({
+  useGetAuthConfig: () => ({ data: h.authConfig }),
 }));
 vi.mock("@blocks-storage/hooks/use-storage-file", () => ({
   useGetPreSignedUrlForUpload: () => ({ mutateAsync: h.getPresignedUrl }),

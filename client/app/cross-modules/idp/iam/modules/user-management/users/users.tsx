@@ -28,7 +28,10 @@ export const Users = () => {
       ? (queryParams.organizationIds ?? [])
       : [];
   const canFilterByRoles =
-    hasOrganizationOptions && (orgConfig?.isMultiOrgEnabled !== true || organizationIds.length > 0);
+    orgConfig?.isMultiOrgEnabled === false ||
+    (orgConfig?.isMultiOrgEnabled === true &&
+      hasOrganizationOptions &&
+      organizationIds.length > 0);
   const roles = canFilterByRoles ? (queryParams.roles ?? []) : [];
 
   const searchText =

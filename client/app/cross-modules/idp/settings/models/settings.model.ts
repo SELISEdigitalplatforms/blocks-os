@@ -21,6 +21,7 @@ export interface ISettingsAuthConfig {
   recoverAccountUrlLifetimeInMinutes: number;
   logoutOnPasswordChange: boolean;
   passwordStrengthCheckerRegex: string;
+  collectPasswordOnActivation: boolean;
 }
 
 export interface ISettingsOrganizationConfig {
@@ -69,6 +70,7 @@ export interface ISettingsSaveAuthConfigPayload {
   recoverAccountUrlLifetimeInMinutes: number;
   logoutOnPasswordChange: boolean;
   passwordStrengthCheckerRegex: string;
+  collectPasswordOnActivation: boolean;
   allowedGrantTypes: string[];
 }
 

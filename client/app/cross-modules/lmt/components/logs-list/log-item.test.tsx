@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,6 +57,30 @@ describe("LogItem", () => {
     expect(link.getAttribute("href")).toBe("/app/proj/lmt/tracing/trace-1");
   });
 
+  it("shows the shortened label for the Information level", () => {
+    renderItem({
+      traceId: "trace-2",
+      level: "Information",
+      message: "All good",
+      serviceName: "blocks-iam-api",
+      timestamp: "2024-01-01T00:00:00Z",
+    });
+    expect(screen.getByText("INFO")).toBeTruthy();
+    expect(screen.queryByText("Information")).toBeNull();
+  });
+
+  it("shows the shortened label for the Warning level", () => {
+    renderItem({
+      traceId: "trace-3",
+      level: "Warning",
+      message: "Careful",
+      serviceName: "blocks-iam-api",
+      timestamp: "2024-01-01T00:00:00Z",
+    });
+    expect(screen.getByText("WARN")).toBeTruthy();
+    expect(screen.queryByText("Warning")).toBeNull();
+  });
+
   it("formats a blocks service badge by stripping the blocks prefix", () => {
     renderItem({
       traceId: "t",
@@ -98,6 +122,58 @@ describe("LogItem", () => {
     );
     // No href resolvable -> the trace id is shown as plain text, not a link.
     expect(screen.queryByRole("link")).toBeNull();
-    expect(screen.getByText("[trace-9]")).toBeTruthy();
+    expect(screen.getByText("trace-9")).toBeTruthy();
+  });
+
+  describe("stack trace", () => {
+    const baseLog = {
+      traceId: "trace-x",
+      level: "error",
+      message: "Boom",
+      serviceName: "blocks-iam-api",
+      timestamp: "2024-01-01T00:00:00Z",
+    };
+
+    it("offers no toggle when the log carries no exception", () => {
+      renderItem(baseLog);
+      expect(screen.queryByRole("button", { name: /stack trace/i })).toBeNull();
+    });
+
+    it("offers no toggle when the exception is only whitespace", () => {
+      // Logs from the live tail arrive with the field blanked server-side rather than absent.
+      renderItem({ ...baseLog, exception: "   " });
+      expect(screen.queryByRole("button", { name: /stack trace/i })).toBeNull();
+    });
+
+    it("reveals the full trace on expand and hides it again", () => {
+      const trace =
+        "System.InvalidOperationException: Boom\n   at Blocks.Iam.Service.Do()\n --- inner ---";
+      // Identity normalizer: the default collapses newlines and indentation, which is exactly
+      // the shape a stack trace has to keep.
+      const findTrace = () => screen.queryByText(trace, { normalizer: (text) => text });
+      renderItem({ ...baseLog, exception: trace });
+
+      expect(findTrace()).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "Show stack trace" }));
+      expect(findTrace()).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: "Hide stack trace" }));
+      expect(findTrace()).toBeNull();
+    });
+
+    it("copies the trace rather than the rendered message", async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+      // Without this the component takes its execCommand fallback, which jsdom does not implement.
+      Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+      const trace = "System.Exception: kaboom\n   at Thing()";
+      renderItem({ ...baseLog, exception: trace });
+
+      fireEvent.click(screen.getByRole("button", { name: "Show stack trace" }));
+      fireEvent.click(screen.getByRole("button", { name: /copy stack trace/i }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(trace));
+    });
   });
 });

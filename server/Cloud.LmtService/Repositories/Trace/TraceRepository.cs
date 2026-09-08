@@ -76,11 +76,13 @@ namespace Cloud.LmtService.Repositories.Trace
             if (query.Filter?.Excepts != null && query.Filter.Excepts.Count > 0)
                 filter &= Builders<BsonDocument>.Filter.Nin("ServiceName", query.Filter.Excepts);
 
+            // See the note on LogTimeRange: unmarked (Kind.Unspecified) dates must be read as
+            // UTC, otherwise Mongo's serializer shifts them by the server's offset.
             if (query.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", query.Filter.StartDate);
+                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.Filter.StartDate));
 
             if (query.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", query.Filter.EndDate);
+                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", LogTimeRange.AsUtc(query.Filter.EndDate));
 
             if (query.Filter?.StatusCodes != null && query.Filter.StatusCodes.Count > 0)
             {
@@ -92,6 +94,32 @@ namespace Cloud.LmtService.Repositories.Trace
 
                 var inArray = new BsonArray(query.Filter.StatusCodes);
                 var exprFilter = new BsonDocument("$expr", new BsonDocument("$in", new BsonArray { statusCodeField, inArray }));
+
+                filter &= new BsonDocumentFilterDefinition<BsonDocument>(exprFilter);
+            }
+
+            if (query.Filter?.StatusCodeClasses != null && query.Filter.StatusCodeClasses.Count > 0)
+            {
+                // $getField because the attribute key itself contains dots.
+                var statusCodeField = new BsonDocument("$getField", new BsonDocument
+                {
+                    { "field", "response.status.code" },
+                    { "input", "$Attributes" }
+                });
+
+                // Guarded by $isNumber: roots with no HTTP code at all (message-worker consumers)
+                // and any code stored as a string would otherwise make $divide throw and fail the
+                // whole query. Those spans resolve to null, which matches no class -- correct for
+                // a filter that asks about HTTP status.
+                var codeClass = new BsonDocument("$cond", new BsonArray
+                {
+                    new BsonDocument("$isNumber", statusCodeField),
+                    new BsonDocument("$floor", new BsonDocument("$divide", new BsonArray { statusCodeField, 100 })),
+                    BsonNull.Value
+                });
+
+                var classArray = new BsonArray(query.Filter.StatusCodeClasses);
+                var exprFilter = new BsonDocument("$expr", new BsonDocument("$in", new BsonArray { codeClass, classArray }));
 
                 filter &= new BsonDocumentFilterDefinition<BsonDocument>(exprFilter);
             }

@@ -56,8 +56,9 @@ export interface SharedEnvironment {
 
 export interface PeopleDetails {
   salutation: string;
-  firstName: string;
-  lastName: string;
+  /** API returns null for invited/unactivated users who have no profile yet. */
+  firstName: string | null;
+  lastName: string | null;
   email: string;
   profileImageUrl: string | null;
   userId: string;

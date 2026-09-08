@@ -84,5 +84,42 @@ namespace XUnitTest.Services
 
             response.TotalCount.Should().Be(5);
         }
+
+        [Fact]
+        public async Task GetLiveLogsAsync_MessageContainsEmail_IsRedacted()
+        {
+            var projections = new[]
+            {
+                new LogProjection { Message = "User login failed for jane.doe@example.com", Exception = "" }
+            }.AsQueryable();
+            _repo.Setup(r => r.GetLogs(It.IsAny<LiveLogRequest>())).ReturnsAsync(projections);
+
+            var response = await Service().GetLiveLogsAsync(new LiveLogRequest { Name = "svc", LastDate = DateTime.UtcNow });
+
+            var data = response.Data.Cast<LogProjection>().ToList();
+            data.Should().ContainSingle();
+            data[0].Message.Should().Be("User login failed for ***REDACTED***");
+        }
+
+        [Fact]
+        public async Task GetLogsAsync_MessageAndExceptionContainSensitiveData_AreRedacted()
+        {
+            var projections = new[]
+            {
+                new LogProjection
+                {
+                    Message = "Request from jane.doe@example.com failed",
+                    Exception = "System.Exception: password=secret123 at Foo.Bar()"
+                }
+            }.AsQueryable();
+            _repo.Setup(r => r.GetLogs(It.IsAny<GetLogsRequest>())).ReturnsAsync((projections, 1L));
+
+            var response = await Service().GetLogsAsync(new GetLogsRequest { ServiceName = "svc" });
+
+            var data = response.Data.Cast<LogProjection>().ToList();
+            data.Should().ContainSingle();
+            data[0].Message.Should().Be("Request from ***REDACTED*** failed");
+            data[0].Exception.Should().Be("System.Exception: password=***REDACTED*** at Foo.Bar()");
+        }
     }
 }
