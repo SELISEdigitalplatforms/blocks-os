@@ -152,22 +152,27 @@ export async function createOrganizationFlow(page: Page, orgName: string) {
       );
     }
 
-    // Strict: the success toast MUST appear after a 2xx create. If it
-    // doesn't, the test MUST fail rather than fall through to a softer
-    // check.
-    const successToast = page.getByText("Organization added successfully", { exact: true });
-    if (await successToast.isVisible({ timeout: 15_000 })) {
-      await expect(dialog).toBeHidden({ timeout: 10_000 });
-      return;
-    }
-
-    // Strict: if the toast didn't appear, the dialog's continued visibility
-    // is itself a signal of failure — surface it rather than swallow.
-    if (await dialog.isVisible({ timeout: 1_000 })) {
+    // HTTP 200 can still carry isSuccess:false (validation/policy). Surface that
+    // before waiting on UI, otherwise the dialog stays open with an error toast
+    // and the success assertion fails with a misleading message.
+    const createBody = (await createResponse.json().catch(() => null)) as {
+      isSuccess?: boolean;
+      errors?: unknown;
+    } | null;
+    if (createBody && createBody.isSuccess === false) {
       throw new Error(
-        `Add Organization returned HTTP ${status} but dialog stayed open and no success toast appeared.`,
+        `Add Organization returned HTTP ${status} with isSuccess=false: ${JSON.stringify(createBody.errors ?? createBody)}`,
       );
     }
+
+    // Do not use locator.isVisible({ timeout }) — Playwright ignores that timeout
+    // and returns immediately, racing the toast/dialog close and failing after a
+    // successful create (org already in the list). Use expect().toBeVisible().
+    const successToast = page
+      .getByRole("region", { name: /Notifications/i })
+      .getByText("Organization added successfully", { exact: true });
+    await expect(successToast).toBeVisible({ timeout: 15_000 });
+    await expect(dialog).toBeHidden({ timeout: 15_000 });
     await expect(page.getByText(orgName, { exact: true }).first()).toBeVisible({
       timeout: 15_000,
     });

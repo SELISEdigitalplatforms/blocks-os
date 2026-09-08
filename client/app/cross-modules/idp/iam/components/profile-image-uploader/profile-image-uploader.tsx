@@ -55,7 +55,11 @@ export const ProfileImageUploader = ({
         parentDirectoryId: "",
         moduleName: ModuleName.IAMCloud,
       });
-      if (!res.isSuccess) return;
+      if (!res.isSuccess) {
+        return showErrorToast({
+          errors: res.errors ?? "Unable to upload profile picture. Check that a Default storage configuration exists.",
+        });
+      }
       const profileImageId = res.fileId;
       await uploadImageMutate({ url: res.uploadUrl, file });
       const userProfileFile = await storageService.file.getFileByFileId({

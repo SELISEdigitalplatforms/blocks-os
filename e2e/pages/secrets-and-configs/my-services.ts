@@ -102,13 +102,41 @@ export async function verifyNavAwayFromMyServicesFlow(
   page: Page,
   linkName: "Logs" | "Traces",
 ): Promise<boolean> {
-  const button = page.getByRole("button", { name: linkName }).first();
+  // exact: true — substring "Logs" otherwise matches sidebar "Logs & Traces",
+  // whose parent click navigates to the first child (Usage).
+  const button = page.getByRole("button", { name: linkName, exact: true }).first();
   if (!(await button.isVisible({ timeout: 5000 }))) return false;
   await button.click();
-  await expect(page).toHaveURL(/\/lmt\//, { timeout: 15000 });
+  if (linkName === "Logs") {
+    await expect(page).toHaveURL(/\/lmt\/logs/, { timeout: 15_000 });
+  } else {
+    await expect(page).toHaveURL(/\/lmt\/tracing/, { timeout: 15_000 });
+  }
   await page.goBack();
   await expect(page.getByRole("heading", { name: "My Services" })).toBeVisible({ timeout: 15000 });
   return true;
+}
+
+/**
+ * Click Logs on the named service card and assert the managed-service logs URL.
+ * Scopes the click to that card so sidebar "Logs & Traces" cannot steal it.
+ */
+export async function openServiceScopedLogsFlow(page: Page, serviceName: string) {
+  const heading = page.getByRole("heading", { name: serviceName, exact: true });
+  const trigger = await findServiceTriggerFlow(page, serviceName);
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+
+  // Accordion item wraps the trigger + content; prefer Logs inside that item.
+  const item = page.locator("[data-state]").filter({ has: heading }).first();
+  const logsInItem = item.getByRole("button", { name: "Logs", exact: true });
+  const logsInTrigger = trigger.getByRole("button", { name: "Logs", exact: true });
+  const logsButton = (await logsInItem.count()) > 0 ? logsInItem.first() : logsInTrigger.first();
+
+  await expect(logsButton).toBeVisible({ timeout: 5_000 });
+  await logsButton.click();
+  await expect(page).toHaveURL(/\/lmt\/logs\?/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/source=managed/);
+  await expect(page).toHaveURL(/[?&]service=/);
 }
 
 export async function openDocsInNewTabFlow(page: Page): Promise<boolean> {

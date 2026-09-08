@@ -24,8 +24,6 @@ export async function verifyOwnerVisibleFlow(page: Page) {
     });
   }
   await expect(invite).toBeVisible({ timeout: 30_000 });
-  // Owner display name/email can be "null" / "-" on a fresh project (product
-  // bug). The role badge is the contract, not a hydrated profile.
   await expect(ownerBadge).toBeVisible({ timeout: 20_000 });
 }
 

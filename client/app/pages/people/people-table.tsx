@@ -42,6 +42,7 @@ import { environmentOptions } from "@/constants/environment-options";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { PeopleStatusBadge } from "@/components/people/status-badge";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import { getUserDisplayName } from "@blocks-idp/iam/utils/user-display-name";
 
 type PeopleTableProps = {
   people: PeopleGroupedByEnvironments[];
@@ -161,18 +162,14 @@ export const PeopleTable = ({
     () => [
       {
         id: "name",
-        accessorFn: (row) =>
-          `${row.peopleDetails.firstName} ${row.peopleDetails.lastName || ""}`.trim(),
+        accessorFn: (row) => getUserDisplayName(row.peopleDetails),
         header: () => (
           <div className="flex w-[220px] items-center">
             <span className="font-bold text-medium-emphasis">Name</span>
           </div>
         ),
         cell: (info) => {
-          const fullName =
-            `${info.row.original.peopleDetails.firstName} ${info.row.original.peopleDetails.lastName || ""}`.trim();
-          const displayName =
-            fullName || info.row.original.peopleDetails.email?.split("@")[0] || "---";
+          const displayName = getUserDisplayName(info.row.original.peopleDetails);
 
           return (
             <div className="ml-2 flex items-center gap-3 sm:ml-0">
@@ -439,7 +436,7 @@ export const PeopleTable = ({
             onConfirm={onRemoveConfirm}
             data={{
               dialogTitle: "Revoke Access",
-              dialogSubtitle: `Are you sure you want to revoke access for ${selectedPeopleData.peopleDetails.firstName} ${selectedPeopleData.peopleDetails.lastName}?`,
+              dialogSubtitle: `Are you sure you want to revoke access for ${getUserDisplayName(selectedPeopleData.peopleDetails)}?`,
               confirmButton: "Revoke",
               cancelButton: "Cancel",
             }}
