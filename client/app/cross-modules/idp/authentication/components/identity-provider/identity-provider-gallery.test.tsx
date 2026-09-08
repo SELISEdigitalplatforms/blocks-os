@@ -117,17 +117,16 @@ describe("IdentityProviderGallery", () => {
     expect(screen.getAllByText("Not configured")).toHaveLength(3);
   });
 
-  it("keeps the status pill in the same header slot whether empty or configured", () => {
-    // The title paragraph renders before any entry list in the DOM, so index 0 is
-    // always the card's own heading, never a (possibly same-named) entry row below it.
+  it("keeps the status pill in the same footer slot whether empty or configured", () => {
+    // The status pill sits in the card's unconditional footer strip (`border-t`), last
+    // in the DOM regardless of state, so its container persists across a rerender.
     const { rerender } = render(<IdentityProviderGallery {...baseProps} />);
-    const titleRow = screen.getAllByText("Google")[0].parentElement;
-    expect(titleRow?.textContent).toContain("Not configured");
+    const footer = screen.getAllByText("Not configured")[0].closest(".border-t");
+    expect(footer).toBeTruthy();
 
     rerender(<IdentityProviderGallery {...baseProps} googleEntries={[googleEntry]} />);
-    const sameTitleRow = screen.getAllByText("Google")[0].parentElement;
-    expect(sameTitleRow?.textContent).toContain("1 configured");
-    expect(sameTitleRow).toBe(titleRow);
+    const sameFooter = screen.getByRole("button", { name: /1 configured/ }).closest(".border-t");
+    expect(sameFooter).toBe(footer);
   });
 
   it("collapses and re-expands a card's entry list from its count summary", async () => {
