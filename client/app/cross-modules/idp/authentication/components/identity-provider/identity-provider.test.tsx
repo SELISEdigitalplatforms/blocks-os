@@ -16,6 +16,8 @@ vi.mock("@blocks-idp/authentication/hooks/use-identity-provider", () => ({
 vi.mock("./identity-provider-gallery", () => ({
   GallerySkeleton: () => <div data-testid="idp-loading" />,
   IdentityProviderGallery: (props: {
+    googleEntries: { itemId?: string }[];
+    microsoftEntries: { itemId?: string }[];
     blocksOidcEntries: { itemId?: string }[];
     byosEntries: { itemId?: string }[];
     onSelectGoogle: () => void;
@@ -25,6 +27,8 @@ vi.mock("./identity-provider-gallery", () => ({
   }) => (
     <div
       data-testid="idp-gallery"
+      data-google-count={props.googleEntries.length}
+      data-microsoft-count={props.microsoftEntries.length}
       data-blocks-oidc-count={props.blocksOidcEntries.length}
       data-byos-count={props.byosEntries.length}
     >
@@ -42,8 +46,6 @@ vi.mock("./identity-provider-form-dialog", () => ({
     editId?: string;
     presetProviderType?: string;
     presetProvider?: string;
-    isGoogleConfigured?: boolean;
-    isMicrosoftConfigured?: boolean;
   }) => (
     <div
       data-testid="idp-dialog"
@@ -51,8 +53,6 @@ vi.mock("./identity-provider-form-dialog", () => ({
       data-edit-id={props.editId ?? ""}
       data-preset-type={props.presetProviderType ?? ""}
       data-preset-provider={props.presetProvider ?? ""}
-      data-google-configured={String(props.isGoogleConfigured)}
-      data-microsoft-configured={String(props.isMicrosoftConfigured)}
     >
       <button onClick={() => props.onOpenChange(false)}>close-dialog</button>
     </div>
@@ -67,6 +67,14 @@ const googleProvider = {
   providerType: "social",
   provider: "google",
   displayName: "Google",
+  isActive: true,
+} as unknown as IdentityProvider;
+
+const microsoftProvider = {
+  itemId: "idp-microsoft",
+  providerType: "social",
+  provider: "microsoft",
+  displayName: "Microsoft",
   isActive: true,
 } as unknown as IdentityProvider;
 
@@ -173,7 +181,7 @@ describe("IdentityProviders (page)", () => {
     expect(h.refetch).toHaveBeenCalled();
   });
 
-  it("H4: picking an unconfigured social provider opens the dialog preset to add mode", async () => {
+  it("H4: picking a social provider opens the dialog preset to add mode", async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(screen.getByRole("button", { name: "pick-google" }));
@@ -184,7 +192,7 @@ describe("IdentityProviders (page)", () => {
     expect(dialog.getAttribute("data-preset-provider")).toBe("google");
   });
 
-  it("H3: picking an already-configured social provider opens the dialog in edit mode", async () => {
+  it("H3: picking an already-configured social provider still opens a blank add dialog", async () => {
     h.useGetIdentityProviders.mockReturnValue({
       data: { data: [googleProvider] },
       isLoading: false,
@@ -196,8 +204,9 @@ describe("IdentityProviders (page)", () => {
     await user.click(screen.getByRole("button", { name: "pick-google" }));
     const dialog = screen.getByTestId("idp-dialog");
     expect(dialog.getAttribute("data-open")).toBe("true");
-    expect(dialog.getAttribute("data-edit-id")).toBe("idp-google");
-    expect(dialog.getAttribute("data-preset-type")).toBe("");
+    expect(dialog.getAttribute("data-edit-id")).toBe("");
+    expect(dialog.getAttribute("data-preset-type")).toBe("social");
+    expect(dialog.getAttribute("data-preset-provider")).toBe("google");
   });
 
   it("H5: picking Blocks OIDC or BYOS always opens a blank add dialog preset to that type", async () => {
@@ -223,17 +232,19 @@ describe("IdentityProviders (page)", () => {
     expect(dialog.getAttribute("data-preset-type")).toBe("");
   });
 
-  it("passes live configured status down to the dialog for the picker to filter on", () => {
+  it("routes every social entry to its own provider's gallery card", () => {
     h.useGetIdentityProviders.mockReturnValue({
-      data: { data: [googleProvider] },
+      data: {
+        data: [googleProvider, { ...googleProvider, itemId: "idp-google-2" }, microsoftProvider],
+      },
       isLoading: false,
       isError: false,
       refetch: h.refetch,
     });
     renderPage();
-    const dialog = screen.getByTestId("idp-dialog");
-    expect(dialog.getAttribute("data-google-configured")).toBe("true");
-    expect(dialog.getAttribute("data-microsoft-configured")).toBe("false");
+    const gallery = screen.getByTestId("idp-gallery");
+    expect(gallery.getAttribute("data-google-count")).toBe("2");
+    expect(gallery.getAttribute("data-microsoft-count")).toBe("1");
   });
 
   it("closing a gallery-opened dialog clears the pick", async () => {
