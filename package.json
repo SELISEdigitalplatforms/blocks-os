@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@seliseblocks/mailcraft": "^0.2.10"
+    "@seliseblocks/mailcraft": "^0.2.17"
   }
 }
