@@ -70,6 +70,48 @@ describe("AddEditProviderModal", () => {
     expect(save.disabled).toBe(false);
   });
 
+  it("enables Save once a certificate is picked, with every text field left blank", async () => {
+    // The file is not a react-hook-form field, so `isDirty` stays false. Password and Issuer are
+    // both optional; requiring one of them to be typed just to enable Save made them mandatory in
+    // practice and left upload-only configuration impossible.
+    const user = userEvent.setup();
+    render(<AddEditProviderModal />);
+    const dialog = await openDialog(user);
+    await user.click(dialog.getByRole("radio", { name: /Others/ }));
+    await user.click(dialog.getByText("Upload file"));
+
+    const save = dialog.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+
+    await user.upload(
+      document.querySelector('input[type="file"]') as HTMLInputElement,
+      new File(["cert"], "cert.pfx", { type: "application/x-pkcs12" }),
+    );
+
+    expect(await dialog.findByText("cert.pfx")).toBeTruthy();
+    expect(save.disabled).toBe(false);
+  });
+
+  it("does not leave Save enabled by a file that Public URL mode ignores", async () => {
+    // Switching back to Public URL keeps the picked file in state but stops using it, so it must
+    // not stand in for a change to the form.
+    const user = userEvent.setup();
+    render(<AddEditProviderModal />);
+    const dialog = await openDialog(user);
+    await user.click(dialog.getByRole("radio", { name: /Others/ }));
+    await user.click(dialog.getByText("Upload file"));
+    await user.upload(
+      document.querySelector('input[type="file"]') as HTMLInputElement,
+      new File(["cert"], "cert.pfx", { type: "application/x-pkcs12" }),
+    );
+
+    const save = dialog.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+
+    await user.click(dialog.getByText("Public URL"));
+    expect(save.disabled).toBe(true);
+  });
+
   it("shows a required error when submitting an empty JWKS url", async () => {
     const user = userEvent.setup();
     render(<AddEditProviderModal />);
@@ -228,9 +270,6 @@ describe("AddEditProviderModal", () => {
       const dialog = await openDialog(user);
       await user.click(dialog.getByRole("radio", { name: /Others/ }));
       await user.click(dialog.getByText("Upload file"));
-      // Uploading a file does not dirty react-hook-form, so type into a
-      // registered field to enable the Save button.
-      await user.type(dialog.getByPlaceholderText("Enter issuer"), "iss");
       return dialog;
     };
 
