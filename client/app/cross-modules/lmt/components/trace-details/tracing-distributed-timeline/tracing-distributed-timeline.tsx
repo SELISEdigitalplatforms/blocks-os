@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useMemo } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -7,142 +7,207 @@ import {
 } from "@/components/ui-kits/tooltip/tooltip";
 import { cn, formatDate, parseDateString } from "@/lib/utils";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { formatDurationMs } from "@blocks-lmt/utils";
+import { getTraceStatus, TraceTree } from "@blocks-lmt/models/trace.model";
+import { TimelineAxis, timelineGridStyle } from "../timeline-axis";
 import { timelineContext } from "../trace-details";
-import { TraceTree } from "@blocks-lmt/models/trace.model";
-const LoadingSkelton = () => {
-  return (
-    <div>
-      <Skeleton className="min-h-[110px] w-full rounded-none" />
+
+/** The waterfall is three columns wide -- span name, plot, duration -- and the axis header
+ *  reuses the same gutters so its stops land on the hairlines beneath them. */
+const NAME_COLUMN = "hidden w-[136px] shrink-0 pr-3 sm:block";
+const DURATION_COLUMN = "w-[76px] shrink-0 pl-3";
+const ROW_HEIGHT = "h-8";
+
+const LoadingSkelton = () => (
+  <div className="rounded-md border border-border p-3">
+    <Skeleton className="h-4 w-full" />
+    <div className="mt-3 flex flex-col gap-3">
+      <Skeleton className="h-2 w-full" />
+      <Skeleton className="h-2 w-2/3" />
     </div>
-  );
-};
-const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
-  const { selectedTrace } = useContext(timelineContext);
-  const divRef = useRef<HTMLDivElement>(null);
-  const [totalWidth, setTotalWidth] = useState(0);
-  useEffect(() => {
-    const element = divRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setTotalWidth(entry.contentRect.width);
-      }
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, [divRef]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const getTimeLine = (item: TraceTree, unitWidth: number, startTime: string) => {
-    return {
-      spanId: item.spanId,
-      startTime: item.startTime,
-      endTime: item.endTime,
-      serviceName: item.serviceName,
-      duration: item.duration,
-      width: item.duration * unitWidth > 1 ? item.duration * unitWidth : 1,
-      marginLeft: (Number(new Date(item.startTime)) - Number(new Date(startTime))) * unitWidth,
-    };
+  </div>
+);
+
+interface SpanRow {
+  spanId: string;
+  label: string;
+  serviceName: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  status: ReturnType<typeof getTraceStatus>;
+  isError: boolean;
+  /** Left edge and length as percentages of the root span, so the chart reflows with the
+   *  card instead of having to be re-measured whenever the insights panel toggles. */
+  offsetPercent: number;
+  widthPercent: number;
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const buildSpanRow = (item: TraceTree, totalDuration: number, originMs: number): SpanRow => {
+  const scale = totalDuration > 0 ? 100 / totalDuration : 0;
+  const offsetPercent = clamp((Number(new Date(item.startTime)) - originMs) * scale, 0, 100);
+  const status = getTraceStatus(item);
+
+  return {
+    spanId: item.spanId,
+    label: item.operationName || item.activitySourceName || item.serviceName,
+    serviceName: item.serviceName,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    duration: item.duration,
+    status,
+    isError: status.variant === "error",
+    offsetPercent,
+    widthPercent: clamp(item.duration * scale, 0, 100 - offsetPercent),
   };
-  const timeLines = useMemo(() => {
-    if (!trace) return [];
-    const unitWidth = totalWidth / trace.duration;
-    const root = getTimeLine(trace, unitWidth, trace.startTime);
-    const child =
-      trace?.subEntries?.map((item) => getTimeLine(item, unitWidth, trace.startTime)) || [];
-    return [root, ...child];
-  }, [getTimeLine, totalWidth, trace]);
-  const timeSlices = useMemo(() => {
-    const arr = [];
-    for (let stop = 0; stop <= trace.duration; stop += trace.duration / 5) {
-      arr.push(parseFloat(stop.toFixed(2)));
-    }
-    return arr;
-  }, [trace]);
+};
+
+const TooltipRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="flex items-baseline justify-between gap-6">
+    <span className="text-low-emphasis">{label}</span>
+    <span className="tabular-nums text-high-emphasis">{children}</span>
+  </div>
+);
+
+const SpanBar = ({ row }: { row: SpanRow }) => {
+  const { selectedTrace, setSelectedTrace, traceHistory } = useContext(timelineContext);
+  const isSelected = selectedTrace?.spanId === row.spanId;
+
+  // Clicking a bar selects the span the activity list below selects, so the two halves of
+  // the card never disagree about which span the insights panel is describing.
+  const selectSpan = () => {
+    const current = traceHistory[traceHistory.length - 1]?.current;
+    if (!current) return;
+    const match =
+      current.spanId === row.spanId
+        ? current
+        : current.subEntries?.find((entry) => entry.spanId === row.spanId);
+    if (match) setSelectedTrace({ ...match });
+  };
+
   return (
-    <div className="flex min-w-full flex-col overflow-auto bg-slate-100 dark:bg-slate-900">
-      <div className="mb-1 flex h-10 w-full" ref={divRef}>
-        {timeSlices.slice(0, timeSlices.length - 1).map((item, index) => (
-          <div
-            key={index}
-            className="flex h-full w-full min-w-[50px] items-center justify-between border-x border-b px-[2px] py-[4px]"
-          >
-            <span className="text-[12px] font-medium text-low-emphasis">{item}ms</span>
-            {index == timeSlices.length - 2 && (
-              <span className="text-[12px] font-medium text-low-emphasis">
-                {timeSlices[timeSlices.length - 1]}ms
-              </span>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={selectSpan}
+            aria-pressed={isSelected}
+            aria-label={`${row.label}, ${formatDurationMs(row.duration)}`}
+            className={cn(
+              "group flex w-full items-center rounded-sm text-left transition-colors",
+              ROW_HEIGHT,
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              // The selected row is tinted with the span's own hue rather than with `muted`,
+              // which in dark mode is the same value as `border` -- it would paint out the
+              // gridlines the row is meant to be read against.
+              isSelected
+                ? row.isError
+                  ? "bg-error/10"
+                  : "bg-chart-purple/10"
+                : "hover:bg-muted/40",
             )}
-          </div>
-        ))}
-      </div>
-      <div className="min-h-[60px] pt-2">
-        {timeLines.map((item) => (
-          <TooltipProvider key={item.spanId}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={cn(
-                    "mb-2 h-3 cursor-pointer",
-                    selectedTrace?.spanId === item.spanId
+          >
+            <span
+              className={cn(
+                NAME_COLUMN,
+                "truncate text-[11px] font-medium",
+                isSelected ? "text-high-emphasis" : "text-medium-emphasis",
+              )}
+              title={`${row.serviceName} - ${row.label}`}
+            >
+              {row.label}
+            </span>
+            {/* Hairlines are painted onto the plot cell itself rather than an overlay, so
+                touching rows join into one continuous gridline down the chart. */}
+            <span
+              className="relative min-w-0 flex-1 self-stretch border-r border-border"
+              style={timelineGridStyle()}
+            >
+              <span
+                className={cn(
+                  "absolute top-1/2 h-2 -translate-y-1/2 rounded-[2px] transition-colors",
+                  row.isError
+                    ? isSelected
+                      ? "bg-error"
+                      : "bg-error/40 group-hover:bg-error/70"
+                    : isSelected
                       ? "bg-chart-purple"
-                      : "bg-chart-purple-light",
-                  )}
-                  style={{ marginLeft: item.marginLeft, width: item.width }}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  <table>
-                    <tbody>
-                      <tr>
-                        <td className="w-16">Service</td>
-                        <td>
-                          <span>{item.serviceName}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Start Time</td>
-                        <td>
-                          <span className="text-medium-emphasis">
-                            {formatDate(parseDateString(item.startTime))}
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>End Time</td>
-                        <td>
-                          <span className="text-medium-emphasis">
-                            {formatDate(parseDateString(item.endTime))}
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Duration</td>
-                        <td>
-                          <span>{item.duration}</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                      : "bg-chart-purple/40 group-hover:bg-chart-purple/70",
+                )}
+                style={{
+                  left: `${row.offsetPercent}%`,
+                  width: `${row.widthPercent}%`,
+                  // Sub-millisecond spans round to a fraction of a percent and would
+                  // disappear; they stay legible as a tick at the moment they occurred.
+                  minWidth: "3px",
+                }}
+              />
+            </span>
+            <span
+              className={cn(
+                DURATION_COLUMN,
+                "truncate text-right text-[11px] tabular-nums",
+                isSelected ? "text-high-emphasis" : "text-medium-emphasis",
+              )}
+            >
+              {formatDurationMs(row.duration)}
+            </span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <div className="flex flex-col gap-1 text-xs">
+            <p className="mb-1 break-all font-medium text-high-emphasis">{row.label}</p>
+            <TooltipRow label="Service">{row.serviceName}</TooltipRow>
+            <TooltipRow label="Status">{row.status.label}</TooltipRow>
+            <TooltipRow label="Start">{formatDate(parseDateString(row.startTime))}</TooltipRow>
+            <TooltipRow label="End">{formatDate(parseDateString(row.endTime))}</TooltipRow>
+            <TooltipRow label="Duration">{formatDurationMs(row.duration)}</TooltipRow>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+const TracingDistributedContent = ({ trace }: { trace: TraceTree }) => {
+  const spanRows = useMemo(() => {
+    if (!trace) return [];
+    const originMs = Number(new Date(trace.startTime));
+    return [
+      buildSpanRow(trace, trace.duration, originMs),
+      ...(trace.subEntries?.map((item) => buildSpanRow(item, trace.duration, originMs)) ?? []),
+    ];
+  }, [trace]);
+
+  return (
+    <div className="w-full rounded-md border border-border px-3 pb-1 pt-3">
+      <div className="flex items-end">
+        <span className={NAME_COLUMN} aria-hidden />
+        {/* Matches the 1px right border the plot cells carry, so the header and the rows
+            resolve to the same content width and the stops sit on their own hairlines. */}
+        <div className="min-w-0 flex-1 border-r border-transparent">
+          <TimelineAxis duration={trace.duration} />
+        </div>
+        <span className={DURATION_COLUMN} aria-hidden />
+      </div>
+      {/* No padding between the rule and the first row: the rows have to touch each other and
+          the axis for their hairlines to join into one continuous gridline. */}
+      <div className="mt-1 border-t border-border">
+        {spanRows.map((row) => (
+          <SpanBar key={row.spanId} row={row} />
         ))}
       </div>
     </div>
   );
 };
+
 export const TracingDistributedTimeline = () => {
   const { traceHistory, isLoading } = useContext(timelineContext);
   if (isLoading) return <LoadingSkelton />;
   if (!traceHistory.length) return <LoadingSkelton />;
   const trace = traceHistory[traceHistory?.length - 1].current;
-  return (
-    <>
-      <TracingDistributedContent trace={trace} />
-    </>
-  );
+  return <TracingDistributedContent trace={trace} />;
 };

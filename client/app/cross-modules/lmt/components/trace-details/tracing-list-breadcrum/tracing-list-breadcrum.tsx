@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Fragment, useContext } from "react";
 import { timelineContext } from "../trace-details";
 const LoadingSkelton = () => {
-  return <Skeleton className="h-7 w-1/2" />;
+  return <Skeleton className="h-4 w-1/2" />;
 };
 export const TracingListBreadCrumb = () => {
   const {
@@ -28,7 +28,10 @@ export const TracingListBreadCrumb = () => {
   if (!history) return <LoadingSkelton />;
   return (
     <Breadcrumb className="hidden md:flex">
-      <BreadcrumbList>
+      {/* Sized to the 12px the Timeline heading and its Duration/Trace ID metadata wear, so
+          the span trail reads as part of that header block rather than as a larger line
+          beneath it. */}
+      <BreadcrumbList className="text-[12px]">
         {history.map((item, index) => (
           <Fragment key={item.root.spanId}>
             <BreadcrumbItem>
