@@ -374,6 +374,95 @@ namespace XUnitTest.Services
                 .Setup(r => r.TryCompleteRequestAsync("req-1", It.IsAny<RestoreRequestStatus>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
+        /// <summary>
+        /// The notification API rejects a payload without ConfigurationName with HTTP 400, and the
+        /// send is fire-and-forget, so the only visible symptom was a logged null result. The field
+        /// was being set on an anonymous object under a misspelled name — which the compiler
+        /// accepts silently, since any name is a valid property on an anonymous type.
+        /// </summary>
+        [Fact]
+        public async Task UpdateFileRequestStatus_SendsTheConfigurationNameTheNotificationApiRequires()
+        {
+            GivenRequest(new RestoreRequestRecord
+            {
+                RequestId = "req-1",
+                TenantId = "tenant-a",
+                Status = RestoreRequestStatus.InProgress
+            });
+
+            GivenAllFilesCompleted();
+            GivenCompletionTransitionWon();
+            GivenNotificationEndpointAccepts();
+
+            var posted = CaptureNotificationPayload();
+
+            await Service().UpdateFileRequestStatus("req-1");
+
+            NotificationField(posted, "ConfigurationName").Should().Be("log_trace_restore");
+        }
+
+        /// <summary>Reads a field off the posted payload the way the receiving API binds it: by name,
+        /// case-insensitively. A misspelling therefore reads as absent rather than as a different name.</summary>
+        private static string? NotificationField(IReadOnlyList<object> posted, string name)
+        {
+            posted.Should().HaveCount(1, "exactly one notification should have been posted");
+
+            return posted[0].GetType().GetProperties()
+                .FirstOrDefault(property => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                ?.GetValue(posted[0]) as string;
+        }
+
+        private List<object> CaptureNotificationPayload()
+        {
+            var posted = new List<object>();
+
+            _httpService
+                .Setup(h => h.Post<NotificationResponse>(
+                    It.IsAny<object>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, string>>(),
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<int?>()))
+                .Callback<object, string, string, Dictionary<string, string>, CancellationToken, int?>(
+                    (payload, _, _, _, _, _) => posted.Add(payload))
+                .ReturnsAsync((new NotificationResponse { isSuccess = true }, "ok"));
+
+            return posted;
+        }
+
+        /// <summary>
+        /// A tenant that has never asked for a restore is the normal first-visit state, not a
+        /// failure. Throwing here made the overview page's first load raise an exception on every
+        /// fresh project, which the client could only absorb with a catch-all that hid real errors
+        /// too.
+        /// </summary>
+        [Fact]
+        public async Task GetLatestRequestIdAsync_ReturnsNoRequestId_WhenTheTenantHasNeverRequestedOne()
+        {
+            _coldRestoreRepository
+                .Setup(r => r.GetLatestRequestIdByProjectKeyAsync(It.IsAny<string>(), "Cold", It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string?)null);
+
+            var response = await Service().GetLatestRequestIdAsync(
+                new GetLatestColdRestoreRequestIdRequest { SourceType = "Cold" });
+
+            response.RequestId.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetLatestRequestIdAsync_ReturnsTheRequestId_WhenOneExists()
+        {
+            _coldRestoreRepository
+                .Setup(r => r.GetLatestRequestIdByProjectKeyAsync(It.IsAny<string>(), "Cold", It.IsAny<CancellationToken>()))
+                .ReturnsAsync("req-7");
+
+            var response = await Service().GetLatestRequestIdAsync(
+                new GetLatestColdRestoreRequestIdRequest { SourceType = "Cold" });
+
+            response.RequestId.Should().Be("req-7");
+        }
+
         private void GivenNotificationEndpointAccepts()
         {
             _configRepository

@@ -255,32 +255,34 @@ namespace Cloud.LmtService.Services.ColdRestore
                     return false;
                 }
 
-                var requestData = new
+                var requestData = new NotificationRequest
                 {
                     ConnectionId = messageCoRelationId,
-                    Roles = new List<string> { },
-                    UserIds = new List<string> { userId ?? string.Empty },
+                    UserIds = [userId ?? string.Empty],
                     DenormalizedPayload = JsonSerializer.Serialize(new
                     {
                         title = "Log and Trace Restoration Status Update",
                         description = $"{tier} data restoration has been {status}."
-
                     }),
                     SaveDenormalizedPayloadAsAnObject = false,
-                    ConfiguratoinName = config.NotificationConfigName,
+                    ConfigurationName = config.NotificationConfigName,
                     ContentAvailable = true,
                     ResponseKey = "Log and Trace Restoration Status Update",
                     ResponseValue = $"{tier} data restoration has been {status}.",
                 };
 
-                // The tenant comes from the persisted request, not BlocksContext: this runs on a
-                // queue consumer where there is no ambient request context to read it from.
-                var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
-                var signedSecret = _cryptoService.Hash(tenantId, salt);
+                // Prefer the ambient context's originating tenant, which is what the notification
+                // service authenticates against. Falls back to the tenant on the persisted request
+                // because this also runs on a queue consumer, where there may be no ambient context
+                // at all — and dereferencing a missing one threw inside this try, turning a missing
+                // context into a silently skipped notification.
+                var xblocksKey = BlocksContext.GetContext()?.OriginalTenantId ?? tenantId;
+                var salt = _tenants.GetTenantByID(xblocksKey)?.TenantSalt;
+                var signedSecret = _cryptoService.Hash(xblocksKey, salt);
 
                 var headers = new Dictionary<string, string>
                 {
-                    { "x-blocks-key", tenantId },
+                    { "x-blocks-key", xblocksKey },
                     { "Secret", signedSecret }
                 };
 
@@ -322,7 +324,10 @@ namespace Cloud.LmtService.Services.ColdRestore
             var archive = RestoreWindow.ForArchive(
                 config.HotDataRetentionPeriodInDays, config.ColdToArchiveLifeCycleInDays, config.MaxRestoreRangeInDays, now);
 
-            var coldDataSelectionDays = config.HotDataRetentionPeriodInDays + 1;
+            // + 1 because a day's blob is only written by the following backup run: with hot
+            // retention of 1, the run on the 10th uploads the 8th, so the newest restorable day is
+            // two back, not one. RestoreWindow.ForCold applies the same offset.
+            var coldDataSelectionDays = config.HotDataRetentionPeriodInDays +1;
 
             return new GetHotDataUploadToBlobInDays
             {
@@ -1404,15 +1409,20 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             var requestId = await _coldRestoreRepository.GetLatestRequestIdByProjectKeyAsync(tenantId, request.SourceType, ct);
 
+            // A tenant that has never requested a restore is the normal first-visit state, so an
+            // empty id is the answer rather than an error. Throwing made every fresh project's
+            // first page load raise an exception, which the client could only absorb with a
+            // catch-all that hid genuine failures along with it.
             if (string.IsNullOrWhiteSpace(requestId))
             {
-                throw new KeyNotFoundException(
-                    $"No cold restore request found for TenantId {tenantId}");
+                _logger.LogInformation(
+                    "No {SourceType} restore request exists yet for TenantId {TenantId}",
+                    request.SourceType, tenantId);
             }
 
             return new GetLatestColdRestoreRequestIdResponse
             {
-                RequestId = requestId
+                RequestId = requestId ?? string.Empty
             };
         }
 
