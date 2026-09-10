@@ -43,10 +43,12 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ICryptoService _cryptoService;
         private readonly ITenants _tenants;
         private readonly IArchiveRestoreRepository _archiveRestoreRepository;
+        private readonly IRestoreUserRepository _userRepository;
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
     ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IMailDriverService mailDriverService,
-    IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository)
+    IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository,
+    IRestoreUserRepository userRepository)
         {
             _logger = logger;
             _coldRestoreRepository = coldRestoreRepository;
@@ -61,6 +63,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             _cryptoService = cryptoService;
             _tenants = tenants;
             _archiveRestoreRepository = archiveRestoreRepository;
+            _userRepository = userRepository;
         }
 
 
@@ -90,6 +93,11 @@ namespace Cloud.LmtService.Services.ColdRestore
             var requestId = Guid.NewGuid().ToString("N");
             var now = DateTime.UtcNow;
             var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+
+            // The token carries the user id but neither a user name nor an email, so the address
+            // for the completion mail has to be read from the user record — and read here, on the
+            // request path, because the worker that sends the mail has no such context.
+            var userId = BlocksContext.GetContext()?.UserId;
             var _retentionDays = config.RetentionDay;
             var record = new RestoreRequestRecord
             {
@@ -108,8 +116,8 @@ namespace Cloud.LmtService.Services.ColdRestore
                 LogRowsRestored = 0,
                 ExpireAt = DateTime.UtcNow.AddDays(_retentionDays),
                 SourceType = RestoreSourceType.Cold,
-                UserEmail = request.UserMail ?? BlocksContext.GetContext().UserName,
-                UserId = BlocksContext.GetContext()?.UserId
+                UserEmail =await _userRepository.GetEmailByUserIdAsync(userId),
+                UserId = userId
             };
             await _coldRestoreRepository.CreateRequestAsync(record);
 

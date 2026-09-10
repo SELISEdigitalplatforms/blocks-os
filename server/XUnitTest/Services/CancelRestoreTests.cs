@@ -40,6 +40,7 @@ namespace XUnitTest.Services
         private readonly Mock<ICryptoService> _cryptoService = new();
         private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IArchiveRestoreRepository> _archiveRepository = new();
+        private readonly Mock<IRestoreUserRepository> _userRepository = new();
 
         public CancelRestoreTests() =>
             BlocksContext.SetContext(BlocksContext.Create(
@@ -77,7 +78,8 @@ namespace XUnitTest.Services
             _httpService.Object,
             _cryptoService.Object,
             _tenants.Object,
-            _archiveRepository.Object);
+            _archiveRepository.Object,
+            _userRepository.Object);
 
         [Fact]
         public async Task CancelRestoreAsync_StopsOutstandingWorkAndPurgesPartialResults()

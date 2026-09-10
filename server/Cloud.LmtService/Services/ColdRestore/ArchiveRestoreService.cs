@@ -25,6 +25,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtConfigRepository;
         private readonly IMessageClient _messageClient;
         private readonly ILogTraceRestoreService _logTraceRestoreService;
+        private readonly IRestoreUserRepository _userRepository;
 
         public ArchiveRestoreService(
             ILogger<ArchiveRestoreService> logger,
@@ -33,7 +34,8 @@ namespace Cloud.LmtService.Services.ColdRestore
             ILogTraceRestoreRepository coldRestoreRepository,
             ILmtArchiveRestoreConfigurationRepository lmtConfigRepository,
             IMessageClient messageClient,
-            ILogTraceRestoreService logTraceRestoreService)
+            ILogTraceRestoreService logTraceRestoreService,
+            IRestoreUserRepository userRepository)
         {
             _logger = logger;
             _blobStorage = blobStorage;
@@ -42,6 +44,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             _lmtConfigRepository = lmtConfigRepository ?? throw new ArgumentNullException(nameof(lmtConfigRepository));
             _messageClient = messageClient;
             _logTraceRestoreService = logTraceRestoreService;
+            _userRepository = userRepository;
         }
 
         public async Task<StartArchiveRestoreResponse> StartArchiveRestoreAsync(StartArchiveRestoreRequest request, CancellationToken ct = default)
@@ -71,6 +74,10 @@ namespace Cloud.LmtService.Services.ColdRestore
             var now = DateTime.UtcNow;
             var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
 
+            // See LogTraceRestoreService.StartRestoreAsync: the address comes from the user record,
+            // resolved here while the request context still exists.
+            var userId = BlocksContext.GetContext()?.UserId;
+
             var retentionDays = config.RetentionDay;
             var requestRecord = new RestoreRequestRecord
             {
@@ -89,8 +96,8 @@ namespace Cloud.LmtService.Services.ColdRestore
                 LogRowsRestored = 0,
                 ExpireAt = DateTime.UtcNow.AddDays(retentionDays),
                 SourceType = RestoreSourceType.Archive,
-                UserEmail = request.UserMail??BlocksContext.GetContext().UserName,
-                UserId = BlocksContext.GetContext()?.UserId
+                UserEmail = request.UserMail ?? await _userRepository.GetEmailByUserIdAsync(userId, ct),
+                UserId = userId
             };
 
             await _coldRestoreRepository.CreateRequestAsync(requestRecord);

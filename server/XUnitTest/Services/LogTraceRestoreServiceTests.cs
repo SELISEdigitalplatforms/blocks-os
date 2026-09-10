@@ -34,6 +34,7 @@ namespace XUnitTest.Services
         private readonly Mock<ICryptoService> _cryptoService = new();
         private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IArchiveRestoreRepository> _archiveRestoreRepository = new();
+        private readonly Mock<IRestoreUserRepository> _userRepository = new();
 
         private LogTraceRestoreService Service() => new(
             _logger.Object,
@@ -48,7 +49,8 @@ namespace XUnitTest.Services
             _httpService.Object,
             _cryptoService.Object,
             _tenants.Object,
-            _archiveRestoreRepository.Object);
+            _archiveRestoreRepository.Object,
+            _userRepository.Object);
 
         [Fact]
         public async Task GetStatusAsync_MissingRequestId_Throws()
