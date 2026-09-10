@@ -108,10 +108,9 @@ namespace Cloud.LmtService.Services.ColdRestore
                 LogRowsRestored = 0,
                 ExpireAt = DateTime.UtcNow.AddDays(_retentionDays),
                 SourceType = RestoreSourceType.Cold,
-                UserEmail = request.UserMail,
+                UserEmail = request.UserMail ?? BlocksContext.GetContext().UserName,
                 UserId = BlocksContext.GetContext()?.UserId
             };
-
             await _coldRestoreRepository.CreateRequestAsync(record);
 
               var message = new ColdRestoreMessage

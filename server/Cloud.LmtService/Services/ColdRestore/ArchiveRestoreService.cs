@@ -89,7 +89,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 LogRowsRestored = 0,
                 ExpireAt = DateTime.UtcNow.AddDays(retentionDays),
                 SourceType = RestoreSourceType.Archive,
-                UserEmail = request.UserMail,
+                UserEmail = request.UserMail??BlocksContext.GetContext().UserName,
                 UserId = BlocksContext.GetContext()?.UserId
             };
 
