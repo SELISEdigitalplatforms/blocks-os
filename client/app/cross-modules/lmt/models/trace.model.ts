@@ -292,6 +292,18 @@ export interface ITraceRequestPayload {
   usermail: string;
 }
 
+export interface ICancelRestorePayload {
+  RequestId: string;
+}
+
+export interface ICancelRestoreResponse {
+  requestId: string;
+  status: string;
+  /** False when the restore had already finished, so there was nothing to stop. */
+  cancelled: boolean;
+  message: string;
+}
+
 export interface IGetRequestIdPayload {
   SourceType: string;
   ProjectKey: string;
@@ -312,9 +324,31 @@ export interface IGetTraceStatusResponse {
   totalFiles: number;
   processedFiles: number;
   failedFiles: number;
+  /**
+   * The window the restore covers and what came back in it. The Logs page never sees the
+   * request being made, so this is the only place it can learn which days it is showing.
+   */
+  startDate?: string;
+  endDate?: string;
+  traceRowsRestored?: number;
+  logRowsRestored?: number;
+  expireAt?: string;
+  sourceType?: string;
 }
 
 export interface IGetRestoredDataRetentionDaysResponse {
+  /** Legacy day offsets, kept for callers that still compute their own bounds. */
   coldDataSelectionDays: number;
   archiveDataSelectionDays: number;
+  /**
+   * The selectable bounds as plain calendar days ("yyyy-MM-dd"). The API states them because the
+   * window is measured from UTC midnight: deriving it here would measure from the browser's local
+   * midnight, which is a different calendar day for part of every day outside UTC.
+   */
+  coldEarliestDate: string;
+  coldLatestDate: string;
+  archiveLatestDate: string;
+  /** How many days one request may span, per tier, from LMT configuration. */
+  coldMaxRangeDays: number;
+  archiveMaxRangeDays: number;
 }

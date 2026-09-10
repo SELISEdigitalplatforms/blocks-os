@@ -48,6 +48,18 @@ namespace BlocksOs.Api.Controllers
             return await _logTraceRestoreService.GetStatusAsync(request);
         }
 
+        /// <summary>
+        /// Cancels an unfinished cold or archive restore and discards whatever it had restored so
+        /// far, freeing the user to request a different range straight away.
+        /// </summary>
+        [HttpPost]
+        [Authorize]
+        //[ProtectedEndPoint("blocks-os::lmt-restore::cancel")]
+        public async Task<CancelRestoreResponse> CancelRestoreProcess([FromBody] CancelRestoreRequest request)
+        {
+            return await _logTraceRestoreService.CancelRestoreAsync(request);
+        }
+
         [HttpPost]
         [Authorize]
         //[ProtectedEndPoint("blocks-os::lmt-restore::get-traces")]

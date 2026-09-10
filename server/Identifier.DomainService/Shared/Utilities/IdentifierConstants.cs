@@ -46,9 +46,10 @@ namespace DomainService.Shared
         public const string RemoteFeTemplate = "/home/nginxreverseproxy/fe-domain.conf";
         public const string RemoteBlocksapiTemplate = "/home/nginxreverseproxy/blocksapi-domain.conf";
 
-        public const string StartBackupQueue = "start_backup_queue";
-        public const string ColdRestoreQueue = "cold-restore-queue";
-        public const string ArchiveRestoreQueue = "archive-restore-queue";
+        // The LMT queue names deliberately live only in Cloud.LmtService.Utilities.Constants.
+        // They were duplicated here too, which meant renaming one queue required editing two files
+        // in lockstep; miss one and Api publishes to a queue no host is listening on. Nothing in
+        // this project consumes or publishes to them — the senders all reference the LMT constants.
         private const string DefaultProvider = "azure";
         private const string RabbitMqProvider = "rabbitmq";
 
@@ -84,13 +85,14 @@ namespace DomainService.Shared
             {
                 RabbitMqConfiguration = new RabbitMqConfiguration
                 {
+                    // The LMT backup/restore queues are deliberately absent: this host registers no
+                    // consumers for those message types, and binding them would let it win messages
+                    // that only LmtColdArchiveRestoreWorker can actually handle. Same for the Azure
+                    // queue list below — see the note there.
                     ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(IdentifierQueueName),
                                              ConsumerSubscription.BindToQueue(GenericMigrationQueue),
                                              ConsumerSubscription.BindToQueue(DataCleanupQueue),
-                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic),
-                                             ConsumerSubscription.BindToQueue(StartBackupQueue),
-                                             ConsumerSubscription.BindToQueue(ColdRestoreQueue),
-                                             ConsumerSubscription.BindToQueue(ArchiveRestoreQueue),],
+                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic),],
                 }
             };
         }
@@ -101,7 +103,17 @@ namespace DomainService.Shared
             {
                 AzureServiceBusConfiguration = new AzureServiceBusConfiguration
                 {
-                    Queues = [IdentifierQueueName, GenericMigrationQueue, DataCleanupQueue, StartBackupQueue, ColdRestoreQueue, ArchiveRestoreQueue],
+                    // Declaring a queue here attaches a receiver to it, and a Service Bus queue has
+                    // competing consumers: exactly one host gets each message. With the LMT queues
+                    // listed, blocks-os-worker won restore messages, found no IConsumer for the
+                    // type, logged "No consumer found for message type ColdRestoreMessage" and
+                    // completed them anyway — losing the work, and only appearing to function when
+                    // that host happened to be stopped.
+                    //
+                    // Api still publishes to those queues: SendToConsumerAsync names the queue on
+                    // each ConsumerMessage, so sending never needed them declared. This mirrors
+                    // ReleaseProjectDeleteQueue above, which is published to and likewise unbound.
+                    Queues = [IdentifierQueueName, GenericMigrationQueue, DataCleanupQueue],
                     Topics = [MigrationCompletionTopic]
                 }
             };

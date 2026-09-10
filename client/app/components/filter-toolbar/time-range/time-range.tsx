@@ -24,6 +24,13 @@ interface TimeRangeProps {
   timeZone?: "utc" | "local";
   /** How an open end reads. Only a caller that keeps streaming should promise streaming. */
   openEndHint?: string;
+  /**
+   * The only days that may be picked, as calendar-frame dates in the same zone as `timeZone`.
+   * A list over a closed set of data -- restored cold or archive rows -- passes the window it
+   * holds, so a reader cannot pick a window the data never covered and read the empty result
+   * as an absence of logs. Omitted by a list with no such limit.
+   */
+  bounds?: { min?: Date; max?: Date };
 }
 
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -95,6 +102,7 @@ export function TimeRange({
   defaultRange = null,
   timeZone = "utc",
   openEndHint = "now",
+  bounds,
 }: TimeRangeProps) {
   const utc = timeZone === "utc";
   const effective = value ?? defaultRange;
@@ -106,6 +114,11 @@ export function TimeRange({
 
   const summary = summarize({ from: effective?.from, to: effective?.to }, utc);
   const endsBeforeItStarts = !!draft.from && !!draft.to && draft.to <= draft.from;
+  // Only the ends that were given are enforced, so a half-known window still narrows the picker.
+  const disabledDays = [
+    ...(bounds?.min ? [{ before: bounds.min }] : []),
+    ...(bounds?.max ? [{ after: bounds.max }] : []),
+  ];
 
   // Reopening starts from what the page is showing, never from an abandoned edit.
   const handleOpenChange = (nextOpen: boolean) => {
@@ -195,7 +208,12 @@ export function TimeRange({
           <Calendar
             mode="range"
             numberOfMonths={1}
-            defaultMonth={draft.from ? asCalendarDate(draft.from, utc) : undefined}
+            disabled={disabledDays}
+            // Bounded windows usually sit months behind today, so the calendar opens on the last
+            // day it holds rather than on a current month with nothing selectable in it.
+            defaultMonth={
+              draft.from ? asCalendarDate(draft.from, utc) : (bounds?.max ?? bounds?.min)
+            }
             selected={
               draft.from
                 ? {

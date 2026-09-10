@@ -5,6 +5,7 @@ namespace Cloud.LmtService.Models.ColdRestore
         Pending,
         RehydrationRequested,
         Ready,
-        Failed
+        Failed,
+        Cancelled
     }
 }

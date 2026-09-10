@@ -78,6 +78,40 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             await GetCollection().UpdateOneAsync(filter, update, cancellationToken: ct);
         }
 
+        public async Task<long> DeleteExpiredHydrationJobsAsync(CancellationToken ct = default)
+        {
+            var filter = Builders<ArchiveHydrationJobRecord>.Filter
+                .Lt(x => x.ExpireAt, DateTime.UtcNow);
+
+            var result = await GetCollection().DeleteManyAsync(filter, ct);
+
+            return result.DeletedCount;
+        }
+
+        public async Task<long> CancelHydrationJobsForRequestAsync(string requestId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return 0;
+
+            var builder = Builders<ArchiveHydrationJobRecord>.Filter;
+            var filter = builder.Eq(x => x.RequestId, requestId) &
+                         builder.Nin(x => x.Status,
+                         [
+                             ArchiveHydrationStatus.Ready,
+                             ArchiveHydrationStatus.Failed,
+                             ArchiveHydrationStatus.Cancelled
+                         ]);
+
+            var update = Builders<ArchiveHydrationJobRecord>.Update
+                .Set(x => x.Status, ArchiveHydrationStatus.Cancelled)
+                .Set(x => x.CompletedAt, DateTime.UtcNow)
+                .Set(x => x.ErrorMessage, "Restore request was cancelled.");
+
+            var result = await GetCollection().UpdateManyAsync(filter, update, cancellationToken: ct);
+
+            return result.ModifiedCount;
+        }
+
         public async Task<bool> HydrationJobExistsAsync(string requestId,string blobPath, CancellationToken ct = default)
         {
             var collection = GetCollection();

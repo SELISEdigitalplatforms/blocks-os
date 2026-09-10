@@ -4,6 +4,18 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueCleanup">
+            <summary>
+            Drives the expired-data sweep on demand. The scheduler normally publishes this daily; the
+            endpoint exists so the job can be exercised before that cron entry is in place.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueHydrationCheck">
+            <summary>
+            Drives a rehydration poll on demand. The scheduler should publish this every 15-30 minutes:
+            this poll is what turns a finished rehydration into restored rows.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.CaptchaConfigController">
             <summary>
             Captcha configuration endpoints.
@@ -20,6 +32,12 @@
             neither calls nor duplicates.
             </para>
             </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.LogAndTraceRestoreController.CancelRestoreProcess(Cloud.LmtService.Models.ColdRestore.CancelRestoreRequest)">
+            <summary>
+            Cancels an unfinished cold or archive restore and discards whatever it had restored so
+            far, freeing the user to request a different range straight away.
+            </summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>

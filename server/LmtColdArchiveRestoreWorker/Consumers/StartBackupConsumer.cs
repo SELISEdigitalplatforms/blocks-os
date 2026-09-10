@@ -1,39 +1,35 @@
 using Blocks.Genesis;
 using Cloud.LmtService.Models.ArchiveAndDelete;
 using Cloud.LmtService.Services.ArchiveAndDelete;
-using Cloud.LmtService.Services.ColdRestore;
 using Microsoft.Extensions.Logging;
 
 namespace LmtColdArchiveRestoreWorker.Consumers
 {
+    /// <summary>
+    /// Runs the nightly archive-and-delete pass. Expired-data cleanup and rehydration polling used
+    /// to ride along here; they now have their own queues so they can run on their own schedules
+    /// and so a failure in one no longer forces the whole backup to be redelivered.
+    /// </summary>
     public class StartBackupConsumer : IConsumer<PublishScheduleCommand>
     {
         private readonly IArchiveService _archiveService;
         private readonly ILogger<StartBackupConsumer> _logger;
-        private readonly ILogTraceRestoreService _logTraceRestoreService;
-        private readonly IArchiveRestoreService _archiveRestoreService;
 
         public StartBackupConsumer(
             IArchiveService archiveService,
-            ILogger<StartBackupConsumer> logger,
-            ILogTraceRestoreService logTraceRestoreService,
-            IArchiveRestoreService archiveRestoreService)
+            ILogger<StartBackupConsumer> logger)
         {
             _archiveService = archiveService;
             _logger = logger;
-            _logTraceRestoreService = logTraceRestoreService;
-            _archiveRestoreService = archiveRestoreService;
         }
 
         public async Task Consume(PublishScheduleCommand message)
         {
             try
             {
-                var deleteMiscellaneous = _archiveService.DeleteMiscellaneousLog();
-                var deleteExpiredRestoreData = _logTraceRestoreService.DeleteAllExpiredColdRestoreDataAsync();
-                var checkPendingHydrations = _archiveRestoreService.CheckPendingHydrationsAsync();
-                var startBackup = _archiveService.StartBackupAsync();
-                await Task.WhenAll(deleteMiscellaneous, deleteExpiredRestoreData, checkPendingHydrations, startBackup);
+                await Task.WhenAll(
+                    _archiveService.DeleteMiscellaneousLog(),
+                    _archiveService.StartBackupAsync());
 
                 _logger.LogInformation("StartBackupConsumer - Backup process initiated successfully");
             }

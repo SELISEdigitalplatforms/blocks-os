@@ -1,7 +1,9 @@
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Blocks.Genesis;
 using Cloud.LmtService.Models.ArchiveAndDelete;
+using Cloud.LmtService.Models.ColdRestore;
 using Cloud.LmtService.Repositories.Shared;
 using Microsoft.Extensions.Logging;
 
@@ -93,26 +95,23 @@ public sealed class BlobStorage : IBlobStorage
             .Where(name => name.EndsWith(".parquet", StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
-    public async Task<bool> ExistsAsync(string blobPath, CancellationToken ct = default)
+    public async Task<BlobTierState> GetTierStateAsync(string blobPath, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(blobPath))
-            return false;
+            return BlobTierState.Missing;
 
         var container = await GetContainerAsync(ct);
         var blob = container.GetBlobClient(blobPath);
-        var result = await blob.ExistsAsync(ct);
-        return result.Value;
-    }
 
-    public async Task<BlobProperties> GetPropertiesAsync(string blobPath, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(blobPath))
-            throw new ArgumentException("File name is required.", nameof(blobPath));
-
-        var container = await GetContainerAsync(ct);
-        var blob = container.GetBlobClient(blobPath);
-        var response = await blob.GetPropertiesAsync(cancellationToken: ct);
-        return response.Value;
+        try
+        {
+            var properties = await blob.GetPropertiesAsync(cancellationToken: ct);
+            return new BlobTierState(true, properties.Value.AccessTier == AccessTier.Archive.ToString());
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return BlobTierState.Missing;
+        }
     }
 
     public async Task RequestRehydrationAsync(

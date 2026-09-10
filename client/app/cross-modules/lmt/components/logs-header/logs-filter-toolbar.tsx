@@ -9,6 +9,7 @@ import {
   getRangeStartDate,
   serviceKeyToTreeValues,
 } from "../../utils";
+import { restoreWindowBounds } from "../../utils/restore-window";
 
 type LogsFilterValues = {
   search?: string;
@@ -18,8 +19,19 @@ type LogsFilterValues = {
 };
 
 export const LogsFilterToolbar = () => {
-  const { services, serviceFilterValue, changeServices, filter, setFilter, resetFilter } =
-    useContext(LogsViewerContext);
+  const {
+    services,
+    serviceFilterValue,
+    changeServices,
+    filter,
+    setFilter,
+    resetFilter,
+    restoreRequestId,
+    restoreWindow,
+  } = useContext(LogsViewerContext);
+  // Reading a restore means reading a closed set of days: no relative default to fall back on,
+  // no streaming to promise, and nothing outside the window worth offering.
+  const isRestored = Boolean(restoreRequestId);
   const { level, startDate, endDate, search } = filter || {
     level: "",
     startDate: "",
@@ -48,7 +60,9 @@ export const LogsFilterToolbar = () => {
     if (!value) {
       setFilter((filter) => ({
         ...filter,
-        range: DEFAULT_LOG_FILTER.range ?? "",
+        // Over a restore there is no default to fall back to: its days are all older than any
+        // relative window, so restoring one here would match nothing at all.
+        range: isRestored ? "" : (DEFAULT_LOG_FILTER.range ?? ""),
         startDate: "",
         endDate: "",
       }));
@@ -110,9 +124,18 @@ export const LogsFilterToolbar = () => {
   // open at the end. Pinned to the relative default rather than recomputed per render, so
   // the popover does not drift while it is open.
   const defaultRange = useMemo<TimeRangeValue>(() => {
+    if (isRestored) return null;
     const start = getRangeStartDate(DEFAULT_LOG_FILTER.range ?? "");
     return start ? { from: new Date(start) } : null;
-  }, []);
+  }, [isRestored]);
+
+  const bounds = useMemo(
+    () =>
+      isRestored
+        ? restoreWindowBounds(restoreWindow?.startDate, restoreWindow?.endDate)
+        : undefined,
+    [isRestored, restoreWindow?.startDate, restoreWindow?.endDate],
+  );
 
   // The whole first service is what the page starts on, so that selection counts as
   // "no service filter applied" for the Reset button.
@@ -147,7 +170,12 @@ export const LogsFilterToolbar = () => {
       type: "TimeRange",
       label: "Time range",
       // Log rows are rendered in UTC, so the window has to be written in UTC to match them.
-      props: { defaultRange, timeZone: "utc", openEndHint: "now — keeps streaming" },
+      props: {
+        defaultRange,
+        timeZone: "utc",
+        openEndHint: isRestored ? "the end of the window" : "now — keeps streaming",
+        bounds,
+      },
     },
     {
       key: "service",

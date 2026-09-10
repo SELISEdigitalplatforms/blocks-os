@@ -14,6 +14,7 @@ interface DateRangePickerProps {
   disabledDays?: Matcher | Matcher[];
   maxDays?: number;
   defaultMonth?: Date;
+  disabled?: boolean;
 }
 
 export function DateRangePicker({
@@ -23,6 +24,7 @@ export function DateRangePicker({
   disabledDays,
   maxDays,
   defaultMonth,
+  disabled,
 }: DateRangePickerProps) {
   return (
     <div className={cn("grid gap-2", className)}>
@@ -31,6 +33,7 @@ export function DateRangePicker({
           <Button
             id="date"
             variant="outline"
+            disabled={disabled}
             className={cn(
               "w-full justify-start text-left font-normal sm:w-[300px]",
               !value && "text-muted-foreground",

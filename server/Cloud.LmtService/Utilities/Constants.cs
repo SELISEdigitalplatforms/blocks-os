@@ -9,6 +9,23 @@ namespace Cloud.LmtService.Utilities
         public const string ColdRestoreQueue = "cold-restore-queue";
         public const string ArchiveRestoreQueue = "archive-restore-queue";
 
+        /// <summary>Expired-data cleanup. Scheduled separately from the backup so a cleanup failure cannot force a whole backup retry.</summary>
+        public const string LmtCleanupQueue = "lmt-cleanup-queue";
+
+        /// <summary>
+        /// Rehydration polling. Wants a much tighter interval than the daily backup (15-30 min):
+        /// this poll is what turns a finished rehydration into restored data, so its period is the
+        /// tail latency of every archive restore.
+        /// </summary>
+        public const string LmtHydrationCheckQueue = "lmt-hydration-check-queue";
+
+        /// <summary>
+        /// How long a blob may stay in the Archive tier after rehydration was requested before the
+        /// job is failed. Azure standard-priority rehydration is documented at up to 15 hours; this
+        /// leaves headroom and still bounds the request.
+        /// </summary>
+        public static readonly TimeSpan MaxHydrationWait = TimeSpan.FromHours(24);
+
         // ── Database field names ─────────────────────────────────────────────────
         public const string Timestamp = "Timestamp";
         public const string BlocksServiceNamePrefix = "blocks-";
@@ -57,14 +74,24 @@ namespace Cloud.LmtService.Utilities
         }
 
         private static MessageConfiguration CreateRabbitMqConfiguration() =>
-            new() { RabbitMqConfiguration = new RabbitMqConfiguration { ConsumerSubscriptions = [] } };
+            new()
+            {
+                RabbitMqConfiguration = new RabbitMqConfiguration
+                {
+                    ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(StartBackupQueue),
+                                             ConsumerSubscription.BindToQueue(ColdRestoreQueue),
+                                             ConsumerSubscription.BindToQueue(ArchiveRestoreQueue),
+                                             ConsumerSubscription.BindToQueue(LmtCleanupQueue),
+                                             ConsumerSubscription.BindToQueue(LmtHydrationCheckQueue)],
+                }
+            };
 
         private static MessageConfiguration CreateAzureServiceBusConfiguration() =>
             new()
             {
                 AzureServiceBusConfiguration = new AzureServiceBusConfiguration
                 {
-                    Queues = [StartBackupQueue, ColdRestoreQueue, ArchiveRestoreQueue],
+                    Queues = [StartBackupQueue, ColdRestoreQueue, ArchiveRestoreQueue, LmtCleanupQueue, LmtHydrationCheckQueue],
                     Topics = []
                 }
             };
@@ -79,15 +106,11 @@ namespace Cloud.LmtService.Utilities
             if (startDate > endDate)
                 throw new ArgumentException("StartDate cannot be greater than EndDate.");
 
-            var normalizedStart = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
-            var normalizedEnd = DateTime.SpecifyKind(endDate.Date, DateTimeKind.Utc);
-            var maxAllowedEnd = normalizedStart.AddDays(6);
-
-            if (normalizedEnd > maxAllowedEnd)
-                throw new ArgumentException(
-                    $"Date range cannot exceed 7 days. Requested end date {endDate:yyyy-MM-dd} exceeds allowed end date {maxAllowedEnd:yyyy-MM-dd}.");
-
-            return (normalizedStart, normalizedEnd);
+            // How wide a range may be is a per-tier question answered by RestoreWindow.MaxSpanDays,
+            // which derives it from configuration. It used to be a flat seven days here, which the
+            // cold tier could not honour: its window is only ColdToArchiveLifeCycleInDays + 1 wide.
+            return (DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc),
+                    DateTime.SpecifyKind(endDate.Date, DateTimeKind.Utc));
         }
     }
 }
