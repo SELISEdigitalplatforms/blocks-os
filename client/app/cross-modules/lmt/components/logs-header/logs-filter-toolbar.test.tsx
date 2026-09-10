@@ -254,4 +254,71 @@ describe("LogsFilterToolbar", () => {
     expect(ctx.resetFilter).toHaveBeenCalledTimes(1);
     expect(ctx.changeServices).toHaveBeenCalledWith([]);
   });
+
+  /**
+   * Restored rows are a closed set of days, always older than any relative window. The hot
+   * default -- the last 30 minutes -- would return nothing over them every single time, which a
+   * reader would read as "this restore has no logs".
+   */
+  describe("over a restored window", () => {
+    const restoredCtx = () =>
+      makeCtx({
+        tier: "cold",
+        restoreRequestId: "req-1",
+        restoreWindow: { startDate: "2026-08-01T00:00:00Z", endDate: "2026-08-07T00:00:00Z" },
+      } as Partial<Ctx>);
+
+    const timeRangeProps = () => {
+      const filters = (h.captured?.filters ?? []) as CapturedFilter[];
+      const timeRange = filters.find((f) => f.key === "timeRange") as unknown as {
+        props?: {
+          defaultRange?: unknown;
+          openEndHint?: string;
+          bounds?: { min?: Date; max?: Date };
+        };
+      };
+      return timeRange.props ?? {};
+    };
+
+    it("offers no relative default window", () => {
+      renderToolbar(restoredCtx());
+
+      expect(timeRangeProps().defaultRange ?? null).toBeNull();
+    });
+
+    it("bounds the picker to the days the restore covers", () => {
+      renderToolbar(restoredCtx());
+
+      expect(timeRangeProps().bounds?.min).toEqual(new Date(2026, 7, 1));
+      expect(timeRangeProps().bounds?.max).toEqual(new Date(2026, 7, 7));
+    });
+
+    it("promises no streaming, because a closed window has nothing to stream", () => {
+      renderToolbar(restoredCtx());
+
+      expect(timeRangeProps().openEndHint).not.toMatch(/keeps streaming/i);
+    });
+
+    it("still offers search, service and level", () => {
+      renderToolbar(restoredCtx());
+
+      const keys = (h.captured?.filters ?? []).map((f) => f.key);
+      expect(keys).toContain("search");
+      expect(keys).toContain("service");
+      expect(keys).toContain("level");
+    });
+
+    it("enforces only the end it knows, while the window is still loading", () => {
+      renderToolbar(
+        makeCtx({
+          tier: "cold",
+          restoreRequestId: "req-1",
+          restoreWindow: {},
+        } as Partial<Ctx>),
+      );
+
+      expect(timeRangeProps().bounds?.min).toBeUndefined();
+      expect(timeRangeProps().bounds?.max).toBeUndefined();
+    });
+  });
 });

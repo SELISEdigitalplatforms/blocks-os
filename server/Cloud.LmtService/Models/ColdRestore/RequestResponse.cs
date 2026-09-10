@@ -41,6 +41,22 @@ namespace Cloud.LmtService.Models.ColdRestore
         public int ProcessedFiles { get; set; }
 
         public int FailedFiles { get; set; }
+
+        // The window and its contents. The Logs page reads restored rows without ever creating
+        // the request, so this response is the only place it can learn which days it is showing.
+        public DateTime StartDate { get; set; }
+
+        public DateTime EndDate { get; set; }
+
+        public int TraceRowsRestored { get; set; }
+
+        public int LogRowsRestored { get; set; }
+
+        /// <summary>When the restored rows are discarded, so the reader is not surprised by it.</summary>
+        public DateTime ExpireAt { get; set; }
+
+        /// <summary>Cold or Archive, echoed back so a caller can label the window it is showing.</summary>
+        public string SourceType { get; set; } = string.Empty;
     }
     public class GetRestoredTracesRequest : BaseGetsRequest<GetTracesRequestFilter>
     {
@@ -54,7 +70,16 @@ namespace Cloud.LmtService.Models.ColdRestore
 
         public string? Search { get; set; }
 
+        /// <summary>
+        /// A single service, kept for the trace detail view which narrows to one collection.
+        /// </summary>
         public string? ServiceName { get; set; }
+
+        /// <summary>
+        /// Every selected service. The Logs page filters across several at once, the same way the
+        /// hot log endpoints do; an empty list means "no service filter".
+        /// </summary>
+        public List<string> ServiceNames { get; set; } = [];
     }
     public class DownloadColdRestoreParquetRequest
     {

@@ -8,19 +8,37 @@ import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 import { LogStackTrace } from "../log-stack-trace";
 import { ILog } from "../../models/log.model";
 
+/** Joins the parts that are actually present, so neither a stray "?" nor "&&" reaches the URL. */
+const buildQuery = (parts: string[]) => {
+  const present = parts.filter(Boolean);
+  return present.length ? `?${present.join("&")}` : "";
+};
+
 export const LogItem = ({ log }: { log: ILog }) => {
-  const { logsRouteServiceName, selectedService, useGenericTraceLinks, isSourceBlocks, services } =
-    useContext(LogsViewerContext);
+  const {
+    logsRouteServiceName,
+    selectedService,
+    useGenericTraceLinks,
+    isSourceBlocks,
+    services,
+    restoreRequestId,
+  } = useContext(LogsViewerContext);
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") ?? selectedService?.serviceName;
   const LMT_BASE_PATH = useLmtBasePath();
+  // A restored row's trace lives only inside its own restore, so the link has to name the
+  // request. Looked up without it, a month-old trace id finds nothing in hot storage.
+  const restoreQuery = restoreRequestId
+    ? `requestId=${encodeURIComponent(restoreRequestId)}`
+    : "";
   const traceHref = log.traceId
     ? useGenericTraceLinks
-      ? `${LMT_BASE_PATH}/tracing/${log.traceId}`
+      ? `${LMT_BASE_PATH}/tracing/${log.traceId}${restoreQuery ? `?${restoreQuery}` : ""}`
       : logsRouteServiceName
-        ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${
-            activeTab ? `?tab=${encodeURIComponent(activeTab)}` : ""
-          }`
+        ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${buildQuery([
+            activeTab ? `tab=${encodeURIComponent(activeTab)}` : "",
+            restoreQuery,
+          ])}`
         : undefined
     : undefined;
 

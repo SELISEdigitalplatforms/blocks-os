@@ -6,6 +6,7 @@ import {
   LOG_SERVICE_AI_QUERIES,
 } from "@blocks-lmt/constants/logs-service-meta.constant";
 import { createParser, useQueryState } from "nuqs";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
 
 type LogSource = "blocks" | "managed";
@@ -28,6 +29,9 @@ export const parseAsLogSource = createParser({
 });
 export function LogsRoute() {
   const [source] = useQueryState<LogSource>("source", parseAsLogSource.withDefault("blocks"));
+  // Cold and archive rows belong to a restore of this project, so the viewer needs to know
+  // which project's restore to look up.
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { data: managedServicesData, isLoading, isFetching } = useGetAllServices({
     page: 0,
     pageSize: 1000,
@@ -82,6 +86,7 @@ export function LogsRoute() {
       <LogsViewer
         key={source}
         services={services}
+        projectKey={projectKey}
         predefinedQueries={predefinedQueries}
         askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
         agentName="Ask AI"

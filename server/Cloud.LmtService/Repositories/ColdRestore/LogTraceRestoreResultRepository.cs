@@ -49,6 +49,12 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         private IMongoCollection<RestoreLogResultRecord> GetLogResultsCollection(string requestId)
             => _database.GetCollection<RestoreLogResultRecord>($"Logs_{requestId}");
 
+        /// <summary>
+        /// Rows to skip for a 0-based page. A page below zero can only come from a hand-edited
+        /// request, and reads the first page rather than handing Mongo a negative skip.
+        /// </summary>
+        private static int PageSkip(int page, int pageSize) => page <= 0 ? 0 : page * pageSize;
+
         // Result collections are named per request, so their indexes can only be created once the
         // request exists. Built on first insert and remembered, so a batched restore pays for this
         // once per collection rather than once per batch. Without them the UI's list query is a
@@ -223,8 +229,9 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             }
 
             var sort = Builders<RestoreTraceResultRecord>.Sort.Descending(x => x.Timestamp);
-            var page = request.Page <= 0 ? 1 : request.Page;
-            var skip = (page - 1) * request.PageSize;
+            // Pages are 0-based, matching the hot repositories and the client's pager. Counting
+            // from 1 here made page 0 and page 1 the same page and hid the last one.
+            var skip = PageSkip(request.Page, request.PageSize);
             var countTask = collection.CountDocumentsAsync(filter, cancellationToken: ct);
             var rowsTask = collection
                 .Find(filter)
@@ -308,7 +315,11 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                     new BsonRegularExpression(request.Search, "i"));
             }
 
-            if (!string.IsNullOrWhiteSpace(request.ServiceName))
+            if (request.ServiceNames.Count > 0)
+            {
+                filter &= Builders<RestoreLogResultRecord>.Filter.In(x => x.ServiceName, request.ServiceNames);
+            }
+            else if (!string.IsNullOrWhiteSpace(request.ServiceName))
             {
                 filter &= Builders<RestoreLogResultRecord>.Filter.Eq(x => x.ServiceName, request.ServiceName);
             }
@@ -341,8 +352,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             var sort = Builders<RestoreLogResultRecord>.Sort.Descending(x => x.Timestamp);
 
             var countTask = collection.CountDocumentsAsync(filter, cancellationToken: ct);
-            var page = request.Page <= 0 ? 1 : request.Page;
-            var skip = (page - 1) * request.PageSize;
+            var skip = PageSkip(request.Page, request.PageSize);
             var rowsTask = collection
                 .Find(filter)
                 .Sort(sort)
@@ -360,6 +370,10 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                     Message = x.Message,
                     TraceId = x.TraceId,
                     SpanId = x.SpanId,
+                    // The list renders a service badge per row, so the field the rows were
+                    // filtered on has to survive the projection.
+                    ServiceName = x.ServiceName,
+                    ActionName = x.ActionName,
                     Exception = x.Exception
                 })
                 .AsQueryable();
@@ -523,9 +537,8 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             var collection = GetLogResultsCollection(request.RequestId);
             var tenantId = BlocksContext.GetContext()?.TenantId;
 
-            var page = request.Page <= 0 ? 1 : request.Page;
             var pageSize = request.PageSize <= 0 ? 50 : request.PageSize;
-            var skip = (page - 1) * pageSize;
+            var skip = PageSkip(request.Page, pageSize);
 
             var filter = Builders<RestoreLogResultRecord>.Filter.Eq(x => x.TenantId, tenantId) &
                          Builders<RestoreLogResultRecord>.Filter.Eq(x => x.TraceId, request.TraceId);

@@ -95,6 +95,42 @@ namespace XUnitTest.Services
             response.FailedFiles.Should().Be(0);
         }
 
+        /// <summary>
+        /// The Logs page reads cold and archive rows without ever creating the request, so the
+        /// status response is the only place it can learn which days it is showing, how many log
+        /// rows came back, and when they are discarded.
+        /// </summary>
+        [Fact]
+        public async Task GetStatusAsync_Found_ReturnsTheRestoredWindow()
+        {
+            var start = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+            var end = new DateTime(2026, 8, 7, 0, 0, 0, DateTimeKind.Utc);
+            var expires = new DateTime(2026, 9, 15, 0, 0, 0, DateTimeKind.Utc);
+
+            _coldRestoreRepository
+                .Setup(r => r.GetRequestStatusAsync("req-1", "Cold", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new RestoreRequestRecord
+                {
+                    RequestId = "req-1",
+                    Status = RestoreRequestStatus.Completed,
+                    StartDate = start,
+                    EndDate = end,
+                    ExpireAt = expires,
+                    LogRowsRestored = 12480,
+                    TraceRowsRestored = 806,
+                    SourceType = RestoreSourceType.Cold
+                });
+
+            var response = await Service().GetStatusAsync(new GetColdRestoreStatusRequest { RequestId = "req-1", SourceType = "Cold" });
+
+            response.StartDate.Should().Be(start);
+            response.EndDate.Should().Be(end);
+            response.ExpireAt.Should().Be(expires);
+            response.LogRowsRestored.Should().Be(12480);
+            response.TraceRowsRestored.Should().Be(806);
+            response.SourceType.Should().Be(nameof(RestoreSourceType.Cold));
+        }
+
         [Fact]
         public async Task CheckRequestStatus_ReturnsFalse_WhenAnotherDeliveryAlreadyClaimedTheRequest()
         {

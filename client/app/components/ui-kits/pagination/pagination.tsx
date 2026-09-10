@@ -79,6 +79,7 @@ export function Pagination({
         </div>
         <div className={cn("flex items-center gap-1", compact && "gap-0.5")}>
           <Button
+            aria-label="Go to first page"
             variant="outline"
             className={cn(
               "flex h-8 w-8 p-0 disabled:cursor-not-allowed",
@@ -92,6 +93,7 @@ export function Pagination({
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
+            aria-label="Go to previous page"
             variant="outline"
             className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
             onClick={() => {
@@ -102,6 +104,7 @@ export function Pagination({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
+            aria-label="Go to next page"
             variant="outline"
             className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
             onClick={() => {
@@ -112,6 +115,7 @@ export function Pagination({
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
+            aria-label="Go to last page"
             variant="outline"
             className={cn("flex h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
             onClick={() => {

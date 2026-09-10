@@ -324,6 +324,16 @@ export interface IGetTraceStatusResponse {
   totalFiles: number;
   processedFiles: number;
   failedFiles: number;
+  /**
+   * The window the restore covers and what came back in it. The Logs page never sees the
+   * request being made, so this is the only place it can learn which days it is showing.
+   */
+  startDate?: string;
+  endDate?: string;
+  traceRowsRestored?: number;
+  logRowsRestored?: number;
+  expireAt?: string;
+  sourceType?: string;
 }
 
 export interface IGetRestoredDataRetentionDaysResponse {

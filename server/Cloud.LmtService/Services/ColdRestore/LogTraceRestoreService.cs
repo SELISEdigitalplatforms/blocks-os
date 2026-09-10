@@ -384,7 +384,13 @@ namespace Cloud.LmtService.Services.ColdRestore
                 Status = record.Status.ToString(),
                 TotalFiles = record.TotalFiles,
                 ProcessedFiles = record.ProcessedFiles,
-                FailedFiles = record.FailedFiles
+                FailedFiles = record.FailedFiles,
+                StartDate = record.StartDate,
+                EndDate = record.EndDate,
+                TraceRowsRestored = record.TraceRowsRestored,
+                LogRowsRestored = record.LogRowsRestored,
+                ExpireAt = record.ExpireAt,
+                SourceType = record.SourceType.ToString()
             };
         }
         public async Task<bool> CheckRequestStatus(string requestId, CancellationToken ct = default)

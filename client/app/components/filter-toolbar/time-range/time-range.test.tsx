@@ -235,4 +235,40 @@ describe("TimeRange", () => {
       expect(screen.queryByText(/keeps streaming/i)).toBeNull();
     });
   });
+
+  /**
+   * A restored window is a closed set of days. Offering the days around it invites a reader to
+   * pick a window the restore never covered and read the empty result as "no logs".
+   */
+  describe("bounded to a fixed window", () => {
+    const BOUNDS = { min: new Date(2026, 7, 1), max: new Date(2026, 7, 7) };
+
+    const dayButton = (day: string) =>
+      screen.getByText(day).closest("button") as HTMLButtonElement;
+
+    it("refuses days outside the window", async () => {
+      renderPicker(null, vi.fn(), { bounds: BOUNDS, defaultRange: null });
+      await openPicker();
+
+      expect(dayButton("15").disabled).toBe(true);
+      expect(dayButton("22").disabled).toBe(true);
+    });
+
+    it("keeps every day of the window selectable, its last day included", async () => {
+      renderPicker(null, vi.fn(), { bounds: BOUNDS, defaultRange: null });
+      await openPicker();
+
+      // 6 and 7 are the only two of these that the August grid shows once; the days around the
+      // month's edges appear twice, as their own day and as a neighbouring month's outside day.
+      expect(dayButton("6").disabled).toBe(false);
+      expect(dayButton("7").disabled).toBe(false);
+    });
+
+    it("opens on the window rather than on the current month", async () => {
+      renderPicker(null, vi.fn(), { bounds: BOUNDS, defaultRange: null });
+      await openPicker();
+
+      expect(screen.getByText(/August 2026/)).toBeTruthy();
+    });
+  });
 });
