@@ -8,6 +8,7 @@ export const OidcAccountSelectorPreview = (props: OidcPagePreviewProps) => {
       {copy.subheading && (
         <p className="mb-4 text-sm text-[var(--muted)] sm:mb-5">{copy.subheading}</p>
       )}
+      <p className="mb-3 text-sm text-[var(--muted)]">{copy.bodyText}</p>
       <div className="space-y-3 sm:space-y-4">
         {["Work account", "Personal account"].map((account) => (
           <div
