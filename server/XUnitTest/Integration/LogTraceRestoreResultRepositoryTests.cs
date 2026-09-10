@@ -288,6 +288,63 @@ namespace XUnitTest.Integration
             total.Should().Be(1);
         }
 
+        /**
+         * A body that spells the list out as null -- "serviceNames": null -- overwrites the
+         * property initialiser, so reading .Count off it would answer the request with a 500.
+         */
+        [Fact]
+        public async Task GetRestoredLogsAsync_TreatsAnAbsentServiceListAsNoServiceFilter()
+        {
+            var requestId = Guid.NewGuid().ToString("N");
+            await SeedLogsAsync(requestId,
+                Log(requestId, Aug3, "iam-row", "blocks-iam-api"),
+                Log(requestId, Aug3.AddSeconds(-1), "mail-row", "blocks-mail-api"));
+
+            var request = LogsRequest(requestId);
+            request.ServiceNames = null!;
+
+            var (rows, total) = await NewRepository().GetRestoredLogsAsync(request);
+
+            rows.Should().HaveCount(2);
+            total.Should().Be(2);
+        }
+
+        /**
+         * Mongo reads Limit(0) as "no limit", so a body that omits pageSize would stream a whole
+         * restore -- millions of rows for a week of logs -- into one response.
+         */
+        [Fact]
+        public async Task GetRestoredLogsAsync_BoundsAPageEvenWhenNoPageSizeWasAsked()
+        {
+            var requestId = Guid.NewGuid().ToString("N");
+            var rows = Enumerable.Range(0, 51)
+                .Select(i => Log(requestId, Aug3.AddSeconds(-i), $"row-{i}"))
+                .ToArray();
+            await SeedLogsAsync(requestId, rows);
+
+            var (page, total) = await NewRepository().GetRestoredLogsAsync(
+                LogsRequest(requestId, pageSize: 0));
+
+            total.Should().Be(51);
+            page.Should().HaveCount(50);
+        }
+
+        [Fact]
+        public async Task GetRestoredTracesAsync_BoundsAPageEvenWhenNoPageSizeWasAsked()
+        {
+            var requestId = Guid.NewGuid().ToString("N");
+            var traces = Enumerable.Range(0, 51)
+                .Select(i => Trace(requestId, Aug3.AddSeconds(-i), $"op-{i}"))
+                .ToArray();
+            await SeedTracesAsync(requestId, traces);
+
+            var (page, total) = await NewRepository().GetRestoredTracesAsync(
+                new GetRestoredTracesRequest { RequestId = requestId, Page = 0, PageSize = 0 });
+
+            total.Should().Be(51);
+            page.Should().HaveCount(50);
+        }
+
         [Fact]
         public async Task GetRestoredLogsAsync_ReturnsNothing_WhenTheRequestHasNoRestoredLogs()
         {

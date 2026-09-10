@@ -271,6 +271,76 @@ describe("RestoredLogsPanel", () => {
       expect(lastQuery()?.search).toBe("smtp");
     });
 
+    /**
+     * Cold and archive are separate restores read through the same panel. Carrying a page number
+     * across the switch asks the other restore for a page it may not have, and the empty answer
+     * reads as a restore with nothing in it.
+     */
+    it("returns to the first page when the reader switches to the other tier", async () => {
+      h.getRestoredLogs.mockReturnValue({
+        data: { data: [row("a row")], totalCount: 45 },
+        isLoading: false,
+        isFetching: false,
+      });
+      const { rerender } = renderPanel();
+
+      await userEvent.click(screen.getByRole("button", { name: /go to next page/i }));
+      await waitFor(() => expect(lastQuery()?.page).toBe(1));
+
+      const archiveRestore = { ...COMPLETED, requestId: "req-2" };
+      rerender(
+        <MemoryRouter>
+          <LogsViewerContext.Provider
+            value={
+              {
+                pageSize: 20,
+                services: [{ id: "s1", label: "IAM", serviceName: "blocks-iam-api" }],
+                selectedService: { id: "s1", label: "IAM", serviceName: "blocks-iam-api" },
+                selectedServiceNames: ["blocks-iam-api"],
+                filter: { search: "", level: "", startDate: "", endDate: "" },
+                isSourceBlocks: true,
+                isServicesLoading: false,
+                useGenericTraceLinks: true,
+                restoreRequestId: "req-2",
+                tier: "archive",
+              } as unknown as Ctx
+            }
+          >
+            <RestoredLogsPanel
+              sourceType={TRACE_REQUEST_SOURCE_TYPE.archive}
+              restore={archiveRestore as never}
+            />
+          </LogsViewerContext.Provider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => expect(lastQuery()?.requestId).toBe("req-2"));
+      expect(lastQuery()?.page).toBe(0);
+    });
+
+    /**
+     * The service filter is narrowed by default -- the page opens on the first service -- so an
+     * empty page under it is a filtered result, not an empty restore.
+     */
+    it("blames the filters when a narrowed service selection matches nothing", () => {
+      h.getRestoredLogs.mockReturnValue({
+        data: { data: [], totalCount: 0 },
+        isLoading: false,
+        isFetching: false,
+      });
+      renderPanel(COMPLETED, {
+        ctx: {
+          services: [
+            { id: "s1", label: "IAM", serviceName: "blocks-iam-api" },
+            { id: "s2", label: "Mail", serviceName: "blocks-mail-api" },
+          ],
+          selectedServiceNames: ["blocks-iam-api"],
+        } as unknown as Partial<Ctx>,
+      });
+
+      expect(screen.getByText(/no logs match/i)).toBeTruthy();
+    });
+
     it("offers no pager when everything fits on one page", () => {
       renderPanel();
 
@@ -325,6 +395,46 @@ describe("RestoredLogsPanel", () => {
       expect(screen.getByText(/cancelled/i)).toBeTruthy();
       expect(screen.getByText(/discarded/i)).toBeTruthy();
     });
+  });
+
+  describe("when the status could not be read", () => {
+    const failed = { ...NO_REQUEST, hasError: true };
+
+    /**
+     * A transient 500 looks exactly like an unrestored tier in the data. Saying "nothing was
+     * restored" would tell a reader with a completed restore that it does not exist.
+     */
+    it("says the status could not be read rather than that nothing was restored", () => {
+      renderPanel(failed);
+
+      expect(screen.queryByText(/no cold logs restored/i)).toBeNull();
+      expect(screen.getByText(/couldn.t (read|load)/i)).toBeTruthy();
+    });
+
+    it("offers to try the lookup again", async () => {
+      const refresh = vi.fn();
+      renderPanel({ ...failed, refresh });
+
+      await userEvent.click(screen.getByRole("button", { name: /try again|retry/i }));
+
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /**
+   * Refreshing a running restore re-reads the same request. Replacing the progress card with a
+   * blank spinner drops the reader's focus and hides the very counter they clicked to update.
+   */
+  it("keeps the progress on screen while it is being re-read", () => {
+    renderPanel({
+      ...COMPLETED,
+      status: TRACE_REQUEST_STATUS.processing,
+      processedFiles: 9,
+      isRefreshing: true,
+    });
+
+    expect(screen.getByText(/9 of 14 files/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /refresh/i })).toBeTruthy();
   });
 
   /** Without this the panel flashes "nothing restored" on every load before the status lands. */

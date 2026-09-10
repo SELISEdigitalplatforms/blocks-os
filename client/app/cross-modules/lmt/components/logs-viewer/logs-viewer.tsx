@@ -195,14 +195,18 @@ export const LogsViewer = ({
     [selectedServices],
   );
 
-  // The tier travels in the URL under the same name Tracing uses, so a link into either page
-  // reads the same way.
-  const [tabParam, setTabParam] = useQueryState("tab", { defaultValue: TRACE_PROVIDERS.hot });
-  const tier = (
-    Object.values(TRACE_PROVIDERS).includes(tabParam as TRACE_PROVIDERS)
-      ? tabParam
+  // Under its own param name rather than Tracing's "tab": on the per-service logs route "tab"
+  // already means the service tab, and log rows copy that param onto their trace links.
+  const [tierParam, setTierParam] = useQueryState("tier", { defaultValue: TRACE_PROVIDERS.hot });
+  const requestedTier = (
+    Object.values(TRACE_PROVIDERS).includes(tierParam as TRACE_PROVIDERS)
+      ? tierParam
       : TRACE_PROVIDERS.hot
   ) as StorageTier;
+  // A restore belongs to a project. Without one -- the per-service logs route passes none --
+  // there is nothing to read on the restored tiers, so they are not offered at all.
+  const canReadRestores = Boolean(projectKey);
+  const tier = canReadRestores ? requestedTier : TRACE_PROVIDERS.hot;
   const restoreSourceType = RESTORE_SOURCE_TYPE[tier];
 
   // Resolved from the initial tier rather than reset by an effect, so a link straight to
@@ -217,12 +221,12 @@ export const LogsViewer = ({
 
   const changeTier = useCallback(
     (next: StorageTier) => {
-      setTabParam(next);
+      setTierParam(next);
       // Each tier has its own window, so carrying a filter across would leave the reader with
       // a window that belongs to the tier they just left.
       setFilter(tierDefaultFilter(next));
     },
-    [setTabParam],
+    [setTierParam],
   );
 
   // Drop services that no longer exist once the service list loads or changes.
@@ -296,15 +300,17 @@ export const LogsViewer = ({
       <div className={cn("flex flex-col gap-6", className)}>
         {/* Tier is the outer choice; the managed/my-service split lives inside the tier the
             reader picked, because that is the pair they switch between far more often. */}
-        <StorageTierCards
-          value={tier}
-          onChange={changeTier}
-          descriptions={{
-            [TRACE_PROVIDERS.hot]: "Live and recent logs for active debugging.",
-            [TRACE_PROVIDERS.cold]: "Longer-term stored logs for later investigation.",
-            [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
-          }}
-        />
+        {canReadRestores && (
+          <StorageTierCards
+            value={tier}
+            onChange={changeTier}
+            descriptions={{
+              [TRACE_PROVIDERS.hot]: "Live and recent logs for active debugging.",
+              [TRACE_PROVIDERS.cold]: "Longer-term stored logs for later investigation.",
+              [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
+            }}
+          />
+        )}
         <LogsListHeader />
         {restoreSourceType ? (
           <RestoredLogsPanel sourceType={restoreSourceType} restore={restore} />

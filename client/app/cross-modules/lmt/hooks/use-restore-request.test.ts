@@ -92,17 +92,56 @@ describe("useRestoreRequest", () => {
   });
 
   /**
-   * The status of an expired or purged request answers with an error. Reading that as "nothing
-   * restored" is what lets the page offer a way forward instead of showing a broken panel.
+   * A failed lookup is not the same as a tier nobody has restored. Reporting a transient 500 as
+   * "nothing restored" tells the reader their completed restore does not exist, and offers them
+   * no way to try again.
    */
-  it("reports no request when the lookup fails", async () => {
-    h.getTraceStatus.mockRejectedValue(new Error("not found"));
+  it("reports a failed lookup as a failure, not as nothing restored", async () => {
+    h.getTraceStatus.mockRejectedValue(new Error("boom"));
 
     const { result } = renderRestoreRequest();
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
+    expect(result.current.hasError).toBe(true);
+  });
+
+  it("reports a tier nobody has restored as no request rather than a failure", async () => {
+    h.getRequestId.mockResolvedValue({ requestId: "" });
+
+    const { result } = renderRestoreRequest();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.hasError).toBe(false);
     expect(result.current.status).toBe(NO_RESTORE_REQUEST);
+  });
+
+  /**
+   * Refreshing a running restore re-reads the same request. Reporting that as a load would let
+   * the panel replace the progress the reader is watching with a blank spinner.
+   */
+  it("separates a refresh from the first load", async () => {
+    h.getTraceStatus.mockResolvedValue({ ...COMPLETED_STATUS, status: TRACE_REQUEST_STATUS.processing });
+
+    const { result } = renderRestoreRequest();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let resolveStatus: ((value: unknown) => void) | undefined;
+    h.getTraceStatus.mockReturnValue(
+      new Promise((resolve) => {
+        resolveStatus = resolve;
+      }),
+    );
+
+    void result.current.refresh();
+
+    await waitFor(() => expect(result.current.isRefreshing).toBe(true));
+    expect(result.current.isLoading).toBe(false);
+
+    await act(async () => {
+      resolveStatus?.(COMPLETED_STATUS);
+    });
   });
 
   it("stays quiet until a project is selected", async () => {

@@ -49,14 +49,14 @@ const formatExpiry = (value?: string) => {
  * points back there rather than offering a second way to spend.
  */
 export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProps) {
-  const { filter, pageSize, selectedServiceNames, selectedService } =
+  const { filter, pageSize, services, selectedServiceNames, selectedService } =
     useContext(LogsViewerContext);
   const basePath = useLmtBasePath();
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
 
   const words = TIER_WORDS[sourceType] ?? TIER_WORDS[TRACE_REQUEST_SOURCE_TYPE.cold];
   const tracingHref = `${basePath}/tracing?tab=${sourceType.toLowerCase()}`;
-  const window = formatRestoreWindow(restore.startDate, restore.endDate);
+  const windowLabel = formatRestoreWindow(restore.startDate, restore.endDate);
 
   const canRead =
     restore.status === TRACE_REQUEST_STATUS.completed ||
@@ -71,6 +71,9 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
   // empty restore. The page is held together with the query it belongs to, so any change to
   // what is being asked for reads as page 0 without an effect having to reset it.
   const queryShape = JSON.stringify({
+    // The restore itself is part of the query: cold and archive are read through this same
+    // panel, and page 5 of one is not page 5 of the other.
+    requestId: restore.requestId,
     search,
     level,
     startDate,
@@ -117,7 +120,46 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
   const rows = (data?.data ?? []) as ILog[];
   const totalCount = data?.totalCount ?? 0;
   const loading = isLoading || isFetching;
-  const hasFilter = Boolean(search || level || startDate || endDate);
+  // The service selection counts as a filter, and it is narrowed from the moment the page opens
+  // on its first service -- so an empty page under it has to read as a filtered result rather
+  // than as a restore holding nothing.
+  const everyServiceName = services.flatMap((service) =>
+    service.serviceNames?.length
+      ? service.serviceNames
+      : service.serviceName
+        ? [service.serviceName]
+        : [],
+  );
+  const isServiceNarrowed = selectedServiceNames.length < new Set(everyServiceName).size;
+  const hasFilter = Boolean(search || level || startDate || endDate) || isServiceNarrowed;
+
+  // A failed lookup and an unrestored tier are indistinguishable in the data, so they are told
+  // apart here: only one of them is worth offering a retry for, and only one of them is true.
+  if (restore.hasError) {
+    return (
+      <Card className="min-h-[280px]">
+        <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
+          <AlertTriangle className="mb-3 h-7 w-7 text-muted-foreground" />
+          <h3 className="text-base font-semibold tracking-tight">
+            Couldn&apos;t read the {words.noun} restore status
+          </h3>
+          <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
+            The status of this project&apos;s {words.noun} restore could not be reached, so there
+            is nothing to show yet. Any restored rows are still there.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button size="sm" onClick={() => void restore.refresh()} disabled={restore.isRefreshing}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Try again
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link to={tracingHref}>Go to Tracing</Link>
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   if (restore.isLoading) {
     return (
@@ -139,16 +181,22 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             A {words.noun} restore is running
           </h3>
           <p className="mb-1 mt-2 max-w-md text-sm text-muted-foreground">
-            {window ? `${window}. ` : ""}Logs appear here as soon as it finishes, which usually
+            {windowLabel ? `${windowLabel}. ` : ""}Logs appear here as soon as it finishes, which usually
             takes {EXPECTED_DURATION[sourceType]}.
           </p>
           <p className="text-xs tabular-nums text-muted-foreground">
             {restore.processedFiles} of {restore.totalFiles} files processed
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            <Button size="sm" onClick={() => void restore.refresh()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
+            <Button
+              size="sm"
+              onClick={() => void restore.refresh()}
+              disabled={restore.isRefreshing}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${restore.isRefreshing ? "animate-spin" : ""}`}
+              />
+              {restore.isRefreshing ? "Refreshing" : "Refresh"}
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link to={tracingHref}>View this request in Tracing</Link>
@@ -168,7 +216,7 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             The last {words.noun} restore failed
           </h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            No log rows were recovered{window ? ` for ${window}` : ""}. Start a new request from
+            No log rows were recovered{windowLabel ? ` for ${windowLabel}` : ""}. Start a new request from
             Tracing to try the range again.
           </p>
           <Button size="sm" asChild>
@@ -228,7 +276,9 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
             This restore holds no log rows
           </h3>
           <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
-            {window ? `${window} was restored, but none of those days ` : "None of the restored days "}
+            {windowLabel
+              ? `${windowLabel} was restored, but none of those days `
+              : "None of the restored days "}
             had logs stored for this project. Its traces may still be readable in Tracing.
           </p>
           <Button size="sm" variant="outline" asChild>
@@ -254,7 +304,9 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
         <span className="text-xs font-semibold uppercase tracking-wider text-primary">
           {words.noun === "cold" ? "Cold" : "Archive"} restore
         </span>
-        {window && <span className="tabular-nums text-high-emphasis">{window} (UTC)</span>}
+        {windowLabel && (
+          <span className="tabular-nums text-high-emphasis">{windowLabel} (UTC)</span>
+        )}
         <span aria-hidden="true">•</span>
         <span className="tabular-nums">
           {(restore.logRowsRestored ?? 0).toLocaleString("en-US")} log rows

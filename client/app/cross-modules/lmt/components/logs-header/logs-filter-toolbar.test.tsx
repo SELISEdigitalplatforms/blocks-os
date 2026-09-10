@@ -308,6 +308,24 @@ describe("LogsFilterToolbar", () => {
       expect(keys).toContain("level");
     });
 
+    /**
+     * The live default is a relative window. Writing it while reading a restore would put back
+     * the very filter the restored view exists to avoid -- one that matches none of its days.
+     */
+    it("clears the window rather than restoring the live default", () => {
+      const ctx = restoredCtx();
+      renderToolbar(ctx);
+
+      h.captured?.onChange("timeRange", null);
+
+      const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(updater({ startDate: "x", endDate: "y" })).toEqual({
+        startDate: "",
+        endDate: "",
+        range: "",
+      });
+    });
+
     it("enforces only the end it knows, while the window is still loading", () => {
       renderToolbar(
         makeCtx({

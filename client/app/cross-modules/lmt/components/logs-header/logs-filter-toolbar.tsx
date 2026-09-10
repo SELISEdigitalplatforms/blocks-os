@@ -60,7 +60,9 @@ export const LogsFilterToolbar = () => {
     if (!value) {
       setFilter((filter) => ({
         ...filter,
-        range: DEFAULT_LOG_FILTER.range ?? "",
+        // Over a restore there is no default to fall back to: its days are all older than any
+        // relative window, so restoring one here would match nothing at all.
+        range: isRestored ? "" : (DEFAULT_LOG_FILTER.range ?? ""),
         startDate: "",
         endDate: "",
       }));

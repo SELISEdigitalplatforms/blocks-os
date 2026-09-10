@@ -53,7 +53,14 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         /// Rows to skip for a 0-based page. A page below zero can only come from a hand-edited
         /// request, and reads the first page rather than handing Mongo a negative skip.
         /// </summary>
-        private static int PageSkip(int page, int pageSize) => page <= 0 ? 0 : page * pageSize;
+        private static int PageSkip(int page, int pageSize) => page <= 0 ? 0 : page * PageLimit(pageSize);
+
+        /// <summary>
+        /// Rows in a page. Mongo reads Limit(0) as "no limit", so a request that omits its page
+        /// size would otherwise stream a whole restore -- a week of logs -- in one response.
+        /// </summary>
+        private const int DefaultPageSize = 50;
+        private static int PageLimit(int pageSize) => pageSize <= 0 ? DefaultPageSize : pageSize;
 
         // Result collections are named per request, so their indexes can only be created once the
         // request exists. Built on first insert and remembered, so a batched restore pays for this
@@ -237,7 +244,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                 .Find(filter)
                 .Sort(sort)
                 .Skip(skip)
-                .Limit(request.PageSize)
+                .Limit(PageLimit(request.PageSize))
                 .ToListAsync(ct);
 
             await Task.WhenAll(countTask, rowsTask);
@@ -315,9 +322,16 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                     new BsonRegularExpression(request.Search, "i"));
             }
 
-            if (request.ServiceNames.Count > 0)
+            // A body that spells the list out as null overwrites the property initialiser, so the
+            // list is re-checked here rather than trusted to exist. Blank entries are dropped:
+            // one would otherwise match only the rows whose service name was never written.
+            var serviceNames = request.ServiceNames?
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToList() ?? [];
+
+            if (serviceNames.Count > 0)
             {
-                filter &= Builders<RestoreLogResultRecord>.Filter.In(x => x.ServiceName, request.ServiceNames);
+                filter &= Builders<RestoreLogResultRecord>.Filter.In(x => x.ServiceName, serviceNames);
             }
             else if (!string.IsNullOrWhiteSpace(request.ServiceName))
             {
@@ -357,7 +371,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
                 .Find(filter)
                 .Sort(sort)
                 .Skip(skip)
-                .Limit(request.PageSize)
+                .Limit(PageLimit(request.PageSize))
                 .ToListAsync(ct);
 
             await Task.WhenAll(countTask, rowsTask);
@@ -537,7 +551,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             var collection = GetLogResultsCollection(request.RequestId);
             var tenantId = BlocksContext.GetContext()?.TenantId;
 
-            var pageSize = request.PageSize <= 0 ? 50 : request.PageSize;
+            var pageSize = PageLimit(request.PageSize);
             var skip = PageSkip(request.Page, pageSize);
 
             var filter = Builders<RestoreLogResultRecord>.Filter.Eq(x => x.TenantId, tenantId) &

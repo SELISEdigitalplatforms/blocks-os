@@ -46,7 +46,7 @@ export const useRestoreRequest = ({
   projectKey,
   enabled = true,
 }: UseRestoreRequestParams) => {
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ["restore-request", sourceType, projectKey],
     queryFn: async (): Promise<RestoreRequestState> => {
       const request = await lmtService.trace.getRequestId({
@@ -79,11 +79,17 @@ export const useRestoreRequest = ({
   });
 
   return {
-    // An expired or purged request answers with an error, and a tier that was never restored
-    // answers with no id. Both read as "nothing restored", which is a state the page can
-    // explain, rather than a failure it would have to render as broken.
     ...(data ?? NOTHING),
-    isLoading: isLoading || isFetching,
+    /**
+     * A lookup that failed is kept apart from a tier nobody has restored. They read the same in
+     * the data -- neither has a request -- but only one of them is worth offering a retry for,
+     * and telling someone their completed restore does not exist is the worse mistake.
+     */
+    hasError: isError,
+    /** The first read, which the page has nothing to show during. */
+    isLoading,
+    /** A re-read of something already on screen, which must not replace it with a spinner. */
+    isRefreshing: isFetching && !isLoading,
     refresh: async () => {
       await refetch();
     },
