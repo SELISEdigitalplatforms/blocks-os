@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -25,6 +26,9 @@ namespace Cloud.LmtService.Services.ColdRestore
 {
     public class LogTraceRestoreService : ILogTraceRestoreService
     {
+        /// <summary>Calendar-day wire format: no time, no offset, nothing for a client to shift.</summary>
+        private const string IsoDate = "yyyy-MM-dd";
+
         private const string RequestIdRequired = "RequestId is required.";
         private const string TraceDataType = "Trace";
         private readonly ILogger<LogTraceRestoreService> _logger;
@@ -38,10 +42,11 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly IHttpService _httpService;
         private readonly ICryptoService _cryptoService;
         private readonly ITenants _tenants;
+        private readonly IArchiveRestoreRepository _archiveRestoreRepository;
         public LogTraceRestoreService(ILogger<LogTraceRestoreService> logger, ILogTraceRestoreRepository coldRestoreRepository, IMessageClient messageClient, ILogTraceRestoreResultRepository coldRestoreResultRepository,
     ILogTraceRestoreParquetReader coldRestoreParquetReader, IBlobStorage blobStorage, IConfiguration configuration,
     ILmtArchiveRestoreConfigurationRepository lmtArchiveRestoreConfigurationRepository, IMailDriverService mailDriverService,
-    IHttpService httpService, ICryptoService cryptoService, ITenants tenants)
+    IHttpService httpService, ICryptoService cryptoService, ITenants tenants, IArchiveRestoreRepository archiveRestoreRepository)
         {
             _logger = logger;
             _coldRestoreRepository = coldRestoreRepository;
@@ -55,6 +60,7 @@ namespace Cloud.LmtService.Services.ColdRestore
             _httpService = httpService;
             _cryptoService = cryptoService;
             _tenants = tenants;
+            _archiveRestoreRepository = archiveRestoreRepository;
         }
 
 
@@ -62,10 +68,29 @@ namespace Cloud.LmtService.Services.ColdRestore
         {
             var (normalizedStartDate, normalizedEndDate) = Constants.ValidateAndNormalize(request.StartDate, request.EndDate);
 
+            var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync();
+            var window = RestoreWindow.ForCold(
+                config.HotDataRetentionPeriodInDays, config.ColdToArchiveLifeCycleInDays, config.MaxRestoreRangeInDays, DateTime.UtcNow);
+
+            // Fail here rather than hours later in the worker: outside this window the day is
+            // either still in Mongo (no blob yet) or already in the unreadable Archive tier.
+            if (!window.Contains(normalizedStartDate) || !window.Contains(normalizedEndDate))
+            {
+                throw new ArgumentException(
+                    $"Cold restore is only available for dates {window.Describe()}. " +
+                    "Use an archive restore for older dates.");
+            }
+
+            if (window.SpanExceedsLimit(normalizedStartDate, normalizedEndDate))
+            {
+                throw new ArgumentException(
+                    $"A cold restore may cover at most {window.MaxSpanDays} days.");
+            }
+
             var requestId = Guid.NewGuid().ToString("N");
             var now = DateTime.UtcNow;
             var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
-            var _retentionDays = await GetRetentionDaysAsync();
+            var _retentionDays = config.RetentionDay;
             var record = new RestoreRequestRecord
             {
                 RequestId = requestId,
@@ -83,8 +108,8 @@ namespace Cloud.LmtService.Services.ColdRestore
                 LogRowsRestored = 0,
                 ExpireAt = DateTime.UtcNow.AddDays(_retentionDays),
                 SourceType = RestoreSourceType.Cold,
-                UserEmail = request.UserMail
-
+                UserEmail = request.UserMail,
+                UserId = BlocksContext.GetContext()?.UserId
             };
 
             await _coldRestoreRepository.CreateRequestAsync(record);
@@ -112,6 +137,63 @@ namespace Cloud.LmtService.Services.ColdRestore
                 EndDate = normalizedEndDate
             };
         }
+        public async Task<CancelRestoreResponse> CancelRestoreAsync(CancelRestoreRequest request, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(request.RequestId))
+                throw new ArgumentException(RequestIdRequired);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var record = await _coldRestoreRepository.GetRequestByIdAsync(request.RequestId, ct);
+
+            if (record == null)
+                throw new KeyNotFoundException($"Restore request not found for RequestId {request.RequestId}");
+
+            if (!string.Equals(record.TenantId, tenantId, StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("TenantId does not match the restore request.");
+
+            if (IsTerminal(record.Status))
+            {
+                return NothingToCancel(record.RequestId, record.Status);
+            }
+
+            var cancelled = await _coldRestoreRepository.TryCancelRequestAsync(request.RequestId, DateTime.UtcNow, ct);
+
+            if (!cancelled)
+            {
+                // Another caller, or the worker finishing, got there between our read and our write.
+                var current = await _coldRestoreRepository.GetRequestByIdAsync(request.RequestId, ct);
+                return NothingToCancel(request.RequestId, current?.Status ?? record.Status);
+            }
+
+            var stoppedFiles = await _coldRestoreRepository.CancelOutstandingFileProgressAsync(request.RequestId, ct);
+            var stoppedHydrations = await _archiveRestoreRepository.CancelHydrationJobsForRequestAsync(request.RequestId, ct);
+
+            // Purge here so the user can re-request the range straight away. The worker drops these
+            // again when it notices the cancellation, which cleans up anything an in-flight batch
+            // wrote between this call and the loop's next check.
+            await _coldRestoreResultRepository.DropResultCollectionsAsync(request.RequestId, ct);
+
+            _logger.LogInformation(
+                "Cancelled RequestId {RequestId}: stopped {Files} file(s) and {Hydrations} hydration job(s)",
+                request.RequestId, stoppedFiles, stoppedHydrations);
+
+            return new CancelRestoreResponse
+            {
+                RequestId = request.RequestId,
+                Status = nameof(RestoreRequestStatus.Cancelled),
+                Cancelled = true,
+                Message = "Restore request cancelled. Partially restored data has been discarded."
+            };
+        }
+
+        private static CancelRestoreResponse NothingToCancel(string requestId, RestoreRequestStatus status) => new()
+        {
+            RequestId = requestId,
+            Status = status.ToString(),
+            Cancelled = false,
+            Message = $"Restore request is already {status} and cannot be cancelled."
+        };
+
         private async Task<bool> SendEmailAsync(string email, string tier, string status, CancellationToken ct = default)
         {
             try
@@ -156,21 +238,28 @@ namespace Cloud.LmtService.Services.ColdRestore
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.ToString(), "Failed to send email notification to {Email} with tier {Tier} and status {Status}.", email, tier, status);
+                _logger.LogError(ex, "Failed to send email notification to {Email} with tier {Tier} and status {Status}.", email, tier, status);
                 return false;
             }
 
         }
-        private async Task<bool> NotifyEvent( string tier, string status, string? messageCoRelationId, string tenantId, CancellationToken ct = default)
+        private async Task<bool> NotifyEvent(string tier, string status, string? messageCoRelationId, string tenantId, string? userId, CancellationToken ct = default)
         {
             try
             {
                 var config = await GetNotificationConfig(ct);
+
+                if (string.IsNullOrWhiteSpace(config.NotificationUrl))
+                {
+                    _logger.LogWarning("Notification URL is not configured. Skipping notification for tenant {TenantId}.", tenantId);
+                    return false;
+                }
+
                 var requestData = new
                 {
                     ConnectionId = messageCoRelationId,
                     Roles = new List<string> { },
-                    UserIds = new List<string> { BlocksContext.GetContext()?.UserId ?? "" },
+                    UserIds = new List<string> { userId ?? string.Empty },
                     DenormalizedPayload = JsonSerializer.Serialize(new
                     {
                         title = "Log and Trace Restoration Status Update",
@@ -184,26 +273,26 @@ namespace Cloud.LmtService.Services.ColdRestore
                     ResponseValue = $"{tier} data restoration has been {status}.",
                 };
 
-                var blocksKey = BlocksContext.GetContext()?.TenantId;
-                var salt = _tenants.GetTenantByID(blocksKey)?.TenantSalt;
-                var actulalSecret = _cryptoService.Hash(blocksKey, salt);
+                // The tenant comes from the persisted request, not BlocksContext: this runs on a
+                // queue consumer where there is no ambient request context to read it from.
+                var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
+                var signedSecret = _cryptoService.Hash(tenantId, salt);
 
-                var url = config.NotificationUrl;
                 var headers = new Dictionary<string, string>
                 {
-                    { "x-blocks-key", blocksKey },
-                    { "Secret", actulalSecret}
+                    { "x-blocks-key", tenantId },
+                    { "Secret", signedSecret }
                 };
 
-                var (result1, _) = await _httpService.Post<NotificationResponse>(
-                     requestData, url, "application/json", headers);
+                var (response, _) = await _httpService.Post<NotificationResponse>(
+                     requestData, config.NotificationUrl, "application/json", headers, ct);
 
-                _logger.LogInformation("Notification sent with result {Result} for tenant {TenantId} with tier {Tier} and status {Status}.", result1?.isSuccess, tenantId, tier, status);
-                return result1 != null && result1.isSuccess;
+                _logger.LogInformation("Notification sent with result {Result} for tenant {TenantId} with tier {Tier} and status {Status}.", response?.isSuccess, tenantId, tier, status);
+                return response != null && response.isSuccess;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.ToString(), "Failed to send notification for tenant {TenantId} with tier {Tier} and status {Status}.", tenantId, tier, status);
+                _logger.LogError(ex, "Failed to send notification for tenant {TenantId} with tier {Tier} and status {Status}.", tenantId, tier, status);
                 return false;
             }
 
@@ -227,8 +316,30 @@ namespace Cloud.LmtService.Services.ColdRestore
         public async Task<GetHotDataUploadToBlobInDays> GetHotDataRetentionPeriodInDays(CancellationToken ct = default)
         {
             var config = await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
+            var now = DateTime.UtcNow;
+            var cold = RestoreWindow.ForCold(
+                config.HotDataRetentionPeriodInDays, config.ColdToArchiveLifeCycleInDays, config.MaxRestoreRangeInDays, now);
+            var archive = RestoreWindow.ForArchive(
+                config.HotDataRetentionPeriodInDays, config.ColdToArchiveLifeCycleInDays, config.MaxRestoreRangeInDays, now);
+
             var coldDataSelectionDays = config.HotDataRetentionPeriodInDays + 1;
-            return new GetHotDataUploadToBlobInDays { ColdDataSelectionDays = coldDataSelectionDays, ArchiveDataSelectionDays=coldDataSelectionDays+config.ColdToArchiveLifeCycleInDays };
+
+            return new GetHotDataUploadToBlobInDays
+            {
+                // Day counts are kept for callers that still compute their own offsets.
+                ColdDataSelectionDays = coldDataSelectionDays,
+                ArchiveDataSelectionDays = coldDataSelectionDays + config.ColdToArchiveLifeCycleInDays,
+
+                // The dates themselves, so the client does not re-derive them: it would have to
+                // pick a "today", and a browser's local midnight is not the UTC midnight this
+                // window is measured from. For part of every day the two disagree by a full day.
+                ColdEarliestDate = cold.Earliest.ToString(IsoDate, CultureInfo.InvariantCulture),
+                ColdLatestDate = cold.Latest.ToString(IsoDate, CultureInfo.InvariantCulture),
+                ArchiveLatestDate = archive.Latest.ToString(IsoDate, CultureInfo.InvariantCulture),
+
+                ColdMaxRangeDays = cold.MaxSpanDays,
+                ArchiveMaxRangeDays = archive.MaxSpanDays,
+            };
         }
 
         public async Task<GetColdRestoreStatusResponse> GetStatusAsync(GetColdRestoreStatusRequest request)
@@ -247,6 +358,14 @@ namespace Cloud.LmtService.Services.ColdRestore
                 throw new KeyNotFoundException($"Cold restore request not found for RequestId {request.RequestId}");
             }
 
+            // Tenant-scoped like the download endpoints: without this, any authenticated tenant
+            // could read another tenant's restore progress from a guessed RequestId.
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            if (!string.Equals(record.TenantId, tenantId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException("TenantId does not match the restore request.");
+            }
+
             return new GetColdRestoreStatusResponse
             {
                 RequestId = record.RequestId,
@@ -256,24 +375,21 @@ namespace Cloud.LmtService.Services.ColdRestore
                 FailedFiles = record.FailedFiles
             };
         }
-        public async Task<bool>CheckRequestStatus(string requestId, CancellationToken ct = default)
+        public async Task<bool> CheckRequestStatus(string requestId, CancellationToken ct = default)
         {
-            var existing = await _coldRestoreRepository.GetRequestByIdAsync(requestId, ct);
-            if (existing?.Status is RestoreRequestStatus.Completed
-                                 or RestoreRequestStatus.PartialSuccess
-                                 or RestoreRequestStatus.InProgress)
+            // One conditional update decides the winner. A read-then-write here let two concurrent
+            // deliveries of the same message both start processing the request.
+            var claimed = await _coldRestoreRepository.TryBeginProcessingAsync(requestId, DateTime.UtcNow, ct);
+
+            if (!claimed)
             {
                 _logger.LogWarning(
-                    "Skipping duplicate ColdRestore delivery for RequestId {RequestId}, Status {Status}",
-                    requestId, existing.Status);
+                    "Skipping duplicate restore delivery for RequestId {RequestId}: it is already running, finished or cancelled",
+                    requestId);
                 return false;
             }
+
             await _coldRestoreRepository.ResetStuckProcessingFilesAsync(requestId, ct);
-            await _coldRestoreRepository.UpdateRequestStatusAsync(
-                requestId,
-                RestoreRequestStatus.InProgress,
-                startedAt: DateTime.UtcNow,
-                ct: ct);
             return true;
         }
         public async Task ProcessRestoreAsync(ColdRestoreMessage message, CancellationToken ct = default)
@@ -314,19 +430,15 @@ namespace Cloud.LmtService.Services.ColdRestore
             if (requestRecord == null)
                 return;
 
-            if (requestRecord.Status is RestoreRequestStatus.Completed
-                                     or RestoreRequestStatus.PartialSuccess
-                                     or RestoreRequestStatus.Failed)
+            if (IsTerminal(requestRecord.Status))
                 return;
 
             var allFiles = await _coldRestoreRepository.GetFileProgressByRequestIdAsync(requestId, ct);
-            if (allFiles.Count == 0)
-                return;
 
-            var allTerminal = allFiles.All(x =>
-                x.Status is RestoreFileProgressStatus.Completed
-                         or RestoreFileProgressStatus.Failed
-                         or RestoreFileProgressStatus.FileNotFound);
+            // No files at all means the requested range had nothing archived. That is still a
+            // finished request: leaving it InProgress strands it, because the next delivery is
+            // refused and the UI keeps showing a blocking progress overlay.
+            var allTerminal = allFiles.Count == 0 || allFiles.All(x => IsTerminal(x.Status));
 
             if (!allTerminal)
                 return;
@@ -337,103 +449,156 @@ namespace Cloud.LmtService.Services.ColdRestore
                          or RestoreFileProgressStatus.FileNotFound);
             var traceRows = allFiles.Where(x => x.DataType == RestoreDataType.Trace).Sum(x => x.RowsRestored);
             var logRows = allFiles.Where(x => x.DataType == RestoreDataType.Log).Sum(x => x.RowsRestored);
-            var processedFiles = allFiles.Count(x =>
-                x.Status is RestoreFileProgressStatus.Completed
-                         or RestoreFileProgressStatus.Failed
-                         or RestoreFileProgressStatus.FileNotFound);
+            var processedFiles = allFiles.Count(x => IsTerminal(x.Status));
 
             await _coldRestoreRepository.UpdateRequestCountersAsync(
                 requestId, processedFiles, failedFiles, traceRows, logRows, ct);
 
-            RestoreRequestStatus finalStatus;
-            if (failedFiles == 0)
-                finalStatus = RestoreRequestStatus.Completed;
-            else if (failedFiles == totalFiles)
-                finalStatus = RestoreRequestStatus.Failed;
-            else
-                finalStatus = RestoreRequestStatus.PartialSuccess;
+            var finalStatus = failedFiles switch
+            {
+                0 => RestoreRequestStatus.Completed,
+                _ when failedFiles == totalFiles => RestoreRequestStatus.Failed,
+                _ => RestoreRequestStatus.PartialSuccess
+            };
 
-            await _coldRestoreRepository.UpdateRequestStatusAsync(
-                requestId,
-                finalStatus,
-                completedAt: DateTime.UtcNow,
-                ct: ct);
-            if(string.IsNullOrEmpty(requestRecord.UserEmail))
+            // Only the caller that actually performs the transition notifies. Concurrent hydration
+            // workers can all observe the final file finishing, and each would otherwise email.
+            var finalized = await _coldRestoreRepository.TryCompleteRequestAsync(
+                requestId, finalStatus, DateTime.UtcNow, ct);
+
+            if (!finalized)
+            {
+                _logger.LogInformation(
+                    "Another worker finalized RequestId {RequestId} first; skipping duplicate notification",
+                    requestId);
                 return;
-             var result = await SendEmailAsync(requestRecord.UserEmail, requestRecord.SourceType.ToString(), finalStatus.ToString());
-             _logger.LogInformation("Email sent status {Result} for RequestId {RequestId}", result, requestId);
-            await NotifyEvent(requestRecord.SourceType.ToString(), finalStatus.ToString(), requestId, requestRecord.TenantId, ct);
+            }
 
+            await ExtendRetentionFromCompletionAsync(requestId, ct);
+
+            if (!string.IsNullOrEmpty(requestRecord.UserEmail))
+            {
+                var emailed = await SendEmailAsync(requestRecord.UserEmail, requestRecord.SourceType.ToString(), finalStatus.ToString(), ct);
+                _logger.LogInformation("Email sent status {Result} for RequestId {RequestId}", emailed, requestId);
+            }
+
+            // Deliberately outside the email guard: the in-app notification is what lets the UI
+            // drop its progress overlay, so a missing address must not suppress it.
+            await NotifyEvent(
+                requestRecord.SourceType.ToString(),
+                finalStatus.ToString(),
+                requestId,
+                requestRecord.TenantId,
+                requestRecord.UserId,
+                ct);
+        }
+
+        private static bool IsTerminal(RestoreRequestStatus status) =>
+            status is RestoreRequestStatus.Completed
+                   or RestoreRequestStatus.PartialSuccess
+                   or RestoreRequestStatus.Failed
+                   or RestoreRequestStatus.Cancelled;
+
+        private static bool IsTerminal(RestoreFileProgressStatus status) =>
+            status is RestoreFileProgressStatus.Completed
+                   or RestoreFileProgressStatus.Failed
+                   or RestoreFileProgressStatus.FileNotFound
+                   or RestoreFileProgressStatus.Cancelled;
+
+        /// <summary>
+        /// Restarts the retention clock from completion. Stamped at request time it can expire
+        /// mid-flight, which for archive restores (hours of rehydration) deletes the request record
+        /// out from under the job that is still working on it.
+        /// </summary>
+        private async Task ExtendRetentionFromCompletionAsync(string requestId, CancellationToken ct)
+        {
+            try
+            {
+                var retentionDays = await GetRetentionDaysAsync(ct);
+                await _coldRestoreRepository.ExtendRequestExpiryAsync(
+                    requestId, DateTime.UtcNow.AddDays(retentionDays), ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not extend retention for RequestId {RequestId}", requestId);
+            }
         }
         private async Task PrepareRestorePlanAsync(ColdRestoreMessage message, CancellationToken ct = default)
         {
             var dates = GenerateDateRange(message.StartDate, message.EndDate);
 
+            // Read once for the whole plan instead of per date per data type.
+            var retentionDays = await GetRetentionDaysAsync(ct);
+
             foreach (var date in dates)
             {
                 ct.ThrowIfCancellationRequested();
 
-                var traceExists = await _coldRestoreRepository.FileProgressExistsAsync(
-                    message.RequestId, RestoreDataType.Trace, date, ct);
-
-                if (!traceExists)
-                {
-                    var traceBlobPath = BuildTraceBlobPath(message.TenantId, date);
-                    var exists = await _blobStorage.ExistsAsync(traceBlobPath, ct);
-                    var _retentionDays = await GetRetentionDaysAsync();
-                    if (exists)
-                    {
-                        var traceRecord = new LogTraceRestoreFileProgressRecord
-                        {
-                            RequestId = message.RequestId,
-                            TenantId = message.TenantId,
-                            DataType = RestoreDataType.Trace,
-                            FileDate = date.Date,
-                            BlobPath = traceBlobPath,
-                            Status = RestoreFileProgressStatus.Pending,
-                            Timestamp = DateTime.UtcNow,
-                            ExpireAt = DateTime.UtcNow.AddDays(_retentionDays)
-                        };
-                        await _coldRestoreRepository.CreateFileProgressAsync(traceRecord, ct);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Blob not found {BlobPath}", traceBlobPath);
-                    }
-                }
-
-                var logExists = await _coldRestoreRepository.FileProgressExistsAsync(
-                    message.RequestId, RestoreDataType.Log, date, ct);
-
-                if (!logExists)
-                {
-                    var logBlobPath = BuildLogBlobPath(message.TenantId, date, message.ServiceName);
-                    var exists = await _blobStorage.ExistsAsync(logBlobPath, ct);
-                    var _retentionDays = await GetRetentionDaysAsync();
-                    if (exists)
-                    {
-                        var logRecord = new LogTraceRestoreFileProgressRecord
-                        {
-                            RequestId = message.RequestId,
-                            TenantId = message.TenantId,
-                            DataType = RestoreDataType.Log,
-                            FileDate = date.Date,
-                            BlobPath = logBlobPath,
-                            Status = RestoreFileProgressStatus.Pending,
-                            Timestamp = DateTime.UtcNow,
-                            ExpireAt = DateTime.UtcNow.AddDays(_retentionDays)
-                        };
-                        await _coldRestoreRepository.CreateFileProgressAsync(logRecord, ct);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Blob not found {BlobPath}", logBlobPath);
-                    }
-                }
+                await PlanColdFileAsync(message, date, RestoreDataType.Trace, retentionDays, ct);
+                await PlanColdFileAsync(message, date, RestoreDataType.Log, retentionDays, ct);
             }
 
             var allFiles = await _coldRestoreRepository.GetFileProgressByRequestIdAsync(message.RequestId, ct);
             await _coldRestoreRepository.UpdateTotalFilesAsync(message.RequestId, allFiles.Count, ct);
+        }
+
+        private async Task PlanColdFileAsync(
+            ColdRestoreMessage message,
+            DateTime date,
+            RestoreDataType dataType,
+            int retentionDays,
+            CancellationToken ct)
+        {
+            var alreadyPlanned = await _coldRestoreRepository.FileProgressExistsAsync(
+                message.RequestId, dataType, date, ct);
+
+            if (alreadyPlanned)
+                return;
+
+            var blobPath = dataType == RestoreDataType.Trace
+                ? RestoreBlobPath.ForTraces(message.TenantId, date)
+                : RestoreBlobPath.ForLogs(message.TenantId, date);
+
+            var tier = await _blobStorage.GetTierStateAsync(blobPath, ct);
+
+            if (!tier.Exists)
+            {
+                _logger.LogWarning("Blob not found {BlobPath}", blobPath);
+                return;
+            }
+
+            var record = new LogTraceRestoreFileProgressRecord
+            {
+                RequestId = message.RequestId,
+                TenantId = message.TenantId,
+                DataType = dataType,
+                FileDate = date.Date,
+                BlobPath = blobPath,
+                Timestamp = DateTime.UtcNow,
+                ExpireAt = DateTime.UtcNow.AddDays(retentionDays),
+                SourceType = RestoreSourceType.Cold
+            };
+
+            if (tier.IsArchived)
+            {
+                // Queuing this would make OpenReadAsync return 409 InvalidBlobTier and surface a raw
+                // Azure message. Recording it as failed keeps the reason visible and actionable.
+                record.Status = RestoreFileProgressStatus.Failed;
+                record.ErrorMessage =
+                    $"Blob {blobPath} is in the Archive tier and cannot be read by a cold restore. " +
+                    "Request an archive restore for this date instead.";
+                record.CompletedAt = DateTime.UtcNow;
+
+                _logger.LogWarning(
+                    "Cold restore skipped Archive-tier blob {BlobPath} for RequestId {RequestId}",
+                    blobPath, message.RequestId);
+            }
+            else
+            {
+                record.Status = RestoreFileProgressStatus.Pending;
+            }
+
+            await _coldRestoreRepository.CreateFileProgressAsync(record, ct);
         }
         public async Task ExecutePendingFilesAsync(string requestId, CancellationToken ct = default)
         {
@@ -442,6 +607,12 @@ namespace Cloud.LmtService.Services.ColdRestore
                 .OrderBy(x => x.FileDate)
                 .ThenBy(x => x.DataType)
                 .ToList();
+
+            // Linked source so a cancellation observed between files drains the loop promptly
+            // instead of restoring the rest of what can be a seven-day range.
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var wasCancelled = false;
+
             var options = new ParallelOptions
             {
                 MaxDegreeOfParallelism = 3,
@@ -450,6 +621,16 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             await Parallel.ForEachAsync(ordered, options, async (file, fileCt) =>
             {
+                if (cancellation.IsCancellationRequested)
+                    return;
+
+                if (await _coldRestoreRepository.IsRequestCancelledAsync(requestId, fileCt))
+                {
+                    wasCancelled = true;
+                    await cancellation.CancelAsync();
+                    return;
+                }
+
                 try
                 {
                     await _coldRestoreRepository.UpdateFileProgressAsync(
@@ -509,7 +690,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                         logRowsIncrement: 0,
                         ct: CancellationToken.None);
                 }
-                catch (RequestFailedException ex) when (ex.Status == 404)
+                catch (RequestFailedException ex) when (ex.Status is 404 or 409)
                 {
                     _logger.LogWarning(
                         ex,
@@ -560,6 +741,14 @@ namespace Cloud.LmtService.Services.ColdRestore
                         ct: CancellationToken.None);
                 }
             });
+
+            if (wasCancelled)
+            {
+                // Drop again on the way out: the cancel endpoint already purged, but a batch that
+                // was mid-insert when the cancellation landed can have written rows since.
+                _logger.LogInformation("RequestId {RequestId} was cancelled; discarding partially restored data", requestId);
+                await _coldRestoreResultRepository.DropResultCollectionsAsync(requestId, CancellationToken.None);
+            }
         }
         private List<DateTime> GenerateDateRange(DateTime startDate, DateTime endDate)
         {
@@ -575,40 +764,8 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             return dates;
         }
-        private static string BuildTraceBlobPath(string tenantId, DateTime date)
-        {
-            var nextDate = date.AddDays(1);
-            return $"{Constants.BackupSubdirectory}/{tenantId}/traces/traces_{tenantId}_{date:yyyyMMdd}_{nextDate:yyyyMMdd}.parquet";
-        }
-        private static string BuildLogBlobPath(string tenantId, DateTime date, string? serviceName)
-        {
-            var serviceSegment = string.IsNullOrWhiteSpace(serviceName)
-                ? "logs"
-                : serviceName;
-            var nextDate = date.AddDays(1);
-            return $"{Constants.BackupSubdirectory}/{tenantId}/logs/{serviceSegment}_{tenantId}_{date:yyyyMMdd}_{nextDate:yyyyMMdd}.parquet";
-        }
         public async Task<int> RestoreTraceFileAsync(LogTraceRestoreFileProgressRecord file, CancellationToken ct = default)
         {
-            var existingRows = await _coldRestoreResultRepository.GetTraceResultsByBlobPathAsync(file.RequestId, file.TenantId, file.BlobPath, ct);
-            if (existingRows.Count > 0)
-            {
-                var sourceRows = existingRows
-                    .GroupBy(x => x.RequestId)
-                    .First()
-                    .ToList();
-
-                await _coldRestoreResultRepository.DeleteTraceResultsByRequestAndDateAsync(file.RequestId, file.FileDate, ct);
-                await _coldRestoreResultRepository.CloneTraceResultsForRequestAsync(
-                    newRequestId: file.RequestId,
-                    tenantId: file.TenantId,
-                    sourceDate: file.FileDate,
-                    blobPath: file.BlobPath,
-                    existingRows: sourceRows,
-                    ct: ct);
-                return sourceRows.Count;
-            }
-
             await using var stream = await _blobStorage.OpenReadAsync(file.BlobPath, ct);
             if (stream == null)
                 throw new FileNotFoundException($"Blob stream is null for path {file.BlobPath}");
@@ -663,25 +820,6 @@ namespace Cloud.LmtService.Services.ColdRestore
 
         public async Task<int> RestoreLogFileAsync(LogTraceRestoreFileProgressRecord file, CancellationToken ct = default)
         {
-            var existingRows = await _coldRestoreResultRepository.GetLogResultsByBlobPathAsync(file.RequestId, file.TenantId, file.BlobPath, ct);
-            if (existingRows.Count > 0)
-            {
-                var sourceRows = existingRows
-                    .GroupBy(x => x.RequestId)
-                    .First()
-                    .ToList();
-
-                await _coldRestoreResultRepository.DeleteLogResultsByRequestAndDateAsync(file.RequestId, file.FileDate, ct);
-                await _coldRestoreResultRepository.CloneLogResultsForRequestAsync(
-                    newRequestId: file.RequestId,
-                    tenantId: file.TenantId,
-                    sourceDate: file.FileDate,
-                    blobPath: file.BlobPath,
-                    existingRows: sourceRows,
-                    ct: ct);
-                return sourceRows.Count;
-            }
-
             await using var stream = await _blobStorage.OpenReadAsync(file.BlobPath, ct);
             if (stream == null)
                 throw new FileNotFoundException($"Blob stream is null for path {file.BlobPath}");
@@ -881,7 +1019,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     if (string.Equals(request.DataType, TraceDataType, StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(request.DataType, "Both", StringComparison.OrdinalIgnoreCase))
                     {
-                        var traceBlobPath = BuildTraceBlobPath(tenantId, date);
+                        var traceBlobPath = RestoreBlobPath.ForTraces(tenantId, date);
 
                         var added = await AddBlobToZipIfExistsAsync(
                             archive,
@@ -898,7 +1036,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                     if (string.Equals(request.DataType, "Log", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(request.DataType, "Both", StringComparison.OrdinalIgnoreCase))
                     {
-                        var logBlobPath = BuildLogBlobPath(tenantId, date, null);
+                        var logBlobPath = RestoreBlobPath.ForLogs(tenantId, date);
 
                         var added = await AddBlobToZipIfExistsAsync(
                             archive,
@@ -952,7 +1090,7 @@ namespace Cloud.LmtService.Services.ColdRestore
                 _logger.LogWarning(ex, "Blob not found for zip download. BlobPath: {BlobPath}", blobPath);
                 return false;
             }
-            catch (RequestFailedException ex) when (ex.Status == 404)
+            catch (RequestFailedException ex) when (ex.Status is 404 or 409)
             {
                 _logger.LogWarning(ex, "Blob not found for zip download. BlobPath: {BlobPath}", blobPath);
                 return false;

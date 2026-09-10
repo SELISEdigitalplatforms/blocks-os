@@ -99,4 +99,26 @@ namespace Cloud.LmtService.Models.ColdRestore
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
     }
+
+    /// <summary>
+    /// Cancels an in-flight cold or archive restore. RequestId alone identifies it; the caller's
+    /// tenant is checked against the stored request rather than trusted from the payload.
+    /// </summary>
+    public class CancelRestoreRequest
+    {
+        public required string RequestId { get; set; }
+    }
+
+    public class CancelRestoreResponse
+    {
+        public string RequestId { get; set; } = string.Empty;
+
+        /// <summary>Status after the attempt — Cancelled on success, otherwise the terminal status it already had.</summary>
+        public string Status { get; set; } = string.Empty;
+
+        /// <summary>False when the request had already finished, so there was nothing to stop.</summary>
+        public bool Cancelled { get; set; }
+
+        public string Message { get; set; } = string.Empty;
+    }
 }

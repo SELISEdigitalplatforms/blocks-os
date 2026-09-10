@@ -10,15 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import { Label } from "@/components/ui-kits/label/label";
-import {
-  ARCHIVE_TRACE_RANGE_DAYS,
-  COLD_TRACE_RANGE_DAYS,
-  MAX_TRACE_REQUEST_DAYS,
-  TRACE_REQUEST_SOURCE_TYPE,
-} from "@blocks-lmt/constants/trace.constant";
+import { TRACE_REQUEST_SOURCE_TYPE } from "@blocks-lmt/constants/trace.constant";
 import { useGetRestoredDataRetentionDays } from "@blocks-lmt/hooks/use-trace";
-import { endOfDay, format, startOfDay, subDays } from "date-fns";
+import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
+import { parseCalendarDay, toUtcCalendarDay } from "@blocks-lmt/utils/restore-date-range";
 import { DateRange } from "react-day-picker";
 import { DateRangePicker } from "../date-range-picker";
 
@@ -48,27 +44,42 @@ export function RequestTracesModal({
 
   const handleSend = async () => {
     if (!dateRange?.from || !dateRange?.to) return;
-    const formatUtcDate = (date: Date) => `${date.toISOString().slice(0, 19)}Z`;
 
+    // Send the calendar day the user clicked, not the instant it maps to. Converting a local
+    // midnight with toISOString() shifts the day in every zone but UTC, and the API compares
+    // dates — so the restore would run for a day the user did not choose, or be refused as
+    // outside the window.
     await onSubmit({
-      startDate: formatUtcDate(startOfDay(dateRange.from)),
-      endDate: formatUtcDate(endOfDay(dateRange.to)),
+      startDate: toUtcCalendarDay(dateRange.from),
+      endDate: toUtcCalendarDay(dateRange.to),
     });
   };
 
-  const coldDays = retentionData?.coldDataSelectionDays ?? COLD_TRACE_RANGE_DAYS.MIN;
-  const archiveDays = retentionData?.archiveDataSelectionDays ?? ARCHIVE_TRACE_RANGE_DAYS.MIN;
-  const today = startOfDay(new Date());
-  const maxDate =
-    sourceType === TRACE_REQUEST_SOURCE_TYPE.cold
-      ? subDays(today, coldDays)
-      : subDays(today, archiveDays + 1);
-  const minDate =
-    sourceType === TRACE_REQUEST_SOURCE_TYPE.cold ? subDays(today, archiveDays) : undefined;
-  const helperText = minDate
-    ? `Allowed range: ${format(minDate, "MMM d, yyyy")} to ${format(maxDate, "MMM d, yyyy")}.`
-    : `Allowed range: any date before ${format(maxDate, "MMM d, yyyy")}.`;
-  const disabledDays = minDate ? [{ after: maxDate }, { before: minDate }] : [{ after: maxDate }];
+  const isCold = sourceType === TRACE_REQUEST_SOURCE_TYPE.cold;
+  const maxDate = parseCalendarDay(
+    isCold ? retentionData?.coldLatestDate : retentionData?.archiveLatestDate,
+  );
+  // Archive keeps blobs until they are deleted, so it has no earliest selectable day.
+  const minDate = isCold ? parseCalendarDay(retentionData?.coldEarliestDate) : undefined;
+  const maxDays = isCold ? retentionData?.coldMaxRangeDays : retentionData?.archiveMaxRangeDays;
+
+  // Until the API answers there are no bounds to enforce. Falling back to constants here used to
+  // offer a range made entirely of archive-tier dates, which the cold tier cannot serve.
+  const boundsReady = Boolean(maxDate) && (!isCold || Boolean(minDate));
+
+  const helperText = !maxDate
+    ? "Loading the available range…"
+    : minDate
+      ? `Allowed range: ${format(minDate, "MMM d, yyyy")} to ${format(maxDate, "MMM d, yyyy")}.`
+      // "before" would exclude this date, but it is selectable — cold picks up the day after it.
+      : `Allowed range: on or before ${format(maxDate, "MMM d, yyyy")}.`;
+
+  // Nothing to disable while the bounds are unknown; the picker itself is disabled until then.
+  const disabledDays = !maxDate
+    ? []
+    : minDate
+      ? [{ after: maxDate }, { before: minDate }]
+      : [{ after: maxDate }];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,13 +98,14 @@ export function RequestTracesModal({
         </Banner>
 
         <div className="space-y-2 py-4">
-          <Label>Date Range (Max {MAX_TRACE_REQUEST_DAYS} Days)</Label>
+          <Label>{maxDays ? `Date Range (Max ${maxDays} Days)` : "Date Range"}</Label>
           <DateRangePicker
             value={dateRange}
             onChange={setDateRange}
             disabledDays={disabledDays}
-            maxDays={MAX_TRACE_REQUEST_DAYS}
+            maxDays={maxDays}
             defaultMonth={maxDate}
+            disabled={!boundsReady}
           />
           <p className="mt-1 text-xs text-muted-foreground">{helperText}</p>
         </div>
@@ -102,7 +114,10 @@ export function RequestTracesModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button onClick={handleSend} disabled={!dateRange?.from || !dateRange?.to || isPending}>
+          <Button
+            onClick={handleSend}
+            disabled={!boundsReady || !dateRange?.from || !dateRange?.to || isPending}
+          >
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

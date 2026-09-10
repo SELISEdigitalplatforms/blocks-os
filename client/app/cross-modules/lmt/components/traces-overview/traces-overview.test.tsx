@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   useGetTraceStatus: vi.fn(),
   useStartColdTrace: vi.fn(),
   useStartArchiveTrace: vi.fn(),
+  useCancelRestoreRequest: vi.fn(),
   useGetRestoredTraces: vi.fn(),
   useGetRestoredDataRetentionDays: vi.fn(),
   isMobile: false,
@@ -35,6 +36,7 @@ vi.mock("@blocks-lmt/hooks/use-trace", () => ({
   useGetTraceStatus: () => ({ mutateAsync: h.useGetTraceStatus }),
   useStartColdTrace: () => ({ mutateAsync: h.useStartColdTrace, isPending: false }),
   useStartArchiveTrace: () => ({ mutateAsync: h.useStartArchiveTrace, isPending: false }),
+  useCancelRestoreRequest: () => ({ mutateAsync: h.useCancelRestoreRequest, isPending: false }),
   useGetRestoredTraces: (opt: unknown, queryOptions: unknown) =>
     h.useGetRestoredTraces(opt, queryOptions),
   useGetRestoredDataRetentionDays: (queryOptions: unknown) =>

@@ -37,6 +37,7 @@ namespace Cloud.LmtService.Utilities
             services.AddSingleton<ILogTraceRestoreService, LogTraceRestoreService>();
             services.AddSingleton<IArchiveRestoreRepository, ArchiveRestoreRepository>();
             services.AddSingleton<IArchiveRestoreService, ArchiveRestoreService>();
+            services.AddSingleton<IRestoreIndexInitializer, RestoreIndexInitializer>();
         }
     }
 }

@@ -292,6 +292,18 @@ export interface ITraceRequestPayload {
   usermail: string;
 }
 
+export interface ICancelRestorePayload {
+  RequestId: string;
+}
+
+export interface ICancelRestoreResponse {
+  requestId: string;
+  status: string;
+  /** False when the restore had already finished, so there was nothing to stop. */
+  cancelled: boolean;
+  message: string;
+}
+
 export interface IGetRequestIdPayload {
   SourceType: string;
   ProjectKey: string;
@@ -315,6 +327,18 @@ export interface IGetTraceStatusResponse {
 }
 
 export interface IGetRestoredDataRetentionDaysResponse {
+  /** Legacy day offsets, kept for callers that still compute their own bounds. */
   coldDataSelectionDays: number;
   archiveDataSelectionDays: number;
+  /**
+   * The selectable bounds as plain calendar days ("yyyy-MM-dd"). The API states them because the
+   * window is measured from UTC midnight: deriving it here would measure from the browser's local
+   * midnight, which is a different calendar day for part of every day outside UTC.
+   */
+  coldEarliestDate: string;
+  coldLatestDate: string;
+  archiveLatestDate: string;
+  /** How many days one request may span, per tier, from LMT configuration. */
+  coldMaxRangeDays: number;
+  archiveMaxRangeDays: number;
 }

@@ -48,6 +48,53 @@ namespace BlocksOs.Api.Controllers
    }
   }
 
+  /// <summary>
+  /// Drives the expired-data sweep on demand. The scheduler normally publishes this daily; the
+  /// endpoint exists so the job can be exercised before that cron entry is in place.
+  /// </summary>
+  [HttpPost]
+  public Task<ActionResult<SimpleResponse>> EnqueueCleanup ( ) =>
+      EnqueueMaintenanceAsync(Constants.LmtCleanupQueue, new RunCleanupCommand(), "cleanup");
+
+  /// <summary>
+  /// Drives a rehydration poll on demand. The scheduler should publish this every 15-30 minutes:
+  /// this poll is what turns a finished rehydration into restored rows.
+  /// </summary>
+  [HttpPost]
+  public Task<ActionResult<SimpleResponse>> EnqueueHydrationCheck ( ) =>
+      EnqueueMaintenanceAsync(Constants.LmtHydrationCheckQueue, new RunHydrationCheckCommand(), "hydration check");
+
+  private async Task<ActionResult<SimpleResponse>> EnqueueMaintenanceAsync<T> (
+      string queueName, T payload, string description ) where T : class
+  {
+   try
+   {
+    _logger.LogInformation("Enqueueing {Description} onto {QueueName}", description, queueName);
+
+    await _messageClient.SendToConsumerAsync(
+        new ConsumerMessage<T>
+        {
+         ConsumerName = queueName,
+         Payload = payload
+        });
+
+    return Ok(new SimpleResponse
+    {
+     Success = true,
+     Message = $"{description} enqueued successfully. Check worker logs for details."
+    });
+   }
+   catch (Exception ex)
+   {
+    _logger.LogError(ex, "Error enqueueing {Description}", description);
+    return StatusCode(500, new SimpleResponse
+    {
+     Success = false,
+     Message = $"Failed to enqueue {description}: {ex.Message}"
+    });
+   }
+  }
+
   private Task EnqueueBackupCommandAsync ( PublishScheduleCommand message )
   {
    return _messageClient.SendToConsumerAsync(

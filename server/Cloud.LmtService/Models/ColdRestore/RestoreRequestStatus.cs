@@ -6,7 +6,8 @@ namespace Cloud.LmtService.Models.ColdRestore
         InProgress,
         Completed,
         PartialSuccess,
-        Failed
+        Failed,
+        Cancelled
     }
 
     public enum RestoreFileProgressStatus
@@ -15,7 +16,8 @@ namespace Cloud.LmtService.Models.ColdRestore
         Processing,
         Completed,
         FileNotFound,
-        Failed
+        Failed,
+        Cancelled
     }
 
     public enum RestoreDataType

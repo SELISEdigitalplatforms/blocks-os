@@ -12,6 +12,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -48,6 +49,88 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         private IMongoCollection<RestoreLogResultRecord> GetLogResultsCollection(string requestId)
             => _database.GetCollection<RestoreLogResultRecord>($"Logs_{requestId}");
 
+        // Result collections are named per request, so their indexes can only be created once the
+        // request exists. Built on first insert and remembered, so a batched restore pays for this
+        // once per collection rather than once per batch. Without them the UI's list query is a
+        // full scan plus an in-memory sort, which trips Mongo's 32MB sort limit on a large day.
+        private readonly HashSet<string> _indexedCollections = [];
+        private readonly SemaphoreSlim _indexLock = new(1, 1);
+
+        private async Task EnsureTraceIndexesAsync(IMongoCollection<RestoreTraceResultRecord> collection, CancellationToken ct)
+        {
+            if (!await ClaimIndexCreationAsync(collection.CollectionNamespace.FullName, ct))
+                return;
+
+            var keys = Builders<RestoreTraceResultRecord>.IndexKeys;
+
+            await collection.Indexes.CreateManyAsync(
+            [
+                // GetRestoredTracesAsync: root spans for the tenant, newest first.
+                new CreateIndexModel<RestoreTraceResultRecord>(
+                    keys.Ascending(x => x.TenantId).Ascending(x => x.ParentId).Descending(x => x.Timestamp),
+                    new CreateIndexOptions { Name = "tenant_parentId_timestamp" }),
+
+                // GetRestoredTraceAsync: every span of one trace.
+                new CreateIndexModel<RestoreTraceResultRecord>(
+                    keys.Ascending(x => x.TenantId).Ascending(x => x.TraceId),
+                    new CreateIndexOptions { Name = "tenant_traceId" }),
+
+                // DeleteTraceResultsByRequestAndDateAsync, run before every file is re-streamed.
+                new CreateIndexModel<RestoreTraceResultRecord>(
+                    keys.Ascending(x => x.SourceDate),
+                    new CreateIndexOptions { Name = "sourceDate" }),
+
+                new CreateIndexModel<RestoreTraceResultRecord>(
+                    keys.Ascending(x => x.ExpireAt),
+                    new CreateIndexOptions { Name = "expireAt" })
+            ], ct);
+        }
+
+        private async Task EnsureLogIndexesAsync(IMongoCollection<RestoreLogResultRecord> collection, CancellationToken ct)
+        {
+            if (!await ClaimIndexCreationAsync(collection.CollectionNamespace.FullName, ct))
+                return;
+
+            var keys = Builders<RestoreLogResultRecord>.IndexKeys;
+
+            await collection.Indexes.CreateManyAsync(
+            [
+                new CreateIndexModel<RestoreLogResultRecord>(
+                    keys.Ascending(x => x.TenantId).Descending(x => x.Timestamp),
+                    new CreateIndexOptions { Name = "tenant_timestamp" }),
+
+                // GetRestoredLogsByTraceAsync, used by the trace detail view.
+                new CreateIndexModel<RestoreLogResultRecord>(
+                    keys.Ascending(x => x.TenantId).Ascending(x => x.TraceId),
+                    new CreateIndexOptions { Name = "tenant_traceId" }),
+
+                new CreateIndexModel<RestoreLogResultRecord>(
+                    keys.Ascending(x => x.SourceDate),
+                    new CreateIndexOptions { Name = "sourceDate" }),
+
+                new CreateIndexModel<RestoreLogResultRecord>(
+                    keys.Ascending(x => x.ExpireAt),
+                    new CreateIndexOptions { Name = "expireAt" })
+            ], ct);
+        }
+
+        /// <summary>Returns true for the first caller to reach a given collection, false afterwards.</summary>
+        private async Task<bool> ClaimIndexCreationAsync(string collectionName, CancellationToken ct)
+        {
+            if (_indexedCollections.Contains(collectionName))
+                return false;
+
+            await _indexLock.WaitAsync(ct);
+            try
+            {
+                return _indexedCollections.Add(collectionName);
+            }
+            finally
+            {
+                _indexLock.Release();
+            }
+        }
+
         public async Task InsertTraceResultsAsync(
             List<RestoreTraceResultRecord> rows,
             CancellationToken ct = default)
@@ -58,6 +141,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             try
             {
                 var collection = GetTraceResultsCollection(rows[0].RequestId);
+                await EnsureTraceIndexesAsync(collection, ct);
                 await collection.InsertManyAsync(rows, cancellationToken: ct);
             }
             catch (Exception ex)
@@ -83,6 +167,7 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             try
             {
                 var collection = GetLogResultsCollection(rows[0].RequestId);
+                await EnsureLogIndexesAsync(collection, ct);
                 await collection.InsertManyAsync(rows, cancellationToken: ct);
             }
             catch (Exception ex)
@@ -332,141 +417,64 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             }
         }
 
-        public async Task<List<RestoreTraceResultRecord>> GetTraceResultsByBlobPathAsync(string requestId, string tenantId, string blobPath, CancellationToken ct = default)
+        public async Task DropResultCollectionsAsync(string requestId, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(requestId) || string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(blobPath))
-                return [];
-
-            var collection = GetTraceResultsCollection(requestId);
-
-            return await collection
-                .Find(x => x.TenantId == tenantId && x.BlobPath == blobPath)
-                .ToListAsync(ct);
-        }
-
-        public async Task CloneTraceResultsForRequestAsync(string newRequestId, string tenantId, DateTime sourceDate, string blobPath, List<RestoreTraceResultRecord> existingRows, CancellationToken ct = default)
-        {
-            if (string.IsNullOrWhiteSpace(newRequestId) || existingRows == null || existingRows.Count == 0)
+            if (string.IsNullOrWhiteSpace(requestId))
                 return;
 
-            var collection = GetTraceResultsCollection(newRequestId);
-            var retentionDays = await GetRetentionDaysAsync(ct);
-
-            var clonedRows = existingRows.Select(x => new RestoreTraceResultRecord
-            {
-                RequestId = newRequestId,
-                TenantId = tenantId,
-                SourceDate = sourceDate.Date,
-                BlobPath = blobPath,
-                Timestamp = x.Timestamp,
-                TraceId = x.TraceId,
-                OperationName = x.OperationName,
-                StartTime = x.StartTime,
-                EndTime = x.EndTime,
-                Duration = x.Duration,
-                AttributesJson = x.AttributesJson,
-                ServiceName = x.ServiceName,
-                SpanId = x.SpanId,
-                ParentSpanId = x.ParentSpanId,
-                ParentId = x.ParentId,
-                Status = x.Status,
-                StatusDescription = x.StatusDescription,
-                Baggage = x.Baggage,
-                Kind = x.Kind,
-                ActivitySourceName = x.ActivitySourceName,
-                ExpireAt = DateTime.UtcNow.AddDays(retentionDays)
-            }).ToList();
-
-            foreach (var batch in clonedRows.Chunk(Constants.RestoreInsertBatchSize))
-            {
-                await collection.InsertManyAsync(batch, cancellationToken: ct);
-            }
+            // Dropping a collection that does not exist is a no-op, which keeps this idempotent —
+            // both the cancel endpoint and the worker call it for the same request.
+            await _database.DropCollectionAsync($"Trace_{requestId}", ct);
+            await _database.DropCollectionAsync($"Logs_{requestId}", ct);
         }
 
-        public async Task<List<RestoreLogResultRecord>> GetLogResultsByBlobPathAsync(string requestId, string tenantId, string blobPath, CancellationToken ct = default)
-        {
-            if (string.IsNullOrWhiteSpace(requestId) || string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(blobPath))
-                return [];
+        public async Task<long> DeleteExpiredTraceResultsAsync(CancellationToken ct = default) =>
+            await DropFullyExpiredCollectionsAsync<RestoreTraceResultRecord>("Trace_", x => x.ExpireAt, ct);
 
-            var collection = GetLogResultsCollection(requestId);
+        public async Task<long> DeleteExpiredLogResultsAsync(CancellationToken ct = default) =>
+            await DropFullyExpiredCollectionsAsync<RestoreLogResultRecord>("Logs_", x => x.ExpireAt, ct);
 
-            return await collection
-                .Find(x => x.TenantId == tenantId && x.BlobPath == blobPath)
-                .ToListAsync(ct);
-        }
-
-        public async Task CloneLogResultsForRequestAsync(string newRequestId, string tenantId, DateTime sourceDate, string blobPath, List<RestoreLogResultRecord> existingRows, CancellationToken ct = default)
-        {
-            if (string.IsNullOrWhiteSpace(newRequestId) || existingRows == null || existingRows.Count == 0)
-                return;
-
-            var collection = GetLogResultsCollection(newRequestId);
-            var retentionDays = await GetRetentionDaysAsync(ct);
-
-            var clonedRows = existingRows.Select(x => new RestoreLogResultRecord
-            {
-                RequestId = newRequestId,
-                TenantId = tenantId,
-                SourceDate = sourceDate.Date,
-                BlobPath = blobPath,
-                Timestamp = x.Timestamp,
-                TraceId = x.TraceId,
-                ServiceName = x.ServiceName,
-                SpanId = x.SpanId,
-                Level = x.Level,
-                Message = x.Message,
-                ActionName = x.ActionName,
-                Exception = x.Exception,
-                ExpireAt = DateTime.UtcNow.AddDays(retentionDays)
-            }).ToList();
-
-            foreach (var batch in clonedRows.Chunk(Constants.RestoreInsertBatchSize))
-            {
-                await collection.InsertManyAsync(batch, cancellationToken: ct);
-            }
-        }
-
-        public async Task<long> DeleteExpiredTraceResultsAsync(CancellationToken ct = default)
+        /// <summary>
+        /// Drops each per-request result collection whose rows have <em>all</em> expired.
+        /// </summary>
+        /// <remarks>
+        /// The live-row check is the point. This used to drop a collection as soon as any single row
+        /// was expired, which destroyed still-valid rows alongside it — a real hazard for archive
+        /// restores, where rows land hours apart as each blob finishes rehydrating.
+        /// </remarks>
+        private async Task<long> DropFullyExpiredCollectionsAsync<TRecord>(
+            string namePrefix,
+            Expression<Func<TRecord, DateTime>> expireAtField,
+            CancellationToken ct)
         {
             using var cursor = await _database.ListCollectionNamesAsync(null, ct);
             var names = await cursor.ToListAsync(ct);
+            var now = DateTime.UtcNow;
             long totalDropped = 0;
 
-            foreach (var name in names.Where(n => n.StartsWith("Trace_")))
+            foreach (var name in names.Where(n => n.StartsWith(namePrefix, StringComparison.Ordinal)))
             {
-                var col = _database.GetCollection<RestoreTraceResultRecord>(name);
-                var expiredCount = await col.CountDocumentsAsync(
-                    Builders<RestoreTraceResultRecord>.Filter.Lt(x => x.ExpireAt, DateTime.UtcNow),
-                    cancellationToken: ct);
+                var collection = _database.GetCollection<TRecord>(name);
 
-                if (expiredCount > 0)
+                var hasLiveRows = await collection
+                    .Find(Builders<TRecord>.Filter.Gte(expireAtField, now))
+                    .AnyAsync(ct);
+
+                if (hasLiveRows)
+                    continue;
+
+                var rowCount = await collection.CountDocumentsAsync(
+                    Builders<TRecord>.Filter.Empty, cancellationToken: ct);
+
+                if (rowCount == 0)
                 {
+                    // An empty collection is left over from a purge; drop it without counting rows.
                     await _database.DropCollectionAsync(name, ct);
-                    totalDropped += expiredCount;
+                    continue;
                 }
-            }
 
-            return totalDropped;
-        }
-
-        public async Task<long> DeleteExpiredLogResultsAsync(CancellationToken ct = default)
-        {
-            using var cursor = await _database.ListCollectionNamesAsync(null, ct);
-            var names = await cursor.ToListAsync(ct);
-            long totalDropped = 0;
-            var date = DateTime.UtcNow;
-            foreach (var name in names.Where(n => n.StartsWith("Logs_")))
-            {
-                var col = _database.GetCollection<RestoreLogResultRecord>(name);
-                var expiredCount = await col.CountDocumentsAsync(
-                    Builders<RestoreLogResultRecord>.Filter.Lt(x => x.ExpireAt, DateTime.UtcNow),
-                    cancellationToken: ct);
-
-                if (expiredCount > 0)
-                {
-                    await _database.DropCollectionAsync(name, ct);
-                    totalDropped += expiredCount;
-                }
+                await _database.DropCollectionAsync(name, ct);
+                totalDropped += rowCount;
             }
 
             return totalDropped;

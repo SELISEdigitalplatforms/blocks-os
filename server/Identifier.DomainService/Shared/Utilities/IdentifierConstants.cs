@@ -84,13 +84,14 @@ namespace DomainService.Shared
             {
                 RabbitMqConfiguration = new RabbitMqConfiguration
                 {
+                    // The LMT backup/restore queues are deliberately absent: this host registers no
+                    // consumers for those message types, and binding them would let it win messages
+                    // that only LmtColdArchiveRestoreWorker can actually handle. They stay in the
+                    // Azure queue list below because Api sends through that configuration.
                     ConsumerSubscriptions = [ConsumerSubscription.BindToQueue(IdentifierQueueName),
                                              ConsumerSubscription.BindToQueue(GenericMigrationQueue),
                                              ConsumerSubscription.BindToQueue(DataCleanupQueue),
-                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic),
-                                             ConsumerSubscription.BindToQueue(StartBackupQueue),
-                                             ConsumerSubscription.BindToQueue(ColdRestoreQueue),
-                                             ConsumerSubscription.BindToQueue(ArchiveRestoreQueue),],
+                                             ConsumerSubscription.BindToQueue(MigrationCompletionTopic),],
                 }
             };
         }
