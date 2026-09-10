@@ -6,8 +6,8 @@ namespace Cloud.LmtService.Utilities
     {
         // ── External message queues (scheduler + restore triggers only) ──────────
         public const string StartBackupQueue = "start_backup_queue";
-        public const string ColdRestoreQueue = "cold-restore-queue";
-        public const string ArchiveRestoreQueue = "archive-restore-queue";
+        public const string ColdRestoreQueue = "blocks-cold-restore-queue";
+        public const string ArchiveRestoreQueue = "blocks-archive-restore-queue";
 
         /// <summary>Expired-data cleanup. Scheduled separately from the backup so a cleanup failure cannot force a whole backup retry.</summary>
         public const string LmtCleanupQueue = "lmt-cleanup-queue";
