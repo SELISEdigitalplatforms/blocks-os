@@ -250,6 +250,46 @@ namespace Cloud.LmtService.Services.ColdRestore
             }
 
         }
+        /// <summary>
+        /// What a finished restore says to the person who asked for it: a title that names the
+        /// outcome and a line saying what they can do next.
+        /// </summary>
+        /// <remarks>
+        /// Written out per outcome rather than interpolated from the enum, which read as
+        /// "Cold data restoration has been PartialSuccess." -- an internal name in front of a
+        /// reader who never sees the enum.
+        /// </remarks>
+        private static (string Title, string Description) RestoreNotificationText(string tier, string status)
+        {
+            var tierLabel = string.Equals(tier, nameof(RestoreSourceType.Archive), StringComparison.OrdinalIgnoreCase)
+                ? "Archive"
+                : "Cold storage";
+
+            var outcome = status switch
+            {
+                nameof(RestoreRequestStatus.Completed) => "complete",
+                nameof(RestoreRequestStatus.PartialSuccess) => "partly complete",
+                nameof(RestoreRequestStatus.Failed) => "failed",
+                nameof(RestoreRequestStatus.Cancelled) => "cancelled",
+                _ => "update"
+            };
+
+            var description = status switch
+            {
+                nameof(RestoreRequestStatus.Completed) =>
+                    "The logs and traces you requested are restored and ready to view.",
+                nameof(RestoreRequestStatus.PartialSuccess) =>
+                    "Some files could not be read, so the restored logs and traces are incomplete. What came back is ready to view.",
+                nameof(RestoreRequestStatus.Failed) =>
+                    "No logs or traces could be restored. You can request the same date range again from the Tracing page.",
+                nameof(RestoreRequestStatus.Cancelled) =>
+                    "The restore was cancelled, and its partially restored logs and traces were discarded.",
+                _ => "The restore has finished. Open the Tracing page to see what came back."
+            };
+
+            return ($"{tierLabel} restore {outcome}", description);
+        }
+
         private async Task<bool> NotifyEvent(string tier, string status, string? messageCoRelationId, string tenantId, string? userId, CancellationToken ct = default)
         {
             try
@@ -262,20 +302,22 @@ namespace Cloud.LmtService.Services.ColdRestore
                     return false;
                 }
 
+                var (title, description) = RestoreNotificationText(tier, status);
+
                 var requestData = new NotificationRequest
                 {
                     ConnectionId = messageCoRelationId,
                     UserIds = [userId ?? string.Empty],
                     DenormalizedPayload = JsonSerializer.Serialize(new
                     {
-                        title = "Log and Trace Restoration Status Update",
-                        description = $"{tier} data restoration has been {status}."
+                        title,
+                        description
                     }),
                     SaveDenormalizedPayloadAsAnObject = false,
                     ConfigurationName = config.NotificationConfigName,
                     ContentAvailable = true,
                     ResponseKey = "Log and Trace Restoration Status Update",
-                    ResponseValue = $"{tier} data restoration has been {status}.",
+                    ResponseValue = description,
                 };
 
                 // Prefer the ambient context's originating tenant, which is what the notification

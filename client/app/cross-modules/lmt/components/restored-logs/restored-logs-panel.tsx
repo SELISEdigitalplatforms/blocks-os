@@ -49,7 +49,7 @@ const formatExpiry = (value?: string) => {
  * points back there rather than offering a second way to spend.
  */
 export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProps) {
-  const { filter, pageSize, services, selectedServiceNames, selectedService } =
+  const { filter, pageSize, services, selectedServiceNames, selectedService, isServicesLoading } =
     useContext(LogsViewerContext);
   const basePath = useLmtBasePath();
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
@@ -113,8 +113,14 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
     ],
   );
 
+  // A restore holds the rows of every service together, and a query naming no service at all
+  // comes back with all of them. So a source whose service list is empty -- "My Service" on a
+  // project that registered none -- must ask for nothing rather than ask unfiltered, or it
+  // would answer with the managed services' rows under the other tab's name.
+  const noServices = services.length === 0;
+
   const { data, isLoading, isFetching } = useGetRestoredLogs(query, {
-    enabled: canRead && Boolean(restore.requestId),
+    enabled: canRead && Boolean(restore.requestId) && !noServices,
   });
 
   const rows = (data?.data ?? []) as ILog[];
@@ -132,6 +138,28 @@ export function RestoredLogsPanel({ sourceType, restore }: RestoredLogsPanelProp
   );
   const isServiceNarrowed = selectedServiceNames.length < new Set(everyServiceName).size;
   const hasFilter = Boolean(search || level || startDate || endDate) || isServiceNarrowed;
+
+  // Whose logs these are is settled before anything about the restore is: a source with no
+  // services has nothing to show on any tier, which is what the live list says under the same
+  // circumstances.
+  if (isServicesLoading) {
+    return (
+      <Card className="flex min-h-[280px] items-center justify-center">
+        <div className="flex flex-col items-center text-center text-muted-foreground">
+          <Loader2 className="mb-3 h-6 w-6 animate-spin" />
+          <p className="text-sm">Loading services...</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (noServices) {
+    return (
+      <Card className="flex min-h-[280px] items-center justify-center">
+        <p className="text-sm text-muted-foreground">No services found.</p>
+      </Card>
+    );
+  }
 
   // A failed lookup and an unrestored tier are indistinguishable in the data, so they are told
   // apart here: only one of them is worth offering a retry for, and only one of them is true.

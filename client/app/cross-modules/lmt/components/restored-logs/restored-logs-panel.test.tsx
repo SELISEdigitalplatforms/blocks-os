@@ -437,6 +437,40 @@ describe("RestoredLogsPanel", () => {
     expect(screen.getByRole("button", { name: /refresh/i })).toBeTruthy();
   });
 
+  /**
+   * The tab a reader is on decides whose logs they asked for. A restore holds every service's
+   * rows together, so a tab with no services of its own has to ask for nothing rather than ask
+   * without a service filter -- an unfiltered query answers with the managed services' rows,
+   * which is precisely what this tab is not.
+   */
+  describe("when the source has no services of its own", () => {
+    const noServices = {
+      services: [],
+      selectedService: null,
+      selectedServiceNames: [],
+    };
+
+    it("says so instead of listing another source's restored rows", () => {
+      renderPanel(COMPLETED, { ctx: noServices });
+
+      expect(screen.getByText(/no services found/i)).toBeTruthy();
+      expect(screen.queryByText(/smtp handshake failed/i)).toBeNull();
+    });
+
+    it("asks for no rows, so an unfiltered query cannot answer with every service's", () => {
+      renderPanel(COMPLETED, { ctx: noServices });
+
+      expect(h.getRestoredLogs.mock.calls.at(-1)?.[1]).toMatchObject({ enabled: false });
+    });
+
+    it("waits for the service list rather than claiming there are none", () => {
+      renderPanel(COMPLETED, { ctx: { ...noServices, isServicesLoading: true } });
+
+      expect(screen.queryByText(/no services found/i)).toBeNull();
+      expect(screen.getByText(/loading services/i)).toBeTruthy();
+    });
+  });
+
   /** Without this the panel flashes "nothing restored" on every load before the status lands. */
   it("waits for the status rather than claiming nothing was restored", () => {
     renderPanel({ ...NO_REQUEST, isLoading: true });
