@@ -5,7 +5,7 @@ namespace Cloud.LmtService.Utilities
     public static class Constants
     {
         // ── External message queues (scheduler + restore triggers only) ──────────
-        public const string StartBackupQueue = "start_backup_queue";
+        public const string StartBackupQueue = "log_trace_backup_queue";
         public const string ColdRestoreQueue = "blocks-cold-restore-queue";
         public const string ArchiveRestoreQueue = "blocks-archive-restore-queue";
 
