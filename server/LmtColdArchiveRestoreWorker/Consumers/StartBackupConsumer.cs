@@ -10,7 +10,7 @@ namespace LmtColdArchiveRestoreWorker.Consumers
     /// to ride along here; they now have their own queues so they can run on their own schedules
     /// and so a failure in one no longer forces the whole backup to be redelivered.
     /// </summary>
-    public class StartBackupConsumer : IConsumer<PublishScheduleCommand>
+    public class StartBackupConsumer : IConsumer<RunBackupCommand>
     {
         private readonly IArchiveService _archiveService;
         private readonly ILogger<StartBackupConsumer> _logger;
@@ -23,7 +23,7 @@ namespace LmtColdArchiveRestoreWorker.Consumers
             _logger = logger;
         }
 
-        public async Task Consume(PublishScheduleCommand message)
+        public async Task Consume(RunBackupCommand message)
         {
             try
             {

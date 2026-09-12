@@ -33,7 +33,7 @@ namespace XUnitTest.Worker
 
             var consumer = new StartBackupConsumer(archiveService.Object, logger.Object);
 
-            await consumer.Consume(new PublishScheduleCommand());
+            await consumer.Consume(new RunBackupCommand());
 
             archiveService.Verify(s => s.DeleteMiscellaneousLog(), Times.Once);
             archiveService.Verify(s => s.StartBackupAsync(), Times.Once);
@@ -52,7 +52,7 @@ namespace XUnitTest.Worker
 
             var consumer = new StartBackupConsumer(archiveService.Object, logger.Object);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => consumer.Consume(new PublishScheduleCommand()));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => consumer.Consume(new RunBackupCommand()));
         }
 
         [Fact]

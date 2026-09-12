@@ -42,11 +42,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         services.AddHttpClient();
         services.AddCloudLmtServices();
 
-        services.AddSingleton<IConsumer<PublishScheduleCommand>, StartBackupConsumer>();
-        services.AddSingleton<IConsumer<ArchiveRestoreMessage>, ArchiveRestoreConsumer>();
-        services.AddSingleton<IConsumer<ColdRestoreMessage>, ColdRestoreConsumer>();
-        services.AddSingleton<IConsumer<RunCleanupCommand>, ExpiredDataCleanupConsumer>();
-        services.AddSingleton<IConsumer<RunHydrationCheckCommand>, HydrationCheckConsumer>();
+        services.AddLmtConsumers();
         services.RegisterBlocksMailService();
      ApplicationConfigurations.ConfigureWorker(services, Constants.GetMessageConfiguration(secret.MessageConnectionString));
     });
