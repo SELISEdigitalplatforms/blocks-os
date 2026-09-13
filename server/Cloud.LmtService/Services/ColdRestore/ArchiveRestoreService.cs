@@ -25,6 +25,7 @@ namespace Cloud.LmtService.Services.ColdRestore
         private readonly ILmtArchiveRestoreConfigurationRepository _lmtConfigRepository;
         private readonly IMessageClient _messageClient;
         private readonly ILogTraceRestoreService _logTraceRestoreService;
+        private readonly IRestoreUserRepository _userRepository;
 
         public ArchiveRestoreService(
             ILogger<ArchiveRestoreService> logger,
@@ -33,7 +34,8 @@ namespace Cloud.LmtService.Services.ColdRestore
             ILogTraceRestoreRepository coldRestoreRepository,
             ILmtArchiveRestoreConfigurationRepository lmtConfigRepository,
             IMessageClient messageClient,
-            ILogTraceRestoreService logTraceRestoreService)
+            ILogTraceRestoreService logTraceRestoreService,
+            IRestoreUserRepository userRepository)
         {
             _logger = logger;
             _blobStorage = blobStorage;
@@ -42,16 +44,41 @@ namespace Cloud.LmtService.Services.ColdRestore
             _lmtConfigRepository = lmtConfigRepository ?? throw new ArgumentNullException(nameof(lmtConfigRepository));
             _messageClient = messageClient;
             _logTraceRestoreService = logTraceRestoreService;
+            _userRepository = userRepository;
         }
 
         public async Task<StartArchiveRestoreResponse> StartArchiveRestoreAsync(StartArchiveRestoreRequest request, CancellationToken ct = default)
         {
             var (normalizedStartDate, normalizedEndDate) = Constants.ValidateAndNormalize(request.StartDate, request.EndDate);
+
+            var config = await _lmtConfigRepository.GetLmtArchiveRestoreConfigurationsAsync(ct);
+            var window = RestoreWindow.ForArchive(
+                config.HotDataRetentionPeriodInDays, config.ColdToArchiveLifeCycleInDays, config.MaxRestoreRangeInDays, DateTime.UtcNow);
+
+            if (!window.Contains(normalizedStartDate) || !window.Contains(normalizedEndDate))
+            {
+                throw new ArgumentException(
+                    $"Archive restore is only available for dates {window.Describe()}. " +
+                    "More recent dates are served by a cold restore.");
+            }
+
+            // Archive has no earliest date, so without this a request could ask for years of
+            // rehydration in one go.
+            if (window.SpanExceedsLimit(normalizedStartDate, normalizedEndDate))
+            {
+                throw new ArgumentException(
+                    $"An archive restore may cover at most {window.MaxSpanDays} days.");
+            }
+
             var requestId = Guid.NewGuid().ToString("N");
             var now = DateTime.UtcNow;
             var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
 
-            var retentionDays = await GetRetentionDaysAsync(ct);
+            // See LogTraceRestoreService.StartRestoreAsync: the address comes from the user record,
+            // resolved here while the request context still exists.
+            var userId = BlocksContext.GetContext()?.UserId;
+
+            var retentionDays = config.RetentionDay;
             var requestRecord = new RestoreRequestRecord
             {
                 RequestId = requestId,
@@ -69,7 +96,8 @@ namespace Cloud.LmtService.Services.ColdRestore
                 LogRowsRestored = 0,
                 ExpireAt = DateTime.UtcNow.AddDays(retentionDays),
                 SourceType = RestoreSourceType.Archive,
-                UserEmail = request.UserMail
+                UserEmail = request.UserMail ?? await _userRepository.GetEmailByUserIdAsync(userId, ct),
+                UserId = userId
             };
 
             await _coldRestoreRepository.CreateRequestAsync(requestRecord);
@@ -137,15 +165,15 @@ namespace Cloud.LmtService.Services.ColdRestore
             foreach (var date in dates)
             {
                 ct.ThrowIfCancellationRequested();
-                await PlanFileAsync(message.RequestId, message.TenantId, date, RestoreDataType.Trace, message.ServiceName, ct);
-                await PlanFileAsync(message.RequestId, message.TenantId, date, RestoreDataType.Log, message.ServiceName, ct);
+                await PlanFileAsync(message.RequestId, message.TenantId, date, RestoreDataType.Trace, ct);
+                await PlanFileAsync(message.RequestId, message.TenantId, date, RestoreDataType.Log, ct);
             }
 
             var allFiles = await _coldRestoreRepository.GetFileProgressByRequestIdAsync(message.RequestId, ct);
             await _coldRestoreRepository.UpdateTotalFilesAsync(message.RequestId, allFiles.Count, ct);
         }
 
-        private async Task PlanFileAsync(string requestId, string tenantId, DateTime date, RestoreDataType dataType, string? serviceName, CancellationToken ct)
+        private async Task PlanFileAsync(string requestId, string tenantId, DateTime date, RestoreDataType dataType, CancellationToken ct)
         {
             var alreadyPlanned = await _coldRestoreRepository.FileProgressExistsAsync(requestId, dataType, date, ct);
             if (alreadyPlanned)
@@ -153,21 +181,20 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             var blobPath = dataType switch
             {
-                RestoreDataType.Trace => BuildTraceBlobPath(tenantId, date),
-                RestoreDataType.Log => BuildLogBlobPath(tenantId, date, serviceName),
+                RestoreDataType.Trace => RestoreBlobPath.ForTraces(tenantId, date),
+                RestoreDataType.Log => RestoreBlobPath.ForLogs(tenantId, date),
                 _ => throw new InvalidOperationException($"Unsupported data type {dataType}")
             };
 
-            var exists = await _blobStorage.ExistsAsync(blobPath, ct);
-            if (!exists)
+            // One call answers existence and tier; asking separately cost two round trips per file.
+            var tier = await _blobStorage.GetTierStateAsync(blobPath, ct);
+            if (!tier.Exists)
             {
                 _logger.LogWarning("Blob not found during planning: {BlobPath}", blobPath);
                 return;
             }
 
-            var properties = await _blobStorage.GetPropertiesAsync(blobPath, ct);
-
-            if (properties.AccessTier == AccessTier.Archive)
+            if (tier.IsArchived)
             {
                 await CreateArchiveTierProgressAsync(requestId, tenantId, date, blobPath, dataType, ct);
             }
@@ -247,6 +274,8 @@ namespace Cloud.LmtService.Services.ColdRestore
                 .ThenBy(x => x.DataType)
                 .ToList();
 
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
             var options = new ParallelOptions
             {
                 MaxDegreeOfParallelism = 3,
@@ -255,6 +284,15 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             await Parallel.ForEachAsync(ordered, options, async (file, fileCt) =>
             {
+                if (cancellation.IsCancellationRequested)
+                    return;
+
+                if (await _coldRestoreRepository.IsRequestCancelledAsync(requestId, fileCt))
+                {
+                    await cancellation.CancelAsync();
+                    return;
+                }
+
                 await RestoreSingleFileAsync(file, fileCt);
             });
         }
@@ -306,7 +344,7 @@ namespace Cloud.LmtService.Services.ColdRestore
 
                 await MarkFileFailedAsync(progressId, file, RestoreFileProgressStatus.FileNotFound, ex.Message, CancellationToken.None);
             }
-            catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+            catch (Azure.RequestFailedException ex) when (ex.Status is 404 or 409)
             {
                 _logger.LogWarning(ex,
                     "Blob not found for RequestId {RequestId}, BlobPath {BlobPath}",
@@ -345,6 +383,16 @@ namespace Cloud.LmtService.Services.ColdRestore
                 ct: ct);
         }
 
+        public async Task DeleteExpiredHydrationJobsAsync(CancellationToken ct = default)
+        {
+            var deleted = await _archiveRepository.DeleteExpiredHydrationJobsAsync(ct);
+
+            if (deleted > 0)
+            {
+                _logger.LogInformation("Deleted {Count} expired hydration job(s)", deleted);
+            }
+        }
+
         public async Task CheckPendingHydrationsAsync(CancellationToken ct = default)
         {
             _logger.LogInformation("Starting hydration check job");
@@ -373,28 +421,50 @@ namespace Cloud.LmtService.Services.ColdRestore
         {
             try
             {
-                var exists = await _blobStorage.ExistsAsync(job.BlobPath, ct);
+                var tier = await _blobStorage.GetTierStateAsync(job.BlobPath, ct);
 
-                if (!exists)
+                if (!tier.Exists)
                 {
                     _logger.LogWarning("Hydration blob not found: {BlobPath}", job.BlobPath);
                     await HandleHydrationFailureAsync(job, $"Blob not found: {job.BlobPath}", ct);
                     return;
                 }
 
-                var properties = await _blobStorage.GetPropertiesAsync(job.BlobPath, ct);
-
-                if (properties.AccessTier == AccessTier.Archive)
+                if (tier.IsArchived)
                 {
+                    var waitedFor = DateTime.UtcNow - job.RequestedAt;
+
+                    // Without a deadline a blob that never rehydrates is re-polled forever and its
+                    // request never leaves InProgress, so the user can never ask again.
+                    if (waitedFor > Constants.MaxHydrationWait)
+                    {
+                        _logger.LogError(
+                            "Blob {BlobPath} has been rehydrating for {Hours:F1}h, past the {Limit:F0}h limit. Failing the request.",
+                            job.BlobPath, waitedFor.TotalHours, Constants.MaxHydrationWait.TotalHours);
+
+                        await HandleHydrationFailureAsync(
+                            job,
+                            $"Rehydration did not finish within {Constants.MaxHydrationWait.TotalHours:F0} hours.",
+                            ct);
+                        return;
+                    }
+
                     await _archiveRepository.UpdateHydrationStatusByIdAsync(
                         job.Id,
                         ArchiveHydrationStatus.RehydrationRequested,
                         lastCheckedAt: DateTime.UtcNow,
                         ct: ct);
 
+                    // Keep the request's bookkeeping alive while we wait. Retention is stamped from
+                    // when the restore was asked for, and a rehydration can outlast it — the
+                    // cleanup job would otherwise delete the request this job belongs to.
+                    var retentionDays = await GetRetentionDaysAsync(ct);
+                    await _coldRestoreRepository.ExtendRequestExpiryAsync(
+                        job.RequestId, DateTime.UtcNow.AddDays(retentionDays), ct);
+
                     _logger.LogInformation(
-                        "Blob {BlobPath} is still in Archive tier. Waiting for hydration.",
-                        job.BlobPath);
+                        "Blob {BlobPath} is still in Archive tier after {Hours:F1}h. Waiting for hydration.",
+                        job.BlobPath, waitedFor.TotalHours);
                     return;
                 }
 
@@ -585,19 +655,5 @@ namespace Cloud.LmtService.Services.ColdRestore
             return config.RetentionDay;
         }
 
-        private static string BuildTraceBlobPath(string tenantId, DateTime date)
-        {
-            var nextDate = date.AddDays(1);
-            return $"{Constants.BackupSubdirectory}/{tenantId}/traces/traces_{tenantId}_{date:yyyyMMdd}_{nextDate:yyyyMMdd}.parquet";
-        }
-
-        private static string BuildLogBlobPath(string tenantId, DateTime date, string? serviceName)
-        {
-            var serviceSegment = string.IsNullOrWhiteSpace(serviceName)
-                ? "logs"
-                : serviceName;
-            var nextDate = date.AddDays(1);
-            return $"{Constants.BackupSubdirectory}/{tenantId}/logs/{serviceSegment}_{tenantId}_{date:yyyyMMdd}_{nextDate:yyyyMMdd}.parquet";
-        }
     }
 }

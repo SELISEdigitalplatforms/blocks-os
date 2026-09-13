@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace Cloud.LmtService.Models.Shared
 {
+    [BsonIgnoreExtraElements]
     public class LmtArchiveRestoreConfigurations
     {
         [BsonId]
@@ -26,6 +27,9 @@ namespace Cloud.LmtService.Models.Shared
 
         [BsonElement("ColdToArchiveLifeCycleInDays")]
         public int ColdToArchiveLifeCycleInDays { get; set; }
+
+        [BsonElement("MaxRestoreRangeInDays")]
+        public int MaxRestoreRangeInDays { get; set; }
 
         [BsonElement("EmailTemplateConfig")]
         public LogTraceRestoreEmailTConfig? EmailTemplateConfig { get; set; }

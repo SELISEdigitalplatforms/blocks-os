@@ -93,6 +93,13 @@ export const AddEditProviderModal = ({
     register,
     formState: { errors, isDirty },
   } = form;
+  // The uploaded file lives outside react-hook-form, so `isDirty` never sees it. Gating Save on
+  // `isDirty` alone therefore made every optional field mandatory in practice: an admin who picked
+  // a certificate and nothing else could not submit, and had to type into Password or Issuer just
+  // to enable the button. Scoped to upload-file mode so a file left over from switching back to
+  // Public URL does not enable Save on an empty form.
+  const hasPendingCertificateFile =
+    certificateMethod === "upload-file" && (certificateFiles?.length ?? 0) > 0;
   // Update form when existingData changes
   useEffect(() => {
     if (existingData) {
@@ -460,7 +467,7 @@ export const AddEditProviderModal = ({
           </DialogClose>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !isDirty}
+            disabled={isSubmitting || (!isDirty && !hasPendingCertificateFile)}
             className="w-full sm:w-auto"
           >
             {isSubmitting ? "Saving..." : "Save"}

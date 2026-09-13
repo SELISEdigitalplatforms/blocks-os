@@ -17,10 +17,12 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         Task<(IQueryable<LogProjection>, long)> GetRestoredLogsAsync(GetRestoredLogsRequest request, CancellationToken ct = default);
         Task DeleteTraceResultsByRequestAndDateAsync(string requestId, DateTime sourceDate, CancellationToken ct = default);
         Task DeleteLogResultsByRequestAndDateAsync(string requestId, DateTime sourceDate, CancellationToken ct = default);
-        Task<List<RestoreTraceResultRecord>> GetTraceResultsByBlobPathAsync(string requestId, string tenantId, string blobPath, CancellationToken ct = default);
-        Task CloneTraceResultsForRequestAsync(string newRequestId, string tenantId, DateTime sourceDate, string blobPath, List<RestoreTraceResultRecord> existingRows, CancellationToken ct = default);
-        Task<List<RestoreLogResultRecord>> GetLogResultsByBlobPathAsync(string requestId, string tenantId, string blobPath, CancellationToken ct = default);
-        Task CloneLogResultsForRequestAsync(string newRequestId, string tenantId, DateTime sourceDate, string blobPath, List<RestoreLogResultRecord> existingRows, CancellationToken ct = default);
+        /// <summary>
+        /// Drops both per-request result collections. Used when a restore is cancelled, so partial
+        /// rows do not linger until their retention elapses.
+        /// </summary>
+        Task DropResultCollectionsAsync(string requestId, CancellationToken ct = default);
+
         Task<long> DeleteExpiredTraceResultsAsync(CancellationToken ct = default);
         Task<long> DeleteExpiredLogResultsAsync(CancellationToken ct = default);
         Task<IQueryable<SingleTraceProjection>> GetRestoredTraceAsync(GetRestoredTraceRequest request, CancellationToken ct = default);

@@ -26,6 +26,13 @@ export const OidcResetPasswordPreview = (props: OidcPagePreviewProps) => {
         <p>{copy.logoutFromDevicesLabel}</p>
       </div>
       <PreviewButton>{copy.submitButton}</PreviewButton>
+      <p className="mt-3 text-center text-xs text-[var(--accent)] sm:mt-4">
+        {copy.backToLoginButton}
+      </p>
+      <div className="mt-3 rounded-lg border border-[var(--border-strong)] p-2.5 sm:mt-4 sm:p-3">
+        <p className="text-xs text-[var(--danger)]">{copy.missingCodeMessage}</p>
+        <p className="mt-2 text-xs text-[var(--accent)]">{copy.requestNewLinkButton}</p>
+      </div>
       <PreviewSuccess title={copy.successTitle} subtitle={copy.successSubtitle} />
     </OidcPreviewShell>
   );

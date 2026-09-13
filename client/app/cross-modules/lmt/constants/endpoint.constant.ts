@@ -28,6 +28,7 @@ export const RESTORE_ENDPOINTS = {
   START_COLD_TRACE: `/api${RESTORE_SUBPATH}/StartColdRestoreProcess`,
   START_ARCHIVE_TRACE: `/api${RESTORE_SUBPATH}/StartArchiveRestoreProcess`,
   GET_TRACE_STATUS: `/api${RESTORE_SUBPATH}/Status`,
+  CANCEL_REQUEST: `/api${RESTORE_SUBPATH}/CancelRestoreProcess`,
   GET_RESTORED_TRACES: `/api${RESTORE_SUBPATH}/GetRestoredTraces`,
   GET_RESTORED_TRACE: `/api${RESTORE_SUBPATH}/GetRestoredTrace`,
   GET_RESTORED_LOGS: `/api${RESTORE_SUBPATH}/GetRestoredLogs`,

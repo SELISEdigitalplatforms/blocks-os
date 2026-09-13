@@ -15,6 +15,8 @@ import {
   IGetRequestIdResponse,
   IGetTraceStatusResponse,
   IGetRestoredDataRetentionDaysResponse,
+  ICancelRestorePayload,
+  ICancelRestoreResponse,
 } from "../models/trace.model";
 import { IBlocksServiceItem } from "../models/log.model";
 import { IAPIResponse } from "@/models/api-response";
@@ -177,6 +179,17 @@ export class TraceService {
       };
     } catch (error) {
       console.error("Failed to fetch restored trace:", error);
+      throw error;
+    }
+  }
+
+  async cancelRestoreRequest({ RequestId }: ICancelRestorePayload): Promise<ICancelRestoreResponse> {
+    try {
+      return await http.post<ICancelRestoreResponse>(RESTORE_ENDPOINTS.CANCEL_REQUEST, {
+        requestId: RequestId,
+      });
+    } catch (error) {
+      console.error("Failed to cancel restore request:", error);
       throw error;
     }
   }

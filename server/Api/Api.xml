@@ -4,6 +4,18 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueCleanup">
+            <summary>
+            Drives the expired-data sweep on demand. The scheduler normally publishes this daily; the
+            endpoint exists so the job can be exercised before that cron entry is in place.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ArchiveController.EnqueueHydrationCheck">
+            <summary>
+            Drives a rehydration poll on demand. The scheduler should publish this every 15-30 minutes:
+            this poll is what turns a finished rehydration into restored rows.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.CaptchaConfigController">
             <summary>
             Captcha configuration endpoints.
@@ -20,6 +32,29 @@
             neither calls nor duplicates.
             </para>
             </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.CertificateController.UploadCertificate(Microsoft.AspNetCore.Http.IFormFile,System.Boolean)">
+             <summary>
+             Stores a public certificate for the calling tenant and returns the URL to read it back.
+             </summary>
+             <remarks>
+             The file arrives as multipart form data while the flag arrives on the query string, so
+             both are bound explicitly - a single complex parameter would be inferred as
+             <c>[FromBody]</c> and reject the upload. Callers also send a <c>TenantId</c> query
+             parameter; it is ignored, because the tenant comes from the request context.
+            
+             <para>
+             Gated by the same permission as UpdateTokenValidationParameters, which persists the URL
+             this returns. The certificate is what token validation actually trusts, so it must not
+             be writable by someone who cannot edit the configuration pointing at it.
+             </para>
+             </remarks>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.LogAndTraceRestoreController.CancelRestoreProcess(Cloud.LmtService.Models.ColdRestore.CancelRestoreRequest)">
+            <summary>
+            Cancels an unfinished cold or archive restore and discards whatever it had restored so
+            far, freeing the user to request a different range straight away.
+            </summary>
         </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>

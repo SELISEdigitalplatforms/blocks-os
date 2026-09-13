@@ -45,5 +45,11 @@ namespace Cloud.LmtService.Models.ColdRestore
         [BsonRepresentation(MongoDB.Bson.BsonType.String)]
         public RestoreSourceType SourceType { get; set; } = RestoreSourceType.Cold;
         public string? UserEmail { get; set; }
+
+        /// <summary>
+        /// Captured when the request is created, because the worker that later sends the completion
+        /// notification has no ambient BlocksContext to read the caller's identity from.
+        /// </summary>
+        public string? UserId { get; set; }
     }
 }

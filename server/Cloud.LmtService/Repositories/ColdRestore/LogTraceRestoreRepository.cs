@@ -123,6 +123,129 @@ namespace Cloud.LmtService.Repositories.ColdRestore
             }
         }
 
+        /// <summary>Statuses a request can no longer be moved out of.</summary>
+        private static readonly RestoreRequestStatus[] TerminalRequestStatuses =
+        [
+            RestoreRequestStatus.Completed,
+            RestoreRequestStatus.PartialSuccess,
+            RestoreRequestStatus.Failed,
+            RestoreRequestStatus.Cancelled
+        ];
+
+        public async Task<bool> TryBeginProcessingAsync(string requestId, DateTime startedAt, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return false;
+
+            var builder = Builders<RestoreRequestRecord>.Filter;
+
+            // Claim only a request that is neither already running nor finished. Expressing this as
+            // one conditional update is what makes a duplicate delivery lose instead of racing.
+            var filter = builder.Eq(x => x.RequestId, requestId) &
+                         builder.Nin(x => x.Status, TerminalRequestStatuses) &
+                         builder.Ne(x => x.Status, RestoreRequestStatus.InProgress);
+
+            var update = Builders<RestoreRequestRecord>.Update
+                .Set(x => x.Status, RestoreRequestStatus.InProgress)
+                .Set(x => x.StartedAt, startedAt);
+
+            var claimed = await GetRequestCollection()
+                .FindOneAndUpdateAsync(filter, update, cancellationToken: ct);
+
+            return claimed is not null;
+        }
+
+        public async Task<bool> TryCompleteRequestAsync(string requestId, RestoreRequestStatus status, DateTime completedAt, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return false;
+
+            var builder = Builders<RestoreRequestRecord>.Filter;
+            var filter = builder.Eq(x => x.RequestId, requestId) &
+                         builder.Nin(x => x.Status, TerminalRequestStatuses);
+
+            var update = Builders<RestoreRequestRecord>.Update
+                .Set(x => x.Status, status)
+                .Set(x => x.CompletedAt, completedAt);
+
+            var completed = await GetRequestCollection()
+                .FindOneAndUpdateAsync(filter, update, cancellationToken: ct);
+
+            return completed is not null;
+        }
+
+        public async Task<bool> TryCancelRequestAsync(string requestId, DateTime cancelledAt, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return false;
+
+            var builder = Builders<RestoreRequestRecord>.Filter;
+            var filter = builder.Eq(x => x.RequestId, requestId) &
+                         builder.Nin(x => x.Status, TerminalRequestStatuses);
+
+            var update = Builders<RestoreRequestRecord>.Update
+                .Set(x => x.Status, RestoreRequestStatus.Cancelled)
+                .Set(x => x.CompletedAt, cancelledAt);
+
+            var cancelled = await GetRequestCollection()
+                .FindOneAndUpdateAsync(filter, update, cancellationToken: ct);
+
+            return cancelled is not null;
+        }
+
+        public async Task<long> CancelOutstandingFileProgressAsync(string requestId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return 0;
+
+            var builder = Builders<LogTraceRestoreFileProgressRecord>.Filter;
+            var filter = builder.Eq(x => x.RequestId, requestId) &
+                         builder.Nin(x => x.Status,
+                         [
+                             RestoreFileProgressStatus.Completed,
+                             RestoreFileProgressStatus.Failed,
+                             RestoreFileProgressStatus.FileNotFound,
+                             RestoreFileProgressStatus.Cancelled
+                         ]);
+
+            var update = Builders<LogTraceRestoreFileProgressRecord>.Update
+                .Set(x => x.Status, RestoreFileProgressStatus.Cancelled)
+                .Set(x => x.CompletedAt, DateTime.UtcNow)
+                .Set(x => x.ErrorMessage, "Restore request was cancelled.");
+
+            var result = await GetFileProgressCollection().UpdateManyAsync(filter, update, cancellationToken: ct);
+
+            return result.ModifiedCount;
+        }
+
+        public async Task<bool> IsRequestCancelledAsync(string requestId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return false;
+
+            var builder = Builders<RestoreRequestRecord>.Filter;
+            var filter = builder.Eq(x => x.RequestId, requestId) &
+                         builder.Eq(x => x.Status, RestoreRequestStatus.Cancelled);
+
+            return await GetRequestCollection().Find(filter).AnyAsync(ct);
+        }
+
+        public async Task ExtendRequestExpiryAsync(string requestId, DateTime expireAt, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return;
+
+            await GetRequestCollection().UpdateOneAsync(
+                x => x.RequestId == requestId,
+                Builders<RestoreRequestRecord>.Update.Set(x => x.ExpireAt, expireAt),
+                cancellationToken: ct);
+
+            await GetFileProgressCollection().UpdateManyAsync(
+                x => x.RequestId == requestId,
+                Builders<LogTraceRestoreFileProgressRecord>.Update.Set(x => x.ExpireAt, expireAt),
+                cancellationToken: ct);
+        }
+
         public async Task ResetStuckProcessingFilesAsync(string requestId, CancellationToken ct = default)
         {
             var collection = GetFileProgressCollection();

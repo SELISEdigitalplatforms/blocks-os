@@ -15,6 +15,12 @@ namespace Cloud.LmtService.Services.ColdRestore
     {
         Task<StartColdRestoreResponse> StartRestoreAsync(StartColdRestoreRequest request);
         Task<GetColdRestoreStatusResponse> GetStatusAsync(GetColdRestoreStatusRequest request);
+
+        /// <summary>
+        /// Cancels a cold or archive restore that has not finished. Serves both tiers: they share
+        /// the request collection, and cancellation is the same operation for either.
+        /// </summary>
+        Task<CancelRestoreResponse> CancelRestoreAsync(CancelRestoreRequest request, CancellationToken ct = default);
         Task ProcessRestoreAsync(ColdRestoreMessage message, CancellationToken ct = default);
         Task<BaseQueryListResponse<IQueryable<SingleTraceProjection>>> GetRestoredTracesAsync(GetRestoredTracesRequest request);
 

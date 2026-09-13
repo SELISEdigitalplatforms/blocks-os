@@ -12,5 +12,6 @@ namespace Cloud.LmtService.Services.ColdRestore
         Task<StartArchiveRestoreResponse> StartArchiveRestoreAsync(StartArchiveRestoreRequest request, CancellationToken ct = default);
         Task ProcessRestoreAsync(ArchiveRestoreMessage message, CancellationToken ct = default);
         Task CheckPendingHydrationsAsync(CancellationToken ct = default);
+        Task DeleteExpiredHydrationJobsAsync(CancellationToken ct = default);
     }
 }

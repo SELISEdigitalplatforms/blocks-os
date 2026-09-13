@@ -1,6 +1,7 @@
 import { UseQueryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import { lmtService } from "../services/lmt.service";
 import {
+  ICancelRestorePayload,
   IGetRequestIdPayload,
   IGetTraceByTraceIdPayload,
   IGetTracesPayload,
@@ -38,6 +39,12 @@ export const useStartColdTrace = () => {
 export const useStartArchiveTrace = () => {
   return useMutation({
     mutationFn: (payload: ITraceRequestPayload) => lmtService.trace.startArchiveTrace(payload),
+  });
+};
+
+export const useCancelRestoreRequest = () => {
+  return useMutation({
+    mutationFn: (payload: ICancelRestorePayload) => lmtService.trace.cancelRestoreRequest(payload),
   });
 };
 
