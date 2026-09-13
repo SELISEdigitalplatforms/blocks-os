@@ -14,6 +14,13 @@ import type { LogServiceIconKey } from "../../models/log-entry.model";
 import { useQueryState } from "nuqs";
 import type { RegisteredService } from "@/cross-modules/identifier/models/service.model";
 import { buildServiceKey, parseServiceKey, treeValuesToServiceKey } from "../../utils";
+import {
+  TRACE_PROVIDERS,
+  TRACE_REQUEST_SOURCE_TYPE,
+} from "@blocks-lmt/constants/trace.constant";
+import { useRestoreRequest } from "@blocks-lmt/hooks/use-restore-request";
+import { StorageTierCards, type StorageTier } from "../storage-tier-cards/storage-tier-cards";
+import { RestoredLogsPanel } from "../restored-logs/restored-logs-panel";
 
 export interface ServiceComponent {
   label: string;
@@ -72,6 +79,15 @@ interface LogsViewerContextType {
   useGenericTraceLinks?: boolean;
   isSourceBlocks: boolean;
   isServicesLoading: boolean;
+  /** Which storage tier is being read: live logs, or the logs of a restore. */
+  tier: StorageTier;
+  /**
+   * The restore whose rows are on screen, empty over live logs. Rows link into their own
+   * restore with it, and the filter toolbar uses it to know it is over a closed window.
+   */
+  restoreRequestId: string;
+  /** The days that restore covers, so the picker can be bounded to them. */
+  restoreWindow: { startDate?: string; endDate?: string };
 }
 const initialContextValue: LogsViewerContextType = {
   services: [],
@@ -92,11 +108,29 @@ const initialContextValue: LogsViewerContextType = {
   useGenericTraceLinks: false,
   isSourceBlocks: true,
   isServicesLoading: false,
+  tier: TRACE_PROVIDERS.hot,
+  restoreRequestId: "",
+  restoreWindow: {},
 };
 // Create context with the initial value
 export const LogsViewerContext = createContext<LogsViewerContextType>(initialContextValue);
+/** A tier a restore can be read from, keyed by the tier the reader picked. */
+const RESTORE_SOURCE_TYPE: Partial<Record<StorageTier, TRACE_REQUEST_SOURCE_TYPE>> = {
+  [TRACE_PROVIDERS.cold]: TRACE_REQUEST_SOURCE_TYPE.cold,
+  [TRACE_PROVIDERS.archive]: TRACE_REQUEST_SOURCE_TYPE.archive,
+};
+
+/**
+ * What the list opens on, per tier. Live logs open on the last 30 minutes; a restore covers a
+ * closed set of past days, where a relative window would match nothing at all.
+ */
+const tierDefaultFilter = (tier: StorageTier): Partial<LogFilter> =>
+  tier === TRACE_PROVIDERS.hot ? DEFAULT_LOG_FILTER : {};
+
 interface LogsViewerProps {
   services: Service[];
+  /** The project whose restores are read. Without it no restore can be looked up. */
+  projectKey?: string;
   startDate?: string;
   endDate?: string;
   pageSize?: number;
@@ -120,6 +154,7 @@ const serviceNamesOf = (service: Service) =>
 export const LogsViewer = ({
   pageSize = 20,
   services,
+  projectKey = "",
   className,
   predefinedQueries,
   agentName = "Ask AI",
@@ -160,7 +195,39 @@ export const LogsViewer = ({
     [selectedServices],
   );
 
-  const [filter, setFilter] = useState<Partial<LogFilter> | null>(DEFAULT_LOG_FILTER);
+  // Under its own param name rather than Tracing's "tab": on the per-service logs route "tab"
+  // already means the service tab, and log rows copy that param onto their trace links.
+  const [tierParam, setTierParam] = useQueryState("tier", { defaultValue: TRACE_PROVIDERS.hot });
+  const requestedTier = (
+    Object.values(TRACE_PROVIDERS).includes(tierParam as TRACE_PROVIDERS)
+      ? tierParam
+      : TRACE_PROVIDERS.hot
+  ) as StorageTier;
+  // A restore belongs to a project. Without one -- the per-service logs route passes none --
+  // there is nothing to read on the restored tiers, so they are not offered at all.
+  const canReadRestores = Boolean(projectKey);
+  const tier = canReadRestores ? requestedTier : TRACE_PROVIDERS.hot;
+  const restoreSourceType = RESTORE_SOURCE_TYPE[tier];
+
+  // Resolved from the initial tier rather than reset by an effect, so a link straight to
+  // ?tab=cold never opens on the live default and re-queries a moment later.
+  const [filter, setFilter] = useState<Partial<LogFilter> | null>(() => tierDefaultFilter(tier));
+
+  const restore = useRestoreRequest({
+    sourceType: restoreSourceType ?? TRACE_REQUEST_SOURCE_TYPE.cold,
+    projectKey,
+    enabled: Boolean(restoreSourceType),
+  });
+
+  const changeTier = useCallback(
+    (next: StorageTier) => {
+      setTierParam(next);
+      // Each tier has its own window, so carrying a filter across would leave the reader with
+      // a window that belongs to the tier they just left.
+      setFilter(tierDefaultFilter(next));
+    },
+    [setTierParam],
+  );
 
   // Drop services that no longer exist once the service list loads or changes.
   useEffect(() => {
@@ -200,7 +267,7 @@ export const LogsViewer = ({
   // Reset returns to the default window rather than clearing it, so the list never falls
   // back to querying the entire retention period by accident.
   const resetFilter = () => {
-    setFilter(DEFAULT_LOG_FILTER);
+    setFilter(tierDefaultFilter(tier));
   };
   return (
     <LogsViewerContext.Provider
@@ -223,14 +290,36 @@ export const LogsViewer = ({
         useGenericTraceLinks,
         isSourceBlocks,
         isServicesLoading,
+        tier,
+        restoreRequestId: restoreSourceType ? restore.requestId : "",
+        restoreWindow: restoreSourceType
+          ? { startDate: restore.startDate, endDate: restore.endDate }
+          : {},
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
+        {/* Tier is the outer choice; the managed/my-service split lives inside the tier the
+            reader picked, because that is the pair they switch between far more often. */}
+        {canReadRestores && (
+          <StorageTierCards
+            value={tier}
+            onChange={changeTier}
+            descriptions={{
+              [TRACE_PROVIDERS.hot]: "Live and recent logs for active debugging.",
+              [TRACE_PROVIDERS.cold]: "Longer-term stored logs for later investigation.",
+              [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
+            }}
+          />
+        )}
         <LogsListHeader />
-        {/* Deliberately not keyed on the selection: LogsList also renders the filter
-            toolbar, and remounting it would tear down an open filter popover on every
-            checkbox click. LogsList resets its own scroll list instead. */}
-        <LogsList />
+        {restoreSourceType ? (
+          <RestoredLogsPanel sourceType={restoreSourceType} restore={restore} />
+        ) : (
+          /* Deliberately not keyed on the selection: LogsList also renders the filter
+             toolbar, and remounting it would tear down an open filter popover on every
+             checkbox click. LogsList resets its own scroll list instead. */
+          <LogsList />
+        )}
       </div>
     </LogsViewerContext.Provider>
   );

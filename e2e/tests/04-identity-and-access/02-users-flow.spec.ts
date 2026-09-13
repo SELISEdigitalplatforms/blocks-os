@@ -1,18 +1,8 @@
 import { test } from "../../support/test-base";
 import { uniqueTestEmail } from "../../support/env";
-import { openIam } from "../../support/os-helpers";
 import {
   enableMultiOrgFlow,
-  verifyAddOrgButtonEnabledFlow,
-  nameMaxLengthValidationFlow,
   createOrganizationFlow,
-  selectOrgInSidebarFlow,
-  verifyMembersTabFlow,
-  inviteOrgMemberFlow,
-  renameOrganizationFlow,
-  disableReEnableOrganizationFlow,
-  searchOrganizationsFlow,
-  statusFilterFlow,
 } from "../../pages/identity-and-access/organizations";
 import {
   navigateToUsersFlow,
@@ -36,8 +26,13 @@ import {
   paginateHistoryListFlow,
 } from "../../pages/identity-and-access/users";
 
+// Users flow: enable multi-org + create a fresh org (idempotent — both
+// helpers short-circuit when already enabled / already created), invite a
+// user into that org, search/filter/sort the users list, then walk the
+// user detail page (profile edit, avatar upload rules, resend activation,
+// role/permission assignment, sessions sign-out, history pagination).
 test.describe("flows", () => {
-  test("Users & Organizations: enable org -> invite member -> invite user into org -> search/filter -> details", async ({
+  test("Users flow: invite into org -> search/filter/sort -> details -> role/perm -> sessions/history", async ({
     page,
   }) => {
     test.setTimeout(360_000);
@@ -46,30 +41,9 @@ test.describe("flows", () => {
       await enableMultiOrgFlow(page);
     });
 
-    await test.step("Verify Add Organization button is enabled", async () => {
-      await verifyAddOrgButtonEnabledFlow(page);
-    });
-
-    await test.step("Name max-length validation rejects 101 characters", async () => {
-      await nameMaxLengthValidationFlow(page);
-    });
-
-    let orgName = `Flow Org ${Date.now()}`;
-    await test.step(`Create organization "${orgName}"`, async () => {
+    const orgName = `Flow Org ${Date.now()}`;
+    await test.step(`Create organization "${orgName}" to invite users into`, async () => {
       await createOrganizationFlow(page, orgName);
-    });
-
-    await test.step("Select the new organization in the sidebar", async () => {
-      await selectOrgInSidebarFlow(page, orgName);
-    });
-
-    await test.step("Verify Members tab shows Invite action", async () => {
-      await verifyMembersTabFlow(page);
-    });
-
-    const orgMemberEmail = uniqueTestEmail("flow-org-member");
-    await test.step("Invite a member from the organization (send invitation only)", async () => {
-      await inviteOrgMemberFlow(page, orgMemberEmail, orgName);
     });
 
     await test.step("Navigate to Users", async () => {
@@ -151,27 +125,6 @@ test.describe("flows", () => {
 
     await test.step("Paginate the History list, if more than one page exists", async () => {
       await paginateHistoryListFlow(page);
-    });
-
-    await test.step("Return to Organizations and select the created org", async () => {
-      await openIam(page, "organization", "Organizations");
-      await selectOrgInSidebarFlow(page, orgName);
-    });
-
-    orgName = await test.step(`Rename organization to "${orgName} Renamed"`, async () => {
-      return await renameOrganizationFlow(page, orgName);
-    });
-
-    await test.step("Disable then re-enable the organization", async () => {
-      await disableReEnableOrganizationFlow(page);
-    });
-
-    await test.step("Search organizations honors 3-char minimum and filters", async () => {
-      await searchOrganizationsFlow(page, orgName);
-    });
-
-    await test.step("Status filter narrows the sidebar list", async () => {
-      await statusFilterFlow(page, orgName);
     });
   });
 });

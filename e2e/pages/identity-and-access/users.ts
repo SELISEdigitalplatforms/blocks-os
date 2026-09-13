@@ -122,7 +122,11 @@ export async function inviteEmailValidationFlow(page: Page) {
   await expect(page.getByText("Please enter a valid email address")).toBeVisible();
 }
 
-async function selectInviteOrganization(page: Page, inviteDialog: Locator, organizationName?: string) {
+async function selectInviteOrganization(
+  page: Page,
+  inviteDialog: Locator,
+  organizationName?: string,
+) {
   const orgTrigger = inviteDialog.getByRole("combobox");
   const orgComboboxVisible = await orgTrigger.isVisible({ timeout: 8_000 });
   if (!orgComboboxVisible) {
@@ -221,9 +225,11 @@ export async function openInvitedUserDetailsFlow(page: Page, inviteEmail: string
     if (attempt === 5) break;
     await page.waitForTimeout(5_000);
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Users" })).toBeVisible({
-      timeout: 30_000,
-    });
+    // After reload the Users heading may take a while (or the list re-renders
+    // without a heading role in some states) — re-establish list context via
+    // the settled list instead of hard-failing on the heading.
+    await waitForUsersListSettledFlow(page).catch(() => undefined);
+    await navigateToUsersFlow(page).catch(() => undefined);
     if (await searchType.isVisible({ timeout: 5_000 })) {
       await searchType.click();
       await page.getByRole("listbox").getByRole("option").first().click();

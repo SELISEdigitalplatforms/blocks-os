@@ -9,14 +9,16 @@ import {
   TRACE_REQUEST_STATUS,
 } from "@blocks-lmt/constants/trace.constant";
 import {
+  useCancelRestoreRequest,
   useGetRequestId,
   useGetRestoredTraces,
   useGetTraceStatus,
   useStartArchiveTrace,
   useStartColdTrace,
 } from "@blocks-lmt/hooks/use-trace";
-import { AlertTriangle, History, Loader2, Plus, RefreshCw } from "lucide-react";
+import { AlertTriangle, Ban, History, Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { TracesFilterToolbar, useTracesFilterQueryParams } from "./traces-filter-toolbar";
+import { CancelRestoreDialog } from "./cancel-restore-dialog";
 import { RequestTracesModal } from "./request-traces-modal";
 import { TracesList } from "./traces-list";
 import type { ServiceOption, TraceFilter } from "./traces-filter-toolbar";
@@ -55,11 +57,14 @@ export function RestoredTracesTab({
   const [traceStatus, setTraceStatus] = useState("");
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const { mutateAsync: getRequestId } = useGetRequestId();
   const { mutateAsync: getTraceStatus } = useGetTraceStatus();
   const { mutateAsync: startColdTrace, isPending: isColdPending } = useStartColdTrace();
   const { mutateAsync: startArchiveTrace, isPending: isArchivePending } = useStartArchiveTrace();
+  const { mutateAsync: cancelRestoreRequest, isPending: isCancelPending } =
+    useCancelRestoreRequest();
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -137,6 +142,26 @@ export function RestoredTracesTab({
     }
   };
 
+  const handleCancelRequest = async () => {
+    if (!requestId) return;
+
+    try {
+      const result = await cancelRestoreRequest({ RequestId: requestId });
+      setShowCancelDialog(false);
+
+      // The worker can finish between the page load and the click, in which case there was
+      // nothing to stop — say so instead of implying the cancel worked.
+      if (!result.cancelled) {
+        showErrorToast({ errors: result.message });
+      }
+
+      await fetchStatus();
+    } catch {
+      setShowCancelDialog(false);
+      showErrorToast({ errors: "Unable to cancel this request at the moment." });
+    }
+  };
+
   if (isLoadingStatus) {
     return (
       <Card className="flex min-h-[280px] items-center justify-center">
@@ -160,10 +185,21 @@ export function RestoredTracesTab({
             It usually takes {sourceType === TRACE_REQUEST_SOURCE_TYPE.cold ? "3-5" : "10-15"} hours
             to process.
           </p>
-          <Button className="mt-5" size="sm" onClick={() => void fetchStatus()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="mt-5 flex items-center gap-2">
+            <Button size="sm" onClick={() => void fetchStatus()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCancelDialog(true)}
+              disabled={!requestId || isCancelPending}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancel Request
+            </Button>
+          </div>
         </div>
       )}
 
@@ -197,12 +233,35 @@ export function RestoredTracesTab({
         </div>
       )}
 
+      {traceStatus === TRACE_REQUEST_STATUS.cancelled && (
+        <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center">
+          <Ban className="mb-3 h-7 w-7 text-muted-foreground" />
+          <h3 className="text-base font-semibold tracking-tight">Request Cancelled</h3>
+          <p className="mb-5 mt-2 max-w-md text-sm text-muted-foreground">
+            You cancelled your last request for {sourceType.toLowerCase()} traces, so the
+            partially restored data was discarded.
+          </p>
+          <Button size="sm" onClick={() => setShowDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Request {sourceType} Traces
+          </Button>
+        </div>
+      )}
+
       <RequestTracesModal
         open={showDialog}
         onOpenChange={setShowDialog}
         sourceType={sourceType}
         isPending={isFormLoading}
         onSubmit={handleRequestTrace}
+      />
+
+      <CancelRestoreDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        sourceType={sourceType}
+        isPending={isCancelPending}
+        onConfirm={handleCancelRequest}
       />
 
       {showTraces && (

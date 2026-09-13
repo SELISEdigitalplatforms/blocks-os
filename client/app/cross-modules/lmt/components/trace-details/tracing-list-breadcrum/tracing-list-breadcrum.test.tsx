@@ -37,10 +37,11 @@ describe("TracingListBreadCrumb", () => {
     h.contextValue.isLoading = false;
   });
 
-  it("renders the list at 14px (text-sm) consistent with the main wrapper", () => {
+  it("renders the list at 12px, matching the Timeline heading and its metadata", () => {
     render(<TracingListBreadCrumb />);
     const list = document.querySelector("ol");
-    expect(list?.className).toContain("text-sm");
+    expect(list?.className).toContain("text-[12px]");
+    expect(list?.className).not.toContain("text-sm");
   });
 
   it("renders the leaf segment as the current page (font-medium + text-foreground, aria-current=page)", () => {

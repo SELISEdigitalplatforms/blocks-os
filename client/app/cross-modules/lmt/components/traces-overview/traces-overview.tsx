@@ -2,13 +2,6 @@ import { PageHeader } from "@/components/page-header/page-header";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui-kits/select/select";
 import { Tabs, TabsContent } from "@/components/ui-kits/tabs/tabs";
 import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
 import { useIsMobile } from "@seliseblocks/genesis-os/hooks";
@@ -16,9 +9,10 @@ import { TraceProviderSetupGuideLine } from "@blocks-lmt/components/trace-guidel
 import { TRACE_PROVIDERS, TRACE_REQUEST_SOURCE_TYPE } from "@blocks-lmt/constants/trace.constant";
 import { useGetBlocksServices, useGetTraces } from "@blocks-lmt/hooks/use-trace";
 import { useQuery } from "@tanstack/react-query";
-import { Archive, BookOpenText, Flame, Snowflake } from "lucide-react";
+import { BookOpenText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { serviceRegistryService } from "@/cross-modules/identifier/services/service-registry.service";
+import { StorageTierCards } from "../storage-tier-cards/storage-tier-cards";
 import { RestoredTracesTab } from "./restored-traces-tab";
 import {
   ServiceOption,
@@ -52,26 +46,6 @@ const treeValuesToServiceNames = (treeValues: string[], options: ServiceOption[]
   });
   return [...new Set(names)];
 };
-const TRACE_MODE_OPTIONS = [
-  {
-    value: "hot",
-    title: "Hot",
-    description: "Live and recent traces for active debugging.",
-    Icon: Flame,
-  },
-  {
-    value: "cold",
-    title: "Cold",
-    description: "Longer-term stored traces for later investigation.",
-    Icon: Snowflake,
-  },
-  {
-    value: "archive",
-    title: "Archive",
-    description: "Deep history retained for audit and export use cases.",
-    Icon: Archive,
-  },
-] as const;
 export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const isMobile = useIsMobile();
   const { queryParams, setQueryParams } = useTracesFilterQueryParams();
@@ -202,64 +176,15 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
           }
         />
         <div className="mb-4 sm:mb-5">
-          {isMobile ? (
-            <Select
-              value={tabId}
-              onValueChange={(value: string) =>
-                tabChangedHandler(value as keyof typeof TRACE_PROVIDERS)
-              }
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TRACE_MODE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {TRACE_MODE_OPTIONS.map((option) => {
-                const Icon = option.Icon;
-                const isActive = tabId === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => tabChangedHandler(option.value as keyof typeof TRACE_PROVIDERS)}
-                    className={[
-                      "rounded-xl border p-4 text-left transition-all",
-                      isActive
-                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
-                        : "border-border bg-background hover:border-primary/40 hover:bg-accent/30",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={[
-                          "rounded-lg p-2",
-                          isActive
-                            ? "bg-primary/10 text-primary"
-                            : "bg-muted text-muted-foreground",
-                        ].join(" ")}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-high-emphasis">{option.title}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {option.description}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <StorageTierCards
+            value={tabId}
+            onChange={(tier) => tabChangedHandler(tier as keyof typeof TRACE_PROVIDERS)}
+            descriptions={{
+              [TRACE_PROVIDERS.hot]: "Live and recent traces for active debugging.",
+              [TRACE_PROVIDERS.cold]: "Longer-term stored traces for later investigation.",
+              [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
+            }}
+          />
         </div>
         <TabsContent value="hot">
           <Card>

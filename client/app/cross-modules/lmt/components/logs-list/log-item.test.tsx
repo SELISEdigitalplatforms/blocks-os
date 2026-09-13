@@ -57,6 +57,40 @@ describe("LogItem", () => {
     expect(link.getAttribute("href")).toBe("/app/proj/lmt/tracing/trace-1");
   });
 
+  /**
+   * A restored row's trace only exists inside its own restore, so the link has to carry the
+   * request. Without it the trace detail page looks the id up in hot storage, where a month-old
+   * trace is long gone, and the reader lands on "not found".
+   */
+  it("carries the restore request on a restored row's trace link", () => {
+    renderItem(
+      {
+        traceId: "trace-1",
+        level: "error",
+        message: "Something failed",
+        serviceName: "blocks-iam-api",
+        timestamp: "2026-08-03T09:12:41Z",
+      },
+      { restoreRequestId: "req-1" },
+    );
+
+    const link = screen.getByRole("link", { name: /View trace details/ }) as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe("/app/proj/lmt/tracing/trace-1?requestId=req-1");
+  });
+
+  it("leaves a hot row's trace link alone", () => {
+    renderItem({
+      traceId: "trace-1",
+      level: "error",
+      message: "Something failed",
+      serviceName: "blocks-iam-api",
+      timestamp: "2026-09-11T09:12:41Z",
+    });
+
+    const link = screen.getByRole("link", { name: /View trace details/ }) as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe("/app/proj/lmt/tracing/trace-1");
+  });
+
   it("shows the shortened label for the Information level", () => {
     renderItem({
       traceId: "trace-2",

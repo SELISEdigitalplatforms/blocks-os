@@ -50,5 +50,49 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         /// </summary>
         Task UpdateFileProgressStatusByObjectIdAsync(ObjectId id, RestoreFileProgressStatus status, bool? needsHydration = null, int rowsRestored = 0, ArchiveHydrationStatus? hydrationStatus = null, DateTime? startedAt = null, DateTime? completedAt = null, string? errorMessage = null, CancellationToken ct = default);
         Task ResetStuckProcessingFilesAsync(string requestId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Atomically claims the request for processing, moving it to InProgress only if it is not
+        /// already running or finished. Returns false when another delivery of the same message got
+        /// there first. Must be a single conditional update: a read-then-write lets two concurrent
+        /// deliveries both believe they won.
+        /// </summary>
+        Task<bool> TryBeginProcessingAsync(string requestId, DateTime startedAt, CancellationToken ct = default);
+
+        /// <summary>
+        /// Atomically moves the request to a terminal status, returning true only for the caller
+        /// that actually performed the transition. Completion notifications hang off that return
+        /// value, so concurrent finishers cannot each send their own email.
+        /// </summary>
+        Task<bool> TryCompleteRequestAsync(string requestId, RestoreRequestStatus status, DateTime completedAt, CancellationToken ct = default);
+
+        /// <summary>
+        /// Pushes the request's expiry out, so retention is measured from when the restore finished
+        /// rather than from when it was asked for.
+        /// </summary>
+        /// <summary>
+        /// Pushes the expiry of the request <em>and</em> its file-progress rows out. Covers both so
+        /// a restore that is still working — an archive rehydration can take most of a day — cannot
+        /// have its own bookkeeping swept out from under it by the cleanup job.
+        /// </summary>
+        Task ExtendRequestExpiryAsync(string requestId, DateTime expireAt, CancellationToken ct = default);
+
+        /// <summary>
+        /// Atomically moves a Pending or InProgress request to Cancelled, returning false if it had
+        /// already reached a terminal status.
+        /// </summary>
+        Task<bool> TryCancelRequestAsync(string requestId, DateTime cancelledAt, CancellationToken ct = default);
+
+        /// <summary>
+        /// Marks every not-yet-finished file of the request as Cancelled, so nothing further is
+        /// picked up by the executor or the hydration poll.
+        /// </summary>
+        Task<long> CancelOutstandingFileProgressAsync(string requestId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Cheap check the file loop makes between files, so a cancellation lands within one file
+        /// rather than after the whole range has been restored.
+        /// </summary>
+        Task<bool> IsRequestCancelledAsync(string requestId, CancellationToken ct = default);
     }
 }

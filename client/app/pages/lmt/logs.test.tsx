@@ -34,6 +34,9 @@ vi.mock("@blocks-lmt/components", () => ({
     );
   },
 }));
+vi.mock("@seliseblocks/genesis-os", () => ({
+  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+}));
 vi.mock("nuqs", () => ({
   createParser: () => ({ withDefault: (d: unknown) => ({ defaultValue: d }) }),
   useQueryState: (_k: string, opts: { defaultValue: unknown }) => [h.source ?? opts.defaultValue],
@@ -42,6 +45,12 @@ vi.mock("nuqs", () => ({
 import { LogsRoute } from "./logs";
 
 describe("LogsRoute", () => {
+  it("hands the viewer the project whose restores it may read", () => {
+    render(<LogsRoute />);
+
+    expect(h.viewerProps?.projectKey).toBe("tenant-1");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     h.source = "blocks";

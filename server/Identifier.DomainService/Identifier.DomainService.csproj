@@ -3,6 +3,9 @@
   <ItemGroup>
 	  <!--<PackageReference Include="Azure.Identity" />-->
 	  <PackageReference Include="Azure.ResourceManager.ServiceBus" />
+	  <!-- Referenced directly by CertificateUploadService, which writes the uploaded certificate
+	       through the BlobClient handed back by IStorageDriverService. -->
+	  <PackageReference Include="Azure.Storage.Blobs" />
 	  <PackageReference Include="FluentValidation" />
 	  <PackageReference Include="MongoDB.Driver" />
 	  <PackageReference Include="SeliseBlocks.Genesis.OS" />

@@ -13,7 +13,7 @@ import {
   openRoleDetailsFlow,
   toggleEditPermissionsDiscardFlow,
   saveEditPermissionsFlow,
-  // archiveRoleFlow,
+  archiveRoleFlow,
 } from "../../pages/identity-and-access/roles";
 
 test.describe("flows", () => {
@@ -80,7 +80,7 @@ test.describe("flows", () => {
     });
 
     await test.step("Archive the role via its row action", async () => {
-      // await archiveRoleFlow(page, updatedRoleName);
+      await archiveRoleFlow(page, updatedRoleName);
     });
   });
 });

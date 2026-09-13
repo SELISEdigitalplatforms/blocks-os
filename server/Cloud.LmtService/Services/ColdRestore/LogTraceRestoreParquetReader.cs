@@ -144,7 +144,10 @@ namespace Cloud.LmtService.Services.ColdRestore
                 return [];
 
             var column = await rowGroupReader.ReadColumnAsync(field, ct);
-            return column.Data.OfType<object?>().Select(x => x?.ToString()).ToList();
+
+            // Cast, not OfType: OfType filters out nulls, which shortens the column and shifts
+            // every later value onto the wrong row. A null has to survive as an empty value.
+            return column.Data.Cast<object?>().Select(x => x?.ToString()).ToList();
         }
 
         private static async Task<List<double?>> ReadDoubleColumnAsync(
@@ -159,7 +162,7 @@ namespace Cloud.LmtService.Services.ColdRestore
 
             var column = await rowGroupReader.ReadColumnAsync(field, ct);
             return column.Data
-                .OfType<object?>()
+                .Cast<object?>()
                 .Select(x =>
                 {
                     if (x == null) return (double?)null;
@@ -167,9 +170,6 @@ namespace Cloud.LmtService.Services.ColdRestore
                 })
                 .ToList();
         }
-
-        private static int GetMinRowCount(params int[] counts)
-            => counts.Length == 0 ? 0 : counts.Min();
 
         private static string GetStringValue(List<string?> values, int index)
             => (index >= 0 && index < values.Count) ? values[index] ?? string.Empty : string.Empty;
