@@ -246,30 +246,85 @@ export async function archiveRoleFlow(page: Page, roleName: string) {
   const searchInput = page.getByPlaceholder("Search...").first();
   await searchInput.fill(roleName);
 
-  const archiveButton = page.getByRole("button", { name: `Archive role ${roleName}` });
-  await expect(archiveButton).toBeVisible({ timeout: 15_000 });
-  await archiveButton.click();
+  const archiveTrigger = page.getByRole("button", { name: `Archive role ${roleName}` });
+  await expect(archiveTrigger).toBeVisible({ timeout: 15_000 });
 
-  const archiveDialog = page.getByRole("dialog").filter({ hasText: /Archive this role\?/i });
-  await expect(archiveDialog).toBeVisible({ timeout: 10_000 });
-
+  // The archive dialog fetches an impact preview on open (see archive-action.tsx
+  // — `useRoleArchiveImpact(itemId, { enabled: open && entity === "role" })`).
+  // The Archive button's `disabled` attribute is tied to that query's lifecycle
+  // and a conditional consent gate:
+  //   `disabled={isPending || isLoading || isBlocked || (needsConsent && !consentChecked)}`
+  //
+  // We use `Archive` becoming enabled as the unified signal that impact has
+  // settled and the consent checkbox has either rendered or definitively won't
+  // (per `needsConsent = !!impact && !isBlocked && affectedUserCount > 0`).
+  // We deliberately do NOT race the network: if the dialog auto-closes on a
+  // dev-env quirk and we re-open, React Query may serve impact from cache and
+  // skip the GET, making a `waitForResponse` listener hang for a phantom
+  // request. The enabled-state signal is cache-safe.
+  //
+  // If the dialog auto-closes between open and enabled-check, we re-open and
+  // retry. The retry budget is small so a permanent regression surfaces as a
+  // hard test failure rather than hiding.
+  const confirmButton = page.getByRole("button", { name: "Archive", exact: true });
   const consentCheckbox = page.getByRole("checkbox", {
-    name: /Confirm removing this role/i,
+    name: /Confirm removing this role(?:\s+from\s+\d+\s+users)?/i,
   });
-  if (await consentCheckbox.isVisible({ timeout: 5_000 })) {
-    await consentCheckbox.click();
+
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await archiveTrigger.click();
+
+    const archiveDialog = page.getByRole("dialog").filter({ hasText: /Archive this role\?/i });
+    try {
+      await expect(archiveDialog).toBeVisible({ timeout: 10_000 });
+    } catch (error) {
+      if (attempt < maxAttempts - 1) {
+        e2eDebugLog(
+          `[archive-role-flow] archive dialog did not open on attempt ${attempt + 1}; retrying.`,
+        );
+        continue;
+      }
+      throw error;
+    }
+
+    // Strict: with the dialog open, the Archive button MUST be enabled
+    // within the budget — that is the unified "impact settled" signal. If
+    // the dialog auto-closes between dialog-open and this assertion, we
+    // detect that with `archiveDialog.isVisible()` and retry.
+    try {
+      await expect(confirmButton).toBeEnabled({ timeout: 20_000 });
+    } catch (error) {
+      const dialogStillThere = await archiveDialog.isVisible();
+      if (!dialogStillThere && attempt < maxAttempts - 1) {
+        e2eDebugLog(
+          `[archive-role-flow] archive dialog auto-closed after impact on attempt ${attempt + 1}; retrying.`,
+        );
+        continue;
+      }
+      throw error;
+    }
+
+    // Branch A: consent checkbox visible → role is held by N users → check it.
+    // Branch B: consent NOT visible → role unused → skip.
+    const consentVisible = await consentCheckbox.isVisible();
+    if (consentVisible) {
+      await consentCheckbox.check();
+    }
+
+    await confirmButton.click();
+
+    // Strict: a successful archive MUST surface the confirmation toast.
+    await expect(page.getByText("Role archived successfully", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: `Open role ${roleName}` })).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    return;
   }
 
-  const confirmButton = page.getByRole("button", { name: "Archive", exact: true });
-  // Strict: the Archive button MUST become enabled after consent.
-  await expect(confirmButton).toBeEnabled({ timeout: 10_000 });
-  await confirmButton.click();
-
-  // Strict: a successful archive MUST surface the confirmation toast.
-  await expect(page.getByText("Role archived successfully", { exact: true })).toBeVisible({
-    timeout: 15_000,
-  });
-  await expect(page.getByRole("button", { name: `Open role ${roleName}` })).toHaveCount(0, {
-    timeout: 15_000,
-  });
+  throw new Error(
+    `[archive-role-flow] dialog auto-closed ${maxAttempts} times in a row after impact loaded — see archive-action.tsx.`,
+  );
 }
