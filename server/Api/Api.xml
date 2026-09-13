@@ -33,6 +33,23 @@
             </para>
             </remarks>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.CertificateController.UploadCertificate(Microsoft.AspNetCore.Http.IFormFile,System.Boolean)">
+             <summary>
+             Stores a public certificate for the calling tenant and returns the URL to read it back.
+             </summary>
+             <remarks>
+             The file arrives as multipart form data while the flag arrives on the query string, so
+             both are bound explicitly - a single complex parameter would be inferred as
+             <c>[FromBody]</c> and reject the upload. Callers also send a <c>TenantId</c> query
+             parameter; it is ignored, because the tenant comes from the request context.
+            
+             <para>
+             Gated by the same permission as UpdateTokenValidationParameters, which persists the URL
+             this returns. The certificate is what token validation actually trusts, so it must not
+             be writable by someone who cannot edit the configuration pointing at it.
+             </para>
+             </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.LogAndTraceRestoreController.CancelRestoreProcess(Cloud.LmtService.Models.ColdRestore.CancelRestoreRequest)">
             <summary>
             Cancels an unfinished cold or archive restore and discards whatever it had restored so
