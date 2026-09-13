@@ -27,12 +27,37 @@ export async function verifyEmptyStateFlow(page: Page) {
   await expect(gallery).toBeVisible();
   await expect(page.getByText("Social logins")).toBeVisible();
   await expect(page.getByText("Enterprise & custom")).toBeVisible();
-  // Nothing configured yet, so no entries are listed inside the enterprise cards.
-  await expect(enterpriseSection(page).getByRole("listitem")).toHaveCount(0);
+  // A previous partial/failed run can leave a provider behind (suite setup
+  // reuses the shared project), so this "fresh project" check must clean up
+  // leftovers instead of hard-failing — otherwise every later step that
+  // assumes an empty gallery breaks too.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const leftovers = enterpriseSection(page).getByRole("listitem");
+    if ((await leftovers.count().catch(() => 1)) === 0) break;
+    const row = leftovers.first();
+    await row.scrollIntoViewIfNeeded().catch(() => undefined);
+    const deleteButton = row.getByRole("button", { name: "Delete provider" });
+    if (!(await deleteButton.isVisible({ timeout: 5_000 }).catch(() => false))) break;
+    await deleteButton.click();
+    await expect(page.getByRole("heading", { name: "Delete identity provider" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(row).toHaveCount(0, { timeout: 15_000 }).catch(() => undefined);
+    await page.waitForTimeout(1_000);
+  }
+  await expect(enterpriseSection(page).getByRole("listitem")).toHaveCount(0, {
+    timeout: 15_000,
+  });
 }
 
 export async function openGoogleGalleryCardFlow(page: Page, { cancel = true } = {}) {
-  await page.getByRole("button", { name: "Configure Google" }).click();
+  // Gallery cards render an icon-only "+" button with aria-label "Add Google"
+  // (see AddProviderButton in identity-provider-gallery.tsx) — there is no
+  // "Configure Google" button, which is why the old locator timed out.
+  const addGoogle = page.getByRole("button", { name: "Add Google", exact: true });
+  await expect(addGoogle).toBeVisible({ timeout: 30_000 });
+  await addGoogle.click();
   await expect(page.getByRole("heading", { name: "Add Identity Provider" })).toBeVisible();
   await expect(changeBannerButton(page)).toBeVisible();
   await expect(page.getByRole("dialog").getByText("Where do I find these?")).toBeVisible();
