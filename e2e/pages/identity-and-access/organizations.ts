@@ -99,6 +99,28 @@ export async function createOrganizationFlow(page: Page, orgName: string) {
   const submitButton = addOrgSubmitButton(page);
   const addOrganizationButton = page.getByRole("button", { name: "Add Organization" }).first();
 
+  // Strict: the Organizations list page MUST be the current route. The most
+  // common reason it isn't is that enableMultiOrgFlow just navigated us to
+  // Settings -> Organization Config to flip the switch, and we never came
+  // back. Asserting the URL up front catches this instead of letting it
+  // surface as a missing Add Organization button 20 s later.
+  await openIam(page, "organization", "Organizations");
+  await expect(page).toHaveURL(/\/iam\/organizations?(?:[/?#]|$)/, { timeout: 15_000 });
+  await expect(addOrganizationButton).toBeVisible({ timeout: 20_000 });
+
+  // Self-contained: open the dialog if it isn't already open. The retry
+  // path below also re-opens it after a session refresh. We can't `expect`
+  // visibility of a dialog that hasn't been opened yet, so we accept a
+  // not-found result from isVisible() — but the dialog appearing after the
+  // click is asserted strictly below.
+  const dialogAlreadyOpen = await dialog.isVisible();
+  if (!dialogAlreadyOpen) {
+    await expect(addOrganizationButton).toBeEnabled({ timeout: 20_000 });
+    await addOrganizationButton.click();
+    // Strict: clicking the Add Organization button MUST surface the dialog.
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+  }
+
   const maxAttempts = 2;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await nameInput.fill(orgName);

@@ -46,6 +46,11 @@ function main() {
       cwd: __dirname,
       stdio: "inherit",
       env: process.env,
+      // Windows: node's spawnSync does not append .cmd, so `npx` resolves to
+      // nothing and the call fails with ENOENT. Delegate to the OS shell so
+      // it can find npx.cmd. All args are hard-coded spec paths or trusted
+      // forwarded flags, so the shell-injection warning does not apply.
+      shell: true,
     },
   )
 
