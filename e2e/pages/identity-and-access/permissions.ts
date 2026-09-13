@@ -43,26 +43,6 @@ export async function selectTypeFlow(page: Page, typeName: string) {
   await expect(typeSelect).toHaveText(typeName);
 }
 
-export async function selectExistingGroupFlow(page: Page, groupName: string) {
-  const comboboxes = page.getByRole("combobox");
-  const groupCombobox = comboboxes.nth(1);
-  await groupCombobox.click();
-  const groupSearchInput = page.getByPlaceholder("Search or create a group...");
-  await expect(groupSearchInput).toBeVisible({ timeout: 10_000 });
-  await groupSearchInput.fill(groupName);
-  const existingOption = page.getByRole("option", { name: groupName, exact: true });
-  // isVisible({ timeout }) returns false on timeout without throwing,
-  // so a plain if-check is sufficient — no .catch needed.
-  if (await existingOption.isVisible({ timeout: 5_000 })) {
-    await existingOption.click();
-    await expect(groupCombobox).toHaveText(groupName, { timeout: 10_000 });
-    return true;
-  }
-  // No exact match -> clear and fall back to create path
-  await groupSearchInput.fill("");
-  return false;
-}
-
 export async function createNewGroupFlow(page: Page, groupName: string) {
   const comboboxes = page.getByRole("combobox");
   const groupCombobox = comboboxes.nth(1);

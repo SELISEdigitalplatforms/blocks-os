@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -361,6 +361,38 @@ namespace DomainService.Projects
             };
         }
 
+        // The project's own domain plus the platform apps that must be able to sign in
+        // against the new tenant. Studio's host is not an appsettings value: it is
+        // deployed into the "FrontendRuntime" section from the Mongo secrets document
+        // (see ApplyFrontendRuntimeSettings), so it is read from the same key the
+        // frontend is served with. A deployment without that secret simply leaves
+        // Studio out instead of writing an empty domain.
+        private List<Applications> BuildDefaultApplications(string applicationDomain)
+        {
+            var applications = new List<Applications>
+            {
+                new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = true },
+                new Applications { Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true }
+            };
+
+            var studioDomain = Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_STUDIO_BASE_URL") is { Length: > 0 } fromEnv
+                ? fromEnv
+                : _configuration["FrontendRuntime:BLOCKS_STUDIO_BASE_URL"];
+
+            if (!string.IsNullOrWhiteSpace(studioDomain))
+            {
+                studioDomain = studioDomain.TrimEnd('/');
+                applications.Add(new Applications
+                {
+                    Domain = studioDomain,
+                    CookieDomain = IdentifierHelper.ExtractMainDomain(studioDomain),
+                    IsDomainVerified = true
+                });
+            }
+
+            return applications;
+        }
+
         private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId)
         {
             var certificateStorageType = GetCertificateStorageType();
@@ -384,7 +416,7 @@ namespace DomainService.Projects
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = [ new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = true }, new Applications{ Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true } ],
+                Applications = BuildDefaultApplications(applicationDomain),
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
