@@ -57,6 +57,18 @@ public class SecretsController : ControllerBase
         _secretService.FindAsync(filter, cancellationToken);
 
     /// <summary>
+    /// The tenant's tag catalogue, for a tag picker or a tag filter.
+    /// </summary>
+    /// <remarks>
+    /// Shares the list permission rather than having its own: the catalogue is a list of
+    /// labels, and anyone who may see the secret list may see the labels on it.
+    /// </remarks>
+    [HttpGet("tags")]
+    [ProtectedEndPoint("blocks-os::secret::gets")]
+    public Task<IReadOnlyList<SecretTagEntry>> Tags(CancellationToken cancellationToken) =>
+        _secretService.GetTagsAsync(cancellationToken);
+
+    /// <summary>
     /// Reads a secret's plaintext value. Always audited.
     /// </summary>
     [HttpGet("value")]
@@ -95,7 +107,7 @@ public class SecretsController : ControllerBase
 
         await _secretService.UpdateAsync(
             request.SecretId,
-            new UpdateSecretRequest { Name = request.Name, Description = request.Description },
+            new UpdateSecretRequest { Name = request.Name, Description = request.Description, Tags = request.Tags },
             cancellationToken);
 
         return Success();

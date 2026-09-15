@@ -75,6 +75,17 @@ public sealed class SecretRepository : ISecretRepository
             conditions.Add(builder.Eq(s => s.OrganizationId, filter.OrganizationId));
         }
 
+        // Normalized here as well as in the service: this is the only choke point every
+        // caller of the repository goes through, and an unnormalized tag would silently match
+        // nothing rather than fail.
+        var tags = SecretTag.NormalizeAll(filter.Tags);
+        if (tags.Count > 0)
+        {
+            // AnyIn is an $in, which the multikey tag index serves. A $regex or an $elemMatch
+            // over the array would not be.
+            conditions.Add(builder.AnyIn(s => s.Tags, tags));
+        }
+
         if (!string.IsNullOrWhiteSpace(filter.Type))
         {
             conditions.Add(builder.Eq(s => s.Type, filter.Type));
@@ -156,7 +167,13 @@ public sealed class SecretRepository : ISecretRepository
 
                 new CreateIndexModel<Secret>(
                     keys.Ascending(s => s.TenantId).Descending(s => s.LastUpdatedDate),
-                    new CreateIndexOptions { Name = "ix_tenant_updated" })
+                    new CreateIndexOptions { Name = "ix_tenant_updated" }),
+
+                // Multikey over the Tags array. Sparse, because most secrets carry no tags and
+                // an entry for every untagged document would only grow the index.
+                new CreateIndexModel<Secret>(
+                    keys.Ascending(s => s.TenantId).Ascending(s => s.Tags),
+                    new CreateIndexOptions { Name = "ix_tenant_tags", Sparse = true })
             ]).ConfigureAwait(false);
         }
         catch (MongoCommandException ex)

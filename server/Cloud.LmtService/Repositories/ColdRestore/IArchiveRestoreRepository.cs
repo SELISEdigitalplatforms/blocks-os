@@ -19,5 +19,17 @@ namespace Cloud.LmtService.Repositories.ColdRestore
         Task UpdateHydrationStatusByIdAsync(ObjectId id, ArchiveHydrationStatus status, DateTime? lastCheckedAt = null, DateTime? completedAt = null, string? errorMessage = null, CancellationToken ct = default);
 
         Task<bool> HydrationJobExistsAsync(string requestId,string blobPath, CancellationToken ct = default);
+
+        /// <summary>
+        /// Removes hydration jobs past their ExpireAt. The record type has always carried that
+        /// field but nothing read it, so finished and abandoned jobs accumulated indefinitely.
+        /// </summary>
+        Task<long> DeleteExpiredHydrationJobsAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Marks every non-terminal hydration job for a request as cancelled, so a cancelled restore
+        /// stops being polled on the next hydration check.
+        /// </summary>
+        Task<long> CancelHydrationJobsForRequestAsync(string requestId, CancellationToken ct = default);
     }
 }

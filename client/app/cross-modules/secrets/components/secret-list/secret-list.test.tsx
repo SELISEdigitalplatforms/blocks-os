@@ -20,6 +20,8 @@ vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
     hoisted.lastFilter = filter;
     return hoisted.state;
   },
+  // Reached through the toolbar's tag filter, not by the list itself.
+  useSecretTags: () => ({ data: [], isLoading: false }),
 }));
 
 // The row is covered by its own suite; here only its presence and count matter.

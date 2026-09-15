@@ -1,28 +1,44 @@
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { useLmtBasePath } from "@/hooks/use-lmt-base-path";
-import { getLogFormatTimestamp, getLogLevelClassName } from "@blocks-lmt/utils";
-import { ChevronRight } from "lucide-react";
-import { useContext, useMemo, useState } from "react";
+import { getLogFormatTimestamp, getLogLevelBadgeVariant, getLogLevelLabel } from "@blocks-lmt/utils";
+import { useContext, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
+import { LogStackTrace } from "../log-stack-trace";
 import { ILog } from "../../models/log.model";
 
+/** Joins the parts that are actually present, so neither a stray "?" nor "&&" reaches the URL. */
+const buildQuery = (parts: string[]) => {
+  const present = parts.filter(Boolean);
+  return present.length ? `?${present.join("&")}` : "";
+};
+
 export const LogItem = ({ log }: { log: ILog }) => {
-  const { logsRouteServiceName, selectedService, useGenericTraceLinks, isSourceBlocks, services } =
-    useContext(LogsViewerContext);
+  const {
+    logsRouteServiceName,
+    selectedService,
+    useGenericTraceLinks,
+    isSourceBlocks,
+    services,
+    restoreRequestId,
+  } = useContext(LogsViewerContext);
   const [searchParams] = useSearchParams();
-  const [isTraceOpen, setIsTraceOpen] = useState(false);
-  const stackTrace = log.exception?.trim() ?? "";
   const activeTab = searchParams.get("tab") ?? selectedService?.serviceName;
   const LMT_BASE_PATH = useLmtBasePath();
+  // A restored row's trace lives only inside its own restore, so the link has to name the
+  // request. Looked up without it, a month-old trace id finds nothing in hot storage.
+  const restoreQuery = restoreRequestId
+    ? `requestId=${encodeURIComponent(restoreRequestId)}`
+    : "";
   const traceHref = log.traceId
     ? useGenericTraceLinks
-      ? `${LMT_BASE_PATH}/tracing/${log.traceId}`
+      ? `${LMT_BASE_PATH}/tracing/${log.traceId}${restoreQuery ? `?${restoreQuery}` : ""}`
       : logsRouteServiceName
-        ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${
-            activeTab ? `?tab=${encodeURIComponent(activeTab)}` : ""
-          }`
+        ? `${LMT_BASE_PATH}/logs/${logsRouteServiceName}/trace/${log.traceId}${buildQuery([
+            activeTab ? `tab=${encodeURIComponent(activeTab)}` : "",
+            restoreQuery,
+          ])}`
         : undefined
     : undefined;
 
@@ -43,73 +59,51 @@ export const LogItem = ({ log }: { log: ILog }) => {
   }, [log.serviceName, isSourceBlocks, services]);
 
   return (
-    <div className="flex flex-col">
-      <div className="flex flex-col md:flex-row md:items-center gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-high-emphasis">{getLogFormatTimestamp(log.timestamp)}</span>
-          {serviceBadgeText && <Badge variant="secondary">{serviceBadgeText}</Badge>}
-          <span className={`text-sm uppercase ${getLogLevelClassName(log.level)}`}>
-            {log.level}
-          </span>
-        </div>
-        <div className="flex h-6 items-center">
+    <div className="flex flex-col gap-1.5">
+      {/* Metadata reads as columns rather than a sentence: a fixed-width monospace timestamp
+          and a fixed-width level chip line up down the list, so the eye can scan severity and
+          time without re-reading each row. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="shrink-0 text-xs tabular-nums text-medium-emphasis">
+          {getLogFormatTimestamp(log.timestamp)}
+        </span>
+        <Badge
+          variant={getLogLevelBadgeVariant(log.level)}
+          className="w-[84px] shrink-0 py-0 text-[10px] uppercase tracking-wider"
+        >
+          {getLogLevelLabel(log.level)}
+        </Badge>
+        {serviceBadgeText && (
+          <Badge variant="secondary" className="shrink-0 py-0 text-[10px] font-medium">
+            {serviceBadgeText}
+          </Badge>
+        )}
+        <div className="flex min-w-0 items-center">
           {traceHref ? (
             <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
               <Link
                 to={traceHref}
-                className="text-warning-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="truncate text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={`View trace details for ${log.traceId}`}
               >
-                [{log.traceId}]
+                {log.traceId}
               </Link>
             </CopyToClipboardButton>
           ) : (
             <CopyToClipboardButton textToCopy={log.traceId} isHoverable>
-              <span className="text-warning-700">[{log.traceId}]</span>
+              <span className="truncate text-xs text-medium-emphasis">{log.traceId}</span>
             </CopyToClipboardButton>
           )}
         </div>
       </div>
-      <div
-        className="whitespace-pre-wrap break-words text-left text-sm text-medium-emphasis"
-        style={{ width: "calc(80vw - 120px)" }}
-      >
+
+      {/* Width comes from the container, not the viewport. The previous calc(80vw - 120px)
+          ignored the actual column and was what forced the list to scroll sideways. */}
+      <div className="whitespace-pre-wrap break-words text-left text-sm leading-relaxed text-high-emphasis">
         {log.message}
       </div>
 
-      {stackTrace && (
-        <div className="mt-2">
-          <button
-            type="button"
-            onClick={() => setIsTraceOpen((open) => !open)}
-            aria-expanded={isTraceOpen}
-            className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-error hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ChevronRight
-              aria-hidden="true"
-              className={`h-3.5 w-3.5 transition-transform motion-reduce:transition-none ${
-                isTraceOpen ? "rotate-90" : ""
-              }`}
-            />
-            {isTraceOpen ? "Hide stack trace" : "Show stack trace"}
-          </button>
-
-          {isTraceOpen && (
-            <div className="mt-2 rounded-sm border border-border bg-muted/40">
-              <div className="flex items-center border-b border-border px-3 py-1.5">
-                <CopyToClipboardButton textToCopy={stackTrace} label="Copy stack trace">
-                  <span className="text-xs font-medium uppercase tracking-wide text-medium-emphasis">
-                    Exception
-                  </span>
-                </CopyToClipboardButton>
-              </div>
-              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-3 py-2 text-xs leading-relaxed text-medium-emphasis">
-                {stackTrace}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
+      <LogStackTrace exception={log.exception} />
     </div>
   );
 };

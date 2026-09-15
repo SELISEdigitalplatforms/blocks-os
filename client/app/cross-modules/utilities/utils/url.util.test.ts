@@ -1,37 +1,60 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { stubOrigin } from "@/test-utils/stub-origin";
 import { getDefaultShortUrlBase, isValidUrl, magicUrlSchema } from "./url.util";
 
 type BlocksWindow = Window & {
   __BLOCKS_ENV__?: Record<string, string | undefined>;
 };
 
-const setRuntimeEnv = (value: string | undefined) => {
-  (window as BlocksWindow).__BLOCKS_ENV__ = { BLOCKS_OS_BASE_URL: value };
-};
-
 describe("url.util", () => {
+  let restoreOrigin: (() => void) | undefined;
+
   afterEach(() => {
     delete (window as BlocksWindow).__BLOCKS_ENV__;
+    restoreOrigin?.();
+    restoreOrigin = undefined;
   });
 
+  // `getDefaultShortUrlBase` sniffs the environment out of the OS base URL, which now resolves to
+  // the origin serving the app -- so these drive it through `window.location`, not the env.
   describe("getDefaultShortUrlBase", () => {
-    it("returns the dev short base when the api base points at dev", () => {
-      setRuntimeEnv("https://dev-api.seliseblocks.com");
+    it("returns the dev short base when served from a dev host", () => {
+      restoreOrigin = stubOrigin("https://dev-os.blocksdevelopers.com");
       expect(getDefaultShortUrlBase()).toBe("https://dev-short.seliseblocks.com/");
     });
 
-    it("returns the staging short base for a stg api base", () => {
-      setRuntimeEnv("https://stg-api.seliseblocks.com");
+    it("returns the dev short base when served from a numbered dev preview host", () => {
+      restoreOrigin = stubOrigin("https://dev-os-546.blocksdevelopers.com");
+      expect(getDefaultShortUrlBase()).toBe("https://dev-short.seliseblocks.com/");
+    });
+
+    it("returns the staging short base when served from a stg host", () => {
+      restoreOrigin = stubOrigin("https://stg-os.blocksdevelopers.com");
       expect(getDefaultShortUrlBase()).toBe("https://stg-short.seliseblocks.com/");
     });
 
     it("falls back to prod when no non-prod env matches", () => {
-      setRuntimeEnv("https://api.seliseblocks.com");
+      restoreOrigin = stubOrigin("https://os.seliseblocks.com");
       expect(getDefaultShortUrlBase()).toBe("https://short.seliseblocks.com/");
     });
 
-    it("falls back to prod when the env is empty", () => {
-      setRuntimeEnv("");
+    // `blocksdevelopers.com` contains "dev", so a substring match over the whole URL sent every
+    // stage host to the dev short base.
+    it("does not treat the blocksdevelopers.com domain itself as the dev env", () => {
+      restoreOrigin = stubOrigin("https://stg-os-546.blocksdevelopers.com");
+      expect(getDefaultShortUrlBase()).toBe("https://stg-short.seliseblocks.com/");
+    });
+
+    it("uses the dev base for local development", () => {
+      restoreOrigin = stubOrigin("https://localhost:5000");
+      expect(getDefaultShortUrlBase()).toBe("https://dev-short.seliseblocks.com/");
+    });
+
+    // An opaque origin ("null") is not a usable base, so resolution falls through to the injected
+    // env -- which is empty here, leaving nothing to parse.
+    it("falls back to prod when no base url can be resolved", () => {
+      (window as BlocksWindow).__BLOCKS_ENV__ = { BLOCKS_OS_BASE_URL: "" };
+      restoreOrigin = stubOrigin("about:blank");
       expect(getDefaultShortUrlBase()).toBe("https://short.seliseblocks.com/");
     });
   });

@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PeopleGroupedByEnvironments } from "@/models/people";
+import type { PeopleGroupedByEnvironments } from "../../models/people";
 
 vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false,
@@ -70,7 +70,7 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 import { PeopleTable } from "./people-table";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { showErrorToast, showSuccessToast } from "../../hooks/use-toast";
 
 type Env = PeopleGroupedByEnvironments["sharedEnviroments"][number];
 
@@ -99,6 +99,8 @@ const makePerson = (
     ...peopleOverrides,
   },
   sharedEnviroments,
+  accessPolicies: [],
+  role: "contributor",
 });
 
 const renderTable = (props: Parameters<typeof PeopleTable>[0]) =>
@@ -132,12 +134,21 @@ describe("PeopleTable", () => {
     expect(screen.getByText("solo")).toBeTruthy();
   });
 
+  it("falls back to the email prefix when firstName is null (not the string null)", () => {
+    renderTable({
+      people: [makePerson({ firstName: null, lastName: null, email: "owner@example.com" })],
+      isLoading: false,
+    });
+    expect(screen.getByText("owner")).toBeTruthy();
+    expect(screen.queryByText(/^null$/)).toBeNull();
+  });
+
   it("shows a dash when name and email are missing", () => {
     renderTable({
       people: [makePerson({ firstName: "", lastName: "", email: "" })],
       isLoading: false,
     });
-    expect(screen.getByText("---")).toBeTruthy();
+    expect(screen.getAllByText("-").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the profile image when a url is present", () => {

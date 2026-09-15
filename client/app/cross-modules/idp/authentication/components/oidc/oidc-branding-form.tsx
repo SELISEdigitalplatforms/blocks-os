@@ -13,6 +13,7 @@ import { ModuleName } from "@/constants/modules.constants";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import { useGetAuthConfig } from "@blocks-idp/authentication/hooks/use-auth-config";
 import { useOidcBrandingHeader } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
 import {
   useGetOidcTemplate,
@@ -212,6 +213,9 @@ export const OidcBrandingForm = () => {
   const { setActions } = useOidcBrandingHeader();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: template, isLoading, isError } = useGetOidcTemplate();
+  // The activation preview drops its password fields when the tenant has turned that
+  // step off, so what is previewed matches what users are served.
+  const { data: authConfig } = useGetAuthConfig({ projectKey: tenantId });
   const { mutateAsync: saveTemplate, isPending: isSaving } = useSaveOidcTemplate();
   const { mutateAsync: getPresignedUrl } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -803,7 +807,8 @@ export const OidcBrandingForm = () => {
                       );
                     })}
                   </div>
-                  <div className="space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
+                  <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="space-y-1.5">
                     <Label htmlFor="page-shared-footerText" className="text-xs">
                       Footer <span className="text-destructive">*</span>
                     </Label>
@@ -818,7 +823,10 @@ export const OidcBrandingForm = () => {
                                 ...current,
                                 pages: {
                                   ...current.pages,
-                                  shared: { footerText: event.target.value },
+                                  shared: {
+                                    ...current.pages.shared,
+                                    footerText: event.target.value,
+                                  },
                                 },
                               }
                             : current,
@@ -836,6 +844,46 @@ export const OidcBrandingForm = () => {
                         Footer {fieldError("pages.shared.footerText")}
                       </p>
                     )}
+                    </div>
+                    {[
+                      { key: "helpPrompt", label: "Help prompt" },
+                      { key: "supportLinkText", label: "Support link text" },
+                    ].map(({ key, label }) => (
+                      <div key={key} className="space-y-1.5">
+                        <Label htmlFor={`page-shared-${key}`} className="text-xs">
+                          {label} <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id={`page-shared-${key}`}
+                          value={draft.pages.shared[key as keyof typeof draft.pages.shared]}
+                          maxLength={200}
+                          onChange={(event) => {
+                            setDraft((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    pages: {
+                                      ...current.pages,
+                                      shared: {
+                                        ...current.pages.shared,
+                                        [key]: event.target.value,
+                                      },
+                                    },
+                                  }
+                                : current,
+                            );
+                            clearServerFieldError(`pages.shared.${key}`);
+                          }}
+                          aria-invalid={!!fieldError(`pages.shared.${key}`)}
+                          className="bg-background shadow-none"
+                        />
+                        {fieldError(`pages.shared.${key}`) && (
+                          <p className="text-xs text-destructive" role="alert">
+                            {label} {fieldError(`pages.shared.${key}`)}
+                          </p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </TabsContent>
               </div>
@@ -876,6 +924,7 @@ export const OidcBrandingForm = () => {
                   previewMode={previewMode}
                   onPreviewModeChange={handlePreviewModeChange}
                   showAuto={editorTab !== "theme"}
+                  collectPasswordOnActivation={authConfig?.collectPasswordOnActivation}
                 />
               </div>
             </div>

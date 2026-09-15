@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Table, TableBody } from "@/components/ui-kits/table/table";
-import { SECRET_STATUS, SECRET_TYPE } from "@/cross-modules/secrets/models/secret.model";
+import {
+  SECRET_NAME_DISPLAY_MAX_LENGTH,
+  SECRET_STATUS,
+  SECRET_TYPE,
+} from "@/cross-modules/secrets/models/secret.model";
 import {
   FakeHttpError,
   SECRET_ID,
@@ -14,10 +18,12 @@ const hoisted = vi.hoisted(() => ({
   revealMutate: vi.fn(),
   showSuccessToast: vi.fn(),
   showErrorToast: vi.fn(),
+  tagCatalogue: [{ key: "iam", label: "Blocks Iam" }],
 }));
 
 vi.mock("@/cross-modules/secrets/hooks/use-secret-management", () => ({
   useRevealSecret: () => ({ mutateAsync: hoisted.revealMutate, isPending: false }),
+  useSecretTags: () => ({ data: hoisted.tagCatalogue, isLoading: false }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showSuccessToast: hoisted.showSuccessToast,
@@ -78,6 +84,16 @@ describe("SecretRow", () => {
     expect(screen.getByText("payment-gateway-key")).toBeTruthy();
     expect(screen.getByText("Application")).toBeTruthy();
     expect(screen.getByText("Locked")).toBeTruthy();
+  });
+
+  it("caps a long name and keeps the full one reachable", () => {
+    const name = "testhujioasdjoias_napoijdaopsij_paojidapoijd_aokkjasndkaj_adoiaso";
+    renderRow(makeSecret({ name }));
+
+    const shown = screen.getByTitle(name);
+    expect(shown.textContent).toBe(`${name.slice(0, SECRET_NAME_DISPLAY_MAX_LENGTH)}…`);
+    // The untruncated name must not be in the row, or the column stretches anyway.
+    expect(screen.queryByText(name)).toBeNull();
   });
 
   it("keeps the description out of the row — it belongs to the expanded panel", () => {

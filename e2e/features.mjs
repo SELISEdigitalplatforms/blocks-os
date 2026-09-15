@@ -107,15 +107,15 @@ export const OS_FEATURES = [
   },
   {
     id: "users",
-    name: "Identity & Access — Users",
+    name: "Identity & Access — Users & Organizations",
     enabled: true,
     spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
   },
   {
     id: "organizations",
-    name: "Identity & Access — Organizations",
-    enabled: true,
-    spec: "tests/04-identity-and-access/03-organizations-flow.spec.ts",
+    name: "Identity & Access — Organizations (merged into users)",
+    enabled: false,
+    spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
   },
   {
     id: "roles",
@@ -183,30 +183,33 @@ export const OS_FEATURES = [
     enabled: true,
     spec: "tests/06-project-settings/05-migration-flow.spec.ts",
   },
-]
+];
 
 export function resolveEnabledFeatures() {
-  const override = process.env.E2E_FEATURES?.trim()
+  const override = process.env.E2E_FEATURES?.trim();
 
   if (!override || override === "all") {
-    return OS_FEATURES.filter((feature) => feature.enabled)
+    return OS_FEATURES.filter((feature) => feature.enabled);
   }
 
-  const ids = override.split(",").map((id) => id.trim()).filter(Boolean)
+  const ids = override
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   /** @type {typeof OS_FEATURES} */
-  const selected = []
+  const selected = [];
 
   for (const id of ids) {
-    const feature = OS_FEATURES.find((entry) => entry.id === id)
+    const feature = OS_FEATURES.find((entry) => entry.id === id);
     if (!feature) {
       throw new Error(
         `Unknown E2E feature "${id}". Valid ids: ${OS_FEATURES.map((f) => f.id).join(", ")}`,
-      )
+      );
     }
-    selected.push(feature)
+    selected.push(feature);
   }
 
-  return selected
+  return selected;
 }
 
 /** Spec files in suite order, including login + os-setup so project filters still match. */
@@ -215,5 +218,5 @@ export function orderedSuiteSpecs() {
     "tests/auth/login.spec.ts",
     "tests/suite/suite.setup.spec.ts",
     ...resolveEnabledFeatures().map((feature) => feature.spec),
-  ]
+  ];
 }

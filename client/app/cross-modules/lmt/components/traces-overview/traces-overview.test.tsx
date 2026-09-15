@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   useGetTraceStatus: vi.fn(),
   useStartColdTrace: vi.fn(),
   useStartArchiveTrace: vi.fn(),
+  useCancelRestoreRequest: vi.fn(),
   useGetRestoredTraces: vi.fn(),
   useGetRestoredDataRetentionDays: vi.fn(),
   isMobile: false,
@@ -35,6 +36,7 @@ vi.mock("@blocks-lmt/hooks/use-trace", () => ({
   useGetTraceStatus: () => ({ mutateAsync: h.useGetTraceStatus }),
   useStartColdTrace: () => ({ mutateAsync: h.useStartColdTrace, isPending: false }),
   useStartArchiveTrace: () => ({ mutateAsync: h.useStartArchiveTrace, isPending: false }),
+  useCancelRestoreRequest: () => ({ mutateAsync: h.useCancelRestoreRequest, isPending: false }),
   useGetRestoredTraces: (opt: unknown, queryOptions: unknown) =>
     h.useGetRestoredTraces(opt, queryOptions),
   useGetRestoredDataRetentionDays: (queryOptions: unknown) =>
@@ -66,16 +68,20 @@ const trace = {
   timestamp: "2024-06-01T12:00:00Z",
 };
 
-const wrapper = ({ children }: { children: ReactNode }) => {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
-  return (
-    <QueryClientProvider client={qc}>
-      <NuqsTestingAdapter>{children}</NuqsTestingAdapter>
-    </QueryClientProvider>
-  );
+const makeWrapper = (searchParams?: string) => {
+  const Wrapper = ({ children }: { children: ReactNode }) => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    return (
+      <QueryClientProvider client={qc}>
+        <NuqsTestingAdapter searchParams={searchParams}>{children}</NuqsTestingAdapter>
+      </QueryClientProvider>
+    );
+  };
+  return Wrapper;
 };
 
-const renderOverview = () => render(<TracesOverview projectKey="proj-1" />, { wrapper });
+const renderOverview = (searchParams?: string) =>
+  render(<TracesOverview projectKey="proj-1" />, { wrapper: makeWrapper(searchParams) });
 
 describe("TracesOverview", () => {
   beforeEach(() => {
@@ -131,7 +137,8 @@ describe("TracesOverview", () => {
     renderOverview();
     expect(await screen.findByText("GetUsers")).toBeTruthy();
     expect(screen.getByText("get")).toBeTruthy();
-    expect(screen.getByText("125ms")).toBeTruthy();
+    // Durations render to two decimals with a unit, not raw driver precision.
+    expect(screen.getByText("125.00 ms")).toBeTruthy();
     // Registered service name resolves from the serviceId.
     await waitFor(() => expect(screen.getByText("Service One")).toBeTruthy());
   });
@@ -218,7 +225,12 @@ describe("TracesOverview", () => {
     await waitFor(() =>
       expect(h.useGetTraces).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          filter: { services: ["blocks-os", "blocks-os-worker"], excepts: ["blocks-lmt-api"] },
+          // objectContaining: this test is about how a service selection resolves to
+          // collection names, not about which other filters the payload carries.
+          filter: expect.objectContaining({
+            services: ["blocks-os", "blocks-os-worker"],
+            excepts: ["blocks-lmt-api"],
+          }),
         }),
       ),
     );
@@ -235,9 +247,51 @@ describe("TracesOverview", () => {
     await waitFor(() =>
       expect(h.useGetTraces).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          filter: { services: ["blocks-os-worker"], excepts: ["blocks-lmt-api"] },
+          // objectContaining: this test is about how a service selection resolves to
+          // collection names, not about which other filters the payload carries.
+          filter: expect.objectContaining({
+            services: ["blocks-os-worker"],
+            excepts: ["blocks-lmt-api"],
+          }),
         }),
       ),
+    );
+  });
+
+  it("offers a local-time window picker instead of relative presets", async () => {
+    const user = userEvent.setup();
+    renderOverview();
+
+    await user.click(screen.getByRole("button", { name: /Time range/i }));
+
+    // Trace timestamps are listed in local time, so the window is written in local time.
+    expect(await screen.findByText(/local timezone/i)).toBeTruthy();
+    expect(screen.queryByText("Last 30 minutes")).toBeNull();
+    expect(screen.queryByText("Last 24 hours")).toBeNull();
+  });
+
+  it("carries a chosen window through to the trace query", async () => {
+    const from = new Date(2026, 8, 8, 11, 9).toISOString();
+    const to = new Date(2026, 8, 8, 11, 39).toISOString();
+
+    renderOverview(`?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}`);
+
+    await waitFor(() =>
+      expect(h.useGetTraces).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          filter: expect.objectContaining({ startDate: from, endDate: to }),
+        }),
+      ),
+    );
+  });
+
+  it("leaves both ends unbounded when no window is chosen", () => {
+    renderOverview();
+
+    expect(h.useGetTraces).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        filter: expect.objectContaining({ startDate: undefined, endDate: undefined }),
+      }),
     );
   });
 

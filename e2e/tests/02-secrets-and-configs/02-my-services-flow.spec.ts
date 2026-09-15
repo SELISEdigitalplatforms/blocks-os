@@ -1,11 +1,11 @@
-import { test, expect } from "../../support/test-base";
+import { test } from "../../support/test-base";
 import {
   copyServiceIdAndKeyFlow,
   expandServiceRowAndVerifyFlow,
-  findServiceTriggerFlow,
   navigateToMyServicesFlow,
   openDocsInNewTabFlow,
   openRegisterServiceDialogFlow,
+  openServiceScopedLogsFlow,
   openSetupGuideFlow,
   registerFrontendServiceFlow,
   registerServiceFlow,
@@ -84,24 +84,11 @@ test.describe("flows", () => {
     });
 
     await test.step("'Logs' button on a service card should open that service's scoped log view", async () => {
-      // CONFIRMED REGRESSION: clicking "Logs" on a service card is supposed
-      // to open that service's scoped log view at /lmt/logs?source=managed&service=...,
-      // but it lands on /lmt/usage instead — the path/query never survives.
-      test.fail(
-        true,
-        "Clicking 'Logs' on a My Services card lands on the LMT section's default Usage tab instead of the service's own Logs view — the '/logs?...' path/query never survives the navigate() call.",
-      );
-
       await navigateToMyServicesFlow(page);
       await openRegisterServiceDialogFlow(page);
       const regressionName = `Flow Regression Service ${Date.now()}`;
       await registerServiceFlow(page, regressionName, "Backend");
-
-      const trigger = await findServiceTriggerFlow(page, regressionName);
-      await expect(trigger).toBeVisible({ timeout: 15000 });
-      await trigger.click();
-      await page.getByRole("button", { name: "Logs" }).first().click();
-      await expect(page).toHaveURL(/\/lmt\/logs\?/, { timeout: 15000 });
+      await openServiceScopedLogsFlow(page, regressionName);
     });
   });
 });

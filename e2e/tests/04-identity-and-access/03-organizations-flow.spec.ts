@@ -1,4 +1,5 @@
 import { test } from "../../support/test-base";
+import { uniqueTestEmail } from "../../support/env";
 import {
   enableMultiOrgFlow,
   verifyAddOrgButtonEnabledFlow,
@@ -6,17 +7,22 @@ import {
   createOrganizationFlow,
   selectOrgInSidebarFlow,
   verifyMembersTabFlow,
+  inviteOrgMemberFlow,
   renameOrganizationFlow,
   disableReEnableOrganizationFlow,
   searchOrganizationsFlow,
   statusFilterFlow,
 } from "../../pages/identity-and-access/organizations";
 
-test.describe("organizations-flows", () => {
-  test("Organizations flow: strict validation -> create -> select in sidebar -> workspace panel", async ({
+// Organizations flow: enable multi-org -> max-length validation -> create ->
+// Members tab -> invite a member -> rename -> disable/re-enable -> search ->
+// status filter. Self-contained: it enables multi-org and creates its own org
+// so it can run before or after 02-users-flow without sharing state.
+test.describe("flows", () => {
+  test("Organizations flow: enable multi-org -> create -> members -> rename -> disable/re-enable -> search -> filter", async ({
     page,
   }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(240_000);
 
     await test.step("Enable multi-organization environment", async () => {
       await enableMultiOrgFlow(page);
@@ -41,6 +47,11 @@ test.describe("organizations-flows", () => {
 
     await test.step("Verify Members tab shows Invite action", async () => {
       await verifyMembersTabFlow(page);
+    });
+
+    const orgMemberEmail = uniqueTestEmail("flow-org-member");
+    await test.step("Invite a member from the organization (send invitation only)", async () => {
+      await inviteOrgMemberFlow(page, orgMemberEmail, orgName);
     });
 
     orgName = await test.step(`Rename organization to "${orgName} Renamed"`, async () => {

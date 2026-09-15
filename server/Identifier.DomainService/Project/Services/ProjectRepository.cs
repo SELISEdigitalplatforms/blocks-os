@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Shared;
@@ -405,9 +405,9 @@ namespace DomainService.Projects
                 CopyDocumentAsync(sourceDatabase, consumerDb, "EmailTemplates", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "StorageConfigurations", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguages", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "UilmFiles", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageModules", project),
-                CopyDocumentAsync(sourceDatabase, consumerDb, "BlocksLanguageKeys", project),
+                // The remaining localization collections (UilmFiles, BlocksLanguageModules,
+                // BlocksLanguageKeys) are deliberately not seeded here. DataCleanupAsync still
+                // copies them from BlocksConfiguration on demand.
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Roles", project),
                 CopyDocumentAsync(sourceDatabase, consumerDb, "Permissions", project),
                 // CopyDocumentAsync(sourceDatabase, consumerDb, "SchemaDefinitions", project),

@@ -13,6 +13,9 @@ public sealed class UpdateSecretApiRequest
     public string? Name { get; set; }
 
     public string? Description { get; set; }
+
+    /// <summary>Replaces the whole tag set. Null leaves it alone; an empty array clears it.</summary>
+    public IReadOnlyCollection<string>? Tags { get; set; }
 }
 
 public sealed class RotateSecretApiRequest

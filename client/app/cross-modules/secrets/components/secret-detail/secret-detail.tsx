@@ -1,12 +1,27 @@
 import { format } from "date-fns";
-import { Clock, Fingerprint, PenLine, RefreshCw, ShieldCheck, Trash2, User } from "lucide-react";
+import {
+  Clock,
+  Fingerprint,
+  PenLine,
+  RefreshCw,
+  ShieldCheck,
+  Tag,
+  Trash2,
+  User,
+} from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import {
   useResolvedRoleNames,
   useResolvedUserNames,
 } from "@/cross-modules/secrets/hooks/use-access-labels";
-import { SECRET_TYPE, type SecretResult } from "@/cross-modules/secrets/models/secret.model";
+import {
+  SECRET_TYPE,
+  secretTagLabel,
+  secretTags,
+  type SecretResult,
+} from "@/cross-modules/secrets/models/secret.model";
+import { useSecretTags } from "@/cross-modules/secrets/hooks/use-secret-management";
 
 /**
  * Actor ids are deliberately not rendered.
@@ -78,6 +93,10 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
   const userNames = useResolvedUserNames(isApi ? access.userIds : []);
   const roleNames = useResolvedRoleNames(isApi ? access.roles : []);
 
+  const tags = secretTags(secret);
+  // Cached and shared with the toolbar and the form, so an expanded row costs no extra fetch.
+  const { data: tagCatalogue = [] } = useSecretTags(tags.length > 0);
+
   const hasAccessEntries = access.userIds.length > 0 || access.roles.length > 0;
 
   return (
@@ -118,6 +137,23 @@ export function SecretDetail({ secret }: { secret: SecretResult }) {
             {formatMoment(secret.deletedDate)}
           </Stat>
         )}
+
+        <Stat icon={Tag} label="Tags">
+          {tags.length ? (
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((key) => (
+                <Badge key={key} variant="secondary" className="w-fit gap-1 font-normal">
+                  <Tag className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="max-w-[220px] truncate">
+                    {secretTagLabel(key, tagCatalogue)}
+                  </span>
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <span className="italic text-muted-foreground">None</span>
+          )}
+        </Stat>
       </div>
 
       {isApi && (

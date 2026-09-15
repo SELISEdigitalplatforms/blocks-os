@@ -122,15 +122,18 @@ describe("ProfileImageUploader", () => {
     expect(input.value).toBe("");
   });
 
-  it("stops silently when the pre-signed upload url cannot be issued", async () => {
-    h.preSigned.mockResolvedValue({ isSuccess: false });
+  it("surfaces an error toast when the pre-signed upload url cannot be issued", async () => {
+    h.preSigned.mockResolvedValue({ isSuccess: false, errors: null });
     const { container } = render(<ProfileImageUploader projectKey="p1" id="u1" />);
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [makeFile("image/png")] } });
     await waitFor(() => expect(h.preSigned).toHaveBeenCalled());
     expect(h.upload).not.toHaveBeenCalled();
     expect(h.showSuccess).not.toHaveBeenCalled();
-    expect(h.showError).not.toHaveBeenCalled();
+    expect(h.showError).toHaveBeenCalledWith({
+      errors:
+        "Unable to upload profile picture. Check that a Default storage configuration exists.",
+    });
   });
 
   it("surfaces the server errors when the upload throws with an errors payload", async () => {

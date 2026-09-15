@@ -95,6 +95,7 @@ export interface IOidcUiTemplate {
       submitButton: string;
       signupPrompt: string;
       signupLink: string;
+      ssoSeparatorText: string;
       activationErrorTitle: string;
       activationErrorMessage: string;
       activateAccountButton: string;
@@ -105,19 +106,39 @@ export interface IOidcUiTemplate {
       firstNameLabel: string;
       lastNameLabel: string;
       emailLabel: string;
+      organizationNameLabel: string;
       submitButton: string;
+      creatingButton: string;
       termsPrefix: string;
       termsLinkText: string;
       privacyLinkText: string;
+      termsConjunction: string;
       loginPrompt: string;
       loginLink: string;
+      ssoSeparatorText: string;
       successTitle: string;
       successSubtitle: string;
+      emailSentTitle: string;
+      emailSentSubtitle: string;
+      resendPromptTitle: string;
+      resendPromptSubtitle: string;
+      resendButton: string;
+      loginSentPrompt: string;
+      loginSentLink: string;
     };
     forgotPassword: {
       heading: string;
+      introText: string;
       emailLabel: string;
       submitButton: string;
+      backToLoginButton: string;
+      successTitle: string;
+      successSubtitle: string;
+      resendPromptTitle: string;
+      resendPromptSubtitle: string;
+      resendButton: string;
+      loginPrompt: string;
+      loginLink: string;
     };
     resetPassword: {
       heading: string;
@@ -125,16 +146,43 @@ export interface IOidcUiTemplate {
       confirmPasswordLabel: string;
       logoutFromDevicesLabel: string;
       submitButton: string;
+      resettingButton: string;
+      missingCodeMessage: string;
+      requestNewLinkButton: string;
+      backToLoginButton: string;
       successTitle: string;
       successSubtitle: string;
+      readyTitle: string;
+      readySubtitle: string;
+      loginButton: string;
     };
     activation: {
       heading: string;
+      firstNameLabel: string;
+      lastNameLabel: string;
       passwordLabel: string;
       confirmPasswordLabel: string;
       submitButton: string;
+      activatingButton: string;
       successTitle: string;
       successSubtitle: string;
+      invalidHeading: string;
+      invalidMessage: string;
+      expiredHeading: string;
+      expiredMessage: string;
+      alreadyActiveHeading: string;
+      alreadyActiveMessage: string;
+      resendButton: string;
+      resendSuccessMessage: string;
+      resendFailureMessage: string;
+      autoConfirmCaptchaText: string;
+      autoConfirmProgressText: string;
+      autoActivatingLabel: string;
+      readyTitle: string;
+      readyWithPasswordSubtitle: string;
+      readySubtitle: string;
+      loginButton: string;
+      backToLoginButton: string;
     };
     mfa: {
       heading: string;
@@ -144,9 +192,12 @@ export interface IOidcUiTemplate {
     accountSelector: {
       heading: string;
       subheading: string | null;
+      bodyText: string;
     };
     shared: {
       footerText: string;
+      helpPrompt: string;
+      supportLinkText: string;
     };
   };
 }

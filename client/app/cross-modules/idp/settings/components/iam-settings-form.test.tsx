@@ -43,6 +43,7 @@ const baseConfig: ISettingsAuthConfig = {
   logoutOnPasswordChange: false,
   isOidcEnabled: false,
   passwordStrengthCheckerRegex: "",
+  collectPasswordOnActivation: true,
   allowedGrantTypes: ["authorization_code"],
 } as unknown as ISettingsAuthConfig;
 
@@ -183,6 +184,34 @@ describe("IamSettingsForm", () => {
     const payload = h.mutateAsync.mock.calls[0][0];
     expect(payload.logoutOnPasswordChange).toBe(true);
     expect(payload.passwordStrengthCheckerRegex).toBe("^.+$");
+  });
+
+  it("offers the activation password toggle only while OIDC is on", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    expect(screen.queryByRole("switch", { name: "Set Password During Activation" })).toBeNull();
+
+    await user.click(screen.getByRole("switch", { name: "OpenID Connect (OIDC)" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name: "Set Password During Activation" })).toBeTruthy(),
+    );
+  });
+
+  it("sends the activation password step turned off", async () => {
+    const user = userEvent.setup();
+    renderForm({ ...baseConfig, isOidcEnabled: true });
+
+    const toggle = screen.getByRole("switch", { name: "Set Password During Activation" });
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+
+    await user.click(toggle);
+    await waitFor(() => expect(saveButton().disabled).toBe(false));
+    await user.click(saveButton());
+
+    await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(h.mutateAsync.mock.calls[0][0].collectPasswordOnActivation).toBe(false);
   });
 
   it("disables the action buttons while a save is pending", () => {

@@ -18,6 +18,38 @@ describe("SecretManagementService", () => {
     expect(SECRET_ENDPOINTS.GETS).toBe("/api/secrets/gets");
     expect(SECRET_ENDPOINTS.VALUE).toBe("/api/secrets/value");
     expect(SECRET_ENDPOINTS.ACCESS).toBe("/api/secrets/access");
+    expect(SECRET_ENDPOINTS.TAGS).toBe("/api/secrets/tags");
+  });
+
+  describe("tags", () => {
+    it("repeats the key once per tag, which is what binds to a collection", async () => {
+      // `String(["a", "b"])` would send the single value `a,b` and the backend would look for
+      // one tag literally named "a,b".
+      vi.mocked(http.get).mockResolvedValue({ data: [], totalCount: 0 });
+
+      await service.find({ tags: ["iam", "os"] });
+
+      const url = vi.mocked(http.get).mock.calls[0][0] as string;
+      const params = new URLSearchParams(url.split("?")[1]);
+      expect(params.getAll("tags")).toEqual(["iam", "os"]);
+    });
+
+    it("omits an empty tag array", async () => {
+      vi.mocked(http.get).mockResolvedValue({ data: [], totalCount: 0 });
+
+      await service.find({ tags: [] });
+
+      expect(vi.mocked(http.get).mock.calls[0][0]).toBe(SECRET_ENDPOINTS.GETS);
+    });
+
+    it("reads the catalogue from the tags endpoint", async () => {
+      vi.mocked(http.get).mockResolvedValue([{ key: "iam", label: "Blocks Iam" }]);
+
+      const tags = await service.getTags();
+
+      expect(vi.mocked(http.get)).toHaveBeenCalledWith(SECRET_ENDPOINTS.TAGS);
+      expect(tags).toEqual([{ key: "iam", label: "Blocks Iam" }]);
+    });
   });
 
   describe("find", () => {

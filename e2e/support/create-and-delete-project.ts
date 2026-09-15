@@ -1,5 +1,5 @@
 import { Page, expect, test } from "@playwright/test"
-import { e2eBaseUrl } from "./env"
+import { e2eBaseUrl, e2eDebugLog } from "./env"
 import { ensureAuthenticated, isLoginSurface, loginFresh } from "./login-helper"
 import { gotoE2e, resolveE2eUrl } from "./navigation"
 import { readOsProject, writeOsProject } from "./os-project"
@@ -680,7 +680,7 @@ export async function deleteCreatedProject(
     })
     return true
   } catch (error) {
-    console.warn(`[e2e] Failed to delete project "${projectName}":`, error)
+    e2eDebugLog(`[e2e] Failed to delete project "${projectName}":`, error)
     return false
   }
 }
@@ -816,7 +816,7 @@ async function deleteEnvironmentByDashboard(
   const maxAttempts = 3
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    console.log(
+    e2eDebugLog(
       `[e2e] Teardown: open dashboard ${dashboardUrl} ` +
         `(attempt ${attempt + 1}/${maxAttempts}) for "${projectName}"…`,
     )
@@ -845,7 +845,7 @@ async function deleteEnvironmentByDashboard(
         timeout: 20_000,
       })
       await expect(page).toHaveURL(/\/app\/console$/, { timeout: 20_000 })
-      console.log(`[e2e] Teardown: deleted environment itemId=${itemId} of "${projectName}".`)
+      e2eDebugLog(`[e2e] Teardown: deleted environment itemId=${itemId} of "${projectName}".`)
       return
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
@@ -863,19 +863,19 @@ async function deleteEnvironmentByDashboard(
           .isVisible({ timeout: 5_000 })
           .catch(() => false)
         if (!stillListed) {
-          console.log(
+          e2eDebugLog(
             `[e2e] Teardown: itemId=${itemId} already gone (console, no project card).`,
           )
           return
         }
       }
 
-      console.warn(
+      e2eDebugLog(
         `[e2e] Teardown: could not delete itemId=${itemId}` +
           `${onConsole ? " (on console)" : ""}: ${detail}`,
       )
       if (attempt >= 1) {
-        console.warn(`[e2e] Teardown: forcing fresh OIDC login before retry…`)
+        e2eDebugLog(`[e2e] Teardown: forcing fresh OIDC login before retry…`)
         await loginFresh(page)
         await openNamedProjectDashboard(page, projectName).catch(() => {})
       }
@@ -922,7 +922,7 @@ async function resolveEnvironmentIdsForDelete(
         }
       }
     } catch (error) {
-      console.warn(
+      e2eDebugLog(
         `[e2e] Teardown: Project/Gets discovery failed for ${tenantGroupId}:`,
         error instanceof Error ? error.message : error,
       )
@@ -942,13 +942,13 @@ async function resolveEnvironmentIdsForDelete(
       if (matched) {
         tenantGroupId = matched.tenantGroupId
         environmentIds = matched.itemIds
-        console.log(
+        e2eDebugLog(
           `[e2e] Teardown: discovered ${environmentIds.length} env id(s) for "${projectName}" ` +
             `via console Project/Gets (tenantGroupId=${tenantGroupId}).`,
         )
       }
     } catch (error) {
-      console.warn(
+      e2eDebugLog(
         `[e2e] Teardown: console Project/Gets discovery failed:`,
         error instanceof Error ? error.message : error,
       )
@@ -978,13 +978,13 @@ export async function deleteProject(
   const { environmentIds } = await resolveEnvironmentIdsForDelete(page, projectName, options)
 
   if (environmentIds.length === 0) {
-    console.log(
+    e2eDebugLog(
       `[e2e] Teardown: no environment ids for "${projectName}" — treating as already deleted.`,
     )
     return { projectName }
   }
 
-  console.log(
+  e2eDebugLog(
     `[e2e] Teardown: deleting ${environmentIds.length} environment(s) by dashboard URL ` +
       `for "${projectName}"…`,
   )

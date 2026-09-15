@@ -69,9 +69,9 @@ public sealed class SecretAuthorizationService : ISecretAuthorizationService
             return null;
         }
 
-        // Service secrets are backend credentials with no per-user notion of ownership. A valid
-        // tenant context plus Active status is the whole check.
-        if (string.Equals(secret.Type, SecretTypes.Service, StringComparison.Ordinal))
+        // Service and Both secrets are platform credentials with no per-user notion of
+        // ownership. A valid tenant context plus Active status is the whole check.
+        if (!SecretTypes.HasAccessList(secret.Type))
         {
             return null;
         }

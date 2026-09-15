@@ -14,6 +14,7 @@ public sealed partial class SecretService : ISecretService
     private readonly ISecretValueStore _valueStore;
     private readonly ISecretAuthorizationService _authorization;
     private readonly ISecretAuditService _audit;
+    private readonly ISecretTagCatalogService _tagCatalog;
     private readonly ILogger<SecretService> _logger;
 
     public SecretService(
@@ -22,6 +23,7 @@ public sealed partial class SecretService : ISecretService
         ISecretValueStore valueStore,
         ISecretAuthorizationService authorization,
         ISecretAuditService audit,
+        ISecretTagCatalogService tagCatalog,
         ILogger<SecretService> logger)
     {
         _repository = repository;
@@ -29,6 +31,7 @@ public sealed partial class SecretService : ISecretService
         _valueStore = valueStore;
         _authorization = authorization;
         _audit = audit;
+        _tagCatalog = tagCatalog;
         _logger = logger;
     }
 
@@ -49,6 +52,10 @@ public sealed partial class SecretService : ISecretService
 
         await CreateAsync(caller, secret, request.Value, cancellationToken).ConfigureAwait(false);
         await _audit.RecordAsync(caller, SecretAuditActions.Set, secret, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        // After the write, never before: a tag the caller invented should not appear in the
+        // tenant's catalogue if the secret it was for failed to save.
+        await _tagCatalog.RegisterAsync(secret.Tags, cancellationToken).ConfigureAwait(false);
 
         return secret.ItemId;
     }
@@ -120,6 +127,10 @@ public sealed partial class SecretService : ISecretService
         }
 
         await _audit.RecordAsync(caller, SecretAuditActions.SetMany, affectedCount: created.Count, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        // One catalogue write for the batch rather than one per secret, which would read and
+        // rewrite the same document up to fifty times.
+        await _tagCatalog.RegisterAsync(created.SelectMany(secret => secret.Tags), cancellationToken).ConfigureAwait(false);
 
         return result;
     }
@@ -219,6 +230,9 @@ public sealed partial class SecretService : ISecretService
         return ToResult(caller, secret);
     }
 
+    public Task<IReadOnlyList<SecretTagEntry>> GetTagsAsync(CancellationToken cancellationToken = default) =>
+        _tagCatalog.GetAsync(cancellationToken);
+
     public async Task<SecretListResult> FindAsync(SecretFilter filter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filter);
@@ -227,6 +241,7 @@ public sealed partial class SecretService : ISecretService
 
         filter.PageNumber = Math.Max(1, filter.PageNumber);
         filter.PageSize = Math.Clamp(filter.PageSize, 1, SecretDefaults.MaxPageSize);
+        filter.Tags = NormalizeFilterTags(filter.Tags);
 
         var (items, total) = await _repository.FindAsync(caller.TenantId, filter, cancellationToken).ConfigureAwait(false);
 
@@ -369,9 +384,20 @@ public sealed partial class SecretService : ISecretService
             secret.Description = request.Description;
         }
 
+        if (request.Tags is not null)
+        {
+            ValidateTags(request.Tags);
+            secret.Tags = SecretTag.NormalizeAll(request.Tags);
+        }
+
         Touch(secret, caller);
         await _repository.ReplaceAsync(secret, cancellationToken).ConfigureAwait(false);
         await _audit.RecordAsync(caller, SecretAuditActions.Update, secret, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (request.Tags is not null)
+        {
+            await _tagCatalog.RegisterAsync(secret.Tags, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async Task RotateAsync(string secretId, RotateSecretRequest request, CancellationToken cancellationToken = default)
@@ -463,10 +489,10 @@ public sealed partial class SecretService : ISecretService
         var caller = _authorization.ResolveContext();
         var secret = await LoadForMutationAsync(caller, secretId, "update access", cancellationToken).ConfigureAwait(false);
 
-        if (string.Equals(secret.Type, SecretTypes.Service, StringComparison.Ordinal))
+        if (!SecretTypes.HasAccessList(secret.Type))
         {
             throw new SecretValidationException(
-                "Service secrets have no access list; they are readable by any valid tenant context.",
+                $"A '{secret.Type}' secret has no access list; it is readable by any valid tenant context.",
                 SecretAuditReasons.AccessNotApplicable);
         }
 

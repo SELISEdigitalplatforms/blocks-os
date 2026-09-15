@@ -45,6 +45,11 @@ public class Secret : BaseEntity
 
     public DateTime? DeletedDate { get; set; }
 
-    // OrganizationId is inherited from BaseEntity. Redeclaring it here would shadow the base
-    // property and give Mongo two members mapped to the same element.
+    // OrganizationId and Tags are both inherited from BaseEntity. Redeclaring either here would
+    // shadow the base property and give Mongo two members mapped to the same element, which the
+    // driver refuses at class-map registration — the whole collection then fails to serialize,
+    // not just the one field. A contract test enforces this.
+    //
+    // Tags holds free-form labels in the canonical form produced by SecretTag.Normalize. They
+    // are purely for grouping and lookup and carry no authorization meaning.
 }

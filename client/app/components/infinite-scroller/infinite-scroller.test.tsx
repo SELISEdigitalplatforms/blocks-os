@@ -44,7 +44,9 @@ describe("InfiniteScroll", () => {
     const { container } = render(
       <InfiniteScroll<Item> {...props} initialData={[{ id: 1 }]} />,
     );
-    const scrollContainer = container.querySelector(".overflow-scroll") as HTMLElement;
+    const scrollContainer = container.querySelector(
+      "[data-testid='infinite-scroll-container']",
+    ) as HTMLElement;
     Object.defineProperty(scrollContainer, "scrollTop", { value: 0, configurable: true, writable: true });
     fireEvent.scroll(scrollContainer);
     await waitFor(() => expect(props.topFn).toHaveBeenCalled());
@@ -57,7 +59,9 @@ describe("InfiniteScroll", () => {
     const { container } = render(
       <InfiniteScroll<Item> {...props} initialData={[{ id: 1 }]} />,
     );
-    const scrollContainer = container.querySelector(".overflow-scroll") as HTMLElement;
+    const scrollContainer = container.querySelector(
+      "[data-testid='infinite-scroll-container']",
+    ) as HTMLElement;
     Object.defineProperty(scrollContainer, "scrollTop", { value: 0, configurable: true, writable: true });
     fireEvent.scroll(scrollContainer);
     await waitFor(() => expect(props.topFn).toHaveBeenCalledTimes(1));

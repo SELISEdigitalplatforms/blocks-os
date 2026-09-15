@@ -23,6 +23,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
 import { PasswordInput } from "@/components/password-input/password-input";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { cn } from "@/lib/utils";
@@ -33,17 +34,20 @@ import {
   SECRET_TYPE,
   SECRET_TYPE_LABEL,
   SECRET_TYPE_DESCRIPTION,
+  secretTags,
   type SecretAccess,
   type SecretResult,
   type SecretType,
 } from "@/cross-modules/secrets/models/secret.model";
 import {
+  useSecretTags,
   useSetSecret,
   useUpdateSecret,
   useUpdateSecretAccess,
 } from "@/cross-modules/secrets/hooks/use-secret-management";
 import { describeSecretError } from "@/cross-modules/secrets/utils/secret-error";
 import { UserRolePicker } from "../user-role-picker/user-role-picker";
+import { SecretTagInput } from "../secret-tag-input/secret-tag-input";
 
 // Mirrors SecretService.Helpers.cs so the user sees the problem before a round trip. The
 // server re-validates regardless; this only saves a failed request.
@@ -87,16 +91,17 @@ const editSchema = z.object({
 type FormValues = { name: string; description?: string; value?: string };
 
 /**
- * Categories offered when creating a secret.
+ * Types offered when creating a secret.
  *
- * Only `Application` is accepted from the UI for now — `Service` stays commented out rather
- * than deleted because the backend still accepts it and the card is meant to come back.
- * Existing service secrets are unaffected: edit mode reads the category off the secret and
- * renders it read-only, so this list is never consulted there.
+ * All three, and the choice is permanent: there is no type transition on the backend, because
+ * converting one in place would silently move an existing credential between access models.
+ * Edit mode reads the type off the secret and renders it read-only, so this list is never
+ * consulted there.
  */
 const CREATE_TYPE_OPTIONS: SecretType[] = [
   SECRET_TYPE.Api,
-  // SECRET_TYPE.Service,
+  SECRET_TYPE.Service,
+  SECRET_TYPE.Both,
 ];
 
 const emptyAccess = (): SecretAccess => ({ userIds: [], roles: [] });
@@ -140,6 +145,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
       ? { userIds: [...secret.access.userIds], roles: [...secret.access.roles] }
       : emptyAccess(),
   );
+  const [tags, setTags] = useState<string[]>(() => (secret ? [...secretTags(secret)] : []));
   const [formError, setFormError] = useState<string | null>(null);
   /** Set when metadata saved but the access call did not — changes what a retry has to do. */
   const [metadataSaved, setMetadataSaved] = useState(false);
@@ -147,6 +153,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
   const { mutateAsync: createSecret, isPending: isCreating } = useSetSecret();
   const { mutateAsync: updateSecret, isPending: isUpdating } = useUpdateSecret();
   const { mutateAsync: updateAccess, isPending: isUpdatingAccess } = useUpdateSecretAccess();
+  const { data: tagCatalogue = [] } = useSecretTags(open);
   const isPending = isCreating || isUpdating || isUpdatingAccess;
 
   const form = useForm<FormValues>({
@@ -184,8 +191,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
         description: values.description?.trim() || undefined,
         value: values.value ?? "",
         type,
-        // Service secrets must not carry an access list — it would imply a check that is never
-        // performed for them.
+        tags,
+        // Only an Application secret carries an access list — for the other categories a
+        // stored list would imply a check that is never performed.
         access: isApi ? access : null,
       });
       onOpenChange(false);
@@ -204,6 +212,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
           secretId: secret.secretId,
           name: values.name.trim(),
           description: values.description?.trim() ?? "",
+          // Always sent, because the request replaces the whole set: omitting it on an edit
+          // that cleared every chip would leave the old tags in place.
+          tags,
         });
       } catch (error) {
         applyError(error, "Could not save the secret.");
@@ -250,7 +261,7 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
           <DialogTitle className="text-left">{isEdit ? "Edit secret" : "Create secret"}</DialogTitle>
           <DialogDescription className="text-left">
             {isEdit
-              ? "Update the name, description and access list. Use Rotate to change the value."
+              ? "Update the name, description, tags and access list. Use Rotate to change the value."
               : "Store a new secret. The value goes straight to the secret store and is never shown in a list."}
           </DialogDescription>
         </DialogHeader>
@@ -265,11 +276,9 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
               {formError && <Banner variant="destructive">{formError}</Banner>}
 
               <div className="space-y-2">
-                <Label>
-                  Category {!isEdit && <span className="text-destructive">*</span>}
-                </Label>
+                <Label>Type {!isEdit && <span className="text-destructive">*</span>}</Label>
                 {isEdit ? (
-                  // The backend has no category transition; changing it would mean a new secret.
+                  // The backend has no type transition; changing it would mean a new secret.
                   <div className="rounded-md border bg-muted/30 px-3 py-2">
                     <p className="text-sm font-medium">{SECRET_TYPE_LABEL[type]}</p>
                     <p className="text-xs text-muted-foreground">
@@ -277,39 +286,42 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                     </p>
                   </div>
                 ) : (
-                  // Cards rather than a segmented toggle: the choice is not obvious from a
-                  // one-word label, so each option carries the sentence that explains it.
-                  <div
-                    role="radiogroup"
-                    aria-label="Category"
-                    className={cn(
-                      "grid gap-2",
-                      CREATE_TYPE_OPTIONS.length > 1 && "sm:grid-cols-2",
-                    )}
+                  // A real radio group rather than styled buttons: arrow-key roving focus and
+                  // the checked state come from Radix, and each option keeps the sentence that
+                  // explains it — the one-word label alone does not say which one you want.
+                  <RadioGroup
+                    value={type}
+                    onValueChange={(value) => setType(value as SecretType)}
+                    aria-label="Type"
+                    className="gap-2"
                   >
                     {CREATE_TYPE_OPTIONS.map((option) => (
-                      <button
+                      <Label
                         key={option}
-                        type="button"
-                        role="radio"
-                        aria-checked={type === option}
-                        onClick={() => setType(option)}
+                        htmlFor={`secret-type-${option}`}
                         className={cn(
-                          "rounded-md border p-3 text-left transition-colors",
+                          "flex cursor-pointer items-start gap-3 rounded-md border p-3 font-normal transition-colors",
                           type === option
                             ? "border-primary bg-primary/5 ring-1 ring-primary"
                             : "hover:border-muted-foreground/40 hover:bg-muted/40",
                         )}
                       >
-                        <span className="block text-sm font-medium">
-                          {SECRET_TYPE_LABEL[option]}
+                        <RadioGroupItem
+                          value={option}
+                          id={`secret-type-${option}`}
+                          className="mt-0.5 shrink-0"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium text-high-emphasis">
+                            {SECRET_TYPE_LABEL[option]}
+                          </span>
+                          <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                            {SECRET_TYPE_DESCRIPTION[option]}
+                          </span>
                         </span>
-                        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
-                          {SECRET_TYPE_DESCRIPTION[option]}
-                        </span>
-                      </button>
+                      </Label>
                     ))}
-                  </div>
+                  </RadioGroup>
                 )}
               </div>
 
@@ -374,6 +386,19 @@ export function SecretFormModal({ open, onOpenChange, secret }: SecretFormModalP
                   )}
                 />
               )}
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <p className="text-xs text-muted-foreground">
+                  For grouping and filtering only — tags never affect who can read a secret.
+                </p>
+                <SecretTagInput
+                  value={tags}
+                  onChange={setTags}
+                  catalogue={tagCatalogue}
+                  disabled={isPending}
+                />
+              </div>
 
               {isApi && (
                 <div className="space-y-2">

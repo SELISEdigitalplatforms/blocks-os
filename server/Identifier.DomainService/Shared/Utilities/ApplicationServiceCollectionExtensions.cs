@@ -66,6 +66,9 @@ namespace DomainService.Shared
 
             services.RegisterBlocksStorageServices();
             services.RegisterBlocksMailService();
+
+            // Registered after RegisterBlocksStorageServices: it resolves IStorageDriverService.
+            services.AddSingleton<ICertificateUploadService, CertificateUploadService>();
         }
     }
 }

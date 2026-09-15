@@ -1,4 +1,5 @@
 import { test } from "../../support/test-base";
+import { e2eDebugLog } from "../../support/env";
 import {
   fillAndSaveAwsFlow,
   fillAndSaveAzureFlow,
@@ -132,7 +133,7 @@ test.describe("flows", () => {
 
     await test.step("'View Details' opens the details drawer with the configuration's properties", async () => {
       if (!s3CompatibleSaved) {
-        console.log(
+        e2eDebugLog(
           "[storage-flow] Skipping View Details check — AWS S3 Compatible configuration was not saved earlier in this run.",
         );
         return;
@@ -142,7 +143,7 @@ test.describe("flows", () => {
 
     await test.step("Regression guard: clicking the card body itself currently does nothing (no onClick wired)", async () => {
       if (!s3CompatibleSaved) {
-        console.log(
+        e2eDebugLog(
           "[storage-flow] Skipping card-click regression guard — AWS S3 Compatible configuration was not saved earlier in this run.",
         );
         return;

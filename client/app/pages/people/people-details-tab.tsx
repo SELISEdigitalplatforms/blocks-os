@@ -2,15 +2,7 @@ import { User } from "@blocks-idp/iam/models/user";
 import { Card } from "@/components/ui-kits/card/card";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { checkValidDate, formatFullDate } from "@/lib/utils";
-
-const getInitials = (user?: User) => {
-  const initials = [user?.firstName, user?.lastName]
-    .filter(Boolean)
-    .map((name) => name?.charAt(0).toUpperCase())
-    .join("");
-
-  return initials || "?";
-};
+import { getUserDisplayName, getUserInitials } from "@blocks-idp/iam/utils/user-display-name";
 
 export const PeopleDetailsTab = ({
   user,
@@ -19,7 +11,7 @@ export const PeopleDetailsTab = ({
   user?: User;
   projectRole?: "Owner" | "Contributor";
 }) => {
-  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  const fullName = getUserDisplayName(user);
 
   return (
     <Card className="overflow-hidden p-0">
@@ -34,7 +26,7 @@ export const PeopleDetailsTab = ({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span aria-label="Profile initials">{getInitials(user)}</span>
+                <span aria-label="Profile initials">{getUserInitials(user)}</span>
               )}
             </div>
             <div className="min-w-0">

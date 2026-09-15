@@ -28,7 +28,11 @@ namespace XUnitTest.Secrets
         public Mock<ISecretAuditRepository> AuditRepository { get; } = new();
         public Mock<ISecretValueStore> ValueStore { get; } = new();
         public Mock<ITenants> Tenants { get; } = new();
+        public Mock<ISecretTagCatalogService> TagCatalog { get; } = new();
         public List<SecretAuditLog> AuditLog { get; } = new();
+
+        /// <summary>Tag keys the service asked the catalogue to record, in call order.</summary>
+        public List<string> RegisteredTags { get; } = new();
 
         public ISecretService Service { get; }
         public ISecretAuthorizationService Authorization { get; }
@@ -53,6 +57,15 @@ namespace XUnitTest.Secrets
                 .Setup(r => r.FindAsync(It.IsAny<string>(), It.IsAny<SecretAuditFilter>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Array.Empty<SecretAuditLog>(), 0L));
 
+            TagCatalog
+                .Setup(c => c.RegisterAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+                .Callback<IEnumerable<string>, CancellationToken>((tags, _) => RegisteredTags.AddRange(tags))
+                .Returns(Task.CompletedTask);
+
+            TagCatalog
+                .Setup(c => c.GetAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<SecretTagEntry>());
+
             Authorization = new SecretAuthorizationService(Tenants.Object);
 
             var audit = new SecretAuditService(AuditRepository.Object, NullLogger<SecretAuditService>.Instance);
@@ -63,6 +76,7 @@ namespace XUnitTest.Secrets
                 ValueStore.Object,
                 Authorization,
                 audit,
+                TagCatalog.Object,
                 NullLogger<SecretService>.Instance);
         }
 
@@ -104,15 +118,18 @@ namespace XUnitTest.Secrets
             string status = SecretStatuses.Active,
             SecretAccess? access = null,
             string createdBy = UserId,
-            string tenantId = TenantId)
+            string tenantId = TenantId,
+            IEnumerable<string>? tags = null,
+            string name = "api-key")
         {
             var secret = new Secret
             {
                 ItemId = secretId,
                 TenantId = tenantId,
                 OrganizationId = "default",
-                Name = "api-key",
-                NameLower = "api-key",
+                Name = name,
+                NameLower = name.ToLowerInvariant(),
+                Tags = tags?.ToList() ?? [],
                 Type = type,
                 Status = status,
                 Access = access,

@@ -6,6 +6,7 @@ import type {
   SecretFilter,
   SecretListResult,
   SecretResult,
+  SecretTagEntry,
   SecretValueResponse,
   SecretValuesResponse,
   SetManySecretsResponse,
@@ -32,6 +33,7 @@ export const SECRET_ENDPOINTS = {
   RESTORE: `${BASE}/restore`,
   ACCESS: `${BASE}/access`,
   AUDIT: `${BASE}/audit`,
+  TAGS: `${BASE}/tags`,
 } as const;
 
 /**
@@ -40,13 +42,27 @@ export const SECRET_ENDPOINTS = {
  * "All" in the toolbar is the empty string, and sending `type=` would reach the backend as an
  * empty string rather than as "no filter" — `SecretFilter.Type` is nullable, so the key has to
  * be absent, not blank.
+ *
+ * An array becomes one repeated key per element (`tags=a&tags=b`), which is what ASP.NET Core
+ * binds to a collection. `String(["a", "b"])` would send the single value `a,b` and the
+ * backend would look for one tag literally named "a,b".
  */
 const toQuery = (filter: object): string => {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filter)) {
-    if (value === undefined || value === null || value === "") continue;
+
+  const append = (key: string, value: unknown) => {
+    if (value === undefined || value === null || value === "") return;
     params.append(key, String(value));
+  };
+
+  for (const [key, value] of Object.entries(filter)) {
+    if (Array.isArray(value)) {
+      for (const item of value) append(key, item);
+      continue;
+    }
+    append(key, value);
   }
+
   const query = params.toString();
   return query ? `?${query}` : "";
 };
@@ -115,6 +131,15 @@ export class SecretManagementService {
    */
   updateAccess(secretId: string, access: SecretAccess): Promise<BaseResponse> {
     return http.post<BaseResponse>(SECRET_ENDPOINTS.ACCESS, { secretId, access });
+  }
+
+  /**
+   * The tenant tag catalogue, for the tag picker and the tag filter.
+   *
+   * Shares the list permission — it returns labels, not secret data — and is not audited.
+   */
+  getTags(): Promise<SecretTagEntry[]> {
+    return http.get<SecretTagEntry[]>(SECRET_ENDPOINTS.TAGS);
   }
 
   getAuditLogs(filter: SecretAuditFilter = {}): Promise<SecretAuditListResult> {

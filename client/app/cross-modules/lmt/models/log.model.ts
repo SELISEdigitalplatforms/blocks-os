@@ -48,8 +48,10 @@ export interface IGetLogsPayload {
   projectKey: string;
 }
 
-export interface IGetRestoredLogsPayload extends IGetLogsPayload {
+export interface IGetRestoredLogsPayload extends Omit<IGetLogsPayload, "projectKey"> {
   requestId: string;
+  /** Unused by the restore endpoints -- they scope to the caller's tenant -- but harmless. */
+  projectKey?: string;
 }
 
 export interface IGetLiveLogsPayload {

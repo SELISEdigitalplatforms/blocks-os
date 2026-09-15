@@ -83,7 +83,10 @@ describe("LogsFilterToolbar", () => {
   afterEach(() => cleanup());
 
   it("hides the reset button while every filter is at its default", () => {
-    renderToolbar(makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "" } }));
+    // The list opens on the default relative window, so that counts as pristine.
+    renderToolbar(
+      makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "", range: "30m" } }),
+    );
     expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("true");
   });
 
@@ -158,25 +161,82 @@ describe("LogsFilterToolbar", () => {
     ]);
   });
 
-  it("converts a date range into ISO start and end dates", () => {
+  it("shows shortened labels for the Type filter while keeping full values", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    const filters = h.captured?.filters as unknown as CapturedFilter[];
+    const levelFilter = filters.find((f) => f.key === "level");
+    expect(levelFilter?.props?.options).toEqual([
+      { label: "INFO", value: "Information" },
+      { label: "WARN", value: "Warning" },
+      { label: "Error", value: "Error" },
+    ]);
+  });
+
+  it("converts a chosen window into ISO start and end dates", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
     const from = new Date("2024-01-01T00:00:00.000Z");
     const to = new Date("2024-01-31T00:00:00.000Z");
-    h.captured?.onChange("date", { from, to });
+    h.captured?.onChange("timeRange", { from, to });
     const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(updater({})).toEqual({
+    expect(updater({ range: "30m" })).toEqual({
       startDate: from.toISOString(),
       endDate: to.toISOString(),
+      // An explicit window supersedes the relative default rather than stacking with it.
+      range: "",
     });
   });
 
-  it("clears the dates when the range is null", () => {
+  it("leaves the end open when only a start is chosen", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
-    h.captured?.onChange("date", null);
+    const from = new Date("2024-01-01T00:00:00.000Z");
+    h.captured?.onChange("timeRange", { from });
     const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(updater({})).toEqual({ startDate: "", endDate: "" });
+    // An open end is what keeps the list tailing, so it must not be pinned to a timestamp.
+    expect(updater({ range: "30m" })).toEqual({
+      startDate: from.toISOString(),
+      endDate: "",
+      range: "",
+    });
+  });
+
+  it("returns to the default relative window when the range is reset", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    h.captured?.onChange("timeRange", null);
+    const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(updater({ startDate: "x", endDate: "y" })).toEqual({
+      startDate: "",
+      endDate: "",
+      range: "30m",
+    });
+  });
+
+  it("offers no relative presets and hands the picker the default window", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    const filters = h.captured?.filters as unknown as CapturedFilter[];
+    const timeRangeFilter = filters.find((f) => f.key === "timeRange") as unknown as {
+      props?: { presets?: unknown; defaultRange?: { from?: Date; to?: Date }; openEndHint?: string };
+    };
+    expect(timeRangeFilter.props?.presets).toBeUndefined();
+    // Logs tail live, so an open end is worth advertising as such here.
+    expect(timeRangeFilter.props?.openEndHint).toMatch(/keeps streaming/i);
+    // The default window is the last 30 minutes, left open at the end so it keeps streaming.
+    // Floored, not rounded: the start is pinned to the top of the current minute, so the gap
+    // is 30 minutes plus however far into that minute the test happens to run.
+    const from = timeRangeFilter.props?.defaultRange?.from as Date;
+    expect(Math.floor((Date.now() - from.getTime()) / 60_000)).toBe(30);
+    expect(timeRangeFilter.props?.defaultRange?.to).toBeUndefined();
+  });
+
+  it("treats the default relative window as no explicit range", () => {
+    const ctx = makeCtx();
+    renderToolbar(ctx);
+    // Nothing absolute is set, so the picker is handed null and the Reset chip stays hidden.
+    expect((h.captured as unknown as { values: { timeRange: unknown } }).values.timeRange).toBeNull();
   });
 
   it("updates a plain filter key such as search", () => {
@@ -193,5 +253,90 @@ describe("LogsFilterToolbar", () => {
     h.captured?.onReset();
     expect(ctx.resetFilter).toHaveBeenCalledTimes(1);
     expect(ctx.changeServices).toHaveBeenCalledWith([]);
+  });
+
+  /**
+   * Restored rows are a closed set of days, always older than any relative window. The hot
+   * default -- the last 30 minutes -- would return nothing over them every single time, which a
+   * reader would read as "this restore has no logs".
+   */
+  describe("over a restored window", () => {
+    const restoredCtx = () =>
+      makeCtx({
+        tier: "cold",
+        restoreRequestId: "req-1",
+        restoreWindow: { startDate: "2026-08-01T00:00:00Z", endDate: "2026-08-07T00:00:00Z" },
+      } as Partial<Ctx>);
+
+    const timeRangeProps = () => {
+      const filters = (h.captured?.filters ?? []) as CapturedFilter[];
+      const timeRange = filters.find((f) => f.key === "timeRange") as unknown as {
+        props?: {
+          defaultRange?: unknown;
+          openEndHint?: string;
+          bounds?: { min?: Date; max?: Date };
+        };
+      };
+      return timeRange.props ?? {};
+    };
+
+    it("offers no relative default window", () => {
+      renderToolbar(restoredCtx());
+
+      expect(timeRangeProps().defaultRange ?? null).toBeNull();
+    });
+
+    it("bounds the picker to the days the restore covers", () => {
+      renderToolbar(restoredCtx());
+
+      expect(timeRangeProps().bounds?.min).toEqual(new Date(2026, 7, 1));
+      expect(timeRangeProps().bounds?.max).toEqual(new Date(2026, 7, 7));
+    });
+
+    it("promises no streaming, because a closed window has nothing to stream", () => {
+      renderToolbar(restoredCtx());
+
+      expect(timeRangeProps().openEndHint).not.toMatch(/keeps streaming/i);
+    });
+
+    it("still offers search, service and level", () => {
+      renderToolbar(restoredCtx());
+
+      const keys = (h.captured?.filters ?? []).map((f) => f.key);
+      expect(keys).toContain("search");
+      expect(keys).toContain("service");
+      expect(keys).toContain("level");
+    });
+
+    /**
+     * The live default is a relative window. Writing it while reading a restore would put back
+     * the very filter the restored view exists to avoid -- one that matches none of its days.
+     */
+    it("clears the window rather than restoring the live default", () => {
+      const ctx = restoredCtx();
+      renderToolbar(ctx);
+
+      h.captured?.onChange("timeRange", null);
+
+      const updater = (ctx.setFilter as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(updater({ startDate: "x", endDate: "y" })).toEqual({
+        startDate: "",
+        endDate: "",
+        range: "",
+      });
+    });
+
+    it("enforces only the end it knows, while the window is still loading", () => {
+      renderToolbar(
+        makeCtx({
+          tier: "cold",
+          restoreRequestId: "req-1",
+          restoreWindow: {},
+        } as Partial<Ctx>),
+      );
+
+      expect(timeRangeProps().bounds?.min).toBeUndefined();
+      expect(timeRangeProps().bounds?.max).toBeUndefined();
+    });
   });
 });

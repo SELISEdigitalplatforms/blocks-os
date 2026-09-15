@@ -1,9 +1,13 @@
 import { test } from "../../support/test-base";
 import { uniqueTestEmail } from "../../support/env";
 import {
+  enableMultiOrgFlow,
+  createOrganizationFlow,
+} from "../../pages/identity-and-access/organizations";
+import {
   navigateToUsersFlow,
   searchUsersFlow,
-  filterByCreatedDateFlow,
+  filterByOrganizationThenRolesFlow,
   sortUsersByNameFlow,
   openInviteUserDialogFlow,
   inviteEmailValidationFlow,
@@ -22,28 +26,28 @@ import {
   paginateHistoryListFlow,
 } from "../../pages/identity-and-access/users";
 
-// Users flow: strict validation on Invite User, invite a fresh user, open
-// their details page, and walk its Access -> Sessions -> History tabs.
+// Users flow: enable multi-org + create a fresh org (idempotent — both
+// helpers short-circuit when already enabled / already created), invite a
+// user into that org, search/filter/sort the users list, then walk the
+// user detail page (profile edit, avatar upload rules, resend activation,
+// role/permission assignment, sessions sign-out, history pagination).
 test.describe("flows", () => {
-  test("Users flow: strict validation -> invite -> open details -> Access/Sessions/History tabs", async ({
+  test("Users flow: invite into org -> search/filter/sort -> details -> role/perm -> sessions/history", async ({
     page,
   }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(360_000);
+
+    await test.step("Enable multi-organization environment", async () => {
+      await enableMultiOrgFlow(page);
+    });
+
+    const orgName = `Flow Org ${Date.now()}`;
+    await test.step(`Create organization "${orgName}" to invite users into`, async () => {
+      await createOrganizationFlow(page, orgName);
+    });
 
     await test.step("Navigate to Users", async () => {
       await navigateToUsersFlow(page);
-    });
-
-    await test.step("Search filters the users list by name", async () => {
-      await searchUsersFlow(page);
-    });
-
-    await test.step("Date filters narrow the users list", async () => {
-      await filterByCreatedDateFlow(page);
-    });
-
-    await test.step("Sort by the Name column header", async () => {
-      await sortUsersByNameFlow(page);
     });
 
     await test.step("Open the Invite User dialog", async () => {
@@ -55,9 +59,20 @@ test.describe("flows", () => {
     });
 
     const inviteEmail = uniqueTestEmail("flow-user");
+    await test.step(`Invite a new user into organization "${orgName}"`, async () => {
+      await sendInviteFlow(page, inviteEmail, orgName);
+    });
 
-    await test.step("Fill a valid, fresh email and send the invite", async () => {
-      await sendInviteFlow(page, inviteEmail);
+    await test.step("Search filters the users list by name", async () => {
+      await searchUsersFlow(page);
+    });
+
+    await test.step("Filters: select organization then Roles appears, then date filter", async () => {
+      await filterByOrganizationThenRolesFlow(page, orgName);
+    });
+
+    await test.step("Sort by the Name column header", async () => {
+      await sortUsersByNameFlow(page);
     });
 
     await test.step("Find the new user and open their details page", async () => {

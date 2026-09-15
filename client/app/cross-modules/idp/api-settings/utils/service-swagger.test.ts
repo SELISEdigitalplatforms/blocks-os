@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { stubOrigin } from "@/test-utils/stub-origin";
 import { getServiceBaseUrl, getServiceSwaggerUrl } from "./service-swagger";
 
 type BlocksWindow = Window & { __BLOCKS_ENV__?: Record<string, string | undefined> };
 
 describe("service-swagger", () => {
+  let restoreOrigin: (() => void) | undefined;
+
   afterEach(() => {
     delete (window as BlocksWindow).__BLOCKS_ENV__;
+    restoreOrigin?.();
+    restoreOrigin = undefined;
   });
 
   describe("getServiceBaseUrl", () => {
@@ -28,9 +33,19 @@ describe("service-swagger", () => {
 
     it("ignores a non-absolute baseUrl and falls back to env resolution", () => {
       (window as BlocksWindow).__BLOCKS_ENV__ = {
-        BLOCKS_OS_BASE_URL: "https://os.env",
+        BLOCKS_LOGIC_BASE_URL: "https://logic.env",
       };
-      expect(getServiceBaseUrl("blocks-os", "/relative/path")).toBe("https://os.env");
+      expect(getServiceBaseUrl("blocks-logic", "/relative/path")).toBe("https://logic.env");
+    });
+
+    it("resolves blocks-os to the serving origin rather than the injected env", () => {
+      restoreOrigin = stubOrigin("https://dev-os-546.blocksdevelopers.com/app/console");
+      (window as BlocksWindow).__BLOCKS_ENV__ = {
+        BLOCKS_OS_BASE_URL: "https://dev-os.blocksdevelopers.com:5000",
+      };
+      expect(getServiceSwaggerUrl("blocks-os")).toBe(
+        "https://dev-os-546.blocksdevelopers.com/swagger/index.html",
+      );
     });
   });
 

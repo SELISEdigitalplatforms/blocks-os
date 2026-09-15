@@ -96,15 +96,15 @@ export const OS_FEATURES: OsFeature[] = [
   },
   {
     id: "users",
-    name: "Identity & Access — Users",
+    name: "Identity & Access — Users & Organizations",
     enabled: true,
     spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
   },
   {
     id: "organizations",
-    name: "Identity & Access — Organizations",
-    enabled: true,
-    spec: "tests/04-identity-and-access/03-organizations-flow.spec.ts",
+    name: "Identity & Access — Organizations (merged into users)",
+    enabled: false,
+    spec: "tests/04-identity-and-access/02-users-flow.spec.ts",
   },
   {
     id: "roles",

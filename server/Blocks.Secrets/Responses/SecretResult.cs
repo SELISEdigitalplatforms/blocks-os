@@ -15,6 +15,8 @@ public sealed class SecretResult
 
     public string? Description { get; set; }
 
+    public IReadOnlyList<string> Tags { get; set; } = [];
+
     public string Type { get; set; } = string.Empty;
 
     public string Status { get; set; } = string.Empty;

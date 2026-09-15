@@ -26,6 +26,7 @@ public static class SecretsServiceCollectionExtensions
         services.TryAddScoped<ISecretAuditRepository, SecretAuditRepository>();
         services.TryAddScoped<ISecretAuthorizationService, SecretAuthorizationService>();
         services.TryAddScoped<ISecretAuditService, SecretAuditService>();
+        services.TryAddScoped<ISecretTagCatalogService, SecretTagCatalogService>();
         services.TryAddScoped<ISecretService, SecretService>();
 
         services.TryAddSingleton<ISecretValueStore, KeyVaultSecretValueStore>();

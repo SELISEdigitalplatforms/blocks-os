@@ -14,6 +14,40 @@ export const getTypeColor = (type: string) => {
   }
 };
 
+const getStatusCodeVariant = (code: number) => {
+  if (code >= 500) return "error" as const;
+  if (code >= 400) return "warning" as const;
+  if (code >= 300) return "secondary" as const;
+  return "success" as const;
+};
+
+/**
+ * The status shown for a trace. Prefers the HTTP response code, which is what the list's
+ * status-code filter already queries, and falls back to the span's own status for entry
+ * points that are not HTTP requests -- message-worker consumers, for example.
+ *
+ * A span status of "Unset" is OpenTelemetry's default for a span nobody marked, so it is
+ * rendered as unknown rather than as a success it cannot vouch for.
+ */
+export const getTraceStatus = (trace: { attributes?: IAttributes; status?: string }) => {
+  const raw =
+    trace.attributes?.["response.status.code"] ?? trace.attributes?.["http.response.status_code"];
+  const code = typeof raw === "string" ? Number(raw) : raw;
+
+  if (typeof code === "number" && Number.isFinite(code)) {
+    return { label: String(code), variant: getStatusCodeVariant(code) };
+  }
+
+  switch (trace.status) {
+    case "Error":
+      return { label: "Error", variant: "error" as const };
+    case "Ok":
+      return { label: "OK", variant: "success" as const };
+    default:
+      return { label: "Unknown", variant: "secondary" as const };
+  }
+};
+
 export interface ITags {
   ecosystem: string;
   habitat: string;
@@ -234,6 +268,7 @@ export interface IGetTracesPayload {
     endDate?: string;
     services: string[];
     excepts: string[];
+    statusCodeClasses?: number[];
   };
   search: string;
   projectKey: string;
@@ -257,6 +292,18 @@ export interface ITraceRequestPayload {
   usermail: string;
 }
 
+export interface ICancelRestorePayload {
+  RequestId: string;
+}
+
+export interface ICancelRestoreResponse {
+  requestId: string;
+  status: string;
+  /** False when the restore had already finished, so there was nothing to stop. */
+  cancelled: boolean;
+  message: string;
+}
+
 export interface IGetRequestIdPayload {
   SourceType: string;
   ProjectKey: string;
@@ -277,9 +324,31 @@ export interface IGetTraceStatusResponse {
   totalFiles: number;
   processedFiles: number;
   failedFiles: number;
+  /**
+   * The window the restore covers and what came back in it. The Logs page never sees the
+   * request being made, so this is the only place it can learn which days it is showing.
+   */
+  startDate?: string;
+  endDate?: string;
+  traceRowsRestored?: number;
+  logRowsRestored?: number;
+  expireAt?: string;
+  sourceType?: string;
 }
 
 export interface IGetRestoredDataRetentionDaysResponse {
+  /** Legacy day offsets, kept for callers that still compute their own bounds. */
   coldDataSelectionDays: number;
   archiveDataSelectionDays: number;
+  /**
+   * The selectable bounds as plain calendar days ("yyyy-MM-dd"). The API states them because the
+   * window is measured from UTC midnight: deriving it here would measure from the browser's local
+   * midnight, which is a different calendar day for part of every day outside UTC.
+   */
+  coldEarliestDate: string;
+  coldLatestDate: string;
+  archiveLatestDate: string;
+  /** How many days one request may span, per tier, from LMT configuration. */
+  coldMaxRangeDays: number;
+  archiveMaxRangeDays: number;
 }
