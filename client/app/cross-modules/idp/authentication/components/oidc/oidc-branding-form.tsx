@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Brush, FileText, ImagePlus, Moon, Palette, Sun, Trash2, Upload } from "lucide-react";
+import {
+  Brush,
+  FileText,
+  ImagePlus,
+  Loader,
+  Moon,
+  Palette,
+  Sun,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { parseAsStringEnum, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
@@ -949,41 +959,49 @@ export const OidcBrandingForm = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-                    <div>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-high-emphasis">{selectedPageLabel}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {selectedPageFields.length} editable fields
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-3">
                       <span
                         className={cn(
-                          "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-                          isSelectedPageDirty
-                            ? "border-warning-200 bg-warning-50 text-warning-700"
-                            : "border-border bg-background text-muted-foreground",
+                          "flex items-center gap-1.5 text-xs font-medium",
+                          isSelectedPageDirty ? "text-warning-700" : "text-muted-foreground",
                         )}
                       >
                         <span
                           className={cn(
-                            "h-1.5 w-1.5 rounded-full",
+                            "h-1.5 w-1.5 shrink-0 rounded-full",
                             isSelectedPageDirty ? "bg-warning-500" : "bg-success",
                           )}
                           aria-hidden
                         />
-                        {isSelectedPageDirty ? "Unsaved" : "Saved"}
+                        {isSelectedPageDirty ? "Unsaved changes" : "Saved"}
                       </span>
                       <Button
                         type="button"
                         size="xs"
+                        /**
+                         * The page name stays in the accessible name only: spelling it out
+                         * on the button made it resize on every page switch ("Save Login" vs
+                         * "Save Account Selector"), and it already reads off the heading
+                         * immediately to its left.
+                         */
+                        aria-label={`Save ${selectedPageLabel} page`}
                         onClick={() => void handleSavePage(selectedPage)}
                         disabled={
                           !isSelectedPageDirty || !isSelectedPageValid || isSavingSelectedPage
                         }
-                        className="shadow-none"
+                        className="min-w-[7.5rem] gap-1.5 px-3 text-xs font-semibold shadow-none"
                       >
-                        {isSavingSelectedPage ? "Saving…" : `Save ${selectedPageLabel}`}
+                        {isSavingSelectedPage && (
+                          <Loader className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        )}
+                        {isSavingSelectedPage ? "Saving…" : "Save changes"}
                       </Button>
                     </div>
                   </div>

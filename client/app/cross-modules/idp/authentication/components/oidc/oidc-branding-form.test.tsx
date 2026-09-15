@@ -439,7 +439,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       await user.type(screen.getByLabelText(/Heading/), "Unsaved login heading");
 
       await user.click(screen.getByRole("tab", { name: "Signup" }));
-      await user.click(screen.getByRole("button", { name: "Save Signup" }));
+      await user.click(screen.getByRole("button", { name: "Save Signup page" }));
 
       await waitFor(() => expect(h.saveTemplate).toHaveBeenCalledTimes(1));
       const payload = h.saveTemplate.mock.calls[0][0];
@@ -456,11 +456,26 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       expect(screen.getByLabelText(/Heading/)).toHaveProperty("value", "Unsaved login heading");
     });
 
+    it("keeps one stable button label across pages while naming the page for screen readers", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      expect(screen.getByRole("button", { name: "Save Signup page" }).textContent).toBe(
+        "Save changes",
+      );
+
+      // The longest page name would otherwise stretch the button on every switch.
+      await user.click(screen.getByRole("tab", { name: "Account Selector" }));
+      expect(screen.getByRole("button", { name: "Save Account Selector page" }).textContent).toBe(
+        "Save changes",
+      );
+    });
+
     it("disables Save page until that page (or shared) actually changes, and re-disables after saving", async () => {
       const user = userEvent.setup();
       await renderForm();
       await user.click(screen.getByRole("tab", { name: "Pages" }));
-      const saveSignup = screen.getByRole("button", { name: "Save Signup" });
+      const saveSignup = screen.getByRole("button", { name: "Save Signup page" });
       expect(saveSignup).toHaveProperty("disabled", true);
 
       await user.type(screen.getByLabelText(/Heading/), " updated");
@@ -468,7 +483,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
       await user.click(saveSignup);
       await waitFor(() =>
-        expect(screen.getByRole("button", { name: "Save Signup" })).toHaveProperty(
+        expect(screen.getByRole("button", { name: "Save Signup page" })).toHaveProperty(
           "disabled",
           true,
         ),
@@ -485,7 +500,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
       await user.click(screen.getByRole("tab", { name: "Pages" }));
       await user.type(screen.getByLabelText(/Heading/), " updated");
-      const saveSignup = screen.getByRole("button", { name: "Save Signup" });
+      const saveSignup = screen.getByRole("button", { name: "Save Signup page" });
       expect(saveSignup).toHaveProperty("disabled", false);
 
       await user.click(saveSignup);
@@ -501,7 +516,10 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       await renderForm();
       await user.click(screen.getByRole("tab", { name: "Pages" }));
       await user.clear(screen.getByLabelText(/Heading/));
-      expect(screen.getByRole("button", { name: "Save Signup" })).toHaveProperty("disabled", true);
+      expect(screen.getByRole("button", { name: "Save Signup page" })).toHaveProperty(
+        "disabled",
+        true,
+      );
       expect(h.saveTemplate).not.toHaveBeenCalled();
     });
 
@@ -514,7 +532,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       await renderForm();
       await user.click(screen.getByRole("tab", { name: "Pages" }));
       await user.type(screen.getByLabelText(/Heading/), " updated");
-      await user.click(screen.getByRole("button", { name: "Save Signup" }));
+      await user.click(screen.getByRole("button", { name: "Save Signup page" }));
 
       expect(await screen.findByText("Heading server signup error")).toBeTruthy();
       expect(h.showSuccessToast).not.toHaveBeenCalled();
