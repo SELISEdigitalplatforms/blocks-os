@@ -81,19 +81,33 @@ describe("validateOidcUiTemplate", () => {
     expect(errors["pages.shared.footerText"]).toBe(TEXT_MESSAGE);
   });
 
-  it("enforces brand-name and optional-logo rules", () => {
+  it("enforces brand-name and optional-logo rules for both light and dark independently", () => {
     const invalid = template();
     invalid.branding.brandName = "x".repeat(81);
-    invalid.branding.logoUrl = "/relative.png";
+    invalid.branding.logoUrlLight = "/relative.png";
+    invalid.branding.logoUrlDark = "/also-relative.png";
     expect(validateOidcUiTemplate(invalid)).toMatchObject({
       "branding.brandName": "must be between 1 and 80 characters",
-      "branding.logoUrl": "must be an absolute http or https URL",
+      "branding.logoUrlLight": "must be an absolute http or https URL",
+      "branding.logoUrlDark": "must be an absolute http or https URL",
     });
 
     const valid = template();
-    valid.branding.logoUrl = null;
+    valid.branding.logoUrlLight = null;
+    valid.branding.logoUrlDark = null;
     expect(validateOidcUiTemplate(valid)).toEqual({});
-    valid.branding.logoUrl = "https://cdn.example.com/logo.svg";
+    valid.branding.logoUrlLight = "https://cdn.example.com/logo.svg";
     expect(validateOidcUiTemplate(valid)).toEqual({});
+    valid.branding.logoUrlDark = "https://cdn.example.com/logo-dark.svg";
+    expect(validateOidcUiTemplate(valid)).toEqual({});
+  });
+
+  it("rejects only the invalid logo slot, leaving a valid sibling slot untouched", () => {
+    const draft = template();
+    draft.branding.logoUrlLight = "https://cdn.example.com/logo.svg";
+    draft.branding.logoUrlDark = "/relative.png";
+    const errors = validateOidcUiTemplate(draft);
+    expect(errors["branding.logoUrlLight"]).toBeUndefined();
+    expect(errors["branding.logoUrlDark"]).toBe("must be an absolute http or https URL");
   });
 });

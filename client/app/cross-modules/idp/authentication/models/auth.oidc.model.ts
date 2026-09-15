@@ -75,11 +75,13 @@ export interface IOidcUiThemePalette {
   border: string;
   borderStrong: string;
   accentSoft: string;
+  buttonText: string;
 }
 
 export interface IOidcUiTemplate {
   branding: {
-    logoUrl: string | null;
+    logoUrlLight: string | null;
+    logoUrlDark: string | null;
     brandName: string;
   };
   theme: {

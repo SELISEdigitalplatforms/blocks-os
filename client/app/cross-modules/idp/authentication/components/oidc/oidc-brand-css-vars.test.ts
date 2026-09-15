@@ -18,7 +18,8 @@ describe("buildOidcBrandCssVars", () => {
       "--border": palette.border,
       "--border-strong": palette.borderStrong,
       "--accent-soft": palette.accentSoft,
+      "--button-text": palette.buttonText,
     });
-    expect(Object.keys(buildOidcBrandCssVars(palette))).toHaveLength(11);
+    expect(Object.keys(buildOidcBrandCssVars(palette))).toHaveLength(12);
   });
 });
