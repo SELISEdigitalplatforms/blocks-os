@@ -3,7 +3,7 @@ import {
   Brush,
   FileText,
   ImagePlus,
-  Loader,
+  Loader2,
   Moon,
   Palette,
   Sun,
@@ -984,22 +984,26 @@ export const OidcBrandingForm = () => {
                       </span>
                       <Button
                         type="button"
+                        variant="outline"
                         size="xs"
                         /**
                          * The page name stays in the accessible name only: spelling it out
                          * on the button made it resize on every page switch ("Save Login" vs
                          * "Save Account Selector"), and it already reads off the heading
-                         * immediately to its left.
+                         * immediately to its left. Outline, not solid, so the header's
+                         * whole-template Save stays the screen's single primary action and
+                         * the two don't read as rival buttons.
                          */
                         aria-label={`Save ${selectedPageLabel} page`}
+                        aria-busy={isSavingSelectedPage}
                         onClick={() => void handleSavePage(selectedPage)}
                         disabled={
                           !isSelectedPageDirty || !isSelectedPageValid || isSavingSelectedPage
                         }
-                        className="min-w-[7.5rem] gap-1.5 px-3 text-xs font-semibold shadow-none"
+                        className="gap-1.5 px-3 text-xs font-semibold shadow-none hover:border-primary hover:bg-transparent hover:text-primary"
                       >
                         {isSavingSelectedPage && (
-                          <Loader className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                         )}
                         {isSavingSelectedPage ? "Saving…" : "Save changes"}
                       </Button>
