@@ -1,3 +1,7 @@
+import type {
+  SaveThirdPartyJwtProviderPayload,
+  ThirdPartyJwtProvider,
+} from "../models/third-party-jwt-provider.model";
 import { http } from "@/lib/http/http-client";
 import { IValidateCnameProjectPayload } from "@/models/project.model";
 import {
@@ -227,6 +231,29 @@ export class ProjectService {
 
   getJwtClaim(): Promise<JwtClaimResponse> {
     return http.get(PROJECT_ENDPOINTS.GET_JWT_CLAIMS);
+  }
+
+  /** Never carries a signing secret — only whether one is stored. */
+  getThirdPartyJwtProviders(): Promise<ThirdPartyJwtProvider[]> {
+    return http.get(PROJECT_ENDPOINTS.GET_THIRD_PARTY_JWT_PROVIDERS);
+  }
+
+  saveThirdPartyJwtProvider(
+    payload: SaveThirdPartyJwtProviderPayload,
+  ): Promise<{ isSuccess: boolean; itemId: string; errors: Record<string, string> | null }> {
+    return http.post(PROJECT_ENDPOINTS.SAVE_THIRD_PARTY_JWT_PROVIDER, payload);
+  }
+
+  deleteThirdPartyJwtProvider(
+    itemId: string,
+  ): Promise<{ isSuccess: boolean; errors: Record<string, string> | null }> {
+    return http.post(PROJECT_ENDPOINTS.DELETE_THIRD_PARTY_JWT_PROVIDER, { itemId });
+  }
+
+  updateThirdPartyJwtEnabled(
+    isEnabled: boolean,
+  ): Promise<{ isSuccess: boolean; errors: Record<string, string> | null }> {
+    return http.post(PROJECT_ENDPOINTS.UPDATE_THIRD_PARTY_JWT_ENABLED, { isEnabled });
   }
 
   addJwtClaim(payload: JwtClaimPayload): Promise<{

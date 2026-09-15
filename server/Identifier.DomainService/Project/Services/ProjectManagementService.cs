@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -27,6 +27,7 @@ namespace DomainService.Projects
         private readonly IStorageDriverService _storageDriverService;
         private readonly IEncodingService _urlEncodingService;
         private readonly ICacheClient _cacheClient;
+        private readonly ICryptoService _cryptoService;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
 
@@ -39,7 +40,8 @@ namespace DomainService.Projects
                                         ITenants tenants,
                                         ICertificateManager certificateManager,
                                         IEncodingService urlEncodingService,
-                                        ICacheClient cacheClient)
+                                        ICacheClient cacheClient,
+                                        ICryptoService cryptoService)
         {
             _projectRepository = projectRepository;
             _blocksSecret = blocksSecret;
@@ -50,6 +52,7 @@ namespace DomainService.Projects
             _certificateManager = certificateManager;
             _urlEncodingService = urlEncodingService;
             _cacheClient = cacheClient;
+            _cryptoService = cryptoService;
         }
 
         public async Task ConfigureProjectAsync(Tenant project, ProjectStatusTracer? projectStatus = null)
@@ -1048,6 +1051,270 @@ namespace DomainService.Projects
             return thirdPartyClaims;
 
         }
+
+        #region Third-party JWT providers
+
+        public async Task<List<ThirdPartyJwtProviderResult>> GetThirdPartyJwtProvidersAsync()
+        {
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+
+            return [.. providers.Select(ToResult)];
+        }
+
+        public async Task<SaveThirdPartyJwtProviderResponse> SaveThirdPartyJwtProviderAsync(SaveThirdPartyJwtProviderRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var tenant = await _projectRepository.GetByTenantIdAsync(tenantId);
+
+            if (tenant == null)
+            {
+                return Failed("project_not_found", $"No project found with id {tenantId}");
+            }
+
+            var siblings = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+            var existing = string.IsNullOrWhiteSpace(request.ItemId)
+                ? null
+                : siblings.FirstOrDefault(p => p.ItemId == request.ItemId);
+
+            if (!string.IsNullOrWhiteSpace(request.ItemId) && existing == null)
+            {
+                return Failed("provider_not_found", $"No provider found with id {request.ItemId}");
+            }
+
+            var validation = ValidateProvider(request, existing, siblings);
+            if (validation != null)
+            {
+                return validation;
+            }
+
+            var isSymmetric = request.Algorithms[0].IsSymmetric();
+            var provider = existing ?? new ThirdPartyJwtProvider
+            {
+                ItemId = Guid.NewGuid().ToString(),
+                TenantId = tenantId,
+                CreatedBy = BlocksContext.GetContext()?.UserId,
+                CreatedDate = DateTime.UtcNow
+            };
+
+            provider.Key = request.Key.Trim();
+            provider.ProviderName = request.ProviderName?.Trim() ?? string.Empty;
+            provider.IsActive = request.IsActive;
+            provider.Issuer = request.Issuer.Trim();
+            provider.Audiences = request.Audiences ?? [];
+            provider.Algorithms = request.Algorithms;
+            provider.CookieKey = request.CookieKey?.Trim() ?? string.Empty;
+            provider.ClaimsMapping = ToMapping(request.ClaimsMapping);
+            provider.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            provider.LastUpdatedDate = DateTime.UtcNow;
+
+            if (isSymmetric)
+            {
+                provider.JwksUrl = string.Empty;
+
+                // Empty means untouched, never cleared: a masked field round-trips as "" from most
+                // frontends, and treating that as a clear would silently break authentication.
+                if (!string.IsNullOrEmpty(request.SigningSecret))
+                {
+                    provider.SigningSecretCipher = _cryptoService.Encrypt(request.SigningSecret, tenant.TenantSalt);
+                }
+            }
+            else
+            {
+                provider.JwksUrl = request.JwksUrl!.Trim();
+
+                // Switching a provider away from the HMAC family drops the stored secret. Leaving
+                // it would keep a dormant signing authority alive for the moment someone switches
+                // the algorithm back.
+                provider.SigningSecretCipher = string.Empty;
+            }
+
+            await _projectRepository.SaveThirdPartyJwtProviderAsync(provider);
+
+            return new SaveThirdPartyJwtProviderResponse { IsSuccess = true, ItemId = provider.ItemId };
+        }
+
+        public async Task<BaseResponse> DeleteThirdPartyJwtProviderAsync(DeleteThirdPartyJwtProviderRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var deleted = await _projectRepository.DeleteThirdPartyJwtProviderAsync(tenantId, request.ItemId);
+
+            // The encrypted secret lives on the row, so deleting the row is what revokes it —
+            // there is no separate vault entry left behind.
+            return deleted
+                ? new BaseResponse { IsSuccess = true }
+                : new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { "provider_not_found", $"No provider found with id {request.ItemId}" } }
+                };
+        }
+
+        public async Task<BaseResponse> UpdateThirdPartyJwtEnabledAsync(UpdateThirdPartyJwtEnabledRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? string.Empty;
+            var project = await _projectRepository.GetByTenantIdAsync(tenantId);
+
+            if (project == null)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } }
+                };
+            }
+
+            project.IsThirdPartyJwtEnabled = request.IsEnabled;
+            project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            project.LastUpdatedDate = DateTime.UtcNow;
+
+            await _projectRepository.UpdateProjectAsync(project);
+
+            // The flag rides on the cached Tenant, so a write alone would take effect only when
+            // that cache happened to expire.
+            await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+            {
+                Action = "upsert",
+                TenantId = project.TenantId,
+                Tenant = project
+            });
+
+            return new BaseResponse { IsSuccess = true };
+        }
+
+        /// <summary>
+        /// Enforces the rules that cannot be recovered at validation time: one key source per
+        /// provider, a usable subject mapping, and audiences wherever two providers share an issuer.
+        /// </summary>
+        private static SaveThirdPartyJwtProviderResponse? ValidateProvider(
+            SaveThirdPartyJwtProviderRequest request,
+            ThirdPartyJwtProvider? existing,
+            List<ThirdPartyJwtProvider> siblings)
+        {
+            if (string.IsNullOrWhiteSpace(request.Key))
+            {
+                return Failed("key_required", "Key is required; it is what the x-blocks-idp header names.");
+            }
+
+            if (siblings.Any(p => p.ItemId != existing?.ItemId
+                                  && string.Equals(p.Key, request.Key.Trim(), StringComparison.Ordinal)))
+            {
+                return Failed("duplicate_key", $"Another provider already uses the key '{request.Key}'.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Issuer))
+            {
+                return Failed("issuer_required", "Issuer is required; it is how a token is routed to this provider.");
+            }
+
+            if (!request.Algorithms.IsSingleKeySource())
+            {
+                return Failed(
+                    "invalid_algorithms",
+                    "Configure at least one algorithm, none of them Unspecified, and all from the same family. " +
+                    "Mixing families would give one provider two independent signing authorities.");
+            }
+
+            var isSymmetric = request.Algorithms[0].IsSymmetric();
+
+            if (isSymmetric)
+            {
+                var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
+
+                if (string.IsNullOrEmpty(request.SigningSecret) && !hasStoredSecret)
+                {
+                    return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.JwksUrl))
+                {
+                    return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(request.JwksUrl))
+                {
+                    return Failed("jwks_url_required", "An asymmetric provider needs a JWKS URL.");
+                }
+
+                if (!string.IsNullOrEmpty(request.SigningSecret))
+                {
+                    return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ClaimsMapping?.UserId))
+            {
+                return Failed(
+                    "user_id_mapping_required",
+                    "ClaimsMapping.UserId is required. Without it every token collapses onto the same principal.");
+            }
+
+            // Two providers sharing an issuer AND an audience validate identically, so nothing
+            // cryptographic tells their tokens apart and the caller's header alone selects the
+            // claim mapping. Requiring audiences keeps that choice out of the caller's hands.
+            var sharesIssuer = siblings.Any(p => p.ItemId != existing?.ItemId
+                                                 && p.IsActive
+                                                 && string.Equals(p.Issuer, request.Issuer.Trim(), StringComparison.Ordinal));
+
+            if (sharesIssuer && (request.Audiences == null || request.Audiences.Count == 0))
+            {
+                return Failed(
+                    "audiences_required_for_shared_issuer",
+                    "Another active provider already uses this issuer, so both must declare audiences. " +
+                    "Without them the two cannot be told apart and the caller chooses which mapping applies.");
+            }
+
+            return null;
+        }
+
+        private static SaveThirdPartyJwtProviderResponse Failed(string code, string message) => new()
+        {
+            IsSuccess = false,
+            Errors = new Dictionary<string, string> { { code, message } }
+        };
+
+        private static ThirdPartyClaimsMapping ToMapping(ThirdPartyClaimsMappingRequest? request) => new()
+        {
+            UserId = request?.UserId?.Trim() ?? string.Empty,
+            Email = request?.Email?.Trim() ?? string.Empty,
+            UserName = request?.UserName?.Trim() ?? string.Empty,
+            Name = request?.Name?.Trim() ?? string.Empty,
+            Roles = request?.Roles?.Trim() ?? string.Empty
+        };
+
+        // Deliberately omits SigningSecretCipher: the stored ciphertext is no more the UI's
+        // business than the plaintext is.
+        private static ThirdPartyJwtProviderResult ToResult(ThirdPartyJwtProvider provider) => new()
+        {
+            ItemId = provider.ItemId,
+            Key = provider.Key,
+            ProviderName = provider.ProviderName,
+            IsActive = provider.IsActive,
+            Issuer = provider.Issuer,
+            Audiences = provider.Audiences,
+            Algorithms = provider.Algorithms,
+            JwksUrl = provider.JwksUrl,
+            CookieKey = provider.CookieKey,
+            HasSigningSecret = !string.IsNullOrWhiteSpace(provider.SigningSecretCipher),
+            ClaimsMapping = new ThirdPartyClaimsMappingRequest
+            {
+                UserId = provider.ClaimsMapping?.UserId ?? string.Empty,
+                Email = provider.ClaimsMapping?.Email ?? string.Empty,
+                UserName = provider.ClaimsMapping?.UserName ?? string.Empty,
+                Name = provider.ClaimsMapping?.Name ?? string.Empty,
+                Roles = provider.ClaimsMapping?.Roles ?? string.Empty
+            }
+        };
+
+        #endregion
 
         public async Task<BaseResponse> UpdateTenantGroupAsync(UpdateTenantGroupRequest request)
         {

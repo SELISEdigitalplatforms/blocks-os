@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Access;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -190,6 +190,49 @@ namespace BlocksOs.Api.Controllers
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaims()
         {
             return await _projectManagementService.GetThirdPartyJWTClaimsAsync();
+        }
+
+        /// <summary>
+        /// External identity providers this tenant accepts tokens from. Never returns a signing
+        /// secret in any form -- only whether one is stored.
+        /// </summary>
+        [HttpGet]
+        [ProtectedEndPoint("blocks-os::project::3rd-party-claims")]
+        public async Task<List<ThirdPartyJwtProviderResult>> GetThirdPartyJwtProviders()
+        {
+            return await _projectManagementService.GetThirdPartyJwtProvidersAsync();
+        }
+
+        /// <summary>
+        /// Creates or updates one provider. An omitted signing secret leaves the stored one
+        /// untouched rather than clearing it.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::mutate-3rd-party-claims")]
+        public async Task<SaveThirdPartyJwtProviderResponse> SaveThirdPartyJwtProvider([FromBody] SaveThirdPartyJwtProviderRequest request)
+        {
+            return await _projectManagementService.SaveThirdPartyJwtProviderAsync(request);
+        }
+
+        /// <summary>
+        /// Removes a provider and, with it, the encrypted signing secret it carried.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::mutate-3rd-party-claims")]
+        public async Task<BaseResponse> DeleteThirdPartyJwtProvider([FromBody] DeleteThirdPartyJwtProviderRequest request)
+        {
+            return await _projectManagementService.DeleteThirdPartyJwtProviderAsync(request);
+        }
+
+        /// <summary>
+        /// Turns third-party token trust on or off for the tenant. Off means such tokens are not
+        /// accepted at all.
+        /// </summary>
+        [HttpPost]
+        [ProtectedEndPoint("blocks-os::project::mutate-token-validation-params")]
+        public async Task<BaseResponse> UpdateThirdPartyJwtEnabled([FromBody] UpdateThirdPartyJwtEnabledRequest request)
+        {
+            return await _projectManagementService.UpdateThirdPartyJwtEnabledAsync(request);
         }
     }
 }

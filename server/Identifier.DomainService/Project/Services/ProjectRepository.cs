@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using DomainService.Dtos;
 using DomainService.Entities;
 using DomainService.Shared;
@@ -796,6 +796,44 @@ namespace DomainService.Projects
                          Builders<ThirdPartyJWTClaims>.Filter.Empty;
 
             return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        // Providers live in the root database beside Tenants, not in the tenant's own database:
+        // Genesis reads them on the authentication path, before any tenant database is opened.
+        private IMongoCollection<ThirdPartyJwtProvider> ResolveThirdPartyJwtProviderCollection() =>
+            _clientDb.GetCollection<ThirdPartyJwtProvider>(IdentifierConstants.JwtThirdPartyProvidersCollectionName);
+
+        public async Task<List<ThirdPartyJwtProvider>> GetThirdPartyJwtProvidersAsync(string tenantId)
+        {
+            var filter = Builders<ThirdPartyJwtProvider>.Filter.Eq(p => p.TenantId, tenantId);
+            return await ResolveThirdPartyJwtProviderCollection().Find(filter).ToListAsync();
+        }
+
+        public async Task<ThirdPartyJwtProvider?> GetThirdPartyJwtProviderAsync(string tenantId, string itemId)
+        {
+            // Scoped by tenant as well as id: an id alone would let one tenant address another's row.
+            var filter = Builders<ThirdPartyJwtProvider>.Filter.And(
+                Builders<ThirdPartyJwtProvider>.Filter.Eq(p => p.TenantId, tenantId),
+                Builders<ThirdPartyJwtProvider>.Filter.Eq(p => p.ItemId, itemId));
+
+            return await ResolveThirdPartyJwtProviderCollection().Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task SaveThirdPartyJwtProviderAsync(ThirdPartyJwtProvider provider)
+        {
+            var filter = Builders<ThirdPartyJwtProvider>.Filter.Eq(p => p.ItemId, provider.ItemId);
+            await ResolveThirdPartyJwtProviderCollection()
+                .ReplaceOneAsync(filter, provider, new ReplaceOptions { IsUpsert = true });
+        }
+
+        public async Task<bool> DeleteThirdPartyJwtProviderAsync(string tenantId, string itemId)
+        {
+            var filter = Builders<ThirdPartyJwtProvider>.Filter.And(
+                Builders<ThirdPartyJwtProvider>.Filter.Eq(p => p.TenantId, tenantId),
+                Builders<ThirdPartyJwtProvider>.Filter.Eq(p => p.ItemId, itemId));
+
+            var result = await ResolveThirdPartyJwtProviderCollection().DeleteOneAsync(filter);
+            return result.DeletedCount > 0;
         }
 
         public async Task<List<string>> GetProjectIdsByGroupId(string projectGroupId)

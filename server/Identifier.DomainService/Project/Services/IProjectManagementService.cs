@@ -26,6 +26,11 @@ namespace DomainService.Projects
         Task<IActionResult> GetProjectTokenValidationParametersAsync(string projectId);
         Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaimsAsync(SaveThirdPartyJWTClaimsRequest request);
         Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaimsAsync();
+
+        Task<List<ThirdPartyJwtProviderResult>> GetThirdPartyJwtProvidersAsync();
+        Task<SaveThirdPartyJwtProviderResponse> SaveThirdPartyJwtProviderAsync(SaveThirdPartyJwtProviderRequest request);
+        Task<BaseResponse> DeleteThirdPartyJwtProviderAsync(DeleteThirdPartyJwtProviderRequest request);
+        Task<BaseResponse> UpdateThirdPartyJwtEnabledAsync(UpdateThirdPartyJwtEnabledRequest request);
         Task<BaseResponse> UpdateTenantGroupAsync(UpdateTenantGroupRequest request);
     }
 }

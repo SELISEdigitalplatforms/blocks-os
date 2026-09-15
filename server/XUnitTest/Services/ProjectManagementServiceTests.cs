@@ -52,7 +52,8 @@ namespace XUnitTest.Services
 
         private ProjectManagementService Service(IConfiguration? configuration = null) => new(
             _repo.Object, _blocksSecret.Object, _messageClient.Object, configuration ?? _configuration,
-            _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object);
+            _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object,
+            new CryptoService());
 
         // The environment's CNAME label, which the shared API host is built from.
         private static IConfiguration WithCnameRecordDomain(string label) =>
