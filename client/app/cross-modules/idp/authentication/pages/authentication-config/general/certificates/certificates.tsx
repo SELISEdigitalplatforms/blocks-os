@@ -167,7 +167,7 @@ export const Certificates = () => {
   if (!list.length) {
     return (
       <>
-        <EmptyConfiguration />
+        <EmptyConfiguration onAdd={openAdd} />
         <ProviderFormModal
           open={isFormOpen}
           onOpenChange={(open) => void setIsFormOpen(open)}
