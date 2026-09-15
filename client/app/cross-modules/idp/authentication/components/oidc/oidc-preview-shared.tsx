@@ -1,6 +1,7 @@
 import { useEffect, useState, type ElementType, type ReactNode } from "react";
 import { ArrowRight, Eye, Monitor, Moon, Sun } from "lucide-react";
 import { Separator } from "@/components/ui-kits/separator/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import type {
   IOidcUiTemplate,
   IOidcUiThemePalette,
@@ -25,6 +26,13 @@ const THEME_OPTIONS: Array<{
   { value: "dark", label: "Dark", Icon: Moon },
 ];
 
+/**
+ * The preview's copy of blocks-iam's shared `ModeToggle` - same Tabs markup and the
+ * same classes, so the selected tab picks up the tenant palette through the
+ * `.oidc-scifi-root [role="tab"][data-state="active"]` override in sci-fi-oidc.css,
+ * exactly as it does on the real sign-in pages. Only the controlled `mode` props and
+ * the `showAuto` filter are ours: the editor drives the toggle instead of the app theme.
+ */
 export const OidcPreviewModeToggle = ({
   mode,
   onModeChange,
@@ -34,35 +42,28 @@ export const OidcPreviewModeToggle = ({
   onModeChange: (mode: OidcPreviewThemeMode) => void;
   showAuto?: boolean;
 }) => (
-  <div
-    role="tablist"
-    aria-label="Preview theme"
-    className="pointer-events-auto flex items-center gap-0.5 rounded-md p-0.5"
-  >
-    {THEME_OPTIONS.filter(({ value }) => showAuto || value !== "system").map(
-      ({ value, label, Icon }) => {
-        const active = mode === value;
-        return (
-          <button
+  <Tabs value={mode} onValueChange={(value) => onModeChange(value as OidcPreviewThemeMode)}>
+    <TabsList
+      aria-label="Preview theme"
+      className="pointer-events-auto h-auto gap-0.5 rounded-md !bg-transparent p-0.5"
+    >
+      {THEME_OPTIONS.filter(({ value }) => showAuto || value !== "system").map(
+        ({ value, label, Icon }) => (
+          <TabsTrigger
             key={value}
-            type="button"
-            role="tab"
-            aria-selected={active}
+            value={value}
+            // The label is hidden until selected, so it can't carry the accessible
+            // name on its own.
             aria-label={label}
-            onClick={() => onModeChange(value)}
-            className="group flex items-center rounded-sm px-2 py-1 text-xs font-medium"
-            style={{
-              backgroundColor: active ? "var(--accent-soft)" : "transparent",
-              color: active ? "var(--accent)" : "var(--muted)",
-            }}
+            className="group h-auto rounded-sm px-2 py-1 text-xs font-medium data-[state=active]:bg-[hsl(var(--primary)/0.1)] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:shadow-sm data-[state=inactive]:text-[hsl(var(--muted-foreground)/0.9)] data-[state=inactive]:hover:text-[hsl(var(--foreground)/0.9)]"
           >
             <Icon size={13} aria-hidden />
-            <span className={`ml-1.5 ${active ? "inline" : "hidden"}`}>{label}</span>
-          </button>
-        );
-      },
-    )}
-  </div>
+            <span className="ml-1.5 hidden group-data-[state=active]:inline">{label}</span>
+          </TabsTrigger>
+        ),
+      )}
+    </TabsList>
+  </Tabs>
 );
 
 /**
@@ -136,7 +137,7 @@ export const OidcPreviewShell = ({
                   <img
                     src={resolvedLogoUrl}
                     alt={`${template.branding.brandName} logo`}
-                    className="h-7 max-w-28 object-contain"
+                    className="h-7 w-auto max-w-28 object-contain"
                   />
                 ) : (
                   <BlocksLogo />

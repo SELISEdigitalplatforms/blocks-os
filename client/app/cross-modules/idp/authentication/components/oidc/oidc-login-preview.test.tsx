@@ -88,6 +88,19 @@ describe("OidcLoginPreview", () => {
     );
   });
 
+  it("renders the mode toggle as blocks-iam does, so the sci-fi CSS can tint the active tab", () => {
+    const input = props();
+    render(<OidcLoginPreview {...input} />);
+
+    // The tenant tint comes from `.oidc-scifi-root [role="tab"][data-state="active"]`
+    // in sci-fi-oidc.css - the same override the real sign-in pages rely on - so the
+    // active tab must expose Radix's data-state rather than an inline brand color.
+    const light = screen.getByRole("tab", { name: "Light" });
+    expect(light.getAttribute("data-state")).toBe("active");
+    expect(light.style.backgroundColor).toBe("");
+    expect(screen.getByRole("tab", { name: "Dark" }).getAttribute("data-state")).toBe("inactive");
+  });
+
   it("reports preview mode changes and can hide Auto while editing a palette", async () => {
     const input = props();
     const user = userEvent.setup();
