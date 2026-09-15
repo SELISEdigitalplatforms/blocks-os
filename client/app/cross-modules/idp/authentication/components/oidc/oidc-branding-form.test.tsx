@@ -42,7 +42,7 @@ vi.mock("@/hooks/use-toast", () => ({
 vi.mock("./oidc-template-preview", () => ({
   OidcTemplatePreview: (props: {
     template: {
-      branding: { brandName: string; logoUrl: string | null };
+      branding: { brandName: string; logoUrlLight: string | null; logoUrlDark: string | null };
       theme: { light: { primary: string }; dark: { primary: string } };
       pages: Record<string, Record<string, string | null>>;
     };
@@ -58,7 +58,8 @@ vi.mock("./oidc-template-preview", () => ({
       data-show-auto={props.showAuto}
       data-light-primary={props.template.theme.light.primary}
       data-dark-primary={props.template.theme.dark.primary}
-      data-logo={props.template.branding.logoUrl}
+      data-logo-light={props.template.branding.logoUrlLight}
+      data-logo-dark={props.template.branding.logoUrlDark}
     >
       <span>{props.template.branding.brandName}</span>
       <span>{props.template.pages[props.selectedPage].heading}</span>
@@ -221,6 +222,29 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     );
   });
 
+  it("C8: a pre-Phase-1 response with no logoUrlLight/logoUrlDark/buttonText keys still loads", async () => {
+    const legacy = structuredClone(DEFAULT_OIDC_UI_TEMPLATE) as unknown as Record<
+      string,
+      Record<string, unknown>
+    >;
+    delete legacy.branding.logoUrlLight;
+    delete legacy.branding.logoUrlDark;
+    delete (legacy.theme as Record<string, Record<string, unknown>>).light.buttonText;
+    delete (legacy.theme as Record<string, Record<string, unknown>>).dark.buttonText;
+    h.useGetOidcTemplate.mockReturnValue({ data: legacy, isLoading: false, isError: false });
+    const user = userEvent.setup();
+    await renderForm();
+
+    expect(screen.getByTestId("preview").getAttribute("data-logo-light")).toBeNull();
+    expect(screen.getByTestId("preview").getAttribute("data-logo-dark")).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    expect(screen.getByLabelText("Light Button text")).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.theme.light.buttonText,
+    );
+    expect(latestActions().isValid).toBe(true);
+  });
+
   it("lists all seven pages, shows only the selected page fields, and always shows Footer", async () => {
     const user = userEvent.setup();
     await renderForm();
@@ -298,6 +322,27 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     expect(screen.getByLabelText("Dark Danger")).toHaveProperty("value", "#123456");
   });
 
+  it("H5/C6: validates the new Button text field like every other palette color", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Theme" }));
+    expect(screen.getByLabelText("Light Button text")).toHaveProperty(
+      "value",
+      DEFAULT_OIDC_UI_TEMPLATE.theme.light.buttonText,
+    );
+
+    const buttonText = screen.getByLabelText("Light Button text");
+    await user.clear(buttonText);
+    expect(
+      screen.getByText("Light Button text must be a valid hex color (#RGB or #RRGGBB)"),
+    ).toBeTruthy();
+    expect(latestActions().isValid).toBe(false);
+
+    await user.type(buttonText, "#0c1024");
+    expect(latestActions().isValid).toBe(true);
+    expect(screen.getByTestId("preview-template").textContent).toContain('"buttonText":"#0c1024"');
+  });
+
   it("sends one complete current template and establishes a new saved baseline", async () => {
     const user = userEvent.setup();
     await renderForm();
@@ -321,7 +366,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     const payload = h.saveTemplate.mock.calls[0][0];
     expect(payload).toEqual({
       ...DEFAULT_OIDC_UI_TEMPLATE,
-      branding: { brandName: "Acme Corp", logoUrl: null },
+      branding: { brandName: "Acme Corp", logoUrlLight: null, logoUrlDark: null },
       theme: {
         light: DEFAULT_OIDC_UI_TEMPLATE.theme.light,
         dark: { ...DEFAULT_OIDC_UI_TEMPLATE.theme.dark, primary: "#112233" },
@@ -332,8 +377,8 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
         shared: { footerText: "Acme {year}" },
       },
     });
-    expect(Object.keys(payload.theme.light)).toHaveLength(11);
-    expect(Object.keys(payload.theme.dark)).toHaveLength(11);
+    expect(Object.keys(payload.theme.light)).toHaveLength(12);
+    expect(Object.keys(payload.theme.dark)).toHaveLength(12);
     expect(Object.keys(payload.pages)).toHaveLength(8);
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "Template saved successfully",
@@ -436,50 +481,103 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     expect(latestActions().isDirty).toBe(false);
   });
 
-  it("uploads a pending logo and saves the resolved absolute URL", async () => {
+  it("H1/H2: uploads a pending logo per slot independently and saves the resolved URLs", async () => {
     h.getPresignedUrl.mockResolvedValue({ isSuccess: true, uploadUrl: "u", fileId: "f1" });
     h.uploadFile.mockResolvedValue({});
-    h.getFileByFileId.mockResolvedValue({ url: "https://cdn.example.com/new.png" });
+    h.getFileByFileId
+      .mockResolvedValueOnce({ url: "https://cdn.example.com/light.png" })
+      .mockResolvedValueOnce({ url: "https://cdn.example.com/dark.png" });
     const user = userEvent.setup();
     await renderForm();
 
     await user.upload(
-      document.getElementById("client-logo-upload") as HTMLInputElement,
-      new File(["x"], "logo.png", { type: "image/png" }),
+      document.getElementById("client-logo-upload-light") as HTMLInputElement,
+      new File(["x"], "light.png", { type: "image/png" }),
     );
-    expect(screen.getByTestId("preview").getAttribute("data-logo")).toBe("blob:preview");
+    expect(screen.getByTestId("preview").getAttribute("data-logo-light")).toBe("blob:preview");
+    // Only the light slot was touched - the dark slot has nothing pending yet.
+    expect(screen.getByTestId("preview").getAttribute("data-logo-dark")).toBeNull();
+
+    await user.upload(
+      document.getElementById("client-logo-upload-dark") as HTMLInputElement,
+      new File(["x"], "dark.png", { type: "image/png" }),
+    );
+    expect(screen.getByTestId("preview").getAttribute("data-logo-dark")).toBe("blob:preview");
+
     await act(async () => latestActions().onSave());
-    expect(h.uploadFile).toHaveBeenCalled();
-    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrl).toBe(
-      "https://cdn.example.com/new.png",
+    expect(h.uploadFile).toHaveBeenCalledTimes(2);
+    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrlLight).toBe(
+      "https://cdn.example.com/light.png",
+    );
+    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrlDark).toBe(
+      "https://cdn.example.com/dark.png",
     );
   });
 
-  it("removes a saved logo as null and rejects invalid files before upload", async () => {
+  it("H3: an only-light logo resolves for both preview modes until a dark logo is set", async () => {
     const withLogo = structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
-    withLogo.branding.logoUrl = "https://cdn.example.com/old.png";
+    withLogo.branding.logoUrlLight = "https://cdn.example.com/light-only.png";
     h.useGetOidcTemplate.mockReturnValue({ data: withLogo, isLoading: false, isError: false });
+    await renderForm();
+
+    expect(screen.getByTestId("preview").getAttribute("data-logo-light")).toBe(
+      "https://cdn.example.com/light-only.png",
+    );
+    expect(screen.getByTestId("preview").getAttribute("data-logo-dark")).toBeNull();
+  });
+
+  it("C1/C3: removing one slot only clears that slot, leaving the other untouched", async () => {
+    const withBoth = structuredClone(DEFAULT_OIDC_UI_TEMPLATE);
+    withBoth.branding.logoUrlLight = "https://cdn.example.com/old-light.png";
+    withBoth.branding.logoUrlDark = "https://cdn.example.com/old-dark.png";
+    h.useGetOidcTemplate.mockReturnValue({ data: withBoth, isLoading: false, isError: false });
     const user = userEvent.setup();
     await renderForm();
-    await user.click(screen.getByRole("button", { name: "Remove logo" }));
-    await act(async () => latestActions().onSave());
-    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrl).toBeNull();
 
-    const input = document.getElementById("client-logo-upload") as HTMLInputElement;
-    Object.defineProperty(input, "files", {
+    const removeButtons = screen.getAllByRole("button", { name: "Remove logo" });
+    expect(removeButtons).toHaveLength(2);
+    await user.click(removeButtons[0]);
+
+    expect(screen.getByTestId("preview").getAttribute("data-logo-light")).toBeNull();
+    expect(screen.getByTestId("preview").getAttribute("data-logo-dark")).toBe(
+      "https://cdn.example.com/old-dark.png",
+    );
+
+    await act(async () => latestActions().onSave());
+    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrlLight).toBeNull();
+    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrlDark).toBe(
+      "https://cdn.example.com/old-dark.png",
+    );
+  });
+
+  it("C1: rejects invalid files at one slot without affecting the other slot's file", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+
+    await user.upload(
+      document.getElementById("client-logo-upload-light") as HTMLInputElement,
+      new File(["x"], "logo.png", { type: "image/png" }),
+    );
+    expect(screen.getByTestId("preview").getAttribute("data-logo-light")).toBe("blob:preview");
+
+    const darkInput = document.getElementById("client-logo-upload-dark") as HTMLInputElement;
+    Object.defineProperty(darkInput, "files", {
       value: [new File(["x"], "logo.txt", { type: "text/plain" })],
       configurable: true,
     });
-    fireEvent.change(input);
+    fireEvent.change(darkInput);
     expect(h.showErrorToast).toHaveBeenCalledWith({
       errors: "Only PNG, JPG, SVG, and WebP images are allowed",
     });
+    // The light slot's already-selected file survives the dark slot's rejection.
+    expect(screen.getByTestId("preview").getAttribute("data-logo-light")).toBe("blob:preview");
+    expect(screen.getByTestId("preview").getAttribute("data-logo-dark")).toBeNull();
 
-    Object.defineProperty(input, "files", {
+    Object.defineProperty(darkInput, "files", {
       value: [new File([new Uint8Array(3 * 1024 * 1024)], "logo.png", { type: "image/png" })],
       configurable: true,
     });
-    fireEvent.change(input);
+    fireEvent.change(darkInput);
     expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Logo must be smaller than 2MB" });
   });
 

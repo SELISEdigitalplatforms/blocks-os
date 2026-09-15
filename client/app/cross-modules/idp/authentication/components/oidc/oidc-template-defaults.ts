@@ -1,7 +1,7 @@
 import type { IOidcUiTemplate } from "@blocks-idp/authentication/models/auth.oidc.model";
 
 export const DEFAULT_OIDC_UI_TEMPLATE: IOidcUiTemplate = {
-  branding: { logoUrl: null, brandName: "Blocks IAM" },
+  branding: { logoUrlLight: null, logoUrlDark: null, brandName: "Blocks IAM" },
   theme: {
     light: {
       primary: "#0066b2",
@@ -15,6 +15,7 @@ export const DEFAULT_OIDC_UI_TEMPLATE: IOidcUiTemplate = {
       border: "#dde2ec",
       borderStrong: "rgba(0, 102, 178, 0.45)",
       accentSoft: "rgba(0, 102, 178, 0.08)",
+      buttonText: "#ffffff",
     },
     dark: {
       primary: "#0066b2",
@@ -28,6 +29,7 @@ export const DEFAULT_OIDC_UI_TEMPLATE: IOidcUiTemplate = {
       border: "#16162a",
       borderStrong: "rgba(0, 102, 178, 0.35)",
       accentSoft: "rgba(0, 102, 178, 0.10)",
+      buttonText: "#ffffff",
     },
   },
   pages: {
@@ -170,3 +172,17 @@ const mergeDefaults = (defaults: unknown, value: unknown): unknown => {
 
 export const normalizeOidcUiTemplate = (template: IOidcUiTemplate): IOidcUiTemplate =>
   mergeDefaults(DEFAULT_OIDC_UI_TEMPLATE, template) as IOidcUiTemplate;
+
+/**
+ * Resolves which logo to show for a given preview mode, mirroring blocks-iam's
+ * server-side fallback exactly: a mode with no logo of its own borrows the other
+ * mode's, so an admin who has only ever uploaded one logo sees it everywhere, in
+ * both the editor's live preview and on the real IAM pages after a save.
+ */
+export const resolveOidcLogoUrl = (
+  branding: { logoUrlLight: string | null; logoUrlDark: string | null },
+  mode: "light" | "dark",
+): string | null =>
+  mode === "light"
+    ? (branding.logoUrlLight ?? branding.logoUrlDark)
+    : (branding.logoUrlDark ?? branding.logoUrlLight);

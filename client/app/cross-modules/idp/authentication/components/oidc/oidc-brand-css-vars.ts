@@ -15,4 +15,5 @@ export const buildOidcBrandCssVars = (palette: IOidcUiThemePalette): OidcThemeSt
   "--border": palette.border,
   "--border-strong": palette.borderStrong,
   "--accent-soft": palette.accentSoft,
+  "--button-text": palette.buttonText,
 });

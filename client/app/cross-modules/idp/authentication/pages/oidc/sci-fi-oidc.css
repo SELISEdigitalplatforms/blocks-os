@@ -308,8 +308,8 @@
 .oidc-scifi-root .oidc-sci-fi-input:focus {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 1px rgba(0, 102, 178, 0.15),
-    0 0 16px rgba(0, 102, 178, 0.08);
+    0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
+    0 0 16px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .oidc-scifi-root .oidc-sci-fi-input[aria-invalid="true"] {
   border-color: var(--danger);
@@ -340,14 +340,14 @@
 .oidc-scifi-root .oidc-sci-fi-otp-slot[data-active="true"] {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 1px rgba(0, 102, 178, 0.15),
-    0 0 16px rgba(0, 102, 178, 0.08);
+    0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
+    0 0 16px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .oidc-scifi-root .oidc-sci-fi-otp-slot.ring-1 {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 1px rgba(0, 102, 178, 0.15),
-    0 0 16px rgba(0, 102, 178, 0.08);
+    0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
+    0 0 16px color-mix(in srgb, var(--accent) 8%, transparent);
   --tw-ring-color: var(--accent);
   --tw-ring-shadow: 0 0 0 1px var(--accent);
 }
@@ -376,8 +376,8 @@
     transform var(--dur-base) var(--ease-out-expo),
     box-shadow var(--dur-base) ease;
   box-shadow:
-    0 4px 24px rgba(0, 102, 178, 0.15),
-    0 0 0 1px rgba(0, 102, 178, 0.1) inset;
+    0 4px 24px color-mix(in srgb, var(--accent) 15%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent) inset;
 }
 .oidc-scifi-root .oidc-sci-fi-btn::before {
   content: "";
@@ -392,9 +392,9 @@
 .oidc-scifi-root .oidc-sci-fi-btn:hover {
   transform: scale(1.03) translateY(-1px);
   box-shadow:
-    0 8px 32px rgba(0, 102, 178, 0.25),
-    0 0 0 1px rgba(0, 102, 178, 0.15) inset,
-    0 0 60px rgba(0, 178, 255, 0.1);
+    0 8px 32px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent) inset,
+    0 0 60px color-mix(in srgb, var(--accent2) 10%, transparent);
 }
 .oidc-scifi-root .oidc-sci-fi-btn:hover::before {
   left: 100%;

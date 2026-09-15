@@ -45,7 +45,7 @@ describe("OidcLoginPreview", () => {
     const { rerender } = render(<OidcLoginPreview {...input} />);
     const updated = structuredClone(input.template);
     updated.branding.brandName = "Acme";
-    updated.branding.logoUrl = "https://cdn.example.com/acme.svg";
+    updated.branding.logoUrlLight = "https://cdn.example.com/acme.svg";
     updated.pages.login.heading = "Welcome to Acme";
     updated.pages.shared.footerText = "Acme {year}";
 
@@ -53,8 +53,39 @@ describe("OidcLoginPreview", () => {
 
     expect(screen.getByText("Welcome to Acme")).toBeTruthy();
     expect(screen.getByText("Acme")).toBeTruthy();
-    expect(screen.getByAltText("Acme logo").getAttribute("src")).toBe(updated.branding.logoUrl);
+    expect(screen.getByAltText("Acme logo").getAttribute("src")).toBe(
+      updated.branding.logoUrlLight,
+    );
     expect(screen.getByText(`Acme ${new Date().getFullYear()}`)).toBeTruthy();
+  });
+
+  it("H3: falls back to the other mode's logo when only one slot has ever been set", () => {
+    const input = { ...props(), resolvedTheme: "dark" as const };
+    const template = structuredClone(input.template);
+    template.branding.logoUrlLight = "https://cdn.example.com/light-only.svg";
+    template.branding.logoUrlDark = null;
+
+    render(<OidcLoginPreview {...input} template={template} />);
+
+    expect(screen.getByAltText("Blocks IAM logo").getAttribute("src")).toBe(
+      "https://cdn.example.com/light-only.svg",
+    );
+    expect(screen.queryByTestId("blocks-default-logo")).toBeNull();
+  });
+
+  it("H6/C7: shows the static default mark, unchanged by color edits, when no logo is set", () => {
+    const input = props();
+    const { rerender } = render(<OidcLoginPreview {...input} />);
+    const defaultLogoSrcBefore = screen.getByTestId("blocks-default-logo").getAttribute("src");
+
+    const recolored = structuredClone(input.template);
+    recolored.theme.light.primary = "#ff0066";
+    recolored.theme.light.secondary = "#00ff66";
+    rerender(<OidcLoginPreview {...input} template={recolored} palette={recolored.theme.light} />);
+
+    expect(screen.getByTestId("blocks-default-logo").getAttribute("src")).toBe(
+      defaultLogoSrcBefore,
+    );
   });
 
   it("reports preview mode changes and can hide Auto while editing a palette", async () => {

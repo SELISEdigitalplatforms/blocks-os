@@ -35,6 +35,7 @@ export const THEME_FIELDS: Array<{
   { key: "border", label: "Border", acceptsRgba: true },
   { key: "borderStrong", label: "Strong border", acceptsRgba: true },
   { key: "accentSoft", label: "Soft accent", acceptsRgba: true },
+  { key: "buttonText", label: "Button text", acceptsRgba: false },
 ];
 
 export type OidcPageKey = Exclude<keyof IOidcUiTemplate["pages"], "shared">;
@@ -144,7 +145,11 @@ export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
     { key: "autoConfirmProgressText", label: "Auto activation progress text", multiline: true },
     { key: "autoActivatingLabel", label: "Auto activating label" },
     { key: "readyTitle", label: "Success page action title" },
-    { key: "readyWithPasswordSubtitle", label: "Success action password subtitle", multiline: true },
+    {
+      key: "readyWithPasswordSubtitle",
+      label: "Success action password subtitle",
+      multiline: true,
+    },
     { key: "readySubtitle", label: "Success action subtitle", multiline: true },
     { key: "loginButton", label: "Success page login button" },
     { key: "backToLoginButton", label: "Back to login button" },
@@ -171,14 +176,16 @@ export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
   if (!template.branding.brandName.trim() || template.branding.brandName.length > 80) {
     errors["branding.brandName"] = "must be between 1 and 80 characters";
   }
-  if (template.branding.logoUrl !== null) {
+  (["logoUrlLight", "logoUrlDark"] as const).forEach((field) => {
+    const value = template.branding[field];
+    if (value === null) return;
     try {
-      const url = new URL(template.branding.logoUrl);
+      const url = new URL(value);
       if (!url.hostname || !["http:", "https:"].includes(url.protocol)) throw new Error();
     } catch {
-      errors["branding.logoUrl"] = "must be an absolute http or https URL";
+      errors[`branding.${field}`] = "must be an absolute http or https URL";
     }
-  }
+  });
 
   (["light", "dark"] as const).forEach((mode) => {
     THEME_FIELDS.forEach(({ key, acceptsRgba }) => {
