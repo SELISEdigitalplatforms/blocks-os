@@ -376,6 +376,9 @@ export const OidcBrandingForm = () => {
     light: false,
     dark: false,
   });
+  // Which single page is mid-save via its own "Save page" button - distinct from the
+  // header's whole-template `isSaving`, so saving one page never disables another.
+  const [savingPageKey, setSavingPageKey] = useState<OidcPageKey | null>(null);
 
   const [previousTemplate, setPreviousTemplate] = useState(sourceTemplate);
   if (sourceTemplate !== previousTemplate) {
@@ -601,6 +604,62 @@ export const OidcBrandingForm = () => {
     }
   }, [draft, isValid, pendingLogoFiles, saveTemplate, uploadLogoToStorage]);
 
+  /**
+   * Saves exactly one page (plus the shared footer fields shown alongside every page)
+   * without touching branding, theme, or any other page's in-progress edits - those
+   * stay in `draft`, still unsaved, exactly as the admin left them. Everything else in
+   * the payload comes from `savedTemplate`, the last known-good template, so an invalid
+   * draft elsewhere (a half-finished Theme edit, say) can never block this save.
+   */
+  const handleSavePage = useCallback(
+    async (pageKey: OidcPageKey) => {
+      if (!draft || !savedTemplate) return;
+      const payload: IOidcUiTemplate = {
+        ...savedTemplate,
+        pages: {
+          ...savedTemplate.pages,
+          [pageKey]: draft.pages[pageKey],
+          shared: draft.pages.shared,
+        },
+      };
+      const hasPageError = Object.keys(validateOidcUiTemplate(payload)).some(
+        (key) => key.startsWith(`pages.${pageKey}.`) || key.startsWith("pages.shared."),
+      );
+      if (hasPageError) return;
+
+      setSavingPageKey(pageKey);
+      try {
+        const response = await saveTemplate(payload);
+        if (!response.isSuccess) {
+          const errors = response.errors ?? { Template: "Failed to save page" };
+          setServerErrors((current) => ({ ...current, ...errors }));
+          showErrorToast({ errors });
+          return;
+        }
+
+        const pageLabel = PAGE_OPTIONS.find(({ key }) => key === pageKey)?.label ?? "Page";
+        showSuccessToast({ description: `${pageLabel} page saved successfully` });
+        setSavedTemplate(payload);
+      } catch (error) {
+        if (isErrorWithErrors(error)) {
+          const errors = Object.fromEntries(
+            Object.entries(error.errors).map(([key, value]) => [
+              key,
+              Array.isArray(value) ? value.join(", ") : value,
+            ]),
+          );
+          setServerErrors((current) => ({ ...current, ...errors }));
+          showErrorToast({ errors: error.errors });
+        } else {
+          showErrorToast({ errors: "Failed to save page" });
+        }
+      } finally {
+        setSavingPageKey(null);
+      }
+    },
+    [draft, savedTemplate, saveTemplate],
+  );
+
   useEffect(() => {
     if (!savedTemplate) {
       setActions(null);
@@ -637,6 +696,17 @@ export const OidcBrandingForm = () => {
   };
   const selectedPageFields = PAGE_FIELDS[selectedPage];
   const selectedPageValues = draft.pages[selectedPage] as unknown as Record<string, string | null>;
+  // Scoped to just this page (+ the shared footer fields shown alongside it), so an
+  // unrelated draft problem elsewhere never blocks or falsely flags this page's own
+  // "Save page" button.
+  const isSelectedPageDirty =
+    JSON.stringify(draft.pages[selectedPage]) !==
+      JSON.stringify(savedTemplate.pages[selectedPage]) ||
+    JSON.stringify(draft.pages.shared) !== JSON.stringify(savedTemplate.pages.shared);
+  const isSelectedPageValid = !Object.keys(validationErrors).some(
+    (key) => key.startsWith(`pages.${selectedPage}.`) || key.startsWith("pages.shared."),
+  );
+  const isSavingSelectedPage = savingPageKey === selectedPage;
 
   const handleEditorTabChange = (value: string) => {
     const next = value as EditorTab;
@@ -879,16 +949,43 @@ export const OidcBrandingForm = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between border-b border-border pb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
                     <div>
                       <p className="text-sm font-medium text-high-emphasis">{selectedPageLabel}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {selectedPageFields.length} editable fields
                       </p>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                      Live
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+                          isSelectedPageDirty
+                            ? "border-warning-200 bg-warning-50 text-warning-700"
+                            : "border-border bg-background text-muted-foreground",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            isSelectedPageDirty ? "bg-warning-500" : "bg-success",
+                          )}
+                          aria-hidden
+                        />
+                        {isSelectedPageDirty ? "Unsaved" : "Saved"}
+                      </span>
+                      <Button
+                        type="button"
+                        size="xs"
+                        onClick={() => void handleSavePage(selectedPage)}
+                        disabled={
+                          !isSelectedPageDirty || !isSelectedPageValid || isSavingSelectedPage
+                        }
+                        className="shadow-none"
+                      >
+                        {isSavingSelectedPage ? "Saving…" : `Save ${selectedPageLabel}`}
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid min-w-0 grid-cols-1 gap-4">
                     {selectedPageFields.map(({ key, label, optional, multiline }) => {

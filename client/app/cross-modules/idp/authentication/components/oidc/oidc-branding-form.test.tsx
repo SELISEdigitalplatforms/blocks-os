@@ -423,6 +423,108 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     expect(payload.pages.accountSelector.subheading).toBeNull();
   });
 
+  describe("per-page Save", () => {
+    it("saves only the edited page (and shared footer), leaving another page's pending edit unsaved", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      await user.click(screen.getByRole("tab", { name: "Signup" }));
+      await user.clear(screen.getByLabelText(/Heading/));
+      await user.type(screen.getByLabelText(/Heading/), "Join Acme");
+      fireEvent.change(screen.getByLabelText(/Footer/), { target: { value: "Acme {year}" } });
+
+      // A pending edit on a different page that hasn't been saved yet.
+      await user.click(screen.getByRole("tab", { name: "Login" }));
+      await user.clear(screen.getByLabelText(/Heading/));
+      await user.type(screen.getByLabelText(/Heading/), "Unsaved login heading");
+
+      await user.click(screen.getByRole("tab", { name: "Signup" }));
+      await user.click(screen.getByRole("button", { name: "Save Signup" }));
+
+      await waitFor(() => expect(h.saveTemplate).toHaveBeenCalledTimes(1));
+      const payload = h.saveTemplate.mock.calls[0][0];
+      expect(payload.pages.signup.heading).toBe("Join Acme");
+      expect(payload.pages.shared.footerText).toBe("Acme {year}");
+      // Login's pending edit was not part of this save.
+      expect(payload.pages.login.heading).toBe(DEFAULT_OIDC_UI_TEMPLATE.pages.login.heading);
+      expect(h.showSuccessToast).toHaveBeenCalledWith({
+        description: "Signup page saved successfully",
+      });
+
+      // The unsaved Login edit is still sitting in the draft, untouched.
+      await user.click(screen.getByRole("tab", { name: "Login" }));
+      expect(screen.getByLabelText(/Heading/)).toHaveProperty("value", "Unsaved login heading");
+    });
+
+    it("disables Save page until that page (or shared) actually changes, and re-disables after saving", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      const saveSignup = screen.getByRole("button", { name: "Save Signup" });
+      expect(saveSignup).toHaveProperty("disabled", true);
+
+      await user.type(screen.getByLabelText(/Heading/), " updated");
+      expect(saveSignup).toHaveProperty("disabled", false);
+
+      await user.click(saveSignup);
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Save Signup" })).toHaveProperty(
+          "disabled",
+          true,
+        ),
+      );
+    });
+
+    it("stays enabled and savable even while an unrelated Theme field is currently invalid", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Theme" }));
+      await user.click(screen.getByRole("tab", { name: "Dark" }));
+      await user.clear(screen.getByLabelText("Dark Border"));
+      expect(latestActions().isValid).toBe(false);
+
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      await user.type(screen.getByLabelText(/Heading/), " updated");
+      const saveSignup = screen.getByRole("button", { name: "Save Signup" });
+      expect(saveSignup).toHaveProperty("disabled", false);
+
+      await user.click(saveSignup);
+      await waitFor(() => expect(h.saveTemplate).toHaveBeenCalledTimes(1));
+      // The broken Dark Border never reached the server - it came from savedTemplate.
+      expect(h.saveTemplate.mock.calls[0][0].theme.dark.border).toBe(
+        DEFAULT_OIDC_UI_TEMPLATE.theme.dark.border,
+      );
+    });
+
+    it("blocks Save page while that page's own field is invalid", async () => {
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      await user.clear(screen.getByLabelText(/Heading/));
+      expect(screen.getByRole("button", { name: "Save Signup" })).toHaveProperty("disabled", true);
+      expect(h.saveTemplate).not.toHaveBeenCalled();
+    });
+
+    it("shows server errors from a failed page save without discarding the pending edit", async () => {
+      h.saveTemplate.mockResolvedValue({
+        isSuccess: false,
+        errors: { "Pages.Signup.Heading": "server signup error" },
+      });
+      const user = userEvent.setup();
+      await renderForm();
+      await user.click(screen.getByRole("tab", { name: "Pages" }));
+      await user.type(screen.getByLabelText(/Heading/), " updated");
+      await user.click(screen.getByRole("button", { name: "Save Signup" }));
+
+      expect(await screen.findByText("Heading server signup error")).toBeTruthy();
+      expect(h.showSuccessToast).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/Heading/)).toHaveProperty(
+        "value",
+        `${DEFAULT_OIDC_UI_TEMPLATE.pages.signup.heading} updated`,
+      );
+    });
+  });
+
   it("shows server field errors beside inputs without accepting the failed save", async () => {
     h.saveTemplate.mockResolvedValue({
       isSuccess: false,
