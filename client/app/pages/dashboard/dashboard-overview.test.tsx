@@ -2,7 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
-import type { IDomain, IEnvRepository } from "@seliseblocks/genesis-os/models";
+import type { IEnvRepository } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 
 // `useGetProject` stays disabled until the impersonation store reports a resolved
