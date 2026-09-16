@@ -133,6 +133,25 @@ describe("storageConfigurationFormSchema", () => {
       expect(result.success).toBe(false);
     });
 
+    it("rejects a maxFileSizeInMb over the 50 MB limit", () => {
+      const result = storageConfigurationFormSchema.safeParse({
+        ...validBase,
+        maxFileSizeInMb: "51",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.map((i) => i.message)).toContain("Must be at most 50 MB");
+      }
+    });
+
+    it("accepts a maxFileSizeInMb of exactly 50 MB", () => {
+      const result = storageConfigurationFormSchema.safeParse({
+        ...validBase,
+        maxFileSizeInMb: "50",
+      });
+      expect(result.success).toBe(true);
+    });
+
     it("accepts an empty uploadCompletionRequiredFor and both allowed values", () => {
       expect(
         storageConfigurationFormSchema.safeParse({ ...validBase, uploadCompletionRequiredFor: [] })
