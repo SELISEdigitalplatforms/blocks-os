@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
-import { MoreVertical, PackageOpen, Info } from "lucide-react";
+import { MoreVertical, PackageOpen, Info, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StorageStrategyType } from "@blocks-storage/models/storage.model";
 import {
@@ -20,6 +20,7 @@ type StorageCardProps = {
   data: StorageCardData;
   onClick?: (id: string) => void;
   onViewDetails?: (id: string) => void;
+  onEdit?: (id: string) => void;
   onRemove?: (id: string) => void;
   onDisconnect?: (id: string) => void;
 };
@@ -29,13 +30,17 @@ const providerColors: Record<StorageStrategyType, string> = {
   SftpStorage: "bg-green-100 text-green-600",
   S3Compatible: "bg-purple-100 text-purple-600",
 };
-export const StorageCard = ({ data, onClick, onViewDetails }: StorageCardProps) => {
+export const StorageCard = ({ data, onClick, onViewDetails, onEdit }: StorageCardProps) => {
   const handleClick = () => {
     onClick?.(data.id);
   };
   const handleViewDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
     onViewDetails?.(data.id);
+  };
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.(data.id);
   };
   const providerColorClass = providerColors[data.provider];
   return (
@@ -82,6 +87,10 @@ export const StorageCard = ({ data, onClick, onViewDetails }: StorageCardProps) 
             <DropdownMenuItem onClick={handleViewDetails} className="cursor-pointer">
               <Info className="mr-2 h-4 w-4" />
               View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
