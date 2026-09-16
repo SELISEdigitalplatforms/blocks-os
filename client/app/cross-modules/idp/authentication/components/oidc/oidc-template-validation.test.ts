@@ -7,6 +7,7 @@ import {
   PAGE_OPTIONS,
   TEXT_MESSAGE,
   THEME_FIELDS,
+  URL_MESSAGE,
   isRgbaColor,
   validateOidcUiTemplate,
 } from "./oidc-template-validation";
@@ -54,7 +55,53 @@ describe("validateOidcUiTemplate", () => {
     expect(isRgbaColor(value)).toBe(false);
   });
 
-  it("requires every page field except the two nullable copy fields", () => {
+  it("treats the SSO separator as optional on both pages that offer SSO", () => {
+    for (const pageKey of ["login", "signup"] as const) {
+      const field = PAGE_FIELDS[pageKey].find(({ key }) => key === "ssoSeparatorText");
+      expect(field?.optional).toBe(true);
+      expect(field?.placeholder).toBe("or");
+      expect(DEFAULT_OIDC_UI_TEMPLATE.pages[pageKey].ssoSeparatorText).toBe("or");
+
+      const draft = template();
+      draft.pages[pageKey].ssoSeparatorText = null;
+      expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
+    }
+  });
+
+  it.each([" ", "", "  ", "or", "x".repeat(300)])(
+    "accepts %j as an SSO separator - any divider the tenant wants is legitimate",
+    (value) => {
+      for (const pageKey of ["login", "signup"] as const) {
+        const draft = template();
+        draft.pages[pageKey].ssoSeparatorText = value;
+        expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
+      }
+    },
+  );
+
+  it("lets a tenant point the consent links at its own terms and privacy pages", () => {
+    const draft = template();
+    draft.pages.signup.termsLinkUrl = "https://acme.example/legal/terms";
+    draft.pages.signup.privacyLinkUrl = "https://acme.example/legal/privacy";
+    expect(validateOidcUiTemplate(draft)).toEqual({});
+
+    // Unset falls back to the Blocks default on the real page, so null is allowed.
+    draft.pages.signup.termsLinkUrl = null;
+    draft.pages.signup.privacyLinkUrl = null;
+    expect(validateOidcUiTemplate(draft)).toEqual({});
+  });
+
+  it("rejects consent link targets that aren't absolute http(s) URLs", () => {
+    const draft = template();
+    draft.pages.signup.termsLinkUrl = "/legal/terms";
+    draft.pages.signup.privacyLinkUrl = "javascript:alert(1)";
+    expect(validateOidcUiTemplate(draft)).toMatchObject({
+      "pages.signup.termsLinkUrl": URL_MESSAGE,
+      "pages.signup.privacyLinkUrl": URL_MESSAGE,
+    });
+  });
+
+  it("requires every page field except the nullable copy fields", () => {
     for (const { key: pageKey } of PAGE_OPTIONS) {
       for (const { key, optional } of PAGE_FIELDS[pageKey]) {
         const draft = template();
@@ -81,19 +128,33 @@ describe("validateOidcUiTemplate", () => {
     expect(errors["pages.shared.footerText"]).toBe(TEXT_MESSAGE);
   });
 
-  it("enforces brand-name and optional-logo rules", () => {
+  it("enforces brand-name and optional-logo rules for both light and dark independently", () => {
     const invalid = template();
     invalid.branding.brandName = "x".repeat(81);
-    invalid.branding.logoUrl = "/relative.png";
+    invalid.branding.logoUrlLight = "/relative.png";
+    invalid.branding.logoUrlDark = "/also-relative.png";
     expect(validateOidcUiTemplate(invalid)).toMatchObject({
       "branding.brandName": "must be between 1 and 80 characters",
-      "branding.logoUrl": "must be an absolute http or https URL",
+      "branding.logoUrlLight": "must be an absolute http or https URL",
+      "branding.logoUrlDark": "must be an absolute http or https URL",
     });
 
     const valid = template();
-    valid.branding.logoUrl = null;
+    valid.branding.logoUrlLight = null;
+    valid.branding.logoUrlDark = null;
     expect(validateOidcUiTemplate(valid)).toEqual({});
-    valid.branding.logoUrl = "https://cdn.example.com/logo.svg";
+    valid.branding.logoUrlLight = "https://cdn.example.com/logo.svg";
     expect(validateOidcUiTemplate(valid)).toEqual({});
+    valid.branding.logoUrlDark = "https://cdn.example.com/logo-dark.svg";
+    expect(validateOidcUiTemplate(valid)).toEqual({});
+  });
+
+  it("rejects only the invalid logo slot, leaving a valid sibling slot untouched", () => {
+    const draft = template();
+    draft.branding.logoUrlLight = "https://cdn.example.com/logo.svg";
+    draft.branding.logoUrlDark = "/relative.png";
+    const errors = validateOidcUiTemplate(draft);
+    expect(errors["branding.logoUrlLight"]).toBeUndefined();
+    expect(errors["branding.logoUrlDark"]).toBe("must be an absolute http or https URL");
   });
 });

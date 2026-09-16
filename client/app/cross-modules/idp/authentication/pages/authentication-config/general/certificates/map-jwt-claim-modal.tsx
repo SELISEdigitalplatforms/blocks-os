@@ -1,10 +1,8 @@
+import { useCallback, useMemo, useState } from "react";
+import { jwtDecode } from "jwt-decode";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerTitle,
-} from "@/components/ui-kits/drawer/drawer";
+import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui-kits/drawer/drawer";
 import {
   Select,
   SelectContent,
@@ -12,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
   TableBody,
@@ -24,265 +21,146 @@ import {
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { useProjectStore } from "@seliseblocks/genesis-os";
-import { useAddJwtClaim, useGetJwtClaim } from "@blocks-idp/authentication/hooks/use-jwt-claim";
-import { JwtClaimPayload } from "@blocks-idp/authentication/models/jwt.claim.model";
-import { jwtDecode } from "jwt-decode";
-import { X } from "lucide-react";
-import { useState, useCallback, useMemo } from "react";
-interface DecodedJwt {
-  [key: string]: unknown;
+import { useSaveThirdPartyJwtProvider } from "@blocks-idp/authentication/hooks/use-third-party-jwt-provider";
+import {
+  toSavePayload,
+  type ClaimsMapping,
+  type ThirdPartyJwtProvider,
+} from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
+
+type ClaimField = keyof ClaimsMapping;
+
+const CLAIM_FIELDS: { field: ClaimField; label: string; required?: boolean }[] = [
+  { field: "userId", label: "User ID", required: true },
+  { field: "email", label: "Email" },
+  { field: "userName", label: "Username" },
+  { field: "name", label: "Display name" },
+  { field: "roles", label: "Roles" },
+];
+
+/** Radix rejects an empty-string item value, so clearing a mapping needs a sentinel. */
+const UNMAPPED = "__unmapped__";
+
+/**
+ * Claim names nest, and a namespaced claim is addressed by its path. Two levels covers the shapes
+ * providers actually emit (Auth0 namespaced objects, Keycloak realm_access.roles) without turning
+ * a large token into an unreadable list.
+ */
+function extractClaimPaths(payload: Record<string, unknown>, prefix = "", depth = 0): string[] {
+  return Object.keys(payload).flatMap((key) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    const value = payload[key];
+    const isNested = value !== null && typeof value === "object" && !Array.isArray(value);
+
+    return depth < 2 && isNested
+      ? extractClaimPaths(value as Record<string, unknown>, path, depth + 1)
+      : [path];
+  });
 }
-interface MapJwtClaimModalProps {
+
+type MapJwtClaimModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-type RequiredProperty = "userId" | "email" | "name" | "userName" | "roles";
-const REQUIRED_PROPERTIES: RequiredProperty[] = ["userId", "email", "name", "userName", "roles"];
-const PROPERTY_LABELS: Record<RequiredProperty, string> = {
-  userId: "User Id",
-  email: "Email",
-  name: "Name",
-  userName: "User Name",
-  roles: "Roles",
+  provider: ThirdPartyJwtProvider | null;
 };
-// JWT Input Section Component
-interface JwtInputSectionProps {
-  jwtToken: string;
-  onTokenChange: (value: string) => void;
-  validationError: string;
-  onDecode: () => void;
-}
-const JwtInputSection: React.FC<JwtInputSectionProps> = ({
-  jwtToken,
-  onTokenChange,
-  validationError,
-  onDecode,
-}) => (
-  <div className="space-y-3">
-    <p className="text-sm font-medium text-foreground">JSON Web Token (JWT)</p>
-    <Textarea
-      value={jwtToken}
-      onChange={(e) => onTokenChange(e.target.value)}
-      placeholder="Paste here..."
-      className="h-[142px] w-full resize-none rounded-md border px-3 py-2 text-sm placeholder:align-top placeholder:text-muted-foreground"
-    />
-    {validationError && <p className="text-sm text-destructive">{validationError}</p>}
-    <Button onClick={onDecode} variant="outline" className="w-full sm:w-auto">
-      Decode
-    </Button>
-  </div>
-);
-// Mapping Table Section Component
-interface MappingTableSectionProps {
-  hasDecodedJwt: boolean;
-  hasExistingData: boolean;
-  requiredProperties: readonly RequiredProperty[];
-  decodedJwt: string[];
-  mapping: Record<RequiredProperty, string>;
-  onMappingChange: (property: RequiredProperty, value: string) => void;
-}
-const MappingTableSection: React.FC<MappingTableSectionProps> = ({
-  hasDecodedJwt,
-  hasExistingData,
-  requiredProperties,
-  decodedJwt,
-  mapping,
-  onMappingChange,
-}) => {
-  const existingMappedValues = useMemo(() => {
-    const values = Object.values(mapping).filter((value) => value !== "");
-    return Array.from(new Set(values));
-  }, [mapping]);
-  return (
-    <div className="flex min-h-0 flex-1 flex-col space-y-3">
-      <p className="border-t pt-3 text-sm font-medium text-foreground">Mapping Table</p>
-      {!hasDecodedJwt && !hasExistingData && (
-        <div className="flex flex-1 items-center justify-center py-10">
-          <p className="text-sm text-muted-foreground">
-            Please paste a valid JWT above to view and map its fields.
-          </p>
-        </div>
-      )}
-      {(hasDecodedJwt || hasExistingData) && (
-        <div className="flex-1 overflow-y-auto rounded-md">
-          <Table className="min-w-full text-sm">
-            <TableHeader className="sticky top-0 z-10 bg-background">
-              <TableRow>
-                <TableHead className="w-1/2 text-left font-semibold text-foreground">
-                  JWT Key
-                </TableHead>
-                <TableHead className="w-1/2 text-left font-semibold text-foreground">
-                  Map To
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {requiredProperties.map((property) => (
-                <TableRow key={property}>
-                  <TableCell className="border-b py-2 text-foreground">
-                    {PROPERTY_LABELS[property]}
-                  </TableCell>
-                  <TableCell className="border-b py-2">
-                    <Select
-                      value={mapping[property]}
-                      onValueChange={(value) => onMappingChange(property, value)}
-                    >
-                      <SelectTrigger className="border-0 text-foreground shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0">
-                        <SelectValue placeholder="Select mapping" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(hasDecodedJwt ? decodedJwt : existingMappedValues).map((jwtKey) => (
-                          <SelectItem key={jwtKey} value={jwtKey}>
-                            {jwtKey}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
-  );
-};
-// Modal Footer Component
-interface ModalFooterProps {
-  onCancel: () => void;
-  onSave: () => void;
-  isSaveDisabled: boolean;
-  isLoading: boolean;
-}
-const ModalFooter: React.FC<ModalFooterProps> = ({
-  onCancel,
-  onSave,
-  isSaveDisabled,
-  isLoading,
-}) => (
-  <div className="flex flex-col gap-2 pt-4 sm:flex-row sm:justify-end sm:gap-3">
-    <Button onClick={onCancel} variant="outline" className="w-full sm:w-auto">
-      Cancel
-    </Button>
-    <Button
-      onClick={onSave}
-      disabled={isSaveDisabled}
-      className="w-full bg-primary text-primary-foreground sm:w-auto"
-    >
-      {isLoading ? "Saving..." : "Save"}
-    </Button>
-  </div>
-);
-const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange }) => {
-  const [jwtToken, setJwtToken] = useState<string>("");
-  const [decodedJwt, setDecodedJwt] = useState<string[]>([]);
-  const [mapping, setMapping] = useState<Record<RequiredProperty, string>>({
-    userId: "",
-    email: "",
-    name: "",
-    userName: "",
-    roles: "",
-  });
-  const [validationError, setValidationError] = useState<string>("");
-  const { mutateAsync: saveJWTClaim, isPending: isLoading } = useAddJwtClaim();
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const { data: existingJwtClaim, isLoading: isJwtClaimLoading } = useGetJwtClaim(projectKey, open);
-  const [prevJwtClaim, setPrevJwtClaim] = useState<typeof existingJwtClaim | undefined>(undefined);
-  if (prevJwtClaim !== existingJwtClaim) {
-    setPrevJwtClaim(existingJwtClaim);
-    if (existingJwtClaim) {
-      setMapping({
-        userId: existingJwtClaim.userId || "",
-        email: existingJwtClaim.email || "",
-        name: existingJwtClaim.name || "",
-        userName: existingJwtClaim.userName || "",
-        roles: existingJwtClaim.roles || "",
-      });
-    }
+
+/**
+ * Maps a provider's claims by example: paste a token the provider actually issued, decode it, and
+ * pick from the claims it carries. Typing claim names blind is how a mapping ends up naming a
+ * claim the provider never sends, which then fails silently at sign-in rather than here.
+ *
+ * The mapping is stored on the provider itself, not alongside it: one row, one save.
+ */
+export function MapJwtClaimModal({ open, onOpenChange, provider }: Readonly<MapJwtClaimModalProps>) {
+  const { mutateAsync, isPending } = useSaveThirdPartyJwtProvider();
+
+  const [token, setToken] = useState("");
+  const [decodedClaims, setDecodedClaims] = useState<string[]>([]);
+  const [decodeStatus, setDecodeStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [draft, setDraft] = useState<ClaimsMapping | null>(null);
+
+  // Re-seed when a different provider is opened, without an effect: the drawer is mounted once and
+  // reused, so the draft has to follow whichever provider it is showing.
+  const [seededFor, setSeededFor] = useState<string | null>(null);
+  const seedKey = open ? (provider?.itemId ?? null) : null;
+
+  if (seedKey !== seededFor) {
+    setSeededFor(seedKey);
+    setDraft(
+      provider
+        ? {
+            userId: provider.claimsMapping?.userId ?? "",
+            email: provider.claimsMapping?.email ?? "",
+            userName: provider.claimsMapping?.userName ?? "",
+            name: provider.claimsMapping?.name ?? "",
+            roles: provider.claimsMapping?.roles ?? "",
+          }
+        : null,
+    );
+    setToken("");
+    setDecodedClaims([]);
+    setDecodeStatus(null);
   }
-  const hasDecodedJwt = useMemo(() => decodedJwt.length > 0, [decodedJwt.length]);
-  const hasExistingData = useMemo(() => !!existingJwtClaim?.itemId, [existingJwtClaim]);
-  const hasAtLeastOneFieldMapped = useMemo(
-    () => REQUIRED_PROPERTIES.some((property) => mapping[property] !== ""),
-    [mapping],
-  );
-  const isSaveDisabled = useMemo(
-    () => isLoading || (!hasExistingData && (!hasDecodedJwt || !hasAtLeastOneFieldMapped)),
-    [isLoading, hasExistingData, hasDecodedJwt, hasAtLeastOneFieldMapped],
-  );
-  const handleDecode = useCallback(() => {
-    if (!jwtToken.trim()) {
-      setValidationError("JWT is required.");
-      setDecodedJwt([]);
+
+  // Before a token is decoded, the claims already mapped are the only ones we can offer — so an
+  // existing mapping stays visible and editable rather than reading as empty.
+  const options = useMemo(() => {
+    const mapped = draft ? Object.values(draft).filter(Boolean) : [];
+    return Array.from(new Set([...decodedClaims, ...mapped]));
+  }, [decodedClaims, draft]);
+
+  const fail = (message: string) => {
+    setDecodeStatus({ ok: false, message });
+    setDecodedClaims([]);
+  };
+
+  const decode = useCallback(() => {
+    if (!token.trim()) {
+      fail("Paste a token issued by this provider first.");
       return;
     }
+
     try {
-      const result = jwtDecode<DecodedJwt>(jwtToken);
-      const jwtKeys: string[] = [];
-      const extractKeys = (
-        obj: Record<string, unknown>,
-        prefix: string = "",
-        depth: number = 0,
-      ) => {
-        Object.keys(obj).forEach((key) => {
-          const fullKey = prefix ? `${prefix}.${key}` : key;
-          const value = obj[key];
-          if (depth < 2 && value !== null && typeof value === "object" && !Array.isArray(value)) {
-            extractKeys(value as Record<string, unknown>, fullKey, depth + 1);
-          } else {
-            jwtKeys.push(fullKey);
-          }
-        });
-      };
-      extractKeys(result);
-      if (jwtKeys.length === 0) {
-        setValidationError("Invalid JWT Token: No properties found.");
-        setDecodedJwt([]);
+      const claims = extractClaimPaths(jwtDecode<Record<string, unknown>>(token));
+
+      if (!claims.length) {
+        fail("Decoded, but this token carries no claims to map.");
         return;
       }
-      setDecodedJwt(jwtKeys);
-      setValidationError("");
-      showSuccessToast({
-        description: "JWT decoded successfully. You can now update the mapping table.",
+
+      setDecodedClaims(claims);
+      setDecodeStatus({
+        ok: true,
+        message: `Decoded successfully — ${claims.length} claim${claims.length > 1 ? "s" : ""} found. Map them below.`,
       });
-    } catch (error) {
-      console.error("JWT decode error:", error);
-      setValidationError("Invalid JWT Token.");
-      setDecodedJwt([]);
+      showSuccessToast({ description: "Token decoded" });
+    } catch {
+      // The token is read for its claim names and nothing else — never verified, never trusted.
+      fail("That is not a readable JWT. Check you copied the whole token.");
     }
-  }, [jwtToken]);
-  const handleMappingChange = useCallback((property: RequiredProperty, value: string) => {
-    setMapping((prev) => ({
-      ...prev,
-      [property]: value,
-    }));
-  }, []);
-  const handleSubmit = useCallback(async () => {
-    try {
-      const payload: JwtClaimPayload = {
-        userId: mapping.userId,
-        email: mapping.email,
-        name: mapping.name,
-        userName: mapping.userName,
-        roles: mapping.roles,
-        ...(existingJwtClaim?.itemId && { itemId: existingJwtClaim.itemId }),
-      };
-      const res = await saveJWTClaim(payload);
-      if (res?.isSuccess) {
-        showSuccessToast({ description: "JWT Claim Saved Successfully" });
-        onOpenChange(false);
-      } else {
-        showErrorToast({ errors: "Something went wrong!" });
-      }
-    } catch (error) {
-      showErrorToast({ errors: error });
+  }, [token]);
+
+  const setField = (field: ClaimField, value: string) =>
+    setDraft((prev) => (prev ? { ...prev, [field]: value === UNMAPPED ? "" : value } : prev));
+
+  const save = async () => {
+    if (!provider || !draft) return;
+
+    const result = await mutateAsync(toSavePayload(provider, { claimsMapping: draft }));
+
+    if (!result.isSuccess) {
+      showErrorToast({
+        errors: Object.values(result.errors ?? {}).join(" ") || "Could not save the mapping",
+      });
+      return;
     }
-  }, [mapping, existingJwtClaim, saveJWTClaim, onOpenChange]);
-  const handleCancel = useCallback(() => {
+
+    showSuccessToast({ description: `Claim mapping saved for ${provider.key}` });
     onOpenChange(false);
-  }, [onOpenChange]);
+  };
+
+  const hasClaimsToOffer = options.length > 0;
+
   return (
     <Drawer direction="right" open={open} onOpenChange={onOpenChange} handleOnly>
       <DrawerContent
@@ -292,64 +170,145 @@ const MapJwtClaimModal: React.FC<MapJwtClaimModalProps> = ({ open, onOpenChange 
         )}
         style={{ userSelect: "text" }}
       >
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-center justify-between gap-4">
-            <DrawerTitle className="text-lg font-semibold leading-none tracking-tight">
-              Map JWT Claim
-            </DrawerTitle>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DrawerTitle className="text-lg font-semibold leading-none tracking-tight">
+                Map JWT claim
+              </DrawerTitle>
+              {provider && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Which claim supplies each field for{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                    {provider.key}
+                  </code>
+                </p>
+              )}
+            </div>
             <DrawerClose asChild>
               <button
                 type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
                 aria-label="Close drawer"
               >
                 <X className="h-4 w-4" />
               </button>
             </DrawerClose>
           </div>
-          {isJwtClaimLoading ? (
-            <div className="mt-6 flex min-h-0 flex-1 flex-col space-y-6">
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-48" />
-                <Skeleton className="h-[142px] w-full" />
-                <Skeleton className="h-10 w-24" />
-              </div>
-              <div className="flex-1 space-y-3">
-                <Skeleton className="h-5 w-32" />
-                <div className="space-y-2">
-                  {REQUIRED_PROPERTIES.map((property) => (
-                    <Skeleton key={property} className="h-10 w-full" />
-                  ))}
+
+          <div className="mt-6 flex min-h-0 flex-1 flex-col space-y-6">
+            <div className="space-y-3">
+              <label htmlFor="jwt-sample" className="text-sm font-medium text-foreground">
+                JSON Web Token (JWT)
+              </label>
+              <Textarea
+                id="jwt-sample"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Paste a token issued by this provider..."
+                className="h-[142px] w-full resize-none rounded-md border px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Read in your browser only, to list the claim names. It is never sent or stored.
+              </p>
+              {decodeStatus && (
+                <p
+                  role="status"
+                  className={
+                    decodeStatus.ok ? "text-sm text-emerald-600" : "text-sm text-destructive"
+                  }
+                >
+                  {decodeStatus.message}
+                </p>
+              )}
+              <Button type="button" onClick={decode} variant="outline" className="w-full sm:w-auto">
+                Decode
+              </Button>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col space-y-3">
+              <p className="border-t pt-3 text-sm font-medium text-foreground">Mapping table</p>
+
+              {hasClaimsToOffer ? (
+                <div className="flex-1 overflow-y-auto rounded-md">
+                  <Table className="min-w-full text-sm">
+                    <TableHeader className="sticky top-0 z-10 bg-background">
+                      <TableRow>
+                        <TableHead className="w-1/2 text-left font-semibold text-foreground">
+                          Field
+                        </TableHead>
+                        <TableHead className="w-1/2 text-left font-semibold text-foreground">
+                          JWT claim
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {CLAIM_FIELDS.map(({ field, label, required }) => (
+                        <TableRow key={field}>
+                          <TableCell className="border-b py-2 text-foreground">
+                            {label}
+                            {required && <span className="ml-1 text-destructive">*</span>}
+                          </TableCell>
+                          <TableCell className="border-b py-2">
+                            <Select
+                              value={draft?.[field] || UNMAPPED}
+                              onValueChange={(value) => setField(field, value)}
+                            >
+                              <SelectTrigger
+                                aria-label={label}
+                                className="border-0 text-foreground shadow-none focus:ring-0 focus:ring-offset-0"
+                              >
+                                <SelectValue placeholder="Not mapped" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {!required && <SelectItem value={UNMAPPED}>Not mapped</SelectItem>}
+                                {options.map((claim) => (
+                                  <SelectItem key={claim} value={claim}>
+                                    {claim}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <p className="pt-3 text-xs text-muted-foreground">
+                    User ID has no safe fallback: without it every token from this provider
+                    collapses onto the same principal.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center py-10">
+                  <p className="text-sm text-muted-foreground">
+                    Decode a token above to list the claims it carries.
+                  </p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="mt-6 flex min-h-0 flex-1 flex-col space-y-6">
-              <JwtInputSection
-                jwtToken={jwtToken}
-                onTokenChange={setJwtToken}
-                validationError={validationError}
-                onDecode={handleDecode}
-              />
-              <MappingTableSection
-                hasDecodedJwt={hasDecodedJwt}
-                hasExistingData={hasExistingData}
-                requiredProperties={REQUIRED_PROPERTIES}
-                decodedJwt={decodedJwt}
-                mapping={mapping}
-                onMappingChange={handleMappingChange}
-              />
-            </div>
-          )}
-          <ModalFooter
-            onCancel={handleCancel}
-            onSave={handleSubmit}
-            isSaveDisabled={isSaveDisabled || isJwtClaimLoading}
-            isLoading={isLoading}
-          />
+          </div>
+
+          <div className="flex flex-col gap-2 pt-4 sm:flex-row sm:justify-end sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={save}
+              disabled={isPending || !draft?.userId}
+              className="w-full sm:w-auto"
+            >
+              {isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </div>
       </DrawerContent>
     </Drawer>
   );
-};
-export default MapJwtClaimModal;
+}

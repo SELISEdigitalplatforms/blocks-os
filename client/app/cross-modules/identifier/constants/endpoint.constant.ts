@@ -44,6 +44,10 @@ export const PROJECT_ENDPOINTS = {
   ADD_JWT_CLAIM: `/api${PROJECT_SUBPATH}/AddJwtClaim`,
   GET_JWT_CLAIMS: `/api${PROJECT_SUBPATH}/GetThirdPartyJWTClaims`,
   SAVE_JWT_CLAIMS: `/api${PROJECT_SUBPATH}/SaveThirdPartyJWTClaims`,
+  GET_THIRD_PARTY_JWT_PROVIDERS: `/api${PROJECT_SUBPATH}/GetThirdPartyJwtProviders`,
+  SAVE_THIRD_PARTY_JWT_PROVIDER: `/api${PROJECT_SUBPATH}/SaveThirdPartyJwtProvider`,
+  DELETE_THIRD_PARTY_JWT_PROVIDER: `/api${PROJECT_SUBPATH}/DeleteThirdPartyJwtProvider`,
+  UPDATE_THIRD_PARTY_JWT_ENABLED: `/api${PROJECT_SUBPATH}/UpdateThirdPartyJwtEnabled`,
 } as const;
 
 // ─── Domain endpoints ─────────────────────────────────────────────────────────

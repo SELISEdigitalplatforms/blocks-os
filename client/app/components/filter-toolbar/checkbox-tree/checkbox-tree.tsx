@@ -169,7 +169,8 @@ export function CheckboxTree({
           />
         </div>
         {searchedOptions.length > 0 ? (
-          <div className="gap-0 p-1 text-xs font-thin text-accent-foreground">
+          // Long lists scroll inside the popover instead of running past the viewport.
+          <div className="max-h-72 gap-0 overflow-y-auto p-1 text-xs font-thin text-accent-foreground">
             {searchedOptions.map((option) => {
               const hasChildren = !!option.children?.length;
               const state = groupStateOf(option, value);

@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Brush, FileText, ImagePlus, Moon, Palette, Sun, Trash2, Upload } from "lucide-react";
+import {
+  Brush,
+  FileText,
+  ImagePlus,
+  Loader2,
+  Moon,
+  Palette,
+  Sun,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { parseAsStringEnum, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
@@ -23,7 +33,11 @@ import type {
   IOidcUiTemplate,
   IOidcUiThemePalette,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
+import {
+  useCompleteUpload,
+  useGetPreSignedUrlForUpload,
+  useUploadFile,
+} from "@blocks-storage/hooks/use-storage-file";
 import { storageService } from "@blocks-storage/services/storage.service";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { OidcTemplatePreview } from "./oidc-template-preview";
@@ -76,6 +90,11 @@ const THEME_GROUPS: Array<{
     description: "Typography and semantic feedback.",
     fields: ["text", "mutedText", "success", "danger"],
   },
+  {
+    label: "Buttons",
+    description: "Text color on the primary sign-in button.",
+    fields: ["buttonText"],
+  },
 ];
 
 const THEME_FIELD_DESCRIPTIONS: Record<keyof IOidcUiThemePalette, string> = {
@@ -90,6 +109,7 @@ const THEME_FIELD_DESCRIPTIONS: Record<keyof IOidcUiThemePalette, string> = {
   border: "Subtle dividers",
   borderStrong: "Emphasized outlines",
   accentSoft: "Tinted highlights",
+  buttonText: "Primary button text",
 };
 
 const normalizeField = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
@@ -208,8 +228,123 @@ const ColorInput = ({
   );
 };
 
+/**
+ * One mode's logo drop zone - light and dark each get their own independent slot
+ * (their own file, their own preview, their own remove action), rendered twice by
+ * the branding tab below.
+ */
+const LogoUploadField = ({
+  inputId,
+  label,
+  previewUrl,
+  isDragOver,
+  isBusy,
+  error,
+  fileInputRef,
+  onDragOverChange,
+  onFile,
+  onRemove,
+}: {
+  inputId: string;
+  label: string;
+  previewUrl: string | null;
+  isDragOver: boolean;
+  isBusy: boolean;
+  error: string | null;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onDragOverChange: (isDragOver: boolean) => void;
+  onFile: (file: File) => void;
+  onRemove: () => void;
+}) => (
+  <div className="space-y-2">
+    <Label htmlFor={inputId}>{label}</Label>
+    <div
+      className={cn(
+        "group rounded-xl border border-dashed p-4 transition-colors",
+        isDragOver
+          ? "border-primary bg-primary/5"
+          : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/30",
+      )}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOverChange(true);
+      }}
+      onDragLeave={() => onDragOverChange(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDragOverChange(false);
+        const file = event.dataTransfer.files?.[0];
+        if (file) onFile(file);
+      }}
+    >
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background shadow-sm">
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Logo preview"
+              className="max-h-full max-w-full object-contain p-2"
+            />
+          ) : (
+            <ImagePlus className="h-6 w-6 text-muted-foreground" />
+          )}
+        </div>
+        <div className="min-w-0 text-center">
+          <p className="text-xs font-medium text-high-emphasis">
+            {previewUrl ? "Replace your logo" : "Drop your logo here"}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">PNG, JPG, SVG, or WebP · max 2MB</p>
+          <input
+            id={inputId}
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) onFile(file);
+            }}
+          />
+          <div className="mt-2.5 flex flex-wrap justify-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+              className="gap-1.5 shadow-none"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              {previewUrl ? "Replace" : "Browse files"}
+            </Button>
+            {previewUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={onRemove}
+                disabled={isBusy}
+                className="gap-1.5 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Remove logo
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+    {error && (
+      <p className="text-xs text-destructive" role="alert">
+        {label} {error}
+      </p>
+    )}
+  </div>
+);
+
 export const OidcBrandingForm = () => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRefLight = useRef<HTMLInputElement>(null);
+  const fileInputRefDark = useRef<HTMLInputElement>(null);
   const { setActions } = useOidcBrandingHeader();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: template, isLoading, isError } = useGetOidcTemplate();
@@ -219,6 +354,7 @@ export const OidcBrandingForm = () => {
   const { mutateAsync: saveTemplate, isPending: isSaving } = useSaveOidcTemplate();
   const { mutateAsync: getPresignedUrl } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutateAsync: completeUpload } = useCompleteUpload();
 
   const sourceTemplate = !isLoading && !isError ? (template ?? DEFAULT_OIDC_UI_TEMPLATE) : null;
   const normalizedTemplate = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
@@ -238,14 +374,26 @@ export const OidcBrandingForm = () => {
     },
     { history: "replace" },
   );
-  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
-  const [previewLogoUrl, setPreviewLogoUrl] = useState<string | null>(
-    normalizedTemplate?.branding.logoUrl ?? null,
-  );
-  const [logoValidationMessage, setLogoValidationMessage] = useState<string | null>(null);
+  const [pendingLogoFiles, setPendingLogoFiles] = useState<Record<OidcPreviewTheme, File | null>>({
+    light: null,
+    dark: null,
+  });
+  const [previewLogoUrls, setPreviewLogoUrls] = useState<Record<OidcPreviewTheme, string | null>>({
+    light: normalizedTemplate?.branding.logoUrlLight ?? null,
+    dark: normalizedTemplate?.branding.logoUrlDark ?? null,
+  });
+  const [logoValidationMessages, setLogoValidationMessages] = useState<
+    Record<OidcPreviewTheme, string | null>
+  >({ light: null, dark: null });
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [isDragOver, setIsDragOver] = useState<Record<OidcPreviewTheme, boolean>>({
+    light: false,
+    dark: false,
+  });
+  // Which single page is mid-save via its own "Save page" button - distinct from the
+  // header's whole-template `isSaving`, so saving one page never disables another.
+  const [savingPageKey, setSavingPageKey] = useState<OidcPageKey | null>(null);
 
   const [previousTemplate, setPreviousTemplate] = useState(sourceTemplate);
   if (sourceTemplate !== previousTemplate) {
@@ -253,17 +401,21 @@ export const OidcBrandingForm = () => {
     const next = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
     setSavedTemplate(next);
     setDraft(next);
-    setPreviewLogoUrl(next?.branding.logoUrl ?? null);
-    setPendingLogoFile(null);
-    setLogoValidationMessage(null);
+    setPreviewLogoUrls({
+      light: next?.branding.logoUrlLight ?? null,
+      dark: next?.branding.logoUrlDark ?? null,
+    });
+    setPendingLogoFiles({ light: null, dark: null });
+    setLogoValidationMessages({ light: null, dark: null });
     setServerErrors({});
   }
 
   useEffect(
     () => () => {
-      if (previewLogoUrl?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrl);
+      if (previewLogoUrls.light?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrls.light);
+      if (previewLogoUrls.dark?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrls.dark);
     },
-    [previewLogoUrl],
+    [previewLogoUrls.light, previewLogoUrls.dark],
   );
 
   const clearServerFieldError = useCallback((field: string) => {
@@ -274,12 +426,19 @@ export const OidcBrandingForm = () => {
     );
   }, []);
 
-  const updateBranding = (field: "brandName" | "logoUrl", value: string | null) => {
+  const updateBranding = (
+    field: "brandName" | "logoUrlLight" | "logoUrlDark",
+    value: string | null,
+  ) => {
     setDraft((current) =>
       current ? { ...current, branding: { ...current.branding, [field]: value } } : current,
     );
     clearServerFieldError(`branding.${field}`);
   };
+
+  /** Each preview mode's logo lives under its own field name on `branding`. */
+  const logoFieldKey = (mode: OidcPreviewTheme): "logoUrlLight" | "logoUrlDark" =>
+    mode === "light" ? "logoUrlLight" : "logoUrlDark";
 
   const updatePalette = (
     mode: OidcPreviewTheme,
@@ -315,7 +474,7 @@ export const OidcBrandingForm = () => {
     clearServerFieldError(`pages.${selectedPage}.${field}`);
   };
 
-  const applyLogoFile = (file: File) => {
+  const applyLogoFile = (mode: OidcPreviewTheme, file: File) => {
     if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
       showErrorToast({ errors: "Only PNG, JPG, SVG, and WebP images are allowed" });
       return;
@@ -324,19 +483,23 @@ export const OidcBrandingForm = () => {
       showErrorToast({ errors: `Logo must be smaller than ${MAX_LOGO_SIZE_MB}MB` });
       return;
     }
-    if (previewLogoUrl?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrl);
-    setPendingLogoFile(file);
-    setPreviewLogoUrl(URL.createObjectURL(file));
-    setLogoValidationMessage(null);
-    clearServerFieldError("branding.logoUrl");
+    setPreviewLogoUrls((current) => {
+      if (current[mode]?.startsWith("blob:")) URL.revokeObjectURL(current[mode]!);
+      return { ...current, [mode]: URL.createObjectURL(file) };
+    });
+    setPendingLogoFiles((current) => ({ ...current, [mode]: file }));
+    setLogoValidationMessages((current) => ({ ...current, [mode]: null }));
+    clearServerFieldError(`branding.${logoFieldKey(mode)}`);
   };
 
-  const removeLogo = () => {
-    if (previewLogoUrl?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrl);
-    setPendingLogoFile(null);
-    setPreviewLogoUrl(null);
-    setLogoValidationMessage(null);
-    updateBranding("logoUrl", null);
+  const removeLogo = (mode: OidcPreviewTheme) => {
+    setPreviewLogoUrls((current) => {
+      if (current[mode]?.startsWith("blob:")) URL.revokeObjectURL(current[mode]!);
+      return { ...current, [mode]: null };
+    });
+    setPendingLogoFiles((current) => ({ ...current, [mode]: null }));
+    setLogoValidationMessages((current) => ({ ...current, [mode]: null }));
+    updateBranding(logoFieldKey(mode), null);
   };
 
   const uploadLogoToStorage = useCallback(
@@ -354,38 +517,56 @@ export const OidcBrandingForm = () => {
       });
       if (!response.isSuccess) throw new Error("Failed to get upload URL");
       await uploadFile({ url: response.uploadUrl, file });
+      if (response.uploadCompletionRequired) {
+        const completion = await completeUpload({
+          fileId: response.fileId,
+          fileVersionId: response.fileVersionId ?? "",
+        });
+        if (completion.verificationStatus !== "Verified") {
+          throw new Error(completion.rejectionReason ?? "Logo failed verification");
+        }
+      }
       const fileRecord = await storageService.file.getFileByFileId({
         itemId: response.fileId,
         projectKey: tenantId,
       });
       return fileRecord.url;
     },
-    [getPresignedUrl, tenantId, uploadFile],
+    [completeUpload, getPresignedUrl, tenantId, uploadFile],
   );
 
   const validationErrors = useMemo(() => (draft ? validateOidcUiTemplate(draft) : {}), [draft]);
   const fieldError = (field: string) =>
     validationErrors[field] ?? getServerFieldError(serverErrors, field);
-  const isValid = Object.keys(validationErrors).length === 0 && !logoValidationMessage;
+  const isValid =
+    Object.keys(validationErrors).length === 0 &&
+    !logoValidationMessages.light &&
+    !logoValidationMessages.dark;
   const isDirty = useMemo(
     () =>
       !!draft &&
       !!savedTemplate &&
-      (JSON.stringify(draft) !== JSON.stringify(savedTemplate) || !!pendingLogoFile),
-    [draft, pendingLogoFile, savedTemplate],
+      (JSON.stringify(draft) !== JSON.stringify(savedTemplate) ||
+        !!pendingLogoFiles.light ||
+        !!pendingLogoFiles.dark),
+    [draft, pendingLogoFiles, savedTemplate],
   );
   const isBusy = isSaving || isUploading;
 
   const resetToSavedTemplate = useCallback(() => {
     if (!savedTemplate) return;
-    if (previewLogoUrl?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrl);
+    if (previewLogoUrls.light?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrls.light);
+    if (previewLogoUrls.dark?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrls.dark);
     const restored = structuredClone(savedTemplate);
     setDraft(restored);
-    setPreviewLogoUrl(restored.branding.logoUrl);
-    setPendingLogoFile(null);
-    setLogoValidationMessage(null);
+    setPreviewLogoUrls({
+      light: restored.branding.logoUrlLight,
+      dark: restored.branding.logoUrlDark,
+    });
+    setPendingLogoFiles({ light: null, dark: null });
+    setLogoValidationMessages({ light: null, dark: null });
     setServerErrors({});
-  }, [previewLogoUrl, savedTemplate]);
+  }, [previewLogoUrls.light, previewLogoUrls.dark, savedTemplate]);
 
   const handleSave = useCallback(async () => {
     if (!draft || !isValid) return;
@@ -393,11 +574,21 @@ export const OidcBrandingForm = () => {
       setIsUploading(true);
       setServerErrors({});
       const payload = structuredClone(draft);
-      if (pendingLogoFile) payload.branding.logoUrl = await uploadLogoToStorage(pendingLogoFile);
+      if (pendingLogoFiles.light) {
+        payload.branding.logoUrlLight = await uploadLogoToStorage(pendingLogoFiles.light);
+      }
+      if (pendingLogoFiles.dark) {
+        payload.branding.logoUrlDark = await uploadLogoToStorage(pendingLogoFiles.dark);
+      }
 
       const uploadedErrors = validateOidcUiTemplate(payload);
-      if (uploadedErrors["branding.logoUrl"]) {
-        setLogoValidationMessage(uploadedErrors["branding.logoUrl"]);
+      const uploadErrorLight = uploadedErrors["branding.logoUrlLight"];
+      const uploadErrorDark = uploadedErrors["branding.logoUrlDark"];
+      if (uploadErrorLight || uploadErrorDark) {
+        setLogoValidationMessages({
+          light: uploadErrorLight ?? null,
+          dark: uploadErrorDark ?? null,
+        });
         return;
       }
 
@@ -412,10 +603,13 @@ export const OidcBrandingForm = () => {
       showSuccessToast({ description: "Template saved successfully" });
       setSavedTemplate(payload);
       setDraft(payload);
-      setPendingLogoFile(null);
-      if (previewLogoUrl?.startsWith("blob:")) URL.revokeObjectURL(previewLogoUrl);
-      setPreviewLogoUrl(payload.branding.logoUrl);
-      setLogoValidationMessage(null);
+      setPendingLogoFiles({ light: null, dark: null });
+      setPreviewLogoUrls((current) => {
+        if (current.light?.startsWith("blob:")) URL.revokeObjectURL(current.light);
+        if (current.dark?.startsWith("blob:")) URL.revokeObjectURL(current.dark);
+        return { light: payload.branding.logoUrlLight, dark: payload.branding.logoUrlDark };
+      });
+      setLogoValidationMessages({ light: null, dark: null });
     } catch (error) {
       if (isErrorWithErrors(error)) {
         const errors = Object.fromEntries(
@@ -432,7 +626,63 @@ export const OidcBrandingForm = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [draft, isValid, pendingLogoFile, previewLogoUrl, saveTemplate, uploadLogoToStorage]);
+  }, [draft, isValid, pendingLogoFiles, saveTemplate, uploadLogoToStorage]);
+
+  /**
+   * Saves exactly one page (plus the shared footer fields shown alongside every page)
+   * without touching branding, theme, or any other page's in-progress edits - those
+   * stay in `draft`, still unsaved, exactly as the admin left them. Everything else in
+   * the payload comes from `savedTemplate`, the last known-good template, so an invalid
+   * draft elsewhere (a half-finished Theme edit, say) can never block this save.
+   */
+  const handleSavePage = useCallback(
+    async (pageKey: OidcPageKey) => {
+      if (!draft || !savedTemplate) return;
+      const payload: IOidcUiTemplate = {
+        ...savedTemplate,
+        pages: {
+          ...savedTemplate.pages,
+          [pageKey]: draft.pages[pageKey],
+          shared: draft.pages.shared,
+        },
+      };
+      const hasPageError = Object.keys(validateOidcUiTemplate(payload)).some(
+        (key) => key.startsWith(`pages.${pageKey}.`) || key.startsWith("pages.shared."),
+      );
+      if (hasPageError) return;
+
+      setSavingPageKey(pageKey);
+      try {
+        const response = await saveTemplate(payload);
+        if (!response.isSuccess) {
+          const errors = response.errors ?? { Template: "Failed to save page" };
+          setServerErrors((current) => ({ ...current, ...errors }));
+          showErrorToast({ errors });
+          return;
+        }
+
+        const pageLabel = PAGE_OPTIONS.find(({ key }) => key === pageKey)?.label ?? "Page";
+        showSuccessToast({ description: `${pageLabel} page saved successfully` });
+        setSavedTemplate(payload);
+      } catch (error) {
+        if (isErrorWithErrors(error)) {
+          const errors = Object.fromEntries(
+            Object.entries(error.errors).map(([key, value]) => [
+              key,
+              Array.isArray(value) ? value.join(", ") : value,
+            ]),
+          );
+          setServerErrors((current) => ({ ...current, ...errors }));
+          showErrorToast({ errors: error.errors });
+        } else {
+          showErrorToast({ errors: "Failed to save page" });
+        }
+      } finally {
+        setSavingPageKey(null);
+      }
+    },
+    [draft, savedTemplate, saveTemplate],
+  );
 
   useEffect(() => {
     if (!savedTemplate) {
@@ -462,10 +712,25 @@ export const OidcBrandingForm = () => {
 
   const previewTemplate: IOidcUiTemplate = {
     ...draft,
-    branding: { ...draft.branding, logoUrl: previewLogoUrl },
+    branding: {
+      ...draft.branding,
+      logoUrlLight: previewLogoUrls.light,
+      logoUrlDark: previewLogoUrls.dark,
+    },
   };
   const selectedPageFields = PAGE_FIELDS[selectedPage];
   const selectedPageValues = draft.pages[selectedPage] as unknown as Record<string, string | null>;
+  // Scoped to just this page (+ the shared footer fields shown alongside it), so an
+  // unrelated draft problem elsewhere never blocks or falsely flags this page's own
+  // "Save page" button.
+  const isSelectedPageDirty =
+    JSON.stringify(draft.pages[selectedPage]) !==
+      JSON.stringify(savedTemplate.pages[selectedPage]) ||
+    JSON.stringify(draft.pages.shared) !== JSON.stringify(savedTemplate.pages.shared);
+  const isSelectedPageValid = !Object.keys(validationErrors).some(
+    (key) => key.startsWith(`pages.${selectedPage}.`) || key.startsWith("pages.shared."),
+  );
+  const isSavingSelectedPage = savingPageKey === selectedPage;
 
   const handleEditorTabChange = (value: string) => {
     const next = value as EditorTab;
@@ -560,94 +825,42 @@ export const OidcBrandingForm = () => {
 
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor="client-logo-upload">Brand logo</Label>
+                      <Label>Brand logos</Label>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Use a transparent, horizontal logo for the best result.
+                        Use a transparent, horizontal logo for the best result. If you only upload
+                        one, it&apos;s used for both light and dark mode.
                       </p>
                     </div>
-                    <div
-                      className={cn(
-                        "group rounded-xl border border-dashed p-4 transition-colors",
-                        isDragOver
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/30",
-                      )}
-                      onDragOver={(event) => {
-                        event.preventDefault();
-                        setIsDragOver(true);
-                      }}
-                      onDragLeave={() => setIsDragOver(false)}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        setIsDragOver(false);
-                        const file = event.dataTransfer.files?.[0];
-                        if (file) applyLogoFile(file);
-                      }}
-                    >
-                      <div className="flex flex-col items-center gap-4 sm:flex-row">
-                        <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background shadow-sm">
-                          {previewLogoUrl ? (
-                            <img
-                              src={previewLogoUrl}
-                              alt="Logo preview"
-                              className="max-h-full max-w-full object-contain p-2"
-                            />
-                          ) : (
-                            <ImagePlus className="h-7 w-7 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1 text-center sm:text-left">
-                          <p className="text-sm font-medium text-high-emphasis">
-                            {previewLogoUrl ? "Replace your logo" : "Drop your logo here"}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            PNG, JPG, SVG, or WebP · max 2MB
-                          </p>
-                          <input
-                            id="client-logo-upload"
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                            className="sr-only"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              event.target.value = "";
-                              if (file) applyLogoFile(file);
-                            }}
-                          />
-                          <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="xs"
-                              onClick={() => fileInputRef.current?.click()}
-                              disabled={isBusy}
-                              className="gap-1.5 shadow-none"
-                            >
-                              <Upload className="h-3.5 w-3.5" />
-                              {previewLogoUrl ? "Replace" : "Browse files"}
-                            </Button>
-                            {previewLogoUrl && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="xs"
-                                onClick={removeLogo}
-                                disabled={isBusy}
-                                className="gap-1.5 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" /> Remove logo
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <LogoUploadField
+                        inputId="client-logo-upload-light"
+                        label="Light mode logo"
+                        previewUrl={previewLogoUrls.light}
+                        isDragOver={isDragOver.light}
+                        isBusy={isBusy}
+                        error={logoValidationMessages.light || fieldError("branding.logoUrlLight")}
+                        fileInputRef={fileInputRefLight}
+                        onDragOverChange={(value) =>
+                          setIsDragOver((current) => ({ ...current, light: value }))
+                        }
+                        onFile={(file) => applyLogoFile("light", file)}
+                        onRemove={() => removeLogo("light")}
+                      />
+                      <LogoUploadField
+                        inputId="client-logo-upload-dark"
+                        label="Dark mode logo"
+                        previewUrl={previewLogoUrls.dark}
+                        isDragOver={isDragOver.dark}
+                        isBusy={isBusy}
+                        error={logoValidationMessages.dark || fieldError("branding.logoUrlDark")}
+                        fileInputRef={fileInputRefDark}
+                        onDragOverChange={(value) =>
+                          setIsDragOver((current) => ({ ...current, dark: value }))
+                        }
+                        onFile={(file) => applyLogoFile("dark", file)}
+                        onRemove={() => removeLogo("dark")}
+                      />
                     </div>
-                    {(logoValidationMessage || fieldError("branding.logoUrl")) && (
-                      <p className="text-xs text-destructive" role="alert">
-                        Logo URL {logoValidationMessage || fieldError("branding.logoUrl")}
-                      </p>
-                    )}
                   </div>
                 </TabsContent>
 
@@ -760,24 +973,64 @@ export const OidcBrandingForm = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between border-b border-border pb-3">
-                    <div>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-high-emphasis">{selectedPageLabel}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {selectedPageFields.length} editable fields
                       </p>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                      Live
-                    </span>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span
+                        className={cn(
+                          "flex items-center gap-1.5 text-xs font-medium",
+                          isSelectedPageDirty ? "text-warning-700" : "text-muted-foreground",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 shrink-0 rounded-full",
+                            isSelectedPageDirty ? "bg-warning-500" : "bg-success",
+                          )}
+                          aria-hidden
+                        />
+                        {isSelectedPageDirty ? "Unsaved changes" : "Saved"}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        /**
+                         * The page name stays in the accessible name only: spelling it out
+                         * on the button made it resize on every page switch ("Save Login" vs
+                         * "Save Account Selector"), and it already reads off the heading
+                         * immediately to its left. Outline, not solid, so the header's
+                         * whole-template Save stays the screen's single primary action and
+                         * the two don't read as rival buttons.
+                         */
+                        aria-label={`Save ${selectedPageLabel} page`}
+                        aria-busy={isSavingSelectedPage}
+                        onClick={() => void handleSavePage(selectedPage)}
+                        disabled={
+                          !isSelectedPageDirty || !isSelectedPageValid || isSavingSelectedPage
+                        }
+                        className="gap-1.5 px-3 text-xs font-semibold shadow-none hover:border-primary hover:bg-transparent hover:text-primary"
+                      >
+                        {isSavingSelectedPage && (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        )}
+                        {isSavingSelectedPage ? "Saving…" : "Save changes"}
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid min-w-0 grid-cols-1 gap-4">
-                    {selectedPageFields.map(({ key, label, optional, multiline }) => {
+                    {selectedPageFields.map(({ key, label, optional, multiline, placeholder }) => {
                       const error = fieldError(`pages.${selectedPage}.${key}`);
                       const controlProps = {
                         id: `page-${selectedPage}-${key}`,
                         value: selectedPageValues[key] ?? "",
                         maxLength: 200,
+                        placeholder,
                         "aria-invalid": !!error,
                         onChange: (
                           event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -809,41 +1062,41 @@ export const OidcBrandingForm = () => {
                   </div>
                   <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-3">
                     <div className="space-y-1.5">
-                    <Label htmlFor="page-shared-footerText" className="text-xs">
-                      Footer <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="page-shared-footerText"
-                      value={draft.pages.shared.footerText}
-                      maxLength={200}
-                      onChange={(event) => {
-                        setDraft((current) =>
-                          current
-                            ? {
-                                ...current,
-                                pages: {
-                                  ...current.pages,
-                                  shared: {
-                                    ...current.pages.shared,
-                                    footerText: event.target.value,
+                      <Label htmlFor="page-shared-footerText" className="text-xs">
+                        Footer <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="page-shared-footerText"
+                        value={draft.pages.shared.footerText}
+                        maxLength={200}
+                        onChange={(event) => {
+                          setDraft((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  pages: {
+                                    ...current.pages,
+                                    shared: {
+                                      ...current.pages.shared,
+                                      footerText: event.target.value,
+                                    },
                                   },
-                                },
-                              }
-                            : current,
-                        );
-                        clearServerFieldError("pages.shared.footerText");
-                      }}
-                      aria-invalid={!!fieldError("pages.shared.footerText")}
-                      className="bg-background shadow-none"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Shared by every page. Use {"{year}"} for the current year.
-                    </p>
-                    {fieldError("pages.shared.footerText") && (
-                      <p className="text-xs text-destructive" role="alert">
-                        Footer {fieldError("pages.shared.footerText")}
+                                }
+                              : current,
+                          );
+                          clearServerFieldError("pages.shared.footerText");
+                        }}
+                        aria-invalid={!!fieldError("pages.shared.footerText")}
+                        className="bg-background shadow-none"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shared by every page. Use {"{year}"} for the current year.
                       </p>
-                    )}
+                      {fieldError("pages.shared.footerText") && (
+                        <p className="text-xs text-destructive" role="alert">
+                          Footer {fieldError("pages.shared.footerText")}
+                        </p>
+                      )}
                     </div>
                     {[
                       { key: "helpPrompt", label: "Help prompt" },

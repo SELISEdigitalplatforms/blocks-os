@@ -262,6 +262,50 @@ describe("Storage File Hooks", () => {
         "Lazy fetch failed",
       );
     });
+
+    it("should reuse the cached signed URL when it has not expired yet", async () => {
+      const farFutureExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      vi.mocked(storageService.file.getFileByFileId).mockResolvedValue({
+        ...mockGetFileByIdResponse,
+        downloadUrlExpiresAtUtc: farFutureExpiry,
+      });
+
+      const { result } = renderHook(() => useLazyGetFile(), { wrapper: createWrapper() });
+
+      await result.current.fetchFile(mockGetFilePayload);
+      await result.current.fetchFile(mockGetFilePayload);
+
+      expect(storageService.file.getFileByFileId).toHaveBeenCalledTimes(1);
+    });
+
+    it("should refetch instead of reusing a cached signed URL that has already expired", async () => {
+      const pastExpiry = new Date(Date.now() - 60 * 1000).toISOString();
+      vi.mocked(storageService.file.getFileByFileId).mockResolvedValue({
+        ...mockGetFileByIdResponse,
+        downloadUrlExpiresAtUtc: pastExpiry,
+      });
+
+      const { result } = renderHook(() => useLazyGetFile(), { wrapper: createWrapper() });
+
+      await result.current.fetchFile(mockGetFilePayload);
+      await result.current.fetchFile(mockGetFilePayload);
+
+      expect(storageService.file.getFileByFileId).toHaveBeenCalledTimes(2);
+    });
+
+    it("should reuse a cached URL that never expires (downloadUrlExpiresAtUtc is null)", async () => {
+      vi.mocked(storageService.file.getFileByFileId).mockResolvedValue({
+        ...mockGetFileByIdResponse,
+        downloadUrlExpiresAtUtc: null,
+      });
+
+      const { result } = renderHook(() => useLazyGetFile(), { wrapper: createWrapper() });
+
+      await result.current.fetchFile(mockGetFilePayload);
+      await result.current.fetchFile(mockGetFilePayload);
+
+      expect(storageService.file.getFileByFileId).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ─── useDeleteFile ─────────────────────────────────────────────────────────

@@ -32,9 +32,27 @@ export interface IStorageConfiguration {
   userName: string | null;
   password: string | null;
   remoteBasePath: string | null;
+  /**
+   * Phase 1 upload-security fields. Optional because a configuration predating Phase 1, or one
+   * that never set these, omits them - callers must fall back to the same documented defaults
+   * the backend itself uses when they are absent.
+   */
+  uploadUrlExpirySeconds?: number;
+  downloadUrlExpirySeconds?: number;
+  maxFileSizeInBytes?: number;
+  uploadCompletionRequiredFor?: ("Public" | "Private")[];
 }
 
-export interface IStorageConfigurationSavePayload {
+/** The upload/verification settings, the only part of a configuration an update may change. */
+export interface IStorageConfigurationMutableSettings {
+  uploadUrlExpirySeconds: number;
+  downloadUrlExpirySeconds: number;
+  maxFileSizeInBytes: number;
+  uploadCompletionRequiredFor: ("Public" | "Private")[];
+}
+
+/** A brand new configuration: the only request that may set a provider identity and its credentials. */
+export interface IStorageConfigurationCreatePayload extends IStorageConfigurationMutableSettings {
   name: string;
   projectKey: string;
   storageStrategy: StorageStrategyType;
@@ -42,14 +60,30 @@ export interface IStorageConfigurationSavePayload {
   accessKey: string | null;
   cloudStorageRegionEndPoint: string | null;
   connectionString: string | null;
-  updateRequest: boolean;
-  itemId: string | null;
+  updateRequest: false;
+  itemId: null;
   host: string | null;
   port: string | null;
   userName: string | null;
   password: string | null;
   remoteBasePath: string | null;
 }
+
+/**
+ * An update carries nothing but the settings it is allowed to change, plus what identifies the
+ * configuration being changed. The name, provider and credentials are deliberately absent: the
+ * server discards them on an update anyway, and the only value a client could send back for a
+ * secret is the masked one the read endpoint gave it.
+ */
+export interface IStorageConfigurationUpdatePayload extends IStorageConfigurationMutableSettings {
+  projectKey: string;
+  updateRequest: true;
+  itemId: string;
+}
+
+export type IStorageConfigurationSavePayload =
+  | IStorageConfigurationCreatePayload
+  | IStorageConfigurationUpdatePayload;
 export interface IStorageConfigurationDeletePayload {
   projectKey: string;
   configurationName: string;
@@ -69,11 +103,37 @@ export interface IGetPreSignedUrlForUploadPayload {
   moduleName: number;
 }
 
+/** Mirrors `Storage.DomainService.Enums.FileVerificationStatus` server-side. */
+export type FileVerificationStatus = "Unverified" | "Quarantined" | "Verified" | "Rejected";
+
 export interface IGetPreSignedUrlForUploadResponse {
   errors: null | unknown;
   isSuccess: boolean;
   fileId: string;
   uploadUrl: string;
+  /** Identifies the exact version this upload created; required to call `completeUpload` when completion is required. */
+  fileVersionId?: string;
+  uploadUrlExpiresAtUtc?: string | null;
+  /** Headers the client must send with the provider PUT (e.g. Azure's blob-type header). */
+  requiredHeaders?: Record<string, string> | null;
+  /** True when the client must call `completeUpload` after the provider PUT succeeds. */
+  uploadCompletionRequired?: boolean;
+  verificationStatus?: FileVerificationStatus;
+}
+
+export interface ICompleteUploadPayload {
+  fileId: string;
+  fileVersionId: string;
+}
+
+export interface ICompleteUploadResponse {
+  errors: null | unknown;
+  isSuccess: boolean;
+  fileId: string;
+  fileVersionId: string;
+  verificationStatus: FileVerificationStatus;
+  /** Safe, non-sensitive explanation set only when `verificationStatus` is "Rejected". */
+  rejectionReason?: string | null;
 }
 
 export interface IGetFileByFileIDPayload {
@@ -99,6 +159,8 @@ export interface IGetFileByFileIDResponse {
   language: string;
   tenantId: string;
   sizeInBytes: number;
+  /** When `url` is a provider-signed URL, when it stops working. Null for an intentionally anonymous (never-expiring) Public URL. */
+  downloadUrlExpiresAtUtc?: string | null;
   errors: unknown;
   isSuccess: boolean;
 }

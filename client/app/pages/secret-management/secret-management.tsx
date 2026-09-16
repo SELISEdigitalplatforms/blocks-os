@@ -8,16 +8,14 @@ import { CreateClientCredential } from "@blocks-idp/authentication/components/cr
 import { useListAuthClientCredentials } from "@blocks-idp/authentication/hooks/use-auth-clients";
 import { AddService } from "@blocks-identifier/components/add-service/add-service";
 import { CreateOIDC } from "@blocks-idp/authentication/components/create-oidc";
-import { useGetSavedPublicCertificates } from "@blocks-idp/authentication/hooks/use-identifier";
 import { ConfigureCaptchaModal } from "@blocks-idp/captcha/modals/configure-captcha-modal";
 import { ConfigureMagicUrlModal } from "@blocks-utilities/components/magic-url-config-dialog/configure-magic-url-modal";
 import {
   OidcBrandingHeaderProvider,
   useOidcBrandingHeaderOptional,
 } from "@blocks-idp/authentication/contexts/oidc-branding-header-context";
-import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { useProjectStore } from "@seliseblocks/genesis-os";
-import { Pencil, Plus, Loader2, Notebook, Waypoints, LayoutTemplate } from "lucide-react";
+import { Plus, Loader2, Notebook, LayoutTemplate } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
@@ -29,10 +27,7 @@ function SecretManagementHeaderActions({
   setIsEmailConfigOpen,
   setIsNotificationConfigOpen,
   setIsManagedServicesGuideOpen,
-  setIsJwtClaimOpen,
-  setIsEditExternalIdpOpen,
   setIsClientCredentialOpen,
-  externalIdpConfigured,
 }: {
   isOidcBranding: boolean;
   currentPath: string;
@@ -40,10 +35,7 @@ function SecretManagementHeaderActions({
   setIsEmailConfigOpen: (value: boolean) => void;
   setIsNotificationConfigOpen: (value: boolean) => void;
   setIsManagedServicesGuideOpen: (value: boolean) => void;
-  setIsJwtClaimOpen: (value: boolean) => void;
-  setIsEditExternalIdpOpen: (value: boolean) => void;
   setIsClientCredentialOpen: (value: boolean) => void;
-  externalIdpConfigured: boolean;
 }) {
   const brandingHeader = useOidcBrandingHeaderOptional();
   const navigate = useNavigate();
@@ -160,33 +152,6 @@ function SecretManagementHeaderActions({
         </Button>
       )}
       {currentPath === "secret" && <CreateSecretButton />}
-      {currentPath === "external-idp" && (
-        <>
-          {externalIdpConfigured ? (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setIsJwtClaimOpen(true)}>
-                <Waypoints className="h-5 w-5" />
-                <span className="sr-only sm:not-sr-only sm:ml-2.5 sm:text-sm sm:whitespace-nowrap">
-                  Map JWT Claim
-                </span>
-              </Button>
-              <PrimaryButton
-                Icon={Pencil}
-                label="Edit"
-                size="sm"
-                onClick={() => setIsEditExternalIdpOpen(true)}
-              />
-            </>
-          ) : (
-            <PrimaryButton
-              Icon={Plus}
-              label="Add"
-              size="sm"
-              onClick={() => setIsEditExternalIdpOpen(true)}
-            />
-          )}
-        </>
-      )}
     </>
   );
 }
@@ -202,9 +167,6 @@ export default function SecretManagementLayout() {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   // Each query drives header actions for its own page only, so gate it on the
   // active route to avoid fetching every page's data on every page.
-  const { data: externalIdpData } = useGetSavedPublicCertificates(
-    currentPath === "external-idp" ? tenantId : "",
-  );
   const { data: clientsData } = useListAuthClientCredentials(
     { projectKey: tenantId },
     currentPath === "client-credentials",
@@ -219,11 +181,6 @@ export default function SecretManagementLayout() {
   );
   const [, setIsManagedServicesGuideOpen] = useQueryState(
     "guideOpen",
-    parseAsBoolean.withDefault(false),
-  );
-  const [, setIsJwtClaimOpen] = useQueryState("jwtClaim", parseAsBoolean.withDefault(false));
-  const [, setIsEditExternalIdpOpen] = useQueryState(
-    "editExternalIdp",
     parseAsBoolean.withDefault(false),
   );
   const [isClientCredentialOpen, setIsClientCredentialOpen] = useQueryState(
@@ -256,10 +213,7 @@ export default function SecretManagementLayout() {
       setIsEmailConfigOpen={setIsEmailConfigOpen}
       setIsNotificationConfigOpen={setIsNotificationConfigOpen}
       setIsManagedServicesGuideOpen={setIsManagedServicesGuideOpen}
-      setIsJwtClaimOpen={setIsJwtClaimOpen}
-      setIsEditExternalIdpOpen={setIsEditExternalIdpOpen}
       setIsClientCredentialOpen={setIsClientCredentialOpen}
-      externalIdpConfigured={!!externalIdpData?.isConfigured}
     />
   );
 

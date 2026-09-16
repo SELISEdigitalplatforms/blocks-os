@@ -7,18 +7,27 @@ namespace Configuration.DomainService.Storage.Validators
 {
     public class StorageConfigurationValidator : AbstractValidator<SaveStorageConfigurationRequest>
     {
+        /// <summary>Lower bound for a configured upload/download URL expiry, in seconds.</summary>
+        private const int MinExpirySeconds = 1;
+
+        /// <summary>Upper bound for a configured upload/download URL expiry (7 days), so a signed URL cannot be made effectively permanent.</summary>
+        private const int MaxExpirySeconds = 604_800;
+
+        /// <summary>The only access modifiers <c>UploadCompletionRequiredFor</c> may name, matching blocks-data's <c>AccessModifierValidation</c>.</summary>
+        private static readonly string[] AllowedUploadCompletionAccessModifiers = { "Public", "Private" };
+
         private readonly IConfigurationRepository _configurationRepository;
 
         public StorageConfigurationValidator(IConfigurationRepository configurationRepository)
         {
             _configurationRepository = configurationRepository;
-            //Validate Name
-            RuleFor(config => config.Name)
-                .Cascade(CascadeMode.Stop)
-                .NotEmpty()
-                .NotNull()
-                .WithMessage("Name must not be empty.");
 
+            // An update only ever changes the Phase 1 upload/verification settings below. The configuration
+            // name, the provider identity and its credentials are fixed once a configuration exists -
+            // ConfigurationService.MappedIntoRepoConfigurationAsync discards them outright on an update - so
+            // requiring them here would only reject requests whose values are ignored anyway. It would also
+            // be impossible to satisfy: the read endpoint masks secrets before handing them to a client, and
+            // a masked Azure connection string ("D****...t") can never match the format rule below.
             When(config => config.UpdateRequest, () =>
             {
                 RuleFor(config => config.ItemId)
@@ -26,29 +35,52 @@ namespace Configuration.DomainService.Storage.Validators
                 .NotEmpty()
                 .NotNull()
                 .WithMessage("ItemId should not be empty");
-
-                RuleFor(config => config.Name)
-                .MustAsync(async (name, cancellation) => await IsUniqueNameAsync(name, default))
-                .WithMessage("Name must be unique")
-                .WhenAsync(async (config, cancellation) => await IsNameUpdated(config));
             });
 
             When(config => !config.UpdateRequest, () =>
             {
+                //Validate Name
+                RuleFor(config => config.Name)
+                    .Cascade(CascadeMode.Stop)
+                    .NotEmpty()
+                    .NotNull()
+                    .WithMessage("Name must not be empty.");
+
                 RuleFor(config => config.ConnectionString)
                 .MustAsync(IsUniqueNameAsync)
                .WithMessage("Name should be unique");
+
+                // Validate StorageStrategy
+                RuleFor(config => config.StorageStrategy)
+                    .Cascade(CascadeMode.Stop)
+                    .NotEmpty()
+                    .WithMessage("StorageStrategy must not be empty.")
+                    .Must(strategy => strategy == "Azure" || strategy == "AWS" || strategy == "SftpStorage" || strategy == "S3Compatible")
+                    .WithMessage("StorageStrategy must be one of the following values: 'Azure', 'AWS', 'SftpStorage', 'S3Compatible'.");
             });
 
-            // Validate StorageStrategy
-            RuleFor(config => config.StorageStrategy)
-                .Cascade(CascadeMode.Stop)
-                .NotEmpty()
-                .WithMessage("StorageStrategy must not be empty.")
-                .Must(strategy => strategy == "Azure" || strategy == "AWS" || strategy == "SftpStorage" || strategy == "S3Compatible")
-                .WithMessage("StorageStrategy must be one of the following values: 'Azure', 'AWS', 'SftpStorage', 'S3Compatible'.");
+            // Validate Phase 1 upload-security fields
+            RuleFor(config => config.UploadUrlExpirySeconds)
+                .InclusiveBetween(MinExpirySeconds, MaxExpirySeconds)
+                .WithMessage($"UploadUrlExpirySeconds must be between {MinExpirySeconds} and {MaxExpirySeconds} seconds.")
+                .When(config => config.UploadUrlExpirySeconds.HasValue);
 
-            When(config => config.StorageStrategy == "SftpStorage", () =>
+            RuleFor(config => config.DownloadUrlExpirySeconds)
+                .InclusiveBetween(MinExpirySeconds, MaxExpirySeconds)
+                .WithMessage($"DownloadUrlExpirySeconds must be between {MinExpirySeconds} and {MaxExpirySeconds} seconds.")
+                .When(config => config.DownloadUrlExpirySeconds.HasValue);
+
+            RuleFor(config => config.MaxFileSizeInBytes)
+                .GreaterThan(0)
+                .WithMessage("MaxFileSizeInBytes must be a positive value.")
+                .When(config => config.MaxFileSizeInBytes.HasValue);
+
+            RuleFor(config => config.UploadCompletionRequiredFor)
+                .Must(HaveOnlyAllowedAndUniqueAccessModifiers)
+                .WithMessage($"UploadCompletionRequiredFor may only contain unique values from: {string.Join(", ", AllowedUploadCompletionAccessModifiers)}.")
+                .When(config => config.UploadCompletionRequiredFor != null);
+
+            When(config => !config.UpdateRequest && config.StorageStrategy == "SftpStorage", () =>
             {
                 RuleFor(config => config.Host)
                     .NotEmpty().WithMessage("Host must not be empty.")
@@ -71,7 +103,7 @@ namespace Configuration.DomainService.Storage.Validators
                     .Must(path => !path.Contains("..")).WithMessage("RemoteBasePath must not contain relative segments ('..')");
             });
 
-            When(config => config.StorageStrategy == "Azure", () =>
+            When(config => !config.UpdateRequest && config.StorageStrategy == "Azure", () =>
             {
                 // Validate ConnectionString
                 RuleFor(config => config.ConnectionString)
@@ -81,7 +113,7 @@ namespace Configuration.DomainService.Storage.Validators
                     .WithMessage("ConnectionString format is invalid");
             });
 
-            When(config => config.StorageStrategy == "AWS", () =>
+            When(config => !config.UpdateRequest && config.StorageStrategy == "AWS", () =>
             {
                 RuleFor(config => config.SecretKey)
                 .NotEmpty()
@@ -98,7 +130,7 @@ namespace Configuration.DomainService.Storage.Validators
                 .NotNull()
                 .WithMessage("CloudStorageRegionEndPoint must not be empty.");
             });
-            When(config => config.StorageStrategy == "S3Compatible", () =>
+            When(config => !config.UpdateRequest && config.StorageStrategy == "S3Compatible", () =>
             {
                 RuleFor(config => config.SecretKey)
                 .NotEmpty()
@@ -117,6 +149,30 @@ namespace Configuration.DomainService.Storage.Validators
             });
         }
 
+        private static bool HaveOnlyAllowedAndUniqueAccessModifiers(List<string>? accessModifiers)
+        {
+            if (accessModifiers is null)
+            {
+                return true;
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var accessModifier in accessModifiers)
+            {
+                if (!AllowedUploadCompletionAccessModifiers.Contains(accessModifier, StringComparer.Ordinal))
+                {
+                    return false;
+                }
+
+                if (!seen.Add(accessModifier))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static bool IsAzureStorageConnectionStringValid(string connectionString)
         {
             var pattern = @"^DefaultEndpointsProtocol=(http|https);AccountName=[\w-]+;AccountKey=[\w+=/]+;EndpointSuffix=[\w.]+$";
@@ -127,12 +183,6 @@ namespace Configuration.DomainService.Storage.Validators
         {
             var configuration = await _configurationRepository.GetStorageConfigurationByNameAsync(name);
             return configuration == null;
-        }
-
-        private async Task<bool> IsNameUpdated(SaveStorageConfigurationRequest request)
-        {
-            var config = await _configurationRepository.GetStorageConfigurationByIdAsync(request.ItemId);
-            return config.Name != request.Name;
         }
     }
 }

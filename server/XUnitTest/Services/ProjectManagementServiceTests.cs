@@ -21,6 +21,61 @@ using XUnitTest.TestSupport;
 
 namespace XUnitTest.Services
 {
+    /// <summary>
+    /// A minimal loopback HTTP server for tests exercising the certificate upload's provider PUT,
+    /// which builds its own <see cref="System.Net.Http.HttpClient"/> internally rather than taking
+    /// an injectable factory - so the only way to observe the PUT's outcome is to actually receive it.
+    /// </summary>
+    internal sealed class TestHttpServer : System.IDisposable
+    {
+        private readonly System.Net.HttpListener _listener;
+        private readonly Task _acceptLoop;
+
+        public string Url { get; }
+
+        public TestHttpServer(System.Net.HttpStatusCode respondWith)
+        {
+            var port = GetFreeTcpPort();
+            Url = $"http://127.0.0.1:{port}/upload";
+            _listener = new System.Net.HttpListener();
+            _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+            _listener.Start();
+
+            _acceptLoop = Task.Run(async () =>
+            {
+                try
+                {
+                    var context = await _listener.GetContextAsync();
+                    context.Response.StatusCode = (int)respondWith;
+                    context.Response.Close();
+                }
+                catch (System.Net.HttpListenerException)
+                {
+                    // Listener stopped while awaiting a request - fine, the test is tearing down.
+                }
+                catch (System.ObjectDisposedException)
+                {
+                    // Same as above.
+                }
+            });
+        }
+
+        private static int GetFreeTcpPort()
+        {
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
+
+        public void Dispose()
+        {
+            _listener.Stop();
+            _listener.Close();
+        }
+    }
+
     public class ProjectManagementServiceTests
     {
         private readonly Mock<IProjectRepository> _repo = new();
@@ -52,7 +107,8 @@ namespace XUnitTest.Services
 
         private ProjectManagementService Service(IConfiguration? configuration = null) => new(
             _repo.Object, _blocksSecret.Object, _messageClient.Object, configuration ?? _configuration,
-            _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object);
+            _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object,
+            new CryptoService());
 
         // The environment's CNAME label, which the shared API host is built from.
         private static IConfiguration WithCnameRecordDomain(string label) =>
@@ -1360,6 +1416,93 @@ namespace XUnitTest.Services
 
             // Configured without error, so it is marked successful and saved.
             _repo.Verify(r => r.SaveStatusTracerAsync(It.Is<ProjectStatusTracer>(t => t.IsProjectCreationSuccess)), Times.Once);
+        }
+
+        private static Tenant NewTenantForCloudCertificate() => new()
+        {
+            DbConnectionString = "mongodb://x",
+            TenantId = "t1",
+            ItemId = "item-1",
+            CreatedBy = "creator",
+            Applications = new List<Applications>(),
+            JwtTokenParameters = new JwtTokenParameters
+            {
+                IssueDate = System.DateTime.UtcNow,
+                PrivateCertificatePassword = "priv",
+                PublicCertificatePassword = "pub",
+                CertificateStorageType = CertificateStorageType.Azure,
+            },
+        };
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_Azure_SkipsCompletion_WhenNotRequired()
+        {
+            using var server = new TestHttpServer(System.Net.HttpStatusCode.OK);
+            _storage.Setup(s => s.GetPerSignedUrlForUploadAsync(It.IsAny<GetPreSignedUrlForUploadRequest>()))
+                    .ReturnsAsync(new GetPreSignedUrlForUploadResponse
+                    {
+                        UploadUrl = server.Url,
+                        UploadCompletionRequired = false,
+                    });
+            _storage.Setup(s => s.GetUrlForDownloadFileAsync(It.IsAny<GetFileRequest>()))
+                    .ReturnsAsync(new FileResponse { IsSuccess = true, Url = "https://download/cert" });
+
+            var url = await Service().UploadPublicCertificateAsync(
+                CreateSelfSignedCertificate(), NewTenantForCloudCertificate());
+
+            url.Should().Be("https://download/cert");
+            _storage.Verify(s => s.CompleteUploadAsync(It.IsAny<CompleteUploadRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_Azure_CallsCompletion_AndSucceeds_WhenVerified()
+        {
+            using var server = new TestHttpServer(System.Net.HttpStatusCode.OK);
+            _storage.Setup(s => s.GetPerSignedUrlForUploadAsync(It.IsAny<GetPreSignedUrlForUploadRequest>()))
+                    .ReturnsAsync(new GetPreSignedUrlForUploadResponse
+                    {
+                        UploadUrl = server.Url,
+                        FileVersionId = "v1",
+                        UploadCompletionRequired = true,
+                    });
+            _storage.Setup(s => s.CompleteUploadAsync(It.Is<CompleteUploadRequest>(r => r.FileVersionId == "v1")))
+                    .ReturnsAsync(new CompleteUploadResponse
+                    {
+                        IsSuccess = true,
+                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Verified,
+                    });
+            _storage.Setup(s => s.GetUrlForDownloadFileAsync(It.IsAny<GetFileRequest>()))
+                    .ReturnsAsync(new FileResponse { IsSuccess = true, Url = "https://download/cert" });
+
+            var url = await Service().UploadPublicCertificateAsync(
+                CreateSelfSignedCertificate(), NewTenantForCloudCertificate());
+
+            url.Should().Be("https://download/cert");
+        }
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_Azure_Throws_WhenCompletionRejects()
+        {
+            using var server = new TestHttpServer(System.Net.HttpStatusCode.OK);
+            _storage.Setup(s => s.GetPerSignedUrlForUploadAsync(It.IsAny<GetPreSignedUrlForUploadRequest>()))
+                    .ReturnsAsync(new GetPreSignedUrlForUploadResponse
+                    {
+                        UploadUrl = server.Url,
+                        FileVersionId = "v1",
+                        UploadCompletionRequired = true,
+                    });
+            _storage.Setup(s => s.CompleteUploadAsync(It.IsAny<CompleteUploadRequest>()))
+                    .ReturnsAsync(new CompleteUploadResponse
+                    {
+                        IsSuccess = true,
+                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Rejected,
+                        RejectionReason = "real_file_type_mismatch",
+                    });
+
+            var act = async () => await Service().UploadPublicCertificateAsync(
+                CreateSelfSignedCertificate(), NewTenantForCloudCertificate());
+
+            await act.Should().ThrowAsync<System.InvalidOperationException>();
         }
 
         private void SetupCertificatePipeline()

@@ -271,7 +271,6 @@ export interface IGetTracesPayload {
     statusCodeClasses?: number[];
   };
   search: string;
-  projectKey: string;
   requestId?: string;
 }
 export interface IGetTracesResponse {
