@@ -17,6 +17,14 @@ export class StorageConfiguration {
     itemId: string;
   }> {
     const url = STORAGE_CONFIG_ENDPOINTS.SAVE_CONFIG;
+
+    // An update carries only the settings it is allowed to change. The blanking below exists to
+    // clear the fields that don't belong to the chosen provider when a configuration is created;
+    // applying it to an update would put every property we deliberately left out back on the wire.
+    if (values.updateRequest) {
+      return http.post(url, values);
+    }
+
     const resetValues =
       values.storageStrategy === "AWS"
         ? {

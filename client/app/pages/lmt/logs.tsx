@@ -57,22 +57,31 @@ export function LogsRoute() {
     () =>
       [...(blocksServicesData ?? [])]
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((service) => ({
-          id: service.key,
-          label: service.label,
-          serviceName: service.apiServiceName,
-          serviceNames: [service.apiServiceName, ...service.workerServiceNames],
-          components: [
-            { label: "API", value: service.apiServiceName },
-            // A raw technical name is used instead of a guessed friendly label
-            // whenever a service has more than one worker (only "OS" does today),
-            // since there's no reliable way to tell them apart otherwise.
-            ...service.workerServiceNames.map((name) => ({
-              label: service.workerServiceNames.length > 1 ? name : "Worker",
-              value: name,
-            })),
-          ],
-        })),
+        .flatMap((service) => {
+          // The API and each worker are listed as separate services rather than as
+          // children of one group, and only the parts a service actually has are offered.
+          const apiServiceName = service.apiServiceName || "";
+          const workerServiceNames = (service.workerServiceNames ?? []).filter(Boolean);
+          const toService = (id: string, label: string, name: string): Service => ({
+            id,
+            label,
+            serviceName: name,
+            serviceNames: [name],
+          });
+          return [
+            ...(apiServiceName
+              ? [toService(`${service.key}-api`, `${service.label} API`, apiServiceName)]
+              : []),
+            // A raw technical name is used instead of a guessed friendly label whenever
+            // a service has more than one worker, since there's no reliable way to tell
+            // them apart otherwise.
+            ...workerServiceNames.map((name) =>
+              workerServiceNames.length > 1
+                ? toService(name, `${service.label} ${name}`, name)
+                : toService(`${service.key}-worker`, `${service.label} Worker`, name),
+            ),
+          ];
+        }),
     [blocksServicesData],
   );
 

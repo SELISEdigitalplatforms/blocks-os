@@ -18,6 +18,7 @@ namespace DomainService.Shared
         public const string ProjectPeopleCollectionName = "ProjectPeoples";
         public const string MigrationTrackerCollectionName = "MigrationTrackers";
         public const string ThirdPartyJWTClaimsCollectionName = "ThirdPartyJWTClaims";
+        public const string JwtThirdPartyProvidersCollectionName = "JwtThirdPartyProviders";
 
         /// <summary>
         /// The one database every cross-project collection lives in. ProjectPeoples in

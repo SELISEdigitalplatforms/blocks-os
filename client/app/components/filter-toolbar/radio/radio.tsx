@@ -101,7 +101,7 @@ export function Radio({ label, options, onChange, value }: MultiSelectProps) {
             <RadioGroup
               onValueChange={onChange}
               value={value}
-              className="gap-0 p-1 text-xs font-thin text-accent-foreground"
+              className="max-h-72 gap-0 overflow-y-auto p-1 text-xs font-thin text-accent-foreground"
             >
               {searchedOptions.length > 0 &&
                 searchedOptions.map((option) => {

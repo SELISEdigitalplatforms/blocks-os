@@ -43,6 +43,11 @@ namespace DomainService.Projects
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);
         Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper);
         Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId);
+
+        Task<List<ThirdPartyJwtProvider>> GetThirdPartyJwtProvidersAsync(string tenantId);
+        Task<ThirdPartyJwtProvider?> GetThirdPartyJwtProviderAsync(string tenantId, string itemId);
+        Task SaveThirdPartyJwtProviderAsync(ThirdPartyJwtProvider provider);
+        Task<bool> DeleteThirdPartyJwtProviderAsync(string tenantId, string itemId);
         Task<bool> IsExistingEnviroment(List<string> enviroments, string tenantGroupId);
         Task<List<Project>> GetSharedProjectsAsync(string? tenantGroupId);
         Task<List<Project>> GetProjectPeoplesAsync(string tenantGroupId);

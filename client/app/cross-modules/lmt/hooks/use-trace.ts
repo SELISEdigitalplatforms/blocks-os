@@ -1,4 +1,5 @@
 import { UseQueryOptions, useMutation, useQuery } from "@tanstack/react-query";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { lmtService } from "../services/lmt.service";
 import {
   ICancelRestorePayload,
@@ -10,8 +11,11 @@ import {
 } from "../models/trace.model";
 
 export const useGetTraces = (option: IGetTracesPayload) => {
+  // The endpoint resolves the tenant from the request token rather than the payload, so the
+  // active tenant keys the cache -- otherwise switching projects serves the previous one's traces.
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
-    queryKey: ["traces", option],
+    queryKey: ["traces", tenantId, option],
     queryFn: () => lmtService.trace.getTraces(option),
   });
 };

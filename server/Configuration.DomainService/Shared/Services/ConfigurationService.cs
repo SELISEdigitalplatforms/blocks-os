@@ -126,27 +126,52 @@ namespace Configuration.DomainService.Shared.Services
         {
             var repoConfiguration = request.UpdateRequest ?
                                     await _configurationRepository.GetStorageConfigurationByIdAsync(request.ItemId ?? "") :
-                                    await _configurationRepository.GetStorageConfigurationByNameAsync(request.Name);
+                                    await _configurationRepository.GetStorageConfigurationByNameAsync(request.Name ?? "");
+
+            var isNewConfiguration = repoConfiguration == null;
 
             if (repoConfiguration == null)
             {
                 repoConfiguration = new StorageConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
+                // Only a brand new configuration records its author; an update must not rewrite the
+                // original creator to whoever happened to change an expiry setting.
+                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
             }
 
-            repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
             repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
             repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-            repoConfiguration.Name = request.Name;
+
+            #region Phase1UploadSecurity
+
+            repoConfiguration.UploadUrlExpirySeconds = request.UploadUrlExpirySeconds;
+            repoConfiguration.DownloadUrlExpirySeconds = request.DownloadUrlExpirySeconds;
+            repoConfiguration.MaxFileSizeInBytes = request.MaxFileSizeInBytes;
+            repoConfiguration.UploadCompletionRequiredFor = request.UploadCompletionRequiredFor;
+
+            #endregion
+
+            // The provider identity and its credentials are fixed once a configuration exists - the client UI
+            // disables these fields in edit mode, but that alone doesn't stop a direct API call from sending
+            // different values, so an update request is not trusted to change them here either. Only a brand
+            // new configuration takes these from the request.
+            if (!isNewConfiguration)
+            {
+                return repoConfiguration;
+            }
+
+            // request.Name/StorageStrategy are only null here if validation somehow let a create
+            // request through without them - FluentValidation already requires both when
+            // !UpdateRequest, so this only guards against that invariant, not a real empty write.
+            repoConfiguration.Name = request.Name ?? "";
             repoConfiguration.ConnectionString = request.ConnectionString;
             repoConfiguration.SecretKey = request.SecretKey;
-            repoConfiguration.StorageStrategy = request.StorageStrategy;
+            repoConfiguration.StorageStrategy = request.StorageStrategy ?? "";
             repoConfiguration.AccessKey = request.AccessKey;
             repoConfiguration.CloudStorageRegionEndPoint = request.CloudStorageRegionEndPoint;
 
-
             #region LocalStorage
 
-            _ = StorageTypes.TryGetCategory(request.StorageStrategy, out var category);
+            _ = StorageTypes.TryGetCategory(request.StorageStrategy ?? "", out var category);
 
             repoConfiguration.Host = request.Host ?? "";
             repoConfiguration.Port = request.Port ?? "";

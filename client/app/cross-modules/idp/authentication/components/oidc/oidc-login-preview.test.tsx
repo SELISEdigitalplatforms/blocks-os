@@ -45,7 +45,7 @@ describe("OidcLoginPreview", () => {
     const { rerender } = render(<OidcLoginPreview {...input} />);
     const updated = structuredClone(input.template);
     updated.branding.brandName = "Acme";
-    updated.branding.logoUrl = "https://cdn.example.com/acme.svg";
+    updated.branding.logoUrlLight = "https://cdn.example.com/acme.svg";
     updated.pages.login.heading = "Welcome to Acme";
     updated.pages.shared.footerText = "Acme {year}";
 
@@ -53,8 +53,89 @@ describe("OidcLoginPreview", () => {
 
     expect(screen.getByText("Welcome to Acme")).toBeTruthy();
     expect(screen.getByText("Acme")).toBeTruthy();
-    expect(screen.getByAltText("Acme logo").getAttribute("src")).toBe(updated.branding.logoUrl);
+    expect(screen.getByAltText("Acme logo").getAttribute("src")).toBe(
+      updated.branding.logoUrlLight,
+    );
     expect(screen.getByText(`Acme ${new Date().getFullYear()}`)).toBeTruthy();
+  });
+
+  it("H3: falls back to the other mode's logo when only one slot has ever been set", () => {
+    const input = { ...props(), resolvedTheme: "dark" as const };
+    const template = structuredClone(input.template);
+    template.branding.logoUrlLight = "https://cdn.example.com/light-only.svg";
+    template.branding.logoUrlDark = null;
+
+    render(<OidcLoginPreview {...input} template={template} />);
+
+    expect(screen.getByAltText("Blocks IAM logo").getAttribute("src")).toBe(
+      "https://cdn.example.com/light-only.svg",
+    );
+    expect(screen.queryByTestId("blocks-default-logo")).toBeNull();
+  });
+
+  it("H6/C7: shows the static default mark, unchanged by color edits, when no logo is set", () => {
+    const input = props();
+    const { rerender } = render(<OidcLoginPreview {...input} />);
+    const defaultLogoSrcBefore = screen.getByTestId("blocks-default-logo").getAttribute("src");
+
+    const recolored = structuredClone(input.template);
+    recolored.theme.light.primary = "#ff0066";
+    recolored.theme.light.secondary = "#00ff66";
+    rerender(<OidcLoginPreview {...input} template={recolored} palette={recolored.theme.light} />);
+
+    expect(screen.getByTestId("blocks-default-logo").getAttribute("src")).toBe(
+      defaultLogoSrcBefore,
+    );
+  });
+
+  it("draws the SSO divider's rules in the border color, as the real pages do", () => {
+    const input = props();
+    render(<OidcLoginPreview {...input} />);
+
+    const separatorText = screen.getByText(input.template.pages.login.ssoSeparatorText as string);
+    const rules = Array.from(separatorText.parentElement?.children ?? []).filter(
+      (child) => child !== separatorText,
+    );
+    expect(rules).toHaveLength(2);
+    for (const rule of rules) {
+      expect((rule as HTMLElement).style.borderColor).toBe("var(--border)");
+      expect(rule.className).toContain("border-t");
+    }
+  });
+
+  it("drops the SSO divider when the separator is cleared, and shows it when set", () => {
+    const input = props();
+    const { rerender } = render(<OidcLoginPreview {...input} />);
+    expect(screen.getByText(input.template.pages.login.ssoSeparatorText as string)).toBeTruthy();
+
+    const withoutSso = structuredClone(input.template);
+    withoutSso.pages.login.ssoSeparatorText = null;
+    rerender(<OidcLoginPreview {...input} template={withoutSso} />);
+
+    expect(screen.queryByText("or")).toBeNull();
+    // The rest of the login page is untouched by a tenant that doesn't use SSO.
+    expect(screen.getByText(withoutSso.pages.login.submitButton)).toBeTruthy();
+
+    // The element after the divider carries its own top margin, so dropping the divider
+    // can't collapse it onto the submit button.
+    const signupPrompt = screen.getByText(withoutSso.pages.login.signupPrompt, {
+      exact: false,
+      selector: "p",
+    });
+    expect(signupPrompt.className).toContain("mt-3");
+  });
+
+  it("renders the mode toggle as blocks-iam does, so the sci-fi CSS can tint the active tab", () => {
+    const input = props();
+    render(<OidcLoginPreview {...input} />);
+
+    // The tenant tint comes from `.oidc-scifi-root [role="tab"][data-state="active"]`
+    // in sci-fi-oidc.css - the same override the real sign-in pages rely on - so the
+    // active tab must expose Radix's data-state rather than an inline brand color.
+    const light = screen.getByRole("tab", { name: "Light" });
+    expect(light.getAttribute("data-state")).toBe("active");
+    expect(light.style.backgroundColor).toBe("");
+    expect(screen.getByRole("tab", { name: "Dark" }).getAttribute("data-state")).toBe("inactive");
   });
 
   it("reports preview mode changes and can hide Auto while editing a palette", async () => {

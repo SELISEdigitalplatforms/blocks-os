@@ -124,7 +124,9 @@ export async function openManageTemplateFlow(page: Page) {
   const brandingSaveButton = page.getByRole("button", { name: "Save", exact: true });
   const brandingUndoButton = page.getByRole("button", { name: "Undo", exact: true });
   const brandNameInput = page.getByRole("textbox", { name: /Brand name/ });
-  const brandingLogoInput = page.locator("#client-logo-upload");
+  // The Branding tab now has an independent upload slot per mode (light/dark); existing
+  // flows exercise the light slot, matching the single-logo behavior they were written for.
+  const brandingLogoInput = page.locator("#client-logo-upload-light");
 
   await expect(templateSections).toBeVisible();
   await expect(templateSections.getByRole("tab", { name: "Branding" })).toHaveAttribute(
@@ -139,7 +141,8 @@ export async function openManageTemplateFlow(page: Page) {
   await expect(brandingUndoButton).toBeDisabled();
   await expect(brandingSaveButton).toBeDisabled();
   await expect(brandNameInput).toBeVisible();
-  await expect(page.getByRole("button", { name: "Browse files" })).toBeVisible();
+  // Two upload slots (light/dark) each have their own "Browse files" button now.
+  await expect(page.getByRole("button", { name: "Browse files" }).first()).toBeVisible();
 
   return {
     templateSections,

@@ -3,6 +3,7 @@ import {
   PreviewButton,
   PreviewField,
   PreviewHeading,
+  PreviewSsoSeparator,
   PreviewSuccess,
   type OidcPagePreviewProps,
 } from "./oidc-preview-shared";
@@ -27,17 +28,19 @@ export const OidcSignupPreview = (props: OidcPagePreviewProps) => {
           className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--border-strong)] text-[10px] text-[var(--accent)]"
           aria-hidden
         >
-          x
+          ✓
         </span>
         <p>
           {copy.termsPrefix} <span className="text-[var(--accent)]">{copy.termsLinkText}</span>{" "}
           {copy.termsConjunction}{" "}
-          <span className="text-[var(--accent)]">{copy.privacyLinkText}</span>
+          <span className="text-[var(--accent)]">{copy.privacyLinkText}</span>.
         </p>
       </div>
       <PreviewButton>{copy.submitButton}</PreviewButton>
-      <p className="my-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
-      <p className="text-xs text-[var(--muted)]">
+      <PreviewSsoSeparator text={copy.ssoSeparatorText} />
+      {/* Its own top margin, so the spacing holds whether or not the divider above is
+          rendered. */}
+      <p className="mt-3 text-xs text-[var(--muted)]">
         {copy.loginPrompt} <span className="text-[var(--accent)]">{copy.loginLink}</span>
       </p>
       <PreviewSuccess title={copy.successTitle} subtitle={copy.successSubtitle} />

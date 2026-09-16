@@ -1,5 +1,4 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useGetLogs, useGetRestoredLogs } from "@blocks-lmt/hooks/use-log";
 import {
   ColumnDef,
@@ -68,12 +67,10 @@ export const TracingLog = () => {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get("requestId");
   const [search, setSearch] = useState<string>("");
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const logsPayload = {
     page: 0,
     pageSize: 200,
     serviceName,
-    projectKey: tenantId,
     filter: {
       traceId: traceId,
       spanId: spanId,
