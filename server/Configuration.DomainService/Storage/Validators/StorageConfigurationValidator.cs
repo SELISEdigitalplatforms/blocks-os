@@ -13,6 +13,9 @@ namespace Configuration.DomainService.Storage.Validators
         /// <summary>Upper bound for a configured upload/download URL expiry (7 days), so a signed URL cannot be made effectively permanent.</summary>
         private const int MaxExpirySeconds = 604_800;
 
+        /// <summary>Upper bound for a configured maximum file size (50 MB), matching the client form's own limit.</summary>
+        private const long MaxFileSizeInBytesLimit = 50 * 1024 * 1024;
+
         /// <summary>The only access modifiers <c>UploadCompletionRequiredFor</c> may name, matching blocks-data's <c>AccessModifierValidation</c>.</summary>
         private static readonly string[] AllowedUploadCompletionAccessModifiers = { "Public", "Private" };
 
@@ -73,6 +76,8 @@ namespace Configuration.DomainService.Storage.Validators
             RuleFor(config => config.MaxFileSizeInBytes)
                 .GreaterThan(0)
                 .WithMessage("MaxFileSizeInBytes must be a positive value.")
+                .LessThanOrEqualTo(MaxFileSizeInBytesLimit)
+                .WithMessage($"MaxFileSizeInBytes must be at most {MaxFileSizeInBytesLimit} bytes (50 MB).")
                 .When(config => config.MaxFileSizeInBytes.HasValue);
 
             RuleFor(config => config.UploadCompletionRequiredFor)

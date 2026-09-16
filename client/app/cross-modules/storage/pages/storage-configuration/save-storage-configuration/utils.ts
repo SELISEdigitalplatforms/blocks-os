@@ -4,6 +4,9 @@ import type { IStorageConfiguration } from "@blocks-storage/models/storage.model
 /** Upper bound for a configured upload/download URL expiry (7 days), matching the backend's own limit. */
 const MAX_EXPIRY_SECONDS = 604_800;
 
+/** Upper bound for a configured maximum file size (50 MB), matching the backend's own limit. */
+const MAX_FILE_SIZE_MB = 50;
+
 /**
  * `isEditMode` controls whether the provider-identity/credential fields below are required.
  * They are hidden (not just disabled) in the edit-mode form - see save-storage-configuration.tsx -
@@ -64,6 +67,7 @@ export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
         z.coerce
           .number({ invalid_type_error: "Must be a number" })
           .positive("Must be greater than 0")
+          .max(MAX_FILE_SIZE_MB, `Must be at most ${MAX_FILE_SIZE_MB} MB`)
           .transform((arg) => arg.toString()),
       ),
     uploadCompletionRequiredFor: z.array(z.enum(["Public", "Private"])),
