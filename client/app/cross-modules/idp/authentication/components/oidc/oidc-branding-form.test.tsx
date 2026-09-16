@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   saveTemplate: vi.fn(),
   getPresignedUrl: vi.fn(),
   uploadFile: vi.fn(),
+  completeUpload: vi.fn(),
   getFileByFileId: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth-config", () => ({
 vi.mock("@blocks-storage/hooks/use-storage-file", () => ({
   useGetPreSignedUrlForUpload: () => ({ mutateAsync: h.getPresignedUrl }),
   useUploadFile: () => ({ mutateAsync: h.uploadFile }),
+  useCompleteUpload: () => ({ mutateAsync: h.completeUpload }),
 }));
 vi.mock("@blocks-storage/services/storage.service", () => ({
   storageService: { file: { getFileByFileId: h.getFileByFileId } },
@@ -710,5 +712,82 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Failed to save template" });
     expect(h.showSuccessToast).not.toHaveBeenCalled();
     expect(latestActions().isDirty).toBe(true);
+  });
+
+  it("skips completion and saves when the logo upload does not require it", async () => {
+    h.getPresignedUrl.mockResolvedValue({
+      isSuccess: true,
+      uploadUrl: "u",
+      fileId: "f1",
+      uploadCompletionRequired: false,
+    });
+    h.uploadFile.mockResolvedValue({});
+    h.getFileByFileId.mockResolvedValue({ url: "https://cdn.example.com/light.png" });
+    const user = userEvent.setup();
+    await renderForm();
+
+    await user.upload(
+      document.getElementById("client-logo-upload-light") as HTMLInputElement,
+      new File(["x"], "light.png", { type: "image/png" }),
+    );
+    await act(async () => latestActions().onSave());
+
+    expect(h.completeUpload).not.toHaveBeenCalled();
+    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrlLight).toBe(
+      "https://cdn.example.com/light.png",
+    );
+  });
+
+  it("calls completion and saves the resolved URL when the logo is verified", async () => {
+    h.getPresignedUrl.mockResolvedValue({
+      isSuccess: true,
+      uploadUrl: "u",
+      fileId: "f1",
+      fileVersionId: "v1",
+      uploadCompletionRequired: true,
+    });
+    h.uploadFile.mockResolvedValue({});
+    h.completeUpload.mockResolvedValue({ isSuccess: true, verificationStatus: "Verified" });
+    h.getFileByFileId.mockResolvedValue({ url: "https://cdn.example.com/light.png" });
+    const user = userEvent.setup();
+    await renderForm();
+
+    await user.upload(
+      document.getElementById("client-logo-upload-light") as HTMLInputElement,
+      new File(["x"], "light.png", { type: "image/png" }),
+    );
+    await act(async () => latestActions().onSave());
+
+    expect(h.completeUpload).toHaveBeenCalledWith({ fileId: "f1", fileVersionId: "v1" });
+    expect(h.saveTemplate.mock.calls[0][0].branding.logoUrlLight).toBe(
+      "https://cdn.example.com/light.png",
+    );
+  });
+
+  it("shows a generic error and does not save when the logo is rejected", async () => {
+    h.getPresignedUrl.mockResolvedValue({
+      isSuccess: true,
+      uploadUrl: "u",
+      fileId: "f1",
+      fileVersionId: "v1",
+      uploadCompletionRequired: true,
+    });
+    h.uploadFile.mockResolvedValue({});
+    h.completeUpload.mockResolvedValue({
+      isSuccess: true,
+      verificationStatus: "Rejected",
+      rejectionReason: "real_file_type_mismatch",
+    });
+    const user = userEvent.setup();
+    await renderForm();
+
+    await user.upload(
+      document.getElementById("client-logo-upload-light") as HTMLInputElement,
+      new File(["x"], "light.png", { type: "image/png" }),
+    );
+    await act(async () => latestActions().onSave());
+
+    expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Failed to save template" });
+    expect(h.saveTemplate).not.toHaveBeenCalled();
   });
 });

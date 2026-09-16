@@ -143,6 +143,14 @@ namespace Configuration.DomainService.Shared.Services
             repoConfiguration.AccessKey = request.AccessKey;
             repoConfiguration.CloudStorageRegionEndPoint = request.CloudStorageRegionEndPoint;
 
+            #region Phase1UploadSecurity
+
+            repoConfiguration.UploadUrlExpirySeconds = request.UploadUrlExpirySeconds;
+            repoConfiguration.DownloadUrlExpirySeconds = request.DownloadUrlExpirySeconds;
+            repoConfiguration.MaxFileSizeInBytes = request.MaxFileSizeInBytes;
+            repoConfiguration.UploadCompletionRequiredFor = request.UploadCompletionRequiredFor;
+
+            #endregion
 
             #region LocalStorage
 

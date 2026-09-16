@@ -169,6 +169,149 @@ namespace XUnitTest.Validators
             result.IsValid.Should().BeFalse();
             result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.ItemId));
         }
+
+        private static SaveStorageConfigurationRequest ValidAzureRequest() => new()
+        {
+            Name = "az",
+            StorageStrategy = "Azure",
+            ConnectionString = "DefaultEndpointsProtocol=https;AccountName=acct;AccountKey=abc123==;EndpointSuffix=core.windows.net"
+        };
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(604_801)]
+        public async Task Validate_UploadUrlExpirySeconds_OutOfRange_Fails(int value)
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.UploadUrlExpirySeconds = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadUrlExpirySeconds));
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(600)]
+        [InlineData(604_800)]
+        public async Task Validate_UploadUrlExpirySeconds_InRange_IsValid(int value)
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.UploadUrlExpirySeconds = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadUrlExpirySeconds));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(604_801)]
+        public async Task Validate_DownloadUrlExpirySeconds_OutOfRange_Fails(int value)
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.DownloadUrlExpirySeconds = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.DownloadUrlExpirySeconds));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task Validate_MaxFileSizeInBytes_NotPositive_Fails(long value)
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = value;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_Positive_IsValid()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 5_242_880;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Theory]
+        [MemberData(nameof(AllowedUploadCompletionCombinations))]
+        public async Task Validate_UploadCompletionRequiredFor_AllowedCombinations_IsValid(List<string> accessModifiers)
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.UploadCompletionRequiredFor = accessModifiers;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
+        }
+
+        public static TheoryData<List<string>> AllowedUploadCompletionCombinations => new()
+        {
+            new List<string> { "Public" },
+            new List<string> { "Private" },
+            new List<string> { "Public", "Private" },
+        };
+
+        [Fact]
+        public async Task Validate_UploadCompletionRequiredFor_DisallowedValue_Fails()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.UploadCompletionRequiredFor = new List<string> { "Secure" };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
+        }
+
+        [Fact]
+        public async Task Validate_UploadCompletionRequiredFor_DuplicateValue_Fails()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.UploadCompletionRequiredFor = new List<string> { "Public", "Public" };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
+        }
     }
 
     public class MailConfigurationValidatorTests

@@ -3,10 +3,27 @@ import {
   ICreateDmsFolderPayload,
   IGetDmsFileAndFolderPayload,
   IGetFileByFileIDPayload,
+  IGetFileByFileIDResponse,
   IGetFilesInfoPayload,
   IUploadDmsFilePayload,
 } from "../models/storage.model";
 import { storageService } from "../services/storage.service";
+
+/**
+ * A cached signed download URL must not outlive the provider's expiry, or a consumer reusing the
+ * query cache would be handed a dead URL. Ties the query's staleTime to `downloadUrlExpiresAtUtc`
+ * instead of the global default so React Query naturally refetches once the URL has expired: no
+ * expiry (local storage, or an intentionally anonymous Public URL) keeps the global
+ * default/never-stale behavior; a past expiry is immediately stale.
+ */
+const staleTimeFromDownloadUrlExpiry = (query: {
+  state: { data?: IGetFileByFileIDResponse };
+}) => {
+  const expiresAt = query.state.data?.downloadUrlExpiresAtUtc;
+  if (expiresAt === undefined) return 60 * 1000;
+  if (expiresAt === null) return Infinity;
+  return Math.max(new Date(expiresAt).getTime() - Date.now(), 0);
+};
 
 export const useGetPreSignedUrlForUpload = () => {
   const queryClient = useQueryClient();
@@ -16,6 +33,13 @@ export const useGetPreSignedUrlForUpload = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["storage", "file", "getFilesInfo"] });
     },
+  });
+};
+
+export const useCompleteUpload = () => {
+  return useMutation({
+    mutationKey: ["storage", "file", "completeUpload"],
+    mutationFn: storageService.file.completeUpload,
   });
 };
 
@@ -37,6 +61,7 @@ export const useGetFile = (option: IGetFileByFileIDPayload) => {
   return useQuery({
     queryKey: ["file", option],
     queryFn: () => storageService.file.getFileByFileId(option),
+    staleTime: staleTimeFromDownloadUrlExpiry,
   });
 };
 
@@ -47,6 +72,7 @@ export const useLazyGetFile = () => {
     return queryClient.fetchQuery({
       queryKey: ["file", option],
       queryFn: () => storageService.file.getFileByFileId(option),
+      staleTime: staleTimeFromDownloadUrlExpiry,
     });
   };
 
@@ -96,6 +122,7 @@ export const useGetFilesDownload = (
     queryFn: () => storageService.file.getFilesDownloadUrl(meta),
     enabled: options?.enabled ?? true,
     refetchOnWindowFocus: false,
+    staleTime: staleTimeFromDownloadUrlExpiry,
   });
 };
 

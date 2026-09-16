@@ -161,4 +161,97 @@ describe("SaveStorageConfiguration", () => {
       expect(h.showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong" }),
     );
   });
+
+  describe("Phase 1 upload-security fields", () => {
+    it("defaults a new configuration to 600s upload, 300s download, 5 MB, and no required completion", () => {
+      renderModal();
+
+      expect(
+        (screen.getByLabelText("Upload URL Expiry (seconds)") as HTMLInputElement).value,
+      ).toBe("600");
+      expect(
+        (screen.getByLabelText("Download URL Expiry (seconds)") as HTMLInputElement).value,
+      ).toBe("300");
+      expect((screen.getByLabelText("Maximum File Size (MB)") as HTMLInputElement).value).toBe(
+        "5",
+      );
+      expect(screen.getByRole("checkbox", { name: "Public" }).getAttribute("aria-checked")).toBe(
+        "false",
+      );
+      expect(screen.getByRole("checkbox", { name: "Private" }).getAttribute("aria-checked")).toBe(
+        "false",
+      );
+    });
+
+    it("converts a configured maxFileSizeInBytes to MB and prefills expiry/completion in edit mode", () => {
+      const configuration = {
+        itemId: "cfg-5",
+        name: "Existing Store",
+        storageStrategy: "AWS",
+        accessKey: "AKIAOLD",
+        secretKey: "secretold",
+        cloudStorageRegionEndPoint: "us-east-1",
+        connectionString: null,
+        host: null,
+        port: null,
+        userName: null,
+        password: null,
+        remoteBasePath: null,
+        uploadUrlExpirySeconds: 900,
+        downloadUrlExpirySeconds: 120,
+        maxFileSizeInBytes: 10_485_760,
+        uploadCompletionRequiredFor: ["Public"],
+      } as unknown as IStorageConfiguration;
+      renderModal({ configuration });
+
+      expect(
+        (screen.getByLabelText("Upload URL Expiry (seconds)") as HTMLInputElement).value,
+      ).toBe("900");
+      expect(
+        (screen.getByLabelText("Download URL Expiry (seconds)") as HTMLInputElement).value,
+      ).toBe("120");
+      expect((screen.getByLabelText("Maximum File Size (MB)") as HTMLInputElement).value).toBe(
+        "10",
+      );
+      expect(screen.getByRole("checkbox", { name: "Public" }).getAttribute("aria-checked")).toBe(
+        "true",
+      );
+      expect(screen.getByRole("checkbox", { name: "Private" }).getAttribute("aria-checked")).toBe(
+        "false",
+      );
+    });
+
+    it("submits the converted byte size and selected access modifiers", async () => {
+      const user = userEvent.setup();
+      renderModal();
+
+      await fillAws(user);
+      await user.clear(screen.getByLabelText("Maximum File Size (MB)"));
+      await user.type(screen.getByLabelText("Maximum File Size (MB)"), "10");
+      await user.click(screen.getByRole("checkbox", { name: "Private" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      const payload = h.mutateAsync.mock.calls[0][0];
+      expect(payload).toMatchObject({
+        uploadUrlExpirySeconds: 600,
+        downloadUrlExpirySeconds: 300,
+        maxFileSizeInBytes: 10_485_760,
+        uploadCompletionRequiredFor: ["Private"],
+      });
+      expect(payload).not.toHaveProperty("maxFileSizeInMb");
+    });
+
+    it("rejects an expiry outside the 1-604800 second range", async () => {
+      const user = userEvent.setup();
+      renderModal();
+
+      await user.clear(screen.getByLabelText("Upload URL Expiry (seconds)"));
+      await user.type(screen.getByLabelText("Upload URL Expiry (seconds)"), "0");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(await screen.findByText("Must be at least 1 second")).toBeTruthy();
+      expect(h.mutateAsync).not.toHaveBeenCalled();
+    });
+  });
 });

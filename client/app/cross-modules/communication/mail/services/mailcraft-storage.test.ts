@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   getFileByFileId: vi.fn(),
   deleteFileByFileId: vi.fn(),
   uploadFile: vi.fn(),
+  completeUpload: vi.fn(),
 }));
 
 vi.mock("@blocks-storage/services/storage.service", () => ({
@@ -15,6 +16,7 @@ vi.mock("@blocks-storage/services/storage.service", () => ({
       getPreSignedUrlForUpload: h.getPreSignedUrlForUpload,
       getFileByFileId: h.getFileByFileId,
       deleteFileByFileId: h.deleteFileByFileId,
+      completeUpload: h.completeUpload,
     },
     uploadFile: h.uploadFile,
   },
@@ -182,6 +184,56 @@ describe("createMailcraftStorageProvider", () => {
       "Could not get an upload URL for the image.",
     );
     expect(h.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it("skips completion and succeeds when the upload does not require it", async () => {
+    const provider = createMailcraftStorageProvider("project-1");
+    const file = new File(["image"], "welcome.png", { type: "image/png" });
+
+    const asset = await provider.upload(file, { width: 120, height: 80 });
+
+    expect(asset.id).toBe("image-1");
+    expect(h.completeUpload).not.toHaveBeenCalled();
+  });
+
+  it("calls completion and succeeds when the upload is verified", async () => {
+    h.getPreSignedUrlForUpload.mockResolvedValue({
+      isSuccess: true,
+      fileId: "image-1",
+      fileVersionId: "v1",
+      uploadUrl: "https://upload.example/image-1",
+      uploadCompletionRequired: true,
+    });
+    h.completeUpload.mockResolvedValue({ isSuccess: true, verificationStatus: "Verified" });
+    const provider = createMailcraftStorageProvider("project-1");
+    const file = new File(["image"], "welcome.png", { type: "image/png" });
+
+    const asset = await provider.upload(file, { width: 120, height: 80 });
+
+    expect(h.completeUpload).toHaveBeenCalledWith({ fileId: "image-1", fileVersionId: "v1" });
+    expect(asset.id).toBe("image-1");
+  });
+
+  it("throws and does not remember the file id when completion is rejected", async () => {
+    h.getPreSignedUrlForUpload.mockResolvedValue({
+      isSuccess: true,
+      fileId: "image-1",
+      fileVersionId: "v1",
+      uploadUrl: "https://upload.example/image-1",
+      uploadCompletionRequired: true,
+    });
+    h.completeUpload.mockResolvedValue({
+      isSuccess: true,
+      verificationStatus: "Rejected",
+      rejectionReason: "real_file_type_mismatch",
+    });
+    const provider = createMailcraftStorageProvider("project-1");
+    const file = new File(["image"], "welcome.png", { type: "image/png" });
+
+    await expect(provider.upload(file, { width: 120, height: 80 })).rejects.toThrow(
+      "real_file_type_mismatch",
+    );
+    expect(localStorage.getItem("blocks-os:mailcraft:file-ids:project-1")).toBeNull();
   });
 
   it("removes an asset using the authenticated project key", async () => {

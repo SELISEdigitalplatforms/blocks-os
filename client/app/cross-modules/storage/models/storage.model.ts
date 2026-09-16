@@ -32,6 +32,15 @@ export interface IStorageConfiguration {
   userName: string | null;
   password: string | null;
   remoteBasePath: string | null;
+  /**
+   * Phase 1 upload-security fields. Optional because a configuration predating Phase 1, or one
+   * that never set these, omits them - callers must fall back to the same documented defaults
+   * the backend itself uses when they are absent.
+   */
+  uploadUrlExpirySeconds?: number;
+  downloadUrlExpirySeconds?: number;
+  maxFileSizeInBytes?: number;
+  uploadCompletionRequiredFor?: ("Public" | "Private")[];
 }
 
 export interface IStorageConfigurationSavePayload {
@@ -49,6 +58,10 @@ export interface IStorageConfigurationSavePayload {
   userName: string | null;
   password: string | null;
   remoteBasePath: string | null;
+  uploadUrlExpirySeconds: number;
+  downloadUrlExpirySeconds: number;
+  maxFileSizeInBytes: number;
+  uploadCompletionRequiredFor: ("Public" | "Private")[];
 }
 export interface IStorageConfigurationDeletePayload {
   projectKey: string;
@@ -69,11 +82,37 @@ export interface IGetPreSignedUrlForUploadPayload {
   moduleName: number;
 }
 
+/** Mirrors `Storage.DomainService.Enums.FileVerificationStatus` server-side. */
+export type FileVerificationStatus = "Unverified" | "Quarantined" | "Verified" | "Rejected";
+
 export interface IGetPreSignedUrlForUploadResponse {
   errors: null | unknown;
   isSuccess: boolean;
   fileId: string;
   uploadUrl: string;
+  /** Identifies the exact version this upload created; required to call `completeUpload` when completion is required. */
+  fileVersionId?: string;
+  uploadUrlExpiresAtUtc?: string | null;
+  /** Headers the client must send with the provider PUT (e.g. Azure's blob-type header). */
+  requiredHeaders?: Record<string, string> | null;
+  /** True when the client must call `completeUpload` after the provider PUT succeeds. */
+  uploadCompletionRequired?: boolean;
+  verificationStatus?: FileVerificationStatus;
+}
+
+export interface ICompleteUploadPayload {
+  fileId: string;
+  fileVersionId: string;
+}
+
+export interface ICompleteUploadResponse {
+  errors: null | unknown;
+  isSuccess: boolean;
+  fileId: string;
+  fileVersionId: string;
+  verificationStatus: FileVerificationStatus;
+  /** Safe, non-sensitive explanation set only when `verificationStatus` is "Rejected". */
+  rejectionReason?: string | null;
 }
 
 export interface IGetFileByFileIDPayload {
@@ -99,6 +138,8 @@ export interface IGetFileByFileIDResponse {
   language: string;
   tenantId: string;
   sizeInBytes: number;
+  /** When `url` is a provider-signed URL, when it stops working. Null for an intentionally anonymous (never-expiring) Public URL. */
+  downloadUrlExpiresAtUtc?: string | null;
   errors: unknown;
   isSuccess: boolean;
 }

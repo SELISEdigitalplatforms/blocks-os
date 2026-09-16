@@ -1,5 +1,7 @@
 import { http } from "@/lib/http/http-client";
 import {
+  ICompleteUploadPayload,
+  ICompleteUploadResponse,
   IDeleteFilePayload,
   IDeleteFolderPayload,
   IDeleteResourceResponse,
@@ -41,6 +43,12 @@ export class StorageFile {
     payload: IGetPreSignedUrlForUploadPayload,
   ): Promise<IGetPreSignedUrlForUploadResponse> {
     return http.post(STORAGE_FILE_ENDPOINTS.GET_PRESIGNED_URL, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  completeUpload(payload: ICompleteUploadPayload): Promise<ICompleteUploadResponse> {
+    return http.post(STORAGE_FILE_ENDPOINTS.COMPLETE_UPLOAD, payload, undefined, {
       absoluteUrl: true,
     });
   }

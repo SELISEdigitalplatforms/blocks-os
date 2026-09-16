@@ -177,6 +177,74 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task SaveStorageConfiguration_NewConfiguration_PersistsThePhase1UploadSecurityFields()
+        {
+            using var _ = new BlocksTestContext();
+            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                             .ReturnsAsync(Valid());
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+            StorageConfiguration? saved = null;
+            _repo.Setup(r => r.SaveStorageConfigurationAsync(It.IsAny<StorageConfiguration>()))
+                 .Callback<StorageConfiguration>(c => saved = c)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest
+            {
+                Name = "az",
+                StorageStrategy = "Azure",
+                ConnectionString = "conn",
+                UploadUrlExpirySeconds = 900,
+                DownloadUrlExpirySeconds = 120,
+                MaxFileSizeInBytes = 10_485_760,
+                UploadCompletionRequiredFor = new List<string> { "Public", "Private" },
+            });
+
+            saved!.UploadUrlExpirySeconds.Should().Be(900);
+            saved.DownloadUrlExpirySeconds.Should().Be(120);
+            saved.MaxFileSizeInBytes.Should().Be(10_485_760);
+            saved.UploadCompletionRequiredFor.Should().BeEquivalentTo(new List<string> { "Public", "Private" });
+        }
+
+        [Fact]
+        public async Task SaveStorageConfiguration_UpdateOmittingTheFields_ClearsThemRatherThanKeepingTheStoredValues()
+        {
+            using var _ = new BlocksTestContext();
+            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                             .ReturnsAsync(Valid());
+            var existing = new StorageConfiguration
+            {
+                ItemId = "existing-id",
+                Name = "az",
+                UploadUrlExpirySeconds = 900,
+                DownloadUrlExpirySeconds = 120,
+                MaxFileSizeInBytes = 10_485_760,
+                UploadCompletionRequiredFor = new List<string> { "Public" },
+            };
+            _repo.Setup(r => r.GetStorageConfigurationByIdAsync("existing-id")).ReturnsAsync(existing);
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+            StorageConfiguration? saved = null;
+            _repo.Setup(r => r.SaveStorageConfigurationAsync(It.IsAny<StorageConfiguration>()))
+                 .Callback<StorageConfiguration>(c => saved = c)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest
+            {
+                Name = "az",
+                StorageStrategy = "Azure",
+                ConnectionString = "conn",
+                UpdateRequest = true,
+                ItemId = "existing-id",
+            });
+
+            saved!.UploadUrlExpirySeconds.Should().BeNull();
+            saved.DownloadUrlExpirySeconds.Should().BeNull();
+            saved.MaxFileSizeInBytes.Should().BeNull();
+            saved.UploadCompletionRequiredFor.Should().BeNull();
+        }
+
+        [Fact]
         public async Task GetStorageConfigurations_MasksSecrets()
         {
             _repo.Setup(r => r.GetAllStorageConfigurationsByDateAsync()).ReturnsAsync(new List<StorageConfiguration>
