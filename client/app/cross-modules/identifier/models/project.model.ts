@@ -1,6 +1,6 @@
 import { DomainAction } from "@/pages/dashboard/components/domain";
 import { GRANT_TYPES, SSO_PROVIDERS } from "@blocks-idp/authentication/constants";
-import { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomainRequest } from "@/models/project.model";
 
 export interface IProject {
   itemId: string;
@@ -117,7 +117,7 @@ export interface IValidateCNameProjectResponse {
 
 export interface IUpdateProjectPayload {
   action: DomainAction;
-  application: IDomain;
+  application: IDomainRequest;
   applicationDomain?: string;
   /**
    * Also tear down the shared API host under the cookie domain. It serves every
