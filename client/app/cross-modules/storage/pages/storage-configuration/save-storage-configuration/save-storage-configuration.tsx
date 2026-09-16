@@ -37,6 +37,7 @@ import { useSaveStorageConfiguration } from "@blocks-storage/hooks/use-storage-c
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import {
   IStorageConfiguration,
+  IStorageConfigurationSavePayload,
   STORAGE_STRATEGIES,
   StorageStrategyType,
 } from "@blocks-storage/models/storage.model";
@@ -70,16 +71,31 @@ export const SaveStorageConfiguration = ({
   const onFormSubmitHandler = async (values: z.infer<typeof storageConfigurationFormSchema>) => {
     try {
       const { maxFileSizeInMb, ...rest } = values;
-      const payload = {
-        ...rest,
-        storageStrategy: values.storageStrategy as StorageStrategyType,
+      // The settings below are the only ones an update may change. Everything else - the name, the
+      // provider and its credentials - is fixed once a configuration exists and is discarded by the
+      // server on an update, so an update request simply doesn't carry it. That also keeps the
+      // masked secrets the read endpoint returned (e.g. "D****...t") from being sent back at all.
+      const mutableSettings = {
         uploadUrlExpirySeconds: Number(values.uploadUrlExpirySeconds),
         downloadUrlExpirySeconds: Number(values.downloadUrlExpirySeconds),
         maxFileSizeInBytes: Math.round(Number(maxFileSizeInMb) * 1024 * 1024),
-        projectKey: tenantId,
-        updateRequest: configuration ? true : false,
-        itemId: configuration?.itemId || null,
+        uploadCompletionRequiredFor: values.uploadCompletionRequiredFor,
       };
+      const payload: IStorageConfigurationSavePayload = configuration
+        ? {
+            ...mutableSettings,
+            projectKey: tenantId,
+            updateRequest: true,
+            itemId: configuration.itemId,
+          }
+        : {
+            ...rest,
+            ...mutableSettings,
+            storageStrategy: values.storageStrategy as StorageStrategyType,
+            projectKey: tenantId,
+            updateRequest: false,
+            itemId: null,
+          };
       const res = await mutateAsync(payload);
       if (!res.isSuccess) return showErrorToast({ errors: res.errors });
       showSuccessToast({
