@@ -15,7 +15,7 @@ using DomainService.Shared.Utilities;
 using DomainService.Subscription.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using Storage.DomainService.Shared.Services;
+using Storage.DomainService.Services;
 using Storage.DomainService.Storage;
 using Storage.DomainService.Storage.Validators;
 
@@ -59,10 +59,7 @@ namespace DomainService.Shared
             services.AddScoped<ProjectPolicyFilter>();
 
             // Drivers
-            services.AddSingleton<DmsArtifactBuilderFactory>();
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
-            services.AddSingleton<FileArtifactBuilder>();
-            services.AddSingleton<FolderArtifactBuilder>();
 
             services.RegisterBlocksStorageServices();
             services.RegisterBlocksMailService();
