@@ -7,6 +7,7 @@ import {
   PAGE_OPTIONS,
   TEXT_MESSAGE,
   THEME_FIELDS,
+  URL_MESSAGE,
   isRgbaColor,
   validateOidcUiTemplate,
 } from "./oidc-template-validation";
@@ -54,7 +55,41 @@ describe("validateOidcUiTemplate", () => {
     expect(isRgbaColor(value)).toBe(false);
   });
 
-  it("requires every page field except the two nullable copy fields", () => {
+  it("treats the SSO separator as optional on both pages that offer SSO", () => {
+    for (const pageKey of ["login", "signup"] as const) {
+      const field = PAGE_FIELDS[pageKey].find(({ key }) => key === "ssoSeparatorText");
+      expect(field?.optional).toBe(true);
+      expect(field?.placeholder).toBe("or");
+
+      const draft = template();
+      draft.pages[pageKey].ssoSeparatorText = null;
+      expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
+    }
+  });
+
+  it("lets a tenant point the consent links at its own terms and privacy pages", () => {
+    const draft = template();
+    draft.pages.signup.termsLinkUrl = "https://acme.example/legal/terms";
+    draft.pages.signup.privacyLinkUrl = "https://acme.example/legal/privacy";
+    expect(validateOidcUiTemplate(draft)).toEqual({});
+
+    // Unset falls back to the Blocks default on the real page, so null is allowed.
+    draft.pages.signup.termsLinkUrl = null;
+    draft.pages.signup.privacyLinkUrl = null;
+    expect(validateOidcUiTemplate(draft)).toEqual({});
+  });
+
+  it("rejects consent link targets that aren't absolute http(s) URLs", () => {
+    const draft = template();
+    draft.pages.signup.termsLinkUrl = "/legal/terms";
+    draft.pages.signup.privacyLinkUrl = "javascript:alert(1)";
+    expect(validateOidcUiTemplate(draft)).toMatchObject({
+      "pages.signup.termsLinkUrl": URL_MESSAGE,
+      "pages.signup.privacyLinkUrl": URL_MESSAGE,
+    });
+  });
+
+  it("requires every page field except the nullable copy fields", () => {
     for (const { key: pageKey } of PAGE_OPTIONS) {
       for (const { key, optional } of PAGE_FIELDS[pageKey]) {
         const draft = template();

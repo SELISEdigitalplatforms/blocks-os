@@ -425,6 +425,23 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
     expect(payload.pages.accountSelector.subheading).toBeNull();
   });
 
+  it('lets a tenant without SSO clear the separator, keeping Save available with an "or" hint', async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+
+    const separator = screen.getByLabelText("SSO separator");
+    expect(separator.getAttribute("placeholder")).toBe("or");
+    // Optional fields carry no required marker on their label.
+    expect(separator.closest("div")?.textContent).not.toContain("*");
+
+    await user.clear(separator);
+    expect(latestActions().isValid).toBe(true);
+
+    await act(async () => latestActions().onSave());
+    expect(h.saveTemplate.mock.calls[0][0].pages.signup.ssoSeparatorText).toBeNull();
+  });
+
   describe("per-page Save", () => {
     it("saves only the edited page (and shared footer), leaving another page's pending edit unsaved", async () => {
       const user = userEvent.setup();
@@ -543,6 +560,32 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
         `${DEFAULT_OIDC_UI_TEMPLATE.pages.signup.heading} updated`,
       );
     });
+  });
+
+  it("takes the tenant's own Terms and Privacy link targets and blocks non-URLs", async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole("tab", { name: "Pages" }));
+
+    const termsUrl = screen.getByLabelText("Terms link URL");
+    const privacyUrl = screen.getByLabelText("Privacy link URL");
+    expect(termsUrl).toHaveProperty("value", DEFAULT_OIDC_UI_TEMPLATE.pages.signup.termsLinkUrl);
+
+    await user.clear(termsUrl);
+    await user.type(termsUrl, "not-a-url");
+    expect(screen.getByText("Terms link URL must be an absolute http or https URL")).toBeTruthy();
+    expect(latestActions().isValid).toBe(false);
+
+    await user.clear(termsUrl);
+    await user.type(termsUrl, "https://acme.example/terms");
+    await user.clear(privacyUrl);
+    await user.type(privacyUrl, "https://acme.example/privacy");
+    expect(latestActions().isValid).toBe(true);
+
+    await act(async () => latestActions().onSave());
+    const payload = h.saveTemplate.mock.calls[0][0];
+    expect(payload.pages.signup.termsLinkUrl).toBe("https://acme.example/terms");
+    expect(payload.pages.signup.privacyLinkUrl).toBe("https://acme.example/privacy");
   });
 
   it("shows server field errors beside inputs without accepting the failed save", async () => {

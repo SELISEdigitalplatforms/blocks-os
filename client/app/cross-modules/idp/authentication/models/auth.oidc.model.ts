@@ -97,7 +97,7 @@ export interface IOidcUiTemplate {
       submitButton: string;
       signupPrompt: string;
       signupLink: string;
-      ssoSeparatorText: string;
+      ssoSeparatorText: string | null;
       activationErrorTitle: string;
       activationErrorMessage: string;
       activateAccountButton: string;
@@ -113,11 +113,15 @@ export interface IOidcUiTemplate {
       creatingButton: string;
       termsPrefix: string;
       termsLinkText: string;
+      /** Where the consent line's Terms link points. Null falls back to the Blocks default. */
+      termsLinkUrl: string | null;
       privacyLinkText: string;
+      /** Where the consent line's Privacy link points. Null falls back to the Blocks default. */
+      privacyLinkUrl: string | null;
       termsConjunction: string;
       loginPrompt: string;
       loginLink: string;
-      ssoSeparatorText: string;
+      ssoSeparatorText: string | null;
       successTitle: string;
       successSubtitle: string;
       emailSentTitle: string;
