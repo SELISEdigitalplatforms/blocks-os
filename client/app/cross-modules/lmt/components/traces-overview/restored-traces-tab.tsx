@@ -103,7 +103,6 @@ export function RestoredTracesTab({
     {
       page: queryParams.page,
       pageSize: queryParams.pageSize,
-      projectKey,
       search: queryParams.search,
       filter: {
         services: selectedServiceNames,

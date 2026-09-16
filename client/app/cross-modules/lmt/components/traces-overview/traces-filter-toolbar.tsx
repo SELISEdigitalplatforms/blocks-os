@@ -2,7 +2,6 @@ import { FilterItem, FilterToolbar, useSortQueryParams } from "@/components/filt
 import type { TimeRangeValue } from "@/components/filter-toolbar/time-range/time-range";
 import { TRACE_STATUS_CLASSES } from "@blocks-lmt/utils";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useMemo } from "react";
 
 /** The filter as it is held in the URL. */
 export type TraceFilter = {
@@ -26,15 +25,6 @@ export type ServiceOption = {
   value: string;
   children?: { label: string; value: string }[];
 };
-
-/**
- * The first root option is treated as the implicit default selection so the
- * filter is never in an "empty -> fetch everything" state on first paint.
- * The URL stays empty until the user interacts, so resetting back to the
- * default behaviour remains a no-op write.
- */
-export const defaultServiceSelection = (serviceOptions: ServiceOption[]): string[] =>
-  serviceOptions[0] ? [serviceOptions[0].value] : [];
 
 export const useTracesFilterQueryParams = () => {
   const [queryParams, setQueryParams] = useQueryStates({
@@ -73,13 +63,6 @@ export function TracesFilterToolbar({
    */
   showTimeRange?: boolean;
 }) {
-  const displayedServices = useMemo(
-    () =>
-      queryParams.services.length > 0
-        ? queryParams.services
-        : defaultServiceSelection(serviceOptions),
-    [queryParams.services, serviceOptions],
-  );
   // Both ends live in the URL as their own params, so the one control writes them together.
   const changeTimeRange = (value: TimeRangeValue) => {
     setQueryParams((params) => ({
@@ -132,7 +115,7 @@ export function TracesFilterToolbar({
       filters={filters}
       values={{
         search: queryParams.search,
-        services: displayedServices,
+        services: queryParams.services,
         status: queryParams.status,
         timeRange:
           queryParams.startDate || queryParams.endDate
@@ -144,7 +127,7 @@ export function TracesFilterToolbar({
       }}
       defaultValues={{
         search: "",
-        services: defaultServiceSelection(serviceOptions),
+        services: [],
         status: [],
         timeRange: null,
       }}

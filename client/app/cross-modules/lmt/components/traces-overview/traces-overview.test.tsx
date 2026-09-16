@@ -150,8 +150,7 @@ describe("TracesOverview", () => {
       isFetching: false,
     });
     renderOverview();
-    // "OS" also appears in the services filter's selected-value chip -- the "os" option is the
-    // implicit default selection -- so this looks for the row's own cell, not just any match.
+    // Looks for the row's own cell, not just any "OS" text on the page.
     await waitFor(() =>
       expect(screen.getByRole("cell", { name: "OS" })).toBeTruthy(),
     );
@@ -206,18 +205,26 @@ describe("TracesOverview", () => {
     );
   });
 
-  it("filters services with a checkbox tree whose blocks services expand into API and Worker", async () => {
+  it("lists one option per service, without API/Worker children", async () => {
     const user = userEvent.setup();
     renderOverview();
     await user.click(screen.getByRole("button", { name: /Service/i }));
-    await user.click(await screen.findByRole("button", { name: "Expand OS" }));
-    expect(screen.getByLabelText("API")).toBeTruthy();
-    expect(screen.getByLabelText("Worker")).toBeTruthy();
-    // Registered services sit in the same list, without children.
+    expect(await screen.findByLabelText("OS")).toBeTruthy();
     expect(screen.getByLabelText("Service One")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Expand OS" })).toBeNull();
+    expect(screen.queryByLabelText("Worker")).toBeNull();
   });
 
-  it("queries every collection of a service when its parent is checked", async () => {
+  it("sends no service filter until a service is picked", () => {
+    renderOverview();
+    expect(h.useGetTraces).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        filter: expect.objectContaining({ services: [] }),
+      }),
+    );
+  });
+
+  it("queries only the API collection when a service is checked", async () => {
     const user = userEvent.setup();
     renderOverview();
     await user.click(screen.getByRole("button", { name: /Service/i }));
@@ -228,29 +235,7 @@ describe("TracesOverview", () => {
           // objectContaining: this test is about how a service selection resolves to
           // collection names, not about which other filters the payload carries.
           filter: expect.objectContaining({
-            services: ["blocks-os", "blocks-os-worker"],
-            excepts: ["blocks-lmt-api"],
-          }),
-        }),
-      ),
-    );
-  });
-
-  it("queries only the checked collection when a child is picked", async () => {
-    const user = userEvent.setup();
-    renderOverview();
-    await user.click(screen.getByRole("button", { name: /Service/i }));
-    await user.click(await screen.findByRole("button", { name: "Expand OS" }));
-    // "os" is the default selection, so both children start checked; unchecking API is what
-    // narrows the selection down to Worker alone.
-    await user.click(screen.getByLabelText("API"));
-    await waitFor(() =>
-      expect(h.useGetTraces).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          // objectContaining: this test is about how a service selection resolves to
-          // collection names, not about which other filters the payload carries.
-          filter: expect.objectContaining({
-            services: ["blocks-os-worker"],
+            services: ["blocks-os"],
             excepts: ["blocks-lmt-api"],
           }),
         }),

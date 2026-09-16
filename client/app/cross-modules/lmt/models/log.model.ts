@@ -45,7 +45,6 @@ export interface IGetLogsPayload {
   search?: string;
   serviceName: string;
   serviceNames?: string[];
-  projectKey: string;
 }
 
 export interface IGetRestoredLogsPayload extends Omit<IGetLogsPayload, "projectKey"> {

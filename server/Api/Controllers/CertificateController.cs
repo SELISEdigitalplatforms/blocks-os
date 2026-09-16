@@ -33,7 +33,7 @@ namespace BlocksOs.Api.Controllers
         [HttpPost]
         [ProtectedEndPoint("blocks-os::project::mutate-token-validation-params")]
         public Task<UploadCertificateResponse> UploadCertificate(
-            [FromForm] IFormFile? certificate,
+             IFormFile? certificate,
             [FromQuery] bool isThirdParty)
         {
             return _certificateUploadService.UploadPublicCertificateAsync(new UploadCertificateRequest

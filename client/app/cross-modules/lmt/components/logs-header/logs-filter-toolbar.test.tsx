@@ -53,10 +53,6 @@ const makeCtx = (over: Partial<Ctx> = {}): Ctx =>
         id: "s1",
         label: "Svc One",
         serviceName: "s1",
-        components: [
-          { label: "API", value: "s1-api" },
-          { label: "Worker", value: "s1-worker" },
-        ],
       },
       { id: "s2", label: "Svc Two", serviceName: "s2" },
     ],
@@ -95,11 +91,6 @@ describe("LogsFilterToolbar", () => {
     expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("false");
   });
 
-  it("shows the reset button once the default service is narrowed to a component", () => {
-    renderToolbar(makeCtx({ serviceFilterValue: "s1::s1-api" }));
-    expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("false");
-  });
-
   it("shows the reset button once a real filter is applied", () => {
     renderToolbar(makeCtx({ filter: { level: "", startDate: "", endDate: "", search: "abc" } }));
     expect(screen.getByTestId("filter-toolbar").getAttribute("data-hide")).toBe("false");
@@ -108,56 +99,37 @@ describe("LogsFilterToolbar", () => {
   it("routes a service change to changeServices", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
-    h.captured?.onChange("service", ["s2"]);
+    h.captured?.onChange("service", "s2");
     expect(ctx.changeServices).toHaveBeenCalledWith(["s2"]);
   });
 
-  it("drops values for unknown service ids", () => {
+  it("falls back to the default for an unknown service id", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
-    h.captured?.onChange("service", ["missing", "s2"]);
-    expect(ctx.changeServices).toHaveBeenCalledWith(["s2"]);
-  });
-
-  it("passes an empty selection through so the viewer can fall back", () => {
-    const ctx = makeCtx();
-    renderToolbar(ctx);
-    h.captured?.onChange("service", []);
+    h.captured?.onChange("service", "missing");
     expect(ctx.changeServices).toHaveBeenCalledWith([]);
   });
 
-  it("keeps several services and components in one selection", () => {
+  it("passes a cleared selection through so the viewer can fall back", () => {
     const ctx = makeCtx();
     renderToolbar(ctx);
-    h.captured?.onChange("service", ["s1::s1-worker", "s2"]);
-    expect(ctx.changeServices).toHaveBeenCalledWith(["s1::s1-worker", "s2"]);
+    h.captured?.onChange("service", null);
+    expect(ctx.changeServices).toHaveBeenCalledWith([]);
   });
 
-  it("maps the service key back to a checkbox selection across services", () => {
-    const ctx = makeCtx({ serviceFilterValue: "s1::s1-api,s1-worker;s2" });
-    renderToolbar(ctx);
-    expect((h.captured as unknown as { values: { service: string[] } }).values.service).toEqual([
-      "s1::s1-api",
-      "s1::s1-worker",
-      "s2",
-    ]);
+  it("maps the service key to the single selected service", () => {
+    renderToolbar(makeCtx({ serviceFilterValue: "s2" }));
+    expect((h.captured as unknown as { values: { service: string } }).values.service).toBe("s2");
   });
 
-  it("builds nested checkbox-tree children from each service's components", () => {
-    const ctx = makeCtx();
-    renderToolbar(ctx);
-    const filters = h.captured?.filters as unknown as CapturedFilter[];
+  it("offers the services as a flat single-choice radio list", () => {
+    renderToolbar(makeCtx());
+    const filters = h.captured?.filters as unknown as (CapturedFilter & { type: string })[];
     const serviceFilter = filters.find((f) => f.key === "service");
+    expect(serviceFilter?.type).toBe("Radio");
     expect(serviceFilter?.props?.options).toEqual([
-      {
-        label: "Svc One",
-        value: "s1",
-        children: [
-          { label: "API", value: "s1::s1-api" },
-          { label: "Worker", value: "s1::s1-worker" },
-        ],
-      },
-      { label: "Svc Two", value: "s2", children: undefined },
+      { label: "Svc One", value: "s1" },
+      { label: "Svc Two", value: "s2" },
     ]);
   });
 
