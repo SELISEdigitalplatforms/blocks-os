@@ -27,16 +27,20 @@ export const OidcSignupPreview = (props: OidcPagePreviewProps) => {
           className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--border-strong)] text-[10px] text-[var(--accent)]"
           aria-hidden
         >
-          x
+          ✓
         </span>
         <p>
           {copy.termsPrefix} <span className="text-[var(--accent)]">{copy.termsLinkText}</span>{" "}
           {copy.termsConjunction}{" "}
-          <span className="text-[var(--accent)]">{copy.privacyLinkText}</span>
+          <span className="text-[var(--accent)]">{copy.privacyLinkText}</span>.
         </p>
       </div>
       <PreviewButton>{copy.submitButton}</PreviewButton>
-      <p className="my-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
+      {/* Cleared means "no SSO here" - the real page drops the divider entirely rather
+          than rendering an empty gap. */}
+      {copy.ssoSeparatorText && (
+        <p className="my-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
+      )}
       <p className="text-xs text-[var(--muted)]">
         {copy.loginPrompt} <span className="text-[var(--accent)]">{copy.loginLink}</span>
       </p>

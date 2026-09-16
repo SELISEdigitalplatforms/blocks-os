@@ -88,6 +88,20 @@ describe("OidcLoginPreview", () => {
     );
   });
 
+  it("drops the SSO divider when the separator is cleared, and shows it when set", () => {
+    const input = props();
+    const { rerender } = render(<OidcLoginPreview {...input} />);
+    expect(screen.getByText(input.template.pages.login.ssoSeparatorText as string)).toBeTruthy();
+
+    const withoutSso = structuredClone(input.template);
+    withoutSso.pages.login.ssoSeparatorText = null;
+    rerender(<OidcLoginPreview {...input} template={withoutSso} />);
+
+    expect(screen.queryByText("or")).toBeNull();
+    // The rest of the login page is untouched by a tenant that doesn't use SSO.
+    expect(screen.getByText(withoutSso.pages.login.submitButton)).toBeTruthy();
+  });
+
   it("renders the mode toggle as blocks-iam does, so the sci-fi CSS can tint the active tab", () => {
     const input = props();
     render(<OidcLoginPreview {...input} />);

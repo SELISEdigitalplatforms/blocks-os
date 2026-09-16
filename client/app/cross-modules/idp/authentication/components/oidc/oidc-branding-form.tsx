@@ -1010,12 +1010,13 @@ export const OidcBrandingForm = () => {
                     </div>
                   </div>
                   <div className="grid min-w-0 grid-cols-1 gap-4">
-                    {selectedPageFields.map(({ key, label, optional, multiline }) => {
+                    {selectedPageFields.map(({ key, label, optional, multiline, placeholder }) => {
                       const error = fieldError(`pages.${selectedPage}.${key}`);
                       const controlProps = {
                         id: `page-${selectedPage}-${key}`,
                         value: selectedPageValues[key] ?? "",
                         maxLength: 200,
+                        placeholder,
                         "aria-invalid": !!error,
                         onChange: (
                           event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
