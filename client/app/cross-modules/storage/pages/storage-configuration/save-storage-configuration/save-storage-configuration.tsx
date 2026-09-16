@@ -18,7 +18,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { storageConfigurationFormSchema, toStorageConfigurationFormValues } from "./utils";
+import { buildStorageConfigurationFormSchema, toStorageConfigurationFormValues } from "./utils";
 import {
   Form,
   FormControl,
@@ -47,6 +47,10 @@ export const SaveStorageConfiguration = ({
   configuration,
 }: SaveStorageConfigurationProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  // Editing only ever changes the Phase 1 upload/verification settings below; the provider
+  // identity and its credentials are fixed once a configuration exists.
+  const isEditMode = !!configuration;
+  const storageConfigurationFormSchema = buildStorageConfigurationFormSchema(isEditMode);
   const form = useForm({
     defaultValues: toStorageConfigurationFormValues(configuration),
     resolver: zodResolver(storageConfigurationFormSchema),
@@ -80,9 +84,6 @@ export const SaveStorageConfiguration = ({
     }
   };
   const storageStrategy = form.watch("storageStrategy") as StorageStrategyType;
-  // Editing only ever changes the Phase 1 upload/verification settings below; the provider
-  // identity and its credentials are fixed once a configuration exists.
-  const isEditMode = !!configuration;
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <DialogHeader>
@@ -95,7 +96,15 @@ export const SaveStorageConfiguration = ({
       </DialogHeader>
       <div>
         <Form {...form}>
-          <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onFormSubmitHandler)}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={form.handleSubmit(onFormSubmitHandler, () => {
+              // A validation failure here would otherwise be completely silent: the field it's
+              // attached to may not even be rendered (e.g. a stale error on a provider-credential
+              // field left over from before edit mode hid that section).
+              showErrorToast({ errors: "Please check the highlighted fields and try again." });
+            })}
+          >
             {!isEditMode && (
               <FormField
                 control={form.control}
