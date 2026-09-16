@@ -177,6 +177,138 @@ namespace XUnitTest.Services
         }
 
         [Fact]
+        public async Task SaveStorageConfiguration_NewConfiguration_PersistsThePhase1UploadSecurityFields()
+        {
+            using var _ = new BlocksTestContext();
+            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                             .ReturnsAsync(Valid());
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+            StorageConfiguration? saved = null;
+            _repo.Setup(r => r.SaveStorageConfigurationAsync(It.IsAny<StorageConfiguration>()))
+                 .Callback<StorageConfiguration>(c => saved = c)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest
+            {
+                Name = "az",
+                StorageStrategy = "Azure",
+                ConnectionString = "conn",
+                UploadUrlExpirySeconds = 900,
+                DownloadUrlExpirySeconds = 120,
+                MaxFileSizeInBytes = 10_485_760,
+                UploadCompletionRequiredFor = new List<string> { "Public", "Private" },
+            });
+
+            saved!.UploadUrlExpirySeconds.Should().Be(900);
+            saved.DownloadUrlExpirySeconds.Should().Be(120);
+            saved.MaxFileSizeInBytes.Should().Be(10_485_760);
+            saved.UploadCompletionRequiredFor.Should().BeEquivalentTo(new List<string> { "Public", "Private" });
+        }
+
+        [Fact]
+        public async Task SaveStorageConfiguration_UpdateOmittingTheFields_ClearsThemRatherThanKeepingTheStoredValues()
+        {
+            using var _ = new BlocksTestContext();
+            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                             .ReturnsAsync(Valid());
+            var existing = new StorageConfiguration
+            {
+                ItemId = "existing-id",
+                Name = "az",
+                UploadUrlExpirySeconds = 900,
+                DownloadUrlExpirySeconds = 120,
+                MaxFileSizeInBytes = 10_485_760,
+                UploadCompletionRequiredFor = new List<string> { "Public" },
+            };
+            _repo.Setup(r => r.GetStorageConfigurationByIdAsync("existing-id")).ReturnsAsync(existing);
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+            StorageConfiguration? saved = null;
+            _repo.Setup(r => r.SaveStorageConfigurationAsync(It.IsAny<StorageConfiguration>()))
+                 .Callback<StorageConfiguration>(c => saved = c)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest
+            {
+                Name = "az",
+                StorageStrategy = "Azure",
+                ConnectionString = "conn",
+                UpdateRequest = true,
+                ItemId = "existing-id",
+            });
+
+            saved!.UploadUrlExpirySeconds.Should().BeNull();
+            saved.DownloadUrlExpirySeconds.Should().BeNull();
+            saved.MaxFileSizeInBytes.Should().BeNull();
+            saved.UploadCompletionRequiredFor.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task SaveStorageConfiguration_Update_IgnoresRequestedChangesToProviderIdentityAndCredentials()
+        {
+            using var _ = new BlocksTestContext();
+            _storageValidator.Setup(v => v.ValidateAsync(It.IsAny<SaveStorageConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                             .ReturnsAsync(Valid());
+            var existing = new StorageConfiguration
+            {
+                ItemId = "existing-id",
+                Name = "original-name",
+                StorageStrategy = "Azure",
+                ConnectionString = "original-conn",
+                AccessKey = "original-access",
+                SecretKey = "original-secret",
+                CloudStorageRegionEndPoint = "original-region",
+                Host = "original-host",
+                Port = "original-port",
+                UserName = "original-user",
+                Password = "original-password",
+                RemoteBasePath = "/original",
+                SftpSecretKey = "original-sftp-key",
+            };
+            _repo.Setup(r => r.GetStorageConfigurationByIdAsync("existing-id")).ReturnsAsync(existing);
+            StorageConfiguration? saved = null;
+            _repo.Setup(r => r.SaveStorageConfigurationAsync(It.IsAny<StorageConfiguration>()))
+                 .Callback<StorageConfiguration>(c => saved = c)
+                 .Returns(Task.CompletedTask);
+
+            // Simulates a request that bypasses the (client-only) disabled fields and tries to rename the
+            // configuration, switch providers, and replace every credential.
+            await Service().SaveStorageConfigurationAsync(new SaveStorageConfigurationRequest
+            {
+                Name = "renamed",
+                StorageStrategy = "SftpStorage",
+                ConnectionString = "attacker-conn",
+                AccessKey = "attacker-access",
+                SecretKey = "attacker-secret",
+                CloudStorageRegionEndPoint = "attacker-region",
+                Host = "attacker-host",
+                Port = "attacker-port",
+                UserName = "attacker-user",
+                Password = "attacker-password",
+                RemoteBasePath = "/attacker",
+                UpdateRequest = true,
+                ItemId = "existing-id",
+                UploadUrlExpirySeconds = 900,
+            });
+
+            saved!.Name.Should().Be("original-name");
+            saved.StorageStrategy.Should().Be("Azure");
+            saved.ConnectionString.Should().Be("original-conn");
+            saved.AccessKey.Should().Be("original-access");
+            saved.SecretKey.Should().Be("original-secret");
+            saved.CloudStorageRegionEndPoint.Should().Be("original-region");
+            saved.Host.Should().Be("original-host");
+            saved.Port.Should().Be("original-port");
+            saved.UserName.Should().Be("original-user");
+            saved.Password.Should().Be("original-password");
+            saved.RemoteBasePath.Should().Be("/original");
+            saved.SftpSecretKey.Should().Be("original-sftp-key");
+            // The one thing an update is actually allowed to change still goes through.
+            saved.UploadUrlExpirySeconds.Should().Be(900);
+        }
+
+        [Fact]
         public async Task GetStorageConfigurations_MasksSecrets()
         {
             _repo.Setup(r => r.GetAllStorageConfigurationsByDateAsync()).ReturnsAsync(new List<StorageConfiguration>

@@ -11,6 +11,16 @@ export const HEX_COLOR_MESSAGE = "must be a valid hex color (#RGB or #RRGGBB)";
 export const HEX_OR_RGBA_COLOR_MESSAGE =
   "must be a valid hex color (#RGB or #RRGGBB) or rgba(r,g,b,a) color";
 export const TEXT_MESSAGE = "must be between 1 and 200 characters";
+export const URL_MESSAGE = "must be an absolute http or https URL";
+
+export const isAbsoluteHttpUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return !!url.hostname && ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+};
 
 export const isRgbaColor = (value: string) => {
   const match = value.match(RGBA_COLOR_PATTERN);
@@ -50,7 +60,19 @@ export const PAGE_OPTIONS: Array<{ key: OidcPageKey; label: string }> = [
   { key: "accountSelector", label: "Account Selector" },
 ];
 
-type PageField = { key: string; label: string; optional?: boolean; multiline?: boolean };
+type PageField = {
+  key: string;
+  label: string;
+  optional?: boolean;
+  multiline?: boolean;
+  placeholder?: string;
+  /**
+   * "url" swaps the 1-200 character rule for an absolute http/https URL check.
+   * "free" skips validation entirely - for copy where any value is legitimate,
+   * a single space included (a blank-looking divider is a real choice).
+   */
+  type?: "url" | "free";
+};
 
 export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
   login: [
@@ -61,7 +83,13 @@ export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
     { key: "submitButton", label: "Submit button" },
     { key: "signupPrompt", label: "Signup prompt" },
     { key: "signupLink", label: "Signup link" },
-    { key: "ssoSeparatorText", label: "SSO separator" },
+    {
+      key: "ssoSeparatorText",
+      label: "SSO separator",
+      optional: true,
+      type: "free",
+      placeholder: "or",
+    },
     { key: "activationErrorTitle", label: "Activation error title" },
     { key: "activationErrorMessage", label: "Activation error message", multiline: true },
     { key: "activateAccountButton", label: "Activate account button" },
@@ -75,13 +103,33 @@ export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
     { key: "organizationNameLabel", label: "Organization name label" },
     { key: "termsPrefix", label: "Terms prefix" },
     { key: "termsLinkText", label: "Terms link text" },
+    {
+      key: "termsLinkUrl",
+      label: "Terms link URL",
+      optional: true,
+      type: "url",
+      placeholder: "https://example.com/terms",
+    },
     { key: "termsConjunction", label: "Terms conjunction" },
     { key: "privacyLinkText", label: "Privacy link text" },
+    {
+      key: "privacyLinkUrl",
+      label: "Privacy link URL",
+      optional: true,
+      type: "url",
+      placeholder: "https://example.com/privacy",
+    },
     { key: "submitButton", label: "Submit button" },
     { key: "creatingButton", label: "Creating button" },
     { key: "loginPrompt", label: "Login prompt" },
     { key: "loginLink", label: "Login link" },
-    { key: "ssoSeparatorText", label: "SSO separator" },
+    {
+      key: "ssoSeparatorText",
+      label: "SSO separator",
+      optional: true,
+      type: "free",
+      placeholder: "or",
+    },
     { key: "successTitle", label: "Success title" },
     { key: "successSubtitle", label: "Success subtitle" },
     { key: "emailSentTitle", label: "Email sent title" },
@@ -179,12 +227,7 @@ export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
   (["logoUrlLight", "logoUrlDark"] as const).forEach((field) => {
     const value = template.branding[field];
     if (value === null) return;
-    try {
-      const url = new URL(value);
-      if (!url.hostname || !["http:", "https:"].includes(url.protocol)) throw new Error();
-    } catch {
-      errors[`branding.${field}`] = "must be an absolute http or https URL";
-    }
+    if (!isAbsoluteHttpUrl(value)) errors[`branding.${field}`] = URL_MESSAGE;
   });
 
   (["light", "dark"] as const).forEach((mode) => {
@@ -201,8 +244,17 @@ export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
 
   PAGE_OPTIONS.forEach(({ key: pageKey }) => {
     const page = template.pages[pageKey] as unknown as Record<string, string | null>;
-    PAGE_FIELDS[pageKey].forEach(({ key, optional }) => {
-      if (!validText(page[key], optional)) errors[`pages.${pageKey}.${key}`] = TEXT_MESSAGE;
+    PAGE_FIELDS[pageKey].forEach(({ key, optional, type }) => {
+      if (type === "free") return;
+      const value = page[key];
+      if (type === "url") {
+        if (optional && value === null) return;
+        if (typeof value !== "string" || !isAbsoluteHttpUrl(value)) {
+          errors[`pages.${pageKey}.${key}`] = URL_MESSAGE;
+        }
+        return;
+      }
+      if (!validText(value, optional)) errors[`pages.${pageKey}.${key}`] = TEXT_MESSAGE;
     });
   });
   (["footerText", "helpPrompt", "supportLinkText"] as const).forEach((key) => {

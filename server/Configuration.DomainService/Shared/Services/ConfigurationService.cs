@@ -128,6 +128,8 @@ namespace Configuration.DomainService.Shared.Services
                                     await _configurationRepository.GetStorageConfigurationByIdAsync(request.ItemId ?? "") :
                                     await _configurationRepository.GetStorageConfigurationByNameAsync(request.Name);
 
+            var isNewConfiguration = repoConfiguration == null;
+
             if (repoConfiguration == null)
             {
                 repoConfiguration = new StorageConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
@@ -136,13 +138,31 @@ namespace Configuration.DomainService.Shared.Services
             repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
             repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
             repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
+
+            #region Phase1UploadSecurity
+
+            repoConfiguration.UploadUrlExpirySeconds = request.UploadUrlExpirySeconds;
+            repoConfiguration.DownloadUrlExpirySeconds = request.DownloadUrlExpirySeconds;
+            repoConfiguration.MaxFileSizeInBytes = request.MaxFileSizeInBytes;
+            repoConfiguration.UploadCompletionRequiredFor = request.UploadCompletionRequiredFor;
+
+            #endregion
+
+            // The provider identity and its credentials are fixed once a configuration exists - the client UI
+            // disables these fields in edit mode, but that alone doesn't stop a direct API call from sending
+            // different values, so an update request is not trusted to change them here either. Only a brand
+            // new configuration takes these from the request.
+            if (!isNewConfiguration)
+            {
+                return repoConfiguration;
+            }
+
             repoConfiguration.Name = request.Name;
             repoConfiguration.ConnectionString = request.ConnectionString;
             repoConfiguration.SecretKey = request.SecretKey;
             repoConfiguration.StorageStrategy = request.StorageStrategy;
             repoConfiguration.AccessKey = request.AccessKey;
             repoConfiguration.CloudStorageRegionEndPoint = request.CloudStorageRegionEndPoint;
-
 
             #region LocalStorage
 

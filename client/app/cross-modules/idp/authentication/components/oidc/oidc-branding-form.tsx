@@ -33,7 +33,11 @@ import type {
   IOidcUiTemplate,
   IOidcUiThemePalette,
 } from "@blocks-idp/authentication/models/auth.oidc.model";
-import { useGetPreSignedUrlForUpload, useUploadFile } from "@blocks-storage/hooks/use-storage-file";
+import {
+  useCompleteUpload,
+  useGetPreSignedUrlForUpload,
+  useUploadFile,
+} from "@blocks-storage/hooks/use-storage-file";
 import { storageService } from "@blocks-storage/services/storage.service";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { OidcTemplatePreview } from "./oidc-template-preview";
@@ -350,6 +354,7 @@ export const OidcBrandingForm = () => {
   const { mutateAsync: saveTemplate, isPending: isSaving } = useSaveOidcTemplate();
   const { mutateAsync: getPresignedUrl } = useGetPreSignedUrlForUpload();
   const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutateAsync: completeUpload } = useCompleteUpload();
 
   const sourceTemplate = !isLoading && !isError ? (template ?? DEFAULT_OIDC_UI_TEMPLATE) : null;
   const normalizedTemplate = sourceTemplate ? normalizeOidcUiTemplate(sourceTemplate) : null;
@@ -512,13 +517,22 @@ export const OidcBrandingForm = () => {
       });
       if (!response.isSuccess) throw new Error("Failed to get upload URL");
       await uploadFile({ url: response.uploadUrl, file });
+      if (response.uploadCompletionRequired) {
+        const completion = await completeUpload({
+          fileId: response.fileId,
+          fileVersionId: response.fileVersionId ?? "",
+        });
+        if (completion.verificationStatus !== "Verified") {
+          throw new Error(completion.rejectionReason ?? "Logo failed verification");
+        }
+      }
       const fileRecord = await storageService.file.getFileByFileId({
         itemId: response.fileId,
         projectKey: tenantId,
       });
       return fileRecord.url;
     },
-    [getPresignedUrl, tenantId, uploadFile],
+    [completeUpload, getPresignedUrl, tenantId, uploadFile],
   );
 
   const validationErrors = useMemo(() => (draft ? validateOidcUiTemplate(draft) : {}), [draft]);
@@ -1010,12 +1024,13 @@ export const OidcBrandingForm = () => {
                     </div>
                   </div>
                   <div className="grid min-w-0 grid-cols-1 gap-4">
-                    {selectedPageFields.map(({ key, label, optional, multiline }) => {
+                    {selectedPageFields.map(({ key, label, optional, multiline, placeholder }) => {
                       const error = fieldError(`pages.${selectedPage}.${key}`);
                       const controlProps = {
                         id: `page-${selectedPage}-${key}`,
                         value: selectedPageValues[key] ?? "",
                         maxLength: 200,
+                        placeholder,
                         "aria-invalid": !!error,
                         onChange: (
                           event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,

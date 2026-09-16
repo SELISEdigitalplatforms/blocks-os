@@ -6,6 +6,8 @@ import {
   DialogTrigger,
 } from "@/components/ui-kits/dialog/dialog";
 import { Input } from "@/components/ui-kits/input/input";
+import { Switch } from "@/components/ui-kits/switch/switch";
+import { Separator } from "@/components/ui-kits/separator/separator";
 import { Button } from "@/components/ui-kits/button/button";
 import {
   Select,
@@ -16,7 +18,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { storageConfigurationFormDefaultValue, storageConfigurationFormSchema } from "./utils";
+import { storageConfigurationFormSchema, toStorageConfigurationFormValues } from "./utils";
 import {
   Form,
   FormControl,
@@ -35,6 +37,7 @@ import {
   StorageStrategyType,
 } from "@blocks-storage/models/storage.model";
 import { isErrorWithErrors } from "@/lib/error";
+import { cn } from "@/lib/utils";
 type SaveStorageConfigurationProps = {
   configuration?: IStorageConfiguration;
   onClose: (val: boolean) => void;
@@ -45,15 +48,19 @@ export const SaveStorageConfiguration = ({
 }: SaveStorageConfigurationProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const form = useForm({
-    defaultValues: configuration || storageConfigurationFormDefaultValue,
+    defaultValues: toStorageConfigurationFormValues(configuration),
     resolver: zodResolver(storageConfigurationFormSchema),
   });
   const { isPending, mutateAsync } = useSaveStorageConfiguration();
   const onFormSubmitHandler = async (values: z.infer<typeof storageConfigurationFormSchema>) => {
     try {
+      const { maxFileSizeInMb, ...rest } = values;
       const payload = {
-        ...values,
+        ...rest,
         storageStrategy: values.storageStrategy as StorageStrategyType,
+        uploadUrlExpirySeconds: Number(values.uploadUrlExpirySeconds),
+        downloadUrlExpirySeconds: Number(values.downloadUrlExpirySeconds),
+        maxFileSizeInBytes: Math.round(Number(maxFileSizeInMb) * 1024 * 1024),
         projectKey: tenantId,
         updateRequest: configuration ? true : false,
         itemId: configuration?.itemId || null,
@@ -73,6 +80,9 @@ export const SaveStorageConfiguration = ({
     }
   };
   const storageStrategy = form.watch("storageStrategy") as StorageStrategyType;
+  // Editing only ever changes the Phase 1 upload/verification settings below; the provider
+  // identity and its credentials are fixed once a configuration exists.
+  const isEditMode = !!configuration;
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <DialogHeader>
@@ -123,7 +133,11 @@ export const SaveStorageConfiguration = ({
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter name" {...field} />
+                      <Input
+                        placeholder="Enter name"
+                        {...field}
+                        disabled={isEditMode}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -142,6 +156,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter access key"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -159,6 +174,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter secret key"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -176,6 +192,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter region endpoint"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -196,6 +213,7 @@ export const SaveStorageConfiguration = ({
                           placeholder="Enter connection string"
                           {...field}
                           value={field.value ?? ""}
+                          disabled={isEditMode}
                         />
                       </FormControl>
                       <FormMessage />
@@ -216,6 +234,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter access key"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -233,6 +252,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter secret key"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -250,6 +270,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter host URL"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -271,6 +292,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter remote base path"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -284,7 +306,7 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Host IP Address</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter host" {...field} value={field.value ?? ""} />
+                          <Input placeholder="Enter host" {...field} value={field.value ?? ""} disabled={isEditMode} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -302,6 +324,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter port"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -319,6 +342,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter username"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -336,6 +360,7 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter password"
                             {...field}
                             value={field.value ?? ""}
+                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -345,6 +370,135 @@ export const SaveStorageConfiguration = ({
                 </>
               )}
             </div>
+
+            <Separator className="mt-2" />
+
+            <div className="text-left text-sm">
+              <h3 className="text-sm font-medium">
+                Upload &amp; verification settings
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Controls how long signed URLs stay valid and which uploads are
+                held for verification before they become readable.
+              </p>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  name="uploadUrlExpirySeconds"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Upload URL Expiry (seconds)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="600"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="downloadUrlExpirySeconds"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Download URL Expiry (seconds)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="300"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="maxFileSizeInMb"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Maximum File Size (MB)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="5"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                name="uploadCompletionRequiredFor"
+                control={form.control}
+                render={({ field }) => {
+                  const selected: ("Public" | "Private")[] = field.value ?? [];
+                  const toggle = (option: "Public" | "Private", checked: boolean) => {
+                    field.onChange(
+                      checked
+                        ? [...selected, option]
+                        : selected.filter((value) => value !== option),
+                    );
+                  };
+                  return (
+                    <FormItem className="mt-4">
+                      <FormLabel>Require upload verification for</FormLabel>
+                      <FormControl>
+                        <div className="rounded-md border">
+                          {(
+                            [
+                              {
+                                option: "Public" as const,
+                                description:
+                                  "Files served on a link anyone can open.",
+                              },
+                              {
+                                option: "Private" as const,
+                                description:
+                                  "Files restricted to authorized users.",
+                              },
+                            ]
+                          ).map(({ option, description }, index) => (
+                            <div
+                              key={option}
+                              className={cn(
+                                "flex items-center justify-between gap-4 px-4 py-3",
+                                index > 0 && "border-t",
+                              )}
+                            >
+                              <div>
+                                <div className="text-sm font-medium">{option}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {description}
+                                </div>
+                              </div>
+                              <Switch
+                                aria-label={option}
+                                checked={selected.includes(option)}
+                                onCheckedChange={(checked) => toggle(option, checked)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            </div>
+
             <div className="mt-6 flex w-full items-center justify-end">
               <div className="flex flex-row gap-2">
                 <DialogTrigger asChild>

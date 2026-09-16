@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
+using Storage.DomainService.Enums;
 using StorageDriver;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
@@ -243,11 +244,26 @@ namespace DomainService.Projects
         {
             var fileName = $"{project.TenantId}.pfx";
             var fileId = Guid.NewGuid().ToString();
-            var preSingedUri = await GetPreSingedUriForUpload(fileId, fileName);
+            var presignedUrlResponse = await GetPreSingedUriForUpload(fileId, fileName);
 
             var content = GetByteArrayContent(publicKeyCertificate, project.JwtTokenParameters.PublicCertificatePassword);
 
-            await UploadContentAsync(content, preSingedUri);
+            await UploadContentAsync(content, presignedUrlResponse.UploadUrl);
+
+            if (presignedUrlResponse.UploadCompletionRequired)
+            {
+                var completion = await _storageDriverService.CompleteUploadAsync(new CompleteUploadRequest
+                {
+                    FileId = fileId,
+                    FileVersionId = presignedUrlResponse.FileVersionId,
+                });
+
+                if (completion?.VerificationStatus != FileVerificationStatus.Verified)
+                {
+                    throw new InvalidOperationException(
+                        $"Certificate upload was not verified: {completion?.RejectionReason}");
+                }
+            }
 
             var getFileResponse = await _storageDriverService.GetUrlForDownloadFileAsync(new GetFileRequest { FileId = fileId });
             if (getFileResponse == null || string.IsNullOrWhiteSpace(getFileResponse.Url))
@@ -270,7 +286,7 @@ namespace DomainService.Projects
             response.EnsureSuccessStatusCode();
         }
 
-        private async Task<string> GetPreSingedUriForUpload(string fileId, string fileName)
+        private async Task<GetPreSignedUrlForUploadResponse> GetPreSingedUriForUpload(string fileId, string fileName)
         {
             var preSignedUriRequest = new GetPreSignedUrlForUploadRequest
             {
@@ -282,8 +298,7 @@ namespace DomainService.Projects
                 AccessModifier = "Public"
             };
 
-            var presignedUrlResponse = await _storageDriverService.GetPerSignedUrlForUploadAsync(preSignedUriRequest);
-            return presignedUrlResponse.UploadUrl;
+            return await _storageDriverService.GetPerSignedUrlForUploadAsync(preSignedUriRequest);
         }
 
         private static ByteArrayContent GetByteArrayContent(X509Certificate2 certificate, string password)
