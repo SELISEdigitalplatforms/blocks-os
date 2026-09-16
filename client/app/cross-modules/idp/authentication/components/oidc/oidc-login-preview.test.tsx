@@ -100,6 +100,14 @@ describe("OidcLoginPreview", () => {
     expect(screen.queryByText("or")).toBeNull();
     // The rest of the login page is untouched by a tenant that doesn't use SSO.
     expect(screen.getByText(withoutSso.pages.login.submitButton)).toBeTruthy();
+
+    // The element after the divider carries its own top margin, so dropping the divider
+    // can't collapse it onto the submit button.
+    const signupPrompt = screen.getByText(withoutSso.pages.login.signupPrompt, {
+      exact: false,
+      selector: "p",
+    });
+    expect(signupPrompt.className).toContain("mt-3");
   });
 
   it("renders the mode toggle as blocks-iam does, so the sci-fi CSS can tint the active tab", () => {

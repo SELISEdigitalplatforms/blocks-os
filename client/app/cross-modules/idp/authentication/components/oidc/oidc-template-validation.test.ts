@@ -60,12 +60,24 @@ describe("validateOidcUiTemplate", () => {
       const field = PAGE_FIELDS[pageKey].find(({ key }) => key === "ssoSeparatorText");
       expect(field?.optional).toBe(true);
       expect(field?.placeholder).toBe("or");
+      expect(DEFAULT_OIDC_UI_TEMPLATE.pages[pageKey].ssoSeparatorText).toBe("or");
 
       const draft = template();
       draft.pages[pageKey].ssoSeparatorText = null;
       expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
     }
   });
+
+  it.each([" ", "", "  ", "or", "x".repeat(300)])(
+    "accepts %j as an SSO separator - any divider the tenant wants is legitimate",
+    (value) => {
+      for (const pageKey of ["login", "signup"] as const) {
+        const draft = template();
+        draft.pages[pageKey].ssoSeparatorText = value;
+        expect(validateOidcUiTemplate(draft)[`pages.${pageKey}.ssoSeparatorText`]).toBeUndefined();
+      }
+    },
+  );
 
   it("lets a tenant point the consent links at its own terms and privacy pages", () => {
     const draft = template();

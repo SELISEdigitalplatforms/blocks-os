@@ -39,9 +39,11 @@ export const OidcSignupPreview = (props: OidcPagePreviewProps) => {
       {/* Cleared means "no SSO here" - the real page drops the divider entirely rather
           than rendering an empty gap. */}
       {copy.ssoSeparatorText && (
-        <p className="my-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
+        <p className="mt-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
       )}
-      <p className="text-xs text-[var(--muted)]">
+      {/* Its own top margin, so the spacing holds whether or not the divider above is
+          rendered. */}
+      <p className="mt-3 text-xs text-[var(--muted)]">
         {copy.loginPrompt} <span className="text-[var(--accent)]">{copy.loginLink}</span>
       </p>
       <PreviewSuccess title={copy.successTitle} subtitle={copy.successSubtitle} />

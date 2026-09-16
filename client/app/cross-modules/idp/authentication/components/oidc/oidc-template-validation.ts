@@ -66,8 +66,12 @@ type PageField = {
   optional?: boolean;
   multiline?: boolean;
   placeholder?: string;
-  /** "url" swaps the 1-200 character rule for an absolute http/https URL check. */
-  type?: "url";
+  /**
+   * "url" swaps the 1-200 character rule for an absolute http/https URL check.
+   * "free" skips validation entirely - for copy where any value is legitimate,
+   * a single space included (a blank-looking divider is a real choice).
+   */
+  type?: "url" | "free";
 };
 
 export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
@@ -79,7 +83,13 @@ export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
     { key: "submitButton", label: "Submit button" },
     { key: "signupPrompt", label: "Signup prompt" },
     { key: "signupLink", label: "Signup link" },
-    { key: "ssoSeparatorText", label: "SSO separator", optional: true, placeholder: "or" },
+    {
+      key: "ssoSeparatorText",
+      label: "SSO separator",
+      optional: true,
+      type: "free",
+      placeholder: "or",
+    },
     { key: "activationErrorTitle", label: "Activation error title" },
     { key: "activationErrorMessage", label: "Activation error message", multiline: true },
     { key: "activateAccountButton", label: "Activate account button" },
@@ -113,7 +123,13 @@ export const PAGE_FIELDS: Record<OidcPageKey, PageField[]> = {
     { key: "creatingButton", label: "Creating button" },
     { key: "loginPrompt", label: "Login prompt" },
     { key: "loginLink", label: "Login link" },
-    { key: "ssoSeparatorText", label: "SSO separator", optional: true, placeholder: "or" },
+    {
+      key: "ssoSeparatorText",
+      label: "SSO separator",
+      optional: true,
+      type: "free",
+      placeholder: "or",
+    },
     { key: "successTitle", label: "Success title" },
     { key: "successSubtitle", label: "Success subtitle" },
     { key: "emailSentTitle", label: "Email sent title" },
@@ -229,6 +245,7 @@ export const validateOidcUiTemplate = (template: IOidcUiTemplate) => {
   PAGE_OPTIONS.forEach(({ key: pageKey }) => {
     const page = template.pages[pageKey] as unknown as Record<string, string | null>;
     PAGE_FIELDS[pageKey].forEach(({ key, optional, type }) => {
+      if (type === "free") return;
       const value = page[key];
       if (type === "url") {
         if (optional && value === null) return;
