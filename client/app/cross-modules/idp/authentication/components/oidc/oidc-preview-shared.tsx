@@ -208,6 +208,22 @@ export const PreviewButton = ({ children }: { children: ReactNode }) => (
   </button>
 );
 
+/**
+ * The divider between the password form and the SSO buttons, built exactly as the real
+ * login and signup pages build it: a rule either side in the border color, the tenant's
+ * separator copy between them in the muted color. Blank copy means the tenant offers no
+ * SSO, so nothing is drawn - and the element below supplies its own top margin, so the
+ * spacing holds either way.
+ */
+export const PreviewSsoSeparator = ({ text }: { text: string | null }) =>
+  text ? (
+    <div className="mt-3 flex items-center gap-3">
+      <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
+      <span className="oidc-font-rajdhani text-xs text-[var(--muted)]">{text}</span>
+      <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
+    </div>
+  ) : null;
+
 export const PreviewSuccess = ({ title, subtitle }: { title: string; subtitle: string }) => (
   <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--accent-soft)] p-3 sm:mt-5">
     <p className="text-sm font-semibold text-[var(--success)]">{title}</p>
