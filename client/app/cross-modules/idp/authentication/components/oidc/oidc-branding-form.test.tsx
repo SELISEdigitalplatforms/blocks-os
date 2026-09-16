@@ -437,7 +437,14 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
 
     await user.clear(separator);
     expect(latestActions().isValid).toBe(true);
+    expect(screen.queryByText(/SSO separator must be between/)).toBeNull();
 
+    // A lone space is a real choice - a divider with no word in it - not an error.
+    await user.type(separator, " ");
+    expect(latestActions().isValid).toBe(true);
+    expect(screen.queryByText(/SSO separator must be between/)).toBeNull();
+
+    await user.clear(separator);
     await act(async () => latestActions().onSave());
     expect(h.saveTemplate.mock.calls[0][0].pages.signup.ssoSeparatorText).toBeNull();
   });

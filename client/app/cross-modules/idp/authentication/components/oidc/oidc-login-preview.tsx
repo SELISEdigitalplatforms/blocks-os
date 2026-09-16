@@ -25,7 +25,7 @@ export const OidcLoginPreview = (props: OidcPagePreviewProps) => {
       {/* Sits between the password form and the SSO buttons, as on the real page. Cleared
           means "no SSO here", so the divider goes away with it. */}
       {copy.ssoSeparatorText && (
-        <p className="my-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
+        <p className="mt-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
       )}
       <p className="mt-3 text-xs text-[var(--muted)] sm:mt-4">
         {copy.signupPrompt} <span className="oidc-sci-fi-link">{copy.signupLink}</span>
