@@ -3,6 +3,7 @@ import {
   PreviewButton,
   PreviewField,
   PreviewHeading,
+  PreviewSsoSeparator,
   type OidcPagePreviewProps,
 } from "./oidc-preview-shared";
 
@@ -22,11 +23,7 @@ export const OidcLoginPreview = (props: OidcPagePreviewProps) => {
         </div>
         <PreviewButton>{copy.submitButton}</PreviewButton>
       </div>
-      {/* Sits between the password form and the SSO buttons, as on the real page. Cleared
-          means "no SSO here", so the divider goes away with it. */}
-      {copy.ssoSeparatorText && (
-        <p className="mt-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
-      )}
+      <PreviewSsoSeparator text={copy.ssoSeparatorText} />
       <p className="mt-3 text-xs text-[var(--muted)] sm:mt-4">
         {copy.signupPrompt} <span className="oidc-sci-fi-link">{copy.signupLink}</span>
       </p>

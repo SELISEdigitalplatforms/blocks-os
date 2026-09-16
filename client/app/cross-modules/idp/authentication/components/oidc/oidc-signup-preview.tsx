@@ -3,6 +3,7 @@ import {
   PreviewButton,
   PreviewField,
   PreviewHeading,
+  PreviewSsoSeparator,
   PreviewSuccess,
   type OidcPagePreviewProps,
 } from "./oidc-preview-shared";
@@ -36,11 +37,7 @@ export const OidcSignupPreview = (props: OidcPagePreviewProps) => {
         </p>
       </div>
       <PreviewButton>{copy.submitButton}</PreviewButton>
-      {/* Cleared means "no SSO here" - the real page drops the divider entirely rather
-          than rendering an empty gap. */}
-      {copy.ssoSeparatorText && (
-        <p className="mt-3 text-center text-xs text-[var(--muted)]">{copy.ssoSeparatorText}</p>
-      )}
+      <PreviewSsoSeparator text={copy.ssoSeparatorText} />
       {/* Its own top margin, so the spacing holds whether or not the divider above is
           rendered. */}
       <p className="mt-3 text-xs text-[var(--muted)]">

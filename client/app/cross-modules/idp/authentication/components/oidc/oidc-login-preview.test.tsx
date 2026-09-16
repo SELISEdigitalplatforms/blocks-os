@@ -88,6 +88,21 @@ describe("OidcLoginPreview", () => {
     );
   });
 
+  it("draws the SSO divider's rules in the border color, as the real pages do", () => {
+    const input = props();
+    render(<OidcLoginPreview {...input} />);
+
+    const separatorText = screen.getByText(input.template.pages.login.ssoSeparatorText as string);
+    const rules = Array.from(separatorText.parentElement?.children ?? []).filter(
+      (child) => child !== separatorText,
+    );
+    expect(rules).toHaveLength(2);
+    for (const rule of rules) {
+      expect((rule as HTMLElement).style.borderColor).toBe("var(--border)");
+      expect(rule.className).toContain("border-t");
+    }
+  });
+
   it("drops the SSO divider when the separator is cleared, and shows it when set", () => {
     const input = props();
     const { rerender } = render(<OidcLoginPreview {...input} />);
