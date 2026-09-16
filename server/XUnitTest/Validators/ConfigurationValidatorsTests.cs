@@ -349,6 +349,35 @@ namespace XUnitTest.Validators
             result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
         }
 
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_ExceedsFiftyMb_Fails()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 50 * 1024 * 1024 + 1;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_ExactlyFiftyMb_IsValid()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 50 * 1024 * 1024;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
         [Theory]
         [MemberData(nameof(AllowedUploadCompletionCombinations))]
         public async Task Validate_UploadCompletionRequiredFor_AllowedCombinations_IsValid(List<string> accessModifiers)
