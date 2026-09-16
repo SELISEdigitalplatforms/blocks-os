@@ -266,4 +266,54 @@ describe("SaveStorageConfiguration", () => {
       expect(h.mutateAsync).not.toHaveBeenCalled();
     });
   });
+
+  describe("a single mounted instance switching from Add to Edit (regression)", () => {
+    // In the real app, SaveStorageConfiguration is always present as a child of the storage
+    // page's <Dialog> - only Radix's internal open state toggles, so this component never
+    // actually unmounts between an "Add" render and a later "Edit" open of the same instance.
+    // `renderModal()` above always mounts fresh, which is exactly why the original
+    // useForm({ defaultValues }) bug (form staying stuck on Add-mode empty defaults forever)
+    // never showed up in any of the tests above.
+    it("picks up the real configuration after being opened once with none, without remounting", async () => {
+      const user = userEvent.setup();
+      const configuration = {
+        itemId: "cfg-9",
+        name: "Existing Store",
+        storageStrategy: "Azure",
+        accessKey: null,
+        secretKey: null,
+        cloudStorageRegionEndPoint: null,
+        connectionString: "conn-string",
+        host: null,
+        port: null,
+        userName: null,
+        password: null,
+        remoteBasePath: null,
+      } as unknown as IStorageConfiguration;
+
+      const utils = render(
+        <Dialog open>
+          <SaveStorageConfiguration onClose={vi.fn()} />
+        </Dialog>,
+      );
+      expect(screen.getByText("Add Storage Configuration")).toBeTruthy();
+
+      utils.rerender(
+        <Dialog open>
+          <SaveStorageConfiguration onClose={vi.fn()} configuration={configuration} />
+        </Dialog>,
+      );
+
+      expect(await screen.findByText("Edit Storage Configuration")).toBeTruthy();
+
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      const payload = h.mutateAsync.mock.calls[0][0];
+      expect(payload.name).toBe("Existing Store");
+      expect(payload.storageStrategy).toBe("Azure");
+      expect(payload.updateRequest).toBe(true);
+      expect(payload.itemId).toBe("cfg-9");
+    });
+  });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { IStorageConfiguration } from "@blocks-storage/models/storage.model";
 import {
-  storageConfigurationFormSchema,
+  buildStorageConfigurationFormSchema,
   storageConfigurationFormDefaultValue,
   toStorageConfigurationFormValues,
 } from "./utils";
@@ -12,6 +12,10 @@ const base = {
   port: "22",
   host: "host",
 };
+
+// Add-mode schema: provider-identity/credential fields are required, matching every existing test
+// below. Edit mode (see the dedicated describe block) skips that validation entirely.
+const storageConfigurationFormSchema = buildStorageConfigurationFormSchema(false);
 
 describe("storageConfigurationFormSchema", () => {
   it("requires a name", () => {
@@ -149,6 +153,53 @@ describe("storageConfigurationFormSchema", () => {
       });
       expect(result.success).toBe(false);
     });
+  });
+});
+
+describe("buildStorageConfigurationFormSchema(true) - edit mode", () => {
+  // The provider identity/credential fields are hidden (not rendered) in the edit-mode form, so
+  // validating them would fail silently with no way for the user to see or fix the error. A real
+  // GET response can also return these masked or null for a provider that doesn't use them, which
+  // must never block saving a Phase 1 field change.
+  const editSchema = buildStorageConfigurationFormSchema(true);
+
+  it("accepts missing AWS credentials", () => {
+    const result = editSchema.safeParse({
+      ...base,
+      storageStrategy: "AWS",
+      secretKey: null,
+      accessKey: null,
+      cloudStorageRegionEndPoint: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a missing Azure connection string", () => {
+    const result = editSchema.safeParse({
+      ...base,
+      storageStrategy: "Azure",
+      connectionString: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts missing SFTP fields", () => {
+    const result = editSchema.safeParse({
+      ...base,
+      storageStrategy: "SftpStorage",
+      host: null,
+      userName: null,
+      password: null,
+      remoteBasePath: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("still requires a name and still validates the Phase 1 fields", () => {
+    expect(editSchema.safeParse({ ...base, name: "" }).success).toBe(false);
+    expect(
+      editSchema.safeParse({ ...base, uploadUrlExpirySeconds: "0" }).success,
+    ).toBe(false);
   });
 });
 

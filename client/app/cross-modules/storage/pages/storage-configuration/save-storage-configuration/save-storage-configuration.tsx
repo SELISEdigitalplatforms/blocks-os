@@ -18,7 +18,11 @@ import {
 } from "@/components/ui-kits/select/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { storageConfigurationFormSchema, toStorageConfigurationFormValues } from "./utils";
+import {
+  buildStorageConfigurationFormSchema,
+  storageConfigurationFormDefaultValue,
+  toStorageConfigurationFormValues,
+} from "./utils";
 import {
   Form,
   FormControl,
@@ -47,8 +51,19 @@ export const SaveStorageConfiguration = ({
   configuration,
 }: SaveStorageConfigurationProps) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
+  // Editing only ever changes the Phase 1 upload/verification settings below; the provider
+  // identity and its credentials are fixed once a configuration exists.
+  const isEditMode = !!configuration;
+  const storageConfigurationFormSchema = buildStorageConfigurationFormSchema(isEditMode);
+  // `SaveStorageConfiguration` never actually unmounts between dialog opens - it's an
+  // unconditional child of the storage page's <Dialog>, which only toggles Radix's internal
+  // open state, not this component's presence in the tree. `defaultValues` alone only applies
+  // once, at this component's very first mount (when `configuration` was still undefined), so
+  // every subsequent Edit open would otherwise keep reusing that stale, empty form state. `values`
+  // keeps the form in sync with `configuration` on every change instead.
   const form = useForm({
-    defaultValues: toStorageConfigurationFormValues(configuration),
+    defaultValues: storageConfigurationFormDefaultValue,
+    values: toStorageConfigurationFormValues(configuration),
     resolver: zodResolver(storageConfigurationFormSchema),
   });
   const { isPending, mutateAsync } = useSaveStorageConfiguration();
@@ -80,9 +95,6 @@ export const SaveStorageConfiguration = ({
     }
   };
   const storageStrategy = form.watch("storageStrategy") as StorageStrategyType;
-  // Editing only ever changes the Phase 1 upload/verification settings below; the provider
-  // identity and its credentials are fixed once a configuration exists.
-  const isEditMode = !!configuration;
   return (
     <DialogContent className="rounded-md sm:max-w-[700px]">
       <DialogHeader>
@@ -95,7 +107,16 @@ export const SaveStorageConfiguration = ({
       </DialogHeader>
       <div>
         <Form {...form}>
-          <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onFormSubmitHandler)}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={form.handleSubmit(onFormSubmitHandler, (errors) => {
+              // A validation failure here would otherwise be completely silent: the field it's
+              // attached to may not even be rendered (e.g. a stale error on a provider-credential
+              // field left over from before edit mode hid that section).
+              console.error("[SaveStorageConfiguration] validation failed", errors);
+              showErrorToast({ errors: "Please check the highlighted fields and try again." });
+            })}
+          >
             {!isEditMode && (
               <FormField
                 control={form.control}
