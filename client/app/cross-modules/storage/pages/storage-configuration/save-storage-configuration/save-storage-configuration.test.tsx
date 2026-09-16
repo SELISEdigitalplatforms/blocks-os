@@ -102,7 +102,7 @@ describe("SaveStorageConfiguration", () => {
     expect(h.mutateAsync.mock.calls[0][0].storageStrategy).toBe("Azure");
   });
 
-  it("renders the edit heading, locks the provider identity fields, and marks the save as an update", async () => {
+  it("renders the edit heading, hides the provider identity fields, and marks the save as an update", async () => {
     const user = userEvent.setup();
     const configuration = {
       itemId: "cfg-5",
@@ -121,19 +121,17 @@ describe("SaveStorageConfiguration", () => {
     renderModal({ configuration });
 
     expect(screen.getByText("Edit Storage Configuration")).toBeTruthy();
-    expect(screen.getByDisplayValue("Existing Store")).toBeTruthy();
-
-    // Only the Phase 1 upload/verification fields may change once a configuration exists.
-    expect((screen.getByPlaceholderText("Enter name") as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByPlaceholderText("Enter access key") as HTMLInputElement).disabled).toBe(
-      true,
-    );
-    expect((screen.getByPlaceholderText("Enter secret key") as HTMLInputElement).disabled).toBe(
-      true,
-    );
     expect(
-      (screen.getByPlaceholderText("Enter region endpoint") as HTMLInputElement).disabled,
-    ).toBe(true);
+      screen.getByText("Only the upload and verification settings below can be changed."),
+    ).toBeTruthy();
+
+    // Only the Phase 1 upload/verification fields may change once a configuration exists - the
+    // provider identity and its credentials aren't rendered at all in edit mode.
+    expect(screen.queryByText("Storage Provider")).toBeNull();
+    expect(screen.queryByPlaceholderText("Enter name")).toBeNull();
+    expect(screen.queryByPlaceholderText("Enter access key")).toBeNull();
+    expect(screen.queryByPlaceholderText("Enter secret key")).toBeNull();
+    expect(screen.queryByPlaceholderText("Enter region endpoint")).toBeNull();
 
     await user.clear(screen.getByLabelText("Maximum File Size (MB)"));
     await user.type(screen.getByLabelText("Maximum File Size (MB)"), "10");

@@ -1,10 +1,20 @@
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { parseAsBoolean, useQueryState } from "nuqs";
+import { ChevronRight, Pencil, Plus, Power, PowerOff, Trash2, Waypoints } from "lucide-react";
+import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Banner } from "@/components/ui-kits/banner/banner";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui-kits/dialog/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -12,14 +22,17 @@ import { providers as providerCatalogue } from "@blocks-idp/authentication/const
 import {
   useDeleteThirdPartyJwtProvider,
   useGetThirdPartyJwtProviders,
+  useSaveThirdPartyJwtProvider,
 } from "@blocks-idp/authentication/hooks/use-third-party-jwt-provider";
 import {
   requiresIdpHeader,
   SIGNING_ALGORITHMS,
+  toSavePayload,
   type ThirdPartyJwtProvider,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
-import { ApiIntegrationCard } from "./api-integration-card";
 import { EmptyConfiguration } from "./empty-configuration";
+import { MapJwtClaimModal } from "./map-jwt-claim-modal";
+import { ProviderDetails } from "./provider-details";
 import { ProviderFormModal } from "./provider-form-modal";
 
 const LoadingSkeleton = () => (
@@ -43,11 +56,23 @@ const providerIcon = (name: string) =>
 
 type ProviderCardProps = {
   provider: ThirdPartyJwtProvider;
+  onToggleActive: (provider: ThirdPartyJwtProvider) => void;
+  isTogglingActive: boolean;
+  onOpen: (provider: ThirdPartyJwtProvider) => void;
   onEdit: (provider: ThirdPartyJwtProvider) => void;
+  onMapClaims: (provider: ThirdPartyJwtProvider) => void;
   onDelete: (provider: ThirdPartyJwtProvider) => void;
 };
 
-function ProviderCard({ provider, onEdit, onDelete }: Readonly<ProviderCardProps>) {
+function ProviderCard({
+  provider,
+  onToggleActive,
+  isTogglingActive,
+  onOpen,
+  onEdit,
+  onMapClaims,
+  onDelete,
+}: Readonly<ProviderCardProps>) {
   const icon = providerIcon(provider.providerName);
 
   return (
@@ -67,6 +92,52 @@ function ProviderCard({ provider, onEdit, onDelete }: Readonly<ProviderCardProps
             {!provider.isActive && <Badge variant="secondary">Inactive</Badge>}
           </div>
           <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              aria-label={`Map JWT claim for ${provider.key}`}
+              onClick={() => onMapClaims(provider)}
+            >
+              <Waypoints className="mr-2 h-4 w-4" />
+              Map JWT claim
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8"
+              aria-label={`View details for ${provider.key}`}
+              onClick={() => onOpen(provider)}
+            >
+              Details
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={cn(
+                    "h-8 w-8",
+                    provider.isActive
+                      ? "text-emerald-600 hover:text-destructive"
+                      : "text-muted-foreground hover:text-emerald-600",
+                  )}
+                  aria-label={
+                    provider.isActive ? `Disable ${provider.key}` : `Enable ${provider.key}`
+                  }
+                  disabled={isTogglingActive}
+                  onClick={() => onToggleActive(provider)}
+                >
+                  {provider.isActive ? (
+                    <Power className="h-4 w-4" />
+                  ) : (
+                    <PowerOff className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{provider.isActive ? "Disable" : "Enable"}</TooltipContent>
+            </Tooltip>
             <Button
               size="icon"
               variant="ghost"
@@ -103,6 +174,7 @@ function ProviderCard({ provider, onEdit, onDelete }: Readonly<ProviderCardProps
             label="Key source"
             value={provider.hasSigningSecret ? "Shared secret (stored encrypted)" : provider.jwksUrl || "—"}
           />
+          <Detail label="User ID claim" value={provider.claimsMapping?.userId || "—"} />
         </div>
       </CardContent>
     </Card>
@@ -128,12 +200,19 @@ export const Certificates = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const { data: providers, isLoading } = useGetThirdPartyJwtProviders(projectKey);
   const { mutateAsync: deleteProvider } = useDeleteThirdPartyJwtProvider();
+  const { mutateAsync: saveProvider, isPending: isTogglingActive } =
+    useSaveThirdPartyJwtProvider();
 
   const [isFormOpen, setIsFormOpen] = useQueryState(
     "editExternalIdp",
     parseAsBoolean.withDefault(false),
   );
   const [editing, setEditing] = useState<ThirdPartyJwtProvider | null>(null);
+  const [mapping, setMapping] = useState<ThirdPartyJwtProvider | null>(null);
+  const [statusTarget, setStatusTarget] = useState<ThirdPartyJwtProvider | null>(null);
+  // A query parameter rather than a path segment: the surrounding layout resolves its heading and
+  // active nav item from the last path segment, which an id would take over.
+  const [openItemId, setOpenItemId] = useQueryState("provider", parseAsString);
 
   const list = providers ?? [];
 
@@ -145,6 +224,33 @@ export const Certificates = () => {
   const openEdit = (provider: ThirdPartyJwtProvider) => {
     setEditing(provider);
     void setIsFormOpen(true);
+  };
+
+  const openClaimMapping = (provider: ThirdPartyJwtProvider) => setMapping(provider);
+
+  const openDetails = (provider: ThirdPartyJwtProvider) => void setOpenItemId(provider.itemId);
+
+  // Disabling stops tokens being accepted without discarding the configuration, so it is asked
+  // about rather than done on the first click — the same confirmation client credentials use.
+  const confirmStatusChange = async () => {
+    if (!statusTarget) return;
+
+    const willEnable = !statusTarget.isActive;
+    const result = await saveProvider(toSavePayload(statusTarget, { isActive: willEnable }));
+
+    if (!result.isSuccess) {
+      showErrorToast({
+        errors:
+          Object.values(result.errors ?? {}).join(" ") ||
+          `Could not ${willEnable ? "enable" : "disable"} the provider`,
+      });
+      return;
+    }
+
+    setStatusTarget(null);
+    showSuccessToast({
+      description: `${statusTarget.key} ${willEnable ? "enabled" : "disabled"}`,
+    });
   };
 
   const remove = async (provider: ThirdPartyJwtProvider) => {
@@ -159,6 +265,7 @@ export const Certificates = () => {
       return;
     }
 
+    if (provider.itemId === openItemId) void setOpenItemId(null);
     showSuccessToast({ description: `Removed ${provider.key}` });
   };
 
@@ -178,6 +285,93 @@ export const Certificates = () => {
   }
 
   const ambiguous = list.filter((p) => p.isActive && requiresIdpHeader(p, list));
+  const opened = openItemId ? list.find((p) => p.itemId === openItemId) : undefined;
+
+  const modals = (
+    <>
+      <ProviderFormModal
+        open={isFormOpen}
+        onOpenChange={(open) => {
+          void setIsFormOpen(open);
+          if (!open) setEditing(null);
+        }}
+        existing={editing}
+        siblingIssuers={list
+          .filter((p) => p.isActive && p.itemId !== editing?.itemId)
+          .map((p) => p.issuer)}
+      />
+
+      <MapJwtClaimModal
+        open={!!mapping}
+        onOpenChange={(open) => {
+          if (!open) setMapping(null);
+        }}
+        provider={mapping && (list.find((p) => p.itemId === mapping.itemId) ?? mapping)}
+      />
+
+      <Dialog
+        open={!!statusTarget}
+        onOpenChange={(open) => {
+          if (!open) setStatusTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {statusTarget?.isActive ? "Disable provider" : "Enable provider"}
+            </DialogTitle>
+            <DialogDescription>
+              {statusTarget?.isActive ? (
+                <>
+                  Tokens from <strong>{statusTarget?.key}</strong> will no longer be accepted on
+                  your APIs. Its configuration is kept, so you can enable it again at any time.
+                </>
+              ) : (
+                <>
+                  Tokens from <strong>{statusTarget?.key}</strong> will be accepted on your APIs
+                  again.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStatusTarget(null)}
+              disabled={isTogglingActive}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={statusTarget?.isActive ? "destructive" : "default"}
+              size="sm"
+              onClick={confirmStatusChange}
+              disabled={isTogglingActive}
+            >
+              {statusTarget?.isActive ? "Disable" : "Enable"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  if (opened) {
+    return (
+      <>
+        <ProviderDetails
+          provider={opened}
+          allProviders={list}
+          projectKey={projectKey}
+          onBack={() => void setOpenItemId(null)}
+          onEdit={openEdit}
+          onMapClaims={openClaimMapping}
+        />
+        {modals}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -197,23 +391,19 @@ export const Certificates = () => {
       </div>
 
       {list.map((provider) => (
-        <div key={provider.itemId} className="space-y-3">
-          <ProviderCard provider={provider} onEdit={openEdit} onDelete={remove} />
-          <ApiIntegrationCard provider={provider} allProviders={list} />
-        </div>
+        <ProviderCard
+          key={provider.itemId}
+          provider={provider}
+          onToggleActive={setStatusTarget}
+          isTogglingActive={isTogglingActive}
+          onOpen={openDetails}
+          onEdit={openEdit}
+          onMapClaims={openClaimMapping}
+          onDelete={remove}
+        />
       ))}
 
-      <ProviderFormModal
-        open={isFormOpen}
-        onOpenChange={(open) => {
-          void setIsFormOpen(open);
-          if (!open) setEditing(null);
-        }}
-        existing={editing}
-        siblingIssuers={list
-          .filter((p) => p.isActive && p.itemId !== editing?.itemId)
-          .map((p) => p.issuer)}
-      />
+      {modals}
     </div>
   );
 };

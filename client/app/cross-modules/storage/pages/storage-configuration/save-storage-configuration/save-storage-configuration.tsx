@@ -88,42 +88,46 @@ export const SaveStorageConfiguration = ({
       <DialogHeader>
         <DialogTitle>{configuration ? "Edit" : "Add"} Storage Configuration</DialogTitle>
         <DialogDescription>
-          Ensure you have selected a storage configuration provider to move forward.
+          {isEditMode
+            ? "Only the upload and verification settings below can be changed."
+            : "Ensure you have selected a storage configuration provider to move forward."}
         </DialogDescription>
       </DialogHeader>
       <div>
         <Form {...form}>
           <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onFormSubmitHandler)}>
-            <FormField
-              control={form.control}
-              name="storageStrategy"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Storage Provider</FormLabel>
-                  <FormControl>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        form.clearErrors();
-                      }}
-                      value={field.value}
-                      disabled={!!configuration}
-                    >
-                      <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                        <SelectValue placeholder="Select configuration provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STORAGE_STRATEGIES.map((item) => (
-                          <SelectItem key={item.id} value={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            {!isEditMode && (
+              <FormField
+                control={form.control}
+                name="storageStrategy"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Storage Provider</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          form.clearErrors();
+                        }}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="border-default col-span-3 flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                          <SelectValue placeholder="Select configuration provider" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STORAGE_STRATEGIES.map((item) => (
+                            <SelectItem key={item.id} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+            {!isEditMode && (
             <div className="mt-2 grid grid-cols-1 gap-4 text-left text-sm md:grid-cols-2">
               <FormField
                 name="name"
@@ -133,11 +137,7 @@ export const SaveStorageConfiguration = ({
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Enter name"
-                        {...field}
-                        disabled={isEditMode}
-                      />
+                      <Input placeholder="Enter name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -156,7 +156,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter access key"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -174,7 +173,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter secret key"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -192,7 +190,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter region endpoint"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -213,7 +210,6 @@ export const SaveStorageConfiguration = ({
                           placeholder="Enter connection string"
                           {...field}
                           value={field.value ?? ""}
-                          disabled={isEditMode}
                         />
                       </FormControl>
                       <FormMessage />
@@ -234,7 +230,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter access key"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -252,7 +247,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter secret key"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -270,7 +264,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter host URL"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -292,7 +285,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter remote base path"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -306,7 +298,7 @@ export const SaveStorageConfiguration = ({
                       <FormItem>
                         <FormLabel>Host IP Address</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter host" {...field} value={field.value ?? ""} disabled={isEditMode} />
+                          <Input placeholder="Enter host" {...field} value={field.value ?? ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -324,7 +316,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter port"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -342,7 +333,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter username"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -360,7 +350,6 @@ export const SaveStorageConfiguration = ({
                             placeholder="Enter password"
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isEditMode}
                           />
                         </FormControl>
                         <FormMessage />
@@ -370,6 +359,7 @@ export const SaveStorageConfiguration = ({
                 </>
               )}
             </div>
+            )}
 
             <Separator className="mt-2" />
 

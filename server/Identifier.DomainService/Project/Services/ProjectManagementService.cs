@@ -1099,6 +1099,17 @@ namespace DomainService.Projects
                 return Failed("provider_not_found", $"No provider found with id {request.ItemId}");
             }
 
+            // Two ways an untouched key reaches here, both meaning "leave it alone": blank, from a
+            // form that starts empty the way the signing-secret field does, and the mask itself,
+            // from a caller echoing back what it was shown. Resolving both here means validation
+            // and the write see the real key.
+            if (existing != null
+                && (string.IsNullOrWhiteSpace(request.Key)
+                    || string.Equals(request.Key.Trim(), MaskProviderKey(existing.Key), StringComparison.Ordinal)))
+            {
+                request.Key = existing.Key;
+            }
+
             var validation = ValidateProvider(request, existing, siblings);
             if (validation != null)
             {
@@ -1305,12 +1316,28 @@ namespace DomainService.Projects
             Roles = request?.Roles?.Trim() ?? string.Empty
         };
 
+        /// <summary>
+        /// Masks a provider key for display: <c>abc***xyz</c>. Anything six characters or shorter
+        /// has no middle to hide, so it is masked whole rather than leaked by a partial reveal.
+        /// </summary>
+        public static string MaskProviderKey(string? key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                return string.Empty;
+            }
+
+            return key.Length <= 6
+                ? new string('*', key.Length)
+                : $"{key[..3]}***{key[^3..]}";
+        }
+
         // Deliberately omits SigningSecretCipher: the stored ciphertext is no more the UI's
         // business than the plaintext is.
         private static ThirdPartyJwtProviderResult ToResult(ThirdPartyJwtProvider provider) => new()
         {
             ItemId = provider.ItemId,
-            Key = provider.Key,
+            Key = MaskProviderKey(provider.Key),
             ProviderName = provider.ProviderName,
             IsActive = provider.IsActive,
             Issuer = provider.Issuer,

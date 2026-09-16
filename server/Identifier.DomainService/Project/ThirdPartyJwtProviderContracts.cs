@@ -13,6 +13,10 @@ namespace DomainService.Projects
         /// <summary>
         /// Stable identifier the <c>x-blocks-idp</c> header names. Unique within a tenant, and
         /// only ever needed when two providers share both issuer and audience.
+        /// <para>
+        /// Required when creating. On an update <b>empty means untouched</b>, not cleared, as does
+        /// the masked form the UI was shown — a provider is never left without a key.
+        /// </para>
         /// </summary>
         public string Key { get; set; } = string.Empty;
 
@@ -62,6 +66,12 @@ namespace DomainService.Projects
     public class ThirdPartyJwtProviderResult
     {
         public string ItemId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Masked, never the stored value: first three and last three characters with the middle
+        /// replaced. A save that sends this back unchanged is read as "leave the key alone", the
+        /// same contract the signing secret uses.
+        /// </summary>
         public string Key { get; set; } = string.Empty;
         public string ProviderName { get; set; } = string.Empty;
         public bool IsActive { get; set; }

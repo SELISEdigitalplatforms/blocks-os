@@ -1,4 +1,18 @@
 /**
+ * Which claim of an incoming token supplies each field.
+ *
+ * Names are matched literally against the decoded payload, so a namespaced claim is written out in
+ * full. Only `userId` has no safe fallback: without it every token collapses onto one principal.
+ */
+export interface ClaimsMapping {
+  userId: string;
+  email: string;
+  userName: string;
+  name: string;
+  roles: string;
+}
+
+/**
  * An external identity provider this project accepts tokens from.
  *
  * Deliberately carries no signing secret in any form — not the plaintext, and not the stored
@@ -16,13 +30,7 @@ export interface ThirdPartyJwtProvider {
   jwksUrl: string;
   cookieKey: string;
   hasSigningSecret: boolean;
-  claimsMapping: {
-    userId: string;
-    email: string;
-    userName: string;
-    name: string;
-    roles: string;
-  };
+  claimsMapping: ClaimsMapping;
 }
 
 /**
@@ -109,11 +117,37 @@ export interface SaveThirdPartyJwtProviderPayload {
   /** Plaintext on the way in only. Empty means untouched, never cleared. */
   signingSecret?: string;
   cookieKey?: string;
-  claimsMapping: {
-    userId: string;
-    email: string;
-    userName: string;
-    name: string;
-    roles: string;
+  claimsMapping: ClaimsMapping;
+}
+
+/**
+ * Builds the payload for a save that changes only part of a provider.
+ *
+ * A save replaces the stored row, so a partial payload silently clears whatever it leaves out —
+ * `cookieKey` above all, which is how a token is found on a cookie. Building from the row that
+ * came back keeps every untouched field intact.
+ *
+ * The signing secret is deliberately absent: empty means untouched, so the stored one survives.
+ * `jwksUrl` is sent only for the asymmetric families, which is what the server expects — it
+ * refuses a provider carrying both a JWKS URL and a shared secret.
+ */
+export function toSavePayload(
+  provider: ThirdPartyJwtProvider,
+  overrides: Partial<SaveThirdPartyJwtProviderPayload> = {},
+): SaveThirdPartyJwtProviderPayload {
+  const symmetric = isSymmetric(provider.algorithms?.[0] as JwtSigningAlgorithm);
+
+  return {
+    itemId: provider.itemId,
+    key: provider.key,
+    providerName: provider.providerName,
+    isActive: provider.isActive,
+    issuer: provider.issuer,
+    audiences: provider.audiences ?? [],
+    algorithms: (provider.algorithms ?? []) as JwtSigningAlgorithm[],
+    jwksUrl: symmetric ? undefined : provider.jwksUrl,
+    cookieKey: provider.cookieKey,
+    claimsMapping: provider.claimsMapping,
+    ...overrides,
   };
 }
