@@ -43,7 +43,16 @@ export interface IStorageConfiguration {
   uploadCompletionRequiredFor?: ("Public" | "Private")[];
 }
 
-export interface IStorageConfigurationSavePayload {
+/** The upload/verification settings, the only part of a configuration an update may change. */
+export interface IStorageConfigurationMutableSettings {
+  uploadUrlExpirySeconds: number;
+  downloadUrlExpirySeconds: number;
+  maxFileSizeInBytes: number;
+  uploadCompletionRequiredFor: ("Public" | "Private")[];
+}
+
+/** A brand new configuration: the only request that may set a provider identity and its credentials. */
+export interface IStorageConfigurationCreatePayload extends IStorageConfigurationMutableSettings {
   name: string;
   projectKey: string;
   storageStrategy: StorageStrategyType;
@@ -51,18 +60,30 @@ export interface IStorageConfigurationSavePayload {
   accessKey: string | null;
   cloudStorageRegionEndPoint: string | null;
   connectionString: string | null;
-  updateRequest: boolean;
-  itemId: string | null;
+  updateRequest: false;
+  itemId: null;
   host: string | null;
   port: string | null;
   userName: string | null;
   password: string | null;
   remoteBasePath: string | null;
-  uploadUrlExpirySeconds: number;
-  downloadUrlExpirySeconds: number;
-  maxFileSizeInBytes: number;
-  uploadCompletionRequiredFor: ("Public" | "Private")[];
 }
+
+/**
+ * An update carries nothing but the settings it is allowed to change, plus what identifies the
+ * configuration being changed. The name, provider and credentials are deliberately absent: the
+ * server discards them on an update anyway, and the only value a client could send back for a
+ * secret is the masked one the read endpoint gave it.
+ */
+export interface IStorageConfigurationUpdatePayload extends IStorageConfigurationMutableSettings {
+  projectKey: string;
+  updateRequest: true;
+  itemId: string;
+}
+
+export type IStorageConfigurationSavePayload =
+  | IStorageConfigurationCreatePayload
+  | IStorageConfigurationUpdatePayload;
 export interface IStorageConfigurationDeletePayload {
   projectKey: string;
   configurationName: string;

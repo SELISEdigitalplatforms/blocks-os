@@ -138,10 +138,22 @@ describe("SaveStorageConfiguration", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    // An update carries nothing but the settings it is allowed to change plus what identifies the
+    // configuration being changed. The name, the provider and its credentials must not reach the
+    // wire at all - the server discards them, and the only value the client holds for a secret is
+    // the masked one the read endpoint gave it.
     const payload = h.mutateAsync.mock.calls[0][0];
+    expect(Object.keys(payload).sort()).toEqual([
+      "downloadUrlExpirySeconds",
+      "itemId",
+      "maxFileSizeInBytes",
+      "projectKey",
+      "updateRequest",
+      "uploadCompletionRequiredFor",
+      "uploadUrlExpirySeconds",
+    ]);
     expect(payload.updateRequest).toBe(true);
     expect(payload.itemId).toBe("cfg-5");
-    expect(payload.name).toBe("Existing Store");
     expect(payload.maxFileSizeInBytes).toBe(10_485_760);
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "Configuration updated successfully",
@@ -289,6 +301,12 @@ describe("SaveStorageConfiguration", () => {
         userName: null,
         password: null,
         remoteBasePath: null,
+        // Deliberately different from the Add-mode defaults (600 / 300 / 5 MB / none) this instance
+        // was first mounted with, so the assertions below can tell a synced form from a stale one.
+        uploadUrlExpirySeconds: 900,
+        downloadUrlExpirySeconds: 120,
+        maxFileSizeInBytes: 10_485_760,
+        uploadCompletionRequiredFor: ["Private"],
       } as unknown as IStorageConfiguration;
 
       const utils = render(
@@ -310,10 +328,14 @@ describe("SaveStorageConfiguration", () => {
 
       await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
       const payload = h.mutateAsync.mock.calls[0][0];
-      expect(payload.name).toBe("Existing Store");
-      expect(payload.storageStrategy).toBe("Azure");
       expect(payload.updateRequest).toBe(true);
       expect(payload.itemId).toBe("cfg-9");
+      // The form must be carrying this configuration's own settings. A form still stuck on the
+      // Add-mode defaults it first mounted with would send 600 / 300 / 5 MB / [] instead.
+      expect(payload.uploadUrlExpirySeconds).toBe(900);
+      expect(payload.downloadUrlExpirySeconds).toBe(120);
+      expect(payload.maxFileSizeInBytes).toBe(10_485_760);
+      expect(payload.uploadCompletionRequiredFor).toEqual(["Private"]);
     });
   });
 });

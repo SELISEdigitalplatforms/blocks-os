@@ -133,9 +133,11 @@ namespace Configuration.DomainService.Shared.Services
             if (repoConfiguration == null)
             {
                 repoConfiguration = new StorageConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
+                // Only a brand new configuration records its author; an update must not rewrite the
+                // original creator to whoever happened to change an expiry setting.
+                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
             }
 
-            repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
             repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
             repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
 

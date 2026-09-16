@@ -265,6 +265,7 @@ namespace XUnitTest.Services
                 Password = "original-password",
                 RemoteBasePath = "/original",
                 SftpSecretKey = "original-sftp-key",
+                CreatedBy = "original-author",
             };
             _repo.Setup(r => r.GetStorageConfigurationByIdAsync("existing-id")).ReturnsAsync(existing);
             StorageConfiguration? saved = null;
@@ -304,6 +305,8 @@ namespace XUnitTest.Services
             saved.Password.Should().Be("original-password");
             saved.RemoteBasePath.Should().Be("/original");
             saved.SftpSecretKey.Should().Be("original-sftp-key");
+            // Changing an expiry setting doesn't make the editor the configuration's author.
+            saved.CreatedBy.Should().Be("original-author");
             // The one thing an update is actually allowed to change still goes through.
             saved.UploadUrlExpirySeconds.Should().Be(900);
         }
