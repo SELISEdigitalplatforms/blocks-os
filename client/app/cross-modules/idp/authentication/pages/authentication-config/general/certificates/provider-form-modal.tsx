@@ -26,30 +26,56 @@ import {
   isSymmetric,
   JwtSigningAlgorithm,
   SIGNING_ALGORITHMS,
+  type ClaimsMapping,
   type ThirdPartyJwtProvider,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 
-const schema = z.object({
-  key: z
-    .string()
-    .trim()
-    .min(1, "Key is required — it is what the x-blocks-idp header names")
-    .regex(/^[A-Za-z0-9._-]+$/, "Use letters, digits, dot, dash or underscore only"),
-  providerName: z.string().trim().min(1, "Pick a provider"),
-  isActive: z.boolean(),
-  issuer: z.string().trim().min(1, "Issuer is required — it is how a token reaches this provider"),
-  audiences: z.string().trim(),
-  algorithm: z.coerce.number(),
-  jwksUrl: z.string().trim(),
-  signingSecret: z.string(),
-  claimUserId: z.string().trim().min(1, "Required — without it every token maps to one principal"),
-  claimEmail: z.string().trim(),
-  claimUserName: z.string().trim(),
-  claimName: z.string().trim(),
-  claimRoles: z.string().trim(),
-});
+const KEY_CHARACTERS = /^[A-Za-z0-9._-]+$/;
+const KEY_CHARACTERS_MESSAGE = "Use letters, digits, dot, dash or underscore only";
 
-type FormData = z.infer<typeof schema>;
+/**
+ * The key field follows the same contract as the signing secret: on an edit it starts blank and
+ * blank means untouched, because the stored key is only ever shown masked and there is nothing
+ * useful to pre-fill it with.
+ */
+const buildSchema = (isEditing: boolean) =>
+  z.object({
+    key: isEditing
+      ? z
+          .string()
+          .trim()
+          .refine((value) => value === "" || KEY_CHARACTERS.test(value), KEY_CHARACTERS_MESSAGE)
+      : z
+          .string()
+          .trim()
+          .min(1, "Key is required — it is what the x-blocks-idp header names")
+          .regex(KEY_CHARACTERS, KEY_CHARACTERS_MESSAGE),
+    providerName: z.string().trim().min(1, "Pick a provider"),
+    isActive: z.boolean(),
+    issuer: z.string().trim().min(1, "Issuer is required — it is how a token reaches this provider"),
+    audiences: z.string().trim(),
+    algorithm: z.coerce.number(),
+    jwksUrl: z.string().trim(),
+    signingSecret: z.string(),
+  });
+
+type FormData = z.infer<ReturnType<typeof buildSchema>>;
+
+/** Marks the fields a provider cannot be saved without, so the rest read as genuinely optional. */
+const Required = () => (
+  <span className="ml-0.5 text-destructive" aria-hidden="true">
+    *
+  </span>
+);
+
+/** The registered OIDC claim names, which is what a provider emits unless it was told otherwise. */
+const DEFAULT_CLAIMS_MAPPING: ClaimsMapping = {
+  userId: "sub",
+  email: "email",
+  userName: "email",
+  name: "name",
+  roles: "",
+};
 
 const splitAudiences = (value: string) =>
   value
@@ -77,9 +103,11 @@ export function ProviderFormModal({
   // object changes, which keeps the form in step with the selected provider without a setState
   // inside an effect.
   const form = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(buildSchema(!!existing)),
     values: {
-      key: existing?.key ?? "",
+      // Blank on an edit, like the signing secret: the stored key is masked, so pre-filling it
+      // would only offer the mask back.
+      key: "",
       providerName: existing?.providerName ?? "",
       isActive: existing?.isActive ?? true,
       issuer: existing?.issuer ?? "",
@@ -87,11 +115,6 @@ export function ProviderFormModal({
       algorithm: existing?.algorithms?.[0] ?? JwtSigningAlgorithm.RS256,
       jwksUrl: existing?.jwksUrl ?? "",
       signingSecret: "",
-      claimUserId: existing?.claimsMapping?.userId ?? "sub",
-      claimEmail: existing?.claimsMapping?.email ?? "email",
-      claimUserName: existing?.claimsMapping?.userName ?? "email",
-      claimName: existing?.claimsMapping?.name ?? "name",
-      claimRoles: existing?.claimsMapping?.roles ?? "",
     },
   });
 
@@ -110,6 +133,7 @@ export function ProviderFormModal({
   const onSubmit = async (data: FormData) => {
     const result = await mutateAsync({
       itemId: existing?.itemId,
+      // Empty means untouched, never cleared — the same contract the signing secret uses.
       key: data.key,
       providerName: data.providerName,
       isActive: data.isActive,
@@ -118,13 +142,12 @@ export function ProviderFormModal({
       algorithms: [Number(data.algorithm) as JwtSigningAlgorithm],
       jwksUrl: symmetric ? undefined : data.jwksUrl,
       signingSecret: symmetric ? data.signingSecret : undefined,
-      claimsMapping: {
-        userId: data.claimUserId,
-        email: data.claimEmail,
-        userName: data.claimUserName,
-        name: data.claimName,
-        roles: data.claimRoles,
-      },
+      cookieKey: existing?.cookieKey,
+      // Claim mapping is not asked for here: it is picked from a real token in "Map JWT claim",
+      // where the provider's own claim names are on screen to choose from. A new provider starts
+      // on the registered OIDC names so it is usable before anyone opens that drawer, and an
+      // existing one carries its mapping through untouched.
+      claimsMapping: existing?.claimsMapping ?? DEFAULT_CLAIMS_MAPPING,
     });
 
     if (!result.isSuccess) {
@@ -147,46 +170,61 @@ export function ProviderFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="provider-name">Provider</Label>
-              <Select
-                value={watch("providerName")}
-                onValueChange={(value) => setValue("providerName", value, { shouldValidate: true })}
-              >
-                <SelectTrigger id="provider-name">
-                  <SelectValue placeholder="Select a provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  {providers.map((p) => (
-                    <SelectItem key={p.id} value={p.name}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formState.errors.providerName && (
-                <p className="text-xs text-destructive">{formState.errors.providerName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="provider-key">Key</Label>
-              <Input id="provider-key" placeholder="auth0-web" {...register("key")} />
-              <p className="text-xs text-muted-foreground">
-                The value callers send as <code className="font-mono">x-blocks-idp</code>, if they
-                ever need to.
-              </p>
-              {formState.errors.key && (
-                <p className="text-xs text-destructive">{formState.errors.key.message}</p>
-              )}
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="provider-name">
+              Provider
+              <Required />
+            </Label>
+            <Select
+              value={watch("providerName")}
+              onValueChange={(value) => setValue("providerName", value, { shouldValidate: true })}
+            >
+              <SelectTrigger id="provider-name" aria-required>
+                <SelectValue placeholder="Select a provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {providers.map((p) => (
+                  <SelectItem key={p.id} value={p.name}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formState.errors.providerName && (
+              <p className="text-xs text-destructive">{formState.errors.providerName.message}</p>
+            )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="provider-issuer">Issuer</Label>
+            <Label htmlFor="provider-key">
+              Key
+              {!existing && <Required />}
+            </Label>
+            <Input
+              id="provider-key"
+              aria-required={!existing}
+              autoComplete="off"
+              placeholder={existing ? `${existing.key}  (leave blank to keep)` : "auth0-web"}
+              {...register("key")}
+            />
+            <p className="text-xs text-muted-foreground">
+              {existing
+                ? "A key is set. Leave this blank to keep it, or type a new one to replace it."
+                : "The value callers send as x-blocks-idp, if they ever need to."}
+            </p>
+            {formState.errors.key && (
+              <p className="text-xs text-destructive">{formState.errors.key.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="provider-issuer">
+              Issuer
+              <Required />
+            </Label>
             <Input
               id="provider-issuer"
+              aria-required
               placeholder="https://your-tenant.us.auth0.com/"
               {...register("issuer")}
             />
@@ -219,39 +257,51 @@ export function ProviderFormModal({
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="provider-algorithm">Signing algorithm</Label>
-              <Select
-                value={String(algorithm)}
-                onValueChange={(value) => setValue("algorithm", Number(value))}
-              >
-                <SelectTrigger id="provider-algorithm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SIGNING_ALGORITHMS.map((a) => (
-                    <SelectItem key={a.value} value={String(a.value)}>
-                      {a.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="provider-algorithm">
+              Signing algorithm
+              <Required />
+            </Label>
+            <Select
+              value={String(algorithm)}
+              onValueChange={(value) => setValue("algorithm", Number(value))}
+            >
+              <SelectTrigger id="provider-algorithm" aria-required>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SIGNING_ALGORITHMS.map((a) => (
+                  <SelectItem key={a.value} value={String(a.value)}>
+                    {a.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="flex items-end gap-2 pb-1">
-              <Switch
-                id="provider-active"
-                checked={watch("isActive")}
-                onCheckedChange={(checked) => setValue("isActive", checked)}
-              />
-              <Label htmlFor="provider-active">Active</Label>
+          <div className="flex items-center justify-between rounded-sm border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="provider-active" className="text-sm">
+                Status
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Tokens from an inactive provider are not accepted.
+              </p>
             </div>
+            <Switch
+              id="provider-active"
+              size="md"
+              checked={watch("isActive")}
+              onCheckedChange={(checked) => setValue("isActive", checked)}
+            />
           </div>
 
           {symmetric ? (
             <div className="space-y-1.5">
-              <Label htmlFor="provider-secret">Signing secret</Label>
+              <Label htmlFor="provider-secret">
+                Signing secret
+                {!existing?.hasSigningSecret && <Required />}
+              </Label>
               <Input
                 id="provider-secret"
                 type="password"
@@ -267,9 +317,13 @@ export function ProviderFormModal({
             </div>
           ) : (
             <div className="space-y-1.5">
-              <Label htmlFor="provider-jwks">JWKS URL</Label>
+              <Label htmlFor="provider-jwks">
+                JWKS URL
+                <Required />
+              </Label>
               <Input
                 id="provider-jwks"
+                aria-required
                 placeholder="https://your-tenant.us.auth0.com/.well-known/jwks.json"
                 {...register("jwksUrl")}
               />
@@ -278,43 +332,6 @@ export function ProviderFormModal({
               </p>
             </div>
           )}
-
-          <div className="space-y-3 rounded-md border p-4">
-            <div>
-              <h4 className="text-sm font-semibold">Claim mapping</h4>
-              <p className="text-xs text-muted-foreground">
-                Which claim supplies each field. Names are matched literally, so a namespaced claim
-                such as <code className="font-mono">https://app.example.com/roles</code> works as
-                written.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="claim-user-id">User ID</Label>
-                <Input id="claim-user-id" {...register("claimUserId")} />
-                {formState.errors.claimUserId && (
-                  <p className="text-xs text-destructive">{formState.errors.claimUserId.message}</p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="claim-email">Email</Label>
-                <Input id="claim-email" {...register("claimEmail")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="claim-user-name">Username</Label>
-                <Input id="claim-user-name" {...register("claimUserName")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="claim-name">Display name</Label>
-                <Input id="claim-name" {...register("claimName")} />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="claim-roles">Roles</Label>
-                <Input id="claim-roles" {...register("claimRoles")} />
-              </div>
-            </div>
-          </div>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

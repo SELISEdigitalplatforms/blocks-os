@@ -90,6 +90,128 @@ namespace XUnitTest.Services
                 ClaimsMapping = new ThirdPartyClaimsMappingRequest { UserId = userIdMapping }
             };
 
+        [Theory]
+        [InlineData("auth0-web-primary", "aut***ary")]
+        [InlineData("abcdefg", "abc***efg")]
+        [InlineData("abcdef", "******")]
+        [InlineData("abc", "***")]
+        [InlineData("", "")]
+        public void MaskProviderKey_HidesTheMiddle_AndMasksShortKeysWhole(string key, string expected)
+        {
+            // Six characters or fewer have no middle to hide: revealing three either side would
+            // show the whole key while claiming to mask it.
+            ProjectManagementService.MaskProviderKey(key).Should().Be(expected);
+        }
+
+        [Fact]
+        public async Task Get_ReturnsTheKeyMasked()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            ExistingProviders(new ThirdPartyJwtProvider
+            {
+                ItemId = "p1",
+                TenantId = TenantId,
+                Key = "auth0-web-primary",
+                Issuer = Auth0,
+                Algorithms = [JwtSigningAlgorithm.RS256]
+            });
+
+            var results = await Service().GetThirdPartyJwtProvidersAsync();
+
+            results.Single().Key.Should().Be("aut***ary");
+        }
+
+        [Fact]
+        public async Task Update_WithTheMaskedKey_LeavesTheStoredKeyUntouched()
+        {
+            // The UI only ever saw the mask, so an untouched field comes back as the mask. Writing
+            // that literally would rename the provider to "aut***ary" and break every caller.
+            using var _ = new BlocksTestContext(TenantId);
+
+            var existing = new ThirdPartyJwtProvider
+            {
+                ItemId = "p1",
+                TenantId = TenantId,
+                Key = "auth0-web-primary",
+                Issuer = Auth0,
+                Audiences = ["api-a"],
+                Algorithms = [JwtSigningAlgorithm.RS256]
+            };
+            ExistingProviders(existing);
+
+            var request = Request(key: "aut***ary");
+            request.ItemId = "p1";
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeTrue();
+            _saved.Single().Key.Should().Be("auth0-web-primary");
+        }
+
+        [Fact]
+        public async Task Update_WithABlankKey_LeavesTheStoredKeyUntouched()
+        {
+            // The edit form starts the key field empty, the way it does the signing secret, so a
+            // save that did not mean to touch the key sends nothing at all.
+            using var _ = new BlocksTestContext(TenantId);
+
+            ExistingProviders(new ThirdPartyJwtProvider
+            {
+                ItemId = "p1",
+                TenantId = TenantId,
+                Key = "auth0-web-primary",
+                Issuer = Auth0,
+                Audiences = ["api-a"],
+                Algorithms = [JwtSigningAlgorithm.RS256]
+            });
+
+            var request = Request(key: "   ");
+            request.ItemId = "p1";
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeTrue();
+            _saved.Single().Key.Should().Be("auth0-web-primary");
+        }
+
+        [Fact]
+        public async Task Create_WithNoKey_IsRefused()
+        {
+            // Blank only ever means "untouched" against a provider that already has one.
+            using var _ = new BlocksTestContext(TenantId);
+            ExistingProviders();
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(Request(key: ""));
+
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().ContainKey("key_required");
+        }
+
+        [Fact]
+        public async Task Update_WithARealNewKey_ReplacesIt()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+
+            var existing = new ThirdPartyJwtProvider
+            {
+                ItemId = "p1",
+                TenantId = TenantId,
+                Key = "auth0-web-primary",
+                Issuer = Auth0,
+                Audiences = ["api-a"],
+                Algorithms = [JwtSigningAlgorithm.RS256]
+            };
+            ExistingProviders(existing);
+
+            var request = Request(key: "auth0-web-secondary");
+            request.ItemId = "p1";
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeTrue();
+            _saved.Single().Key.Should().Be("auth0-web-secondary");
+        }
+
         [Fact]
         public async Task Create_EncryptsTheSigningSecret_UnderTheTenantSalt()
         {
@@ -313,7 +435,7 @@ namespace XUnitTest.Services
 
             var provider = results.Single();
             provider.HasSigningSecret.Should().BeTrue();
-            provider.Key.Should().Be("auth0-a");
+            provider.Key.Should().Be("aut***0-a");
 
             // The stored ciphertext is no more the UI's business than the plaintext is.
             typeof(ThirdPartyJwtProviderResult).GetProperty("SigningSecretCipher").Should().BeNull();
