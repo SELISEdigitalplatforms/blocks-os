@@ -13,12 +13,21 @@ const h = vi.hoisted(() => ({
     key: string;
     type: string;
     label: string;
-    props?: { disabled?: boolean; numberOfMonths?: number };
+    props?: {
+      disabled?: boolean;
+      numberOfMonths?: number;
+      hasMore?: boolean;
+      isLoadingMore?: boolean;
+      onLoadMore?: () => void;
+    };
   }>,
   lastShowFirstFilterOnMobile: undefined as boolean | undefined,
   lastDisplayMode: undefined as "responsive" | "sheet" | undefined,
   lastSheetTriggerLabel: undefined as string | undefined,
   lastRoleOptionsPayload: null as { organizationIds: string[] } | null,
+  fetchNextPage: vi.fn(),
+  hasNextPage: false,
+  isFetchingNextPage: false,
 }));
 
 vi.mock("nuqs", () => ({
@@ -31,10 +40,15 @@ vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
-  useGetAllEnabledOrganizations: () => ({
-    data: h.organizations,
+  useGetEnabledOrganizationsInfinite: () => ({
+    data: { pages: [{ organizations: h.organizations }] },
     isLoading: false,
+    hasNextPage: h.hasNextPage,
+    isFetchingNextPage: h.isFetchingNextPage,
+    fetchNextPage: h.fetchNextPage,
   }),
+  getEnabledOrganizationsFromPages: (pages: Array<{ organizations: unknown[] }>) =>
+    pages.flatMap((page) => page.organizations),
   useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: h.isMultiOrgEnabled } }),
 }));
 vi.mock("@blocks-idp/iam/hooks/use-roles", () => ({
@@ -62,7 +76,13 @@ vi.mock("@/components/filter-toolbar", () => ({
       key: string;
       type: string;
       label: string;
-      props?: { disabled?: boolean; numberOfMonths?: number };
+      props?: {
+        disabled?: boolean;
+        numberOfMonths?: number;
+        hasMore?: boolean;
+        isLoadingMore?: boolean;
+        onLoadMore?: () => void;
+      };
     }>;
     onChange: (key: string, value: unknown) => void;
     onReset: () => void;
@@ -119,6 +139,9 @@ beforeEach(() => {
   h.lastDisplayMode = undefined;
   h.lastSheetTriggerLabel = undefined;
   h.lastRoleOptionsPayload = null;
+  h.fetchNextPage.mockReset();
+  h.hasNextPage = false;
+  h.isFetchingNextPage = false;
 });
 
 describe("users-filter-toolbar helpers", () => {
@@ -218,6 +241,19 @@ describe("UsersDateFilters", () => {
         .filter((filter) => filter.type === "DateRange")
         .every((filter) => filter.props?.numberOfMonths === 1),
     ).toBe(true);
+  });
+
+  it("passes organization pagination state to the multi-select", () => {
+    h.hasNextPage = true;
+    h.isFetchingNextPage = true;
+    render(<UsersDateFilters />);
+
+    const organizationFilter = h.lastFilters.find((filter) => filter.key === "organizationIds");
+    expect(organizationFilter?.props).toMatchObject({
+      hasMore: true,
+      isLoadingMore: true,
+      onLoadMore: h.fetchNextPage,
+    });
   });
 
   it("loads role options for selected organizations", () => {

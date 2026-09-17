@@ -14,6 +14,8 @@ import {
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__";
 import { iamService } from "@blocks-idp/iam/services/iam.service";
 import {
+  getEnabledOrganizationsFromPages,
+  useGetEnabledOrganizationsInfinite,
   useGetOrganizations,
   useGetOrganizationById,
   useSaveOrganization,
@@ -92,6 +94,57 @@ describe("use-organization hooks", () => {
 
       expect(result.current.fetchStatus).toBe("idle");
       expect(iamService.organization.getOrganizations).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("useGetEnabledOrganizationsInfinite", () => {
+    it("fetches the next organization page and stops at the total count", async () => {
+      const firstOrganization = mockOrganizationsResponse.organizations[0];
+      const secondOrganization = { ...firstOrganization, itemId: "org-2", name: "Second" };
+      vi.mocked(iamService.organization.getOrganizations)
+        .mockResolvedValueOnce({
+          ...mockOrganizationsResponse,
+          organizations: [firstOrganization],
+          totalCount: 2,
+        })
+        .mockResolvedValueOnce({
+          ...mockOrganizationsResponse,
+          organizations: [secondOrganization],
+          totalCount: 2,
+        });
+
+      const { result } = renderHook(() => useGetEnabledOrganizationsInfinite(TEST_PROJECT_KEY), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.hasNextPage).toBe(true));
+      await result.current.fetchNextPage();
+      await waitFor(() => expect(result.current.hasNextPage).toBe(false));
+
+      expect(iamService.organization.getOrganizations).toHaveBeenNthCalledWith(1, {
+        projectKey: TEST_PROJECT_KEY,
+        page: 0,
+        pageSize: 25,
+      });
+      expect(iamService.organization.getOrganizations).toHaveBeenNthCalledWith(2, {
+        projectKey: TEST_PROJECT_KEY,
+        page: 1,
+        pageSize: 25,
+      });
+    });
+  });
+
+  describe("getEnabledOrganizationsFromPages", () => {
+    it("filters disabled organizations, removes duplicates, and includes Default", () => {
+      const organization = mockOrganizationsResponse.organizations[0];
+      const result = getEnabledOrganizationsFromPages([
+        {
+          organizations: [organization, { ...organization, itemId: "disabled", isDisabled: true }],
+        },
+        { organizations: [organization] },
+      ]);
+
+      expect(result.map(({ itemId }) => itemId)).toEqual([organization.itemId, "default"]);
     });
   });
 
