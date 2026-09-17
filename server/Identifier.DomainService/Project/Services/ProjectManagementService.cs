@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -29,6 +29,7 @@ namespace DomainService.Projects
         private readonly IEncodingService _urlEncodingService;
         private readonly ICacheClient _cacheClient;
         private readonly ICryptoService _cryptoService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
 
@@ -42,7 +43,8 @@ namespace DomainService.Projects
                                         ICertificateManager certificateManager,
                                         IEncodingService urlEncodingService,
                                         ICacheClient cacheClient,
-                                        ICryptoService cryptoService)
+                                        ICryptoService cryptoService,
+                                        IHttpClientFactory httpClientFactory)
         {
             _projectRepository = projectRepository;
             _blocksSecret = blocksSecret;
@@ -54,6 +56,7 @@ namespace DomainService.Projects
             _urlEncodingService = urlEncodingService;
             _cacheClient = cacheClient;
             _cryptoService = cryptoService;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task ConfigureProjectAsync(Tenant project, ProjectStatusTracer? projectStatus = null)
@@ -1299,7 +1302,9 @@ namespace DomainService.Projects
             provider.Key = request.Key.Trim();
             provider.ProviderName = request.ProviderName?.Trim() ?? string.Empty;
             provider.IsActive = request.IsActive;
-            provider.Issuer = request.Issuer.Trim();
+            // Blank is a real configuration, not a missing value: it means "this provider receives
+            // the tokens that name no issuer".
+            provider.Issuer = request.Issuer?.Trim() ?? string.Empty;
             provider.Audiences = request.Audiences ?? [];
             provider.Algorithms = request.Algorithms;
             provider.CookieKey = request.CookieKey?.Trim() ?? string.Empty;
@@ -1311,6 +1316,15 @@ namespace DomainService.Projects
             {
                 provider.JwksUrl = string.Empty;
 
+                // Switching a provider to the HMAC family drops the certificate for the same
+                // reason the reverse drops the secret: an unused key source left behind is a
+                // dormant signing authority waiting for the algorithm to be switched back.
+                provider.PublicCertificatePath = string.Empty;
+                provider.PublicCertificatePasswordCipher = string.Empty;
+                provider.CertificateSubject = string.Empty;
+                provider.CertificateThumbprint = string.Empty;
+                provider.CertificateNotAfter = null;
+
                 // Empty means untouched, never cleared: a masked field round-trips as "" from most
                 // frontends, and treating that as a clear would silently break authentication.
                 if (!string.IsNullOrEmpty(request.SigningSecret))
@@ -1320,12 +1334,35 @@ namespace DomainService.Projects
             }
             else
             {
-                provider.JwksUrl = request.JwksUrl!.Trim();
-
                 // Switching a provider away from the HMAC family drops the stored secret. Leaving
                 // it would keep a dormant signing authority alive for the moment someone switches
                 // the algorithm back.
                 provider.SigningSecretCipher = string.Empty;
+
+                // Validation has already established exactly one of the two is set.
+                if (!string.IsNullOrWhiteSpace(request.PublicCertificatePath))
+                {
+                    ApplyCertificateKeySource(provider, request, tenant);
+
+                    var inspection = await InspectCertificateAsync(provider, tenant);
+                    if (inspection.Rejection != null)
+                    {
+                        return inspection.Rejection;
+                    }
+
+                    provider.CertificateSubject = inspection.Subject;
+                    provider.CertificateThumbprint = inspection.Thumbprint;
+                    provider.CertificateNotAfter = inspection.NotAfter;
+                }
+                else
+                {
+                    provider.JwksUrl = request.JwksUrl!.Trim();
+                    provider.PublicCertificatePath = string.Empty;
+                    provider.PublicCertificatePasswordCipher = string.Empty;
+                    provider.CertificateSubject = string.Empty;
+                    provider.CertificateThumbprint = string.Empty;
+                    provider.CertificateNotAfter = null;
+                }
             }
 
             await _projectRepository.SaveThirdPartyJwtProviderAsync(provider);
@@ -1389,6 +1426,133 @@ namespace DomainService.Projects
         /// Enforces the rules that cannot be recovered at validation time: one key source per
         /// provider, a usable subject mapping, and audiences wherever two providers share an issuer.
         /// </summary>
+        /// <summary>
+        /// Points a provider at an uploaded public certificate and settles what happens to the
+        /// passphrase that unlocks it.
+        /// </summary>
+        /// <remarks>
+        /// A passphrase belongs to one specific file, so the three cases are kept apart
+        /// deliberately. A new passphrase replaces the stored one. An explicit clear removes it,
+        /// which is the only way to go from a protected certificate to an unprotected one — empty
+        /// on its own cannot mean that, because empty is also what a form sends for "keep what is
+        /// stored". A certificate uploaded to a different path drops the passphrase regardless,
+        /// since it unlocked the file that is no longer configured.
+        /// </remarks>
+        private void ApplyCertificateKeySource(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            var path = request.PublicCertificatePath!.Trim();
+            var pathChanged = !string.Equals(provider.PublicCertificatePath, path, StringComparison.Ordinal);
+
+            provider.JwksUrl = string.Empty;
+            provider.PublicCertificatePath = path;
+
+            if (!string.IsNullOrEmpty(request.PublicCertificatePassword))
+            {
+                provider.PublicCertificatePasswordCipher =
+                    _cryptoService.Encrypt(request.PublicCertificatePassword, tenant.TenantSalt);
+            }
+            else if (request.ClearCertificatePassword || pathChanged)
+            {
+                provider.PublicCertificatePasswordCipher = string.Empty;
+            }
+        }
+
+        /// <summary>What reading the configured certificate produced.</summary>
+        private readonly record struct CertificateInspection(
+            SaveThirdPartyJwtProviderResponse? Rejection,
+            string Subject,
+            string Thumbprint,
+            DateTime? NotAfter);
+
+        /// <summary>
+        /// Reads the certificate the provider now points at, to describe it and to prove it can be
+        /// opened at all.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The point is <b>when</b> a mistake surfaces. A passphrase that does not match the file,
+        /// or a file that is not a certificate, is otherwise discovered by Genesis on the first
+        /// real request — and the symptom there is a 401 carrying a perfectly valid token, which
+        /// sends people looking at the token. Opening it here turns that into an error on the form
+        /// where it can still be corrected.
+        /// </para>
+        /// <para>
+        /// A parse failure is therefore refused, but a <b>fetch</b> failure is not: the blob may be
+        /// momentarily unreachable, and blocking configuration on a transient network fault would
+        /// be worse than saving without the descriptive fields. Genesis reports the same fetch
+        /// problem with <c>third_party_certificate_unreadable</c> if it persists.
+        /// </para>
+        /// </remarks>
+        private async Task<CertificateInspection> InspectCertificateAsync(
+            ThirdPartyJwtProvider provider,
+            Tenant tenant)
+        {
+            byte[] data;
+
+            try
+            {
+                data = await _httpClientFactory
+                    .CreateClient()
+                    .GetByteArrayAsync(provider.PublicCertificatePath);
+            }
+            catch (Exception)
+            {
+                // Saved without the descriptive fields rather than refused. Deliberate: see above.
+                return new CertificateInspection(null, string.Empty, string.Empty, null);
+            }
+
+            // Empty means untouched, in which case the stored cipher is the only copy there is.
+            var passphrase = string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher)
+                ? null
+                : _cryptoService.Decrypt(provider.PublicCertificatePasswordCipher, tenant.TenantSalt);
+
+            try
+            {
+                using var certificate = LoadCertificate(data, passphrase);
+
+                return new CertificateInspection(
+                    null,
+                    certificate.Subject,
+                    certificate.Thumbprint,
+                    certificate.NotAfter.ToUniversalTime());
+            }
+            catch (Exception)
+            {
+                return new CertificateInspection(
+                    Failed(
+                        "certificate_unreadable",
+                        string.IsNullOrEmpty(passphrase)
+                            ? "The uploaded file could not be read as a certificate. A PKCS#12 file (.pfx, .p12) " +
+                              "that is passphrase protected needs its passphrase supplied here."
+                            : "The uploaded file could not be opened with that passphrase. Check the passphrase, " +
+                              "or re-upload the certificate."),
+                    string.Empty,
+                    string.Empty,
+                    null);
+            }
+        }
+
+        /// <summary>
+        /// Opens a certificate in any of the forms the upload accepts: PKCS#12 first, since only
+        /// that one can be passphrase protected, then PEM or DER.
+        /// </summary>
+        private static X509Certificate2 LoadCertificate(byte[] data, string? passphrase)
+        {
+            try
+            {
+                return X509CertificateLoader.LoadPkcs12(data, passphrase);
+            }
+            catch
+            {
+                // Not a PKCS#12 container. A bare certificate carries no passphrase, so one being
+                // present does not change how it is read -- it simply does not apply.
+                return X509CertificateLoader.LoadCertificate(data);
+            }
+        }
+
         private static SaveThirdPartyJwtProviderResponse? ValidateProvider(
             SaveThirdPartyJwtProviderRequest request,
             ThirdPartyJwtProvider? existing,
@@ -1405,11 +1569,10 @@ namespace DomainService.Projects
                 return Failed("duplicate_key", $"Another provider already uses the key '{request.Key}'.");
             }
 
-            if (string.IsNullOrWhiteSpace(request.Issuer))
-            {
-                return Failed("issuer_required", "Issuer is required; it is how a token is routed to this provider.");
-            }
-
+            // Issuer is optional on purpose. A provider that leaves it blank receives the tokens
+            // that carry no `iss` claim at all -- which some third parties simply do not emit --
+            // and is reached by the x-blocks-idp header when more than one does so. A blank issuer
+            // is not a wildcard: Genesis will not route an issuer-bearing token to it.
             if (!request.Algorithms.IsSingleKeySource())
             {
                 return Failed(
@@ -1420,6 +1583,9 @@ namespace DomainService.Projects
 
             var isSymmetric = request.Algorithms[0].IsSymmetric();
 
+            var hasJwksUrl = !string.IsNullOrWhiteSpace(request.JwksUrl);
+            var hasCertificate = !string.IsNullOrWhiteSpace(request.PublicCertificatePath);
+
             if (isSymmetric)
             {
                 var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
@@ -1429,21 +1595,49 @@ namespace DomainService.Projects
                     return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
                 }
 
-                if (!string.IsNullOrWhiteSpace(request.JwksUrl))
+                if (hasJwksUrl)
                 {
                     return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
+                }
+
+                if (hasCertificate)
+                {
+                    return Failed(
+                        "unexpected_certificate",
+                        "An HMAC provider must not carry a public certificate. HMAC verifies with the shared " +
+                        "secret; a certificate would be a second, unrelated signing authority.");
                 }
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(request.JwksUrl))
+                if (!hasJwksUrl && !hasCertificate)
                 {
-                    return Failed("jwks_url_required", "An asymmetric provider needs a JWKS URL.");
+                    return Failed(
+                        "key_source_required",
+                        "An asymmetric provider needs a key source: either a JWKS URL, or a public certificate " +
+                        "to pin a single key.");
+                }
+
+                // Which of the two got consulted would otherwise come down to the order this code
+                // happens to check them in, and the other would sit there looking configured.
+                if (hasJwksUrl && hasCertificate)
+                {
+                    return Failed(
+                        "ambiguous_key_source",
+                        "Configure a JWKS URL or a public certificate, not both. Two key sources for one " +
+                        "provider is two independent signing authorities behind a single claim mapping.");
                 }
 
                 if (!string.IsNullOrEmpty(request.SigningSecret))
                 {
                     return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
+                }
+
+                if (hasJwksUrl && !string.IsNullOrEmpty(request.PublicCertificatePassword))
+                {
+                    return Failed(
+                        "unexpected_certificate_password",
+                        "A JWKS URL needs no passphrase; a passphrase only ever unlocks a PKCS#12 certificate.");
                 }
             }
 
@@ -1457,9 +1651,22 @@ namespace DomainService.Projects
             // Two providers sharing an issuer AND an audience validate identically, so nothing
             // cryptographic tells their tokens apart and the caller's header alone selects the
             // claim mapping. Requiring audiences keeps that choice out of the caller's hands.
+            //
+            // Deliberately not applied to a blank issuer. A token with no `iss` normally carries
+            // no `aud` either, so demanding audiences there would produce a provider that can
+            // never match anything -- the rule would create the dead configuration it exists to
+            // prevent. Those providers are separated by the header instead, which the integration
+            // card already marks as required once there are two of them.
+            var issuer = request.Issuer?.Trim() ?? string.Empty;
+
+            if (issuer.Length == 0)
+            {
+                return null;
+            }
+
             var sharesIssuer = siblings.Any(p => p.ItemId != existing?.ItemId
                                                  && p.IsActive
-                                                 && string.Equals(p.Issuer, request.Issuer.Trim(), StringComparison.Ordinal));
+                                                 && string.Equals(p.Issuer, issuer, StringComparison.Ordinal));
 
             if (sharesIssuer && (request.Audiences == null || request.Audiences.Count == 0))
             {
@@ -1515,8 +1722,13 @@ namespace DomainService.Projects
             Audiences = provider.Audiences,
             Algorithms = provider.Algorithms,
             JwksUrl = provider.JwksUrl,
+            PublicCertificatePath = provider.PublicCertificatePath,
+            CertificateSubject = provider.CertificateSubject,
+            CertificateThumbprint = provider.CertificateThumbprint,
+            CertificateNotAfter = provider.CertificateNotAfter,
             CookieKey = provider.CookieKey,
             HasSigningSecret = !string.IsNullOrWhiteSpace(provider.SigningSecretCipher),
+            HasCertificatePassword = !string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher),
             ClaimsMapping = new ThirdPartyClaimsMappingRequest
             {
                 UserId = provider.ClaimsMapping?.UserId ?? string.Empty,
