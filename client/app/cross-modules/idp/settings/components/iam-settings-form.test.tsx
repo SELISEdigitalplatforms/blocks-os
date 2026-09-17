@@ -187,7 +187,9 @@ describe("IamSettingsForm", () => {
     const user = userEvent.setup();
     renderForm();
 
-    expect(screen.getByLabelText("Password policy builder")).toBeTruthy();
+    const header = screen.getByTestId("password-strength-regex-header");
+    expect(header.className).toContain("justify-between");
+    await user.click(screen.getByRole("button", { name: "Build password policy" }));
     await user.click(screen.getByRole("button", { name: "Use recommended policy" }));
 
     const regex = screen.getByLabelText("Password Strength Regex") as HTMLTextAreaElement;

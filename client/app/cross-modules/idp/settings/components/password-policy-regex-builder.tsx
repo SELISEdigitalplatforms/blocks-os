@@ -1,6 +1,15 @@
-import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui-kits/dialog/dialog";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, CircleAlert, FlaskConical, WandSparkles } from "lucide-react";
@@ -111,138 +120,143 @@ export const PasswordPolicyRegexBuilder = ({ onChange }: PasswordPolicyRegexBuil
   };
 
   return (
-    <div
-      className="space-y-5 rounded-lg border bg-muted/20 p-4"
-      aria-label="Password policy builder"
-    >
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <WandSparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-          <p className="text-sm font-semibold">Build with common password rules</p>
-          <Badge variant="secondary" className="font-normal">
-            Optional helper
-          </Badge>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Choose the requirements IAM can explain to users. Apply them when ready, or keep writing
-          any custom regex above.
-        </p>
-      </div>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" size="sm" variant="outline" className="shrink-0 gap-2">
+          <WandSparkles className="h-4 w-4" aria-hidden="true" />
+          Build password policy
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Build with common password rules</DialogTitle>
+          <DialogDescription>
+            Choose the requirements IAM can explain to users. Applying a choice replaces the regex
+            in the editor, which remains fully editable afterward.
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="space-y-1.5 text-sm font-medium" htmlFor="password-policy-min-length">
-          Minimum length
-          <Input
-            id="password-policy-min-length"
-            type="number"
-            inputMode="numeric"
-            value={policy.minLength}
-            onChange={(event) =>
-              setPolicy((current) => ({ ...current, minLength: event.target.value }))
-            }
-          />
-        </label>
-        <label className="space-y-1.5 text-sm font-medium" htmlFor="password-policy-max-length">
-          Maximum length
-          <Input
-            id="password-policy-max-length"
-            type="number"
-            inputMode="numeric"
-            value={policy.maxLength}
-            onChange={(event) =>
-              setPolicy((current) => ({ ...current, maxLength: event.target.value }))
-            }
-          />
-        </label>
-      </div>
-
-      <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">Require at least one</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {characterRequirements.map(({ key, label, example }) => (
-            <label
-              key={key}
-              htmlFor={`password-policy-${key}`}
-              className="flex cursor-pointer items-center gap-3 rounded-md border bg-background p-3"
-            >
-              <Checkbox
-                id={`password-policy-${key}`}
-                checked={policy[key]}
-                onCheckedChange={(checked) =>
-                  setPolicy((current) => ({ ...current, [key]: checked === true }))
+        <div className="space-y-5 py-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5 text-sm font-medium" htmlFor="password-policy-min-length">
+              Minimum length
+              <Input
+                id="password-policy-min-length"
+                type="number"
+                inputMode="numeric"
+                value={policy.minLength}
+                onChange={(event) =>
+                  setPolicy((current) => ({ ...current, minLength: event.target.value }))
                 }
               />
-              <span className="min-w-0 text-sm">
-                <span className="font-medium">{label}</span>
-                <span className="ml-1 text-muted-foreground">({example})</span>
-              </span>
             </label>
-          ))}
+            <label className="space-y-1.5 text-sm font-medium" htmlFor="password-policy-max-length">
+              Maximum length
+              <Input
+                id="password-policy-max-length"
+                type="number"
+                inputMode="numeric"
+                value={policy.maxLength}
+                onChange={(event) =>
+                  setPolicy((current) => ({ ...current, maxLength: event.target.value }))
+                }
+              />
+            </label>
+          </div>
+
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm font-medium">Require at least one</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {characterRequirements.map(({ key, label, example }) => (
+                <label
+                  key={key}
+                  htmlFor={`password-policy-${key}`}
+                  className="flex cursor-pointer items-center gap-3 rounded-md border bg-background p-3"
+                >
+                  <Checkbox
+                    id={`password-policy-${key}`}
+                    checked={policy[key]}
+                    onCheckedChange={(checked) =>
+                      setPolicy((current) => ({ ...current, [key]: checked === true }))
+                    }
+                  />
+                  <span className="min-w-0 text-sm">
+                    <span className="font-medium">{label}</span>
+                    <span className="ml-1 text-muted-foreground">({example})</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Generated regex preview
+            </p>
+            {builderError ? (
+              <p className="flex items-center gap-2 text-sm text-warning-700" role="status">
+                <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {builderError}
+              </p>
+            ) : (
+              <code className="block break-all text-sm" data-testid="generated-password-regex">
+                {generatedRegex}
+              </code>
+            )}
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <label
+              className="flex items-center gap-2 text-sm font-medium"
+              htmlFor="password-regex-sample"
+            >
+              <FlaskConical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              Try the builder policy
+            </label>
+            <Input
+              id="password-regex-sample"
+              value={samplePassword}
+              onChange={(event) => setSamplePassword(event.target.value)}
+              placeholder="Sample only — this is not saved"
+              autoComplete="off"
+            />
+            <p
+              className={cn(
+                "flex items-center gap-2 text-xs",
+                testResult === "match" && "text-success",
+                (testResult === "invalid" || testResult === "no-match") && "text-warning-700",
+                testResult === "idle" && "text-muted-foreground",
+              )}
+              aria-live="polite"
+            >
+              {testResult === "match" ? (
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              ) : testResult === "invalid" || testResult === "no-match" ? (
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              ) : null}
+              {resultCopy[testResult]}
+            </p>
+          </div>
         </div>
-      </fieldset>
 
-      <div className="space-y-2 rounded-md border bg-background p-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Generated regex preview
-        </p>
-        {builderError ? (
-          <p className="flex items-center gap-2 text-sm text-warning-700" role="status">
-            <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {builderError}
-          </p>
-        ) : (
-          <code className="block break-all text-sm" data-testid="generated-password-regex">
-            {generatedRegex}
-          </code>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => onChange(generatedRegex)}
-          disabled={!!builderError}
-        >
-          Use generated regex
-        </Button>
-        <Button type="button" size="sm" variant="outline" onClick={useRecommendedPolicy}>
-          Use recommended policy
-        </Button>
-      </div>
-
-      <div className="space-y-2 border-t pt-4">
-        <label
-          className="flex items-center gap-2 text-sm font-medium"
-          htmlFor="password-regex-sample"
-        >
-          <FlaskConical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          Try the builder policy
-        </label>
-        <Input
-          id="password-regex-sample"
-          value={samplePassword}
-          onChange={(event) => setSamplePassword(event.target.value)}
-          placeholder="Sample only — this is not saved"
-          autoComplete="off"
-        />
-        <p
-          className={cn(
-            "flex items-center gap-2 text-xs",
-            testResult === "match" && "text-success",
-            (testResult === "invalid" || testResult === "no-match") && "text-warning-700",
-            testResult === "idle" && "text-muted-foreground",
-          )}
-          aria-live="polite"
-        >
-          {testResult === "match" ? (
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          ) : testResult === "invalid" || testResult === "no-match" ? (
-            <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          ) : null}
-          {resultCopy[testResult]}
-        </p>
-      </div>
-    </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" size="sm" variant="outline" onClick={useRecommendedPolicy}>
+              Use recommended policy
+            </Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => onChange(generatedRegex)}
+              disabled={!!builderError}
+            >
+              Use generated regex
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

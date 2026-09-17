@@ -425,10 +425,16 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password Strength Regex</FormLabel>
+                    <div
+                      data-testid="password-strength-regex-header"
+                      className="flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <FormLabel>Password Strength Regex</FormLabel>
+                      <PasswordPolicyRegexBuilder onChange={field.onChange} />
+                    </div>
                     <FormDescription>
-                      This remains fully editable. The optional builder below only helps compose and
-                      preview common IAM password requirements.
+                      This remains fully editable. Use the policy builder to compose and preview
+                      common IAM password requirements.
                     </FormDescription>
                     <FormControl>
                       <Textarea
@@ -440,7 +446,6 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                         {...field}
                       />
                     </FormControl>
-                    <PasswordPolicyRegexBuilder onChange={field.onChange} />
                     <FormMessage />
                   </FormItem>
                 )}

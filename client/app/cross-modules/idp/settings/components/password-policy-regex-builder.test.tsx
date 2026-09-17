@@ -8,10 +8,16 @@ import {
 } from "./password-policy-regex-builder";
 
 describe("PasswordPolicyRegexBuilder", () => {
-  it("shows the IAM recommended policy without replacing a custom regex", () => {
+  it("opens the builder in a modal without the optional-helper badge", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<PasswordPolicyRegexBuilder onChange={onChange} />);
 
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Build password policy" }));
+
+    expect(screen.getByRole("dialog", { name: "Build with common password rules" })).toBeTruthy();
+    expect(screen.queryByText("Optional helper")).toBeNull();
     expect(screen.getByTestId("generated-password-regex").textContent).toBe(
       buildPasswordPolicyRegex(RECOMMENDED_PASSWORD_POLICY),
     );
@@ -23,6 +29,7 @@ describe("PasswordPolicyRegexBuilder", () => {
     const onChange = vi.fn();
     render(<PasswordPolicyRegexBuilder onChange={onChange} />);
 
+    await user.click(screen.getByRole("button", { name: "Build password policy" }));
     const minimum = screen.getByLabelText("Minimum length");
     await user.clear(minimum);
     await user.type(minimum, "12");
@@ -41,6 +48,7 @@ describe("PasswordPolicyRegexBuilder", () => {
     const onChange = vi.fn();
     render(<PasswordPolicyRegexBuilder onChange={onChange} />);
 
+    await user.click(screen.getByRole("button", { name: "Build password policy" }));
     await user.click(screen.getByRole("button", { name: "Use recommended policy" }));
 
     expect(onChange).toHaveBeenCalledWith(buildPasswordPolicyRegex(RECOMMENDED_PASSWORD_POLICY));
@@ -50,6 +58,7 @@ describe("PasswordPolicyRegexBuilder", () => {
     const user = userEvent.setup();
     render(<PasswordPolicyRegexBuilder onChange={vi.fn()} />);
 
+    await user.click(screen.getByRole("button", { name: "Build password policy" }));
     const maximum = screen.getByLabelText("Maximum length");
     await user.clear(maximum);
     await user.type(maximum, "2");
@@ -58,13 +67,14 @@ describe("PasswordPolicyRegexBuilder", () => {
     expect(
       (screen.getByRole("button", { name: "Use generated regex" }) as HTMLButtonElement).disabled,
     ).toBe(true);
-    expect(screen.getByText(/keep writing any custom regex/)).toBeTruthy();
+    expect(screen.getByText(/remains fully editable afterward/)).toBeTruthy();
   });
 
   it("previews whether a sample password meets the safe visual builder choices", async () => {
     const user = userEvent.setup();
     render(<PasswordPolicyRegexBuilder onChange={vi.fn()} />);
 
+    await user.click(screen.getByRole("button", { name: "Build password policy" }));
     const sample = screen.getByLabelText("Try the builder policy");
     await user.type(sample, "Test42");
     expect(
