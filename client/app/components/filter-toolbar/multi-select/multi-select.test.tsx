@@ -171,4 +171,23 @@ describe("MultiSelect", () => {
     expect(screen.getByRole("status").textContent).toContain("Loading more");
     expect(onLoadMore).not.toHaveBeenCalled();
   });
+
+  it("can keep its scrollable content inside a containing modal", async () => {
+    const user = userEvent.setup();
+    render(
+      <div data-testid="modal-content">
+        <MultiSelect
+          label="Organization"
+          options={options}
+          value={[]}
+          onChange={vi.fn()}
+          portalled={false}
+        />
+      </div>,
+    );
+
+    await user.click(screen.getByRole("button"));
+
+    expect(screen.getByTestId("modal-content").contains(screen.getByRole("listbox"))).toBe(true);
+  });
 });

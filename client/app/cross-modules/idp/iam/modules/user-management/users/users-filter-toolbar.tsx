@@ -242,6 +242,7 @@ export const UsersDateFilters = () => {
                   hasMore: hasMoreOrganizations,
                   isLoadingMore: isLoadingMoreOrganizations,
                   onLoadMore: fetchMoreOrganizations,
+                  portalled: false,
                 },
               },
             ]
