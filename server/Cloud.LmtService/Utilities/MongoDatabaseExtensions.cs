@@ -1,4 +1,5 @@
 using Cloud.LmtService.Models.ArchiveAndDelete;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
@@ -26,7 +27,8 @@ namespace Cloud.LmtService.Utilities
             this IMongoDatabase database,
             BsonDocument collectionFilter,
             DateTime startDate,
-            DateTime endDate)
+            DateTime endDate,
+            ILogger? logger = null)
         {
             using var cursor = await database.ListCollectionNamesAsync(
                 new ListCollectionNamesOptions { Filter = collectionFilter });
@@ -42,13 +44,26 @@ namespace Cloud.LmtService.Utilities
 
             await Parallel.ForEachAsync(names, new ParallelOptions { MaxDegreeOfParallelism = 20 }, async (name, ct) =>
             {
-                var collection = database.GetCollection<BsonDocument>(name);
-                var hasData = await collection.Find(dateFilter)
-                    .Limit(1)
-                    .Project(projection)
-                    .AnyAsync(ct);
+                try
+                {
+                    var collection = database.GetCollection<BsonDocument>(name);
+                    var hasData = await collection.Find(dateFilter)
+                        .Limit(1)
+                        .Project(projection)
+                        .AnyAsync(ct);
 
-                if (hasData) results.Add(name);
+                    if (hasData) results.Add(name);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // A single unreadable collection - an orphaned time-series view whose
+                    // system.buckets collection is gone, for instance - must not abort the
+                    // enumeration for every other collection in the database. Log it by name
+                    // so the collection can be cleaned up rather than skipped forever.
+                    logger?.LogWarning(ex,
+                        "Skipping unreadable collection {CollectionName} in database {DatabaseName}",
+                        name, database.DatabaseNamespace.DatabaseName);
+                }
             });
 
             return [.. results];

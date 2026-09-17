@@ -15,13 +15,13 @@ namespace Cloud.LmtService.Repositories.Trace
 
         // Backup methods
         Task<List<string>> GetDistinctTracesCollectionNamesAsync(DateTime startDate, DateTime endDate);
-        Task<List<StoredTrace>> GetTracesByCollectionAsync(string collectionName, TenantLogsRequest query, int pageNumber, int pageSize);
+        IAsyncEnumerable<List<StoredTrace>> StreamTracesByCollectionAsync(string collectionName, TenantLogsRequest query, int batchSize, CancellationToken ct = default);
         Task<long> DeleteTracesByCollectionAsync(TenantLogsRequest query, CancellationToken ct = default);
         Task ArchiveTracesAsync(List<StoredTrace> traces, TenantLogsRequest query);
 
         // Archive DB methods
         Task<List<string>> GetArchiveCollectionsAsync();
-        Task<List<StoredTrace>> GetTracesFromArchiveCollectionAsync(string collectionName);
+        IAsyncEnumerable<List<StoredTrace>> StreamTracesFromArchiveCollectionAsync(string collectionName, int batchSize, CancellationToken ct = default);
         Task DeleteArchiveCollectionAsync(string collectionName);
         Task DeleteMiscellaneousTracesCollectionAsync(string collectionName);
     }
