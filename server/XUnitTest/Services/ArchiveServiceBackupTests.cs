@@ -155,6 +155,77 @@ namespace XUnitTest.Services
             _backupRepository.Verify(r => r.MarkTraceArchivedAsync("run-1", "tenant-a", 0), Times.Once);
         }
 
+        [Fact]
+        public async Task StartBackup_WhenTraceArchivingFailsPartWay_DiscardsThePartialArchive()
+        {
+            // The partial archive would otherwise be uploaded as if it were the whole window,
+            // producing a Parquet file that looks complete but is short. The source traces are
+            // untouched at this point, so throwing the partial away costs nothing.
+            _traceRepository.Setup(r => r.GetDistinctTracesCollectionNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(["tenant-a"]);
+            _traceRepository.Setup(r => r.StreamTracesByCollectionAsync("tenant-a", It.IsAny<TenantLogsRequest>(),
+                    It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .Returns(Batches(Traces(10), Traces(10)));
+
+            var archived = 0;
+            _traceRepository.Setup(r => r.ArchiveTracesAsync(It.IsAny<List<StoredTrace>>(), It.IsAny<TenantLogsRequest>()))
+                .Returns(() => ++archived == 2
+                    ? Task.FromException(new InvalidOperationException("archive write failed"))
+                    : Task.CompletedTask);
+
+            await Service().StartBackupAsync();
+
+            _traceRepository.Verify(r => r.DeleteArchiveCollectionAsync(
+                It.Is<string>(name => name.StartsWith("tenant-a_"))), Times.Once);
+        }
+
+        [Fact]
+        public async Task StartBackup_WhenTraceArchivingFailsBeforeWritingAnything_LeavesEarlierArchivesAlone()
+        {
+            // Nothing was written this run, so any collection with that name belongs to an earlier
+            // run whose upload had not succeeded yet. Dropping it would destroy the only copy.
+            _traceRepository.Setup(r => r.GetDistinctTracesCollectionNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(["tenant-a"]);
+            _traceRepository.Setup(r => r.StreamTracesByCollectionAsync("tenant-a", It.IsAny<TenantLogsRequest>(),
+                    It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .Returns(Throwing<StoredTrace>(new TimeoutException("read failed on the first batch")));
+
+            await Service().StartBackupAsync();
+
+            _traceRepository.Verify(r => r.DeleteArchiveCollectionAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        // ── Enumeration failures ─────────────────────────────────────────────────
+
+        [Fact]
+        public async Task StartBackup_WhenTraceEnumerationFails_FailsTheJobInsteadOfReportingSuccess()
+        {
+            // Returning an empty list here used to be indistinguishable from "this database has no
+            // trace collections", so an unreachable database produced a Completed job that had
+            // backed up nothing at all.
+            _traceRepository.Setup(r => r.GetDistinctTracesCollectionNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ThrowsAsync(new TimeoutException("listCollections failed"));
+
+            var act = async () => await Service().StartBackupAsync();
+
+            await act.Should().ThrowAsync<TimeoutException>();
+            _backupRepository.Verify(r => r.FailJobAsync("run-1", It.IsAny<string>()), Times.Once);
+            _backupRepository.Verify(r => r.CompleteJobAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task StartBackup_WhenServiceEnumerationFails_FailsTheJobInsteadOfReportingSuccess()
+        {
+            _logRepository.Setup(r => r.GetDistinctBlocksServiceNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ThrowsAsync(new TimeoutException("listCollections failed"));
+
+            var act = async () => await Service().StartBackupAsync();
+
+            await act.Should().ThrowAsync<TimeoutException>();
+            _backupRepository.Verify(r => r.FailJobAsync("run-1", It.IsAny<string>()), Times.Once);
+            _backupRepository.Verify(r => r.CompleteJobAsync(It.IsAny<string>()), Times.Never);
+        }
+
         // ── Blocks service logs ──────────────────────────────────────────────────
 
         [Fact]
@@ -209,6 +280,47 @@ namespace XUnitTest.Services
             _calls.Should().Contain("Delete:good-tenant");
             _calls.Should().NotContain("Delete:bad-tenant", "a tenant whose archive failed must keep its source logs");
             _backupRepository.Verify(r => r.MarkLogArchiveFailedAsync("run-1", "bad-tenant", "svc-1", It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task StartBackup_WhenATenantsLogArchiveFails_DiscardsWhatThatServiceHadAlreadyWritten()
+        {
+            // A tenant's log archive collection is shared by every service, so the collection can
+            // not be dropped wholesale - only this service's partial rows are removed.
+            _logRepository.Setup(r => r.GetDistinctBlocksServiceNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(["svc-1"]);
+            _logRepository.Setup(r => r.StreamBlocksServiceLogsAsync("svc-1", It.IsAny<TenantLogsRequest>(),
+                    It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .Returns(Batches(
+                    [Log("tenant-a", "a1")],
+                    [Log("tenant-a", "a2")]));
+
+            var writes = 0;
+            _logRepository.Setup(r => r.ArchiveLogsAsync(It.IsAny<List<StoredLog>>(), It.IsAny<TenantLogsRequest>()))
+                .Returns(() => ++writes == 2
+                    ? Task.FromException(new InvalidOperationException("archive write failed"))
+                    : Task.CompletedTask);
+
+            await Service().StartBackupAsync();
+
+            _logRepository.Verify(r => r.DeleteArchivedLogsByServiceAsync(
+                It.Is<string>(name => name.StartsWith("tenant-a_")), "svc-1"), Times.Once);
+        }
+
+        [Fact]
+        public async Task StartBackup_WhenATenantsFirstLogWriteFails_LeavesEarlierArchivesAlone()
+        {
+            _logRepository.Setup(r => r.GetDistinctBlocksServiceNamesAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(["svc-1"]);
+            _logRepository.Setup(r => r.StreamBlocksServiceLogsAsync("svc-1", It.IsAny<TenantLogsRequest>(),
+                    It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .Returns(Batches([Log("tenant-a", "a1")]));
+            _logRepository.Setup(r => r.ArchiveLogsAsync(It.IsAny<List<StoredLog>>(), It.IsAny<TenantLogsRequest>()))
+                .ThrowsAsync(new InvalidOperationException("archive write failed"));
+
+            await Service().StartBackupAsync();
+
+            _logRepository.Verify(r => r.DeleteArchivedLogsByServiceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]

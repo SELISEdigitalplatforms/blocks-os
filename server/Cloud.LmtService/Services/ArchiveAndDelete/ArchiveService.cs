@@ -145,6 +145,9 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             if (string.IsNullOrWhiteSpace(tenantId)) return;
 
             await semaphore.WaitAsync();
+
+            int totalRecords = 0;
+
             try
             {
                 await _backupRepository.CreateTraceFileProgressAsync(runId, tenantId);
@@ -155,7 +158,6 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                     Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
                 };
 
-                int totalRecords = 0;
 
                 // The delete covers the whole window, so it can only run once the whole window has
                 // been archived. Deleting per batch - as this used to - destroyed every trace past
@@ -178,6 +180,20 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ProcessSingleTenantTracesAsync - Failed for tenant {TenantId}", tenantId);
+
+                // Discard what this run managed to write. Left in place it would be uploaded as if
+                // it were the whole window, giving a Parquet file that looks complete but is short.
+                // The source traces were never deleted, so nothing is lost by throwing it away.
+                //
+                // Only when this run actually wrote something: otherwise a collection with that
+                // name belongs to an earlier run whose upload has not succeeded yet, and that copy
+                // is the only one there is.
+                if (totalRecords > 0)
+                {
+                    await TrySilentAsync(() => _traceRepository.DeleteArchiveCollectionAsync(
+                        ArchiveCollectionNaming.Build(tenantId, startDate, endDate)));
+                }
+
                 await TrySilentAsync(() => _backupRepository.MarkTraceArchiveFailedAsync(runId, tenantId, ex.ToString()));
             }
             finally
@@ -285,8 +301,19 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
                         // Give up on this tenant only. Its logs stay put rather than being deleted
                         // against an archive that never received them.
-                        archivedByTenant.Remove(tenantId);
+                        var hadPartialWrite = archivedByTenant.Remove(tenantId);
                         failedTenants.Add(tenantId);
+
+                        // Discard this service's partial rows so they are not uploaded as a whole
+                        // window. The collection itself is shared with every other service writing
+                        // for this tenant, so only this service's rows go. Skipped when nothing was
+                        // written, because then any rows present came from an earlier run.
+                        if (hadPartialWrite)
+                        {
+                            await TrySilentAsync(() => _logRepository.DeleteArchivedLogsByServiceAsync(
+                                ArchiveCollectionNaming.Build(tenantId, startDate, endDate), serviceName));
+                        }
+
                         await TrySilentAsync(() => markFailedAsync(tenantId, ex.ToString()));
                     }
                 }
@@ -437,7 +464,7 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
         private async Task ProcessSingleLogCollectionAsync(string runId, string collectionName)
         {
-            if (!TryParseArchiveCollectionName(collectionName, out var tenantId, out var startDateStr, out var endDateStr))
+            if (!ArchiveCollectionNaming.TryParse(collectionName, out var tenantId, out var startDateStr, out var endDateStr))
             {
                 _logger.LogWarning("ProcessSingleLogCollectionAsync - Skipping invalid collection name: {CollectionName}", collectionName);
                 return;
@@ -511,30 +538,9 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             }
         }
 
-        /// <summary>
-        /// Splits an archive collection name into its tenant and window parts.
-        /// The name is <c>{tenantId}_{yyyyMMdd}_{yyyyMMdd}</c>, and the two dates are always the
-        /// last two segments, so a tenant id that itself contains an underscore still resolves to
-        /// the right tenant instead of being truncated at the first separator.
-        /// </summary>
-        private static bool TryParseArchiveCollectionName(
-            string collectionName, out string tenantId, out string startDateStr, out string endDateStr)
-        {
-            tenantId = startDateStr = endDateStr = string.Empty;
-
-            var parts = collectionName.Split('_');
-            if (parts.Length < 3) return false;
-
-            endDateStr = parts[^1];
-            startDateStr = parts[^2];
-            tenantId = string.Join('_', parts[..^2]);
-
-            return !string.IsNullOrWhiteSpace(tenantId);
-        }
-
         private async Task ProcessSingleTraceCollectionAsync(string runId, string collectionName)
         {
-            if (!TryParseArchiveCollectionName(collectionName, out var tenantId, out var startDateStr, out var endDateStr))
+            if (!ArchiveCollectionNaming.TryParse(collectionName, out var tenantId, out var startDateStr, out var endDateStr))
             {
                 _logger.LogWarning("ProcessSingleTraceCollectionAsync - Skipping invalid collection name: {CollectionName}", collectionName);
                 return;

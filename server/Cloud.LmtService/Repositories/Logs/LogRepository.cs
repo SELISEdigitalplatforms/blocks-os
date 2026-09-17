@@ -193,25 +193,24 @@ namespace Cloud.LmtService.Repositories.Logs
         // ── Archive/backup methods ───────────────────────────────────────────────
 
         public async Task<List<string>> GetDistinctBlocksServiceNamesAsync(DateTime startDate, DateTime endDate) =>
-            await GetServiceNamesWithPrefixAsync(Constants.BlocksServiceNamePrefix, startDate, endDate,
-                "Failed to get distinct blocks service names");
+            await GetServiceNamesWithPrefixAsync(Constants.BlocksServiceNamePrefix, startDate, endDate);
 
         public async Task<List<string>> GetDistinctManagedServiceNamesAsync(DateTime startDate, DateTime endDate) =>
-            await GetServiceNamesWithPrefixAsync(Constants.ManagedServiceNamePrefix, startDate, endDate,
-                "Failed to get distinct managed service names");
+            await GetServiceNamesWithPrefixAsync(Constants.ManagedServiceNamePrefix, startDate, endDate);
 
-        private async Task<List<string>> GetServiceNamesWithPrefixAsync(string prefix, DateTime startDate, DateTime endDate, string errorMessage)
+        /// <summary>
+        /// Lists the service collections holding logs in the window.
+        /// <para>
+        /// Failures are not swallowed: a single unreadable collection is already skipped inside
+        /// <see cref="MongoDatabaseExtensions.GetCollectionNamesWithDataAsync"/>, so anything that
+        /// reaches here means the enumeration itself failed. Reporting that as an empty list let the
+        /// job complete "successfully" having backed up nothing.
+        /// </para>
+        /// </summary>
+        private async Task<List<string>> GetServiceNamesWithPrefixAsync(string prefix, DateTime startDate, DateTime endDate)
         {
-            try
-            {
-                var filter = new BsonDocument("name", new BsonRegularExpression($"^{prefix}", "i"));
-                return await _database.GetCollectionNamesWithDataAsync(filter, startDate, endDate, _logger);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, errorMessage);
-                return [];
-            }
+            var filter = new BsonDocument("name", new BsonRegularExpression($"^{prefix}", "i"));
+            return await _database.GetCollectionNamesWithDataAsync(filter, startDate, endDate, _logger);
         }
 
         public async Task<Dictionary<string, List<StoredLog>>> GetLogsByServiceAndTenantBatchAsync(
@@ -384,7 +383,7 @@ namespace Cloud.LmtService.Repositories.Logs
 
             var startDate = query.Filter?.StartDate ?? DateTime.MinValue;
             var endDate = query.Filter?.EndDate ?? DateTime.MinValue;
-            var collectionName = $"{query.ProjectKey}_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}";
+            var collectionName = ArchiveCollectionNaming.Build(query.ProjectKey, startDate, endDate);
 
             try
             {
@@ -400,16 +399,48 @@ namespace Cloud.LmtService.Repositories.Logs
             }
         }
 
+        /// <summary>
+        /// Lists the archive collections awaiting upload.
+        /// <para>
+        /// Failures are not swallowed. This list drives the whole blob-upload phase, including the
+        /// retry of collections carried over from earlier runs whose upload had not succeeded yet.
+        /// Reporting a failure as an empty list skipped all of that silently and still let the job
+        /// finish as Completed.
+        /// </para>
+        /// </summary>
         public async Task<List<string>> GetArchiveCollectionsAsync()
         {
+            return await _archiveDatabase.GetArchiveCollectionsAsync();
+        }
+
+        /// <summary>
+        /// Removes one service's rows from a tenant's archive collection.
+        /// <para>
+        /// Used to discard a partial archive when a service's write fails part-way. The collection
+        /// cannot simply be dropped: every service archiving that tenant shares it, and the others
+        /// may have written successfully.
+        /// </para>
+        /// </summary>
+        public async Task DeleteArchivedLogsByServiceAsync(string collectionName, string serviceName)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName) || string.IsNullOrWhiteSpace(serviceName))
+                return;
+
             try
             {
-                return await _archiveDatabase.GetArchiveCollectionsAsync();
+                var collection = _archiveDatabase.GetCollection<StoredLog>(collectionName);
+                var filter = Builders<StoredLog>.Filter.Eq(log => log.ServiceName, serviceName);
+
+                var result = await collection.DeleteManyAsync(filter);
+
+                _logger.LogWarning(
+                    "Discarded {Count} partially archived log(s) for service {ServiceName} from {CollectionName}",
+                    result.DeletedCount, serviceName, collectionName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to list collections from LogsArchive database");
-                return [];
+                _logger.LogError(ex, "Failed to discard partial archive for service {ServiceName} in {CollectionName}",
+                    serviceName, collectionName);
             }
         }
 

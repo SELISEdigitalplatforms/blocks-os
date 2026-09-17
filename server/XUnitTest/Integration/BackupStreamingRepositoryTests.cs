@@ -165,6 +165,69 @@ namespace XUnitTest.Integration
             await act.Should().ThrowAsync<MongoDB.Driver.MongoCommandException>();
         }
 
+        /// <summary>
+        /// A repository wired to an unreachable MongoDB, so enumeration genuinely fails rather than
+        /// being simulated with a mock.
+        /// </summary>
+        private static (TraceRepository Traces, LogRepository Logs) UnreachableRepositories()
+        {
+            var settings = MongoClientSettings.FromConnectionString("mongodb://127.0.0.1:1");
+            settings.ServerSelectionTimeout = TimeSpan.FromMilliseconds(400);
+            settings.ConnectTimeout = TimeSpan.FromMilliseconds(400);
+            var database = new MongoClient(settings).GetDatabase("unreachable");
+
+            var provider = new Mock<IDbContextProvider>();
+            provider.Setup(p => p.GetDatabase(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(database);
+
+            var secret = new Mock<IBlocksSecret>();
+            var config = new ConfigurationBuilder().Build();
+
+            return (
+                new TraceRepository(secret.Object, provider.Object, NullLogger<TraceRepository>.Instance, config),
+                new LogRepository(secret.Object, provider.Object, NullLogger<LogRepository>.Instance, config));
+        }
+
+        [Fact]
+        public async Task GetDistinctTracesCollectionNames_WhenTheDatabaseIsUnreachable_Throws()
+        {
+            // Returning an empty list here is indistinguishable from "no traces in this window",
+            // which let the backup report success after archiving nothing.
+            var now = DateTime.UtcNow;
+            var act = async () => await UnreachableRepositories().Traces
+                .GetDistinctTracesCollectionNamesAsync(now.AddDays(-1), now);
+
+            await act.Should().ThrowAsync<TimeoutException>();
+        }
+
+        [Fact]
+        public async Task GetTraceArchiveCollections_WhenTheDatabaseIsUnreachable_Throws()
+        {
+            // The blob phase drives off this list, and it is also what retries the carryover
+            // collections from earlier runs. An empty list on failure silently skips all of it.
+            var act = async () => await UnreachableRepositories().Traces.GetArchiveCollectionsAsync();
+
+            await act.Should().ThrowAsync<TimeoutException>();
+        }
+
+        [Fact]
+        public async Task GetLogArchiveCollections_WhenTheDatabaseIsUnreachable_Throws()
+        {
+            var act = async () => await UnreachableRepositories().Logs.GetArchiveCollectionsAsync();
+
+            await act.Should().ThrowAsync<TimeoutException>();
+        }
+
+        [Fact]
+        public async Task GetDistinctBlocksServiceNames_WhenTheDatabaseIsUnreachable_Throws()
+        {
+            var now = DateTime.UtcNow;
+            var act = async () => await UnreachableRepositories().Logs
+                .GetDistinctBlocksServiceNamesAsync(now.AddDays(-1), now);
+
+            await act.Should().ThrowAsync<TimeoutException>();
+        }
+
         [Fact]
         public async Task StreamBlocksServiceLogs_YieldsEveryTenantsLogsInWindow()
         {

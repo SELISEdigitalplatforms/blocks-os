@@ -260,30 +260,30 @@ namespace Cloud.LmtService.Repositories.Trace
 
         // ── Archive/backup methods ───────────────────────────────────────────────
 
+        /// <summary>
+        /// Lists the tenant collections holding traces in the window.
+        /// <para>
+        /// Failures are not swallowed here. An individual unreadable collection is already skipped
+        /// inside <see cref="MongoDatabaseExtensions.GetCollectionNamesWithDataAsync"/>, so anything
+        /// reaching this point means the enumeration itself failed - an unreachable database, for
+        /// instance. Returning an empty list for that is indistinguishable from "this database holds
+        /// no traces", which let the job report success after backing up nothing at all.
+        /// </para>
+        /// </summary>
         public async Task<List<string>> GetDistinctTracesCollectionNamesAsync(DateTime startDate, DateTime endDate)
         {
-            try
+            // Optimization: Filter system collections and archive failure collection at the DB level
+            var collectionFilter = new BsonDocument("name", new BsonDocument
             {
-                // Optimization: Filter system collections and archive failure collection at the DB level
-                var collectionFilter = new BsonDocument("name", new BsonDocument
-                {
-                    { "$nin", new BsonArray { FailedArchiveTracesCollection } },
-                    { "$not", new BsonRegularExpression("^system\\.", "i") }
-                });
+                { "$nin", new BsonArray { FailedArchiveTracesCollection } },
+                { "$not", new BsonRegularExpression("^system\\.", "i") }
+            });
 
-                var names = await _database.GetCollectionNamesWithDataAsync(collectionFilter, startDate, endDate, _logger);
+            var names = await _database.GetCollectionNamesWithDataAsync(collectionFilter, startDate, endDate, _logger);
 
-                return names
-                    .Where(n => !Constants.IgnoredTenants.Contains(n, StringComparer.OrdinalIgnoreCase))
-                    .ToList();
-
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get distinct traces collection names");
-                return [];
-            }
+            return names
+                .Where(n => !Constants.IgnoredTenants.Contains(n, StringComparer.OrdinalIgnoreCase))
+                .ToList();
         }
 
         /// <summary>
@@ -427,7 +427,7 @@ namespace Cloud.LmtService.Repositories.Trace
 
             var startDate = query.Filter?.StartDate ?? DateTime.MinValue;
             var endDate = query.Filter?.EndDate ?? DateTime.MinValue;
-            var collectionName = $"{query.ProjectKey}_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}";
+            var collectionName = ArchiveCollectionNaming.Build(query.ProjectKey, startDate, endDate);
 
             try
             {
@@ -443,17 +443,18 @@ namespace Cloud.LmtService.Repositories.Trace
             }
         }
 
+        /// <summary>
+        /// Lists the archive collections awaiting upload.
+        /// <para>
+        /// Failures are not swallowed. This list drives the whole blob-upload phase, including the
+        /// retry of collections carried over from earlier runs whose upload had not succeeded yet.
+        /// Reporting a failure as an empty list skipped all of that silently and still let the job
+        /// finish as Completed.
+        /// </para>
+        /// </summary>
         public async Task<List<string>> GetArchiveCollectionsAsync()
         {
-            try
-            {
-                return await _archiveDatabase.GetArchiveCollectionsAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to list collections from TracesArchive database");
-                return [];
-            }
+            return await _archiveDatabase.GetArchiveCollectionsAsync();
         }
 
         public async Task DeleteArchiveCollectionAsync(string collectionName)

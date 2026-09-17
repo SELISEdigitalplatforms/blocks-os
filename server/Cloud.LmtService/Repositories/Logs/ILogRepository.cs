@@ -20,6 +20,7 @@ namespace Cloud.LmtService.Repositories.Logs
         Task ArchiveLogsAsync(List<StoredLog> logs, TenantLogsRequest query);
         Task<List<string>> GetArchiveCollectionsAsync();
         IAsyncEnumerable<List<StoredLog>> StreamLogsFromArchiveCollectionAsync(string collectionName, int batchSize, CancellationToken ct = default);
+        Task DeleteArchivedLogsByServiceAsync(string collectionName, string serviceName);
         Task DeleteArchiveCollectionAsync(string collectionName);
         Task DeleteMiscellaneousLogsCollectionAsync(string collectionName);
         Task SaveFailedArchiveLogsAsync(string serviceName, List<StoredLog> logs, string failureReason, DateTime processStartDate, DateTime processEndDate);
