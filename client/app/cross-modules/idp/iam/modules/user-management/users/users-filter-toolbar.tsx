@@ -1,6 +1,7 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
 import {
-  useGetAllEnabledOrganizations,
+  getEnabledOrganizationsFromPages,
+  useGetEnabledOrganizationsInfinite,
   useGetOrganizationConfig,
 } from "@blocks-idp/iam/hooks/use-organization";
 import { useGetRoleFilterOptions } from "@blocks-idp/iam/hooks/use-roles";
@@ -131,10 +132,19 @@ export const UsersDateFilters = () => {
     [queryParams.organizationIds],
   );
   const selectedRoles = queryParams.roles ?? [];
-  const { data: organizations = [], isLoading: isOrganizationsLoading } =
-    useGetAllEnabledOrganizations(tenantId, {
-      enabled: showOrganizationFilter || orgConfig?.isMultiOrgEnabled === false,
-    });
+  const {
+    data: organizationsData,
+    isLoading: isOrganizationsLoading,
+    hasNextPage: hasMoreOrganizations,
+    isFetchingNextPage: isLoadingMoreOrganizations,
+    fetchNextPage: fetchMoreOrganizations,
+  } = useGetEnabledOrganizationsInfinite(tenantId, {
+    enabled: showOrganizationFilter || orgConfig?.isMultiOrgEnabled === false,
+  });
+  const organizations = useMemo(
+    () => getEnabledOrganizationsFromPages(organizationsData?.pages),
+    [organizationsData?.pages],
+  );
 
   const organizationOptions = useMemo(
     () =>
@@ -145,9 +155,10 @@ export const UsersDateFilters = () => {
     [organizations],
   );
   const hasOrganizationOptions = organizationOptions.length > 0;
-  const showOrganizationSelection = showOrganizationFilter && hasOrganizationOptions;
-  const showRoleSelection =
-    orgConfig?.isMultiOrgEnabled === false || hasOrganizationOptions;
+  const showOrganizationSelection =
+    showOrganizationFilter &&
+    (hasOrganizationOptions || isOrganizationsLoading || hasMoreOrganizations === true);
+  const showRoleSelection = orgConfig?.isMultiOrgEnabled === false || hasOrganizationOptions;
   const isRoleSelectionWaitingForOrganizations =
     showOrganizationSelection && selectedOrganizationIds.length === 0;
 
@@ -228,6 +239,9 @@ export const UsersDateFilters = () => {
                 props: {
                   options: organizationOptions,
                   disabled: isOrganizationsLoading,
+                  hasMore: hasMoreOrganizations,
+                  isLoadingMore: isLoadingMoreOrganizations,
+                  onLoadMore: fetchMoreOrganizations,
                 },
               },
             ]

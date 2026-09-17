@@ -29,6 +29,9 @@ interface MultiSelectProps {
   value: string[];
   onChange: (selected: string[]) => void;
   disabled?: boolean;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 export function MultiSelect({
   label,
@@ -36,6 +39,9 @@ export function MultiSelect({
   onChange,
   value: selectedValues,
   disabled = false,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: MultiSelectProps) {
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -105,7 +111,13 @@ export function MultiSelect({
       >
         <Command>
           <CommandInput placeholder={label} />
-          <CommandList>
+          <CommandList
+            onScroll={(event) => {
+              const list = event.currentTarget;
+              const isNearBottom = list.scrollHeight - list.scrollTop - list.clientHeight <= 32;
+              if (isNearBottom && hasMore && !isLoadingMore) onLoadMore?.();
+            }}
+          >
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
@@ -181,6 +193,11 @@ export function MultiSelect({
                 );
               })}
             </CommandGroup>
+            {isLoadingMore && (
+              <div className="py-2 text-center text-xs text-muted-foreground" role="status">
+                Loading more…
+              </div>
+            )}
             {selectedValues.length > 0 && (
               <>
                 <CommandSeparator />

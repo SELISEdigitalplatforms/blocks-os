@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -122,5 +122,53 @@ describe("MultiSelect", () => {
     );
     const trigger = screen.getByRole("button");
     expect(within(trigger).getByText("blocks-os-worker")).toBeTruthy();
+  });
+
+  it("loads the next page when the options list is scrolled near the bottom", async () => {
+    const onLoadMore = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MultiSelect
+        label="Organization"
+        options={options}
+        value={[]}
+        onChange={vi.fn()}
+        hasMore
+        onLoadMore={onLoadMore}
+      />,
+    );
+
+    await user.click(screen.getByRole("button"));
+    const list = screen.getByRole("listbox");
+    Object.defineProperties(list, {
+      scrollHeight: { configurable: true, value: 500 },
+      clientHeight: { configurable: true, value: 300 },
+      scrollTop: { configurable: true, value: 180 },
+    });
+    fireEvent.scroll(list);
+
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not request another page while one is already loading", async () => {
+    const onLoadMore = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MultiSelect
+        label="Organization"
+        options={options}
+        value={[]}
+        onChange={vi.fn()}
+        hasMore
+        isLoadingMore
+        onLoadMore={onLoadMore}
+      />,
+    );
+
+    await user.click(screen.getByRole("button"));
+    fireEvent.scroll(screen.getByRole("listbox"));
+
+    expect(screen.getByRole("status").textContent).toContain("Loading more");
+    expect(onLoadMore).not.toHaveBeenCalled();
   });
 });
