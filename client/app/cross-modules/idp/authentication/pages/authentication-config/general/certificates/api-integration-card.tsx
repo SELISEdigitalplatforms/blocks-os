@@ -110,7 +110,9 @@ export function ApiIntegrationCard({
       <CardContent className="space-y-5 pt-6">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold">Calling the API with this provider&apos;s token</h3>
+            <h3 className="text-sm font-semibold">
+              Calling the API with this provider&apos;s token
+            </h3>
             <p className="text-xs text-muted-foreground">
               Every request carries the token and your project key. These are the headers.
             </p>

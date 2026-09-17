@@ -29,6 +29,7 @@ import {
   SIGNING_ALGORITHMS,
   toSavePayload,
   type ThirdPartyJwtProvider,
+  keySourceLabel,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 import { EmptyConfiguration } from "./empty-configuration";
 import { MapJwtClaimModal } from "./map-jwt-claim-modal";
@@ -163,17 +164,16 @@ function ProviderCard({
           <Detail label="Issuer" value={provider.issuer} />
           <Detail
             label="Audience"
-            value={provider.audiences?.length ? provider.audiences.join(", ") : "Any (validation off)"}
+            value={
+              provider.audiences?.length ? provider.audiences.join(", ") : "Any (validation off)"
+            }
             muted={!provider.audiences?.length}
           />
           <Detail
             label="Algorithm"
             value={provider.algorithms?.map(algorithmLabel).join(", ") || "—"}
           />
-          <Detail
-            label="Key source"
-            value={provider.hasSigningSecret ? "Shared secret (stored encrypted)" : provider.jwksUrl || "—"}
-          />
+          <Detail label="Key source" value={keySourceLabel(provider)} />
           <Detail label="User ID claim" value={provider.claimsMapping?.userId || "—"} />
         </div>
       </CardContent>
@@ -200,8 +200,7 @@ export const Certificates = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
   const { data: providers, isLoading } = useGetThirdPartyJwtProviders(projectKey);
   const { mutateAsync: deleteProvider } = useDeleteThirdPartyJwtProvider();
-  const { mutateAsync: saveProvider, isPending: isTogglingActive } =
-    useSaveThirdPartyJwtProvider();
+  const { mutateAsync: saveProvider, isPending: isTogglingActive } = useSaveThirdPartyJwtProvider();
 
   const [isFormOpen, setIsFormOpen] = useQueryState(
     "editExternalIdp",
@@ -279,6 +278,7 @@ export const Certificates = () => {
           open={isFormOpen}
           onOpenChange={(open) => void setIsFormOpen(open)}
           existing={null}
+          projectKey={projectKey}
         />
       </>
     );
@@ -296,6 +296,7 @@ export const Certificates = () => {
           if (!open) setEditing(null);
         }}
         existing={editing}
+        projectKey={projectKey}
         siblingIssuers={list
           .filter((p) => p.isActive && p.itemId !== editing?.itemId)
           .map((p) => p.issuer)}
