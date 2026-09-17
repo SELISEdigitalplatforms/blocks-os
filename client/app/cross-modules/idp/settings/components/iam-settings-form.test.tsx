@@ -20,9 +20,8 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 const { IamSettingsForm } = await import("@blocks-idp/settings/components/iam-settings-form");
-const { SettingsTabActionsProvider, SettingsTabActionsSlot } = await import(
-  "@blocks-idp/settings/components/settings-tab-actions"
-);
+const { SettingsTabActionsProvider, SettingsTabActionsSlot } =
+  await import("@blocks-idp/settings/components/settings-tab-actions");
 
 const baseConfig: ISettingsAuthConfig = {
   itemId: "cfg-1",
@@ -146,9 +145,7 @@ describe("IamSettingsForm", () => {
 
     await user.click(screen.getByRole("switch", { name: "OpenID Connect (OIDC)" }));
 
-    await waitFor(() =>
-      expect(screen.queryByPlaceholderText("/auth/verify-identity")).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByPlaceholderText("/auth/verify-identity")).toBeNull());
     const baseUrlInput = screen.getByPlaceholderText("console.enterprise.cloud");
     expect(baseUrlInput.hasAttribute("readonly")).toBe(true);
   });
@@ -184,6 +181,21 @@ describe("IamSettingsForm", () => {
     const payload = h.mutateAsync.mock.calls[0][0];
     expect(payload.logoutOnPasswordChange).toBe(true);
     expect(payload.passwordStrengthCheckerRegex).toBe("^.+$");
+  });
+
+  it("applies a visually generated password policy regex without locking the raw editor", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    expect(screen.getByLabelText("Password policy builder")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Use recommended policy" }));
+
+    const regex = screen.getByLabelText("Password Strength Regex") as HTMLTextAreaElement;
+    expect(regex.value).toBe("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_])[A-Za-z\\d\\W_]{8,30}$");
+
+    await user.clear(regex);
+    await user.type(regex, "^custom.+$");
+    expect(regex.value).toBe("^custom.+$");
   });
 
   it("offers the activation password toggle only while OIDC is on", async () => {
