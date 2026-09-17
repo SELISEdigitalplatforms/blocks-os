@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { useGetEnvRepositories } from "@/hooks/use-project";
-import type { IProject } from "@seliseblocks/genesis-os/models";
+import type { IProject } from "@/models/project.model";
 import { useState } from "react";
 import { ProjectRepoTable } from "./repo-table";
 

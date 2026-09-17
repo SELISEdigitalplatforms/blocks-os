@@ -138,10 +138,22 @@ describe("SaveStorageConfiguration", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+    // An update carries nothing but the settings it is allowed to change plus what identifies the
+    // configuration being changed. The name, the provider and its credentials must not reach the
+    // wire at all - the server discards them, and the only value the client holds for a secret is
+    // the masked one the read endpoint gave it.
     const payload = h.mutateAsync.mock.calls[0][0];
+    expect(Object.keys(payload).sort()).toEqual([
+      "downloadUrlExpirySeconds",
+      "itemId",
+      "maxFileSizeInBytes",
+      "projectKey",
+      "updateRequest",
+      "uploadCompletionRequiredFor",
+      "uploadUrlExpirySeconds",
+    ]);
     expect(payload.updateRequest).toBe(true);
     expect(payload.itemId).toBe("cfg-5");
-    expect(payload.name).toBe("Existing Store");
     expect(payload.maxFileSizeInBytes).toBe(10_485_760);
     expect(h.showSuccessToast).toHaveBeenCalledWith({
       description: "Configuration updated successfully",
@@ -264,6 +276,66 @@ describe("SaveStorageConfiguration", () => {
 
       expect(await screen.findByText("Must be at least 1 second")).toBeTruthy();
       expect(h.mutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a single mounted instance switching from Add to Edit (regression)", () => {
+    // In the real app, SaveStorageConfiguration is always present as a child of the storage
+    // page's <Dialog> - only Radix's internal open state toggles, so this component never
+    // actually unmounts between an "Add" render and a later "Edit" open of the same instance.
+    // `renderModal()` above always mounts fresh, which is exactly why the original
+    // useForm({ defaultValues }) bug (form staying stuck on Add-mode empty defaults forever)
+    // never showed up in any of the tests above.
+    it("picks up the real configuration after being opened once with none, without remounting", async () => {
+      const user = userEvent.setup();
+      const configuration = {
+        itemId: "cfg-9",
+        name: "Existing Store",
+        storageStrategy: "Azure",
+        accessKey: null,
+        secretKey: null,
+        cloudStorageRegionEndPoint: null,
+        connectionString: "conn-string",
+        host: null,
+        port: null,
+        userName: null,
+        password: null,
+        remoteBasePath: null,
+        // Deliberately different from the Add-mode defaults (600 / 300 / 5 MB / none) this instance
+        // was first mounted with, so the assertions below can tell a synced form from a stale one.
+        uploadUrlExpirySeconds: 900,
+        downloadUrlExpirySeconds: 120,
+        maxFileSizeInBytes: 10_485_760,
+        uploadCompletionRequiredFor: ["Private"],
+      } as unknown as IStorageConfiguration;
+
+      const utils = render(
+        <Dialog open>
+          <SaveStorageConfiguration onClose={vi.fn()} />
+        </Dialog>,
+      );
+      expect(screen.getByText("Add Storage Configuration")).toBeTruthy();
+
+      utils.rerender(
+        <Dialog open>
+          <SaveStorageConfiguration onClose={vi.fn()} configuration={configuration} />
+        </Dialog>,
+      );
+
+      expect(await screen.findByText("Edit Storage Configuration")).toBeTruthy();
+
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      const payload = h.mutateAsync.mock.calls[0][0];
+      expect(payload.updateRequest).toBe(true);
+      expect(payload.itemId).toBe("cfg-9");
+      // The form must be carrying this configuration's own settings. A form still stuck on the
+      // Add-mode defaults it first mounted with would send 600 / 300 / 5 MB / [] instead.
+      expect(payload.uploadUrlExpirySeconds).toBe(900);
+      expect(payload.downloadUrlExpirySeconds).toBe(120);
+      expect(payload.maxFileSizeInBytes).toBe(10_485_760);
+      expect(payload.uploadCompletionRequiredFor).toEqual(["Private"]);
     });
   });
 });

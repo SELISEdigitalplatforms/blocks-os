@@ -7,6 +7,7 @@ using Configuration.DomainService.Notification.Enums;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.Validators;
 using Configuration.DomainService.Shared.Services;
+using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
@@ -149,7 +150,6 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_UpdateRequest_WithoutItemId_Fails()
         {
-            // IsNameUpdated reads the existing config by id, so it must resolve to a value.
             _repo.Setup(r => r.GetStorageConfigurationByIdAsync(It.IsAny<string>()))
                  .ReturnsAsync(new StorageConfiguration { Name = "existing-name" });
             _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
@@ -168,6 +168,94 @@ namespace XUnitTest.Validators
 
             result.IsValid.Should().BeFalse();
             result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.ItemId));
+        }
+
+        [Fact]
+        public async Task Validate_UpdateRequest_CarryingOnlyMutableSettings_IsValid()
+        {
+            // The client sends nothing but the settings an update may change plus the target's id.
+            // Requiring a name, a provider or credentials here would reject a perfectly good update,
+            // since ConfigurationService discards all of them on an update anyway.
+            var request = new SaveStorageConfigurationRequest
+            {
+                UpdateRequest = true,
+                ItemId = "cfg-1",
+                UploadUrlExpirySeconds = 900,
+                DownloadUrlExpirySeconds = 120,
+                MaxFileSizeInBytes = 10_485_760,
+                UploadCompletionRequiredFor = new List<string> { "Private" }
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_UpdateRequest_WithMaskedAzureConnectionString_IsValid()
+        {
+            // A client can only ever echo back the masked connection string the read endpoint gave
+            // it ("D****...t"), which can never match the real Azure format rule. Enforcing that rule
+            // on an update made every Azure configuration permanently unsaveable.
+            var masked = Helper.GetMaskedCloudStorageRegionEndPoint(
+                "DefaultEndpointsProtocol=https;AccountName=acct;AccountKey=abc123==;EndpointSuffix=core.windows.net");
+
+            var request = new SaveStorageConfigurationRequest
+            {
+                Name = "Default",
+                StorageStrategy = "Azure",
+                ConnectionString = masked,
+                UpdateRequest = true,
+                ItemId = "cfg-1",
+                UploadUrlExpirySeconds = 600,
+                DownloadUrlExpirySeconds = 300,
+                MaxFileSizeInBytes = 5_242_880
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_UpdateRequest_StillValidatesTheMutableSettings()
+        {
+            var request = new SaveStorageConfigurationRequest
+            {
+                UpdateRequest = true,
+                ItemId = "cfg-1",
+                UploadUrlExpirySeconds = 604_801,
+                MaxFileSizeInBytes = 0,
+                UploadCompletionRequiredFor = new List<string> { "Secure" }
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadUrlExpirySeconds));
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.UploadCompletionRequiredFor));
+        }
+
+        [Fact]
+        public async Task Validate_CreateRequest_StillRequiresNameAndProviderCredentials()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            // The relaxation above must apply to updates only - creating a configuration is still the
+            // one request that has to supply a name, a provider and that provider's credentials.
+            var request = new SaveStorageConfigurationRequest
+            {
+                UpdateRequest = false,
+                UploadUrlExpirySeconds = 600
+            };
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.Name));
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.StorageStrategy));
         }
 
         private static SaveStorageConfigurationRequest ValidAzureRequest() => new()
@@ -255,6 +343,35 @@ namespace XUnitTest.Validators
 
             var request = ValidAzureRequest();
             request.MaxFileSizeInBytes = 5_242_880;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.Errors.Should().NotContain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_ExceedsFiftyMb_Fails()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 50 * 1024 * 1024 + 1;
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(SaveStorageConfigurationRequest.MaxFileSizeInBytes));
+        }
+
+        [Fact]
+        public async Task Validate_MaxFileSizeInBytes_ExactlyFiftyMb_IsValid()
+        {
+            _repo.Setup(r => r.GetStorageConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((StorageConfiguration?)null);
+
+            var request = ValidAzureRequest();
+            request.MaxFileSizeInBytes = 50 * 1024 * 1024;
 
             var result = await Validator().ValidateAsync(request);
 

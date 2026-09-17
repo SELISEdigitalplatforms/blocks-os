@@ -1,6 +1,6 @@
 import { useUpdateProject } from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
-import type { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 import {
   createColumnHelper,
   flexRender,

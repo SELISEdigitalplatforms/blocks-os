@@ -23,7 +23,12 @@ vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
   },
 }));
 vi.mock("@blocks-idp/iam/hooks/use-organization", () => ({
-  useGetAllEnabledOrganizations: () => ({ data: h.organizations }),
+  useGetEnabledOrganizationsInfinite: () => ({
+    data: { pages: [{ organizations: h.organizations }] },
+    hasNextPage: false,
+  }),
+  getEnabledOrganizationsFromPages: (pages: Array<{ organizations: unknown[] }>) =>
+    pages.flatMap((page) => page.organizations),
   useGetOrganizationConfig: () => ({ data: { isMultiOrgEnabled: h.isMultiOrgEnabled } }),
 }));
 vi.mock("@/store/useProjectStore", () => ({

@@ -4,7 +4,19 @@ import type { IStorageConfiguration } from "@blocks-storage/models/storage.model
 /** Upper bound for a configured upload/download URL expiry (7 days), matching the backend's own limit. */
 const MAX_EXPIRY_SECONDS = 604_800;
 
-export const storageConfigurationFormSchema = z
+/** Upper bound for a configured maximum file size (50 MB), matching the backend's own limit. */
+const MAX_FILE_SIZE_MB = 50;
+
+/**
+ * `isEditMode` controls whether the provider-identity/credential fields below are required.
+ * They are hidden (not just disabled) in the edit-mode form - see save-storage-configuration.tsx -
+ * because they can never actually change once a configuration exists (enforced server-side too), so
+ * validating them against whatever the backend happened to return (possibly masked, possibly null
+ * for fields the provider doesn't use) would only ever produce a validation failure the user can't
+ * see or fix, since there's no rendered field left to show the error on.
+ */
+export const buildStorageConfigurationFormSchema = (isEditMode: boolean) =>
+  z
   .object({
     name: z.string().nonempty("Name is required").trim(),
     storageStrategy: z.enum(["AWS", "Azure", "SftpStorage", "S3Compatible"]),
@@ -55,11 +67,14 @@ export const storageConfigurationFormSchema = z
         z.coerce
           .number({ invalid_type_error: "Must be a number" })
           .positive("Must be greater than 0")
+          .max(MAX_FILE_SIZE_MB, `Must be at most ${MAX_FILE_SIZE_MB} MB`)
           .transform((arg) => arg.toString()),
       ),
     uploadCompletionRequiredFor: z.array(z.enum(["Public", "Private"])),
   })
   .superRefine((data, ctx) => {
+    if (isEditMode) return;
+
     const { storageStrategy } = data;
 
     const requireFields = (fields: (keyof typeof data)[], messages: Record<string, string>) => {
@@ -107,7 +122,9 @@ export const storageConfigurationFormSchema = z
     }
   });
 
-export type StorageConfigurationFormValues = z.infer<typeof storageConfigurationFormSchema>;
+export type StorageConfigurationFormValues = z.infer<
+  ReturnType<typeof buildStorageConfigurationFormSchema>
+>;
 
 /** Matches the backend's own documented defaults (600s / 300s / 5 MiB / no required completion). */
 export const storageConfigurationFormDefaultValue: StorageConfigurationFormValues = {

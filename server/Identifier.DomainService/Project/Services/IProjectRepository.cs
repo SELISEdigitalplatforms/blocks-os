@@ -10,6 +10,10 @@ namespace DomainService.Projects
     public interface IProjectRepository
     {
         Task<Tenant> GetByDomainAsync(string name);
+
+        /// <summary>Every environment in a project group, including disabled ones.</summary>
+        Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId);
+
         Task<Tenant> GetByIdAsync(string itemId);
         Task InsertProjectAsync(Tenant project);
         Task UpdateProjectAsync(Tenant project);
