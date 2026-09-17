@@ -19,6 +19,7 @@ const h = vi.hoisted(() => ({
       hasMore?: boolean;
       isLoadingMore?: boolean;
       onLoadMore?: () => void;
+      portalled?: boolean;
     };
   }>,
   lastShowFirstFilterOnMobile: undefined as boolean | undefined,
@@ -82,6 +83,7 @@ vi.mock("@/components/filter-toolbar", () => ({
         hasMore?: boolean;
         isLoadingMore?: boolean;
         onLoadMore?: () => void;
+        portalled?: boolean;
       };
     }>;
     onChange: (key: string, value: unknown) => void;
@@ -253,6 +255,7 @@ describe("UsersDateFilters", () => {
       hasMore: true,
       isLoadingMore: true,
       onLoadMore: h.fetchNextPage,
+      portalled: false,
     });
   });
 

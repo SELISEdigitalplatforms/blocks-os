@@ -32,6 +32,7 @@ interface MultiSelectProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  portalled?: boolean;
 }
 export function MultiSelect({
   label,
@@ -42,6 +43,7 @@ export function MultiSelect({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  portalled = true,
 }: MultiSelectProps) {
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -107,11 +109,13 @@ export function MultiSelect({
       <PopoverContent
         className="w-auto p-0 sm:w-full"
         align="start"
+        portalled={portalled}
         style={isMobile ? { width: popoverWidth ? `${popoverWidth}px` : "auto" } : undefined}
       >
         <Command>
           <CommandInput placeholder={label} />
           <CommandList
+            className="overscroll-contain touch-pan-y"
             onScroll={(event) => {
               const list = event.currentTarget;
               const isNearBottom = list.scrollHeight - list.scrollTop - list.clientHeight <= 32;
