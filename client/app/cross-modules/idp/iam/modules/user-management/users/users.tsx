@@ -3,7 +3,8 @@ import { UsersTable } from "./users-table";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { useGetUsers } from "@blocks-idp/iam/hooks/use-user";
 import {
-  useGetAllEnabledOrganizations,
+  getEnabledOrganizationsFromPages,
+  useGetEnabledOrganizationsInfinite,
   useGetOrganizationConfig,
 } from "@blocks-idp/iam/hooks/use-organization";
 import { useProjectStore } from "@seliseblocks/genesis-os";
@@ -13,25 +14,29 @@ import {
   useUsersFilterQueryParams,
   useUsersSortQueryParams,
 } from "./users-filter-toolbar";
+import { useMemo } from "react";
 
 export const Users = () => {
   const { queryParams, setQueryParams } = useUsersFilterQueryParams();
   const { sortQueryParams } = useUsersSortQueryParams();
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const { data: orgConfig } = useGetOrganizationConfig(tenantId);
-  const { data: organizations = [] } = useGetAllEnabledOrganizations(tenantId, {
-    enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
-  });
-  const hasOrganizationOptions = organizations.length > 0;
+  const { data: organizationsData, hasNextPage: hasMoreOrganizations } =
+    useGetEnabledOrganizationsInfinite(tenantId, {
+      enabled: orgConfig?.isMultiOrgEnabled === true || orgConfig?.isMultiOrgEnabled === false,
+    });
+  const organizations = useMemo(
+    () => getEnabledOrganizationsFromPages(organizationsData?.pages),
+    [organizationsData?.pages],
+  );
+  const hasOrganizationOptions = organizations.length > 0 || hasMoreOrganizations === true;
   const organizationIds =
     orgConfig?.isMultiOrgEnabled === true && hasOrganizationOptions
       ? (queryParams.organizationIds ?? [])
       : [];
   const canFilterByRoles =
     orgConfig?.isMultiOrgEnabled === false ||
-    (orgConfig?.isMultiOrgEnabled === true &&
-      hasOrganizationOptions &&
-      organizationIds.length > 0);
+    (orgConfig?.isMultiOrgEnabled === true && hasOrganizationOptions && organizationIds.length > 0);
   const roles = canFilterByRoles ? (queryParams.roles ?? []) : [];
 
   const searchText =

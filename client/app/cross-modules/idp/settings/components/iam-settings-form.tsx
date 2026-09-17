@@ -9,6 +9,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { Switch } from "@/components/ui-kits/switch/switch";
+import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { isErrorWithErrors } from "@/lib/error";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ import {
   SettingsTabActions,
 } from "@blocks-idp/settings/components/settings-tab-actions";
 import { SettingsToggleCard } from "@blocks-idp/settings/components/settings-toggle-card";
+import { PasswordPolicyRegexBuilder } from "@blocks-idp/settings/components/password-policy-regex-builder";
 import { SETTINGS_FORM_LAYOUT } from "@blocks-idp/settings/constants/settings-form-layout";
 import { useSaveSettingsAuthConfig } from "@blocks-idp/settings/hooks/use-settings-config";
 import type { ISettingsAuthConfig } from "@blocks-idp/settings/models/settings.model";
@@ -423,10 +425,23 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password Strength Regex</FormLabel>
+                    <div
+                      data-testid="password-strength-regex-header"
+                      className="flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <FormLabel>Password Strength Regex</FormLabel>
+                      <PasswordPolicyRegexBuilder onChange={field.onChange} />
+                    </div>
+                    <FormDescription>
+                      Use the policy builder to compose and preview
+                      common IAM password requirements.
+                    </FormDescription>
                     <FormControl>
-                      <Input
-                        className={cn(SETTINGS_FORM_LAYOUT.inputFull, "font-mono text-sm")}
+                      <Textarea
+                        className={cn(
+                          SETTINGS_FORM_LAYOUT.inputFull,
+                          "min-h-20 resize-y font-mono text-sm",
+                        )}
                         placeholder={DEFAULT_PASSWORD_STRENGTH_REGEX_PLACEHOLDER}
                         {...field}
                       />

@@ -82,8 +82,7 @@ export interface IStorageConfigurationUpdatePayload extends IStorageConfiguratio
 }
 
 export type IStorageConfigurationSavePayload =
-  | IStorageConfigurationCreatePayload
-  | IStorageConfigurationUpdatePayload;
+  IStorageConfigurationCreatePayload | IStorageConfigurationUpdatePayload;
 export interface IStorageConfigurationDeletePayload {
   projectKey: string;
   configurationName: string;
@@ -172,6 +171,12 @@ export interface IUploadImagePayload {
 export interface IPublicCertificatePayload {
   TenantId: string;
   file: File;
+  /**
+   * Which external provider the certificate belongs to. The blob name is derived from it, so
+   * without it every provider on a tenant shares one slot and each upload replaces the previous
+   * provider's certificate.
+   */
+  ProviderRef?: string;
 }
 
 export interface IUploadFileToLocalStorage {

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Blocks.Genesis;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using System.Text;
 
@@ -137,6 +138,40 @@ namespace DomainService.Shared
             "prod" => "p",
             _ => "n"
         };
+
+        /// <summary>
+        /// The host the platform generates for a repository in one environment:
+        /// "https://{env}{tenantSlug}-{repoSlug}{identifier}". Both slugs are stable across a
+        /// group — the tenant slug is keyed on the group id and the repo slug on the resource id —
+        /// so the environment letter is the only part that varies between a group's environments.
+        /// A resource without a slug (a project that has no repository yet) falls back to the
+        /// group's own host. Lowercased so the same repository in the same environment always
+        /// produces a byte-identical domain, whichever caller built it.
+        /// </summary>
+        public static string BuildPlatformSubdomain(string environment, string tenantSlug, string repoSlug, string identifier) =>
+            (string.IsNullOrEmpty(repoSlug)
+                ? $"https://{EnvironmentMapper(environment)}{tenantSlug}{identifier}"
+                : $"https://{EnvironmentMapper(environment)}{tenantSlug}-{repoSlug}{identifier}")
+            .ToLowerInvariant();
+
+        /// <summary>
+        /// Whether a registrable domain belongs to the platform rather than to a customer.
+        /// Hosts under these are provisioned by Blocks and served by shared infrastructure, so
+        /// they are verified on sight and never treated as customer-owned.
+        /// </summary>
+        public static bool IsPlatformOwnedDomain(string mainDomain) =>
+            mainDomain == IdentifierConstants.ConstructCookieDomain
+            || mainDomain == IdentifierConstants.BlocksDomain;
+
+        /// <summary>
+        /// How a domain someone registered against a project should be classified. Anything under
+        /// a platform domain was generated for them, however it was entered; everything else is
+        /// theirs. Never read from the request — the caller cannot be allowed to name its own type.
+        /// </summary>
+        public static DomainType ResolveDomainType(string domain) =>
+            IsPlatformOwnedDomain(ExtractMainDomain(domain))
+                ? DomainType.PlatformSubdomain
+                : DomainType.Custom;
 
         public static (string? Controller, string? Action) GetControllerAction(HttpContext httpContext)
         {
