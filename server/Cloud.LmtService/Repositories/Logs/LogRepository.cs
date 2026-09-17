@@ -9,6 +9,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Cloud.LmtService.Repositories.Logs
@@ -250,118 +251,110 @@ namespace Cloud.LmtService.Repositories.Logs
             }
         }
 
-        public async Task<Dictionary<string, List<StoredLog>>> GetLogsByServiceGroupedByTenantAsync(
+        /// <summary>
+        /// Streams a blocks service's logs for the window, excluding the tenants and services the
+        /// backup has always ignored. Batched off one cursor rather than paged with Skip: the old
+        /// paged read deleted between pages, so the moving offset silently skipped logs.
+        /// </summary>
+        public IAsyncEnumerable<List<StoredLog>> StreamBlocksServiceLogsAsync(
             string serviceName,
             TenantLogsRequest query,
-            int pageNumber,
-            int pageSize)
+            int batchSize,
+            CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(serviceName))
-                return [];
+            var filter = BuildDateFilter(query)
+                & Builders<BsonDocument>.Filter.Nin(TenantIdField, Constants.IgnoredTenants)
+                & Builders<BsonDocument>.Filter.Nin(ServiceNameField, Constants.IgnoredServices);
 
-            var collection = _database.GetCollection<BsonDocument>(serviceName);
-            var filter = BuildDateFilter(query);
-            filter &= Builders<BsonDocument>.Filter.Nin(TenantIdField, Constants.IgnoredTenants);
-            filter &= Builders<BsonDocument>.Filter.Nin(ServiceNameField, Constants.IgnoredServices);
-
-            var sort = Builders<BsonDocument>.Sort.Descending(Constants.Timestamp);
-            var projection = BuildStoredLogProjection();
-
-            try
-            {
-                var aggregateOptions = new AggregateOptions { AllowDiskUse = true };
-
-                var groupedDocs = await collection.Aggregate(aggregateOptions)
-                    .Match(filter)
-                    .Sort(sort)
-                    .Project(projection)
-                    .Skip(pageNumber * pageSize)
-                    .Limit(pageSize)
-                    .Group(new BsonDocument
-                    {
-                                { "_id", "$TenantId" },
-                                { "Logs", new BsonDocument("$push", "$$ROOT") }
-                    })
-                    .ToListAsync();
-
-                return groupedDocs
-                    .Select(doc =>
-                    {
-                        var id = doc.GetValue("_id", BsonNull.Value);
-                        string tenantId;
-
-                        if (id.IsString)
-                        {
-                            tenantId = id.AsString;
-                        }
-                        else if (id.IsBsonNull)
-                        {
-                            tenantId = string.Empty;
-                        }
-                        else
-                        {
-                            tenantId = id.ToString();
-                        }
-
-                        return new
-                        {
-                            TenantId = tenantId,
-                            Logs = doc.GetValue("Logs", new BsonArray()).AsBsonArray
-                        };
-                    })
-                    .Where(x => !string.IsNullOrWhiteSpace(x.TenantId) && x.Logs.Count > 0)
-                    .ToDictionary(
-                        x => x.TenantId!,
-                        x => x.Logs
-                            .Select(l => MapStoredLog(l.AsBsonDocument))
-                            .ToList(),
-                        StringComparer.OrdinalIgnoreCase);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get logs for service {ServiceName}", serviceName);
-                return [];
-            }
+            return StreamServiceLogsAsync(serviceName, filter, batchSize, ct);
         }
 
-        public async Task<(List<StoredLog> Logs, string? TenantId)> GetLogsByServiceAsync(
+        /// <summary>
+        /// Streams a managed service's logs for the window. Managed services keep their own filter
+        /// rules - they are not subject to the ignore lists the blocks services use - but they now
+        /// read the same projection, so the six fields the narrower managed projection used to drop
+        /// (ActionName, EnvironmentName, ParentId, RequestPath, Exception, ParentSpanId) reach the
+        /// archive instead of being backed up blank.
+        /// </summary>
+        public IAsyncEnumerable<List<StoredLog>> StreamManagedServiceLogsAsync(
             string serviceName,
-            TenantLogsRequest query)
+            TenantLogsRequest query,
+            int batchSize,
+            CancellationToken ct = default)
+            => StreamServiceLogsAsync(serviceName, BuildDateFilter(query), batchSize, ct);
+
+        private async IAsyncEnumerable<List<StoredLog>> StreamServiceLogsAsync(
+            string serviceName,
+            FilterDefinition<BsonDocument> filter,
+            int batchSize,
+            [EnumeratorCancellation] CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(serviceName))
-                return ([], null);
+            if (string.IsNullOrWhiteSpace(serviceName) || batchSize <= 0)
+                yield break;
 
             var collection = _database.GetCollection<BsonDocument>(serviceName);
-            var filter = BuildDateFilter(query);
-            var sort = Builders<BsonDocument>.Sort.Descending(Constants.Timestamp);
-            var projection = BuildStoredLogWithTenantProjection();
-
-            try
+            var options = new FindOptions<BsonDocument, BsonDocument>
             {
-                var docs = await collection.Find(filter)
-                    .Sort(sort)
-                    .Project(projection)
-                    .ToListAsync();
+                Projection = BuildStoredLogProjection(),
+                Sort = Builders<BsonDocument>.Sort.Descending(Constants.Timestamp),
+                BatchSize = batchSize
+            };
 
-                if (docs.Count == 0)
-                    return ([], null);
+            using var cursor = await collection.FindAsync(filter, options, ct);
 
-                var firstDoc = docs[0];
-                var tenantId = firstDoc.GetValue(TenantIdField, BsonNull.Value).IsBsonNull
-                    ? null
-                    : firstDoc[TenantIdField].AsString;
+            var buffer = new List<StoredLog>(batchSize);
 
-                var logs = docs
-                    .Select(doc => MapStoredLog(doc))
-                    .ToList();
-
-                return (logs, tenantId);
-            }
-            catch (Exception ex)
+            while (await cursor.MoveNextAsync(ct))
             {
-                _logger.LogError(ex, "Failed to get logs for managed service {ServiceName}", serviceName);
-                return ([], null);
+                foreach (var doc in cursor.Current)
+                {
+                    buffer.Add(MapStoredLog(doc));
+
+                    if (buffer.Count < batchSize) continue;
+
+                    yield return buffer;
+                    buffer = new List<StoredLog>(batchSize);
+                }
             }
+
+            if (buffer.Count > 0)
+                yield return buffer;
+        }
+
+        /// <summary>
+        /// Streams an archive collection in batches. Read failures propagate so the caller can tell
+        /// an empty collection from one it simply could not read.
+        /// </summary>
+        public async IAsyncEnumerable<List<StoredLog>> StreamLogsFromArchiveCollectionAsync(
+            string collectionName,
+            int batchSize,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName) || batchSize <= 0)
+                yield break;
+
+            var collection = _archiveDatabase.GetCollection<StoredLog>(collectionName);
+            var options = new FindOptions<StoredLog, StoredLog> { BatchSize = batchSize };
+
+            using var cursor = await collection.FindAsync(FilterDefinition<StoredLog>.Empty, options, ct);
+
+            var buffer = new List<StoredLog>(batchSize);
+
+            while (await cursor.MoveNextAsync(ct))
+            {
+                foreach (var log in cursor.Current)
+                {
+                    buffer.Add(log);
+
+                    if (buffer.Count < batchSize) continue;
+
+                    yield return buffer;
+                    buffer = new List<StoredLog>(batchSize);
+                }
+            }
+
+            if (buffer.Count > 0)
+                yield return buffer;
         }
 
         public async Task<long> DeleteLogsByServiceAndTenantAsync(string serviceName, TenantLogsRequest query, CancellationToken ct = default)
@@ -416,22 +409,6 @@ namespace Cloud.LmtService.Repositories.Logs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to list collections from LogsArchive database");
-                return [];
-            }
-        }
-
-        public async Task<List<StoredLog>> GetLogsFromArchiveCollectionAsync(string collectionName)
-        {
-            try
-            {
-                var collection = _archiveDatabase.GetCollection<StoredLog>(collectionName);
-                return await collection
-                    .Find(FilterDefinition<StoredLog>.Empty)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get logs from archive collection {CollectionName}", collectionName);
                 return [];
             }
         }

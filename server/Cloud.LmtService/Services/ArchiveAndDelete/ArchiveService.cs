@@ -44,6 +44,20 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
         public async Task StartBackupAsync()
         {
+            // A run that died without completing would otherwise hold the lock below forever, so
+            // stale rows are released first.
+            await ReleaseStaleRunsAsync();
+
+            // Two overlapping runs both enumerate the archive databases and drop each collection
+            // once it is uploaded, so the second can drop what the first is still writing. The
+            // schedule can overlap for ordinary reasons: a Service Bus lock that expires mid-run
+            // gets the message redelivered, and the on-demand endpoint can fire at any time.
+            if (await _backupRepository.HasActiveRunAsync())
+            {
+                _logger.LogWarning("StartBackupAsync - A backup run is already active; skipping this trigger.");
+                return;
+            }
+
             var (startDate, endDate) = await ComputeBackupDateRangeAsync();
             var runId = await _backupRepository.CreateJobAsync(startDate, endDate);
 
@@ -75,6 +89,29 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                 throw;
             }
         }
+        /// <summary>
+        /// Marks runs that stopped sending heartbeats as abandoned. Without this a crashed worker
+        /// leaves a Running row behind and every later trigger is refused as "already active".
+        /// Failing to reap must not stop the backup, so the error is logged and swallowed.
+        /// </summary>
+        private async Task ReleaseStaleRunsAsync()
+        {
+            try
+            {
+                var staleRunIds = await _backupRepository.GetStaleRunningJobIdsAsync(Constants.BackupStaleRunThreshold);
+
+                foreach (var staleRunId in staleRunIds)
+                {
+                    _logger.LogWarning("ReleaseStaleRunsAsync - Abandoning stale backup run {RunId}", staleRunId);
+                    await _backupRepository.MarkJobAbandonedAsync(staleRunId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ReleaseStaleRunsAsync - Could not release stale runs");
+            }
+        }
+
         public async Task<LmtArchiveRestoreConfigurations> GetRestoreConfigurationsAsync()
         {
             return await _lmtArchiveRestoreConfigurationRepository.GetLmtArchiveRestoreConfigurationsAsync();
@@ -118,24 +155,23 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                     Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
                 };
 
-                int pageNumber = 0;
                 int totalRecords = 0;
 
-                while (true)
+                // The delete covers the whole window, so it can only run once the whole window has
+                // been archived. Deleting per batch - as this used to - destroyed every trace past
+                // the first batch, because the delete was never scoped to the batch just written.
+                await foreach (var batch in _traceRepository.StreamTracesByCollectionAsync(
+                    tenantId, query, Constants.TracesBatchSize))
                 {
-                    var traces = await _traceRepository.GetTracesByCollectionAsync(
-                        tenantId, query, pageNumber, Constants.TracesBatchSize);
-
-                    if (traces.Count == 0) break;
-
-                    await _traceRepository.ArchiveTracesAsync(traces, query);
-                    await _traceRepository.DeleteTracesByCollectionAsync(query);
-
-                    totalRecords += traces.Count;
-                    pageNumber++;
+                    await _traceRepository.ArchiveTracesAsync(batch, query);
+                    totalRecords += batch.Count;
 
                     await TrySilentAsync(() => _backupRepository.UpdateJobHeartbeatAsync(runId));
                 }
+
+                // An exception above skips this, leaving the source data in place for a later run.
+                if (totalRecords > 0)
+                    await _traceRepository.DeleteTracesByCollectionAsync(query);
 
                 await _backupRepository.MarkTraceArchivedAsync(runId, tenantId, totalRecords);
             }
@@ -178,27 +214,14 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                     Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
                 };
 
-                int pageNumber = 0;
+                var archived = await ArchiveServiceLogsByTenantAsync(
+                    runId, serviceName, startDate, endDate,
+                    _logRepository.StreamBlocksServiceLogsAsync(serviceName, query, Constants.LogsBatchSize),
+                    (tenantId, traceId) => _backupRepository.CreateLogFileProgressAsync(runId, tenantId, serviceName, traceId),
+                    (tenantId, error) => _backupRepository.MarkLogArchiveFailedAsync(runId, tenantId, serviceName, error));
 
-                while (true)
-                {
-                    var groupedLogs = await _logRepository.GetLogsByServiceGroupedByTenantAsync(
-                        serviceName, query, pageNumber, Constants.LogsBatchSize);
-
-                    if (groupedLogs.Count == 0) break;
-
-                    foreach (var (tenantId, logs) in groupedLogs)
-                    {
-                        if (logs.Count == 0) continue;
-
-                        var traceId = logs.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.TraceId))?.TraceId;
-                        await _backupRepository.CreateLogFileProgressAsync(runId, tenantId, serviceName, traceId);
-                        await ArchiveAndDeleteBlocksServiceLogDataAsync(runId, serviceName, tenantId, logs, startDate, endDate);
-                    }
-
-                    pageNumber++;
-                    await TrySilentAsync(() => _backupRepository.UpdateJobHeartbeatAsync(runId));
-                }
+                await DeleteArchivedServiceLogsAsync(runId, serviceName, startDate, endDate, archived,
+                    (tenantId, count) => _backupRepository.MarkLogArchivedAsync(runId, tenantId, serviceName, count));
             }
             catch (Exception ex)
             {
@@ -210,30 +233,105 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             }
         }
 
-        private async Task ArchiveAndDeleteBlocksServiceLogDataAsync(
-            string runId, string serviceName, string tenantId, List<StoredLog> logs, DateTime startDate, DateTime endDate)
+        /// <summary>
+        /// Archives a service's logs, filing every log under the tenant that owns it.
+        /// <para>
+        /// Nothing is deleted here. The delete is scoped to a tenant and the whole window, so it
+        /// cannot run until that tenant's logs have all been archived - see
+        /// <see cref="DeleteArchivedServiceLogsAsync"/>. A tenant whose archive write fails is left
+        /// out of the returned set, so its source logs survive to be retried.
+        /// </para>
+        /// </summary>
+        private async Task<Dictionary<string, int>> ArchiveServiceLogsByTenantAsync(
+            string runId,
+            string serviceName,
+            DateTime startDate,
+            DateTime endDate,
+            IAsyncEnumerable<List<StoredLog>> batches,
+            Func<string, string?, Task> createProgressAsync,
+            Func<string, string, Task> markFailedAsync)
         {
-            try
+            var archivedByTenant = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var failedTenants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            await foreach (var batch in batches)
             {
-                var query = new TenantLogsRequest
+                foreach (var group in batch.GroupBy(log => log.TenantId, StringComparer.OrdinalIgnoreCase))
                 {
-                    ProjectKey = tenantId,
-                    Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
-                };
+                    var tenantId = group.Key;
 
-                await _logRepository.ArchiveLogsAsync(logs, query);
-                await _logRepository.DeleteLogsByServiceAndTenantAsync(serviceName, query);
+                    // Logs with no tenant have always been skipped: there is no tenant folder to
+                    // archive them under, and deleting them would be deleting an unbacked-up log.
+                    if (string.IsNullOrWhiteSpace(tenantId) || failedTenants.Contains(tenantId))
+                        continue;
 
-                await _backupRepository.MarkLogArchivedAsync(runId, tenantId, serviceName, logs.Count);
+                    var logs = group.ToList();
+
+                    try
+                    {
+                        if (!archivedByTenant.ContainsKey(tenantId))
+                        {
+                            var traceId = logs.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.TraceId))?.TraceId;
+                            await createProgressAsync(tenantId, traceId);
+                        }
+
+                        await _logRepository.ArchiveLogsAsync(logs, TenantWindow(tenantId, startDate, endDate));
+                        archivedByTenant[tenantId] = archivedByTenant.GetValueOrDefault(tenantId) + logs.Count;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "ArchiveServiceLogsByTenantAsync - Failed for tenant {TenantId}, service {ServiceName}",
+                            tenantId, serviceName);
+
+                        // Give up on this tenant only. Its logs stay put rather than being deleted
+                        // against an archive that never received them.
+                        archivedByTenant.Remove(tenantId);
+                        failedTenants.Add(tenantId);
+                        await TrySilentAsync(() => markFailedAsync(tenantId, ex.ToString()));
+                    }
+                }
+
+                await TrySilentAsync(() => _backupRepository.UpdateJobHeartbeatAsync(runId));
             }
-            catch (Exception ex)
+
+            return archivedByTenant;
+        }
+
+        /// <summary>
+        /// Deletes the source logs of every tenant that was archived in full, one delete per tenant.
+        /// </summary>
+        private async Task DeleteArchivedServiceLogsAsync(
+            string runId,
+            string serviceName,
+            DateTime startDate,
+            DateTime endDate,
+            Dictionary<string, int> archivedByTenant,
+            Func<string, int, Task> markArchivedAsync)
+        {
+            foreach (var (tenantId, recordCount) in archivedByTenant)
             {
-                _logger.LogError(ex, "ArchiveAndDeleteBlocksServiceLogDataAsync - Failed for tenant {TenantId}, service {ServiceName}",
-                    tenantId, serviceName);
-                await TrySilentAsync(() =>
-                    _backupRepository.MarkLogArchiveFailedAsync(runId, tenantId, serviceName, ex.ToString()));
+                try
+                {
+                    await _logRepository.DeleteLogsByServiceAndTenantAsync(
+                        serviceName, TenantWindow(tenantId, startDate, endDate));
+
+                    await markArchivedAsync(tenantId, recordCount);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "DeleteArchivedServiceLogsAsync - Failed for tenant {TenantId}, service {ServiceName}",
+                        tenantId, serviceName);
+                }
+
+                await TrySilentAsync(() => _backupRepository.UpdateJobHeartbeatAsync(runId));
             }
         }
+
+        private static TenantLogsRequest TenantWindow(string tenantId, DateTime startDate, DateTime endDate) => new()
+        {
+            ProjectKey = tenantId,
+            Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
+        };
         private async Task ProcessAllManagedServiceLogsBackupAsync(string runId, DateTime startDate, DateTime endDate)
         {
             var serviceNames = await _logRepository.GetDistinctManagedServiceNamesAsync(startDate, endDate);
@@ -256,6 +354,20 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             if (string.IsNullOrWhiteSpace(serviceName)) return;
 
             await semaphore.WaitAsync();
+
+            // The progress document is per service, not per tenant, so it is created once - on the
+            // first tenant seen, which is also where its TraceId comes from. Declared out here so
+            // the failure path below can still guarantee the row exists.
+            var progressCreated = false;
+
+            async Task EnsureServiceProgressAsync(string? traceId)
+            {
+                if (progressCreated) return;
+
+                progressCreated = true;
+                await _backupRepository.CreateServiceLogFileProgressAsync(runId, serviceName, traceId);
+            }
+
             try
             {
                 var query = new TenantLogsRequest
@@ -263,32 +375,41 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
                     Filter = new TenantLogsRequestByFilter { StartDate = startDate, EndDate = endDate }
                 };
 
-                var (logs, tenantId) = await _logRepository.GetLogsByServiceAsync(serviceName, query);
-                var traceId = logs.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.TraceId))?.TraceId;
+                // A managed service collection holds more than one tenant's logs. Reading the
+                // tenant off the first document filed everyone else's logs under that tenant - and
+                // into that tenant's blob folder - while leaving their source logs undeleted.
+                var archived = await ArchiveServiceLogsByTenantAsync(
+                    runId, serviceName, startDate, endDate,
+                    _logRepository.StreamManagedServiceLogsAsync(serviceName, query, Constants.LogsBatchSize),
+                    async (tenantId, traceId) =>
+                    {
+                        await EnsureServiceProgressAsync(traceId);
+                        await TrySilentAsync(() =>
+                            _backupRepository.UpdateServiceLogTenantResolvedAsync(runId, serviceName, tenantId));
+                    },
+                    (tenantId, error) =>
+                        _backupRepository.MarkServiceLogArchiveFailedAsync(runId, serviceName, tenantId, error));
 
-                await _backupRepository.CreateServiceLogFileProgressAsync(runId, serviceName, traceId);
+                // A service with no logs in the window still gets its progress row, recorded as 0.
+                await EnsureServiceProgressAsync(null);
 
-                if (logs.Count == 0 || string.IsNullOrWhiteSpace(tenantId))
-                {
-                    // No data — mark as archived with 0 records
-                    await _backupRepository.MarkServiceLogArchivedAsync(runId, serviceName, 0);
-                    return;
-                }
-                await TrySilentAsync(() =>
-                    _backupRepository.UpdateServiceLogTenantResolvedAsync(runId, serviceName, tenantId));
+                await DeleteArchivedServiceLogsAsync(runId, serviceName, startDate, endDate, archived,
+                    (_, _) => Task.CompletedTask);
 
-                query.ProjectKey = tenantId;
-
-                await _logRepository.ArchiveLogsAsync(logs, query);
-                await _logRepository.DeleteLogsByServiceAndTenantAsync(serviceName, query);
-
-                await _backupRepository.MarkServiceLogArchivedAsync(runId, serviceName, logs.Count);
+                // The progress document is per service, so it carries the whole service's total.
+                await _backupRepository.MarkServiceLogArchivedAsync(runId, serviceName, archived.Values.Sum());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ProcessSingleManagedServiceLogAsync - Failed for service {ServiceName}", serviceName);
-                await TrySilentAsync(() =>
-                    _backupRepository.MarkServiceLogArchiveFailedAsync(runId, serviceName, null, ex.ToString()));
+
+                // The failure is recorded against a row that is guaranteed to exist, even when the
+                // read failed before a single batch arrived.
+                await TrySilentAsync(async () =>
+                {
+                    await EnsureServiceProgressAsync(null);
+                    await _backupRepository.MarkServiceLogArchiveFailedAsync(runId, serviceName, null, ex.ToString());
+                });
             }
             finally
             {
@@ -306,46 +427,45 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
             _logger.LogInformation("ProcessArchiveLogsToBlobAsync - Uploading {Count} collection(s) to blob.", collections.Count);
 
-            foreach (var collectionName in collections)
-            {
-                await ProcessSingleLogCollectionAsync(runId, collectionName);
-            }
+            // Bounded concurrency, matching the archiving phase. Each upload now streams one batch
+            // at a time, so running several at once costs a bounded amount of memory rather than
+            // one tenant-day per upload.
+            using var semaphore = new SemaphoreSlim(Constants.MongoQueryMaxConcurrency);
+            await Task.WhenAll(collections.Select(collectionName =>
+                RunWithSemaphoreAsync(semaphore, () => ProcessSingleLogCollectionAsync(runId, collectionName))));
         }
 
         private async Task ProcessSingleLogCollectionAsync(string runId, string collectionName)
         {
-            var parts = collectionName.Split('_');
-            if (parts.Length < 3)
+            if (!TryParseArchiveCollectionName(collectionName, out var tenantId, out var startDateStr, out var endDateStr))
             {
                 _logger.LogWarning("ProcessSingleLogCollectionAsync - Skipping invalid collection name: {CollectionName}", collectionName);
                 return;
             }
 
-            var tenantId = parts[0];
-            var startDateStr = parts[1];
-            var endDateStr = parts[2];
             var fileName = $"logs_{tenantId}_{startDateStr}_{endDateStr}.parquet";
             var blobPath = $"{Constants.BackupSubdirectory}/{tenantId}/{Constants.BackupLogsDirectory}/{fileName}";
 
             try
             {
-                var logs = await _logRepository.GetLogsFromArchiveCollectionAsync(collectionName);
                 var isCarryover = !await _backupRepository.LogProgressExistsForTenantAsync(runId, tenantId);
                 await _backupRepository.CreateLogBlobUploadProgressAsync(runId, tenantId, collectionName, blobPath, isCarryover);
 
-                if (logs.Count == 0)
+                // A read failure throws out of here instead of arriving as an empty result, so the
+                // collection is only ever dropped once its contents are safely in blob storage.
+                var (url, rowCount, error) = await StoreArchivedLogFileAsync(fileName, collectionName, tenantId);
+
+                if (rowCount == 0)
                 {
                     await _logRepository.DeleteArchiveCollectionAsync(collectionName);
                     await _backupRepository.MarkLogBlobCompletedAsync(runId, tenantId, 0);
                     return;
                 }
 
-                var (url, error) = await StoreArchivedLogFileAsync(fileName, logs, tenantId);
-
                 if (!string.IsNullOrWhiteSpace(url))
                 {
                     await _logRepository.DeleteArchiveCollectionAsync(collectionName);
-                    await _backupRepository.MarkLogBlobCompletedAsync(runId, tenantId, logs.Count);
+                    await _backupRepository.MarkLogBlobCompletedAsync(runId, tenantId, (int)rowCount);
                 }
                 else
                 {
@@ -373,43 +493,71 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
             _logger.LogInformation("ProcessArchiveTracesToBlobAsync - Uploading {Count} collection(s) to blob.", collections.Count);
 
-            foreach (var collectionName in collections)
+            using var semaphore = new SemaphoreSlim(Constants.MongoQueryMaxConcurrency);
+            await Task.WhenAll(collections.Select(collectionName =>
+                RunWithSemaphoreAsync(semaphore, () => ProcessSingleTraceCollectionAsync(runId, collectionName))));
+        }
+
+        private static async Task RunWithSemaphoreAsync(SemaphoreSlim semaphore, Func<Task> action)
+        {
+            await semaphore.WaitAsync();
+            try
             {
-                await ProcessSingleTraceCollectionAsync(runId, collectionName);
+                await action();
             }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+
+        /// <summary>
+        /// Splits an archive collection name into its tenant and window parts.
+        /// The name is <c>{tenantId}_{yyyyMMdd}_{yyyyMMdd}</c>, and the two dates are always the
+        /// last two segments, so a tenant id that itself contains an underscore still resolves to
+        /// the right tenant instead of being truncated at the first separator.
+        /// </summary>
+        private static bool TryParseArchiveCollectionName(
+            string collectionName, out string tenantId, out string startDateStr, out string endDateStr)
+        {
+            tenantId = startDateStr = endDateStr = string.Empty;
+
+            var parts = collectionName.Split('_');
+            if (parts.Length < 3) return false;
+
+            endDateStr = parts[^1];
+            startDateStr = parts[^2];
+            tenantId = string.Join('_', parts[..^2]);
+
+            return !string.IsNullOrWhiteSpace(tenantId);
         }
 
         private async Task ProcessSingleTraceCollectionAsync(string runId, string collectionName)
         {
-            var parts = collectionName.Split('_');
-            if (parts.Length < 3)
+            if (!TryParseArchiveCollectionName(collectionName, out var tenantId, out var startDateStr, out var endDateStr))
             {
                 _logger.LogWarning("ProcessSingleTraceCollectionAsync - Skipping invalid collection name: {CollectionName}", collectionName);
                 return;
             }
 
-            var tenantId = parts[0];
-            var startDateStr = parts[1];
-            var endDateStr = parts[2];
             var fileName = $"traces_{tenantId}_{startDateStr}_{endDateStr}.parquet";
             var blobPath = $"{Constants.BackupSubdirectory}/{tenantId}/{Constants.BackupTracesDirectory}/{fileName}";
 
-            var isCarryover = !await _backupRepository.TraceProgressExistsAsync(runId, tenantId);
-
-            await _backupRepository.MarkTraceUploadingAsync(runId, tenantId, collectionName, blobPath, isCarryover);
-
             try
             {
-                var traces = await _traceRepository.GetTracesFromArchiveCollectionAsync(collectionName);
+                // Inside the try: a failure reading or writing progress used to escape this method,
+                // abort the enclosing loop and leave every remaining tenant unuploaded.
+                var isCarryover = !await _backupRepository.TraceProgressExistsAsync(runId, tenantId);
+                await _backupRepository.MarkTraceUploadingAsync(runId, tenantId, collectionName, blobPath, isCarryover);
 
-                if (traces.Count == 0)
+                var (url, rowCount, error) = await StoreArchivedTraceFileAsync(fileName, collectionName, tenantId);
+
+                if (rowCount == 0)
                 {
                     await _traceRepository.DeleteArchiveCollectionAsync(collectionName);
                     await _backupRepository.MarkTraceCompletedAsync(runId, tenantId);
                     return;
                 }
-
-                var (url, error) = await StoreArchivedTraceFileAsync(fileName, traces, tenantId);
 
                 if (!string.IsNullOrWhiteSpace(url))
                 {
@@ -433,26 +581,38 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
 
         // ── Blob storage helpers ─────────────────────────────────────────────────
 
-        private async Task<(string Url, string? ErrorMessage)> StoreArchivedLogFileAsync(
-            string fileName, IEnumerable<StoredLog> logs, string tenantId, CancellationToken ct = default)
+        /// <summary>
+        /// Streams the archive collection straight into a Parquet file and uploads it.
+        /// <para>
+        /// A read failure propagates to the caller rather than being reported as an empty result:
+        /// the caller drops the archive collection when the row count is zero, so "empty" and
+        /// "could not be read" must not look alike.
+        /// </para>
+        /// </summary>
+        private async Task<(string Url, long RowCount, string? ErrorMessage)> StoreArchivedLogFileAsync(
+            string fileName, string collectionName, string tenantId, CancellationToken ct = default)
         {
             string filePath = string.Empty;
             try
             {
-                var logsForParquet = logs.Select(StoredLogForParquet.FromStoredLog).ToList();
                 var uniqueLocalFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{Guid.NewGuid():N}.parquet";
-                filePath = await ParquetService.SaveParquetAsync(logsForParquet, uniqueLocalFileName, ct);
+
+                var batches = _logRepository
+                    .StreamLogsFromArchiveCollectionAsync(collectionName, Constants.LogsBatchSize, ct)
+                    .Select(batch => batch.ConvertAll(StoredLogForParquet.FromStoredLog));
+
+                long rowCount;
+                (filePath, rowCount) = await ParquetService.SaveLogsParquetAsync(batches, uniqueLocalFileName, ct);
+
+                if (rowCount == 0)
+                    return (string.Empty, 0, null);
 
                 if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
-                    return (string.Empty, $"Parquet file was not saved for {fileName}");
+                    return (string.Empty, rowCount, $"Parquet file was not saved for {fileName}");
 
                 var blobPath = $"{Constants.BackupSubdirectory}/{tenantId}/{Constants.BackupLogsDirectory}/{fileName}";
-                return await UploadFileAsync(filePath, blobPath, ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "StoreArchivedLogFileAsync - Failed for {FileName}", fileName);
-                return (string.Empty, ex.ToString());
+                var (url, error) = await UploadFileAsync(filePath, blobPath, ct);
+                return (url, rowCount, error);
             }
             finally
             {
@@ -460,26 +620,31 @@ namespace Cloud.LmtService.Services.ArchiveAndDelete
             }
         }
 
-        private async Task<(string Url, string? ErrorMessage)> StoreArchivedTraceFileAsync(
-            string fileName, IEnumerable<StoredTrace> traces, string tenantId, CancellationToken ct = default)
+        /// <inheritdoc cref="StoreArchivedLogFileAsync"/>
+        private async Task<(string Url, long RowCount, string? ErrorMessage)> StoreArchivedTraceFileAsync(
+            string fileName, string collectionName, string tenantId, CancellationToken ct = default)
         {
             string filePath = string.Empty;
             try
             {
-                var tracesForParquet = traces.Select(StoredTraceForParquet.FromStoredTrace).ToList();
                 var uniqueLocalFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{Guid.NewGuid():N}.parquet";
-                filePath = await ParquetService.SaveParquetAsync(tracesForParquet, uniqueLocalFileName, ct);
+
+                var batches = _traceRepository
+                    .StreamTracesFromArchiveCollectionAsync(collectionName, Constants.TracesBatchSize, ct)
+                    .Select(batch => batch.ConvertAll(StoredTraceForParquet.FromStoredTrace));
+
+                long rowCount;
+                (filePath, rowCount) = await ParquetService.SaveTracesParquetAsync(batches, uniqueLocalFileName, ct);
+
+                if (rowCount == 0)
+                    return (string.Empty, 0, null);
 
                 if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
-                    return (string.Empty, $"Parquet file was not saved for {fileName}");
+                    return (string.Empty, rowCount, $"Parquet file was not saved for {fileName}");
 
                 var blobPath = $"{Constants.BackupSubdirectory}/{tenantId}/{Constants.BackupTracesDirectory}/{fileName}";
-                return await UploadFileAsync(filePath, blobPath, ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "StoreArchivedTraceFileAsync - Failed for {FileName}", fileName);
-                return (string.Empty, ex.ToString());
+                var (url, error) = await UploadFileAsync(filePath, blobPath, ct);
+                return (url, rowCount, error);
             }
             finally
             {
