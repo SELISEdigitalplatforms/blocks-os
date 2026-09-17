@@ -98,4 +98,43 @@ describe("LogsRoute", () => {
     render(<LogsRoute />);
     expect(screen.getByTestId("services-loading").textContent).toBe("true");
   });
+
+  it("lists the API and each worker of a blocks service as separate flat services", () => {
+    render(<LogsRoute />);
+    expect(h.viewerProps?.services).toEqual([
+      { id: "os-api", label: "OS API", serviceName: "blocks-os", serviceNames: ["blocks-os"] },
+      {
+        id: "os-worker",
+        label: "OS Worker",
+        serviceName: "blocks-os-worker",
+        serviceNames: ["blocks-os-worker"],
+      },
+    ]);
+  });
+
+  it("offers only the API and worker parts a blocks service actually has", () => {
+    h.blocksServicesData = [
+      { key: "lmt", label: "Lmt", sortOrder: 1, workerServiceNames: ["lmt-worker"] },
+      { key: "ui", label: "UI", sortOrder: 2, apiServiceName: "ui-api", workerServiceNames: [] },
+    ];
+    render(<LogsRoute />);
+    const services = h.viewerProps?.services as { id: string; label: string; components?: unknown }[];
+    expect(services.map((s) => [s.id, s.label])).toEqual([
+      ["lmt-worker", "Lmt Worker"],
+      ["ui-api", "UI API"],
+    ]);
+    expect(services.every((s) => s.components === undefined)).toBe(true);
+  });
+
+  it("labels workers by name when a service has more than one", () => {
+    h.blocksServicesData = [
+      { key: "os", label: "OS", sortOrder: 1, workerServiceNames: ["os-worker-a", "os-worker-b"] },
+    ];
+    render(<LogsRoute />);
+    const services = h.viewerProps?.services as { id: string; label: string }[];
+    expect(services.map((s) => [s.id, s.label])).toEqual([
+      ["os-worker-a", "OS os-worker-a"],
+      ["os-worker-b", "OS os-worker-b"],
+    ]);
+  });
 });

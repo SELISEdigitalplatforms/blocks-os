@@ -10,6 +10,10 @@ namespace DomainService.Projects
     public interface IProjectRepository
     {
         Task<Tenant> GetByDomainAsync(string name);
+
+        /// <summary>Every environment in a project group, including disabled ones.</summary>
+        Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId);
+
         Task<Tenant> GetByIdAsync(string itemId);
         Task InsertProjectAsync(Tenant project);
         Task UpdateProjectAsync(Tenant project);
@@ -43,6 +47,11 @@ namespace DomainService.Projects
         Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId);
         Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper);
         Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId);
+
+        Task<List<ThirdPartyJwtProvider>> GetThirdPartyJwtProvidersAsync(string tenantId);
+        Task<ThirdPartyJwtProvider?> GetThirdPartyJwtProviderAsync(string tenantId, string itemId);
+        Task SaveThirdPartyJwtProviderAsync(ThirdPartyJwtProvider provider);
+        Task<bool> DeleteThirdPartyJwtProviderAsync(string tenantId, string itemId);
         Task<bool> IsExistingEnviroment(List<string> enviroments, string tenantGroupId);
         Task<List<Project>> GetSharedProjectsAsync(string? tenantGroupId);
         Task<List<Project>> GetProjectPeoplesAsync(string tenantGroupId);

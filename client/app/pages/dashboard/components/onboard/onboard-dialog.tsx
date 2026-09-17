@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import type { IProject } from "@seliseblocks/genesis-os/models";
+import type { IProject } from "@/models/project.model";
 import { showErrorToast, showSuccessToast } from "@seliseblocks/genesis-os/utils";
 import { Rocket } from "lucide-react";
 import { useMemo } from "react";

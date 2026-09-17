@@ -9,7 +9,7 @@ import {
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Label } from "@/components/ui-kits/label/label";
 import { Button } from "@/components/ui-kits/button/button";
-import type { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { Info } from "lucide-react";
 import { useState } from "react";

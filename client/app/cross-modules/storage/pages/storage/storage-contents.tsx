@@ -32,6 +32,7 @@ export function StorageContents() {
   const [open, setOpen] = useState<boolean>(false);
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
   const [selectedStorage, setSelectedStorage] = useState<IStorageConfiguration | null>(null);
+  const [editingStorage, setEditingStorage] = useState<IStorageConfiguration | null>(null);
   const [filters, setFilters] = useState<FilterValues>({
     search: "",
     providers: [],
@@ -75,6 +76,13 @@ export function StorageContents() {
       setDetailsOpen(true);
     }
   };
+  const handleEdit = (id: string) => {
+    const storage = configurations.find((config) => config.itemId === id);
+    if (storage) {
+      setEditingStorage(storage);
+      setOpen(true);
+    }
+  };
   return (
     <div className="flex flex-col">
       <div className="mt-2 rounded-sm border bg-card p-6">
@@ -82,7 +90,10 @@ export function StorageContents() {
           filters={filters}
           onChange={onChange}
           onReset={onReset}
-          onAddConfiguration={() => setOpen(true)}
+          onAddConfiguration={() => {
+            setEditingStorage(null);
+            setOpen(true);
+          }}
         />
         {loading ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -105,7 +116,12 @@ export function StorageContents() {
         ) : filteredData.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredData.map((storage) => (
-              <StorageCard key={storage.id} data={storage} onViewDetails={handleViewDetails} />
+              <StorageCard
+                key={storage.id}
+                data={storage}
+                onViewDetails={handleViewDetails}
+                onEdit={handleEdit}
+              />
             ))}
           </div>
         ) : (
@@ -114,8 +130,17 @@ export function StorageContents() {
           </div>
         )}
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <SaveStorageConfiguration onClose={setOpen} />
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (!nextOpen) setEditingStorage(null);
+        }}
+      >
+        <SaveStorageConfiguration
+          configuration={editingStorage ?? undefined}
+          onClose={setOpen}
+        />
       </Dialog>
       <StorageDetailsDrawer
         open={detailsOpen}

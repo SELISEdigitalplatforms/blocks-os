@@ -1,37 +1,34 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { JwtSigningAlgorithm } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 
 const h = vi.hoisted(() => ({
-  certificate: undefined as Record<string, unknown> | undefined,
+  providers: undefined as unknown[] | undefined,
   isLoading: false,
-  jwtClaim: undefined as Record<string, unknown> | undefined,
-  isJwtClaimLoading: false,
+  deleteProvider: vi.fn(),
+  saveProvider: vi.fn(),
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
   useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
+  // The ui-kit tooltip re-exports these, so the mock has to carry them or every row action
+  // renders as undefined.
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: () => null,
 }));
-vi.mock("@blocks-idp/authentication/hooks/use-identifier", () => ({
-  useGetSavedPublicCertificates: () => ({
-    isLoading: h.isLoading,
-    data: h.certificate,
-  }),
-  useSavePublicCertificates: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useValidateJwksUrl: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
-vi.mock("@blocks-idp/authentication/hooks/use-jwt-claim", () => ({
-  useGetJwtClaim: () => ({ data: h.jwtClaim, isLoading: h.isJwtClaimLoading }),
-  useAddJwtClaim: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
-vi.mock("@blocks-storage/hooks/use-storage-file", () => ({
-  usePublicCertificateFile: () => ({ mutateAsync: vi.fn(), isPending: false }),
+vi.mock("@blocks-idp/authentication/hooks/use-third-party-jwt-provider", () => ({
+  useGetThirdPartyJwtProviders: () => ({ data: h.providers, isLoading: h.isLoading }),
+  useSaveThirdPartyJwtProvider: () => ({ mutateAsync: h.saveProvider, isPending: false }),
+  useDeleteThirdPartyJwtProvider: () => ({ mutateAsync: h.deleteProvider }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
 }));
-vi.mock("jwt-decode", () => ({ jwtDecode: vi.fn(() => ({})) }));
 vi.mock("nuqs", () => {
   const parser = { withDefault: (d: unknown) => ({ defaultValue: d }) };
   return {
@@ -44,56 +41,127 @@ vi.mock("nuqs", () => {
 
 import { Certificates } from "./certificates";
 
+const provider = {
+  itemId: "provider-1",
+  key: "auth0-web",
+  providerName: "Auth0",
+  isActive: true,
+  issuer: "https://tenant.us.auth0.com/",
+  audiences: ["https://api.example.com"],
+  algorithms: [JwtSigningAlgorithm.RS256],
+  jwksUrl: "https://tenant.us.auth0.com/.well-known/jwks.json",
+  hasSigningSecret: false,
+  cookieKey: "",
+  claimsMapping: { userId: "sub", email: "email", userName: "email", name: "name", roles: "" },
+};
+
 describe("Certificates", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    h.certificate = undefined;
+    h.providers = [];
     h.isLoading = false;
-    h.jwtClaim = undefined;
-    h.isJwtClaimLoading = false;
+    h.deleteProvider = vi.fn().mockResolvedValue({ isSuccess: true });
+    h.saveProvider = vi.fn().mockResolvedValue({ isSuccess: true });
   });
 
-  it("shows the loading skeleton while certificates load", () => {
-    h.isLoading = true;
-    const { container } = render(<Certificates />);
-    // The skeleton renders placeholder blocks, not the configured card fields.
-    expect(container.querySelector(".space-y-3")).toBeTruthy();
-    expect(screen.queryByText("Provider")).toBeNull();
-  });
-
-  it("shows the empty configuration when nothing is configured", () => {
-    h.certificate = { isConfigured: false };
+  it("offers a way to add the first provider from the empty state", async () => {
+    // With no provider configured there is no list to hang an action off, and the page header
+    // carries none — so the empty state is the only entry point into the form.
     render(<Certificates />);
-    expect(screen.queryByText("Provider")).toBeNull();
+
+    const add = screen.getByRole("button", { name: "Add provider" });
+    await userEvent.click(add);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Add provider" })).toBeTruthy(),
+    );
   });
 
-  it("renders the configured certificate details", () => {
-    h.certificate = {
-      isConfigured: true,
-      providerName: "Others",
-      jwksUrl: "https://issuer.example.com/jwks",
-      issuer: "https://issuer.example.com",
-      audiences: ["aud-1", "aud-2"],
-    };
-    h.jwtClaim = { itemId: "claim-1" };
+  it("lists a configured provider with its key source and an add action", () => {
+    h.providers = [provider];
     render(<Certificates />);
-    expect(screen.getByText("Provider")).toBeTruthy();
-    expect(screen.getByText("Others")).toBeTruthy();
-    expect(screen.getByText("https://issuer.example.com/jwks")).toBeTruthy();
-    expect(screen.getByText("aud-1, aud-2")).toBeTruthy();
+
+    // Integration details live on the details page now, so the list shows the key exactly once.
+    expect(screen.getAllByText("auth0-web")).toHaveLength(1);
+    expect(screen.getByText(provider.issuer)).toBeTruthy();
+    expect(screen.getByText(provider.jwksUrl)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add provider" })).toBeTruthy();
   });
 
-  it("warns to map JWT claims when configured but no claim mapping exists", () => {
-    h.certificate = {
-      isConfigured: true,
-      providerName: "Google",
-      publicCertificatePath: "https://certs/x",
-    };
-    h.jwtClaim = undefined;
+  it("opens claim mapping for the provider whose row was clicked", async () => {
+    // Mapping is deliberately not part of the create form: it is picked from a real token here,
+    // once the provider exists and can issue one.
+    h.providers = [provider];
     render(<Certificates />);
-    expect(screen.getByRole("button", { name: "Map JWT Claims" })).toBeTruthy();
-    // Falls back to the public certificate path and dashes for missing fields.
-    expect(screen.getByText("https://certs/x")).toBeTruthy();
-    expect(screen.getAllByText("-").length).toBeGreaterThan(0);
+
+    await userEvent.click(screen.getByRole("button", { name: /Map JWT claim/ }));
+
+    await waitFor(() => expect(screen.getByLabelText("JSON Web Token (JWT)")).toBeTruthy());
+    expect(screen.getByText("Mapping table")).toBeTruthy();
+  });
+
+  it("opens one provider's details, with the headers a caller has to send", async () => {
+    h.providers = [provider];
+    render(<Certificates />);
+
+    await userEvent.click(screen.getByRole("button", { name: "View details for auth0-web" }));
+
+    await waitFor(() => expect(screen.getByText("Claim mapping")).toBeTruthy());
+    // Each header is offered for copying, which is the part a caller actually needs.
+    expect(screen.getByRole("button", { name: "Copy x-blocks-key" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy x-blocks-idp" })).toBeTruthy();
+    expect(screen.getByText("Authorization")).toBeTruthy();
+    // The sample is copyable as a whole, and carries x-blocks-idp whether or not it is required,
+    // so a caller who copies it once does not have to come back and add a header later.
+    expect(screen.getByRole("button", { name: "Copy example request" })).toBeTruthy();
+    const curl = screen.getByText(/^curl /);
+    expect(curl.textContent).toContain("/iam/me");
+    expect(curl.textContent).toContain("x-blocks-key: tenant-1");
+    expect(curl.textContent).toContain("x-blocks-idp: auth0-web");
+  });
+
+  it("disables a provider from the list, once confirmed", async () => {
+    h.providers = [provider];
+    render(<Certificates />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Disable auth0-web" }));
+
+    // Asked about first: disabling stops every token from this provider being accepted.
+    await waitFor(() => expect(screen.getByText("Disable provider")).toBeTruthy());
+    expect(h.saveProvider).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Disable", exact: true }));
+
+    await waitFor(() => expect(h.saveProvider).toHaveBeenCalledTimes(1));
+    expect(h.saveProvider.mock.calls[0][0]).toMatchObject({
+      itemId: "provider-1",
+      isActive: false,
+      // The save replaces the row, so the fields the toggle does not touch have to ride along.
+      issuer: provider.issuer,
+      jwksUrl: provider.jwksUrl,
+      claimsMapping: provider.claimsMapping,
+    });
+  });
+
+  it("offers to enable a provider that is off", async () => {
+    h.providers = [{ ...provider, isActive: false }];
+    render(<Certificates />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Enable auth0-web" }));
+    await waitFor(() => expect(screen.getByText("Enable provider")).toBeTruthy());
+
+    await userEvent.click(screen.getByRole("button", { name: "Enable", exact: true }));
+
+    await waitFor(() => expect(h.saveProvider).toHaveBeenCalledTimes(1));
+    expect(h.saveProvider.mock.calls[0][0].isActive).toBe(true);
+  });
+
+  it("deletes by item id, which is what revokes the stored secret", async () => {
+    h.providers = [provider];
+    render(<Certificates />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete auth0-web" }));
+
+    await waitFor(() => expect(h.deleteProvider).toHaveBeenCalledWith("provider-1"));
   });
 });

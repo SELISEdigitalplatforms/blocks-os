@@ -4,7 +4,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { DashboardSectionCard } from "@seliseblocks/genesis-os/components";
 import { DomainFormDialog } from "./domain-form-dialog";
 import { DomainTable } from "./domain-table";
-import type { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 
 interface DomainsSectionProps {
   applications: IDomain[];

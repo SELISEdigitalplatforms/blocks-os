@@ -17,7 +17,6 @@ import { RestoredTracesTab } from "./restored-traces-tab";
 import {
   ServiceOption,
   TracesFilterToolbar,
-  defaultServiceSelection,
   useTraceSortQueryParams,
   useTracesFilterQueryParams,
 } from "./traces-filter-toolbar";
@@ -26,26 +25,11 @@ type TracesOverviewProps = {
   projectKey: string;
 };
 /**
- * The service filter renders the same checkbox tree the logs page uses: a blocks
- * service is a parent (its key) and its API/worker collections are the children,
- * keyed "<serviceKey>::<collectionName>". A registered service has no children, so
- * its own value is already the collection name.
+ * Traces are only ever written by API collections -- workers don't emit them -- so the
+ * service filter is a flat list: one option per blocks service, valued by its API
+ * collection name, followed by the registered services. A blocks service without an API
+ * collection has nothing to trace and is left out.
  */
-const COMPONENT_PREFIX = "::";
-/** Checkbox-tree option values -> the collection names the traces API filters on. */
-const treeValuesToServiceNames = (treeValues: string[], options: ServiceOption[]) => {
-  const names = treeValues.flatMap((treeValue) => {
-    const [parent, component] = treeValue.split(COMPONENT_PREFIX);
-    if (component) return [component];
-    const option = options.find((item) => item.value === parent);
-    // Values whose service is not (yet) in the list are dropped rather than sent as-is.
-    if (!option) return [];
-    return option.children?.length
-      ? option.children.map((child) => child.value.split(COMPONENT_PREFIX)[1])
-      : [option.value];
-  });
-  return [...new Set(names)];
-};
 export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const isMobile = useIsMobile();
   const { queryParams, setQueryParams } = useTracesFilterQueryParams();
@@ -66,21 +50,9 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
   const { data: blocksServicesData } = useGetBlocksServices();
   const serviceOptions = useMemo<ServiceOption[]>(() => {
     const blocksServices = [...(blocksServicesData ?? [])]
+      .filter((service) => !!service.apiServiceName)
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((service) => ({
-        label: service.label,
-        value: service.key,
-        children: [
-          { label: "API", value: `${service.key}${COMPONENT_PREFIX}${service.apiServiceName}` },
-          // A raw technical name is used instead of a guessed friendly label
-          // whenever a service has more than one worker (only "OS" does today),
-          // since there's no reliable way to tell them apart otherwise.
-          ...service.workerServiceNames.map((name) => ({
-            label: service.workerServiceNames.length > 1 ? name : "Worker",
-            value: `${service.key}${COMPONENT_PREFIX}${name}`,
-          })),
-        ],
-      }));
+      .map((service) => ({ label: service.label, value: service.apiServiceName }));
     const registered = (registeredServices?.data ?? []).map((service) => ({
       label: service.name,
       value: service.serviceId,
@@ -90,9 +62,6 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
       (item, index, array) => array.findIndex((value) => value.value === item.value) === index,
     );
   }, [blocksServicesData, registeredServices?.data]);
-  // The trace table's Service column shows a raw collection name (an api or a worker
-  // one), so labels are resolved from a name -> label map rather than from the tree
-  // options, whose child labels are only meaningful inside their own group.
   const serviceLabels = useMemo(() => {
     const labels = new Map<string, string>();
     for (const service of registeredServices?.data ?? []) {
@@ -100,27 +69,22 @@ export function TracesOverview({ projectKey }: TracesOverviewProps) {
     }
     // Blocks services are written last so they win a name collision, as before.
     for (const service of blocksServicesData ?? []) {
-      labels.set(service.apiServiceName, service.label);
-      for (const name of service.workerServiceNames) {
-        labels.set(name, service.workerServiceNames.length > 1 ? name : `${service.label} Worker`);
-      }
+      if (service.apiServiceName) labels.set(service.apiServiceName, service.label);
     }
     return labels;
   }, [blocksServicesData, registeredServices?.data]);
+  // Nothing checked means no service filter at all. Values that aren't a current option
+  // (e.g. a stale link) are dropped rather than sent as a filter that matches nothing.
   const selectedServiceNames = useMemo(
     () =>
-      treeValuesToServiceNames(
-        queryParams.services.length > 0
-          ? queryParams.services
-          : defaultServiceSelection(serviceOptions),
-        serviceOptions,
+      queryParams.services.filter((value) =>
+        serviceOptions.some((option) => option.value === value),
       ),
     [queryParams.services, serviceOptions],
   );
   const { data, isLoading, isFetching } = useGetTraces({
     page: queryParams.page,
     pageSize: queryParams.pageSize,
-    projectKey,
     search: queryParams.search,
     sort: sortQueryParams,
     filter: {

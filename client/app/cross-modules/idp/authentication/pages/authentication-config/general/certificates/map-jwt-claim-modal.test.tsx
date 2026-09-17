@@ -1,131 +1,117 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { JwtSigningAlgorithm } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
 
-const saveJWTClaim = vi.fn();
-let isLoading = false;
-let existingJwtClaim: Record<string, unknown> | undefined;
-let isJwtClaimLoading = false;
+const h = vi.hoisted(() => ({ save: vi.fn() }));
 
-vi.mock("@blocks-idp/authentication/hooks/use-jwt-claim", () => ({
-  useAddJwtClaim: () => ({ mutateAsync: saveJWTClaim, isPending: isLoading }),
-  useGetJwtClaim: () => ({ data: existingJwtClaim, isLoading: isJwtClaimLoading }),
+vi.mock("@blocks-idp/authentication/hooks/use-third-party-jwt-provider", () => ({
+  useSaveThirdPartyJwtProvider: () => ({ mutateAsync: h.save, isPending: false }),
 }));
-
-const showErrorToast = vi.fn();
-const showSuccessToast = vi.fn();
 vi.mock("@/hooks/use-toast", () => ({
-  showErrorToast: (...a: unknown[]) => showErrorToast(...a),
-  showSuccessToast: (...a: unknown[]) => showSuccessToast(...a),
+  showErrorToast: vi.fn(),
+  showSuccessToast: vi.fn(),
 }));
 
-vi.mock("@seliseblocks/genesis-os", () => ({
-  useProjectStore: () => ({ selectedProject: { tenantId: "tenant-1" } }),
-}));
+import { MapJwtClaimModal } from "./map-jwt-claim-modal";
 
-const jwtDecode = vi.fn();
-vi.mock("jwt-decode", () => ({ jwtDecode: (...a: unknown[]) => jwtDecode(...a) }));
+/** jwtDecode only reads the payload segment, so the header and signature can be anything. */
+const tokenFor = (payload: Record<string, unknown>) => {
+  const encode = (value: unknown) =>
+    btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `${encode({ alg: "RS256" })}.${encode(payload)}.signature`;
+};
 
-import MapJwtClaimModal from "./map-jwt-claim-modal";
+const provider = {
+  itemId: "provider-1",
+  key: "auth0-web",
+  providerName: "Auth0",
+  isActive: true,
+  issuer: "https://tenant.us.auth0.com/",
+  audiences: ["https://api.example.com"],
+  algorithms: [JwtSigningAlgorithm.RS256],
+  jwksUrl: "https://tenant.us.auth0.com/.well-known/jwks.json",
+  cookieKey: "app-session",
+  hasSigningSecret: false,
+  claimsMapping: { userId: "sub", email: "email", userName: "email", name: "name", roles: "" },
+};
+
+const renderDrawer = () =>
+  render(<MapJwtClaimModal open onOpenChange={vi.fn()} provider={provider} />);
+
+/** Pasted, not typed: a token is always pasted, and typing one key at a time is needlessly slow. */
+const paste = async (value: string) => {
+  await userEvent.click(screen.getByLabelText("JSON Web Token (JWT)"));
+  await userEvent.paste(value);
+};
+
+const decode = async (payload: Record<string, unknown>) => {
+  await paste(tokenFor(payload));
+  await userEvent.click(screen.getByRole("button", { name: "Decode" }));
+};
 
 describe("MapJwtClaimModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    isLoading = false;
-    existingJwtClaim = undefined;
-    isJwtClaimLoading = false;
-    jwtDecode.mockReturnValue({ sub: "1", email: "a@b.com", roles: ["admin"] });
-    saveJWTClaim.mockResolvedValue({ isSuccess: true });
+    h.save = vi.fn().mockResolvedValue({ isSuccess: true });
   });
 
-  it("shows the empty prompt before any JWT is decoded", () => {
-    render(<MapJwtClaimModal open onOpenChange={vi.fn()} />);
-    expect(screen.getByText("Map JWT Claim")).toBeTruthy();
-    expect(
-      screen.getByText("Please paste a valid JWT above to view and map its fields."),
-    ).toBeTruthy();
-  });
+  it("offers the claims the pasted token actually carries, nested ones by path", async () => {
+    renderDrawer();
+    await decode({ sub: "user-1", email: "a@b.c", realm_access: { roles: ["admin"] } });
 
-  it("validates that a token is required before decoding", async () => {
-    const user = userEvent.setup();
-    render(<MapJwtClaimModal open onOpenChange={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: "Decode" }));
-    expect(await screen.findByText("JWT is required.")).toBeTruthy();
-  });
+    await userEvent.click(screen.getByRole("combobox", { name: "Roles" }));
 
-  it("decodes a valid JWT and reveals the mapping table", async () => {
-    const user = userEvent.setup();
-    render(<MapJwtClaimModal open onOpenChange={vi.fn()} />);
-    await user.type(screen.getByPlaceholderText("Paste here..."), "header.payload.sig");
-    await user.click(screen.getByRole("button", { name: "Decode" }));
+    // A namespaced or nested claim is addressed by its full path, which is what gets stored.
     await waitFor(() =>
-      expect(showSuccessToast).toHaveBeenCalledWith({
-        description: "JWT decoded successfully. You can now update the mapping table.",
-      }),
+      expect(screen.getByRole("option", { name: "realm_access.roles" })).toBeTruthy(),
     );
-    expect(screen.getByText("JWT Key")).toBeTruthy();
-    expect(screen.getByText("User Id")).toBeTruthy();
   });
 
-  it("reports an invalid token when decoding throws", async () => {
-    jwtDecode.mockImplementation(() => {
-      throw new Error("bad");
+  it("reports a token it cannot read instead of offering an empty list", async () => {
+    renderDrawer();
+    await paste("not-a-jwt");
+    await userEvent.click(screen.getByRole("button", { name: "Decode" }));
+
+    expect(screen.getByRole("status").textContent).toContain("not a readable JWT");
+  });
+
+  it("says decoding worked, so a valid token is not mistaken for a silent failure", async () => {
+    renderDrawer();
+    await decode({ sub: "user-1", email: "a@b.c" });
+
+    expect(screen.getByRole("status").textContent).toContain("Decoded successfully");
+    expect(screen.getByRole("status").textContent).toContain("2 claims found");
+  });
+
+  it("saves the whole provider, so fields this drawer does not edit survive", async () => {
+    renderDrawer();
+    await decode({ sub: "user-1", email: "a@b.c", preferred_username: "rafeen" });
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Username" }));
+    await userEvent.click(
+      await within(await screen.findByRole("listbox")).findByText("preferred_username"),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
+    expect(h.save.mock.calls[0][0]).toMatchObject({
+      itemId: "provider-1",
+      key: "auth0-web",
+      issuer: "https://tenant.us.auth0.com/",
+      jwksUrl: "https://tenant.us.auth0.com/.well-known/jwks.json",
+      // A save replaces the row, so dropping this would silently disable cookie-borne tokens.
+      cookieKey: "app-session",
+      claimsMapping: { userId: "sub", userName: "preferred_username" },
     });
-    const user = userEvent.setup();
-    render(<MapJwtClaimModal open onOpenChange={vi.fn()} />);
-    await user.type(screen.getByPlaceholderText("Paste here..."), "garbage");
-    await user.click(screen.getByRole("button", { name: "Decode" }));
-    expect(await screen.findByText("Invalid JWT Token.")).toBeTruthy();
   });
 
-  it("reports when the decoded token has no properties", async () => {
-    jwtDecode.mockReturnValue({});
-    const user = userEvent.setup();
-    render(<MapJwtClaimModal open onOpenChange={vi.fn()} />);
-    await user.type(screen.getByPlaceholderText("Paste here..."), "empty");
-    await user.click(screen.getByRole("button", { name: "Decode" }));
-    expect(await screen.findByText("Invalid JWT Token: No properties found.")).toBeTruthy();
-  });
+  it("never sends a signing secret, so the stored one is left alone", async () => {
+    renderDrawer();
+    await decode({ sub: "user-1" });
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
-  it("renders the loading skeleton while the existing claim loads", () => {
-    isJwtClaimLoading = true;
-    render(<MapJwtClaimModal open onOpenChange={vi.fn()} />);
-    const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
-  });
-
-  it("prefills mapping from an existing claim and saves it", async () => {
-    existingJwtClaim = { itemId: "claim-1", userId: "sub", email: "email", name: "", userName: "", roles: "" };
-    const onOpenChange = vi.fn();
-    const user = userEvent.setup();
-    render(<MapJwtClaimModal open onOpenChange={onOpenChange} />);
-    const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
-    expect(save.disabled).toBe(false);
-    await user.click(save);
-    await waitFor(() => expect(saveJWTClaim).toHaveBeenCalledTimes(1));
-    expect(saveJWTClaim).toHaveBeenCalledWith(
-      expect.objectContaining({ itemId: "claim-1", userId: "sub", email: "email" }),
-    );
-    expect(showSuccessToast).toHaveBeenCalledWith({ description: "JWT Claim Saved Successfully" });
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-  });
-
-  it("shows an error toast when the save fails", async () => {
-    existingJwtClaim = { itemId: "claim-1", userId: "sub" };
-    saveJWTClaim.mockResolvedValue({ isSuccess: false });
-    const user = userEvent.setup();
-    render(<MapJwtClaimModal open onOpenChange={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() =>
-      expect(showErrorToast).toHaveBeenCalledWith({ errors: "Something went wrong!" }),
-    );
-  });
-
-  it("closes the drawer when Cancel is clicked", async () => {
-    const onOpenChange = vi.fn();
-    const user = userEvent.setup();
-    render(<MapJwtClaimModal open onOpenChange={onOpenChange} />);
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
+    expect(h.save.mock.calls[0][0].signingSecret).toBeUndefined();
   });
 });

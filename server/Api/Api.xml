@@ -98,6 +98,29 @@
         <member name="M:BlocksOs.Api.Controllers.PeopleController.SaveAccessPolicy(DomainService.Access.SaveAccessPolicyRequest)">
             <summary>Owner-only, always — a grant must never be able to widen itself.</summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.GetThirdPartyJwtProviders">
+            <summary>
+            External identity providers this tenant accepts tokens from. Never returns a signing
+            secret in any form -- only whether one is stored.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.SaveThirdPartyJwtProvider(DomainService.Projects.SaveThirdPartyJwtProviderRequest)">
+            <summary>
+            Creates or updates one provider. An omitted signing secret leaves the stored one
+            untouched rather than clearing it.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.DeleteThirdPartyJwtProvider(DomainService.Projects.DeleteThirdPartyJwtProviderRequest)">
+            <summary>
+            Removes a provider and, with it, the encrypted signing secret it carried.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Controllers.ProjectController.UpdateThirdPartyJwtEnabled(DomainService.Projects.UpdateThirdPartyJwtEnabledRequest)">
+            <summary>
+            Turns third-party token trust on or off for the tenant. Off means such tokens are not
+            accepted at all.
+            </summary>
+        </member>
         <member name="T:BlocksOs.Api.Controllers.ReleaseController">
             <summary>
             Release and repository operations, served out of blocks-os. This is the move of what blocks-logic

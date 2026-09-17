@@ -119,6 +119,17 @@ export function createMailcraftStorageProvider(
       }
 
       await storageService.uploadFile({ url: presigned.uploadUrl, file });
+
+      if (presigned.uploadCompletionRequired) {
+        const completion = await storageService.file.completeUpload({
+          fileId: presigned.fileId,
+          fileVersionId: presigned.fileVersionId ?? "",
+        });
+        if (completion.verificationStatus !== "Verified") {
+          throw new Error(completion.rejectionReason ?? "The image failed verification.");
+        }
+      }
+
       rememberFileId(projectKey, presigned.fileId);
       const saved = await storageService.file.getFileByFileId({
         itemId: presigned.fileId,

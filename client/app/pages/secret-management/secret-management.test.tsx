@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   pathname: "/app/proj/secret-management/secret",
-  externalIdpData: undefined as unknown,
   clientsData: [] as unknown[],
   brandingActions: undefined as unknown,
   navigate: vi.fn(),
@@ -22,9 +21,6 @@ vi.mock("@seliseblocks/genesis-os", () => ({
 }));
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({
   useScopedPath: () => (p: string) => `/app/proj/${p}`,
-}));
-vi.mock("@blocks-idp/authentication/hooks/use-identifier", () => ({
-  useGetSavedPublicCertificates: () => ({ data: h.externalIdpData }),
 }));
 vi.mock("@blocks-idp/authentication/hooks/use-auth-clients", () => ({
   useListAuthClientCredentials: () => ({ data: h.clientsData }),
@@ -90,7 +86,6 @@ describe("SecretManagementLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.pathname = "/app/proj/secret-management/secret";
-    h.externalIdpData = undefined;
     h.clientsData = [];
     h.brandingActions = undefined;
     h.breadcrumbProps = undefined;
@@ -134,19 +129,12 @@ describe("SecretManagementLayout", () => {
     expect(screen.getByTestId("create-client-credential")).toBeTruthy();
   });
 
-  it("shows an edit action when an external idp is already configured", () => {
+  it("leaves the external idp header empty, since providers are managed from the page body", () => {
     h.pathname = "/app/proj/secret-management/external-idp";
-    h.externalIdpData = { isConfigured: true };
     render(<SecretManagementLayout />);
-    expect(screen.getByText("Edit")).toBeTruthy();
-    expect(screen.getByText("Map JWT Claim")).toBeTruthy();
-  });
-
-  it("shows an add action when no external idp is configured", () => {
-    h.pathname = "/app/proj/secret-management/external-idp";
-    h.externalIdpData = { isConfigured: false };
-    render(<SecretManagementLayout />);
-    expect(screen.getByText("Add")).toBeTruthy();
+    expect(screen.queryByText("Add")).toBeNull();
+    expect(screen.queryByText("Edit")).toBeNull();
+    expect(screen.queryByText("Map JWT Claim")).toBeNull();
   });
 
   it("always shows the Add Configuration action on the captcha page, since a tenant may configure more than one", () => {

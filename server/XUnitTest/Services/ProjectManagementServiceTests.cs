@@ -21,6 +21,61 @@ using XUnitTest.TestSupport;
 
 namespace XUnitTest.Services
 {
+    /// <summary>
+    /// A minimal loopback HTTP server for tests exercising the certificate upload's provider PUT,
+    /// which builds its own <see cref="System.Net.Http.HttpClient"/> internally rather than taking
+    /// an injectable factory - so the only way to observe the PUT's outcome is to actually receive it.
+    /// </summary>
+    internal sealed class TestHttpServer : System.IDisposable
+    {
+        private readonly System.Net.HttpListener _listener;
+        private readonly Task _acceptLoop;
+
+        public string Url { get; }
+
+        public TestHttpServer(System.Net.HttpStatusCode respondWith)
+        {
+            var port = GetFreeTcpPort();
+            Url = $"http://127.0.0.1:{port}/upload";
+            _listener = new System.Net.HttpListener();
+            _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+            _listener.Start();
+
+            _acceptLoop = Task.Run(async () =>
+            {
+                try
+                {
+                    var context = await _listener.GetContextAsync();
+                    context.Response.StatusCode = (int)respondWith;
+                    context.Response.Close();
+                }
+                catch (System.Net.HttpListenerException)
+                {
+                    // Listener stopped while awaiting a request - fine, the test is tearing down.
+                }
+                catch (System.ObjectDisposedException)
+                {
+                    // Same as above.
+                }
+            });
+        }
+
+        private static int GetFreeTcpPort()
+        {
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
+
+        public void Dispose()
+        {
+            _listener.Stop();
+            _listener.Close();
+        }
+    }
+
     public class ProjectManagementServiceTests
     {
         private readonly Mock<IProjectRepository> _repo = new();
@@ -52,7 +107,8 @@ namespace XUnitTest.Services
 
         private ProjectManagementService Service(IConfiguration? configuration = null) => new(
             _repo.Object, _blocksSecret.Object, _messageClient.Object, configuration ?? _configuration,
-            _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object);
+            _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object,
+            new CryptoService());
 
         // The environment's CNAME label, which the shared API host is built from.
         private static IConfiguration WithCnameRecordDomain(string label) =>
@@ -1362,6 +1418,93 @@ namespace XUnitTest.Services
             _repo.Verify(r => r.SaveStatusTracerAsync(It.Is<ProjectStatusTracer>(t => t.IsProjectCreationSuccess)), Times.Once);
         }
 
+        private static Tenant NewTenantForCloudCertificate() => new()
+        {
+            DbConnectionString = "mongodb://x",
+            TenantId = "t1",
+            ItemId = "item-1",
+            CreatedBy = "creator",
+            Applications = new List<Applications>(),
+            JwtTokenParameters = new JwtTokenParameters
+            {
+                IssueDate = System.DateTime.UtcNow,
+                PrivateCertificatePassword = "priv",
+                PublicCertificatePassword = "pub",
+                CertificateStorageType = CertificateStorageType.Azure,
+            },
+        };
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_Azure_SkipsCompletion_WhenNotRequired()
+        {
+            using var server = new TestHttpServer(System.Net.HttpStatusCode.OK);
+            _storage.Setup(s => s.GetPerSignedUrlForUploadAsync(It.IsAny<GetPreSignedUrlForUploadRequest>()))
+                    .ReturnsAsync(new GetPreSignedUrlForUploadResponse
+                    {
+                        UploadUrl = server.Url,
+                        UploadCompletionRequired = false,
+                    });
+            _storage.Setup(s => s.GetUrlForDownloadFileAsync(It.IsAny<GetFileRequest>()))
+                    .ReturnsAsync(new FileResponse { IsSuccess = true, Url = "https://download/cert" });
+
+            var url = await Service().UploadPublicCertificateAsync(
+                CreateSelfSignedCertificate(), NewTenantForCloudCertificate());
+
+            url.Should().Be("https://download/cert");
+            _storage.Verify(s => s.CompleteUploadAsync(It.IsAny<CompleteUploadRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_Azure_CallsCompletion_AndSucceeds_WhenVerified()
+        {
+            using var server = new TestHttpServer(System.Net.HttpStatusCode.OK);
+            _storage.Setup(s => s.GetPerSignedUrlForUploadAsync(It.IsAny<GetPreSignedUrlForUploadRequest>()))
+                    .ReturnsAsync(new GetPreSignedUrlForUploadResponse
+                    {
+                        UploadUrl = server.Url,
+                        FileVersionId = "v1",
+                        UploadCompletionRequired = true,
+                    });
+            _storage.Setup(s => s.CompleteUploadAsync(It.Is<CompleteUploadRequest>(r => r.FileVersionId == "v1")))
+                    .ReturnsAsync(new CompleteUploadResponse
+                    {
+                        IsSuccess = true,
+                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Verified,
+                    });
+            _storage.Setup(s => s.GetUrlForDownloadFileAsync(It.IsAny<GetFileRequest>()))
+                    .ReturnsAsync(new FileResponse { IsSuccess = true, Url = "https://download/cert" });
+
+            var url = await Service().UploadPublicCertificateAsync(
+                CreateSelfSignedCertificate(), NewTenantForCloudCertificate());
+
+            url.Should().Be("https://download/cert");
+        }
+
+        [Fact]
+        public async Task UploadPublicCertificateAsync_Azure_Throws_WhenCompletionRejects()
+        {
+            using var server = new TestHttpServer(System.Net.HttpStatusCode.OK);
+            _storage.Setup(s => s.GetPerSignedUrlForUploadAsync(It.IsAny<GetPreSignedUrlForUploadRequest>()))
+                    .ReturnsAsync(new GetPreSignedUrlForUploadResponse
+                    {
+                        UploadUrl = server.Url,
+                        FileVersionId = "v1",
+                        UploadCompletionRequired = true,
+                    });
+            _storage.Setup(s => s.CompleteUploadAsync(It.IsAny<CompleteUploadRequest>()))
+                    .ReturnsAsync(new CompleteUploadResponse
+                    {
+                        IsSuccess = true,
+                        VerificationStatus = Storage.DomainService.Enums.FileVerificationStatus.Rejected,
+                        RejectionReason = "real_file_type_mismatch",
+                    });
+
+            var act = async () => await Service().UploadPublicCertificateAsync(
+                CreateSelfSignedCertificate(), NewTenantForCloudCertificate());
+
+            await act.Should().ThrowAsync<System.InvalidOperationException>();
+        }
+
         private void SetupCertificatePipeline()
         {
             var cert = CreateSelfSignedCertificate();
@@ -1393,6 +1536,324 @@ namespace XUnitTest.Services
                 CertificateStorageType = CertificateStorageType.Filefilesystem
             }
         };
+
+        // ---- Domain typing -------------------------------------------------------------
+        //
+        // Tenant.Applications is the origin allow-list every request is checked against, and it
+        // mixes three unrelated things: the hosts Blocks generates for this project, the hosts
+        // the customer brought, and the two platform apps that appear in every tenant's list.
+        // DomainType is what tells them apart.
+
+        private void EncodeSlugsPerInput(params (string Input, string Slug)[] slugs)
+        {
+            var map = slugs.ToDictionary(s => s.Input, s => s.Slug);
+
+            _encoding.Setup(e => e.EncodeToBase26Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
+                     .ReturnsAsync((string input, string _, int __) =>
+                         map.TryGetValue(input, out var slug) ? slug : "abcde");
+        }
+
+        private static Resource RepositoryNamed(string resourceId) =>
+            new() { ResourceId = resourceId, Name = resourceId, Link = $"https://git/{resourceId}" };
+
+        [Fact]
+        public async Task SaveProjectAsync_GivesEveryRepositoryItsOwnPlatformSubdomain()
+        {
+            // A project created with several repositories used to register only the first one's
+            // generated host, which left every other repository serving from a domain that was
+            // not an allowed origin. The same path runs when an environment is added to a group
+            // that already owns repositories, so it was the common case, not the edge case.
+            using var _ = new BlocksTestContext();
+            EncodeSlugsPerInput(("repo-1", "aaaaa"), ("repo-2", "bbbbb"));
+
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                Resources = [RepositoryNamed("repo-1"), RepositoryNamed("repo-2")],
+                applicationContexts = [new() { Environment = "dev" }]
+            });
+
+            inserted.Should().NotBeNull();
+
+            var generated = inserted!.Applications
+                .Where(a => a.DomainType == DomainType.PlatformSubdomain)
+                .Select(a => a.Domain);
+
+            generated.Should().BeEquivalentTo(
+                new[] { "https://dabcde-aaaaa.blocks.dev", "https://dabcde-bbbbb.blocks.dev" },
+                "each repository is reachable at its own host in this environment");
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_KeepsTheFirstRepositorysHostAtIndexZero()
+        {
+            // Applications[0] is read as "the project's own domain" by the IAM account-action
+            // urls and by the token audience, so widening the list must not disturb it.
+            using var _ = new BlocksTestContext();
+            EncodeSlugsPerInput(("repo-1", "aaaaa"), ("repo-2", "bbbbb"));
+
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                Resources = [RepositoryNamed("repo-1"), RepositoryNamed("repo-2")],
+                applicationContexts = [new() { Environment = "dev" }]
+            });
+
+            inserted!.Applications[0].Domain.Should().Be("https://dabcde-aaaaa.blocks.dev");
+            inserted.JwtTokenParameters.Audiences.Should().BeEquivalentTo(new[] { "https://dabcde-aaaaa.blocks.dev" });
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_TagsTheSharedPlatformAppsAsPlatformDefault()
+        {
+            using var _ = new BlocksTestContext();
+
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                Resources = [RepositoryNamed("repo-1")],
+                applicationContexts = [new() { Environment = "dev" }]
+            });
+
+            inserted!.Applications
+                .Where(a => a.DomainType == DomainType.PlatformDefault)
+                .Select(a => a.Domain)
+                .Should().BeEquivalentTo(new[] { "https://iam.blocks.dev" },
+                    "IAM is the same host in every tenant's list; Studio is absent from this configuration");
+        }
+
+        [Theory]
+        // Anything under a platform domain was generated for the project, however it was typed in.
+        [InlineData("https://app.slsblx.com", DomainType.PlatformSubdomain)]
+        [InlineData("https://app.seliseblocks.com", DomainType.PlatformSubdomain)]
+        // Anything else is the customer's own.
+        [InlineData("https://app.example.com", DomainType.Custom)]
+        [InlineData("https://example.co.uk", DomainType.Custom)]
+        public async Task UpdateProjectAsync_AddApplication_ClassifiesTheDomainItself(string domain, DomainType expected)
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith();
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Add,
+                Application = new Application { Domain = domain, CookieDomain = "irrelevant" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            tenant.Applications.Single().DomainType.Should().Be(expected);
+        }
+
+        [Fact]
+        public async Task UpdateProjectAsync_EditApplication_ReclassifiesTheDomain()
+        {
+            // Moving a domain off a platform host makes it the customer's, and the type has to
+            // follow it -- otherwise a host keeps a label describing where it used to point.
+            using var _ = new BlocksTestContext();
+            var tenant = TenantWith(new Applications
+            {
+                Domain = "https://app.slsblx.com",
+                CookieDomain = "slsblx.com",
+                IsDomainVerified = true,
+                DomainType = DomainType.PlatformSubdomain
+            });
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+            _messageClient.Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<DisableDomainBindingRequest>>()))
+                          .Returns(Task.CompletedTask);
+
+            var response = await Service().UpdateProjectAsync(new UpdateProjectRequest
+            {
+                Action = ApplicationAction.Edit,
+                ApplicationDomain = "https://app.slsblx.com",
+                Application = new Application { Domain = "https://app.example.com", CookieDomain = "example.com" }
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            tenant.Applications.Single().DomainType.Should().Be(DomainType.Custom);
+        }
+
+        [Fact]
+        public void UpdateProjectRequest_CarriesNoDomainType()
+        {
+            // The request DTO has no DomainType at all, which is the point: a caller that could
+            // name its own type could pass its domain off as one of the platform's and inherit
+            // the trust that goes with it. This pins that shape.
+            typeof(Application).GetProperty("DomainType").Should().BeNull();
+        }
+
+        [Fact]
+        public async Task AddAssetAsync_RegistersTheGeneratedHostInEveryEnvironment()
+        {
+            // One repository, one host per environment: the tenant and repo slugs are keyed on
+            // the group and resource ids, so only the environment letter differs.
+            using var _ = new BlocksTestContext();
+            EncodeSlugsPerInput(("repo-1", "aaaaa"), ("group-1", "ggggg"));
+
+            var dev = TenantWith();
+            dev.TenantId = "dev-1";
+            dev.Environment = "dev";
+            var prod = TenantWith();
+            prod.TenantId = "prod-1";
+            prod.Environment = "prod";
+
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("group-1")).ReturnsAsync((TenantAsset?)null);
+            _repo.Setup(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.UpdateRepoResourceAsync(It.IsAny<AddAssetRequest>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.GetByGroupIdAsync("group-1")).ReturnsAsync(new List<Tenant> { dev, prod });
+            _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>())).Returns(Task.CompletedTask);
+
+            var republished = new List<string>();
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()))
+                    .Callback<TenantCacheUpdateMessage>(m => republished.Add(m.TenantId))
+                    .Returns(Task.CompletedTask);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "group-1",
+                Resource = RepositoryNamed("repo-1")
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            response.Status.Should().Be(AssetMutationStatus.Added);
+
+            dev.Applications.Single().Domain.Should().Be("https://dggggg-aaaaa.blocks.dev");
+            dev.Applications.Single().DomainType.Should().Be(DomainType.PlatformSubdomain);
+            prod.Applications.Single().Domain.Should().Be("https://pggggg-aaaaa.blocks.dev");
+
+            // The allow-list is read from the tenant cache, so an environment that is saved but
+            // not republished carries on refusing the host it was just given.
+            republished.Should().BeEquivalentTo(new[] { "dev-1", "prod-1" });
+        }
+
+        [Fact]
+        public async Task AddAssetAsync_DoesNotRegisterAHostTwice()
+        {
+            // Deleting a repository archives it and leaves Applications alone, so a repository
+            // that is removed and added back arrives at a list that already holds its host.
+            using var _ = new BlocksTestContext();
+            EncodeSlugsPerInput(("repo-1", "aaaaa"), ("group-1", "ggggg"));
+
+            var dev = TenantWith(new Applications
+            {
+                // Stored with the casing and trailing slash a hand-written entry can carry:
+                // membership is decided on the normalized form, not the literal string.
+                Domain = "https://DGGGGG-AAAAA.blocks.dev/",
+                CookieDomain = "blocks.dev",
+                IsDomainVerified = true,
+                DomainType = DomainType.PlatformSubdomain
+            });
+            dev.TenantId = "dev-1";
+            dev.Environment = "dev";
+
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "group-1",
+                Resources = new List<Resource>
+                {
+                    new() { ResourceId = "repo-1", Name = "repo-1", Link = "https://git/repo-1", IsArchived = true }
+                }
+            };
+
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("group-1")).ReturnsAsync(asset);
+            _repo.Setup(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.GetByGroupIdAsync("group-1")).ReturnsAsync(new List<Tenant> { dev });
+            _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>())).Returns(Task.CompletedTask);
+            _tenants.Setup(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>())).Returns(Task.CompletedTask);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "group-1",
+                Resource = RepositoryNamed("repo-1")
+            });
+
+            response.Status.Should().Be(AssetMutationStatus.Restored);
+            dev.Applications.Should().ContainSingle("the host was already registered");
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AddAssetAsync_RenamingARepositoryRegistersNothing()
+        {
+            // The generated host is derived from the resource id, not the name, so a rename
+            // cannot produce a new one -- and must not write to every tenant in the group.
+            using var _ = new BlocksTestContext();
+
+            var asset = new TenantAsset
+            {
+                TenantGroupId = "group-1",
+                Resources = new List<Resource>
+                {
+                    new() { ResourceId = "repo-1", Name = "old-name", Link = "https://git/old" }
+                }
+            };
+
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("group-1")).ReturnsAsync(asset);
+            _repo.Setup(r => r.SaveTenantAssetAsync(It.IsAny<TenantAsset>())).Returns(Task.CompletedTask);
+            _repo.Setup(r => r.UpdateRepoResourceInfoAsync(It.IsAny<AddAssetRequest>())).Returns(Task.CompletedTask);
+
+            var response = await Service().AddAssetAsync(new AddAssetRequest
+            {
+                TenantGroupId = "group-1",
+                Resource = new Resource { ResourceId = "repo-1", Name = "new-name", Link = "https://git/new" }
+            });
+
+            response.Status.Should().Be(AssetMutationStatus.Updated);
+            _repo.Verify(r => r.GetByGroupIdAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetAsync_WithholdsThePlatformsOwnHosts()
+        {
+            // IAM and Studio are in every tenant's list so their origins pass, but they belong to
+            // the platform and no project can act on them. Showing them made every environment
+            // look like it had two domains it did not.
+            using var _ = new BlocksTestContext();
+
+            var tenant = TenantWith(
+                new Applications { Domain = "https://dabcde-aaaaa.blocks.dev", DomainType = DomainType.PlatformSubdomain },
+                new Applications { Domain = "https://iam.blocks.dev", DomainType = DomainType.PlatformDefault },
+                new Applications { Domain = "https://studio.blocks.dev", DomainType = DomainType.PlatformDefault },
+                new Applications { Domain = "https://app.example.com", DomainType = DomainType.Custom },
+                // Written before the type existed. Kept, because a project that has not been
+                // backfilled must not lose its domains from the console.
+                new Applications { Domain = "https://legacy.example.com" });
+            tenant.TenantGroupId = "group-1";
+
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.GetBlocksGuidAsync("group-1")).ReturnsAsync((BlocksGuid?)null);
+            _repo.Setup(r => r.GetOwnerUserIdAsync(It.IsAny<string>())).ReturnsAsync("owner-1");
+
+            var response = await Service().GetAsync();
+
+            response.Data.Applications.Select(a => a.Domain).Should().BeEquivalentTo(new[]
+            {
+                "https://dabcde-aaaaa.blocks.dev",
+                "https://app.example.com",
+                "https://legacy.example.com"
+            });
+
+            // The tenant itself keeps them -- they are what makes those origins pass.
+            tenant.Applications.Should().HaveCount(5);
+        }
 
         private static X509Certificate2 CreateSelfSignedCertificate()
         {

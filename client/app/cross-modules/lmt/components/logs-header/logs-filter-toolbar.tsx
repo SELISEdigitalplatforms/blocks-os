@@ -14,7 +14,7 @@ import { restoreWindowBounds } from "../../utils/restore-window";
 type LogsFilterValues = {
   search?: string;
   level?: string;
-  service: string[];
+  service: string;
   timeRange: TimeRangeValue;
 };
 
@@ -42,11 +42,7 @@ export const LogsFilterToolbar = () => {
     label: getLogLevelLabel(item[0]),
     value: item[1],
   }));
-  const serviceOptions = services.map((s) => ({
-    label: s.label,
-    value: s.id,
-    children: s.components?.map((c) => ({ label: c.label, value: `${s.id}::${c.value}` })),
-  }));
+  const serviceOptions = services.map((s) => ({ label: s.label, value: s.id }));
   const updateFilter = (key: keyof typeof filter, value: unknown) => {
     setFilter((filter) => ({
       ...filter,
@@ -75,19 +71,17 @@ export const LogsFilterToolbar = () => {
       endDate: value.to ? value.to.toISOString() : "",
     }));
   };
-  const handleServiceChange = (serviceKeys: string[] | null) => {
-    // Values for services that are no longer registered are dropped rather than
-    // written back into the URL.
-    const knownKeys = (serviceKeys ?? []).filter((key) =>
-      services.some((service) => service.id === key.split("::")[0]),
-    );
-    changeServices(knownKeys);
+  const handleServiceChange = (serviceId: string | null) => {
+    // Logs are read one service at a time. A service that is no longer registered, or a
+    // cleared selection, falls back to the viewer's default rather than landing in the URL.
+    const isKnown = services.some((service) => service.id === serviceId);
+    changeServices(serviceId && isKnown ? [serviceId] : []);
   };
   const onChange = (
     key: keyof LogsFilterValues,
     value: LogsFilterValues[keyof LogsFilterValues],
   ) => {
-    if (key === "service") return handleServiceChange(value as string[] | null);
+    if (key === "service") return handleServiceChange(value as string | null);
     if (key === "timeRange") return updateTimeRange(value as TimeRangeValue);
     return updateFilter(key as keyof typeof filter, value);
   };
@@ -96,7 +90,7 @@ export const LogsFilterToolbar = () => {
     () => ({
       search: "",
       level: "",
-      service: [],
+      service: "",
       timeRange: null,
     }),
     [], // static — never changes
@@ -106,7 +100,7 @@ export const LogsFilterToolbar = () => {
     () => ({
       search,
       level,
-      service: serviceKeyToTreeValues(serviceFilterValue),
+      service: serviceKeyToTreeValues(serviceFilterValue)[0] ?? "",
       // The relative default counts as "no window chosen", so the Reset chip stays hidden
       // until someone picks one -- and the picker shows the default rather than owning it.
       timeRange:
@@ -137,12 +131,9 @@ export const LogsFilterToolbar = () => {
     [isRestored, restoreWindow?.startDate, restoreWindow?.endDate],
   );
 
-  // The whole first service is what the page starts on, so that selection counts as
+  // The first service is what the page starts on, so that selection counts as
   // "no service filter applied" for the Reset button.
-  const defaultServiceSelection = useMemo(
-    () => (services.length > 0 ? [services[0].id] : []),
-    [services],
-  );
+  const defaultServiceSelection = services[0]?.id ?? "";
 
   // The Reset button is offered as soon as anything — the service selection included —
   // differs from what the page opens with.
@@ -150,9 +141,7 @@ export const LogsFilterToolbar = () => {
     const searchChanged = currentValues.search !== defaultValues.search;
     const levelChanged = currentValues.level !== defaultValues.level;
     const timeRangeChanged = !deepEqual(currentValues.timeRange, defaultValues.timeRange);
-    const serviceChanged =
-      currentValues.service.length !== defaultServiceSelection.length ||
-      currentValues.service.some((value, index) => value !== defaultServiceSelection[index]);
+    const serviceChanged = currentValues.service !== defaultServiceSelection;
     return !searchChanged && !levelChanged && !timeRangeChanged && !serviceChanged;
   }, [currentValues, defaultValues, defaultServiceSelection]);
 
@@ -179,7 +168,7 @@ export const LogsFilterToolbar = () => {
     },
     {
       key: "service",
-      type: "CheckboxTree",
+      type: "Radio",
       label: "Service",
       props: { options: serviceOptions },
     },
