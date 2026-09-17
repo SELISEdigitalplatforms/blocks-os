@@ -204,7 +204,7 @@ namespace Cloud.LmtService.Repositories.Logs
             try
             {
                 var filter = new BsonDocument("name", new BsonRegularExpression($"^{prefix}", "i"));
-                return await _database.GetCollectionNamesWithDataAsync(filter, startDate, endDate);
+                return await _database.GetCollectionNamesWithDataAsync(filter, startDate, endDate, _logger);
             }
             catch (Exception ex)
             {

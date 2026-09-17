@@ -270,7 +270,7 @@ namespace Cloud.LmtService.Repositories.Trace
                     { "$not", new BsonRegularExpression("^system\\.", "i") }
                 });
 
-                var names = await _database.GetCollectionNamesWithDataAsync(collectionFilter, startDate, endDate);
+                var names = await _database.GetCollectionNamesWithDataAsync(collectionFilter, startDate, endDate, _logger);
 
                 return names
                     .Where(n => !Constants.IgnoredTenants.Contains(n, StringComparer.OrdinalIgnoreCase))
