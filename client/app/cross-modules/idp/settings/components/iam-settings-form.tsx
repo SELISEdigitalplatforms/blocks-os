@@ -433,7 +433,7 @@ export const IamSettingsForm = ({ config }: IamSettingsFormProps) => {
                       <PasswordPolicyRegexBuilder onChange={field.onChange} />
                     </div>
                     <FormDescription>
-                      This remains fully editable. Use the policy builder to compose and preview
+                      Use the policy builder to compose and preview
                       common IAM password requirements.
                     </FormDescription>
                     <FormControl>
