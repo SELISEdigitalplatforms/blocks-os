@@ -14,13 +14,10 @@ import type { LogServiceIconKey } from "../../models/log-entry.model";
 import { useQueryState } from "nuqs";
 import type { RegisteredService } from "@/cross-modules/identifier/models/service.model";
 import { buildServiceKey, parseServiceKey, treeValuesToServiceKey } from "../../utils";
-import {
-  TRACE_PROVIDERS,
-  TRACE_REQUEST_SOURCE_TYPE,
-} from "@blocks-lmt/constants/trace.constant";
+import { TRACE_PROVIDERS, TRACE_REQUEST_SOURCE_TYPE } from "@blocks-lmt/constants/trace.constant";
 import { useRestoreRequest } from "@blocks-lmt/hooks/use-restore-request";
 import { useLogsTier } from "@blocks-lmt/hooks/use-logs-tier";
-import { StorageTierCards, type StorageTier } from "../storage-tier-cards/storage-tier-cards";
+import type { StorageTier } from "../storage-tier-cards/storage-tier-cards";
 import { RestoredLogsPanel } from "../restored-logs/restored-logs-panel";
 
 export interface ServiceComponent {
@@ -88,6 +85,9 @@ interface LogsViewerContextType {
   isServicesLoading: boolean;
   /** Which storage tier is being read: live logs, or the logs of a restore. */
   tier: StorageTier;
+  /** Whether the reader may leave live logs at all -- see {@link LogsViewerProps.projectKey}. */
+  canSwitchTier: boolean;
+  changeTier: (tier: StorageTier) => void;
   /**
    * The restore whose rows are on screen, empty over live logs. Rows link into their own
    * restore with it, and the filter toolbar uses it to know it is over a closed window.
@@ -117,6 +117,8 @@ const initialContextValue: LogsViewerContextType = {
   isSourceBlocks: true,
   isServicesLoading: false,
   tier: TRACE_PROVIDERS.hot,
+  canSwitchTier: false,
+  changeTier: () => {},
   restoreRequestId: "",
   restoreWindow: {},
 };
@@ -295,6 +297,8 @@ export const LogsViewer = ({
         isSourceBlocks,
         isServicesLoading,
         tier,
+        canSwitchTier: canReadRestores,
+        changeTier,
         restoreRequestId: restoreSourceType ? restore.requestId : "",
         restoreWindow: restoreSourceType
           ? { startDate: restore.startDate, endDate: restore.endDate }
@@ -302,19 +306,8 @@ export const LogsViewer = ({
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
-        {/* Tier is the outer choice; the managed/my-service split lives inside the tier the
-            reader picked, because that is the pair they switch between far more often. */}
-        {canReadRestores && (
-          <StorageTierCards
-            value={tier}
-            onChange={changeTier}
-            descriptions={{
-              [TRACE_PROVIDERS.hot]: "Live and recent logs for active debugging.",
-              [TRACE_PROVIDERS.cold]: "Longer-term stored logs for later investigation.",
-              [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
-            }}
-          />
-        )}
+        {/* The tier switcher rides in the list header beside the service tabs -- see
+            LogsListHeader. */}
         <LogsListHeader />
         {restoreSourceType ? (
           <RestoredLogsPanel sourceType={restoreSourceType} restore={restore} />
