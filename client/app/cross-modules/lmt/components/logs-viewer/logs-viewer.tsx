@@ -19,6 +19,7 @@ import {
   TRACE_REQUEST_SOURCE_TYPE,
 } from "@blocks-lmt/constants/trace.constant";
 import { useRestoreRequest } from "@blocks-lmt/hooks/use-restore-request";
+import { useLogsTier } from "@blocks-lmt/hooks/use-logs-tier";
 import { StorageTierCards, type StorageTier } from "../storage-tier-cards/storage-tier-cards";
 import { RestoredLogsPanel } from "../restored-logs/restored-logs-panel";
 
@@ -75,6 +76,12 @@ interface LogsViewerContextType {
   predefinedQueries?: string[];
   agentName?: string;
   askAiDescription?: string;
+  /**
+   * Whether the list header offers the agent. A page that puts the agent in its own page
+   * header -- as the Logs route does, to sit where Tracing's does -- turns it off here so the
+   * one button isn't offered twice.
+   */
+  showAgent: boolean;
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks: boolean;
@@ -102,8 +109,9 @@ const initialContextValue: LogsViewerContextType = {
   setFilter: () => {},
   resetFilter: () => {},
   predefinedQueries: [],
-  agentName: "Ask AI",
+  agentName: "Blocks Agent",
   askAiDescription: "",
+  showAgent: true,
   logsRouteServiceName: undefined,
   useGenericTraceLinks: false,
   isSourceBlocks: true,
@@ -138,6 +146,8 @@ interface LogsViewerProps {
   predefinedQueries?: string[];
   agentName?: string;
   askAiDescription?: string;
+  /** See {@link LogsViewerContextType.showAgent}. */
+  showAgent?: boolean;
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks?: boolean;
@@ -157,8 +167,9 @@ export const LogsViewer = ({
   projectKey = "",
   className,
   predefinedQueries,
-  agentName = "Ask AI",
+  agentName = "Blocks Agent",
   askAiDescription,
+  showAgent = true,
   logsRouteServiceName,
   useGenericTraceLinks = false,
   isSourceBlocks = true,
@@ -195,18 +206,10 @@ export const LogsViewer = ({
     [selectedServices],
   );
 
-  // Under its own param name rather than Tracing's "tab": on the per-service logs route "tab"
-  // already means the service tab, and log rows copy that param onto their trace links.
-  const [tierParam, setTierParam] = useQueryState("tier", { defaultValue: TRACE_PROVIDERS.hot });
-  const requestedTier = (
-    Object.values(TRACE_PROVIDERS).includes(tierParam as TRACE_PROVIDERS)
-      ? tierParam
-      : TRACE_PROVIDERS.hot
-  ) as StorageTier;
   // A restore belongs to a project. Without one -- the per-service logs route passes none --
   // there is nothing to read on the restored tiers, so they are not offered at all.
   const canReadRestores = Boolean(projectKey);
-  const tier = canReadRestores ? requestedTier : TRACE_PROVIDERS.hot;
+  const { tier, setTier } = useLogsTier(canReadRestores);
   const restoreSourceType = RESTORE_SOURCE_TYPE[tier];
 
   // Resolved from the initial tier rather than reset by an effect, so a link straight to
@@ -221,12 +224,12 @@ export const LogsViewer = ({
 
   const changeTier = useCallback(
     (next: StorageTier) => {
-      setTierParam(next);
+      setTier(next);
       // Each tier has its own window, so carrying a filter across would leave the reader with
       // a window that belongs to the tier they just left.
       setFilter(tierDefaultFilter(next));
     },
-    [setTierParam],
+    [setTier],
   );
 
   // Drop services that no longer exist once the service list loads or changes.
@@ -286,6 +289,7 @@ export const LogsViewer = ({
         predefinedQueries,
         agentName,
         askAiDescription,
+        showAgent,
         logsRouteServiceName,
         useGenericTraceLinks,
         isSourceBlocks,

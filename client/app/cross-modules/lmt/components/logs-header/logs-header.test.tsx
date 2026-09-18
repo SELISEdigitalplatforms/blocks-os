@@ -11,7 +11,9 @@ vi.mock("nuqs", async () => {
 });
 
 vi.mock("@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet", () => ({
-  LMTQueryAgentSheet: () => <button type="button">Ask AI</button>,
+  LMTQueryAgentSheet: ({ agentName }: { agentName?: string }) => (
+    <button type="button">{agentName ?? "Blocks Agent"}</button>
+  ),
 }));
 
 // Importing the viewer for its context would otherwise drag the hot list, the restored panel
@@ -27,7 +29,7 @@ type Ctx = React.ContextType<typeof LogsViewerContext>;
 const renderHeader = (ctx: Partial<Ctx> = {}) =>
   render(
     <LogsViewerContext.Provider
-      value={{ tier: "hot", restoreRequestId: "", ...ctx } as unknown as Ctx}
+      value={{ tier: "hot", restoreRequestId: "", showAgent: true, ...ctx } as unknown as Ctx}
     >
       <LogsListHeader />
     </LogsViewerContext.Provider>,
@@ -44,7 +46,7 @@ describe("LogsListHeader", () => {
   it("offers the agent over live logs", () => {
     renderHeader();
 
-    expect(screen.getByRole("button", { name: /ask ai/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /blocks agent/i })).toBeTruthy();
   });
 
   /**
@@ -54,12 +56,19 @@ describe("LogsListHeader", () => {
   it("withholds the agent over a restore, which it cannot query", () => {
     renderHeader({ tier: "cold", restoreRequestId: "req-1" } as Partial<Ctx>);
 
-    expect(screen.queryByRole("button", { name: /ask ai/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /blocks agent/i })).toBeNull();
   });
 
   it("withholds the agent on a restored tier even before the request has loaded", () => {
     renderHeader({ tier: "archive", restoreRequestId: "" } as Partial<Ctx>);
 
-    expect(screen.queryByRole("button", { name: /ask ai/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /blocks agent/i })).toBeNull();
+  });
+
+  /** The Logs route hosts the agent in its own page header; offering it here too would double it. */
+  it("withholds the agent when the page hosts it itself", () => {
+    renderHeader({ showAgent: false } as Partial<Ctx>);
+
+    expect(screen.queryByRole("button", { name: /blocks agent/i })).toBeNull();
   });
 });

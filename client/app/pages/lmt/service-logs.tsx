@@ -78,7 +78,6 @@ export function LmtServiceLogsRoute() {
         services={logServices}
         predefinedQueries={LOG_SERVICE_AI_QUERIES[service.name] ?? []}
         askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
-        agentName="Ask AI"
       />
     </div>
   );

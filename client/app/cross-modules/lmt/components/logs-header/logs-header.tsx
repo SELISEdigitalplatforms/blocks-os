@@ -6,13 +6,16 @@ import { useContext } from "react";
 import { LogsViewerContext } from "../logs-viewer/logs-viewer";
 
 export const LogsListHeader = () => {
-  const { predefinedQueries, agentName, askAiDescription, tier } = useContext(LogsViewerContext);
+  const { predefinedQueries, agentName, askAiDescription, tier, showAgent } =
+    useContext(LogsViewerContext);
   const [source, setSource] = useQueryState("source", {
     defaultValue: "blocks",
   });
   // The agent queries hot storage. Offered beside restored rows it would answer about days
   // other than the ones on screen, so it is withheld there rather than quietly misleading.
-  const canAskAgent = tier === TRACE_PROVIDERS.hot;
+  // A page that hosts the agent in its own page header turns it off here -- see
+  // LogsViewerContextType.showAgent.
+  const canAskAgent = showAgent && tier === TRACE_PROVIDERS.hot;
 
   return (
     <div className="flex items-center justify-between gap-4">
