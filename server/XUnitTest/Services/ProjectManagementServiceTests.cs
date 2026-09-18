@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Blocks.Genesis;
@@ -108,7 +108,8 @@ namespace XUnitTest.Services
         private ProjectManagementService Service(IConfiguration? configuration = null) => new(
             _repo.Object, _blocksSecret.Object, _messageClient.Object, configuration ?? _configuration,
             _storage.Object, _tenants.Object, _certManager.Object, _encoding.Object, _cache.Object,
-            new CryptoService());
+            new CryptoService(),
+            HttpFactoryStub.Unreachable());
 
         // The environment's CNAME label, which the shared API host is built from.
         private static IConfiguration WithCnameRecordDomain(string label) =>

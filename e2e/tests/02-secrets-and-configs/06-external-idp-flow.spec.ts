@@ -13,6 +13,9 @@ import {
   verifyFormAsksNothingAboutClaimsFlow,
   verifyEmptyStateFlow,
   verifyKeySourceFollowsAlgorithmFlow,
+  verifyKeySourceFollowsTheAlgorithmNotTheBrandFlow,
+  verifyIssuerIsOptionalFlow,
+  verifyCertificateUploadAndPassphraseFlow,
   verifyProviderCardFlow,
   verifyProvidersOfferedFlow,
   verifyRequiredFieldsRejectedFlow,
@@ -68,6 +71,18 @@ test.describe("flows", () => {
 
     await test.step("The key source follows the signing algorithm", async () => {
       await verifyKeySourceFollowsAlgorithmFlow(page);
+    });
+
+    await test.step("The key source follows the algorithm, not the provider brand", async () => {
+      await verifyKeySourceFollowsTheAlgorithmNotTheBrandFlow(page);
+    });
+
+    await test.step("Issuer is optional, and a blank one is explained", async () => {
+      await verifyIssuerIsOptionalFlow(page);
+    });
+
+    await test.step("Choosing the certificate source offers a dropzone and a passphrase", async () => {
+      await verifyCertificateUploadAndPassphraseFlow(page);
     });
 
     await test.step("The create form asks nothing about claims", async () => {

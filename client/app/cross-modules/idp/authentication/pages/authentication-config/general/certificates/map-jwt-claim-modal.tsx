@@ -2,7 +2,12 @@ import { useCallback, useMemo, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui-kits/drawer/drawer";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerTitle,
+} from "@/components/ui-kits/drawer/drawer";
 import {
   Select,
   SelectContent,
@@ -71,7 +76,11 @@ type MapJwtClaimModalProps = {
  *
  * The mapping is stored on the provider itself, not alongside it: one row, one save.
  */
-export function MapJwtClaimModal({ open, onOpenChange, provider }: Readonly<MapJwtClaimModalProps>) {
+export function MapJwtClaimModal({
+  open,
+  onOpenChange,
+  provider,
+}: Readonly<MapJwtClaimModalProps>) {
   const { mutateAsync, isPending } = useSaveThirdPartyJwtProvider();
 
   const [token, setToken] = useState("");

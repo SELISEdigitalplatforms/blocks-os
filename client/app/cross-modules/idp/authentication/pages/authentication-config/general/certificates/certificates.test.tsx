@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   isLoading: false,
   deleteProvider: vi.fn(),
   saveProvider: vi.fn(),
+  uploadCertificate: vi.fn(),
 }));
 
 vi.mock("@seliseblocks/genesis-os", () => ({
@@ -24,6 +25,12 @@ vi.mock("@blocks-idp/authentication/hooks/use-third-party-jwt-provider", () => (
   useGetThirdPartyJwtProviders: () => ({ data: h.providers, isLoading: h.isLoading }),
   useSaveThirdPartyJwtProvider: () => ({ mutateAsync: h.saveProvider, isPending: false }),
   useDeleteThirdPartyJwtProvider: () => ({ mutateAsync: h.deleteProvider }),
+}));
+// The provider form reaches for this so an "Others" provider can upload a certificate instead of
+// naming a JWKS URL. Unmocked it calls useMutation, which needs a QueryClientProvider this page
+// is never rendered inside.
+vi.mock("@blocks-storage/hooks/use-storage-file", () => ({
+  usePublicCertificateFile: () => ({ mutateAsync: h.uploadCertificate, isPending: false }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   showErrorToast: vi.fn(),
@@ -50,7 +57,12 @@ const provider = {
   audiences: ["https://api.example.com"],
   algorithms: [JwtSigningAlgorithm.RS256],
   jwksUrl: "https://tenant.us.auth0.com/.well-known/jwks.json",
+  publicCertificatePath: "",
+  certificateSubject: "",
+  certificateThumbprint: "",
+  certificateNotAfter: null,
   hasSigningSecret: false,
+  hasCertificatePassword: false,
   cookieKey: "",
   claimsMapping: { userId: "sub", email: "email", userName: "email", name: "name", roles: "" },
 };
@@ -62,6 +74,9 @@ describe("Certificates", () => {
     h.isLoading = false;
     h.deleteProvider = vi.fn().mockResolvedValue({ isSuccess: true });
     h.saveProvider = vi.fn().mockResolvedValue({ isSuccess: true });
+    h.uploadCertificate = vi
+      .fn()
+      .mockResolvedValue({ downloadUrl: "https://cdn.example.com/certificates/tenant-1_3rdparty" });
   });
 
   it("offers a way to add the first provider from the empty state", async () => {
@@ -72,9 +87,23 @@ describe("Certificates", () => {
     const add = screen.getByRole("button", { name: "Add provider" });
     await userEvent.click(add);
 
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Add provider" })).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Add provider" })).toBeTruthy());
+  });
+
+  it("names the key source of a certificate-backed provider rather than an em dash", () => {
+    // Regression: the card read `jwksUrl || "—"`, so a provider validating perfectly well
+    // against an uploaded certificate rendered as though nothing had been configured.
+    h.providers = [
+      {
+        ...provider,
+        jwksUrl: "",
+        publicCertificatePath: "https://cdn.example.com/certificates/tenant-1_3rdparty_p1.crt",
+      },
+    ];
+
+    render(<Certificates />);
+
+    expect(screen.getByText("Certificate (.crt)")).toBeTruthy();
   });
 
   it("lists a configured provider with its key source and an add action", () => {

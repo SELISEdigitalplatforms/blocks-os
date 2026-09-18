@@ -1,9 +1,12 @@
-import { ArrowLeft, Pencil, Waypoints } from "lucide-react";
+import { ArrowLeft, Copy, Download, Pencil, Waypoints } from "lucide-react";
 import { Badge } from "@/components/ui-kits/badge/badge";
+import { showSuccessToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { providers as providerCatalogue } from "@blocks-idp/authentication/constants/authentication.constant";
 import {
+  certificateExpiry,
+  keySourceLabel,
   SIGNING_ALGORITHMS,
   type ThirdPartyJwtProvider,
 } from "@/cross-modules/identifier/models/third-party-jwt-provider.model";
@@ -26,6 +29,115 @@ function Detail({
       <div className={`break-all text-sm font-medium ${muted ? "text-muted-foreground" : ""}`}>
         {value}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Everything about the configured certificate that an operator acts on.
+ *
+ * Shown only here and not on the list card, because the useful parts are long: the storage URL,
+ * the subject to match against what the provider sent, and the thumbprint to match against what
+ * they published.
+ *
+ * The URL and the download are safe to surface. The certificate holds a public key, and the
+ * container serves it anonymously by design — Genesis fetches it with a bare HTTP client and no
+ * credentials — so the link exposes nothing that was not already reachable.
+ */
+function CertificatePanel({ provider }: Readonly<{ provider: ThirdPartyJwtProvider }>) {
+  const expiry = certificateExpiry(provider);
+
+  const copyUrl = async () => {
+    await navigator.clipboard.writeText(provider.publicCertificatePath);
+    showSuccessToast({ description: "Certificate URL copied" });
+  };
+
+  return (
+    <div className="space-y-4 rounded-md border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Certificate</h3>
+        {expiry && (
+          <Badge
+            variant={expiry.expired || expiry.expiringSoon ? "destructive" : "secondary"}
+            title={expiry.on.toISOString()}
+          >
+            {expiry.expired
+              ? `Expired ${Math.abs(expiry.daysLeft)} day${Math.abs(expiry.daysLeft) === 1 ? "" : "s"} ago`
+              : `Expires in ${expiry.daysLeft} day${expiry.daysLeft === 1 ? "" : "s"}`}
+          </Badge>
+        )}
+      </div>
+
+      {/* A certificate pins one key, so a lapse refuses every token the provider issues and
+          nothing in the token says why. Worth stating outright rather than leaving to the date. */}
+      {expiry?.expired && (
+        <p className="text-xs text-destructive">
+          Tokens from this provider are being refused. Upload the replacement certificate to restore
+          it.
+        </p>
+      )}
+      {expiry?.expiringSoon && (
+        <p className="text-xs text-destructive">
+          Ask the provider for the replacement before this date. A certificate pins a single key, so
+          tokens stop being accepted the moment it lapses.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Detail
+          label="Subject"
+          value={provider.certificateSubject || "Not read"}
+          muted={!provider.certificateSubject}
+        />
+        <Detail
+          label="Expires"
+          value={expiry ? expiry.on.toLocaleDateString() : "Not read"}
+          muted={!expiry}
+        />
+        <div className="space-y-1 sm:col-span-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Thumbprint (SHA-1)
+          </p>
+          <code className="block break-all font-mono text-xs">
+            {provider.certificateThumbprint || "—"}
+          </code>
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Stored at
+          </p>
+          <code className="block break-all font-mono text-xs">
+            {provider.publicCertificatePath}
+          </code>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" className="h-8" onClick={() => void copyUrl()}>
+          <Copy className="mr-2 h-4 w-4" />
+          Copy URL
+        </Button>
+        {/* download without a value lets the server name the file; rel is set because the
+            certificate lives on a storage host rather than this origin. */}
+        <Button size="sm" variant="outline" className="h-8" asChild>
+          <a
+            href={provider.publicCertificatePath}
+            download
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download
+          </a>
+        </Button>
+      </div>
+
+      {!provider.certificateSubject && (
+        <p className="text-xs text-muted-foreground">
+          The certificate could not be read when this provider was saved, so there is nothing to
+          describe here. Check the URL above is reachable, then save the provider again.
+        </p>
+      )}
     </div>
   );
 }
@@ -103,9 +215,7 @@ export function ProviderDetails({
             <Detail
               label="Audience"
               value={
-                provider.audiences?.length
-                  ? provider.audiences.join(", ")
-                  : "Any (validation off)"
+                provider.audiences?.length ? provider.audiences.join(", ") : "Any (validation off)"
               }
               muted={!provider.audiences?.length}
             />
@@ -113,16 +223,11 @@ export function ProviderDetails({
               label="Algorithm"
               value={provider.algorithms?.map(algorithmLabel).join(", ") || "—"}
             />
-            <Detail
-              label="Key source"
-              value={
-                provider.hasSigningSecret
-                  ? "Shared secret (stored encrypted)"
-                  : provider.jwksUrl || "—"
-              }
-            />
+            <Detail label="Key source" value={keySourceLabel(provider)} />
             {provider.cookieKey && <Detail label="Cookie key" value={provider.cookieKey} />}
           </div>
+
+          {provider.publicCertificatePath && <CertificatePanel provider={provider} />}
         </CardContent>
       </Card>
 
@@ -152,11 +257,7 @@ export function ProviderDetails({
         </CardContent>
       </Card>
 
-      <ApiIntegrationCard
-        provider={provider}
-        allProviders={allProviders}
-        projectKey={projectKey}
-      />
+      <ApiIntegrationCard provider={provider} allProviders={allProviders} projectKey={projectKey} />
     </div>
   );
 }
