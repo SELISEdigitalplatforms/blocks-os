@@ -39,7 +39,7 @@ vi.mock("../cname/dialog", () => ({
 }));
 
 import { DomainTable } from "./domain-table";
-import type { IDomain } from "@seliseblocks/genesis-os/models";
+import type { IDomain } from "@/models/project.model";
 
 const domains = [
   { domain: "verified.com", isDomainVerified: true, cookieDomain: ".verified.com" },

@@ -43,6 +43,13 @@ namespace Cloud.LmtService.Utilities
         public const int LogsBatchSize = 10000;
         public const int RestoreInsertBatchSize = 1000;
 
+        /// <summary>
+        /// How long a Running backup job may go without a heartbeat before a later trigger treats
+        /// it as dead and takes over. The job heartbeats after every batch, so this only elapses
+        /// when the worker really has stopped.
+        /// </summary>
+        public static readonly TimeSpan BackupStaleRunThreshold = TimeSpan.FromHours(3);
+
         public static readonly string[] IgnoredTenants = ["miscellaneous"];
         public static readonly string[] IgnoredServices = ["blocks-lmt-worker"];
 

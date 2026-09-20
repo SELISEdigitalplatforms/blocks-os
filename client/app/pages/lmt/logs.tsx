@@ -1,3 +1,5 @@
+import { PageHeader } from "@/components/page-header/page-header";
+import { LMTQueryAgentSheet } from "@blocks-ai/components/lmt-query-agent/lmt-query-agent-sheet";
 import { useGetAllServices } from "@blocks-identifier/hooks/use-services";
 import { useGetBlocksServices } from "@blocks-lmt/hooks/use-log";
 import { LogsViewer, type Service } from "@blocks-lmt/components";
@@ -5,6 +7,8 @@ import {
   LOG_SERVICE_AI_DESCRIPTION,
   LOG_SERVICE_AI_QUERIES,
 } from "@blocks-lmt/constants/logs-service-meta.constant";
+import { useLogsTier } from "@blocks-lmt/hooks/use-logs-tier";
+import { TRACE_PROVIDERS } from "@blocks-lmt/constants/trace.constant";
 import { createParser, useQueryState } from "nuqs";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { useMemo } from "react";
@@ -32,6 +36,9 @@ export function LogsRoute() {
   // Cold and archive rows belong to a restore of this project, so the viewer needs to know
   // which project's restore to look up.
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
+  // The agent sits in the page header, where Tracing's does. It queries hot storage, so over a
+  // restore it would answer about days other than the ones on screen and is withheld there.
+  const { tier } = useLogsTier(Boolean(projectKey));
   const { data: managedServicesData, isLoading, isFetching } = useGetAllServices({
     page: 0,
     pageSize: 1000,
@@ -91,18 +98,32 @@ export function LogsRoute() {
   const predefinedQueries = source === "blocks" ? Object.values(LOG_SERVICE_AI_QUERIES).flat() : [];
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-4">
-      <LogsViewer
-        key={source}
-        services={services}
-        projectKey={projectKey}
-        predefinedQueries={predefinedQueries}
-        askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
-        agentName="Ask AI"
-        useGenericTraceLinks
-        isSourceBlocks={source === "blocks"}
-        isServicesLoading={isServicesLoading}
+    <>
+      <PageHeader
+        title="Logs"
+        description="Search and view application logs across your services"
+        actions={
+          tier === TRACE_PROVIDERS.hot ? (
+            <LMTQueryAgentSheet
+              description={LOG_SERVICE_AI_DESCRIPTION}
+              questions={predefinedQueries}
+            />
+          ) : undefined
+        }
       />
-    </div>
+      <div className="flex flex-col gap-5 sm:gap-4">
+        <LogsViewer
+          key={source}
+          services={services}
+          projectKey={projectKey}
+          predefinedQueries={predefinedQueries}
+          askAiDescription={LOG_SERVICE_AI_DESCRIPTION}
+          showAgent={false}
+          useGenericTraceLinks
+          isSourceBlocks={source === "blocks"}
+          isServicesLoading={isServicesLoading}
+        />
+      </div>
+    </>
   );
 }

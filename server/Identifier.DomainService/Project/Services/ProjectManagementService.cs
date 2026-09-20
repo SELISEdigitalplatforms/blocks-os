@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Certificate;
 using DomainService.Dtos;
 using DomainService.Entities;
@@ -29,6 +29,7 @@ namespace DomainService.Projects
         private readonly IEncodingService _urlEncodingService;
         private readonly ICacheClient _cacheClient;
         private readonly ICryptoService _cryptoService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         private const string _tenantTokenPublicCertificateCachePrefix = "tetocertpublic::";
 
@@ -42,7 +43,8 @@ namespace DomainService.Projects
                                         ICertificateManager certificateManager,
                                         IEncodingService urlEncodingService,
                                         ICacheClient cacheClient,
-                                        ICryptoService cryptoService)
+                                        ICryptoService cryptoService,
+                                        IHttpClientFactory httpClientFactory)
         {
             _projectRepository = projectRepository;
             _blocksSecret = blocksSecret;
@@ -54,6 +56,7 @@ namespace DomainService.Projects
             _urlEncodingService = urlEncodingService;
             _cacheClient = cacheClient;
             _cryptoService = cryptoService;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task ConfigureProjectAsync(Tenant project, ProjectStatusTracer? projectStatus = null)
@@ -346,7 +349,32 @@ namespace DomainService.Projects
         {
             var tenantSlug = await _urlEncodingService.EncodeToBase26Async(tenantIdGroupId, tenantIdGroupId, 5);
             var repoSlug = await _urlEncodingService.EncodeToBase26Async(resource?.ResourceId ?? string.Empty, tenantIdGroupId, 5);
-            return !string.IsNullOrEmpty(repoSlug) ? $"https://{IdentifierHelper.EnvironmentMapper(application.Environment)}{tenantSlug}-{repoSlug}{_configuration["KbtclIdentifier"]}" : $"https://{IdentifierHelper.EnvironmentMapper(application.Environment)}{tenantSlug}{_configuration["KbtclIdentifier"]}";
+            return IdentifierHelper.BuildPlatformSubdomain(application.Environment, tenantSlug, repoSlug, _configuration["KbtclIdentifier"] ?? string.Empty);
+        }
+
+        // Every repository the group owns gets its own generated host in this environment, and
+        // each of those has to be a registered application or it fails the origin allow-list the
+        // moment it serves a request. A project created with several repositories, and every
+        // environment added to a group that already has them, both land here — which is why this
+        // walks the whole list rather than the first entry. The first resource stays first: several
+        // callers still read Applications[0] as the project's own domain.
+        private async Task<List<string>> GetDefaultDomainsAsync(List<Resource>? resources, ApplicationContext application, string tenantIdGroupId)
+        {
+            // No repositories yet. The project still needs one host of its own, derived from the
+            // group alone — the same domain GetDefaultDomainAsync returns for a null resource.
+            if (resources is null || resources.Count == 0)
+            {
+                return [await GetDefaultDomainAsync(null, application, tenantIdGroupId)];
+            }
+
+            var domains = new List<string>(resources.Count);
+
+            foreach (var resource in resources)
+            {
+                domains.Add(await GetDefaultDomainAsync(resource, application, tenantIdGroupId));
+            }
+
+            return domains;
         }
 
         private async Task ManageTenantAssetAsync(CreateProjectRequest project, string customGroupId)
@@ -379,19 +407,45 @@ namespace DomainService.Projects
             };
         }
 
-        // The project's own domain plus the platform apps that must be able to sign in
-        // against the new tenant. Studio's host is not an appsettings value: it is
-        // deployed into the "FrontendRuntime" section from the Mongo secrets document
+        // The generated host of every repository in the group, plus the platform apps that must
+        // be able to sign in against the new tenant. Studio's host is not an appsettings value:
+        // it is deployed into the "FrontendRuntime" section from the Mongo secrets document
         // (see ApplyFrontendRuntimeSettings), so it is read from the same key the
         // frontend is served with. A deployment without that secret simply leaves
         // Studio out instead of writing an empty domain.
-        private List<Applications> BuildDefaultApplications(string applicationDomain)
+        //
+        // The repository hosts are PlatformSubdomain and the two platform apps are
+        // PlatformDefault: the former are unique to this tenant, while IAM and Studio are the
+        // same hosts in every tenant's list. The type is set here rather than derived from the
+        // host, so a deployment whose KbtclIdentifier sits outside the platform domains still
+        // labels its own generated hosts correctly.
+        private List<Applications> BuildDefaultApplications(IReadOnlyList<string> applicationDomains)
         {
-            var applications = new List<Applications>
+            var applications = new List<Applications>();
+
+            foreach (var domain in applicationDomains)
             {
-                new Applications { Domain = applicationDomain, CookieDomain = IdentifierConstants.ConstructCookieDomain, IsDomainVerified = true },
-                new Applications { Domain = _configuration["IamDomain"], CookieDomain = _configuration["IamCookieDomain"], IsDomainVerified = true }
-            };
+                if (string.IsNullOrWhiteSpace(domain) || ContainsDomain(applications, domain))
+                {
+                    continue;
+                }
+
+                applications.Add(new Applications
+                {
+                    Domain = domain,
+                    CookieDomain = IdentifierConstants.ConstructCookieDomain,
+                    IsDomainVerified = true,
+                    DomainType = DomainType.PlatformSubdomain
+                });
+            }
+
+            applications.Add(new Applications
+            {
+                Domain = _configuration["IamDomain"],
+                CookieDomain = _configuration["IamCookieDomain"],
+                IsDomainVerified = true,
+                DomainType = DomainType.PlatformDefault
+            });
 
             var studioDomain = Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_STUDIO_BASE_URL") is { Length: > 0 } fromEnv
                 ? fromEnv
@@ -404,17 +458,34 @@ namespace DomainService.Projects
                 {
                     Domain = studioDomain,
                     CookieDomain = IdentifierHelper.ExtractMainDomain(studioDomain),
-                    IsDomainVerified = true
+                    IsDomainVerified = true,
+                    DomainType = DomainType.PlatformDefault
                 });
             }
 
             return applications;
         }
 
+        // Stored domains vary by protocol, case and trailing slash, so membership is decided on
+        // the normalized form. Nothing is ever removed from Applications — a deleted repository
+        // is archived, not dropped — so every append has to check first or a repository that is
+        // removed and added back leaves a second copy behind.
+        private static bool ContainsDomain(IEnumerable<Applications> applications, string domain)
+        {
+            var normalized = NormalizeDomain(domain);
+
+            return applications.Any(a => NormalizeDomain(a.Domain) == normalized);
+        }
+
         private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId)
         {
             var certificateStorageType = GetCertificateStorageType();
-            var applicationDomain = createProjectRequest.Resources?.Count > 0 ? await GetDefaultDomainAsync(createProjectRequest.Resources.First(), applicationContext, groupId) : await GetDefaultDomainAsync(createProjectRequest.Resources?.FirstOrDefault(), applicationContext, groupId);
+            var applicationDomains = await GetDefaultDomainsAsync(createProjectRequest.Resources, applicationContext, groupId);
+
+            // The first repository's host is the project's own: it is what the token audience
+            // and the IAM account-action urls are built from, and what Applications[0] means to
+            // every caller that reads it.
+            var applicationDomain = applicationDomains[0];
 
             var project = new Tenant
             {
@@ -434,7 +505,7 @@ namespace DomainService.Projects
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 
-                Applications = BuildDefaultApplications(applicationDomain),
+                Applications = BuildDefaultApplications(applicationDomains),
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
@@ -470,8 +541,41 @@ namespace DomainService.Projects
 
         public async Task<List<GroupedProjectsDto>> GetAllAsync(GetProjectsRequest request)
         {
-            return await _projectRepository.GetAllByLastModifiedDateAsync(request);
+            var groups = await _projectRepository.GetAllByLastModifiedDateAsync(request);
+
+            foreach (var project in groups.SelectMany(g => g.Projects.Concat(g.NonSharedProject ?? [])))
+            {
+                project.Applications = VisibleApplications(project.Applications);
+            }
+
+            return groups;
         }
+
+        /// <summary>
+        /// The applications a project owns, as opposed to the ones it merely has to trust. IAM
+        /// and Studio are written into every tenant's list so their hosts pass the origin
+        /// allow-list, but they are the same two hosts everywhere and no project can act on
+        /// them — showing them made every environment look like it had two domains it did not.
+        /// <para>
+        /// Only PlatformDefault is dropped. Entries written before the type existed read back as
+        /// Unspecified and are kept, so nothing disappears from a project until it is
+        /// backfilled.
+        /// </para>
+        /// </summary>
+        private static List<ApplicationDto> VisibleApplications(IEnumerable<ApplicationDto>? applications) =>
+            [.. (applications ?? []).Where(a => a.DomainType != DomainType.PlatformDefault)];
+
+        // The detail endpoint reads a Tenant rather than a Project, so its applications arrive
+        // as the Genesis type and are copied across. A copy, not the list itself: the entries
+        // belong to a Tenant that may have come from the cache, and filtering must not reach it.
+        private static List<ApplicationDto> VisibleApplications(IEnumerable<Applications>? applications) =>
+            VisibleApplications((applications ?? []).Select(a => new ApplicationDto
+            {
+                Domain = a.Domain,
+                CookieDomain = a.CookieDomain,
+                IsDomainVerified = a.IsDomainVerified,
+                DomainType = a.DomainType
+            }));
 
         public async Task RestoreUnfinishedProjectAsync()
         {
@@ -553,7 +657,7 @@ namespace DomainService.Projects
             var project = new GetProjectResponseData
             {
                 Name = tenant.Name,
-                Applications = tenant.Applications,
+                Applications = VisibleApplications(tenant.Applications),
                 ItemId = tenant.ItemId,
                 CreatedDate = tenant.CreatedDate,
                 LastUpdatedDate = tenant.LastUpdatedDate,
@@ -764,11 +868,15 @@ namespace DomainService.Projects
             }
 
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
+
+            // Derived here, never read from the request: a caller that could name its own type
+            // could pass its domain off as one of the platform's.
             var newApp = new Applications
             {
                 Domain = request.Application.Domain,
                 CookieDomain = request.Application.CookieDomain,
-                IsDomainVerified = (mainDomain == IdentifierConstants.ConstructCookieDomain) || (mainDomain == IdentifierConstants.BlocksDomain)
+                IsDomainVerified = IdentifierHelper.IsPlatformOwnedDomain(mainDomain),
+                DomainType = IdentifierHelper.ResolveDomainType(request.Application.Domain)
             };
             project.Applications.Add(newApp);
             return new BaseResponse { IsSuccess = true };
@@ -788,10 +896,14 @@ namespace DomainService.Projects
                 return new BaseResponse { IsSuccess = false, Errors = new Dictionary<string, string> { { "duplicate_domain", $"The domain {request.Application.Domain} is already configured for this project" } } };
             }
 
+            // An edit re-runs the same classification an add would, so moving a domain on or off
+            // a platform host retypes it. This used to test ConstructCookieDomain alone, which
+            // left a seliseblocks.com host verified on add and unverified on the next edit.
             var mainDomain = IdentifierHelper.ExtractMainDomain(request.Application.Domain);
             existingApp.Domain = request.Application.Domain;
             existingApp.CookieDomain = request.Application.CookieDomain;
-            existingApp.IsDomainVerified = mainDomain == IdentifierConstants.ConstructCookieDomain;
+            existingApp.IsDomainVerified = IdentifierHelper.IsPlatformOwnedDomain(mainDomain);
+            existingApp.DomainType = IdentifierHelper.ResolveDomainType(request.Application.Domain);
 
             return new BaseResponse { IsSuccess = true };
         }
@@ -896,6 +1008,8 @@ namespace DomainService.Projects
                 await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
                                _projectRepository.UpdateRepoResourceAsync(asset));
 
+                await RegisterRepositoryDomainsAsync(asset.TenantGroupId, asset.Resource);
+
                 return AssetResponse(AssetMutationStatus.Added);
             }
 
@@ -919,7 +1033,67 @@ namespace DomainService.Projects
             await Task.WhenAll(_projectRepository.SaveTenantAssetAsync(tenantAsset),
                            _projectRepository.UpdateRepoResourceInfoAsync(asset));
 
+            // A restore brings a repository's deployments back, so its hosts have to be
+            // registered again. They are normally still there — deleting a repository archives
+            // it and leaves Applications alone — but a repository that predates this, or one
+            // whose entry was removed by hand, is put right here. A rename changes neither the
+            // resource id nor the domain, so an Updated has nothing to register.
+            if (wasArchived)
+            {
+                await RegisterRepositoryDomainsAsync(asset.TenantGroupId, asset.Resource);
+            }
+
             return AssetResponse(wasArchived ? AssetMutationStatus.Restored : AssetMutationStatus.Updated);
+        }
+
+        // One generated host per environment, because the environment letter is the only part of
+        // the domain that varies across a group — the tenant and repo slugs are keyed on the
+        // group and resource ids. Each tenant is saved and its cache entry republished on its
+        // own: the allow-list these entries feed is read from the tenant cache, so a project
+        // that is not republished keeps refusing the host it was just given.
+        private async Task RegisterRepositoryDomainsAsync(string tenantGroupId, Resource resource)
+        {
+            var projects = await _projectRepository.GetByGroupIdAsync(tenantGroupId);
+
+            if (projects is null || projects.Count == 0)
+            {
+                return;
+            }
+
+            var tenantSlug = await _urlEncodingService.EncodeToBase26Async(tenantGroupId, tenantGroupId, 5);
+            var repoSlug = await _urlEncodingService.EncodeToBase26Async(resource.ResourceId, tenantGroupId, 5);
+            var identifier = _configuration["KbtclIdentifier"] ?? string.Empty;
+
+            foreach (var project in projects)
+            {
+                var domain = IdentifierHelper.BuildPlatformSubdomain(project.Environment, tenantSlug, repoSlug, identifier);
+
+                project.Applications ??= [];
+
+                if (ContainsDomain(project.Applications, domain))
+                {
+                    continue;
+                }
+
+                project.Applications.Add(new Applications
+                {
+                    Domain = domain,
+                    CookieDomain = IdentifierConstants.ConstructCookieDomain,
+                    IsDomainVerified = true,
+                    DomainType = DomainType.PlatformSubdomain
+                });
+
+                project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+                project.LastUpdatedDate = DateTime.UtcNow;
+
+                await _projectRepository.UpdateProjectAsync(project);
+                await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+                {
+                    Action = "upsert",
+                    TenantId = project.TenantId,
+                    Tenant = project
+                });
+            }
         }
 
         public async Task<BaseResponse> DeleteAssetAsync(DeleteAssetRequest request)
@@ -1128,7 +1302,9 @@ namespace DomainService.Projects
             provider.Key = request.Key.Trim();
             provider.ProviderName = request.ProviderName?.Trim() ?? string.Empty;
             provider.IsActive = request.IsActive;
-            provider.Issuer = request.Issuer.Trim();
+            // Blank is a real configuration, not a missing value: it means "this provider receives
+            // the tokens that name no issuer".
+            provider.Issuer = request.Issuer?.Trim() ?? string.Empty;
             provider.Audiences = request.Audiences ?? [];
             provider.Algorithms = request.Algorithms;
             provider.CookieKey = request.CookieKey?.Trim() ?? string.Empty;
@@ -1140,6 +1316,15 @@ namespace DomainService.Projects
             {
                 provider.JwksUrl = string.Empty;
 
+                // Switching a provider to the HMAC family drops the certificate for the same
+                // reason the reverse drops the secret: an unused key source left behind is a
+                // dormant signing authority waiting for the algorithm to be switched back.
+                provider.PublicCertificatePath = string.Empty;
+                provider.PublicCertificatePasswordCipher = string.Empty;
+                provider.CertificateSubject = string.Empty;
+                provider.CertificateThumbprint = string.Empty;
+                provider.CertificateNotAfter = null;
+
                 // Empty means untouched, never cleared: a masked field round-trips as "" from most
                 // frontends, and treating that as a clear would silently break authentication.
                 if (!string.IsNullOrEmpty(request.SigningSecret))
@@ -1149,12 +1334,35 @@ namespace DomainService.Projects
             }
             else
             {
-                provider.JwksUrl = request.JwksUrl!.Trim();
-
                 // Switching a provider away from the HMAC family drops the stored secret. Leaving
                 // it would keep a dormant signing authority alive for the moment someone switches
                 // the algorithm back.
                 provider.SigningSecretCipher = string.Empty;
+
+                // Validation has already established exactly one of the two is set.
+                if (!string.IsNullOrWhiteSpace(request.PublicCertificatePath))
+                {
+                    ApplyCertificateKeySource(provider, request, tenant);
+
+                    var inspection = await InspectCertificateAsync(provider, tenant);
+                    if (inspection.Rejection != null)
+                    {
+                        return inspection.Rejection;
+                    }
+
+                    provider.CertificateSubject = inspection.Subject;
+                    provider.CertificateThumbprint = inspection.Thumbprint;
+                    provider.CertificateNotAfter = inspection.NotAfter;
+                }
+                else
+                {
+                    provider.JwksUrl = request.JwksUrl!.Trim();
+                    provider.PublicCertificatePath = string.Empty;
+                    provider.PublicCertificatePasswordCipher = string.Empty;
+                    provider.CertificateSubject = string.Empty;
+                    provider.CertificateThumbprint = string.Empty;
+                    provider.CertificateNotAfter = null;
+                }
             }
 
             await _projectRepository.SaveThirdPartyJwtProviderAsync(provider);
@@ -1218,6 +1426,133 @@ namespace DomainService.Projects
         /// Enforces the rules that cannot be recovered at validation time: one key source per
         /// provider, a usable subject mapping, and audiences wherever two providers share an issuer.
         /// </summary>
+        /// <summary>
+        /// Points a provider at an uploaded public certificate and settles what happens to the
+        /// passphrase that unlocks it.
+        /// </summary>
+        /// <remarks>
+        /// A passphrase belongs to one specific file, so the three cases are kept apart
+        /// deliberately. A new passphrase replaces the stored one. An explicit clear removes it,
+        /// which is the only way to go from a protected certificate to an unprotected one — empty
+        /// on its own cannot mean that, because empty is also what a form sends for "keep what is
+        /// stored". A certificate uploaded to a different path drops the passphrase regardless,
+        /// since it unlocked the file that is no longer configured.
+        /// </remarks>
+        private void ApplyCertificateKeySource(
+            ThirdPartyJwtProvider provider,
+            SaveThirdPartyJwtProviderRequest request,
+            Tenant tenant)
+        {
+            var path = request.PublicCertificatePath!.Trim();
+            var pathChanged = !string.Equals(provider.PublicCertificatePath, path, StringComparison.Ordinal);
+
+            provider.JwksUrl = string.Empty;
+            provider.PublicCertificatePath = path;
+
+            if (!string.IsNullOrEmpty(request.PublicCertificatePassword))
+            {
+                provider.PublicCertificatePasswordCipher =
+                    _cryptoService.Encrypt(request.PublicCertificatePassword, tenant.TenantSalt);
+            }
+            else if (request.ClearCertificatePassword || pathChanged)
+            {
+                provider.PublicCertificatePasswordCipher = string.Empty;
+            }
+        }
+
+        /// <summary>What reading the configured certificate produced.</summary>
+        private readonly record struct CertificateInspection(
+            SaveThirdPartyJwtProviderResponse? Rejection,
+            string Subject,
+            string Thumbprint,
+            DateTime? NotAfter);
+
+        /// <summary>
+        /// Reads the certificate the provider now points at, to describe it and to prove it can be
+        /// opened at all.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The point is <b>when</b> a mistake surfaces. A passphrase that does not match the file,
+        /// or a file that is not a certificate, is otherwise discovered by Genesis on the first
+        /// real request — and the symptom there is a 401 carrying a perfectly valid token, which
+        /// sends people looking at the token. Opening it here turns that into an error on the form
+        /// where it can still be corrected.
+        /// </para>
+        /// <para>
+        /// A parse failure is therefore refused, but a <b>fetch</b> failure is not: the blob may be
+        /// momentarily unreachable, and blocking configuration on a transient network fault would
+        /// be worse than saving without the descriptive fields. Genesis reports the same fetch
+        /// problem with <c>third_party_certificate_unreadable</c> if it persists.
+        /// </para>
+        /// </remarks>
+        private async Task<CertificateInspection> InspectCertificateAsync(
+            ThirdPartyJwtProvider provider,
+            Tenant tenant)
+        {
+            byte[] data;
+
+            try
+            {
+                data = await _httpClientFactory
+                    .CreateClient()
+                    .GetByteArrayAsync(provider.PublicCertificatePath);
+            }
+            catch (Exception)
+            {
+                // Saved without the descriptive fields rather than refused. Deliberate: see above.
+                return new CertificateInspection(null, string.Empty, string.Empty, null);
+            }
+
+            // Empty means untouched, in which case the stored cipher is the only copy there is.
+            var passphrase = string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher)
+                ? null
+                : _cryptoService.Decrypt(provider.PublicCertificatePasswordCipher, tenant.TenantSalt);
+
+            try
+            {
+                using var certificate = LoadCertificate(data, passphrase);
+
+                return new CertificateInspection(
+                    null,
+                    certificate.Subject,
+                    certificate.Thumbprint,
+                    certificate.NotAfter.ToUniversalTime());
+            }
+            catch (Exception)
+            {
+                return new CertificateInspection(
+                    Failed(
+                        "certificate_unreadable",
+                        string.IsNullOrEmpty(passphrase)
+                            ? "The uploaded file could not be read as a certificate. A PKCS#12 file (.pfx, .p12) " +
+                              "that is passphrase protected needs its passphrase supplied here."
+                            : "The uploaded file could not be opened with that passphrase. Check the passphrase, " +
+                              "or re-upload the certificate."),
+                    string.Empty,
+                    string.Empty,
+                    null);
+            }
+        }
+
+        /// <summary>
+        /// Opens a certificate in any of the forms the upload accepts: PKCS#12 first, since only
+        /// that one can be passphrase protected, then PEM or DER.
+        /// </summary>
+        private static X509Certificate2 LoadCertificate(byte[] data, string? passphrase)
+        {
+            try
+            {
+                return X509CertificateLoader.LoadPkcs12(data, passphrase);
+            }
+            catch
+            {
+                // Not a PKCS#12 container. A bare certificate carries no passphrase, so one being
+                // present does not change how it is read -- it simply does not apply.
+                return X509CertificateLoader.LoadCertificate(data);
+            }
+        }
+
         private static SaveThirdPartyJwtProviderResponse? ValidateProvider(
             SaveThirdPartyJwtProviderRequest request,
             ThirdPartyJwtProvider? existing,
@@ -1234,11 +1569,10 @@ namespace DomainService.Projects
                 return Failed("duplicate_key", $"Another provider already uses the key '{request.Key}'.");
             }
 
-            if (string.IsNullOrWhiteSpace(request.Issuer))
-            {
-                return Failed("issuer_required", "Issuer is required; it is how a token is routed to this provider.");
-            }
-
+            // Issuer is optional on purpose. A provider that leaves it blank receives the tokens
+            // that carry no `iss` claim at all -- which some third parties simply do not emit --
+            // and is reached by the x-blocks-idp header when more than one does so. A blank issuer
+            // is not a wildcard: Genesis will not route an issuer-bearing token to it.
             if (!request.Algorithms.IsSingleKeySource())
             {
                 return Failed(
@@ -1249,6 +1583,9 @@ namespace DomainService.Projects
 
             var isSymmetric = request.Algorithms[0].IsSymmetric();
 
+            var hasJwksUrl = !string.IsNullOrWhiteSpace(request.JwksUrl);
+            var hasCertificate = !string.IsNullOrWhiteSpace(request.PublicCertificatePath);
+
             if (isSymmetric)
             {
                 var hasStoredSecret = !string.IsNullOrWhiteSpace(existing?.SigningSecretCipher);
@@ -1258,21 +1595,49 @@ namespace DomainService.Projects
                     return Failed("signing_secret_required", "An HMAC provider needs a signing secret.");
                 }
 
-                if (!string.IsNullOrWhiteSpace(request.JwksUrl))
+                if (hasJwksUrl)
                 {
                     return Failed("unexpected_jwks_url", "An HMAC provider must not carry a JWKS URL.");
+                }
+
+                if (hasCertificate)
+                {
+                    return Failed(
+                        "unexpected_certificate",
+                        "An HMAC provider must not carry a public certificate. HMAC verifies with the shared " +
+                        "secret; a certificate would be a second, unrelated signing authority.");
                 }
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(request.JwksUrl))
+                if (!hasJwksUrl && !hasCertificate)
                 {
-                    return Failed("jwks_url_required", "An asymmetric provider needs a JWKS URL.");
+                    return Failed(
+                        "key_source_required",
+                        "An asymmetric provider needs a key source: either a JWKS URL, or a public certificate " +
+                        "to pin a single key.");
+                }
+
+                // Which of the two got consulted would otherwise come down to the order this code
+                // happens to check them in, and the other would sit there looking configured.
+                if (hasJwksUrl && hasCertificate)
+                {
+                    return Failed(
+                        "ambiguous_key_source",
+                        "Configure a JWKS URL or a public certificate, not both. Two key sources for one " +
+                        "provider is two independent signing authorities behind a single claim mapping.");
                 }
 
                 if (!string.IsNullOrEmpty(request.SigningSecret))
                 {
                     return Failed("unexpected_signing_secret", "An asymmetric provider must not carry a signing secret.");
+                }
+
+                if (hasJwksUrl && !string.IsNullOrEmpty(request.PublicCertificatePassword))
+                {
+                    return Failed(
+                        "unexpected_certificate_password",
+                        "A JWKS URL needs no passphrase; a passphrase only ever unlocks a PKCS#12 certificate.");
                 }
             }
 
@@ -1286,9 +1651,22 @@ namespace DomainService.Projects
             // Two providers sharing an issuer AND an audience validate identically, so nothing
             // cryptographic tells their tokens apart and the caller's header alone selects the
             // claim mapping. Requiring audiences keeps that choice out of the caller's hands.
+            //
+            // Deliberately not applied to a blank issuer. A token with no `iss` normally carries
+            // no `aud` either, so demanding audiences there would produce a provider that can
+            // never match anything -- the rule would create the dead configuration it exists to
+            // prevent. Those providers are separated by the header instead, which the integration
+            // card already marks as required once there are two of them.
+            var issuer = request.Issuer?.Trim() ?? string.Empty;
+
+            if (issuer.Length == 0)
+            {
+                return null;
+            }
+
             var sharesIssuer = siblings.Any(p => p.ItemId != existing?.ItemId
                                                  && p.IsActive
-                                                 && string.Equals(p.Issuer, request.Issuer.Trim(), StringComparison.Ordinal));
+                                                 && string.Equals(p.Issuer, issuer, StringComparison.Ordinal));
 
             if (sharesIssuer && (request.Audiences == null || request.Audiences.Count == 0))
             {
@@ -1344,8 +1722,13 @@ namespace DomainService.Projects
             Audiences = provider.Audiences,
             Algorithms = provider.Algorithms,
             JwksUrl = provider.JwksUrl,
+            PublicCertificatePath = provider.PublicCertificatePath,
+            CertificateSubject = provider.CertificateSubject,
+            CertificateThumbprint = provider.CertificateThumbprint,
+            CertificateNotAfter = provider.CertificateNotAfter,
             CookieKey = provider.CookieKey,
             HasSigningSecret = !string.IsNullOrWhiteSpace(provider.SigningSecretCipher),
+            HasCertificatePassword = !string.IsNullOrWhiteSpace(provider.PublicCertificatePasswordCipher),
             ClaimsMapping = new ThirdPartyClaimsMappingRequest
             {
                 UserId = provider.ClaimsMapping?.UserId ?? string.Empty,

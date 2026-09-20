@@ -33,7 +33,7 @@
             </para>
             </remarks>
         </member>
-        <member name="M:BlocksOs.Api.Controllers.CertificateController.UploadCertificate(Microsoft.AspNetCore.Http.IFormFile,System.Boolean)">
+        <member name="M:BlocksOs.Api.Controllers.CertificateController.UploadCertificate(Microsoft.AspNetCore.Http.IFormFile,System.Boolean,System.String)">
              <summary>
              Stores a public certificate for the calling tenant and returns the URL to read it back.
              </summary>

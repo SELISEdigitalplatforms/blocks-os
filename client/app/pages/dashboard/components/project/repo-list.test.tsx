@@ -1,7 +1,8 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IEnvRepository, IProject } from "@seliseblocks/genesis-os/models";
+import type { IEnvRepository } from "@seliseblocks/genesis-os/models";
+import type { IProject } from "@/models/project.model";
 
 // The point of this file is the REAL ProjectRepoList: the synthetic parent in
 // repo-table.test.tsx proves the pattern, but only this proves the component that ships.

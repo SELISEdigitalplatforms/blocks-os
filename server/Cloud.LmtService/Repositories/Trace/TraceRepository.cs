@@ -8,6 +8,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Cloud.LmtService.Repositories.Trace
@@ -259,67 +260,121 @@ namespace Cloud.LmtService.Repositories.Trace
 
         // ── Archive/backup methods ───────────────────────────────────────────────
 
+        /// <summary>
+        /// Lists the tenant collections holding traces in the window.
+        /// <para>
+        /// Failures are not swallowed here. An individual unreadable collection is already skipped
+        /// inside <see cref="MongoDatabaseExtensions.GetCollectionNamesWithDataAsync"/>, so anything
+        /// reaching this point means the enumeration itself failed - an unreachable database, for
+        /// instance. Returning an empty list for that is indistinguishable from "this database holds
+        /// no traces", which let the job report success after backing up nothing at all.
+        /// </para>
+        /// </summary>
         public async Task<List<string>> GetDistinctTracesCollectionNamesAsync(DateTime startDate, DateTime endDate)
         {
-            try
+            // Optimization: Filter system collections and archive failure collection at the DB level
+            var collectionFilter = new BsonDocument("name", new BsonDocument
             {
-                // Optimization: Filter system collections and archive failure collection at the DB level
-                var collectionFilter = new BsonDocument("name", new BsonDocument
-                {
-                    { "$nin", new BsonArray { FailedArchiveTracesCollection } },
-                    { "$not", new BsonRegularExpression("^system\\.", "i") }
-                });
+                { "$nin", new BsonArray { FailedArchiveTracesCollection } },
+                { "$not", new BsonRegularExpression("^system\\.", "i") }
+            });
 
-                var names = await _database.GetCollectionNamesWithDataAsync(collectionFilter, startDate, endDate);
+            var names = await _database.GetCollectionNamesWithDataAsync(collectionFilter, startDate, endDate, _logger);
 
-                return names
-                    .Where(n => !Constants.IgnoredTenants.Contains(n, StringComparer.OrdinalIgnoreCase))
-                    .ToList();
-
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get distinct traces collection names");
-                return [];
-            }
+            return names
+                .Where(n => !Constants.IgnoredTenants.Contains(n, StringComparer.OrdinalIgnoreCase))
+                .ToList();
         }
 
-        public async Task<List<StoredTrace>> GetTracesByCollectionAsync(
+        /// <summary>
+        /// Streams every trace in the window in batches, using a single server-side cursor.
+        /// <para>
+        /// The backup used to page this with Skip/Limit while deleting between pages, which both
+        /// re-scanned the collection on every page and let the shifting offset hide documents. One
+        /// forward-only cursor reads each document exactly once and keeps only a batch in memory.
+        /// </para>
+        /// <para>
+        /// Read failures are deliberately not caught. An empty window and an unreadable collection
+        /// must stay distinguishable, otherwise the caller archives nothing and then deletes as if
+        /// the window had been empty.
+        /// </para>
+        /// </summary>
+        public async IAsyncEnumerable<List<StoredTrace>> StreamTracesByCollectionAsync(
             string collectionName,
             TenantLogsRequest query,
-            int pageNumber,
-            int pageSize)
+            int batchSize,
+            [EnumeratorCancellation] CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(collectionName))
-                return [];
+            if (string.IsNullOrWhiteSpace(collectionName) || batchSize <= 0)
+                yield break;
 
-            try
+            var collection = _database.GetCollection<BsonDocument>(collectionName);
+            var options = new FindOptions<BsonDocument, BsonDocument>
             {
-                var collection = _database.GetCollection<BsonDocument>(collectionName);
+                Projection = BuildStoredTraceProjection(),
+                Sort = Builders<BsonDocument>.Sort.Descending(Constants.Timestamp),
+                BatchSize = batchSize
+            };
 
-                var filter = BuildDateFilter(query);
-                var sort = Builders<BsonDocument>.Sort.Descending(Constants.Timestamp);
-                var projection = BuildStoredTraceProjection();
+            using var cursor = await collection.FindAsync(BuildDateFilter(query), options, ct);
 
-                var aggregateOptions = new AggregateOptions { AllowDiskUse = true };
+            var buffer = new List<StoredTrace>(batchSize);
 
-                var docs = await collection.Aggregate(aggregateOptions)
-                    .Match(filter)
-                    .Sort(sort)
-                    .Skip(pageNumber * pageSize)
-                    .Limit(pageSize)
-                    .Project(projection)
-                    .ToListAsync();
-
-                return [.. docs.Select(doc => MapStoredTrace(doc))];
-            }
-            catch (Exception ex)
+            while (await cursor.MoveNextAsync(ct))
             {
-                _logger.LogError(ex, "Failed to get traces for collection {CollectionName}", collectionName);
-                return [];
+                foreach (var doc in cursor.Current)
+                {
+                    buffer.Add(MapStoredTrace(doc));
+
+                    if (buffer.Count < batchSize) continue;
+
+                    yield return buffer;
+                    buffer = new List<StoredTrace>(batchSize);
+                }
             }
+
+            if (buffer.Count > 0)
+                yield return buffer;
         }
+
+        /// <summary>
+        /// Streams an archive collection in batches so a tenant's whole day never has to sit in
+        /// memory at once. As above, read failures propagate rather than looking like an empty
+        /// collection - the caller drops the collection once the upload succeeds, so "empty" and
+        /// "unreadable" must not be confused.
+        /// </summary>
+        public async IAsyncEnumerable<List<StoredTrace>> StreamTracesFromArchiveCollectionAsync(
+            string collectionName,
+            int batchSize,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName) || batchSize <= 0)
+                yield break;
+
+            var collection = _archiveDatabase.GetCollection<StoredTrace>(collectionName);
+            var options = new FindOptions<StoredTrace, StoredTrace> { BatchSize = batchSize };
+
+            using var cursor = await collection.FindAsync(FilterDefinition<StoredTrace>.Empty, options, ct);
+
+            var buffer = new List<StoredTrace>(batchSize);
+
+            while (await cursor.MoveNextAsync(ct))
+            {
+                foreach (var trace in cursor.Current)
+                {
+                    buffer.Add(trace);
+
+                    if (buffer.Count < batchSize) continue;
+
+                    yield return buffer;
+                    buffer = new List<StoredTrace>(batchSize);
+                }
+            }
+
+            if (buffer.Count > 0)
+                yield return buffer;
+        }
+
         public async Task DeleteMiscellaneousTracesCollectionAsync(string collectionName)
         {
             if (string.IsNullOrWhiteSpace(collectionName))
@@ -372,7 +427,7 @@ namespace Cloud.LmtService.Repositories.Trace
 
             var startDate = query.Filter?.StartDate ?? DateTime.MinValue;
             var endDate = query.Filter?.EndDate ?? DateTime.MinValue;
-            var collectionName = $"{query.ProjectKey}_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}";
+            var collectionName = ArchiveCollectionNaming.Build(query.ProjectKey, startDate, endDate);
 
             try
             {
@@ -388,33 +443,18 @@ namespace Cloud.LmtService.Repositories.Trace
             }
         }
 
+        /// <summary>
+        /// Lists the archive collections awaiting upload.
+        /// <para>
+        /// Failures are not swallowed. This list drives the whole blob-upload phase, including the
+        /// retry of collections carried over from earlier runs whose upload had not succeeded yet.
+        /// Reporting a failure as an empty list skipped all of that silently and still let the job
+        /// finish as Completed.
+        /// </para>
+        /// </summary>
         public async Task<List<string>> GetArchiveCollectionsAsync()
         {
-            try
-            {
-                return await _archiveDatabase.GetArchiveCollectionsAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to list collections from TracesArchive database");
-                return [];
-            }
-        }
-
-        public async Task<List<StoredTrace>> GetTracesFromArchiveCollectionAsync(string collectionName)
-        {
-            try
-            {
-                var collection = _archiveDatabase.GetCollection<StoredTrace>(collectionName);
-                return await collection
-                    .Find(FilterDefinition<StoredTrace>.Empty)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get traces from archive collection {CollectionName}", collectionName);
-                return [];
-            }
+            return await _archiveDatabase.GetArchiveCollectionsAsync();
         }
 
         public async Task DeleteArchiveCollectionAsync(string collectionName)
