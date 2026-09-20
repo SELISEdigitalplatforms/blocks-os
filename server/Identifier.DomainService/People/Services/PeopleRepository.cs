@@ -66,7 +66,7 @@ namespace DomainService.People
             _dbContextProvider = dbContextProvider;
             _tenants = tenants;
             _projectRepository = projectRepository;
-            _rootDb = dbContextProvider.GetDatabase(blocksSecret.DatabaseConnectionString, IdentifierConstants.RootDatabaseName);
+            _rootDb = dbContextProvider.GetDatabase(blocksSecret.DatabaseConnectionString, blocksSecret.RootDatabaseName);
         }
 
         public async Task<(List<GetProjectPeople> peoples, long totalCount, long peoplesTotalCount, bool isOwner)> GetPeoplesAsync(GetPeoplesRequest request)

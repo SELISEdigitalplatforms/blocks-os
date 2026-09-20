@@ -18,7 +18,7 @@ namespace DomainService.Projects
         private readonly IBlocksSecret _blocksSecret;
         private readonly IConfiguration _configuration;
         private readonly IEncodingService _urlEncodingService;
-        private IMongoDatabase _clientDb;
+        private readonly IMongoDatabase _clientDb;
 
         private const string _projectStatusTraceCollectionName = "ProjectStatusTracers";
         private const string _legacyDefaultUserRoleSlug = "user";
@@ -33,19 +33,9 @@ namespace DomainService.Projects
             _blocksSecret = blocksSecret;
             _configuration = configuration;
             _urlEncodingService = urlEncodingService;
-            _clientDb = ResolvedClientDb();
-        }
-
-        private IMongoDatabase ResolvedClientDb()
-        {
-            var blocksContext = BlocksContext.GetContext();
-
-            if (blocksContext?.Impersonated ?? true)
-            {
-                return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, IdentifierConstants.RootDatabaseName);
-            }
-
-            return _dbContextProvider.GetDatabase(blocksContext.TenantId);
+            // Registry, memberships, assets, and provisioning metadata have one owner:
+            // main/root. Never bind this singleton to the first caller's tenant.
+            _clientDb = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, _blocksSecret.RootDatabaseName);
         }
 
         // Genesis resolves this collection from the caller's tenant database when it maps an
@@ -390,7 +380,7 @@ namespace DomainService.Projects
         {
             if (statusTracer.IsDefaultConfigurationCopied) return;
 
-            var dataBase = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, $"{project.DBName}");
+            var dataBase = _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName);
 
             await InitializeDefaultConfigurationsAsync(dataBase, project);
             statusTracer.IsDefaultConfigurationCopied = true;
@@ -610,11 +600,12 @@ namespace DomainService.Projects
 
         public async Task SaveRepoInfoAsync(Tenant project, List<Resource>? resources)
         {
-            var targetDb = _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, $"{project.DBName}");
+            // This runs alongside tenant insertion, so the registry may not contain it yet.
+            var targetDb = _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName);
             var tenantSlug = await _urlEncodingService.EncodeToBase26Async(project.TenantGroupId, project.TenantGroupId, 5);
 
             List<BsonDocument> documents = [];
-            foreach (var resource in resources)
+            foreach (var resource in resources ?? [])
             {
                 var repoSlug = await _urlEncodingService.EncodeToBase26Async(resource.ResourceId, project.TenantGroupId, 5);
                 documents.Add(GetRepoObject(resource, project, tenantSlug, repoSlug));

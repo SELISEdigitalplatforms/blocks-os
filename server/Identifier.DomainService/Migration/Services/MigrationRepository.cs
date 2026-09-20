@@ -9,29 +9,29 @@ namespace DomainService.Migration.Services
 {
     public class MigrationRepository : IMigrationRepository
     {
-        private readonly IMongoCollection<MigrationTracker> _collection;
-        private readonly IMongoCollection<User> _userCollection;
+        // Resolve for the current operation, not the singleton's first request/message.
+        private IMongoCollection<MigrationTracker> Collection =>
+            _dbContextProvider.GetCollection<MigrationTracker>(IdentifierConstants.MigrationTrackerCollectionName);
+        private IMongoCollection<User> UserCollection => _dbContextProvider.GetCollection<User>("Users");
         private readonly IDbContextProvider _dbContextProvider;
         private readonly IBlocksSecret _blocksSecret;
 
         public MigrationRepository(IDbContextProvider dbContextProvider, IBlocksSecret blocksSecret)
         {
             _dbContextProvider = dbContextProvider;
-            _collection = dbContextProvider.GetCollection<MigrationTracker>(IdentifierConstants.MigrationTrackerCollectionName);
-            _userCollection = dbContextProvider.GetCollection<User>("Users");
             _blocksSecret = blocksSecret;
         }
 
         public async Task<string> CreateMigrationTrackerAsync(MigrationTracker migrationTracker)
         {
-            await _collection.InsertOneAsync(migrationTracker);
+            await Collection.InsertOneAsync(migrationTracker);
             return migrationTracker.ItemId;
         }
 
         public async Task<MigrationTracker?> GetMigrationTrackerAsync(string trackerId)
         {
             var filter = Builders<MigrationTracker>.Filter.Eq(m => m.ItemId, trackerId);
-            return await _collection.Find(filter).FirstOrDefaultAsync();
+            return await Collection.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<bool> UpdateServiceStatusAsync(string trackerId, MigrationServiceNames serviceName, bool isCompleted, string? errorMessage = null)
@@ -45,7 +45,7 @@ namespace DomainService.Migration.Services
                 .Set($"{propertyName}.ErrorMessage", errorMessage)
                 .Set(m => m.LastUpdatedDate, DateTime.UtcNow);
 
-            var result = await _collection.UpdateOneAsync(filter, update);
+            var result = await Collection.UpdateOneAsync(filter, update);
             return result.ModifiedCount > 0;
         }
 
@@ -56,7 +56,7 @@ namespace DomainService.Migration.Services
                 Builders<MigrationTracker>.Filter.In(m => m.TargetedProjectKey, projectKeys)
             );
 
-            var trackers = await _collection.Find(filter)
+            var trackers = await Collection.Find(filter)
                 .SortByDescending(m => m.CreatedDate)
                 .ToListAsync();
 
@@ -68,7 +68,7 @@ namespace DomainService.Migration.Services
         {
             var filter = Builders<MigrationTracker>.Filter.Eq(m => m.TenantGroupId, tenantGroupId);
 
-            var trackers = await _collection.Find(filter)
+            var trackers = await Collection.Find(filter)
                 .SortByDescending(m => m.CreatedDate)
                 .ToListAsync();
 
@@ -253,7 +253,7 @@ namespace DomainService.Migration.Services
         }
        public async Task<User> GetUserByIdAsync ( string itemId )
        {
-          return await _userCollection.Find(x => x.ItemId == itemId).FirstOrDefaultAsync();
+          return await UserCollection.Find(x => x.ItemId == itemId).FirstOrDefaultAsync();
        }
   }
 }

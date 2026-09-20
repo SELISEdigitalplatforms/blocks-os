@@ -39,6 +39,7 @@ namespace XUnitTest.Integration
                     });
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
+            secret.SetupGet(s => s.RootDatabaseName).Returns("BlocksRootDb");
             return new PeopleRepository(provider, _tenants.Object, _projectRepo.Object, secret.Object);
         }
 
