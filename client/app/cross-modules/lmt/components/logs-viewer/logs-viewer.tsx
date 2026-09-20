@@ -14,12 +14,10 @@ import type { LogServiceIconKey } from "../../models/log-entry.model";
 import { useQueryState } from "nuqs";
 import type { RegisteredService } from "@/cross-modules/identifier/models/service.model";
 import { buildServiceKey, parseServiceKey, treeValuesToServiceKey } from "../../utils";
-import {
-  TRACE_PROVIDERS,
-  TRACE_REQUEST_SOURCE_TYPE,
-} from "@blocks-lmt/constants/trace.constant";
+import { TRACE_PROVIDERS, TRACE_REQUEST_SOURCE_TYPE } from "@blocks-lmt/constants/trace.constant";
 import { useRestoreRequest } from "@blocks-lmt/hooks/use-restore-request";
-import { StorageTierCards, type StorageTier } from "../storage-tier-cards/storage-tier-cards";
+import { useLogsTier } from "@blocks-lmt/hooks/use-logs-tier";
+import type { StorageTier } from "../storage-tier-cards/storage-tier-cards";
 import { RestoredLogsPanel } from "../restored-logs/restored-logs-panel";
 
 export interface ServiceComponent {
@@ -75,12 +73,21 @@ interface LogsViewerContextType {
   predefinedQueries?: string[];
   agentName?: string;
   askAiDescription?: string;
+  /**
+   * Whether the list header offers the agent. A page that puts the agent in its own page
+   * header -- as the Logs route does, to sit where Tracing's does -- turns it off here so the
+   * one button isn't offered twice.
+   */
+  showAgent: boolean;
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks: boolean;
   isServicesLoading: boolean;
   /** Which storage tier is being read: live logs, or the logs of a restore. */
   tier: StorageTier;
+  /** Whether the reader may leave live logs at all -- see {@link LogsViewerProps.projectKey}. */
+  canSwitchTier: boolean;
+  changeTier: (tier: StorageTier) => void;
   /**
    * The restore whose rows are on screen, empty over live logs. Rows link into their own
    * restore with it, and the filter toolbar uses it to know it is over a closed window.
@@ -102,13 +109,16 @@ const initialContextValue: LogsViewerContextType = {
   setFilter: () => {},
   resetFilter: () => {},
   predefinedQueries: [],
-  agentName: "Ask AI",
+  agentName: "Blocks Agent",
   askAiDescription: "",
+  showAgent: true,
   logsRouteServiceName: undefined,
   useGenericTraceLinks: false,
   isSourceBlocks: true,
   isServicesLoading: false,
   tier: TRACE_PROVIDERS.hot,
+  canSwitchTier: false,
+  changeTier: () => {},
   restoreRequestId: "",
   restoreWindow: {},
 };
@@ -138,6 +148,8 @@ interface LogsViewerProps {
   predefinedQueries?: string[];
   agentName?: string;
   askAiDescription?: string;
+  /** See {@link LogsViewerContextType.showAgent}. */
+  showAgent?: boolean;
   logsRouteServiceName?: string;
   useGenericTraceLinks?: boolean;
   isSourceBlocks?: boolean;
@@ -157,8 +169,9 @@ export const LogsViewer = ({
   projectKey = "",
   className,
   predefinedQueries,
-  agentName = "Ask AI",
+  agentName = "Blocks Agent",
   askAiDescription,
+  showAgent = true,
   logsRouteServiceName,
   useGenericTraceLinks = false,
   isSourceBlocks = true,
@@ -195,18 +208,10 @@ export const LogsViewer = ({
     [selectedServices],
   );
 
-  // Under its own param name rather than Tracing's "tab": on the per-service logs route "tab"
-  // already means the service tab, and log rows copy that param onto their trace links.
-  const [tierParam, setTierParam] = useQueryState("tier", { defaultValue: TRACE_PROVIDERS.hot });
-  const requestedTier = (
-    Object.values(TRACE_PROVIDERS).includes(tierParam as TRACE_PROVIDERS)
-      ? tierParam
-      : TRACE_PROVIDERS.hot
-  ) as StorageTier;
   // A restore belongs to a project. Without one -- the per-service logs route passes none --
   // there is nothing to read on the restored tiers, so they are not offered at all.
   const canReadRestores = Boolean(projectKey);
-  const tier = canReadRestores ? requestedTier : TRACE_PROVIDERS.hot;
+  const { tier, setTier } = useLogsTier(canReadRestores);
   const restoreSourceType = RESTORE_SOURCE_TYPE[tier];
 
   // Resolved from the initial tier rather than reset by an effect, so a link straight to
@@ -221,12 +226,12 @@ export const LogsViewer = ({
 
   const changeTier = useCallback(
     (next: StorageTier) => {
-      setTierParam(next);
+      setTier(next);
       // Each tier has its own window, so carrying a filter across would leave the reader with
       // a window that belongs to the tier they just left.
       setFilter(tierDefaultFilter(next));
     },
-    [setTierParam],
+    [setTier],
   );
 
   // Drop services that no longer exist once the service list loads or changes.
@@ -286,11 +291,14 @@ export const LogsViewer = ({
         predefinedQueries,
         agentName,
         askAiDescription,
+        showAgent,
         logsRouteServiceName,
         useGenericTraceLinks,
         isSourceBlocks,
         isServicesLoading,
         tier,
+        canSwitchTier: canReadRestores,
+        changeTier,
         restoreRequestId: restoreSourceType ? restore.requestId : "",
         restoreWindow: restoreSourceType
           ? { startDate: restore.startDate, endDate: restore.endDate }
@@ -298,19 +306,8 @@ export const LogsViewer = ({
       }}
     >
       <div className={cn("flex flex-col gap-6", className)}>
-        {/* Tier is the outer choice; the managed/my-service split lives inside the tier the
-            reader picked, because that is the pair they switch between far more often. */}
-        {canReadRestores && (
-          <StorageTierCards
-            value={tier}
-            onChange={changeTier}
-            descriptions={{
-              [TRACE_PROVIDERS.hot]: "Live and recent logs for active debugging.",
-              [TRACE_PROVIDERS.cold]: "Longer-term stored logs for later investigation.",
-              [TRACE_PROVIDERS.archive]: "Deep history retained for audit and export use cases.",
-            }}
-          />
-        )}
+        {/* The tier switcher rides in the list header beside the service tabs -- see
+            LogsListHeader. */}
         <LogsListHeader />
         {restoreSourceType ? (
           <RestoredLogsPanel sourceType={restoreSourceType} restore={restore} />

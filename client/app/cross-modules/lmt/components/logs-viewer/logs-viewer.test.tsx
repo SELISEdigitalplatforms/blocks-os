@@ -113,6 +113,16 @@ vi.mock("../logs-header/logs-header", async () => {
           { onClick: () => ctx.changeServices(["gone", "b"]) },
           "select-unknown-service",
         ),
+        // The real header carries the tier switcher, and only where a restore can be read.
+        ctx.canSwitchTier
+          ? (["hot", "cold", "archive"] as const).map((tier) =>
+              React.createElement(
+                "button",
+                { key: tier, onClick: () => ctx.changeTier(tier) },
+                tier,
+              ),
+            )
+          : null,
       );
     },
   };
@@ -253,21 +263,13 @@ describe("LogsViewer", () => {
       expect(screen.queryByTestId("restored-logs")).toBeNull();
     });
 
+    /** The header draws the switcher; the viewer's part is telling it there is a tier to pick. */
     it("offers every tier", () => {
       render(<LogsViewer services={services} projectKey="proj-1" />);
 
       expect(screen.getByRole("button", { name: /hot/i })).toBeTruthy();
       expect(screen.getByRole("button", { name: /cold/i })).toBeTruthy();
       expect(screen.getByRole("button", { name: /archive/i })).toBeTruthy();
-    });
-
-    it("puts the tier choice above the service source tabs", () => {
-      render(<LogsViewer services={services} projectKey="proj-1" />);
-
-      const tier = screen.getByRole("button", { name: /hot/i });
-      const sourceTab = screen.getByText("change");
-      // 4 === DOCUMENT_POSITION_FOLLOWING: the tabs come after the tier cards.
-      expect(tier.compareDocumentPosition(sourceTab) & 4).toBeTruthy();
     });
 
     it("reads the restored rows once a cold tier is picked", async () => {
@@ -326,7 +328,7 @@ describe("LogsViewer", () => {
 
     /**
      * The per-service logs route has no project behind it, so no restore can ever be looked up
-     * there. Offering the tiers anyway would give the reader two cards that lead nowhere.
+     * there. Offering the tiers anyway would give the reader two tabs that lead nowhere.
      */
     it("offers no tier choice where no restore can be read", () => {
       render(<LogsViewer services={services} />);
