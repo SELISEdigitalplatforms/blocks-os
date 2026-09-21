@@ -56,6 +56,18 @@
             far, freeing the user to request a different range straight away.
             </summary>
         </member>
+        <member name="M:BlocksOs.Api.Controllers.MailController.ToActionResult(Configuration.DomainService.Mail.Services.MailConfigurationMutationResult)">
+            <summary>
+            Turns a mail configuration outcome into a status code.
+            </summary>
+            <remarks>
+            Only an unreachable secret store becomes 503. Every other secret failure —
+            authorization, state, a missing secret — propagates to the global
+            <c>SecretExceptionFilter</c>, which already classifies it as 403/409/404; collapsing
+            them all into an availability error would tell an operator to retry something that
+            will never succeed.
+            </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.MigrationController.#ctor(DomainService.Migration.IMigrationService,DomainService.Migration.Services.IMigrationRepository,Blocks.Genesis.IMessageClient)">
             <summary>
             Initializes a new instance of the MigrationController.

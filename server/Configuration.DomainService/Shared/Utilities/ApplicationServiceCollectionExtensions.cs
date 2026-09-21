@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols;
@@ -16,6 +16,8 @@ using Configuration.DomainService.Storage.Validators;
 using Configuration.DomainService.Captcha.RequestModel;
 using Configuration.DomainService.Captcha.Services;
 using Configuration.DomainService.Captcha.Validators;
+using Configuration.DomainService.Mail.Providers;
+using Configuration.DomainService.Mail.Services;
 
 namespace Configuration.DomainService.Shared.Utilities
 {
@@ -35,6 +37,16 @@ namespace Configuration.DomainService.Shared.Utilities
             // because they read the request-scoped BlocksContext. A Singleton here would either
             // fail to resolve (scope validation) or capture the first request's identity forever.
             serviceCollection.AddScoped<ICaptchaConfigService, CaptchaConfigService>();
+
+            // Mail configuration is scoped for the same reason: the Office 365 provider
+            // definition resolves the client secret through ISecretService. The provider
+            // definitions are registered individually and collected by the registry, so adding a
+            // provider is one more AddScoped and nothing else.
+            serviceCollection.AddScoped<IMailConfigurationProvider, AmazonSesMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProvider, ZohoMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProvider, Office365SmtpMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
+            serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
 
             serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
