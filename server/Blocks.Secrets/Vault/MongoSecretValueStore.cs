@@ -6,7 +6,8 @@ using MongoDB.Driver;
 namespace Blocks.Secrets;
 
 /// <summary>
-/// A stored secret value. Lives in the <c>SecretStore</c> database, beside the metadata.
+/// A stored secret value. Lives in the <c>SecretStore</c> database, beside the metadata — which
+/// means on the tenant's own connection, because that is where the metadata is.
 /// </summary>
 /// <remarks>
 /// Deliberately its own collection rather than a field on <see cref="Secret"/>. Every metadata
