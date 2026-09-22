@@ -299,7 +299,7 @@ namespace Configuration.DomainService.Mail.Services
             entity.Port = configuration.Port;
             entity.Name = configuration.ConfigurationName;
             entity.SenderName = configuration.SenderName;
-            entity.SenderUserName = configuration.SenderUserName;
+            entity.SenderUserName = configuration.SenderUserName ?? string.Empty;
             entity.SenderAddress = configuration.SenderAddress;
             entity.AccountPassword = configuration.AccountPassword ?? string.Empty;
             entity.EnableSSL = configuration.EnableSSL;

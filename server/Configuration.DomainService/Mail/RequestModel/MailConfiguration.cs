@@ -13,8 +13,18 @@ namespace Configuration.DomainService.Mail.RequestModel
         public bool EnableSSL { get; set; }
         public string? SenderName { get; set; }
         public string? SenderAddress { get; set; }
-        public string SenderUserName { get; set; }
-        public string AccountPassword { get; set; }
+        /// <summary>
+        /// Nullable because an OAuth provider sends neither. With nullable reference types on, a
+        /// non-nullable property here is an implicit <c>[Required]</c> to model binding, and
+        /// <c>[ApiController]</c> answers 400 before normalization or the validator runs — which
+        /// made an Office 365 configuration impossible to save at all. Whether a value is required
+        /// is decided by authentication type in <c>MailConfigurationValidator</c>, not here.
+        /// </summary>
+        public string? SenderUserName { get; set; }
+
+        /// <inheritdoc cref="SenderUserName" />
+        public string? AccountPassword { get; set; }
+
         public DateTime LastUpdatedDate { get; set; }
         public bool IsInbound { get; set; }
         public MailServiceProvider Provider { get; set; }
