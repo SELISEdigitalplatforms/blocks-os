@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using BlocksOs.Api.Controllers;
@@ -6,6 +6,8 @@ using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.Mailbox;
 using Configuration.DomainService.Mail.Mailbox.Services;
 using Configuration.DomainService.Mail.RequestModel;
+using Configuration.DomainService.Mail.ResponseModel;
+using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Notification.Entities;
@@ -22,28 +24,44 @@ namespace XUnitTest.Controllers
 {
     public class MailControllerTests
     {
-        private readonly Mock<IConfigurationService> _service = new();
+        private readonly Mock<IMailConfigurationService> _service = new();
         private MailController Controller() => new(_service.Object);
 
         [Fact]
-        public async Task Save_MissingConfigurationId_GeneratesOne()
+        public async Task Save_MissingConfigurationId_IsPassedThroughEmpty()
         {
+            // The empty id is the create signal and must survive the controller: minting one
+            // here used to make a create indistinguishable from an edit, and left the service
+            // allocating a second, different id for the document it actually wrote.
             MailConfiguration? captured = null;
-            _service.Setup(s => s.SaveMailConfigurationAsync(It.IsAny<MailConfiguration>()))
-                    .Callback<MailConfiguration>(c => captured = c)
-                    .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
+            _service.Setup(s => s.SaveAsync(It.IsAny<MailConfiguration>(), It.IsAny<CancellationToken>()))
+                    .Callback<MailConfiguration, CancellationToken>((c, _) => captured = c)
+                    .ReturnsAsync(MailConfigurationMutationResult.Success("generated-id"));
 
             var result = await Controller().Save(new MailConfiguration { ConfigurationId = "" });
 
             result.Should().BeOfType<OkObjectResult>();
-            captured!.ConfigurationId.Should().NotBeNullOrEmpty();
+            captured!.ConfigurationId.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task Save_Success_ReturnsPersistedItemId()
+        {
+            _service.Setup(s => s.SaveAsync(It.IsAny<MailConfiguration>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(MailConfigurationMutationResult.Success("persisted-id"));
+
+            var result = await Controller().Save(new MailConfiguration { ConfigurationId = "" });
+
+            result.Should().BeOfType<OkObjectResult>()
+                  .Which.Value.Should().BeOfType<BaseMutationResponse>()
+                  .Which.ItemId.Should().Be("persisted-id");
         }
 
         [Fact]
         public async Task Save_Failure_ReturnsBadRequest()
         {
-            _service.Setup(s => s.SaveMailConfigurationAsync(It.IsAny<MailConfiguration>()))
-                    .ReturnsAsync(new BaseMutationResponse { IsSuccess = false });
+            _service.Setup(s => s.SaveAsync(It.IsAny<MailConfiguration>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(MailConfigurationMutationResult.Invalid("TenantId", "Tenant ID is required for SMTP Office 365."));
 
             var result = await Controller().Save(new MailConfiguration { ConfigurationId = "c1" });
 
@@ -51,10 +69,25 @@ namespace XUnitTest.Controllers
         }
 
         [Fact]
+        public async Task Save_SecretStoreUnavailable_ReturnsServiceUnavailable()
+        {
+            _service.Setup(s => s.SaveAsync(It.IsAny<MailConfiguration>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(MailConfigurationMutationResult.SecretStoreUnavailable());
+
+            var result = await Controller().Save(new MailConfiguration());
+
+            var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+            objectResult.StatusCode.Should().Be(503);
+            objectResult.Value.Should().BeOfType<BaseMutationResponse>()
+                        .Which.Errors.Should().ContainKey("ClientSecret")
+                        .WhoseValue.Should().Be("The client secret could not be stored. Try again.");
+        }
+
+        [Fact]
         public async Task Get_ReturnsConfiguration()
         {
-            var config = new MailConfiguration { ConfigurationName = "Primary" };
-            _service.Setup(s => s.GetMailConfigurationAsync(It.IsAny<GetMailConfigurationRequest>())).ReturnsAsync(config);
+            var config = new MailConfigurationResponse { Name = "Primary" };
+            _service.Setup(s => s.GetAsync(It.IsAny<GetMailConfigurationRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(config);
 
             var result = await Controller().Get(new GetMailConfigurationRequest { ConfigurationName = "Primary" });
 
@@ -65,8 +98,8 @@ namespace XUnitTest.Controllers
         [Fact]
         public async Task Get_NullConfiguration_ReturnsNotFound()
         {
-            _service.Setup(s => s.GetMailConfigurationAsync(It.IsAny<GetMailConfigurationRequest>()))
-                    .ReturnsAsync((MailConfiguration?)null!);
+            _service.Setup(s => s.GetAsync(It.IsAny<GetMailConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((MailConfigurationResponse?)null);
 
             var result = await Controller().Get(new GetMailConfigurationRequest { ConfigurationName = "x" });
 
@@ -76,8 +109,8 @@ namespace XUnitTest.Controllers
         [Fact]
         public async Task Gets_ReturnsList()
         {
-            var configs = new List<MailServerConfiguration> { new() };
-            _service.Setup(s => s.GetAllMailConfigurationsAsync()).ReturnsAsync(configs);
+            var configs = new List<MailConfigurationResponse> { new() };
+            _service.Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(configs);
 
             var result = await Controller().Gets(new GetAllMailConfigurationsRequest());
 
@@ -91,14 +124,14 @@ namespace XUnitTest.Controllers
             var result = await Controller().Delete(new DeleteMailConfigurationRequest { ConfigurationId = "" });
 
             result.Should().BeOfType<BadRequestObjectResult>();
-            _service.Verify(s => s.DeleteMailConfigurationAsync(It.IsAny<DeleteMailConfigurationRequest>()), Times.Never);
+            _service.Verify(s => s.DeleteAsync(It.IsAny<DeleteMailConfigurationRequest>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
         public async Task Delete_Valid_ReturnsOk()
         {
-            _service.Setup(s => s.DeleteMailConfigurationAsync(It.IsAny<DeleteMailConfigurationRequest>()))
-                    .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
+            _service.Setup(s => s.DeleteAsync(It.IsAny<DeleteMailConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(MailConfigurationMutationResult.Success("c1"));
 
             var result = await Controller().Delete(new DeleteMailConfigurationRequest { ConfigurationId = "c1" });
 
@@ -116,8 +149,8 @@ namespace XUnitTest.Controllers
         [Fact]
         public async Task Duplicate_Valid_ReturnsOk()
         {
-            _service.Setup(s => s.DuplicateMailConfigurationAsync(It.IsAny<DuplicateMailConfigurationRequest>()))
-                    .ReturnsAsync(new BaseMutationResponse { IsSuccess = true });
+            _service.Setup(s => s.DuplicateAsync(It.IsAny<DuplicateMailConfigurationRequest>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(MailConfigurationMutationResult.Success("c1-copy"));
 
             var result = await Controller().Duplicate(new DuplicateMailConfigurationRequest { ConfigurationId = "c1" });
 

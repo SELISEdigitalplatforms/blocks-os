@@ -77,6 +77,7 @@ export async function verifyOutboundProvidersOfferedFlow(page: Page) {
   await providerSelect.click();
   await expect(page.getByRole("option", { name: "Amazon SES" })).toBeVisible();
   await expect(page.getByRole("option", { name: "Zoho" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "SMTP Office 365" })).toBeVisible();
   await page.getByRole("option", { name: "Amazon SES" }).click();
 }
 
@@ -89,6 +90,7 @@ export async function verifyInboundProviderAndFieldsFlow(page: Page) {
   await expect(providerSelect).toHaveText(/Zoho/);
   await providerSelect.click();
   await expect(page.getByRole("option", { name: "Amazon SES" })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "SMTP Office 365" })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
   await expect(page.getByPlaceholder("Enter sender name")).toHaveCount(0);

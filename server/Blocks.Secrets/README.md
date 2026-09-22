@@ -2,8 +2,33 @@
 
 ## Configuration
 
-Values live in Azure Key Vault, configured through the `KeyVault` environment section — the same
-keys `Blocks.Genesis` reads, so a host already configured for Genesis needs nothing extra.
+Metadata and audit always live in the `SecretStore` database. **Values** live in Azure Key Vault,
+or — in an environment with no vault provisioned yet — in that same database.
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `Secrets__ValueStore` | no | `KeyVault` or `Database`. Overrides the inference below. |
+
+With nothing set, the store is inferred: `KeyVault` when `KeyVault__KeyVaultUrl` is present,
+`Database` when it is not. That way an environment with a vault keeps using it and the values
+already in it stay readable, while an environment without one gets a working store instead of a
+startup failure.
+
+The two stores keep their bytes in different places, so **a value written to one is invisible to
+the other**. Switching an environment that already holds values means re-entering them, not just
+setting a variable.
+
+`Database` stores values **unencrypted**, in a `SecretValues` collection of their own so a metadata
+read can never carry one out with it. It keeps the whole `ISecretService` contract around them —
+tenant-scoped authorization, rotation, soft delete, audit — and keeps a value out of the
+configuration document that owns it and out of every configuration API response. What it does not
+do is protect a value from anyone who can read the `SecretStore` database. It is the interim
+option; `KeyVault` is the intended production store.
+
+### Key Vault
+
+Configured through the `KeyVault` environment section — the same keys `Blocks.Genesis` reads, so a
+host already configured for Genesis needs nothing extra.
 
 | Variable | Required | Purpose |
 |---|---|---|

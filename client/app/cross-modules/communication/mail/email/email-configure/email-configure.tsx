@@ -13,7 +13,11 @@ import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { useMediaQuery } from "@/components/ui-kits/stepper/use-media-query";
 import { cn } from "@/lib/utils";
-import { IEmailConfig, MailServiceProvider } from "@blocks-communication/mail/models/email";
+import {
+  getMailProviderLabel,
+  IEmailConfig,
+  usesPasswordAuthentication,
+} from "@blocks-communication/mail/models/email";
 import { useGetEmailSecretConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { EmptyState } from "@/components/ui-kits/empty-state";
@@ -185,27 +189,55 @@ export function EmailConfiguration({
                   )}
                   <div>
                     <p className="text-sm text-muted-foreground">Provider</p>
-                    <p className="text-base">{MailServiceProvider[config.provider]}</p>
+                    <p className="text-base">{getMailProviderLabel(config.provider)}</p>
                   </div>
                 </div>
-                {!config.isInbound && (
-                  <div
-                    className={cn(
-                      "mt-5 grid grid-cols-3 space-y-2",
-                      isMediumScreen && "gap-12",
-                      isMobileScreen && "grid-cols-1 gap-6",
-                    )}
-                  >
-                    <div>
-                      <p className="text-sm text-muted-foreground">Sender username</p>
-                      <p className="text-base">{config.senderUserName}</p>
+                {!config.isInbound &&
+                  (usesPasswordAuthentication(config.provider) ? (
+                    <div
+                      className={cn(
+                        "mt-5 grid grid-cols-3 space-y-2",
+                        isMediumScreen && "gap-12",
+                        isMobileScreen && "grid-cols-1 gap-6",
+                      )}
+                    >
+                      <div>
+                        <p className="text-sm text-muted-foreground">Sender username</p>
+                        <p className="text-base">{config.senderUserName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Account Password</p>
+                        <p className="trucate break-all text-base">*********************</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Account Password</p>
-                      <p className="trucate break-all text-base">*********************</p>
+                  ) : (
+                    <div
+                      className={cn(
+                        "mt-5 grid grid-cols-3 space-y-2",
+                        isMediumScreen && "gap-12",
+                        isMobileScreen && "grid-cols-1 gap-6",
+                      )}
+                    >
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tenant ID</p>
+                        <p className="trucate break-all text-base">{config.tenantId}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Client ID</p>
+                        <p className="trucate break-all text-base">{config.clientId}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Mailbox Address</p>
+                        <p className="trucate break-all text-base">{config.mailboxAddress}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Client secret</p>
+                        <p className="text-base">
+                          {config.isClientSecretConfigured ? "Configured" : "Not configured"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ))}
               </AccordionContent>
             </AccordionItem>
           ))}
