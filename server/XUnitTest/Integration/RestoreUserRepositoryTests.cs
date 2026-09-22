@@ -38,6 +38,7 @@ namespace XUnitTest.Integration
         {
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.DatabaseConnectionString).Returns(MongoIntegrationFixture.ConnectionString);
+            secret.SetupGet(s => s.RootDatabaseName).Returns("BlocksRootDb");
 
             return new RestoreUserRepository(
                 provider,
@@ -56,6 +57,33 @@ namespace XUnitTest.Integration
                 { "_id", userId },
                 { "Email", email is null ? BsonNull.Value : new BsonString(email) }
             });
+
+        [Fact]
+        public async Task GetEmailByUserIdAsync_SharedInstance_KeepsConcurrentTenantLookupsSeparate()
+        {
+            var firstDb = _fixture.DbContextProvider.GetDatabase(MongoIntegrationFixture.ConnectionString, "restore-dev");
+            var secondDb = _fixture.DbContextProvider.GetDatabase(MongoIntegrationFixture.ConnectionString, "restore-other");
+            var userId = "shared-" + Guid.NewGuid().ToString("N");
+            await InsertUserAsync(firstDb, userId, "dev@example.com");
+            await InsertUserAsync(secondDb, userId, "other@example.com");
+            var provider = new Mock<IDbContextProvider>(MockBehavior.Strict);
+            provider.Setup(p => p.GetDatabase("dev")).Returns(firstDb);
+            provider.Setup(p => p.GetDatabase("other")).Returns(secondDb);
+            var repository = NewRepository(provider.Object);
+            var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            async Task<string?> Read(string tenantId)
+            {
+                using var context = new BlocksTestContext(tenantId: tenantId);
+                await gate.Task;
+                return await repository.GetEmailByUserIdAsync(userId);
+            }
+            var first = Read("dev");
+            var second = Read("other");
+            gate.SetResult(true);
+
+            (await first).Should().Be("dev@example.com");
+            (await second).Should().Be("other@example.com");
+        }
 
         [Fact]
         public async Task GetEmailByUserIdAsync_ReadsTheTenantDatabase_WhenNotImpersonating()

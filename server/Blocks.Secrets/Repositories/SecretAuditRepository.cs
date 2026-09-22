@@ -5,8 +5,6 @@ namespace Blocks.Secrets;
 
 public sealed class SecretAuditRepository : ISecretAuditRepository
 {
-    private static int _indexesEnsured;
-
     private readonly SecretStoreContext _store;
     private readonly ILogger<SecretAuditRepository> _logger;
 
@@ -87,7 +85,9 @@ public sealed class SecretAuditRepository : ISecretAuditRepository
 
     private async Task EnsureIndexesAsync(IMongoCollection<SecretAuditLog> collection)
     {
-        if (Interlocked.Exchange(ref _indexesEnsured, 1) == 1)
+        // Once per cluster: the audit log follows its tenant's placement like the metadata does,
+        // and the TTL index has to exist wherever the log is actually written.
+        if (!SecretStoreIndexes.ShouldEnsure(collection))
         {
             return;
         }

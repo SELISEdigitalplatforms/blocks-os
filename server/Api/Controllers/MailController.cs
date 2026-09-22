@@ -1,7 +1,8 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using Configuration.DomainService.Mail.Mailbox;
 using Configuration.DomainService.Mail.Mailbox.Services;
 using Configuration.DomainService.Mail.RequestModel;
+using Configuration.DomainService.Mail.Services;
 using Configuration.DomainService.Mail.Template;
 using Configuration.DomainService.Mail.Template.Services;
 using Configuration.DomainService.Shared.Services;
@@ -14,16 +15,16 @@ namespace BlocksOs.Api.Controllers
     [Route("[controller]/[action]")]
     public class MailController : ControllerBase
     {
-        private readonly IConfigurationService _configurationService;
+        private readonly IMailConfigurationService _mailConfigurationService;
         private readonly IMailTemplateService? _mailTemplateService;
         private readonly IMailboxService? _mailboxService;
 
         public MailController(
-            IConfigurationService configurationService,
+            IMailConfigurationService mailConfigurationService,
             IMailTemplateService? mailTemplateService = null,
             IMailboxService? mailboxService = null)
         {
-            _configurationService = configurationService;
+            _mailConfigurationService = mailConfigurationService;
             _mailTemplateService = mailTemplateService;
             _mailboxService = mailboxService;
         }
@@ -32,20 +33,18 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::mail::save")]
         public async Task<IActionResult> Save([FromBody] MailConfiguration request)
         {
-            if (string.IsNullOrWhiteSpace(request.ConfigurationId))
-            {
-                request.ConfigurationId = Guid.NewGuid().ToString();
-            }
-
-            var result = await _configurationService.SaveMailConfigurationAsync(request);
-            return result.IsSuccess ? Ok(result) : BadRequest(result);
+            // The id is deliberately left as the caller sent it. Minting one here made an empty
+            // id indistinguishable from an edit, and the service then allocated a second id for
+            // the document, so the id the caller was handed back was never the id of the record.
+            var result = await _mailConfigurationService.SaveAsync(request);
+            return ToActionResult(result);
         }
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> Get([FromQuery] GetMailConfigurationRequest request)
         {
-            var result = await _configurationService.GetMailConfigurationAsync(request);
+            var result = await _mailConfigurationService.GetAsync(request);
 
             if (result == null)
             {
@@ -66,7 +65,7 @@ namespace BlocksOs.Api.Controllers
         [ProtectedEndPoint("blocks-os::mail::gets")]
         public async Task<IActionResult> Gets([FromQuery] GetAllMailConfigurationsRequest request)
         {
-            var result = await _configurationService.GetAllMailConfigurationsAsync();
+            var result = await _mailConfigurationService.GetAllAsync();
             return Ok(result);
         }
 
@@ -86,8 +85,8 @@ namespace BlocksOs.Api.Controllers
                 });
             }
 
-            var result = await _configurationService.DeleteMailConfigurationAsync(request);
-            return result.IsSuccess ? Ok(result) : BadRequest(result);
+            var result = await _mailConfigurationService.DeleteAsync(request);
+            return ToActionResult(result);
         }
 
         [HttpPost]
@@ -106,9 +105,28 @@ namespace BlocksOs.Api.Controllers
                 });
             }
 
-            var result = await _configurationService.DuplicateMailConfigurationAsync(request);
-            return result.IsSuccess ? Ok(result) : BadRequest(result);
+            var result = await _mailConfigurationService.DuplicateAsync(request);
+            return ToActionResult(result);
         }
+
+        /// <summary>
+        /// Turns a mail configuration outcome into a status code.
+        /// </summary>
+        /// <remarks>
+        /// Only an unreachable secret store becomes 503. Every other secret failure —
+        /// authorization, state, a missing secret — propagates to the global
+        /// <c>SecretExceptionFilter</c>, which already classifies it as 403/409/404; collapsing
+        /// them all into an availability error would tell an operator to retry something that
+        /// will never succeed.
+        /// </remarks>
+        private IActionResult ToActionResult(MailConfigurationMutationResult result) =>
+            result.Outcome switch
+            {
+                MailConfigurationOutcome.Success => Ok(result.Response),
+                MailConfigurationOutcome.SecretStoreUnavailable =>
+                    StatusCode(StatusCodes.Status503ServiceUnavailable, result.Response),
+                _ => BadRequest(result.Response)
+            };
 
         [HttpPost]
         // [ProtectedEndPoint("blocks-os::mail-template::save")]

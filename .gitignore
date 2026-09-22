@@ -288,3 +288,6 @@ deploy.log
 npm-cache/
 test-results/
 /server/_tmpbuild/Debug/net10.0
+
+# Developer-specific project references and build overrides
+/server/Directory.Build.local.props

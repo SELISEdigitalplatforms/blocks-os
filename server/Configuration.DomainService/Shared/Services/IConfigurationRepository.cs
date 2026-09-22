@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
 using Configuration.DomainService.Notification.Entities;
@@ -36,7 +36,7 @@ namespace Configuration.DomainService.Shared.Services
 
         Task SaveMailConfigurationAsync(MailServerConfiguration configuration);
         Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
-        Task<MailConfiguration> GetMailConfigurationByNameAsync(string configurationName);
+        Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
         Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
         Task DeleteMailConfigurationAsync(string configurationId);
 

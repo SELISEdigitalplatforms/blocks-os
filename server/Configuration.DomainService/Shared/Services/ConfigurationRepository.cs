@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using MongoDB.Driver;
 using System.Linq.Expressions;
 using Configuration.DomainService.Notification.Entities;
@@ -169,10 +169,19 @@ namespace Configuration.DomainService.Shared.Services
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
-        public async Task<MailConfiguration> GetMailConfigurationByNameAsync(string configurationName)
+        /// <summary>
+        /// Looks a configuration up by the name it is stored under.
+        /// </summary>
+        /// <remarks>
+        /// Typed to the entity and filtered on <c>Name</c>. It previously typed the collection as
+        /// the request model and filtered on <c>ConfigurationName</c> — a field no document in
+        /// this collection has — so it matched nothing: name uniqueness silently passed for every
+        /// name, and a lookup by name never found anything.
+        /// </remarks>
+        public async Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName)
         {
-            var collection = _dbContextProvider.GetCollection<MailConfiguration>(_mailConfigurationCollectionName);
-            var filter = Builders<MailConfiguration>.Filter.Eq(mc => mc.ConfigurationName, configurationName);
+            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
+            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.Name, configurationName);
 
             return await collection.Find(filter).FirstOrDefaultAsync();
         }

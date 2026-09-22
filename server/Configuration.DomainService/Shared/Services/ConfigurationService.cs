@@ -1,4 +1,4 @@
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using FluentValidation;
 using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Notification.RequestModel;
@@ -8,8 +8,6 @@ using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.Enums;
 using System.Collections.Immutable;
-using Configuration.DomainService.Mail.Entities;
-using Configuration.DomainService.Mail.RequestModel;
 using Microsoft.Extensions.Logging;
 
 namespace Configuration.DomainService.Shared.Services
@@ -21,7 +19,6 @@ namespace Configuration.DomainService.Shared.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IValidator<SaveNotificationConfigurationRequest> _notificatonConfigurationValidator;
         private readonly IValidator<SaveStorageConfigurationRequest> _storageConfigurationValidator;
-        private readonly IValidator<MailConfiguration> _mailConfigurationValidator;
         private readonly IMessageClient _messageClient;
         private readonly ILogger<ConfigurationService> _logger;
 
@@ -29,14 +26,12 @@ namespace Configuration.DomainService.Shared.Services
         public ConfigurationService(IConfigurationRepository configurationRepository,
                                     IValidator<SaveNotificationConfigurationRequest> notificatonConfigurationValidator,
                                     IValidator<SaveStorageConfigurationRequest> storageConfigurationValidator,
-                                    IValidator<MailConfiguration> mailConfigurationValidator,
                                     IMessageClient messageClient,
                                     ILogger<ConfigurationService> logger)
         {
             _configurationRepository = configurationRepository;
             _notificatonConfigurationValidator = notificatonConfigurationValidator;
             _storageConfigurationValidator = storageConfigurationValidator;
-            _mailConfigurationValidator = mailConfigurationValidator;
             _messageClient = messageClient;
             _logger = logger;
         }
@@ -251,153 +246,6 @@ namespace Configuration.DomainService.Shared.Services
         #endregion
 
 
-        #region Mail
-
-        public async Task<BaseMutationResponse> SaveMailConfigurationAsync(MailConfiguration configuration)
-        {
-            _logger.LogInformation("Saving mail configuration start");
-            var validationResult = await _mailConfigurationValidator.ValidateAsync(configuration);
-
-            if (!validationResult.IsValid)
-            {
-                _logger.LogInformation("Saving mail configuration end -- Validation Error");
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage)
-                };
-            }
-
-            var repoConfiguration = await MappedIntoMailRepoConfigurationAsync(configuration);
-            await _configurationRepository.SaveMailConfigurationAsync(repoConfiguration);
-
-            _logger.LogInformation("Saving mail configuration end -- Success");
-            return new BaseMutationResponse { IsSuccess = true };
-        }
-
-        public async Task<MailConfiguration> GetMailConfigurationAsync(GetMailConfigurationRequest request)
-        {
-            var configuration = await _configurationRepository.GetMailConfigurationByNameAsync(request.ConfigurationName);
-            if (configuration == null)
-            {
-                return null;
-            }
-
-            configuration.AccountPassword = MaskedSecretValue;
-            return configuration;
-        }
-
-        public async Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync()
-        {
-            var configurations = await _configurationRepository.GetAllMailConfigurationsAsync();
-
-            foreach (var config in configurations)
-            {
-                config.AccountPassword = MaskedSecretValue;
-            }
-
-            return configurations;
-        }
-
-        public async Task<BaseMutationResponse> DeleteMailConfigurationAsync(DeleteMailConfigurationRequest request)
-        {
-            _logger.LogInformation("Deleting mail configuration start");
-
-            var config = await _configurationRepository.GetMailConfigurationByIdAsync(request.ConfigurationId);
-            if (config == null)
-            {
-                _logger.LogInformation("Deleting mail configuration end -- Configuration not found");
-
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
-                    {
-                        { "ConfigurationId", "Configuration not found" }
-                    }
-                };
-            }
-
-            await _configurationRepository.DeleteMailConfigurationAsync(request.ConfigurationId);
-
-            _logger.LogInformation("Deleting mail configuration end -- Success");
-            return new BaseMutationResponse { IsSuccess = true };
-        }
-
-        public async Task<BaseMutationResponse> DuplicateMailConfigurationAsync(DuplicateMailConfigurationRequest request)
-        {
-            _logger.LogInformation("Duplicating mail configuration start");
-
-            var config = await _configurationRepository.GetMailConfigurationByIdAsync(request.ConfigurationId);
-            if (config == null)
-            {
-                _logger.LogInformation("Duplicating mail configuration end -- Configuration not found");
-
-                return new BaseMutationResponse
-                {
-                    IsSuccess = false,
-                    Errors = new Dictionary<string, string>
-                    {
-                        { "ConfigurationId", "Configuration not found" }
-                    }
-                };
-            }
-
-            var newConfig = new MailServerConfiguration
-            {
-                ItemId = Guid.NewGuid().ToString(),
-                CreatedDate = DateTime.UtcNow,
-                LastUpdatedDate = DateTime.UtcNow,
-                CreatedBy = BlocksContext.GetContext()?.UserId,
-                LastUpdatedBy = BlocksContext.GetContext()?.UserId,
-               // OrganizationIds = config.OrganizationIds,
-                Tags = config.Tags,
-                Name = config.Name + " - Copy",
-                Host = config.Host,
-                Port = config.Port,
-                EnableSSL = config.EnableSSL,
-                SenderName = config.SenderName,
-                SenderAddress = config.SenderAddress,
-                SenderUserName = config.SenderUserName,
-                AccountPassword = config.AccountPassword,
-                UseDefaultCredentials = config.UseDefaultCredentials,
-                SmtpClient = config.SmtpClient,
-                IsDefault = config.IsDefault,
-                Provider = config.Provider,
-                IsInbound = config.IsInbound,
-                IsEnableSnsConfiguration = config.IsEnableSnsConfiguration
-            };
-
-            await _configurationRepository.SaveMailConfigurationAsync(newConfig);
-
-            _logger.LogInformation("Duplicating mail configuration end -- Success");
-            return new BaseMutationResponse { IsSuccess = true };
-        }
-
-        private async Task<MailServerConfiguration> MappedIntoMailRepoConfigurationAsync(MailConfiguration configuration)
-        {
-            var repoConfiguration = await _configurationRepository.GetMailConfigurationByIdAsync(configuration.ConfigurationId);
-
-            repoConfiguration ??= new MailServerConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
-
-            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
-            repoConfiguration.Host = configuration.Host;
-            repoConfiguration.Port = configuration.Port;
-            repoConfiguration.Name = configuration.ConfigurationName;
-            repoConfiguration.SenderName = configuration.SenderName;
-            repoConfiguration.SenderUserName = configuration.SenderUserName;
-            repoConfiguration.SenderAddress = configuration.SenderAddress;
-            repoConfiguration.AccountPassword = configuration.AccountPassword;
-            repoConfiguration.EnableSSL = configuration.EnableSSL;
-            repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId ?? "";
-            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId ?? "";
-            repoConfiguration.IsInbound = configuration.IsInbound;
-            repoConfiguration.Provider = configuration.Provider;
-            repoConfiguration.IsEnableSnsConfiguration = configuration.IsEnableSnsConfiguration;
-            return repoConfiguration;
-        }
-
-        #endregion
 
         
     }

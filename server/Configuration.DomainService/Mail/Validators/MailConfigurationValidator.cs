@@ -1,9 +1,24 @@
 using Configuration.DomainService.Mail.RequestModel;
+using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Services;
 using FluentValidation;
 
 namespace Configuration.DomainService.Mail.Validators
 {
+    /// <summary>
+    /// The rules every mail configuration shares, whoever the provider is.
+    /// </summary>
+    /// <remarks>
+    /// Provider-specific rules live in the provider definitions, not here, and the orchestrator
+    /// normalizes a request before running this validator. That ordering is what lets the host
+    /// and port rules below stay unconditional: a provider with fixed transport settings has
+    /// already overwritten them with values that pass.
+    /// <para>
+    /// Kept free of the provider registry on purpose — the registry is scoped, this validator is
+    /// a singleton, and wiring one into the other is exactly the captured-dependency trap the
+    /// secret services warn about.
+    /// </para>
+    /// </remarks>
     public class MailConfigurationValidator : AbstractValidator<MailConfiguration>
     {
         private readonly IConfigurationRepository _configurationRepository;
@@ -15,13 +30,14 @@ namespace Configuration.DomainService.Mail.Validators
             // ConfigurationName is required and should not be empty
             RuleFor(x => x.ConfigurationName)
                 .NotEmpty().WithMessage("Configuration name is required.")
-                .MustAsync(async (name, cancellationToken) => await IsNameUniqueAsync(name))
+                .MustAsync(async (configuration, name, cancellationToken) => await IsNameUniqueAsync(name, configuration.ConfigurationId))
                 .WithMessage("The name must be unique.")
                 .Length(3, 100).WithMessage("Configuration name must be between 3 and 100 characters.");
 
-            // ConfigurationId is required
-            RuleFor(x => x.ConfigurationId)
-                .NotEmpty().WithMessage("Configuration ID is required.");
+            // ConfigurationId is deliberately not required. An empty id is how a caller asks for
+            // a create, and the orchestrator allocates the real one; requiring a value here would
+            // reject every create. On edit the orchestrator checks that the id resolves to a
+            // record, which this validator cannot do without re-reading it.
 
             // Host is required and should not be empty
             RuleFor(x => x.Host)
@@ -42,21 +58,34 @@ namespace Configuration.DomainService.Mail.Validators
                 .NotEmpty().When(x => !x.IsInbound).WithMessage("Sender email address is required.")
                 .EmailAddress().When(x => !x.IsInbound).WithMessage("Sender email address must be a valid email.");
 
-            // UserName is required
+            // Username and password apply to password authentication only. The condition is the
+            // authentication type rather than the provider id, so a later OAuth provider needs no
+            // change here: normalization has already set the type by the time this runs.
             RuleFor(x => x.SenderUserName)
-                .NotEmpty().WithMessage("Username is required.");
+                .NotEmpty().When(UsesPasswordAuthentication).WithMessage("Username is required.");
 
-            // Password is required
             RuleFor(x => x.AccountPassword)
-                .NotEmpty().WithMessage("Password is required.")
-                .MinimumLength(6).WithMessage("Password must be at least 6 characters long.");
+                .NotEmpty().When(UsesPasswordAuthentication).WithMessage("Password is required.")
+                .MinimumLength(6).When(UsesPasswordAuthentication).WithMessage("Password must be at least 6 characters long.");
         }
 
-        private async Task<bool> IsNameUniqueAsync(string name)
+        private static bool UsesPasswordAuthentication(MailConfiguration configuration) =>
+            configuration.AuthenticationType == MailAuthenticationType.Password;
+
+        /// <summary>
+        /// Unique among the other records, not among all of them.
+        /// </summary>
+        /// <remarks>
+        /// The current record is excluded, otherwise every edit that leaves the name alone would
+        /// collide with itself and no Office 365 configuration could be edited without renaming it.
+        /// </remarks>
+        private async Task<bool> IsNameUniqueAsync(string name, string? configurationId)
         {
             var configuration = await _configurationRepository.GetMailConfigurationByNameAsync(name);
-            return configuration == null;
+
+            return configuration is null
+                || (!string.IsNullOrWhiteSpace(configurationId)
+                    && string.Equals(configuration.ItemId, configurationId, StringComparison.Ordinal));
         }
     }
 }
-

@@ -315,13 +315,58 @@ namespace DomainService.Projects
 
         public async Task<CreateProjectResponse> SaveProjectAsync(CreateProjectRequest project)
         {
+            // Resolve all placements before creating assets, tenant records, or messages.
+            // Existing tenants retain their stored connection; this only provisions new ones.
+            var connections = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (project.applicationContexts is null || project.applicationContexts.Count == 0)
+            {
+                return new CreateProjectResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { ["environment"] = "At least one environment is required." }
+                };
+            }
+            foreach (var application in project.applicationContexts)
+            {
+                if (application is null || !IdentifierHelper.IsSupportedEnvironment(application.Environment))
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["environment"] = "One or more projects have unsupported environment." }
+                    };
+                }
+
+                if (connections.ContainsKey(application.Environment))
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["environment"] = "Projects should not contain duplicate environments." }
+                    };
+                }
+
+                try
+                {
+                    connections[application.Environment] = ResolveDatabaseConnectionString(application.Environment);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return new CreateProjectResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string> { ["database_configuration"] = ex.Message }
+                    };
+                }
+            }
+
             var isNewGroup = string.IsNullOrEmpty(project.TenantGroupId);
             var groupId = isNewGroup ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
             await ManageTenantAssetAsync(project, groupId);
 
             foreach (var applicationContext in project.applicationContexts)
             {
-                var tenant = await MapAsync(project, applicationContext, groupId);
+                var tenant = await MapAsync(project, applicationContext, groupId, connections[applicationContext.Environment]);
                 await Task.WhenAll(_projectRepository.SaveRepoInfoAsync(tenant, project.Resources),
                                    _projectRepository.InsertProjectAsync(tenant));
 
@@ -477,7 +522,37 @@ namespace DomainService.Projects
             return applications.Any(a => NormalizeDomain(a.Domain) == normalized);
         }
 
-        private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId)
+        private string ResolveDatabaseConnectionString(string environment)
+        {
+            var connectionString = environment switch
+            {
+                "prod" => _blocksSecret.DatabaseConnectionString,
+                "dev" => _blocksSecret.DevDatabaseConnectionString,
+                _ => _blocksSecret.OtherDatabaseConnectionString
+            };
+
+            // A missing optional placement secret deliberately falls back to main.
+            if (string.IsNullOrWhiteSpace(connectionString))
+                connectionString = _blocksSecret.DatabaseConnectionString;
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException($"No database connection is configured for environment '{environment}'.");
+
+            connectionString = connectionString.Trim();
+            try
+            {
+                _ = MongoUrl.Create(connectionString);
+            }
+            catch (Exception ex) when (ex is ArgumentException or FormatException or MongoConfigurationException)
+            {
+                // Do not include a connection string (or a parser exception containing it).
+                throw new InvalidOperationException($"The database connection configured for environment '{environment}' is invalid.");
+            }
+
+            return connectionString;
+        }
+
+        private async Task<Tenant> MapAsync(CreateProjectRequest createProjectRequest, ApplicationContext applicationContext, string groupId, string connectionString)
         {
             var certificateStorageType = GetCertificateStorageType();
             var applicationDomains = await GetDefaultDomainsAsync(createProjectRequest.Resources, applicationContext, groupId);
@@ -501,7 +576,7 @@ namespace DomainService.Projects
                 IsAcceptBlocksTerms = createProjectRequest.IsAcceptBlocksTerms,
                 IsUseBlocksExclusively = createProjectRequest.IsUseBlocksExclusively,
                // ApplicationDomain = applicationDomain,
-                DbConnectionString = _blocksSecret.DatabaseConnectionString,
+                DbConnectionString = connectionString,
                // CookieDomain = applicationContext.CookieDomain,
                // IsDomainVerified = applicationContext.CookieDomain == IdentifierConstants.BlocsDomain,
 

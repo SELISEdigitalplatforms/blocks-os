@@ -34,6 +34,7 @@ namespace XUnitTest.Integration
         {
             var secret = new Mock<IBlocksSecret>();
             secret.SetupGet(s => s.DatabaseConnectionString).Returns("mongodb://localhost:27017");
+            secret.SetupGet(s => s.RootDatabaseName).Returns("BlocksRootDb");
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { { "KbtclIdentifier", ".blocks.dev" } })
                 .Build();

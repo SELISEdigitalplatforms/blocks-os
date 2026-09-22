@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
@@ -6,6 +6,7 @@ using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Notification.Enums;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.Validators;
+using Configuration.DomainService.Shared.Enums;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Shared.Utilities;
 using Configuration.DomainService.Storage.Entities;
@@ -454,7 +455,7 @@ namespace XUnitTest.Validators
         public async Task Validate_HappyPathOutbound_IsValid()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var result = await Validator().ValidateAsync(ValidOutbound());
 
@@ -464,8 +465,9 @@ namespace XUnitTest.Validators
         [Fact]
         public async Task Validate_DuplicateName_Fails()
         {
+            // A different record holds the name, so the edit collides.
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync(ValidOutbound());
+                 .ReturnsAsync(new MailServerConfiguration { ItemId = "someone-else", Name = "Primary" });
 
             var result = await Validator().ValidateAsync(ValidOutbound());
 
@@ -477,7 +479,7 @@ namespace XUnitTest.Validators
         public async Task Validate_InvalidHost_Fails()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.Host = "not a host";
@@ -491,7 +493,7 @@ namespace XUnitTest.Validators
         public async Task Validate_OutboundMissingSenderAddress_Fails()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.SenderAddress = "";
@@ -505,7 +507,7 @@ namespace XUnitTest.Validators
         public async Task Validate_InboundDoesNotRequireSender_IsValid()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.IsInbound = true;
@@ -521,7 +523,7 @@ namespace XUnitTest.Validators
         public async Task Validate_ShortPassword_Fails()
         {
             _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
-                 .ReturnsAsync((MailConfiguration?)null);
+                 .ReturnsAsync((MailServerConfiguration?)null);
 
             var request = ValidOutbound();
             request.AccountPassword = "123";
@@ -529,6 +531,51 @@ namespace XUnitTest.Validators
             var result = await Validator().ValidateAsync(request);
 
             result.IsValid.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Validate_NameHeldByTheRecordBeingEdited_IsValid()
+        {
+            // Without excluding the current record, every edit that leaves the name alone would
+            // collide with itself and nothing could be saved twice.
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync(new MailServerConfiguration { ItemId = "cfg-1", Name = "Primary" });
+
+            var result = await Validator().ValidateAsync(ValidOutbound());
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_CreateWithoutConfigurationId_IsValid()
+        {
+            // An empty id is how a caller asks for a create; requiring one here rejected every
+            // create once the controller stopped minting them.
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((MailServerConfiguration?)null);
+
+            var request = ValidOutbound();
+            request.ConfigurationId = "";
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_OAuthConfiguration_DoesNotRequireUsernameOrPassword()
+        {
+            _repo.Setup(r => r.GetMailConfigurationByNameAsync(It.IsAny<string>()))
+                 .ReturnsAsync((MailServerConfiguration?)null);
+
+            var request = ValidOutbound();
+            request.AuthenticationType = MailAuthenticationType.OAuthClientCredentials;
+            request.SenderUserName = "";
+            request.AccountPassword = "";
+
+            var result = await Validator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
         }
     }
 
