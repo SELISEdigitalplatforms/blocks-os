@@ -30,9 +30,9 @@ type OrganizationUsersTableProps = {
 };
 
 const LoadingSkelton = () => (
-  <div className="flex flex-col gap-1.5">
+  <div className="scrollbar-slim flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
     {Array.from({ length: 8 }).map((_, index) => (
-      <Skeleton key={index} className="h-11 w-full rounded-xl" />
+      <Skeleton key={index} className="h-11 w-full shrink-0 rounded-xl" />
     ))}
   </div>
 );
@@ -129,11 +129,19 @@ export const OrganizationUsersTable = ({
       {/* Both the header row and the data rows share the same grid template so
           the column labels stay perfectly aligned with their cells. Below md,
           rows render as stacked cards instead, so the min-width (and the
-          resulting horizontal scroll) only applies at md+. */}
-      <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
-        <div className="flex flex-col gap-1.5 md:min-w-[860px]">
-          {/* Column headers, sticky so they stay pinned while the rows below scroll */}
-          <div className="sticky top-0 z-10 hidden grid-cols-[220px_minmax(0,1fr)_90px_140px_40px] items-center gap-2 bg-card px-2 pb-1.5 text-xs md:grid">
+          resulting horizontal scroll) only applies at md+.
+
+          This element is the scroll container for both axes: the rows scroll
+          vertically inside it rather than overflowing the card and running
+          underneath the pagination footer, and because the sticky header below
+          is one of its descendants, that header pins to the top of this box
+          while they do. */}
+      <div className="scrollbar-hidden-x scrollbar-slim min-h-0 flex-1 overflow-y-auto overflow-x-hidden md:overflow-x-auto">
+        <div className="flex flex-col md:min-w-[860px]">
+          {/* Column headers, sticky so they stay pinned while the rows below scroll.
+              The bottom padding is what covers the rows passing underneath, so it
+              has to be opaque all the way down to the first row. */}
+          <div className="sticky top-0 z-10 hidden grid-cols-[220px_minmax(0,1fr)_90px_140px_40px] items-center gap-2 bg-card px-2 pb-2 text-xs md:grid">
             <div className="min-w-0">
               <FilterControls.SortHeader
                 id="FirstName"
@@ -169,42 +177,98 @@ export const OrganizationUsersTable = ({
             <div />
           </div>
 
-          {users.map((user) => {
-            const fullName = getUserDisplayName(user);
-            const hasLastLogin = checkValidDate(user.lastLoggedInTime);
+          <div className="flex flex-col gap-1.5">
+            {users.map((user) => {
+              const fullName = getUserDisplayName(user);
+              const hasLastLogin = checkValidDate(user.lastLoggedInTime);
 
-            return (
-              <div
-                key={user.itemId}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleRowClick(user.itemId)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") handleRowClick(user.itemId);
-                }}
-                className="group flex cursor-pointer flex-col gap-2.5 rounded-xl border bg-card p-3 transition-colors hover:border-primary/30 md:grid md:grid-cols-[220px_minmax(0,1fr)_90px_140px_40px] md:items-center md:gap-2 md:p-2"
-              >
-                {/* Avatar + name (+ inline revoke action on mobile) */}
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
-                    {getUserInitials(user)}
+              return (
+                <div
+                  key={user.itemId}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleRowClick(user.itemId)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") handleRowClick(user.itemId);
+                  }}
+                  className="group flex cursor-pointer flex-col gap-2.5 rounded-xl border bg-card p-3 transition-colors hover:border-primary/30 md:grid md:grid-cols-[220px_minmax(0,1fr)_90px_140px_40px] md:items-center md:gap-2 md:p-2"
+                >
+                  {/* Avatar + name (+ inline revoke action on mobile) */}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                      {getUserInitials(user)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold leading-tight text-high-emphasis">
+                        {fullName}
+                      </p>
+                      {user.email && (
+                        <div className="md:hidden">
+                          <CopyToClipboardButton textToCopy={user.email} isHoverable>
+                            <span className="truncate text-[11px] lowercase leading-tight text-muted-foreground">
+                              {user.email}
+                            </span>
+                          </CopyToClipboardButton>
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      className="shrink-0 md:hidden"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Revoke from organization"
+                        title="Revoke from organization"
+                        className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                        onClick={() => setConfirmRevoke(user)}
+                      >
+                        <UserMinus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold leading-tight text-high-emphasis">
-                      {fullName}
-                    </p>
+
+                  {/* Email, desktop only. The cell itself always renders:
+                      dropping it would pull the status and last-login columns one
+                      place left for a member with no email, breaking alignment
+                      with the header row. */}
+                  <div className="hidden min-w-0 md:block">
                     {user.email && (
-                      <div className="md:hidden">
-                        <CopyToClipboardButton textToCopy={user.email} isHoverable>
-                          <span className="truncate text-[11px] lowercase leading-tight text-muted-foreground">
-                            {user.email}
-                          </span>
-                        </CopyToClipboardButton>
-                      </div>
+                      <CopyToClipboardButton textToCopy={user.email} isHoverable>
+                        <span className="truncate text-xs lowercase text-muted-foreground">
+                          {user.email}
+                        </span>
+                      </CopyToClipboardButton>
                     )}
                   </div>
+
+                  {/* Status + Last login: paired on one row on mobile; on md+ this
+                      wrapper becomes `contents` so its children fall back into
+                      their own grid columns (3 and 4), matching the header. */}
+                  <div className="flex items-center justify-between gap-3 md:contents">
+                    {/* Status */}
+                    <div className="md:shrink-0">
+                      <Badge variant={user.active ? "success" : "error"} className="w-fit">
+                        {user.active ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+
+                    {/* Last login */}
+                    <div className="text-right md:shrink-0 md:text-left md:text-xs md:text-muted-foreground">
+                      <span className="block text-[11px] text-muted-foreground md:hidden">
+                        Last login
+                      </span>
+                      {hasLastLogin
+                        ? formatDate(parseDateString(user.lastLoggedInTime))
+                        : "Never logged in"}
+                    </div>
+                  </div>
+
+                  {/* Revoke, desktop only (mobile has its own copy inline with the name) */}
                   <div
-                    className="shrink-0 md:hidden"
+                    className="hidden md:block md:shrink-0"
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
@@ -213,70 +277,16 @@ export const OrganizationUsersTable = ({
                       variant="ghost"
                       aria-label="Revoke from organization"
                       title="Revoke from organization"
-                      className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                      className="h-6 w-6 text-destructive hover:bg-destructive/10"
                       onClick={() => setConfirmRevoke(user)}
                     >
                       <UserMinus className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
-
-                {/* Email, desktop only. The cell itself always renders:
-                    dropping it would pull the status and last-login columns one
-                    place left for a member with no email, breaking alignment
-                    with the header row. */}
-                <div className="hidden min-w-0 md:block">
-                  {user.email && (
-                    <CopyToClipboardButton textToCopy={user.email} isHoverable>
-                      <span className="truncate text-xs lowercase text-muted-foreground">
-                        {user.email}
-                      </span>
-                    </CopyToClipboardButton>
-                  )}
-                </div>
-
-                {/* Status + Last login: paired on one row on mobile; on md+ this
-                    wrapper becomes `contents` so its children fall back into
-                    their own grid columns (3 and 4), matching the header. */}
-                <div className="flex items-center justify-between gap-3 md:contents">
-                  {/* Status */}
-                  <div className="md:shrink-0">
-                    <Badge variant={user.active ? "success" : "error"} className="w-fit">
-                      {user.active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-
-                  {/* Last login */}
-                  <div className="text-right md:shrink-0 md:text-left md:text-xs md:text-muted-foreground">
-                    <span className="block text-[11px] text-muted-foreground md:hidden">
-                      Last login
-                    </span>
-                    {hasLastLogin
-                      ? formatDate(parseDateString(user.lastLoggedInTime))
-                      : "Never logged in"}
-                  </div>
-                </div>
-
-                {/* Revoke, desktop only (mobile has its own copy inline with the name) */}
-                <div
-                  className="hidden md:block md:shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                >
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Revoke from organization"
-                    title="Revoke from organization"
-                    className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                    onClick={() => setConfirmRevoke(user)}
-                  >
-                    <UserMinus className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
