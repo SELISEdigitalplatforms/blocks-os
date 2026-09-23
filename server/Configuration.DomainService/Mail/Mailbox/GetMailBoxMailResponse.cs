@@ -24,6 +24,30 @@ namespace Configuration.DomainService.Mail.Mailbox
         public List<MailBoxMailAttachment> Attachments { get; set; } = [];
     }
 
+    public class GetMailBoxMailAttachmentRequest
+    {
+        public string MessageId { get; set; } = string.Empty;
+
+        /// <summary>Position in <see cref="MailBoxMailContent.Attachments"/>.</summary>
+        public int Index { get; set; }
+    }
+
+    public class GetMailBoxMailAttachmentResponse : BaseResponse
+    {
+        public MailBoxMailAttachmentContent? Attachment { get; set; }
+    }
+
+    public class MailBoxMailAttachmentContent
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string ContentType { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Base64 so the file travels through the same JSON client as every other mail read.
+        /// </summary>
+        public string ContentBase64 { get; set; } = string.Empty;
+    }
+
     /// <summary>Metadata only; the content stays in the stored MIME.</summary>
     public class MailBoxMailAttachment
     {

@@ -320,6 +320,12 @@ export interface IEmailUsageResponse {
   isSuccess: boolean;
 }
 
+export interface IGetMailBoxMailAttachmentResponse {
+  attachment?: { fileName: string; contentType: string; contentBase64: string } | null;
+  errors: Record<string, unknown> | null;
+  isSuccess: boolean;
+}
+
 export interface IGetMailBoxMailResponse {
   mail: IEmailUsage;
   content?: IMailBoxMailContent | null;

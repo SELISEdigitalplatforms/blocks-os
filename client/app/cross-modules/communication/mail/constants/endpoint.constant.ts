@@ -11,6 +11,7 @@ const MAIL_SUBPATH = "Mail";
 export const MAIL_ENDPOINTS = {
   GET_MAILBOX_MAILS: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMails`,
   GET_MAILBOX_MAIL: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMail`,
+  GET_MAILBOX_MAIL_ATTACHMENT: `${MAIL_BASE}/${MAIL_SUBPATH}/GetMailBoxMailAttachment`,
   SEND_TO_ANY: `${LOGIC_MAIL_BASE}/${MAIL_SUBPATH}/SendToAny`,
 } as const;
 

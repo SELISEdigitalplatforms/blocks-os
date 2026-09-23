@@ -233,5 +233,14 @@ namespace BlocksOs.Api.Controllers
             var result = await _mailboxService!.GetMailBoxMailAsync(request);
             return result.IsSuccess ? Ok(result) : NotFound(result);
         }
+
+        [HttpGet]
+        // [ProtectedEndPoint("blocks-os::mailbox::gets")]
+        [Authorize]
+        public async Task<IActionResult> GetMailBoxMailAttachment([FromQuery] GetMailBoxMailAttachmentRequest request)
+        {
+            var result = await _mailboxService!.GetMailBoxMailAttachmentAsync(request);
+            return result.IsSuccess ? Ok(result) : NotFound(result);
+        }
     }
 }

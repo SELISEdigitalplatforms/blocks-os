@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { AlertCircle, Download, Mail, Paperclip } from "lucide-react";
+import { AlertCircle, Download, Loader2, Mail, Paperclip } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { emailService } from "@blocks-communication/mail/services/email.services";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
@@ -38,26 +40,55 @@ const AddressLine = ({ label, raw }: { label: string; raw?: string | null }) => 
   );
 };
 
-const downloadEml = (rawMime: string, subject: string) => {
-  const blob = new Blob([rawMime], { type: "message/rfc822" });
+const saveBlob = (blob: Blob, fileName: string) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${(subject || "message").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 80)}.eml`;
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
 };
 
+const downloadEml = (rawMime: string, subject: string) =>
+  saveBlob(
+    new Blob([rawMime], { type: "message/rfc822" }),
+    `${(subject || "message").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 80)}.eml`,
+  );
+
 export const EmailUsageDetails = ({ id }: { id: string }) => {
   const { data: details, isLoading } = useGetEmailUsageById(id);
   const [view, setView] = useState<BodyView | null>(null);
+  const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
+
+  const downloadAttachment = async (messageId: string, index: number, fallbackName: string) => {
+    setDownloadingIndex(index);
+    try {
+      const response = await emailService.getMailBoxMailAttachment(messageId, index);
+      const file = response?.attachment;
+      if (!response?.isSuccess || !file) {
+        throw new Error("Attachment not found");
+      }
+      const bytes = Uint8Array.from(atob(file.contentBase64), (ch) => ch.charCodeAt(0));
+      saveBlob(new Blob([bytes], { type: file.contentType || "application/octet-stream" }), file.fileName || fallbackName);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: `${fallbackName} could not be downloaded. Try again, or download the .eml.`,
+      });
+    } finally {
+      setDownloadingIndex(null);
+    }
+  };
 
   const bodies = useMemo(() => {
     const content = details?.content;
     const body = details?.body || "";
     const html = content?.htmlBody || (looksLikeHtml(body) ? body : "");
     const text = content?.textBody || (!looksLikeHtml(body) ? body : "");
-    return { html, text };
+    // A mail that is only an attachment still carries a line break as its body; that is not
+    // something worth a tab of its own.
+    return { html: html.trim() ? html : "", text: text.trim() ? text : "" };
   }, [details]);
 
   if (isLoading) return <EmailUsageDetailsSkeleton />;
@@ -152,19 +183,28 @@ export const EmailUsageDetails = ({ id }: { id: string }) => {
               </p>
               <div className="flex flex-wrap gap-2">
                 {attachments.map((attachment, index) => (
-                  <div
+                  <button
+                    type="button"
                     key={`${attachment.fileName}-${index}`}
-                    className="flex max-w-xs items-center gap-2 rounded-md border bg-muted/30 px-3 py-2"
-                    title={attachment.contentType}
+                    className="group flex max-w-xs items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                    title={`Download ${attachment.fileName}`}
+                    aria-label={`Download ${attachment.fileName}`}
+                    disabled={downloadingIndex === index}
+                    onClick={() => downloadAttachment(details.messageId || id, index, attachment.fileName)}
                   >
-                    <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {downloadingIndex === index ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                    ) : (
+                      <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
                     <span className="truncate text-sm">{attachment.fileName}</span>
                     {attachment.size != null && (
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {formatSize(attachment.size)}
                       </span>
                     )}
-                  </div>
+                    <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-60 group-hover:opacity-100" />
+                  </button>
                 ))}
               </div>
             </div>

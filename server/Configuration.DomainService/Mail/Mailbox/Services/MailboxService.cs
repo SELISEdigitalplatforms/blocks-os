@@ -69,5 +69,29 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 Content = MailContentParser.Parse(mail.RawMime)
             };
         }
+
+        public async Task<GetMailBoxMailAttachmentResponse> GetMailBoxMailAttachmentAsync(GetMailBoxMailAttachmentRequest request)
+        {
+            var mail = await _mailboxRepository.GetMailBoxMailAsync(request.MessageId);
+            var attachment = MailContentParser.ExtractAttachment(mail?.RawMime, request.Index);
+
+            if (attachment is null)
+            {
+                return new GetMailBoxMailAttachmentResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { mail is null ? "MessageId" : "Index", mail is null ? "Mail not found" : "Attachment not found" }
+                    }
+                };
+            }
+
+            return new GetMailBoxMailAttachmentResponse
+            {
+                IsSuccess = true,
+                Attachment = attachment
+            };
+        }
     }
 }

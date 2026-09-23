@@ -48,6 +48,53 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
             }
         }
 
+        /// <summary>
+        /// The decoded content of the attachment at <paramref name="index"/>, in the same order
+        /// <see cref="Parse"/> lists them. Null when the message or the index does not resolve.
+        /// </summary>
+        public static MailBoxMailAttachmentContent? ExtractAttachment(string? rawMime, int index)
+        {
+            if (string.IsNullOrWhiteSpace(rawMime) || index < 0)
+            {
+                return null;
+            }
+
+            try
+            {
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(rawMime));
+                var message = MimeMessage.Load(stream);
+                var entity = message.Attachments.ElementAtOrDefault(index);
+                if (entity is null)
+                {
+                    return null;
+                }
+
+                using var content = new MemoryStream();
+                switch (entity)
+                {
+                    case MimePart part:
+                        part.Content.DecodeTo(content);
+                        break;
+                    case MessagePart attached:
+                        attached.Message.WriteTo(content);
+                        break;
+                    default:
+                        return null;
+                }
+
+                return new MailBoxMailAttachmentContent
+                {
+                    FileName = FileNameOf(entity),
+                    ContentType = entity.ContentType.MimeType,
+                    ContentBase64 = Convert.ToBase64String(content.ToArray())
+                };
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
+
         private static string FileNameOf(MimeEntity entity) =>
             entity switch
             {

@@ -4,5 +4,6 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
     {
         Task<GetMailBoxMailsResponse> GetMailBoxMailsAsync(GetMailBoxMailsRequest request);
         Task<GetMailBoxMailResponse> GetMailBoxMailAsync(GetMailBoxMailRequest request);
+        Task<GetMailBoxMailAttachmentResponse> GetMailBoxMailAttachmentAsync(GetMailBoxMailAttachmentRequest request);
     }
 }

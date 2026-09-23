@@ -40,6 +40,25 @@ namespace XUnitTest.Services
             content.Attachments[0].Size.Should().BeInRange(290, 310);
         }
 
+        [Fact]
+        public void ExtractAttachment_ReturnsTheDecodedFile()
+        {
+            var attachment = MailContentParser.ExtractAttachment(Raw(), 0);
+
+            attachment.Should().NotBeNull();
+            attachment!.FileName.Should().Be("invoice.pdf");
+            attachment.ContentType.Should().Be("application/pdf");
+            Convert.FromBase64String(attachment.ContentBase64).Should().HaveCount(300);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(-1)]
+        public void ExtractAttachment_AnIndexThatDoesNotResolve_ReturnsNull(int index)
+        {
+            MailContentParser.ExtractAttachment(Raw(), index).Should().BeNull();
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]

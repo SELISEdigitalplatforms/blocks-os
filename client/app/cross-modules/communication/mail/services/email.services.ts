@@ -2,6 +2,7 @@ import {
   IEmailConfig,
   IEmailTemplate,
   IEmailUsageResponse,
+  IGetMailBoxMailAttachmentResponse,
   IGetMailBoxMailResponse,
 } from "../models/email";
 import { http } from "@/lib/http/http-client";
@@ -112,6 +113,16 @@ class EmailService {
     }
 
     return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, {
+      absoluteUrl: true,
+    });
+  };
+
+  getMailBoxMailAttachment = (
+    messageId: string,
+    index: number,
+  ): Promise<IGetMailBoxMailAttachmentResponse> => {
+    const params = new URLSearchParams({ MessageId: messageId, Index: String(index) });
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT}?${params.toString()}`, undefined, {
       absoluteUrl: true,
     });
   };

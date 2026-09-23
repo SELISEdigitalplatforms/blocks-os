@@ -6,6 +6,8 @@ import type { IEmailUsage } from "@blocks-communication/mail/models/email";
 const h = vi.hoisted(() => ({
   data: undefined as IEmailUsage | null | undefined,
   isLoading: false,
+  getAttachment: vi.fn(),
+  toast: vi.fn(),
 }));
 
 vi.mock("@blocks-communication/mail/hooks/use-email-usage", () => ({
@@ -14,6 +16,10 @@ vi.mock("@blocks-communication/mail/hooks/use-email-usage", () => ({
 vi.mock("@blocks-communication/mail/email/email-usage/email-usage-details-breadcrumb", () => ({
   EmailUsageDetailsBreadcrumb: () => <nav>breadcrumb</nav>,
 }));
+vi.mock("@blocks-communication/mail/services/email.services", () => ({
+  emailService: { getMailBoxMailAttachment: h.getAttachment },
+}));
+vi.mock("@/hooks/use-toast", () => ({ toast: h.toast }));
 vi.mock("@blocks-communication/mail/email/email-usage/email-usage-details-skeleton", () => ({
   EmailUsageDetailsSkeleton: () => <div>skeleton</div>,
 }));
@@ -82,6 +88,38 @@ describe("EmailUsageDetails", () => {
     render(<EmailUsageDetails id="m-1" />);
     expect(screen.getByText("1 attachment")).toBeTruthy();
     expect(screen.getByText("invoice.pdf")).toBeTruthy();
+  });
+
+  it("downloads an attachment by its position when the chip is clicked", async () => {
+    h.data = mail({
+      content: {
+        textBody: "see attached",
+        attachments: [{ fileName: "invoice.pdf", contentType: "application/pdf", size: 3 }],
+      },
+    });
+    h.getAttachment.mockResolvedValue({
+      isSuccess: true,
+      errors: null,
+      attachment: { fileName: "invoice.pdf", contentType: "application/pdf", contentBase64: btoa("pdf") },
+    });
+    const createUrl = vi.fn(() => "blob:x");
+    Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(<EmailUsageDetails id="m-1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Download invoice.pdf" }));
+
+    expect(h.getAttachment).toHaveBeenCalledWith("m-1", 0);
+    expect(createUrl).toHaveBeenCalledTimes(1);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(h.toast).not.toHaveBeenCalled();
+    click.mockRestore();
+  });
+
+  it("hides the plain-text view when the body is only whitespace", () => {
+    h.data = mail({ body: "\n", content: { htmlBody: "<div><br></div>", attachments: [] } });
+    render(<EmailUsageDetails id="m-1" />);
+    expect(screen.queryByRole("tab", { name: "Plain text" })).toBeNull();
   });
 
   it("shows a not-found state", () => {
