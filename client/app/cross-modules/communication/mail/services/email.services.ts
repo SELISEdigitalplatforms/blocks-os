@@ -24,6 +24,14 @@ export interface ISaveMailConfigPayload {
   lastUpdatedDate?: string;
   isInbound?: boolean;
   provider?: number;
+  authenticationType?: number;
+  securityMode?: number;
+  /** The Microsoft Entra tenant id, not the Blocks tenant id. */
+  tenantId?: string;
+  clientId?: string;
+  /** Omitted to keep the secret already on file; never read back. */
+  clientSecret?: string;
+  mailboxAddress?: string;
 }
 
 class EmailService {
@@ -125,11 +133,15 @@ class EmailService {
       .post<{
         errors: unknown;
         isSuccess: boolean;
+        itemId?: string;
       }>(MAIL_CONFIG_ENDPOINTS.SAVE_CONFIG, payload, undefined, { absoluteUrl: true })
       .then((response) => ({
         isSuccess: !!response?.isSuccess,
         errors: response?.errors ?? null,
-        itemId: payload.configurationId ?? "",
+        // The server's id, not the one that was sent. On a create the request
+        // carries no id, so echoing the payload back reported an empty string
+        // for the record it had just written.
+        itemId: response?.itemId ?? payload.configurationId ?? "",
       }));
   };
 

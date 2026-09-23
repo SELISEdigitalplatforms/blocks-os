@@ -200,6 +200,18 @@ Users and Organizations management is owned by this client and calls the existin
 
   The value is read from the running assembly (`Assembly.GetExecutingAssembly().GetName().Version`), so it reflects whatever version the deployed build was stamped with.
 
+## Environment database placement
+
+The API and workers use `SeliseBlocks.Genesis.OS` 4.2.2. New environments retain separate database names. OS stores the chosen connection in `Tenant.DbConnectionString`: `prod` uses `DatabaseConnectionString`, `dev` uses `DevDatabaseConnectionString`, and the other supported environments use `OtherDatabaseConnectionString`. Blank optional connections fall back to main; malformed configured connections reject the entire creation request before provisioning begins.
+
+Keep `RootDatabaseName` (normally `BlocksRootDb`) on main. Tenant records, project membership and assets stay there; provisioning templates remain in main's `BlocksConfiguration`. Environment repositories and default configuration are written using the new tenant's stored connection. Existing tenants are not moved when secrets change.
+
+For on-premises vaults, optional secret keys are `BlocksSecret__DevDatabaseConnectionString` and `BlocksSecret__OtherDatabaseConnectionString`; Azure vault names omit the prefix. Leave these blank until all participating consumers are ready. Restart APIs and workers after changing startup secrets. Migration messages retain their owner's tenant context through Genesis's message envelope; migration repositories resolve collections for each operation.
+
+Normal builds use NuGet. For a sibling Genesis checkout, opt in with `-p:UseLocalGenesis=true` or an ignored `server/Directory.Build.local.props`. Set the flag to `false` to validate the published package.
+
+Run `dotnet test server/XUnitTest/XUnitTest.csproj -c Release` with local MongoDB available. Placement tests cover selection/fallback/rejection, root versus provisioning destinations, and shared repository isolation. Before rollout, also verify provisioning and CRUD against three independent MongoDB deployments; local database tests alone do not establish cross-cluster connectivity.
+
 ## Contributing and security
 
 - Contribution conventions and workflow: [CONTRIBUTING.md](CONTRIBUTING.md)

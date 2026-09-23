@@ -76,7 +76,7 @@ namespace XUnitTest.Services
         }
     }
 
-    public class ProjectManagementServiceTests
+    public partial class ProjectManagementServiceTests
     {
         private readonly Mock<IProjectRepository> _repo = new();
         private readonly Mock<IBlocksSecret> _blocksSecret = new();

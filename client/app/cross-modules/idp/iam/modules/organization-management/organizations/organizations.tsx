@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQueryState } from "nuqs";
 import { Card, CardContent } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
@@ -18,6 +18,10 @@ import { Building2, Settings2 } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
+// Bottom breathing room kept under the split view, matching the `pb-6` the
+// surrounding IAM shell already reserves below its scroll area.
+const PAGE_BOTTOM_GAP = 24;
+
 export function Organizations() {
   const { tenantId } = useProjectStore().selectedProject || { tenantId: "" };
   const { sortQueryParams } = useOrganizationsSortQueryParams();
@@ -35,6 +39,16 @@ export function Organizations() {
   // first org). The list is only shown until something is selected, or once
   // the user explicitly navigates back to it.
   const [showListOnMobile, setShowListOnMobile] = useState(false);
+
+  // At lg+ the split view is sized to the viewport minus whatever chrome sits
+  // above it, so the sidebar and the workspace panel scroll inside themselves.
+  // That gap is not a constant — the global header, breadcrumbs and page header
+  // all feed into it — and the hard-coded 180px fallback under-measured it, so
+  // the panel ran past the bottom of the screen and the members list had no
+  // room left to scroll in. Measure the real distance and hand it to the custom
+  // property the height calc already reads.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [pageOffset, setPageOffset] = useState<number | null>(null);
 
   const effectiveSearch = normalizeSearchQueryText(search);
 
@@ -84,6 +98,23 @@ export function Organizations() {
     });
   }
 
+  // Measured before paint so the first frame is already the right height. The
+  // container above only scrolls when this measurement is wrong, so reading
+  // `top` off the viewport stays accurate for later resizes too.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const node = rootRef.current;
+      if (!node) return;
+      const next = Math.max(0, Math.round(node.getBoundingClientRect().top) + PAGE_BOTTOM_GAP);
+      setPageOffset((prev) => (prev === next ? prev : next));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+    // The multi-org card renders instead of the grid, so the ref only attaches
+    // once that flag settles — re-measure when it does.
+  }, [showMultiOrgDisabledCard]);
+
   // Default to the first organization once the list has loaded.
   useEffect(() => {
     if (!selectedOrgId && loadedOrgs.length > 0) {
@@ -131,7 +162,15 @@ export function Organizations() {
   const showSidebarMobile = showListOnMobile || !selectedOrgId;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:h-[calc(100vh-var(--org-page-offset,180px))] lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+    <div
+      ref={rootRef}
+      style={
+        pageOffset === null
+          ? undefined
+          : ({ "--org-page-offset": `${pageOffset}px` } as React.CSSProperties)
+      }
+      className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:h-[calc(100vh-var(--org-page-offset,180px))] lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]"
+    >
       <div
         className={cn(
           "min-h-0 flex-1 flex-col lg:flex lg:h-full",

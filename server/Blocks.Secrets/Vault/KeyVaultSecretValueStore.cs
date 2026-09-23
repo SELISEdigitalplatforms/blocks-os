@@ -16,6 +16,14 @@ namespace Blocks.Secrets;
 /// Registered as a singleton — <see cref="SecretClient"/> is thread-safe and pools connections
 /// and tokens internally, so building one per request would throw away that caching.
 /// </para>
+/// <para>
+/// One vault per host, for every tenant the host serves. Metadata follows the tenant's Mongo
+/// placement; a value kept here does not, so a deployment serving tenants across several
+/// clusters puts all their values in the same vault. That is safe — vault keys are derived from
+/// the globally unique secret id, so two tenants cannot collide — but it does mean the vault,
+/// not the cluster, is the blast radius for values. An environment that needs values separated
+/// per placement needs its own host and its own <c>KeyVault__KeyVaultUrl</c>, not a code change.
+/// </para>
 /// </remarks>
 public sealed class KeyVaultSecretValueStore : ISecretValueStore
 {
