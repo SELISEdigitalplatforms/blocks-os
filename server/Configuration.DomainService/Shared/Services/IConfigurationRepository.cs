@@ -5,6 +5,7 @@ using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Storage.Entities;
+using Configuration.DomainService.DataGateway.Entities;
 using System.Linq.Expressions;
 
 namespace Configuration.DomainService.Shared.Services
@@ -39,6 +40,14 @@ namespace Configuration.DomainService.Shared.Services
         Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
         Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
         Task DeleteMailConfigurationAsync(string configurationId);
+
+        #endregion
+
+        #region DataGateway
+
+        Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration);
+        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
+        Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId);
 
         #endregion
 
