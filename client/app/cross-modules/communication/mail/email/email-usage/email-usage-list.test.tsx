@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes, useParams } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IEmailUsage } from "@blocks-communication/mail/models/email";
 
@@ -86,5 +87,41 @@ describe("EmailUsageList", () => {
     h.data = { data: [row()], totalCount: 40 };
     renderList(false);
     expect(screen.getByText(/Page 1 of/)).toBeTruthy();
+    expect(screen.getByText("Showing 1–10 of 40")).toBeTruthy();
+  });
+
+  it("shows the sender's display name, address and a body preview for inbound", () => {
+    h.data = {
+      data: [
+        row({
+          from: '"Abdullah Al Momen" <momen@gmail.com>',
+          subject: "inbound test 1",
+          body: "Test **Inbound** [link](https://x.io)",
+        }),
+      ],
+      totalCount: 1,
+    };
+    renderList(true);
+    expect(screen.getByText("Abdullah Al Momen")).toBeTruthy();
+    expect(screen.getByText("momen@gmail.com")).toBeTruthy();
+    expect(screen.getByText("AM")).toBeTruthy();
+    expect(screen.getByText("Test Inbound link")).toBeTruthy();
+  });
+
+  it("opens the details page, with the message id encoded, when a row is clicked", async () => {
+    h.data = { data: [row({ messageId: "CAP+abc@mail.gmail.com" })], totalCount: 1 };
+    const Details = () => <div>details:{useParams().id}</div>;
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<EmailUsageList isInbound />} />
+          <Route path="/s/email-management/usage/:id" element={<Details />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("link", { name: "Open Hello" }));
+
+    expect(await screen.findByText("details:CAP+abc@mail.gmail.com")).toBeTruthy();
   });
 });

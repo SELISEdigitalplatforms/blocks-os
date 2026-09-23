@@ -193,7 +193,7 @@ export function EmailConfiguration({
                   </div>
                 </div>
                 {!config.isInbound &&
-                  (usesPasswordAuthentication(config.provider) ? (
+                  (usesPasswordAuthentication(config.provider, config.isInbound, config.authenticationType) ? (
                     <div
                       className={cn(
                         "mt-5 grid grid-cols-3 space-y-2",

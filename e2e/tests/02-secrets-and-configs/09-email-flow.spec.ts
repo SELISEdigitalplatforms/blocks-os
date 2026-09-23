@@ -20,7 +20,7 @@ import {
   fillAndSaveOffice365ConfigFlow,
   selectOffice365AndVerifyFormFlow,
   verifyOffice365BlankSecretRejectedFlow,
-  verifyOffice365OfferedForOutboundOnlyFlow,
+  verifyOffice365OfferedForBothDirectionsFlow,
 } from "../../pages/secrets-and-configs/office365-email";
 
 test.describe("flows", () => {
@@ -80,7 +80,7 @@ test.describe("flows", () => {
     });
   });
 
-  test("SMTP Office 365 flow: outbound-only -> create -> details -> keep secret -> rotate -> delete", async ({
+  test("Office 365 flow: outbound OAuth -> create -> details -> keep secret -> rotate -> delete", async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -99,8 +99,8 @@ test.describe("flows", () => {
       await openAddEmailConfigDialogFlow(page);
     });
 
-    await test.step("Provider offers SMTP Office 365 for Outbound and withholds it for Inbound", async () => {
-      await verifyOffice365OfferedForOutboundOnlyFlow(page);
+    await test.step("Provider offers Office 365 for Outbound and Inbound", async () => {
+      await verifyOffice365OfferedForBothDirectionsFlow(page);
     });
 
     await test.step("Selecting it locks the transport, hides the password controls and shows the OAuth fields", async () => {

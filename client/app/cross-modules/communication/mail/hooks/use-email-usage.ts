@@ -54,7 +54,7 @@ export const useGetEmailUsageById = (id: string) => {
     queryFn: async () => {
       if (!tenantId) return null;
       const response = await emailService.getMailBoxMail(id);
-      return response.mail;
+      return response.content ? { ...response.mail, content: response.content } : response.mail;
     },
     enabled: !!tenantId && !!id,
   });

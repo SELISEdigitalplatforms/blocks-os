@@ -65,7 +65,8 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
             return new GetMailBoxMailResponse
             {
                 IsSuccess = true,
-                Mail = mail
+                Mail = mail,
+                Content = MailContentParser.Parse(mail.RawMime)
             };
         }
     }

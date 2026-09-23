@@ -10,6 +10,7 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
     public class MailboxRepository : IMailboxRepository
     {
         private const string LastAccumulator = "$last";
+        internal const int ListPreviewLength = 200;
         private readonly IDbContextProvider _dbContextProvider;
 
         public MailboxRepository(IDbContextProvider dbContextProvider)
@@ -47,7 +48,6 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 { nameof(MailBoxEntityResponse.Subject), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.Subject)}" } } },
                 { nameof(MailBoxEntityResponse.Body), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.Body)}" } } },
                 { nameof(MailBoxEntityResponse.Error), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.Error)}" } } },
-                { nameof(MailBoxEntityResponse.RawMime), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.RawMime)}" } } },
                 { nameof(MailBoxEntityResponse.IsInbound), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.IsInbound)}" } } },
             };
 
@@ -61,9 +61,19 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 { nameof(MailBoxEntityResponse.From), 1 },
                 { nameof(MailBoxEntityResponse.To), 1 },
                 { nameof(MailBoxEntityResponse.Subject), 1 },
-                { nameof(MailBoxEntityResponse.Body), 1 },
+                // A list row shows a one-line preview, so it carries the start of the body and not
+                // the stored MIME — which can run to megabytes per message, for every row on the page.
+                // The details read returns both in full.
+                {
+                    nameof(MailBoxEntityResponse.Body),
+                    new BsonDocument("$substrCP", new BsonArray
+                    {
+                        new BsonDocument("$ifNull", new BsonArray { $"${nameof(MailBoxEntityResponse.Body)}", string.Empty }),
+                        0,
+                        ListPreviewLength
+                    })
+                },
                 { nameof(MailBoxEntityResponse.Error), 1 },
-                { nameof(MailBoxEntityResponse.RawMime), 1 },
                 { nameof(MailBoxEntityResponse.IsInbound), 1 },
             };
 

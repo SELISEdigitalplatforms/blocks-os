@@ -45,6 +45,7 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProvider, AmazonSesMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProvider, ZohoMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProvider, Office365SmtpMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProvider, GmailMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
 

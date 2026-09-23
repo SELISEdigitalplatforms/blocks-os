@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Input } from "@/components/ui-kits/input/input";
 import {
   DialogDescription,
@@ -20,10 +20,14 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import {
+  getAuthenticationOptions,
+  getFixedTransport,
   getMailProvider,
   getMailProvidersFor,
   IEmailConfig,
+  MAIL_AUTHENTICATION_LABELS,
   MailAuthenticationType,
+  MailServiceProvider,
   MailSecurityMode,
   usesPasswordAuthentication,
 } from "../../../../models/email";
@@ -74,6 +78,7 @@ const createSchema = ({ hasClientSecretOnFile }: { hasClientSecretOnFile: boolea
       accountPassword: z.string().optional(),
       isInbound: z.boolean(),
       provider: z.coerce.number(),
+      authenticationType: z.coerce.number().optional(),
       tenantId: z.string().optional(),
       clientId: z.string().optional(),
       clientSecret: z.string().optional(),
@@ -109,7 +114,7 @@ const createSchema = ({ hasClientSecretOnFile }: { hasClientSecretOnFile: boolea
 
       // Username and password belong to password authentication, not to a
       // particular provider id, so a later OAuth provider needs no change here.
-      if (usesPasswordAuthentication(data.provider)) {
+      if (usesPasswordAuthentication(data.provider, data.isInbound, data.authenticationType)) {
         if (!data.senderUserName) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -204,6 +209,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             accountPassword: "",
             isInbound: previousData?.isInbound,
             provider: previousData?.provider,
+            authenticationType: previousData?.authenticationType,
             tenantId: previousData?.tenantId ?? "",
             clientId: previousData?.clientId ?? "",
             mailboxAddress: previousData?.mailboxAddress ?? "",
@@ -223,6 +229,7 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
             accountPassword: "",
             isInbound: false,
             provider: 0,
+            authenticationType: MailAuthenticationType.Password,
             tenantId: "",
             clientId: "",
             mailboxAddress: "",
@@ -233,9 +240,11 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   });
   const isInbound = form.watch("isInbound");
   const provider = form.watch("provider");
-  const providerCapability = getMailProvider(provider);
-  const usesPassword = usesPasswordAuthentication(provider);
-  const fixedTransport = providerCapability?.transport;
+  const authenticationType = form.watch("authenticationType");
+  const authenticationOptions = getAuthenticationOptions(provider, isInbound);
+  const usesPassword = usesPasswordAuthentication(provider, isInbound, authenticationType);
+  const fixedTransport = getFixedTransport(provider, isInbound);
+  const isGmail = provider === MailServiceProvider.Gmail;
 
   const availableProviders = useMemo(() => getMailProvidersFor(isInbound), [isInbound]);
 
@@ -246,6 +255,29 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
       form.setValue("provider", availableProviders[0].value, { shouldValidate: true });
     }
   }, [availableProviders, provider, form]);
+
+  // The provider/direction the authentication method was last chosen for, so a
+  // change resets it while the initial render keeps an edited record's method.
+  const authenticationScope = useRef(`${provider}|${isInbound}`);
+
+  useEffect(() => {
+    // A provider or direction change starts from that provider's default (its
+    // first option), and nothing may stay selected that is not offered, e.g. a
+    // password on Office 365 inbound.
+    const scope = `${provider}|${isInbound}`;
+    const scopeChanged = authenticationScope.current !== scope;
+    authenticationScope.current = scope;
+
+    if (
+      scopeChanged ||
+      authenticationType === undefined ||
+      !authenticationOptions.includes(authenticationType)
+    ) {
+      if (authenticationType !== authenticationOptions[0]) {
+        form.setValue("authenticationType", authenticationOptions[0], { shouldValidate: true });
+      }
+    }
+  }, [provider, isInbound, authenticationOptions, authenticationType, form]);
 
   useEffect(() => {
     // A provider whose transport is part of the integration prefills and locks
@@ -263,21 +295,26 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
   }
   const formSubmitHandler = async (data: IEmailConfig) => {
     try {
-      const capability = getMailProvider(data.provider);
-      const isPasswordProvider = usesPasswordAuthentication(data.provider);
+      const transport = getFixedTransport(data.provider, data.isInbound);
+      const options = getAuthenticationOptions(data.provider, data.isInbound);
+      const selectedAuthentication =
+        data.authenticationType !== undefined && options.includes(data.authenticationType)
+          ? data.authenticationType
+          : options[0];
+      const isPasswordProvider = selectedAuthentication === MailAuthenticationType.Password;
 
       const payload: ISaveMailConfigPayload = {
         configurationName: data.configurationName,
         configurationId: isEdit && previousData?.itemId ? previousData.itemId : "",
-        host: capability?.transport?.host ?? data.host,
-        port: capability?.transport?.port ?? data.port,
-        enableSSL: capability?.transport?.enableSSL ?? data.enableSSL,
+        host: transport?.host ?? data.host,
+        port: transport?.port ?? data.port,
+        enableSSL: transport?.enableSSL ?? data.enableSSL,
         senderName: data.senderName || "",
         senderAddress: data.senderAddress || "",
         isInbound: data.isInbound,
         provider: data.provider,
-        authenticationType: capability?.authentication ?? MailAuthenticationType.Password,
-        securityMode: capability?.transport?.securityMode ?? MailSecurityMode.Legacy,
+        authenticationType: selectedAuthentication,
+        securityMode: transport?.securityMode ?? MailSecurityMode.Legacy,
       };
 
       if (isPasswordProvider) {
@@ -455,6 +492,42 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                     )}
                   />
                 </div>
+                {authenticationOptions.length > 1 && (
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <FormField
+                      name="authenticationType"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-left font-medium text-high-emphasis">
+                            Authentication <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
+                            // The server refuses to switch an existing record's
+                            // method, since that would strand or lack a secret.
+                            disabled={isEdit}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="border-default col-span-3 mt-1 border shadow-none">
+                                <SelectValue placeholder="Select authentication" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {authenticationOptions.map((option) => (
+                                <SelectItem key={option} value={option.toString()}>
+                                  {MAIL_AUTHENTICATION_LABELS[option]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
                 {!isInbound && (
                   <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
@@ -536,16 +609,22 @@ const NewConfiguration: React.FC<NewConfigurationProps> = ({
                           <FormItem>
                             <FormLabel className="text-left font-medium text-high-emphasis">
                               {" "}
-                              Account password <span className="text-destructive">*</span>
+                              {isGmail ? "App password" : "Account password"}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
                                 type="password"
-                                placeholder="Enter password"
+                                placeholder={isGmail ? "Enter Google app password" : "Enter password"}
                                 className="border-default col-span-3 mt-1 border shadow-none"
                                 {...field}
                               />
                             </FormControl>
+                            {isGmail && (
+                              <p className="mt-1 text-xs text-medium-emphasis">
+                                Google requires an App Password (2-Step Verification must be on).
+                              </p>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}

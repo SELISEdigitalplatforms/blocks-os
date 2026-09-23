@@ -26,7 +26,7 @@ namespace Configuration.DomainService.Mail.Providers
         public virtual MailInboundMode InboundMode =>
             SupportedDirections.HasFlag(MailDirections.Inbound) ? MailInboundMode.Poll : MailInboundMode.None;
 
-        public void Normalize(MailConfiguration request)
+        public virtual void Normalize(MailConfiguration request)
         {
             // Host, port, EnableSSL, username and password are all caller-supplied for these
             // providers, and SecurityMode stays Legacy so EnableSSL remains authoritative.
@@ -86,5 +86,51 @@ namespace Configuration.DomainService.Mail.Providers
         public override MailServiceProvider Provider => MailServiceProvider.Zoho;
 
         public override MailDirections SupportedDirections => MailDirections.Both;
+    }
+
+    /// <summary>
+    /// Gmail / Google Workspace over SMTP (outbound) and IMAP (inbound) with the account address
+    /// and an App Password.
+    /// </summary>
+    /// <remarks>
+    /// Google rejects the account's normal password for SMTP and IMAP, so the password here is an
+    /// App Password, which needs 2-Step Verification on the account. Transport is fixed per
+    /// direction, the same way Office 365's is.
+    /// </remarks>
+    public sealed class GmailMailConfigurationProvider : PasswordMailConfigurationProvider
+    {
+        public const string SmtpHost = "smtp.gmail.com";
+        public const int SmtpPort = 587;
+        public const string ImapHost = "imap.gmail.com";
+        public const int ImapPort = 993;
+
+        public override MailServiceProvider Provider => MailServiceProvider.Gmail;
+
+        public override MailDirections SupportedDirections => MailDirections.Both;
+
+        public override void Normalize(MailConfiguration request)
+        {
+            if (request.IsInbound)
+            {
+                request.Host = ImapHost;
+                request.Port = ImapPort;
+                request.SecurityMode = MailSecurityMode.SslOnConnect;
+                request.EnableSSL = true;
+            }
+            else
+            {
+                request.Host = SmtpHost;
+                request.Port = SmtpPort;
+                request.SecurityMode = MailSecurityMode.StartTls;
+                request.EnableSSL = false;
+            }
+
+            request.AuthenticationType = MailAuthenticationType.Password;
+            request.SenderUserName = request.SenderUserName?.Trim();
+
+            // Google displays App Passwords in groups of four ("abcd efgh ijkl mnop") and people
+            // paste them that way; the spaces are not part of the credential.
+            request.AccountPassword = request.AccountPassword?.Replace(" ", string.Empty);
+        }
     }
 }

@@ -189,27 +189,77 @@ describe("NewConfiguration", () => {
   const selectOffice365 = async (user: ReturnType<typeof userEvent.setup>) => {
     // The provider select is the second combobox; the first is Type.
     await user.click(screen.getAllByRole("combobox")[1]);
-    await user.click(await screen.findByRole("option", { name: "SMTP Office 365" }));
+    await user.click(await screen.findByRole("option", { name: "Office 365" }));
   };
 
-  describe("SMTP Office 365", () => {
-    it("offers the provider for outbound and withholds it for inbound", async () => {
+  describe("Office 365", () => {
+    it("offers the provider for outbound and inbound, and withholds Amazon SES for inbound", async () => {
       const user = userEvent.setup();
       renderModal();
 
       await user.click(screen.getAllByRole("combobox")[1]);
-      expect(await screen.findByRole("option", { name: "SMTP Office 365" })).toBeTruthy();
+      expect(await screen.findByRole("option", { name: "Office 365" })).toBeTruthy();
       expect(screen.getByRole("option", { name: "Amazon SES" })).toBeTruthy();
       expect(screen.getByRole("option", { name: "Zoho" })).toBeTruthy();
+      expect(screen.getByRole("option", { name: "Gmail" })).toBeTruthy();
       await user.keyboard("{Escape}");
 
       await user.click(screen.getAllByRole("combobox")[0]);
       await user.click(await screen.findByRole("option", { name: "Inbound" }));
 
       await user.click(screen.getAllByRole("combobox")[1]);
-      await waitFor(() =>
-        expect(screen.queryByRole("option", { name: "SMTP Office 365" })).toBeNull(),
-      );
+      expect(await screen.findByRole("option", { name: "Office 365" })).toBeTruthy();
+      expect(screen.getByRole("option", { name: "Gmail" })).toBeTruthy();
+      expect(screen.queryByRole("option", { name: "Amazon SES" })).toBeNull();
+    });
+
+    it("submits username and password when password sign-in is chosen for outbound", async () => {
+      const user = userEvent.setup();
+      renderModal();
+
+      await selectOffice365(user);
+      // The Authentication select follows Type and Provider.
+      await user.click(screen.getAllByRole("combobox")[2]);
+      await user.click(await screen.findByRole("option", { name: "Username & Password" }));
+
+      expect(screen.queryByPlaceholderText("Enter Microsoft Entra tenant ID")).toBeNull();
+
+      await user.type(screen.getByPlaceholderText("Enter name"), "Microsoft 365 Basic");
+      await user.type(screen.getByPlaceholderText("Enter sender name"), "Contoso Support");
+      await user.type(screen.getByPlaceholderText("Enter sender address"), "support@contoso.com");
+      await user.type(screen.getByPlaceholderText("Enter sender username"), "support@contoso.com");
+      await user.type(screen.getByPlaceholderText("Enter password"), "secret1");
+
+      const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+      await waitFor(() => expect(save.disabled).toBe(false));
+      await user.click(save);
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      const payload = h.mutateAsync.mock.calls[0][0];
+      expect(payload.host).toBe("smtp.office365.com");
+      expect(payload.authenticationType).toBe(MailAuthenticationType.Password);
+      expect(payload.senderUserName).toBe("support@contoso.com");
+      expect(payload.accountPassword).toBe("secret1");
+      expect(payload.tenantId).toBeUndefined();
+      expect(payload.clientSecret).toBeUndefined();
+    });
+
+    it("uses IMAP and OAuth only for inbound", async () => {
+      const user = userEvent.setup();
+      renderModal();
+
+      await user.click(screen.getAllByRole("combobox")[0]);
+      await user.click(await screen.findByRole("option", { name: "Inbound" }));
+      await selectOffice365(user);
+
+      const host = (await screen.findByPlaceholderText("Enter Server Name")) as HTMLInputElement;
+      await waitFor(() => expect(host.value).toBe("outlook.office365.com"));
+      expect((screen.getByPlaceholderText("Enter port") as HTMLInputElement).value).toBe("993");
+
+      // Only Type and Provider: there is no authentication choice to make.
+      expect(screen.getAllByRole("combobox")).toHaveLength(2);
+      expect(screen.queryByPlaceholderText("Enter password")).toBeNull();
+      expect(screen.getByPlaceholderText("Enter Microsoft Entra tenant ID")).toBeTruthy();
     });
 
     it("locks the transport, hides the password controls and shows the OAuth fields", async () => {
@@ -385,6 +435,44 @@ describe("NewConfiguration", () => {
       await user.tab();
 
       expect(await screen.findByText("Mailbox address must be a valid email")).toBeTruthy();
+    });
+  });
+
+  describe("Gmail", () => {
+    it("locks the IMAP transport for inbound and submits the app password", async () => {
+      const user = userEvent.setup();
+      renderModal();
+
+      await user.click(screen.getAllByRole("combobox")[0]);
+      await user.click(await screen.findByRole("option", { name: "Inbound" }));
+      await user.click(screen.getAllByRole("combobox")[1]);
+      await user.click(await screen.findByRole("option", { name: "Gmail" }));
+
+      const host = (await screen.findByPlaceholderText("Enter Server Name")) as HTMLInputElement;
+      await waitFor(() => expect(host.value).toBe("imap.gmail.com"));
+      expect(host.readOnly).toBe(true);
+
+      await user.type(screen.getByPlaceholderText("Enter name"), "Gmail Inbox");
+      await user.type(screen.getByPlaceholderText("Enter username"), "someone@gmail.com");
+      await user.type(
+        screen.getByPlaceholderText("Enter Google app password"),
+        "abcdefghijklmnop",
+      );
+
+      const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+      await waitFor(() => expect(save.disabled).toBe(false));
+      await user.click(save);
+
+      await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
+      const payload = h.mutateAsync.mock.calls[0][0];
+      expect(payload.provider).toBe(MailServiceProvider.Gmail);
+      expect(payload.isInbound).toBe(true);
+      expect(payload.host).toBe("imap.gmail.com");
+      expect(payload.port).toBe(993);
+      expect(payload.enableSSL).toBe(true);
+      expect(payload.securityMode).toBe(MailSecurityMode.SslOnConnect);
+      expect(payload.authenticationType).toBe(MailAuthenticationType.Password);
+      expect(payload.accountPassword).toBe("abcdefghijklmnop");
     });
   });
 });

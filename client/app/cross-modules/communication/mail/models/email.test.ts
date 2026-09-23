@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  getAuthenticationOptions,
+  getFixedTransport,
   getMailProvider,
   getMailProviderLabel,
   getMailProvidersFor,
@@ -16,6 +18,7 @@ describe("MailServiceProvider enum", () => {
     expect(MailServiceProvider.AmazonSes).toBe(0);
     expect(MailServiceProvider.Zoho).toBe(1);
     expect(MailServiceProvider.Office365Smtp).toBe(2);
+    expect(MailServiceProvider.Gmail).toBe(3);
   });
 
   it("exposes a reverse lookup for numeric enum members", () => {
@@ -47,54 +50,79 @@ describe("provider capability map", () => {
     expect(MAIL_PROVIDERS.map((p) => p.value).sort()).toEqual(enumValues.sort());
   });
 
-  it("labels Office 365 exactly as the server names it", () => {
+  it("labels each provider for display", () => {
     // The enum reverse lookup would read "Office365Smtp"; the label is the contract.
-    expect(getMailProviderLabel(MailServiceProvider.Office365Smtp)).toBe("SMTP Office 365");
+    expect(getMailProviderLabel(MailServiceProvider.Office365Smtp)).toBe("Office 365");
     expect(getMailProviderLabel(MailServiceProvider.AmazonSes)).toBe("Amazon SES");
     expect(getMailProviderLabel(MailServiceProvider.Zoho)).toBe("Zoho");
+    expect(getMailProviderLabel(MailServiceProvider.Gmail)).toBe("Gmail");
   });
 
   it("falls back to the numeric value for a provider this client does not know", () => {
     expect(getMailProviderLabel(99 as MailServiceProvider)).toBe("Provider 99");
   });
 
-  it("offers Office 365 for outbound only", () => {
-    const outbound = getMailProvidersFor(false).map((p) => p.value);
-    const inbound = getMailProvidersFor(true).map((p) => p.value);
-
-    expect(outbound).toContain(MailServiceProvider.Office365Smtp);
-    expect(inbound).not.toContain(MailServiceProvider.Office365Smtp);
-  });
-
-  it("keeps the existing Amazon SES and Zoho direction availability", () => {
+  it("offers each provider for the directions it supports", () => {
     expect(getMailProvidersFor(false).map((p) => p.value)).toEqual([
       MailServiceProvider.AmazonSes,
       MailServiceProvider.Zoho,
       MailServiceProvider.Office365Smtp,
+      MailServiceProvider.Gmail,
     ]);
-    expect(getMailProvidersFor(true).map((p) => p.value)).toEqual([MailServiceProvider.Zoho]);
+    expect(getMailProvidersFor(true).map((p) => p.value)).toEqual([
+      MailServiceProvider.Zoho,
+      MailServiceProvider.Office365Smtp,
+      MailServiceProvider.Gmail,
+    ]);
   });
 
-  it("fixes the Office 365 transport to STARTTLS on 587", () => {
-    const transport = getMailProvider(MailServiceProvider.Office365Smtp)?.transport;
-
-    expect(transport).toEqual({
+  it("fixes the Office 365 transport per direction", () => {
+    expect(getFixedTransport(MailServiceProvider.Office365Smtp, false)).toEqual({
       host: "smtp.office365.com",
       port: 587,
       securityMode: MailSecurityMode.StartTls,
       enableSSL: false,
     });
+    expect(getFixedTransport(MailServiceProvider.Office365Smtp, true)).toEqual({
+      host: "outlook.office365.com",
+      port: 993,
+      securityMode: MailSecurityMode.SslOnConnect,
+      enableSSL: true,
+    });
   });
 
-  it("leaves the password providers without a fixed transport", () => {
+  it("fixes the Gmail transport per direction", () => {
+    expect(getFixedTransport(MailServiceProvider.Gmail, false)?.host).toBe("smtp.gmail.com");
+    expect(getFixedTransport(MailServiceProvider.Gmail, true)?.host).toBe("imap.gmail.com");
+  });
+
+  it("leaves Amazon SES and Zoho without a fixed transport", () => {
     expect(getMailProvider(MailServiceProvider.AmazonSes)?.transport).toBeUndefined();
     expect(getMailProvider(MailServiceProvider.Zoho)?.transport).toBeUndefined();
   });
 
-  it("classifies authentication by provider", () => {
+  it("offers Office 365 password sign-in for outbound only", () => {
+    expect(getAuthenticationOptions(MailServiceProvider.Office365Smtp, false)).toEqual([
+      MailAuthenticationType.OAuthClientCredentials,
+      MailAuthenticationType.Password,
+    ]);
+    expect(getAuthenticationOptions(MailServiceProvider.Office365Smtp, true)).toEqual([
+      MailAuthenticationType.OAuthClientCredentials,
+    ]);
+  });
+
+  it("classifies authentication by provider default or the record's own type", () => {
     expect(usesPasswordAuthentication(MailServiceProvider.AmazonSes)).toBe(true);
     expect(usesPasswordAuthentication(MailServiceProvider.Zoho)).toBe(true);
+    expect(usesPasswordAuthentication(MailServiceProvider.Gmail, true)).toBe(true);
     expect(usesPasswordAuthentication(MailServiceProvider.Office365Smtp)).toBe(false);
+    expect(
+      usesPasswordAuthentication(
+        MailServiceProvider.Office365Smtp,
+        false,
+        MailAuthenticationType.Password,
+      ),
+    ).toBe(true);
   });
 });
 
