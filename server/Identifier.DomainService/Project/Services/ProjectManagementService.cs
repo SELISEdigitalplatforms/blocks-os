@@ -360,6 +360,22 @@ namespace DomainService.Projects
                 }
             }
 
+            // Issuer host is required before any tenant is written. A blank issuer would make
+            // Genesis set ValidateIssuer=false for that tenant forever, so fail loudly here
+            // (same shape as database_configuration) rather than half-building a group.
+            try
+            {
+                _ = ResolveIamBaseUrl();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return new CreateProjectResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { ["iam_configuration"] = ex.Message }
+                };
+            }
+
             var isNewGroup = string.IsNullOrEmpty(project.TenantGroupId);
             var groupId = isNewGroup ? Guid.NewGuid().ToString("n") : project.TenantGroupId;
             await ManageTenantAssetAsync(project, groupId);
@@ -492,9 +508,7 @@ namespace DomainService.Projects
                 DomainType = DomainType.PlatformDefault
             });
 
-            var studioDomain = Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_STUDIO_BASE_URL") is { Length: > 0 } fromEnv
-                ? fromEnv
-                : _configuration["FrontendRuntime:BLOCKS_STUDIO_BASE_URL"];
+            var studioDomain = ResolveFrontendRuntimeValue("BLOCKS_STUDIO_BASE_URL");
 
             if (!string.IsNullOrWhiteSpace(studioDomain))
             {
@@ -520,6 +534,56 @@ namespace DomainService.Projects
             var normalized = NormalizeDomain(domain);
 
             return applications.Any(a => NormalizeDomain(a.Domain) == normalized);
+        }
+
+
+        // Env var FrontendRuntime__{key} wins over the FrontendRuntime:{key} configuration
+        // entry (Mongo secrets / appsettings). Empty env values are treated as unset so a
+        // blank override does not shadow a configured secret.
+        private string? ResolveFrontendRuntimeValue(string key)
+        {
+            var fromEnv = Environment.GetEnvironmentVariable($"FrontendRuntime__{key}");
+            if (!string.IsNullOrEmpty(fromEnv))
+            {
+                return fromEnv;
+            }
+
+            return _configuration[$"FrontendRuntime:{key}"];
+        }
+
+        private string ResolveIamBaseUrl()
+        {
+            var raw = ResolveFrontendRuntimeValue("BLOCKS_IAM_BASE_URL");
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                throw new InvalidOperationException(
+                    "FrontendRuntime:BLOCKS_IAM_BASE_URL is not configured; a tenant cannot be created without a JWT issuer.");
+            }
+
+            raw = raw.Trim();
+            if (!Uri.TryCreate(raw, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+                || !string.IsNullOrEmpty(uri.Query)
+                || !string.IsNullOrEmpty(uri.Fragment))
+            {
+                throw new InvalidOperationException(
+                    "FrontendRuntime:BLOCKS_IAM_BASE_URL must be an absolute http or https URL without query or fragment.");
+            }
+
+            return raw;
+        }
+
+        // Issuer format forced by blocks-iam OidcServices.ResolveEndpoints:
+        // issuer + "/.well-known/jwks.json" == the JWKS URL served for this TenantId.
+        private string BuildJwtIssuer(string tenantId)
+        {
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                throw new InvalidOperationException(
+                    "TenantId is required to build a JWT issuer; refusing a host-only issuer.");
+            }
+
+            return ResolveIamBaseUrl().TrimEnd('/') + "/" + tenantId;
         }
 
         private string ResolveDatabaseConnectionString(string environment)
@@ -562,10 +626,14 @@ namespace DomainService.Projects
             // every caller that reads it.
             var applicationDomain = applicationDomains[0];
 
+            // TenantId is stamped before JwtTokenParameters so the issuer can append it
+            // byte-for-byte (uppercase environment letter + lowercase group GUID).
+            var tenantId = IdentifierHelper.EnvironmentMapper(applicationContext.Environment).ToUpper() + groupId;
+
             var project = new Tenant
             {
                 ItemId = Guid.NewGuid().ToString(),
-                TenantId = IdentifierHelper.EnvironmentMapper(applicationContext.Environment).ToUpper() + groupId,
+                TenantId = tenantId,
                 TenantGroupId = groupId,
                 Environment = applicationContext.Environment,
                 CreatedDate = DateTime.UtcNow,
@@ -584,7 +652,7 @@ namespace DomainService.Projects
 
                 JwtTokenParameters = new JwtTokenParameters
                 {
-                    Issuer = IdentifierConstants.Issuer,
+                    Issuer = BuildJwtIssuer(tenantId),
                     Subject = IdentifierConstants.Subject,
                     CertificateValidForNumberOfDays = 2 * 365,
                     IssueDate = DateTime.UtcNow,
