@@ -25,6 +25,7 @@ namespace Cloud.LmtService.Repositories.Trace
         private const string OperationNameField = "OperationName";
         private const string ServiceNameField = "ServiceName";
         private const string TimestampField = "Timestamp";
+        private static readonly TimeSpan DefaultTracesWindow = TimeSpan.FromHours(24);
 
         public TraceRepository(
             IBlocksSecret blocksSecret,
@@ -79,11 +80,17 @@ namespace Cloud.LmtService.Repositories.Trace
 
             // See the note on LogTimeRange: unmarked (Kind.Unspecified) dates must be read as
             // UTC, otherwise Mongo's serializer shifts them by the server's offset.
-            if (query.Filter?.StartDate != null)
-                filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", LogTimeRange.AsUtc(query.Filter.StartDate));
+            var endDate = LogTimeRange.AsUtc(query.Filter?.EndDate);
 
-            if (query.Filter?.EndDate != null)
-                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", LogTimeRange.AsUtc(query.Filter.EndDate));
+            // Without a start the query walks the tenant's whole retention window, which on busy
+            // tenants outlasts the gateway timeout. Default to the 24 hours before the end (or now).
+            var startDate = LogTimeRange.AsUtc(query.Filter?.StartDate)
+                            ?? (endDate ?? DateTime.UtcNow) - DefaultTracesWindow;
+
+            filter &= Builders<BsonDocument>.Filter.Gt("Timestamp", startDate);
+
+            if (endDate != null)
+                filter &= Builders<BsonDocument>.Filter.Lte("Timestamp", endDate);
 
             if (query.Filter?.StatusCodes != null && query.Filter.StatusCodes.Count > 0)
             {
