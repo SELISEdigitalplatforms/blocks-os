@@ -46,9 +46,8 @@ namespace Configuration.DomainService.Shared.Services
         #region DataGateway
 
         Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration);
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationByProjectKeyAsync(string projectKey);
+        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
         Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId);
-        Task<List<DataGatewayConfiguration>> GetAllDataGatewayConfigurationsByDateAsync();
 
         #endregion
 

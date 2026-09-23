@@ -32,8 +32,7 @@ namespace Configuration.DomainService.Shared.Services
         #region DataGateway
 
         Task<BaseMutationResponse> SaveDataGatewayConfigurationAsync(SaveDataGatewayConfigurationRequest request);
-        Task<List<DataGatewayConfiguration>> GetDataGatewayConfigurationsAsync();
-        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync(string projectKey);
+        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
 
         #endregion
 

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { IDataGatewayConfiguration } from "@/cross-modules/data-gateway/models/data-gateway.model";
 import {
-  buildDataGatewayConfigurationFormSchema,
+  DEFAULT_DATA_SOURCE_VALUE,
   dataGatewayConfigurationFormDefaultValue,
+  dataGatewayConfigurationFormSchema,
+  isDefaultConnection,
   toDataGatewayConfigurationFormValues,
 } from "./utils";
 
@@ -14,7 +16,7 @@ const baseConfiguration: IDataGatewayConfiguration = {
   lastUpdatedDate: "2026-01-10T00:00:00.000Z",
   projectKey: "project-key-1",
   projectShortKey: "proj1",
-  connectionString: "********",
+  connectionString: "mongodb://localhost:27017",
   databaseName: "project_one_db",
   isCollectionNameEditable: true,
   collectionNamePattern: "custom_{SchemaName}",
@@ -26,10 +28,25 @@ const baseConfiguration: IDataGatewayConfiguration = {
   },
 };
 
+describe("isDefaultConnection", () => {
+  it("treats a missing value as the platform default", () => {
+    expect(isDefaultConnection(undefined)).toBe(true);
+    expect(isDefaultConnection(null)).toBe(true);
+    expect(isDefaultConnection("")).toBe(true);
+  });
+
+  it("treats the sentinel value as the platform default", () => {
+    expect(isDefaultConnection(DEFAULT_DATA_SOURCE_VALUE)).toBe(true);
+  });
+
+  it("treats any other value as a custom connection", () => {
+    expect(isDefaultConnection("mongodb://localhost:27017")).toBe(false);
+  });
+});
+
 describe("dataGatewayConfigurationFormDefaultValue", () => {
   it("defaults to the backend's documented collection name pattern and no analytics", () => {
     expect(dataGatewayConfigurationFormDefaultValue).toEqual({
-      projectKey: "",
       connectionString: "",
       databaseName: "",
       isCollectionNameEditable: false,
@@ -44,24 +61,30 @@ describe("toDataGatewayConfigurationFormValues", () => {
     expect(toDataGatewayConfigurationFormValues(undefined)).toEqual(
       dataGatewayConfigurationFormDefaultValue,
     );
+    expect(toDataGatewayConfigurationFormValues(null)).toEqual(
+      dataGatewayConfigurationFormDefaultValue,
+    );
   });
 
-  it("seeds the project key with the fallback when creating and no configuration exists", () => {
-    expect(toDataGatewayConfigurationFormValues(undefined, "tenant-42")).toEqual({
-      ...dataGatewayConfigurationFormDefaultValue,
-      projectKey: "tenant-42",
-    });
-  });
-
-  it("maps a configuration onto form values without pre-filling the masked connection string", () => {
+  it("maps a custom configuration onto form values", () => {
     expect(toDataGatewayConfigurationFormValues(baseConfiguration)).toEqual({
-      projectKey: "project-key-1",
-      connectionString: "",
+      connectionString: "mongodb://localhost:27017",
       databaseName: "project_one_db",
       isCollectionNameEditable: true,
       collectionNamePattern: "custom_{SchemaName}",
       enableAnalytics: true,
     });
+  });
+
+  it("blanks the connection string and database name for a platform-managed configuration", () => {
+    const configuration = {
+      ...baseConfiguration,
+      connectionString: DEFAULT_DATA_SOURCE_VALUE,
+      databaseName: DEFAULT_DATA_SOURCE_VALUE,
+    };
+    const values = toDataGatewayConfigurationFormValues(configuration);
+    expect(values.connectionString).toBe("");
+    expect(values.databaseName).toBe("");
   });
 
   it("falls back to the default collection name pattern when the configuration has none", () => {
@@ -77,45 +100,19 @@ describe("toDataGatewayConfigurationFormValues", () => {
   });
 });
 
-describe("buildDataGatewayConfigurationFormSchema", () => {
-  const validPayload = {
-    projectKey: "project-key-1",
-    connectionString: "mongodb://localhost:27017",
-    databaseName: "project_one_db",
-    isCollectionNameEditable: false,
-    collectionNamePattern: "sb_{SchemaName}s",
-    enableAnalytics: false,
-  };
-
-  it("requires a project key when creating", () => {
-    const schema = buildDataGatewayConfigurationFormSchema(false);
-    const result = schema.safeParse({ ...validPayload, projectKey: "" });
+describe("dataGatewayConfigurationFormSchema", () => {
+  it("requires a collection name pattern", () => {
+    const result = dataGatewayConfigurationFormSchema.safeParse({
+      ...dataGatewayConfigurationFormDefaultValue,
+      collectionNamePattern: "",
+    });
     expect(result.success).toBe(false);
   });
 
-  it("does not require a project key when editing", () => {
-    const schema = buildDataGatewayConfigurationFormSchema(true);
-    const result = schema.safeParse({ ...validPayload, projectKey: "" });
-    expect(result.success).toBe(true);
-  });
-
-  it("requires a connection string in both create and edit mode", () => {
-    const createSchema = buildDataGatewayConfigurationFormSchema(false);
-    const editSchema = buildDataGatewayConfigurationFormSchema(true);
-
-    expect(createSchema.safeParse({ ...validPayload, connectionString: "" }).success).toBe(false);
-    expect(editSchema.safeParse({ ...validPayload, connectionString: "" }).success).toBe(false);
-  });
-
-  it("requires a database name", () => {
-    const schema = buildDataGatewayConfigurationFormSchema(false);
-    const result = schema.safeParse({ ...validPayload, databaseName: "" });
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts a fully filled-in payload", () => {
-    const schema = buildDataGatewayConfigurationFormSchema(false);
-    const result = schema.safeParse(validPayload);
+  it("accepts blank connection string/database name (the Blocks-managed case)", () => {
+    const result = dataGatewayConfigurationFormSchema.safeParse(
+      dataGatewayConfigurationFormDefaultValue,
+    );
     expect(result.success).toBe(true);
   });
 });

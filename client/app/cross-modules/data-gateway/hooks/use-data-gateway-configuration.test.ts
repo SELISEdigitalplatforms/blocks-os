@@ -2,7 +2,6 @@ import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  mockDataGatewayConfigList,
   mockDataGatewayConfig,
   mockDataGatewayServiceFactory,
   mockSaveCreatePayload,
@@ -10,10 +9,18 @@ import {
 } from "../test-utils/__mocks__";
 import { dataGatewayService } from "@/cross-modules/data-gateway/services/data-gateway.service";
 import {
-  useGetDataGatewayConfigurations,
   useGetDataGatewayConfiguration,
   useSaveDataGatewayConfiguration,
 } from "./use-data-gateway-configuration";
+
+const mockGetState = vi.fn(() => ({
+  selectedProject: { tenantId: "t1", tenantSlug: "slug1" },
+}));
+vi.mock("@seliseblocks/genesis-os", () => {
+  const useProjectStore = () => mockGetState();
+  (useProjectStore as unknown as { getState: () => unknown }).getState = () => mockGetState();
+  return { useProjectStore };
+});
 
 vi.mock("@/cross-modules/data-gateway/services/data-gateway.service", () =>
   mockDataGatewayServiceFactory(),
@@ -22,17 +29,17 @@ vi.mock("@/cross-modules/data-gateway/services/data-gateway.service", () =>
 describe("DataGateway Configuration Hooks", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockGetState.mockReturnValue({ selectedProject: { tenantId: "t1", tenantSlug: "slug1" } });
   });
 
-  // ─── useGetDataGatewayConfigurations ───────────────────────────────────────
+  // ─── useGetDataGatewayConfiguration ────────────────────────────────────────
+  // There is at most one configuration - no project key is sent, the ambient tenant decides it.
 
-  describe("useGetDataGatewayConfigurations", () => {
-    it("should fetch data gateway configurations successfully", async () => {
-      vi.mocked(dataGatewayService.configuration.gets).mockResolvedValue(
-        mockDataGatewayConfigList,
-      );
+  describe("useGetDataGatewayConfiguration", () => {
+    it("should fetch the single configuration", async () => {
+      vi.mocked(dataGatewayService.configuration.get).mockResolvedValue(mockDataGatewayConfig);
 
-      const { result } = renderHook(() => useGetDataGatewayConfigurations(), {
+      const { result } = renderHook(() => useGetDataGatewayConfiguration(), {
         wrapper: createWrapper(),
       });
 
@@ -40,73 +47,36 @@ describe("DataGateway Configuration Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(result.current.data).toEqual(mockDataGatewayConfigList);
-      expect(dataGatewayService.configuration.gets).toHaveBeenCalledWith();
+      expect(dataGatewayService.configuration.get).toHaveBeenCalledWith();
+      expect(result.current.data).toEqual(mockDataGatewayConfig);
     });
 
-    it("should return empty array when no configs exist", async () => {
-      vi.mocked(dataGatewayService.configuration.gets).mockResolvedValue([]);
+    it("should resolve to null/undefined when none exists yet", async () => {
+      vi.mocked(dataGatewayService.configuration.get).mockResolvedValue(
+        null as unknown as typeof mockDataGatewayConfig,
+      );
 
-      const { result } = renderHook(() => useGetDataGatewayConfigurations(), {
+      const { result } = renderHook(() => useGetDataGatewayConfiguration(), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(result.current.data).toEqual([]);
+      expect(result.current.data).toBeNull();
     });
 
     it("should handle errors", async () => {
-      vi.mocked(dataGatewayService.configuration.gets).mockRejectedValue(
-        new Error("Failed to fetch configs"),
+      vi.mocked(dataGatewayService.configuration.get).mockRejectedValue(
+        new Error("Failed to fetch config"),
       );
 
-      const { result } = renderHook(() => useGetDataGatewayConfigurations(), {
+      const { result } = renderHook(() => useGetDataGatewayConfiguration(), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
       expect(result.current.error).toBeDefined();
-    });
-  });
-
-  // ─── useGetDataGatewayConfiguration ────────────────────────────────────────
-
-  describe("useGetDataGatewayConfiguration", () => {
-    it("should fetch a single configuration by project key", async () => {
-      vi.mocked(dataGatewayService.configuration.get).mockResolvedValue(mockDataGatewayConfig);
-
-      const { result } = renderHook(
-        () => useGetDataGatewayConfiguration({ projectKey: "project-key-1" }),
-        { wrapper: createWrapper() },
-      );
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      expect(dataGatewayService.configuration.get).toHaveBeenCalledWith("project-key-1");
-      expect(result.current.data).toEqual(mockDataGatewayConfig);
-    });
-
-    it("should not query when the project key is blank", () => {
-      renderHook(() => useGetDataGatewayConfiguration({ projectKey: "" }), {
-        wrapper: createWrapper(),
-      });
-
-      expect(dataGatewayService.configuration.get).not.toHaveBeenCalled();
-    });
-
-    it("should respect an explicit enabled override", () => {
-      renderHook(
-        () =>
-          useGetDataGatewayConfiguration(
-            { projectKey: "project-key-1" },
-            { enabled: false },
-          ),
-        { wrapper: createWrapper() },
-      );
-
-      expect(dataGatewayService.configuration.get).not.toHaveBeenCalled();
     });
   });
 
@@ -131,18 +101,16 @@ describe("DataGateway Configuration Hooks", () => {
       expect(result.current.data).toEqual(mockSuccessResponse);
     });
 
-    it("should invalidate the configurations list on success", async () => {
+    it("should invalidate the configuration on success", async () => {
       vi.mocked(dataGatewayService.configuration.save).mockResolvedValue(mockSuccessResponse);
-      vi.mocked(dataGatewayService.configuration.gets).mockResolvedValue(
-        mockDataGatewayConfigList,
-      );
+      vi.mocked(dataGatewayService.configuration.get).mockResolvedValue(mockDataGatewayConfig);
 
       const wrapper = createWrapper();
 
-      const { result: configsResult } = renderHook(() => useGetDataGatewayConfigurations(), {
+      const { result: getResult } = renderHook(() => useGetDataGatewayConfiguration(), {
         wrapper,
       });
-      await waitFor(() => expect(configsResult.current.isSuccess).toBe(true));
+      await waitFor(() => expect(getResult.current.isSuccess).toBe(true));
 
       const { result: saveResult } = renderHook(() => useSaveDataGatewayConfiguration(), {
         wrapper,
@@ -152,23 +120,21 @@ describe("DataGateway Configuration Hooks", () => {
       await waitFor(() => expect(saveResult.current.isSuccess).toBe(true));
 
       await waitFor(() => {
-        expect(dataGatewayService.configuration.gets).toHaveBeenCalledTimes(2);
+        expect(dataGatewayService.configuration.get).toHaveBeenCalledTimes(2);
       });
     });
 
     it("should not invalidate the query when isSuccess is false", async () => {
-      const failResponse = { errors: { projectKey: "duplicate" }, isSuccess: false };
+      const failResponse = { errors: { connectionString: "required" }, isSuccess: false };
       vi.mocked(dataGatewayService.configuration.save).mockResolvedValue(failResponse);
-      vi.mocked(dataGatewayService.configuration.gets).mockResolvedValue(
-        mockDataGatewayConfigList,
-      );
+      vi.mocked(dataGatewayService.configuration.get).mockResolvedValue(mockDataGatewayConfig);
 
       const wrapper = createWrapper();
 
-      const { result: configsResult } = renderHook(() => useGetDataGatewayConfigurations(), {
+      const { result: getResult } = renderHook(() => useGetDataGatewayConfiguration(), {
         wrapper,
       });
-      await waitFor(() => expect(configsResult.current.isSuccess).toBe(true));
+      await waitFor(() => expect(getResult.current.isSuccess).toBe(true));
 
       const { result: saveResult } = renderHook(() => useSaveDataGatewayConfiguration(), {
         wrapper,
@@ -177,7 +143,7 @@ describe("DataGateway Configuration Hooks", () => {
 
       await waitFor(() => expect(saveResult.current.isSuccess).toBe(true));
 
-      expect(dataGatewayService.configuration.gets).toHaveBeenCalledTimes(1);
+      expect(dataGatewayService.configuration.get).toHaveBeenCalledTimes(1);
     });
 
     it("should handle save errors", async () => {

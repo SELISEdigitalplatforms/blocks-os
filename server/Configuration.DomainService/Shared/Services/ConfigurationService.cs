@@ -317,25 +317,18 @@ namespace Configuration.DomainService.Shared.Services
             return repoConfiguration;
         }
 
-        public async Task<List<DataGatewayConfiguration>> GetDataGatewayConfigurationsAsync()
+        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()
         {
-            var configurations = await _configurationRepository.GetAllDataGatewayConfigurationsByDateAsync();
+            var configuration = await _configurationRepository.GetDataGatewayConfigurationAsync();
 
-            foreach (var configuration in configurations)
+            // Unlike Storage's masked secrets, blocks-data's own DataGatewayConfigurationService.GetConfiguration
+            // returns the connection string decoded, not masked - the client needs the real value to
+            // tell a platform-managed ("default") configuration apart from a custom one and to let an
+            // admin edit an existing custom connection string.
+            if (configuration != null && !string.IsNullOrEmpty(configuration.ConnectionString))
             {
-                configuration.ConnectionString = MaskedSecretValue;
-            }
-
-            return configurations;
-        }
-
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync(string projectKey)
-        {
-            var configuration = await _configurationRepository.GetDataGatewayConfigurationByProjectKeyAsync(projectKey);
-
-            if (configuration != null)
-            {
-                configuration.ConnectionString = MaskedSecretValue;
+                configuration.ConnectionString = System.Text.Encoding.UTF8.GetString(
+                    Convert.FromBase64String(configuration.ConnectionString));
             }
 
             return configuration;

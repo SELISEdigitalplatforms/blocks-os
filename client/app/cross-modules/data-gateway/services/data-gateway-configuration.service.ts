@@ -7,14 +7,10 @@ import {
 import { DATA_GATEWAY_CONFIG_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class DataGatewayConfiguration {
-  gets(): Promise<IDataGatewayConfiguration[]> {
-    return http.get<IDataGatewayConfiguration[]>(DATA_GATEWAY_CONFIG_ENDPOINTS.GET_CONFIGS);
-  }
-
-  get(projectKey: string): Promise<IDataGatewayConfiguration> {
-    return http.get<IDataGatewayConfiguration>(
-      `${DATA_GATEWAY_CONFIG_ENDPOINTS.GET_CONFIG}?ProjectKey=${encodeURIComponent(projectKey)}`,
-    );
+  // There is at most one configuration - it belongs to whichever tenant is ambient on the
+  // request, so this takes no project key.
+  get(): Promise<IDataGatewayConfiguration> {
+    return http.get<IDataGatewayConfiguration>(DATA_GATEWAY_CONFIG_ENDPOINTS.GET_CONFIG);
   }
 
   save(

@@ -19,24 +19,19 @@ namespace BlocksOs.Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint("blocks-os::datagateway::mutate")]
-        public async Task<BaseMutationResponse> Save([FromBody] SaveDataGatewayConfigurationRequest request)
+        [ProtectedEndPoint("blocks-os::datagateway::saveconfig")]
+        public async Task<BaseMutationResponse> SaveConfig([FromBody] SaveDataGatewayConfigurationRequest request)
         {
             return await _configurationService.SaveDataGatewayConfigurationAsync(request);
         }
 
+        // There is at most one DataGateway configuration - unlike Storage's several named
+        // configurations, there is no list action here.
         [HttpGet]
-        [ProtectedEndPoint("blocks-os::datagateway::gets")]
-        public async Task<List<DataGatewayConfiguration>> Gets([FromQuery] GetDataGatewayConfigurationsRequest request)
+        [ProtectedEndPoint("blocks-os::datagateway::getconfig")]
+        public async Task<DataGatewayConfiguration> GetConfig()
         {
-            return await _configurationService.GetDataGatewayConfigurationsAsync();
-        }
-
-        [HttpGet]
-        [ProtectedEndPoint("blocks-os::datagateway::gets")]
-        public async Task<DataGatewayConfiguration> Get([FromQuery] GetDataGatewayConfigurationRequest request)
-        {
-            return await _configurationService.GetDataGatewayConfigurationAsync(request?.ProjectKey ?? string.Empty);
+            return await _configurationService.GetDataGatewayConfigurationAsync();
         }
     }
 }

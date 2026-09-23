@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockHttpClientFactory } from "@/test-utils/__mocks__";
 import {
-  mockDataGatewayConfigList,
   mockDataGatewayConfig,
   mockSuccessResponse,
   mockSaveCreatePayload,
@@ -25,61 +24,24 @@ describe("DataGatewayConfiguration", () => {
     vi.clearAllMocks();
   });
 
-  // ─── gets ──────────────────────────────────────────────────────────────────
-
-  describe("gets", () => {
-    it("should call the configs endpoint", async () => {
-      vi.mocked(http.get).mockResolvedValue(mockDataGatewayConfigList);
-
-      const result = await service.gets();
-
-      expect(http.get).toHaveBeenCalledWith(DATA_GATEWAY_CONFIG_ENDPOINTS.GET_CONFIGS);
-      expect(result).toEqual(mockDataGatewayConfigList);
-    });
-
-    it("should return an empty array when no configs exist", async () => {
-      vi.mocked(http.get).mockResolvedValue([]);
-
-      const result = await service.gets();
-
-      expect(result).toEqual([]);
-    });
-
-    it("should handle API errors", async () => {
-      vi.mocked(http.get).mockRejectedValue(new Error("Network error"));
-
-      await expect(service.gets()).rejects.toThrow("Network error");
-    });
-  });
-
   // ─── get ───────────────────────────────────────────────────────────────────
+  // There is at most one configuration - the ambient tenant on the request decides it, so `get`
+  // takes no project key.
 
   describe("get", () => {
-    it("should call the config endpoint with the ProjectKey query param", async () => {
+    it("should call the config endpoint with no query params", async () => {
       vi.mocked(http.get).mockResolvedValue(mockDataGatewayConfig);
 
-      const result = await service.get("project-key-1");
+      const result = await service.get();
 
-      expect(http.get).toHaveBeenCalledWith(
-        `${DATA_GATEWAY_CONFIG_ENDPOINTS.GET_CONFIG}?ProjectKey=project-key-1`,
-      );
+      expect(http.get).toHaveBeenCalledWith(DATA_GATEWAY_CONFIG_ENDPOINTS.GET_CONFIG);
       expect(result).toEqual(mockDataGatewayConfig);
-    });
-
-    it("should encode the project key", async () => {
-      vi.mocked(http.get).mockResolvedValue(mockDataGatewayConfig);
-
-      await service.get("project key/with special&chars");
-
-      expect(http.get).toHaveBeenCalledWith(
-        `${DATA_GATEWAY_CONFIG_ENDPOINTS.GET_CONFIG}?ProjectKey=project%20key%2Fwith%20special%26chars`,
-      );
     });
 
     it("should handle API errors", async () => {
       vi.mocked(http.get).mockRejectedValue(new Error("Not found"));
 
-      await expect(service.get("missing")).rejects.toThrow("Not found");
+      await expect(service.get()).rejects.toThrow("Not found");
     });
   });
 

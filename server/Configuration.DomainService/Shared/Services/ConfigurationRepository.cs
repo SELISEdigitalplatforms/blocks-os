@@ -221,11 +221,14 @@ namespace Configuration.DomainService.Shared.Services
             );
         }
 
-        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationByProjectKeyAsync(string projectKey)
+        // There is at most one DataGateway configuration - mirrors blocks-data's own
+        // DataGatewayConfigurationService.GetConfiguration, which likewise takes no key and just
+        // filters on IsDeleted.
+        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()
         {
             var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
 
-            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ProjectKey, projectKey);
+            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.IsDeleted, false);
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
@@ -235,19 +238,6 @@ namespace Configuration.DomainService.Shared.Services
 
             var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, itemId);
             return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<List<DataGatewayConfiguration>> GetAllDataGatewayConfigurationsByDateAsync()
-        {
-            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
-            var filter = Builders<DataGatewayConfiguration>.Filter.Where(_ => true);
-
-            using var cursor = await collection.FindAsync(filter, new FindOptions<DataGatewayConfiguration>
-            {
-                Sort = Builders<DataGatewayConfiguration>.Sort.Ascending(doc => doc.LastUpdatedDate)
-            });
-
-            return await cursor.ToListAsync();
         }
 
         #endregion

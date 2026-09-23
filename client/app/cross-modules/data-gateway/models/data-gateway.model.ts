@@ -7,10 +7,7 @@ export interface IDataGatewayAnalyticsConfiguration {
   validTill: string | null;
 }
 
-/**
- * Mirrors `Configuration.DomainService.DataGateway.Entities.DataGatewayConfiguration`. Returned by
- * both the `Gets` (list) and `Get` (single) actions.
- */
+/** Mirrors `Configuration.DomainService.DataGateway.Entities.DataGatewayConfiguration`. */
 export interface IDataGatewayConfiguration {
   itemId: string;
   createdBy: string;
@@ -19,7 +16,10 @@ export interface IDataGatewayConfiguration {
   lastUpdatedDate: string;
   projectKey: string;
   projectShortKey: string;
-  /** Always masked to "********" by the backend on every read - never the real secret. */
+  /**
+   * Decoded by the backend on every read - unlike Storage's masked secrets, this is the real
+   * value (or the "default" sentinel meaning the platform-managed database).
+   */
   connectionString: string;
   databaseName: string;
   isCollectionNameEditable: boolean;
@@ -70,9 +70,4 @@ export interface IDataGatewayConfigurationSaveResponse {
   isSuccess: boolean;
   errors?: Record<string, string>;
   itemId?: string;
-}
-
-/** Mirrors `GetDataGatewayConfigurationRequest` (sent as the `ProjectKey` query param). */
-export interface IGetDataGatewayConfigurationPayload {
-  projectKey: string;
 }

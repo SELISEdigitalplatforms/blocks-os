@@ -21,14 +21,14 @@ namespace Configuration.DomainService.DataGateway.Validators
                     .WithMessage("ItemId must not be empty.");
             });
 
+            // There is at most one DataGateway configuration - a create is only valid when none
+            // exists yet; any further change must go through an update instead.
             When(config => !config.UpdateRequest, () =>
             {
-                RuleFor(config => config.ProjectKey)
-                    .Cascade(CascadeMode.Stop)
-                    .NotEmpty()
-                    .WithMessage("ProjectKey must not be empty.")
-                    .MustAsync(BeAUniqueProjectKeyAsync)
-                    .WithMessage("A DataGateway configuration for this ProjectKey already exists.");
+                RuleFor(config => config)
+                    .MustAsync(NotAlreadyExistAsync)
+                    .WithMessage("A DataGateway configuration already exists. Use update instead.")
+                    .OverridePropertyName("ItemId");
             });
 
             RuleFor(config => config.ConnectionString)
@@ -40,14 +40,11 @@ namespace Configuration.DomainService.DataGateway.Validators
                 .WithMessage("DatabaseName must not be empty.");
         }
 
-        private async Task<bool> BeAUniqueProjectKeyAsync(string? projectKey, CancellationToken cancellationToken)
+        private async Task<bool> NotAlreadyExistAsync(
+            SaveDataGatewayConfigurationRequest request,
+            CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(projectKey))
-            {
-                return true;
-            }
-
-            var configuration = await _configurationRepository.GetDataGatewayConfigurationByProjectKeyAsync(projectKey);
+            var configuration = await _configurationRepository.GetDataGatewayConfigurationAsync();
             return configuration == null;
         }
     }

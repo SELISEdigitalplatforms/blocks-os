@@ -1,27 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useProjectStore } from "@seliseblocks/genesis-os";
 import { dataGatewayService } from "../services/data-gateway.service";
-import { IGetDataGatewayConfigurationPayload } from "../models/data-gateway.model";
 
-// Storage's `gets()` deliberately isn't scoped by the active project because it only ever holds a
-// handful of shared, named configurations. DataGateway configurations are the opposite: they are
-// genuinely one-per-project, and this list is an admin view meant to browse every project's
-// configuration, not just the currently selected tenant's - so the query key is intentionally not
-// keyed on the selected project either.
-export const useGetDataGatewayConfigurations = () => {
+// There is at most one configuration, resolved from whichever tenant is ambient on the request -
+// the query itself takes no project key. `tenantId` is included only in the query key, purely so
+// switching the selected project busts the cache instead of serving the previous project's data.
+export const useGetDataGatewayConfiguration = () => {
+  const tenantId = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
-    queryKey: ["data-gateway", "configuration", "gets"],
-    queryFn: () => dataGatewayService.configuration.gets(),
-  });
-};
-
-export const useGetDataGatewayConfiguration = (
-  payload: IGetDataGatewayConfigurationPayload,
-  options?: { enabled?: boolean },
-) => {
-  return useQuery({
-    queryKey: ["data-gateway", "configuration", "get", payload.projectKey],
-    queryFn: () => dataGatewayService.configuration.get(payload.projectKey),
-    enabled: options?.enabled ?? !!payload.projectKey,
+    queryKey: ["data-gateway", "configuration", "get", tenantId],
+    queryFn: () => dataGatewayService.configuration.get(),
   });
 };
 
@@ -32,7 +20,7 @@ export const useSaveDataGatewayConfiguration = () => {
     mutationFn: dataGatewayService.configuration.save,
     onSuccess: (data) => {
       if (data.isSuccess)
-        queryClient.invalidateQueries({ queryKey: ["data-gateway", "configuration", "gets"] });
+        queryClient.invalidateQueries({ queryKey: ["data-gateway", "configuration", "get"] });
     },
   });
 };
