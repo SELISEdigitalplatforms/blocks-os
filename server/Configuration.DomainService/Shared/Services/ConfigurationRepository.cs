@@ -7,6 +7,7 @@ using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
+using Configuration.DomainService.DataGateway.Entities;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -17,6 +18,9 @@ namespace Configuration.DomainService.Shared.Services
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
         private const string _storageCollectionName = "StorageConfigurations";
         private const string _mailConfigurationCollectionName = "MailServerConfigurations";
+        // Matches blocks-data's own DataServiceConfiguration collection name exactly (its DbRepository
+        // derives it as $"{typeof(T).Name}s") - both sides read/write the same document per tenant.
+        private const string _dataGatewayCollectionName = "DataServiceConfigurations";
 
         public ConfigurationRepository(IDbContextProvider dbContextProvider)
         {
@@ -203,7 +207,43 @@ namespace Configuration.DomainService.Shared.Services
         }
 
         #endregion
-        
+
+        #region DataGateway
+
+        public async Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration)
+        {
+            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
+
+            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
+
+            await collection.ReplaceOneAsync(
+                filter,
+                configuration,
+                new ReplaceOptions { IsUpsert = true }
+            );
+        }
+
+        // There is at most one DataGateway configuration - mirrors blocks-data's own
+        // DataGatewayConfigurationService.GetConfiguration, which likewise takes no key and just
+        // filters on IsDeleted.
+        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync()
+        {
+            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
+
+            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.IsDeleted, false);
+            return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId)
+        {
+            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
+
+            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, itemId);
+            return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        #endregion
+
         public async Task UpsertAsync<T>(T data, Expression<Func<T, bool>> filterExpression, string collectionName = "")
         {
             IMongoCollection<T> collection = _dbContextProvider.GetCollection<T>(string.IsNullOrWhiteSpace(collectionName) ? (typeof(T).Name + "s") : collectionName);
