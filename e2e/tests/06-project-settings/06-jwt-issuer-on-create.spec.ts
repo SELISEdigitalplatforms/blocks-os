@@ -1,9 +1,6 @@
 import { expect } from "@playwright/test";
 import { test } from "../../support/test-base";
-import {
-  createProject,
-  deleteProject,
-} from "../../support/create-and-delete-project";
+import { createProject } from "../../support/create-and-delete-project";
 import { e2eBaseUrl } from "../../support/env";
 
 /**
@@ -14,6 +11,8 @@ import { e2eBaseUrl } from "../../support/env";
  * FrontendRuntime:BLOCKS_IAM_BASE_URL configured. Unit tests cover the issuer
  * string shape, fail-closed validation, and certificate DN decoupling; full
  * mongosh/IAM token decode (§7 steps 2–11) needs root-DB access outside Playwright.
+ *
+ * Cleanup is left to globalTeardown (avoid session-lock races on delete).
  */
 async function dismissSessionLockIfPresent(page: import("@playwright/test").Page) {
   await page.goto(`${e2eBaseUrl()}/app/console`, { waitUntil: "domcontentloaded" });
@@ -23,13 +22,10 @@ async function dismissSessionLockIfPresent(page: import("@playwright/test").Page
     name: /Your Blocks Projects|Welcome to SELISE Blocks/,
   });
 
-  // Session lock and console heading are mutually exclusive; wait for either.
   await Promise.race([
     leaveButton.waitFor({ state: "visible", timeout: 45_000 }),
     consoleHeading.waitFor({ state: "visible", timeout: 45_000 }),
-  ]).catch(() => {
-    /* fall through — createProject/ensureConsole will surface a clearer error */
-  });
+  ]).catch(() => undefined);
 
   if (await leaveButton.isVisible().catch(() => false)) {
     await leaveButton.click();
@@ -71,9 +67,5 @@ test.describe("jwt issuer on project create (#606)", () => {
     expect(errors).not.toHaveProperty("iam_configuration");
     expect(created.itemId).toBeTruthy();
     expect(created.tenantGroupId).toBeTruthy();
-
-    await deleteProject(page, created.projectName).catch(() => {
-      /* best-effort — globalTeardown also sweeps orphans */
-    });
   });
 });
