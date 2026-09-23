@@ -284,7 +284,7 @@ namespace Configuration.DomainService.Shared.Services
             repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
             repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
 
-            repoConfiguration.ConnectionString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.ConnectionString ?? ""));
+            repoConfiguration.DbConnectionString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.ConnectionString ?? ""));
             repoConfiguration.DatabaseName = request.DatabaseName ?? "";
             repoConfiguration.IsCollectionNameEditable = request.IsCollectionNameEditable;
             repoConfiguration.CollectionNamePattern = request.CollectionNamePattern ?? repoConfiguration.CollectionNamePattern;
@@ -325,10 +325,10 @@ namespace Configuration.DomainService.Shared.Services
             // returns the connection string decoded, not masked - the client needs the real value to
             // tell a platform-managed ("default") configuration apart from a custom one and to let an
             // admin edit an existing custom connection string.
-            if (configuration != null && !string.IsNullOrEmpty(configuration.ConnectionString))
+            if (configuration != null && !string.IsNullOrEmpty(configuration.DbConnectionString))
             {
-                configuration.ConnectionString = System.Text.Encoding.UTF8.GetString(
-                    Convert.FromBase64String(configuration.ConnectionString));
+                configuration.DbConnectionString = System.Text.Encoding.UTF8.GetString(
+                    Convert.FromBase64String(configuration.DbConnectionString));
             }
 
             return configuration;

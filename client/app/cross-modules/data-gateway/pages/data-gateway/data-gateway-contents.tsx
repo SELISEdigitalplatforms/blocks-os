@@ -76,7 +76,7 @@ export function DataGatewayContents() {
 
   useEffect(() => {
     if (!isLoading) {
-      const isBlocks = isDefaultConnection(configuration?.connectionString);
+      const isBlocks = isDefaultConnection(configuration?.dbConnectionString);
       setSelectedSource(isBlocks ? "blocks" : "others");
       form.reset(toDataGatewayConfigurationFormValues(configuration));
     }

@@ -39,11 +39,11 @@ export function toDataGatewayConfigurationFormValues(
 ): DataGatewayConfigurationFormValues {
   if (!configuration) return dataGatewayConfigurationFormDefaultValue;
 
-  const isBlocksManaged = isDefaultConnection(configuration.connectionString);
+  const isBlocksManaged = isDefaultConnection(configuration.dbConnectionString);
 
   return {
     ...dataGatewayConfigurationFormDefaultValue,
-    connectionString: isBlocksManaged ? "" : configuration.connectionString,
+    connectionString: isBlocksManaged ? "" : configuration.dbConnectionString,
     databaseName: isBlocksManaged ? "" : configuration.databaseName,
     isCollectionNameEditable: configuration.isCollectionNameEditable,
     collectionNamePattern: configuration.collectionNamePattern || DEFAULT_COLLECTION_NAME_PATTERN,

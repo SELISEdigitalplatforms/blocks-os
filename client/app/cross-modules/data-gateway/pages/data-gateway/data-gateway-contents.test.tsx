@@ -36,7 +36,7 @@ const config = (
     itemId: "id-1",
     projectKey: "project-key-1",
     projectShortKey: "proj1",
-    connectionString: "mongodb://localhost:27017",
+    dbConnectionString: "mongodb://localhost:27017",
     databaseName: "project_one_db",
     isCollectionNameEditable: false,
     collectionNamePattern: "sb_{SchemaName}s",
@@ -74,7 +74,7 @@ describe("DataGatewayContents", () => {
 
   it("selects My data sources and pre-fills the real connection details for a custom configuration", () => {
     h.data = config({
-      connectionString: "mongodb://custom-host:27017",
+      dbConnectionString: "mongodb://custom-host:27017",
       databaseName: "custom_db",
     });
     render(<DataGatewayContents />);

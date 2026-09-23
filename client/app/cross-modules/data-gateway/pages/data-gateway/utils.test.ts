@@ -16,7 +16,7 @@ const baseConfiguration: IDataGatewayConfiguration = {
   lastUpdatedDate: "2026-01-10T00:00:00.000Z",
   projectKey: "project-key-1",
   projectShortKey: "proj1",
-  connectionString: "mongodb://localhost:27017",
+  dbConnectionString: "mongodb://localhost:27017",
   databaseName: "project_one_db",
   isCollectionNameEditable: true,
   collectionNamePattern: "custom_{SchemaName}",
@@ -79,7 +79,7 @@ describe("toDataGatewayConfigurationFormValues", () => {
   it("blanks the connection string and database name for a platform-managed configuration", () => {
     const configuration = {
       ...baseConfiguration,
-      connectionString: DEFAULT_DATA_SOURCE_VALUE,
+      dbConnectionString: DEFAULT_DATA_SOURCE_VALUE,
       databaseName: DEFAULT_DATA_SOURCE_VALUE,
     };
     const values = toDataGatewayConfigurationFormValues(configuration);

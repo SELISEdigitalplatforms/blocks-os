@@ -18,9 +18,11 @@ export interface IDataGatewayConfiguration {
   projectShortKey: string;
   /**
    * Decoded by the backend on every read - unlike Storage's masked secrets, this is the real
-   * value (or the "default" sentinel meaning the platform-managed database).
+   * value (or the "default" sentinel meaning the platform-managed database). Named
+   * `dbConnectionString` (not `connectionString`) to match the stored entity's actual field,
+   * shared with blocks-data's own DataServiceConfiguration document.
    */
-  connectionString: string;
+  dbConnectionString: string;
   databaseName: string;
   isCollectionNameEditable: boolean;
   collectionNamePattern: string;

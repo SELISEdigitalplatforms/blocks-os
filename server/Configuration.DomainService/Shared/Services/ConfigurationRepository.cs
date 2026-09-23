@@ -18,7 +18,9 @@ namespace Configuration.DomainService.Shared.Services
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
         private const string _storageCollectionName = "StorageConfigurations";
         private const string _mailConfigurationCollectionName = "MailServerConfigurations";
-        private const string _dataGatewayCollectionName = "DataGatewayConfigurations";
+        // Matches blocks-data's own DataServiceConfiguration collection name exactly (its DbRepository
+        // derives it as $"{typeof(T).Name}s") - both sides read/write the same document per tenant.
+        private const string _dataGatewayCollectionName = "DataServiceConfigurations";
 
         public ConfigurationRepository(IDbContextProvider dbContextProvider)
         {
