@@ -60,15 +60,16 @@ vi.mock("@/hooks/use-project-access", () => ({
   useProjectPermissions: () => h.access,
 }));
 
-// Lightweight stand-in for the shared zustand store, supporting the selector
-// call form `useProjectStore((s) => s.setTenantGroup)` the source uses.
+// Lightweight stand-in for both direct and selector calls to the shared store.
 vi.mock("@seliseblocks/genesis-os/store", () => ({
   useAuthStore: () => ({ user: h.user }),
-  useProjectStore: (selector: (s: unknown) => unknown) =>
-    selector({
+  useProjectStore: (selector?: (s: unknown) => unknown) => {
+    const state = {
       setTenantGroup: h.setTenantGroup,
       setSelectedProject: h.setSelectedProject,
-    }),
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock("@seliseblocks/genesis-os/components", () => ({
