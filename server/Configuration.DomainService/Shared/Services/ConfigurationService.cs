@@ -7,6 +7,8 @@ using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.Enums;
+using Configuration.DomainService.DataGateway.RequestModel;
+using Configuration.DomainService.DataGateway.Entities;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +21,7 @@ namespace Configuration.DomainService.Shared.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IValidator<SaveNotificationConfigurationRequest> _notificatonConfigurationValidator;
         private readonly IValidator<SaveStorageConfigurationRequest> _storageConfigurationValidator;
+        private readonly IValidator<SaveDataGatewayConfigurationRequest> _dataGatewayConfigurationValidator;
         private readonly IMessageClient _messageClient;
         private readonly ILogger<ConfigurationService> _logger;
 
@@ -26,12 +29,14 @@ namespace Configuration.DomainService.Shared.Services
         public ConfigurationService(IConfigurationRepository configurationRepository,
                                     IValidator<SaveNotificationConfigurationRequest> notificatonConfigurationValidator,
                                     IValidator<SaveStorageConfigurationRequest> storageConfigurationValidator,
+                                    IValidator<SaveDataGatewayConfigurationRequest> dataGatewayConfigurationValidator,
                                     IMessageClient messageClient,
                                     ILogger<ConfigurationService> logger)
         {
             _configurationRepository = configurationRepository;
             _notificatonConfigurationValidator = notificatonConfigurationValidator;
             _storageConfigurationValidator = storageConfigurationValidator;
+            _dataGatewayConfigurationValidator = dataGatewayConfigurationValidator;
             _messageClient = messageClient;
             _logger = logger;
         }
@@ -245,9 +250,98 @@ namespace Configuration.DomainService.Shared.Services
 
         #endregion
 
+        #region DataGateway
 
+        public async Task<BaseMutationResponse> SaveDataGatewayConfigurationAsync(SaveDataGatewayConfigurationRequest request)
+        {
+            var validationResult = await _dataGatewayConfigurationValidator.ValidateAsync(request);
 
-        
+            if (!validationResult.IsValid)
+                return new BaseMutationResponse { IsSuccess = false, Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage) };
+
+            var repoConfiguration = await MappedIntoRepoConfigurationAsync(request);
+
+            await _configurationRepository.SaveDataGatewayConfigurationAsync(repoConfiguration);
+
+            return new BaseMutationResponse { IsSuccess = true, ItemId = repoConfiguration.ItemId };
+        }
+
+        private async Task<DataGatewayConfiguration> MappedIntoRepoConfigurationAsync(SaveDataGatewayConfigurationRequest request)
+        {
+            var repoConfiguration = request.UpdateRequest ?
+                                    await _configurationRepository.GetDataGatewayConfigurationByIdAsync(request.ItemId ?? "") :
+                                    null;
+
+            var isNewConfiguration = repoConfiguration == null;
+
+            if (repoConfiguration == null)
+            {
+                repoConfiguration = new DataGatewayConfiguration { ItemId = Guid.NewGuid().ToString(), CreatedDate = DateTime.UtcNow };
+                repoConfiguration.CreatedBy = BlocksContext.GetContext()?.UserId;
+                repoConfiguration.ProjectKey = request.ProjectKey ?? "";
+            }
+
+            repoConfiguration.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+            repoConfiguration.LastUpdatedDate = DateTime.UtcNow;
+
+            repoConfiguration.ConnectionString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.ConnectionString ?? ""));
+            repoConfiguration.DatabaseName = request.DatabaseName ?? "";
+            repoConfiguration.IsCollectionNameEditable = request.IsCollectionNameEditable;
+            repoConfiguration.CollectionNamePattern = request.CollectionNamePattern ?? repoConfiguration.CollectionNamePattern;
+
+            if (request.EnableAnalytics.HasValue)
+            {
+                repoConfiguration.AnalyticsConfiguration ??= new AnalyticsConfiguration();
+                if (request.EnableAnalytics.Value
+                    && !repoConfiguration.AnalyticsConfiguration.EnableDate.HasValue
+                    && !repoConfiguration.AnalyticsConfiguration.ValidTill.HasValue)
+                {
+                    var enableDate = DateTime.UtcNow;
+                    repoConfiguration.AnalyticsConfiguration.EnableDate = enableDate;
+                    repoConfiguration.AnalyticsConfiguration.ValidTill = enableDate.AddDays(14);
+                }
+
+                repoConfiguration.AnalyticsConfiguration.EnableAnalytics = request.EnableAnalytics.Value;
+            }
+            else if (isNewConfiguration)
+            {
+                var enableDate = DateTime.UtcNow;
+                repoConfiguration.AnalyticsConfiguration = new AnalyticsConfiguration
+                {
+                    EnableAnalytics = true,
+                    EnableDate = enableDate,
+                    ValidTill = enableDate.AddDays(14)
+                };
+            }
+
+            return repoConfiguration;
+        }
+
+        public async Task<List<DataGatewayConfiguration>> GetDataGatewayConfigurationsAsync()
+        {
+            var configurations = await _configurationRepository.GetAllDataGatewayConfigurationsByDateAsync();
+
+            foreach (var configuration in configurations)
+            {
+                configuration.ConnectionString = MaskedSecretValue;
+            }
+
+            return configurations;
+        }
+
+        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync(string projectKey)
+        {
+            var configuration = await _configurationRepository.GetDataGatewayConfigurationByProjectKeyAsync(projectKey);
+
+            if (configuration != null)
+            {
+                configuration.ConnectionString = MaskedSecretValue;
+            }
+
+            return configuration;
+        }
+
+        #endregion
     }
 }
 

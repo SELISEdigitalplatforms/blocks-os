@@ -7,6 +7,7 @@ using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Mail.Entities;
 using Configuration.DomainService.Mail.RequestModel;
+using Configuration.DomainService.DataGateway.Entities;
 
 namespace Configuration.DomainService.Shared.Services
 {
@@ -17,6 +18,7 @@ namespace Configuration.DomainService.Shared.Services
         private const string _notificatonConfigurationCollectionName = "NotificationConfigurations";
         private const string _storageCollectionName = "StorageConfigurations";
         private const string _mailConfigurationCollectionName = "MailServerConfigurations";
+        private const string _dataGatewayCollectionName = "DataGatewayConfigurations";
 
         public ConfigurationRepository(IDbContextProvider dbContextProvider)
         {
@@ -203,7 +205,53 @@ namespace Configuration.DomainService.Shared.Services
         }
 
         #endregion
-        
+
+        #region DataGateway
+
+        public async Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration)
+        {
+            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
+
+            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, configuration.ItemId);
+
+            await collection.ReplaceOneAsync(
+                filter,
+                configuration,
+                new ReplaceOptions { IsUpsert = true }
+            );
+        }
+
+        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationByProjectKeyAsync(string projectKey)
+        {
+            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
+
+            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ProjectKey, projectKey);
+            return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId)
+        {
+            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
+
+            var filter = Builders<DataGatewayConfiguration>.Filter.Eq(mc => mc.ItemId, itemId);
+            return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<List<DataGatewayConfiguration>> GetAllDataGatewayConfigurationsByDateAsync()
+        {
+            var collection = _dbContextProvider.GetCollection<DataGatewayConfiguration>(_dataGatewayCollectionName);
+            var filter = Builders<DataGatewayConfiguration>.Filter.Where(_ => true);
+
+            using var cursor = await collection.FindAsync(filter, new FindOptions<DataGatewayConfiguration>
+            {
+                Sort = Builders<DataGatewayConfiguration>.Sort.Ascending(doc => doc.LastUpdatedDate)
+            });
+
+            return await cursor.ToListAsync();
+        }
+
+        #endregion
+
         public async Task UpsertAsync<T>(T data, Expression<Func<T, bool>> filterExpression, string collectionName = "")
         {
             IMongoCollection<T> collection = _dbContextProvider.GetCollection<T>(string.IsNullOrWhiteSpace(collectionName) ? (typeof(T).Name + "s") : collectionName);

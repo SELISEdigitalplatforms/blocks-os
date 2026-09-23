@@ -7,6 +7,7 @@ import { navigationMenus } from "@/constants/navigation-menus";
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
 import { NotificationConfigurationListPage } from "@/cross-modules/communication/notification/components/notification-configuration-list";
+import { DataGatewayContents } from "@/cross-modules/data-gateway/pages/data-gateway/data-gateway-contents";
 import { SecretList } from "@/cross-modules/secrets/components/secret-list/secret-list";
 import { StorageContents } from "@/cross-modules/storage/pages/storage/storage-contents";
 // Temporarily disabled
@@ -281,6 +282,10 @@ export const router = createBrowserRouter([
                       {
                         path: "storage",
                         element: <StorageContents />,
+                      },
+                      {
+                        path: "data-gateway",
+                        element: <DataGatewayContents />,
                       },
                       {
                         path: "email",
