@@ -6,5 +6,6 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
     {
         Task<(List<MailBoxEntityResponse> Mails, long TotalCount)> GetMailBoxAggregatedMailsAsync(GetMailBoxMailsRequest request);
         Task<MailBoxEntity?> GetMailBoxMailAsync(string messageId);
+        Task<string?> GetMessageIdByItemIdAsync(string itemId);
     }
 }

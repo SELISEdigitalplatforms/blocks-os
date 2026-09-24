@@ -49,7 +49,14 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
 
         public async Task<GetMailBoxMailResponse> GetMailBoxMailAsync(GetMailBoxMailRequest request)
         {
-            var mail = await _mailboxRepository.GetMailBoxMailAsync(request.MessageId);
+            // An item id names one status row; resolve it to the message so the read still merges
+            // every row of that mail (latest status, body backfilled from the Sent row).
+            var messageId = !string.IsNullOrEmpty(request.ItemId)
+                ? await _mailboxRepository.GetMessageIdByItemIdAsync(request.ItemId)
+                : request.MessageId;
+            var mail = string.IsNullOrEmpty(messageId)
+                ? null
+                : await _mailboxRepository.GetMailBoxMailAsync(messageId);
             if (mail == null)
             {
                 return new GetMailBoxMailResponse

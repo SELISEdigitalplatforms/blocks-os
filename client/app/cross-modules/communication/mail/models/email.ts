@@ -284,6 +284,8 @@ export enum MailStatus {
 }
 
 export interface IEmailUsage {
+  /** Id of one stored status row; the details route uses it (a Message-ID ends in a dotted domain). */
+  itemId: string;
   messageId: string;
   subject: string;
   from: string;

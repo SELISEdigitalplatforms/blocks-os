@@ -108,8 +108,8 @@ describe("EmailUsageList", () => {
     expect(screen.getByText("Test Inbound link")).toBeTruthy();
   });
 
-  it("opens the details page, with the message id encoded, when a row is clicked", async () => {
-    h.data = { data: [row({ messageId: "CAP+abc@mail.gmail.com" })], totalCount: 1 };
+  it("opens the details page by item id, not the dotted message id, when a row is clicked", async () => {
+    h.data = { data: [row({ itemId: "7519fadc-4004", messageId: "CAP+abc@mail.gmail.com" })], totalCount: 1 };
     const Details = () => <div>details:{useParams().id}</div>;
     render(
       <MemoryRouter initialEntries={["/"]}>
@@ -122,6 +122,6 @@ describe("EmailUsageList", () => {
 
     await userEvent.click(screen.getByRole("link", { name: "Open Hello" }));
 
-    expect(await screen.findByText("details:CAP+abc@mail.gmail.com")).toBeTruthy();
+    expect(await screen.findByText("details:7519fadc-4004")).toBeTruthy();
   });
 });

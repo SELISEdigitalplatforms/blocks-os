@@ -140,6 +140,17 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
             return (mails, totalCount);
         }
 
+        public async Task<string?> GetMessageIdByItemIdAsync(string itemId)
+        {
+            var dbContext = _dbContextProvider.GetDatabase();
+            var collection = dbContext.GetCollection<MailBoxEntity>($"{nameof(MailBoxEntity)}s");
+            var filter = Builders<MailBoxEntity>.Filter.Eq(x => x.ItemId, itemId);
+
+            return await collection.Find(filter)
+                .Project(x => x.MessageId)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<MailBoxEntity?> GetMailBoxMailAsync(string messageId)
         {
             var dbContext = _dbContextProvider.GetDatabase();

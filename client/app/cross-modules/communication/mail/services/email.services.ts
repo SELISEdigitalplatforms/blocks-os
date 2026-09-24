@@ -127,9 +127,8 @@ class EmailService {
     });
   };
 
-  getMailBoxMail = (messageId: string): Promise<IGetMailBoxMailResponse> => {
-    // Encoded: Gmail message ids contain "+", which a raw query string reads as a space.
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=${encodeURIComponent(messageId)}`, undefined, {
+  getMailBoxMail = (itemId: string): Promise<IGetMailBoxMailResponse> => {
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=${encodeURIComponent(itemId)}`, undefined, {
       absoluteUrl: true,
     });
   };

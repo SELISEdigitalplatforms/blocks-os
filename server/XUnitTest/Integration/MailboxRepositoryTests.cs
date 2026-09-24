@@ -131,6 +131,19 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task GetMessageIdByItemIdAsync_ReturnsTheRowsMessageId()
+        {
+            var messageId = "item-" + Guid.NewGuid().ToString("N") + "@mail.gmail.com";
+            var row = Mail(messageId, "Subj", MailStatus.Received, DateTime.UtcNow, inbound: true);
+            await SeedAsync(row);
+
+            var repository = NewRepository();
+
+            (await repository.GetMessageIdByItemIdAsync(row.ItemId)).Should().Be(messageId);
+            (await repository.GetMessageIdByItemIdAsync("nope-" + Guid.NewGuid().ToString("N"))).Should().BeNull();
+        }
+
+        [Fact]
         public async Task GetMailBoxMailAsync_WhenMissing_ReturnsNull()
         {
             var result = await NewRepository().GetMailBoxMailAsync("nope-" + Guid.NewGuid().ToString("N"));

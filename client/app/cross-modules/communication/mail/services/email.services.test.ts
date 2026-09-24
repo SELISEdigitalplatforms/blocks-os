@@ -289,13 +289,13 @@ describe("EmailService", () => {
   });
 
   describe("getMailBoxMail", () => {
-    it("should call correct endpoint with messageId", async () => {
+    it("should call correct endpoint with itemId", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetMailBoxMailResponse);
 
       const result = await service.getMailBoxMail("msg-123");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=msg-123`,
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=msg-123`,
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );

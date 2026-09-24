@@ -105,8 +105,10 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
     endDate,
   );
 
+  // Keyed by item id, not Message-ID: "...@mail.gmail.com" ends the path in a dotted segment, which
+  // the server's SPA fallback treats as a static file and answers with a 404 on reload.
   const detailsPath = (mail: IEmailUsage) =>
-    scoped(`email-management/usage/${encodeURIComponent(mail.messageId)}`);
+    scoped(`email-management/usage/${encodeURIComponent(mail.itemId)}`);
 
   const columns = useMemo<ColumnDef<IEmailUsage>[]>(() => {
     const allColumns: ColumnDef<IEmailUsage>[] = [
