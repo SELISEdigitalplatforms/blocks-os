@@ -7,6 +7,8 @@ using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Storage.Entities;
 using FluentAssertions;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace XUnitTest.Integration
 {
@@ -108,6 +110,45 @@ namespace XUnitTest.Integration
 
             await repo.DeleteMailConfigurationAsync("m-" + tag);
             (await repo.GetMailConfigurationByIdAsync("m-" + tag)).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Mail_UpdateSenderName_ChangesOnlyThatFieldAndKeepsUnmappedOnes()
+        {
+            var tag = Guid.NewGuid().ToString("N");
+            var repo = NewRepository();
+            var collection = _fixture.Collection<BsonDocument>("MailServerConfigurations");
+
+            // Written raw so the document can carry a field the entity does not map, as a
+            // provisioned default may. A read-then-replace would silently drop it.
+            await collection.InsertOneAsync(new BsonDocument
+            {
+                { "_id", "d-" + tag },
+                { "Name", "Default" },
+                { "Host", "email-smtp.eu-central-1.amazonaws.com" },
+                { "Port", 587 },
+                { "SenderName", "Selise Blocks" },
+                { "SenderAddress", "blocks@selise.io" },
+                { "SenderUserName", "ses-user" },
+                { "AccountPassword", "ses-password" },
+                { "IsDefault", true },
+                { "ProvisionedOnly", "keep-me" }
+            });
+
+            var updatedAt = new DateTime(2026, 9, 25, 0, 0, 0, DateTimeKind.Utc);
+            await repo.UpdateMailSenderNameAsync("d-" + tag, "Contoso Mailer", updatedAt, "user-1");
+
+            var stored = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", "d-" + tag)).FirstAsync();
+            stored["SenderName"].AsString.Should().Be("Contoso Mailer");
+            stored["LastUpdatedBy"].AsString.Should().Be("user-1");
+            stored["Host"].AsString.Should().Be("email-smtp.eu-central-1.amazonaws.com");
+            stored["SenderAddress"].AsString.Should().Be("blocks@selise.io");
+            stored["SenderUserName"].AsString.Should().Be("ses-user");
+            stored["AccountPassword"].AsString.Should().Be("ses-password");
+            stored["IsDefault"].AsBoolean.Should().BeTrue();
+            stored["ProvisionedOnly"].AsString.Should().Be("keep-me");
+
+            await repo.DeleteMailConfigurationAsync("d-" + tag);
         }
 
         [Fact]

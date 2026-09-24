@@ -165,6 +165,19 @@ namespace Configuration.DomainService.Shared.Services
             await collection.ReplaceOneAsync(filter, configuration, new ReplaceOptions { IsUpsert = true });
         }
 
+        public async Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy)
+        {
+            var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
+
+            var filter = Builders<MailServerConfiguration>.Filter.Eq(mc => mc.ItemId, configurationId);
+            var update = Builders<MailServerConfiguration>.Update
+                .Set(mc => mc.SenderName, senderName)
+                .Set(mc => mc.LastUpdatedDate, lastUpdatedDate)
+                .Set(mc => mc.LastUpdatedBy, lastUpdatedBy);
+
+            await collection.UpdateOneAsync(filter, update);
+        }
+
         public async Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId)
         {
             var collection = _dbContextProvider.GetCollection<MailServerConfiguration>(_mailConfigurationCollectionName);
