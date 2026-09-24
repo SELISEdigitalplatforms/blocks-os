@@ -21,6 +21,12 @@ export type BulkRolesDialogProps = {
   open: boolean;
   mode: BulkRolesMode;
   projectKey: string;
+  /**
+   * The organization the delta will be written into. Also what the role list is
+   * scoped to -- roles live under an organization key, so listing another one's
+   * would offer slugs that do not exist where they are about to be written.
+   */
+  organizationId: string;
   /** Shown in the locked field; never editable here (see the field's own note). */
   organizationLabel: string;
   selectedCount: number;
@@ -54,6 +60,7 @@ export const BulkRolesDialog = ({
   open,
   mode,
   projectKey,
+  organizationId,
   organizationLabel,
   selectedCount,
   heldRoleCounts,
@@ -89,6 +96,7 @@ export const BulkRolesDialog = ({
           page: 0,
           pageSize: Math.max(heldSlugs.length, 1),
           projectKey,
+          organizationId,
           sort: { property: "Name", isDescending: false },
           filter: { slugs: heldSlugs },
         }
@@ -96,6 +104,7 @@ export const BulkRolesDialog = ({
           page,
           pageSize: PAGE_SIZE,
           projectKey,
+          organizationId,
           sort: { property: "Name", isDescending: false },
           filter: { search },
         },

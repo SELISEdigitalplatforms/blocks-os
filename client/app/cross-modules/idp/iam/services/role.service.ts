@@ -20,9 +20,24 @@ import {
 
 export class RoleService {
   getRoles(payload: GetRolesPayload): Promise<GetRolesResponse> {
-    return http.post(ROLE_ENDPOINTS.GET_ROLES, payload, undefined, {
-      absoluteUrl: true,
-    });
+    // `projectKey` is deliberately not forwarded: it is a React Query cache
+    // discriminator, and IAM's request model has no such field, so sending it only
+    // made the body look organization-aware when it was not.
+    const { projectKey: _cacheScope, filter, ...request } = payload;
+
+    return http.post(
+      ROLE_ENDPOINTS.GET_ROLES,
+      {
+        ...request,
+        // Sent even when empty. IAM's GetRolesFilter.Search is optional now, but a
+        // slugs-only body was rejected outright by older builds with
+        // { "Filter.Search": ["The Search field is required."] }, and an empty
+        // string means the same thing to every version.
+        filter: { ...filter, search: filter?.search ?? "" },
+      },
+      undefined,
+      { absoluteUrl: true },
+    );
   }
 
   getRoleById(payload: IGetRolePayload): Promise<IGetRoleResponse> {

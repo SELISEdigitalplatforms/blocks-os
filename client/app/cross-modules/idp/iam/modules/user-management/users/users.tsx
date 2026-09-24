@@ -388,6 +388,7 @@ export const Users = () => {
             open
             mode={dialogMode}
             projectKey={tenantId}
+            organizationId={effectiveOrganizationId ?? DEFAULT_ORGANIZATION_ID}
             organizationLabel={organizationLabel}
             selectedCount={selectedCount}
             heldRoleCounts={dialogMode === "remove" ? heldRoleCounts : null}

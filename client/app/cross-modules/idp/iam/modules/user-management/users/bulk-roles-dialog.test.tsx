@@ -43,6 +43,7 @@ const renderDialog = (props: Partial<Parameters<typeof BulkRolesDialog>[0]> = {}
       open
       mode="add"
       projectKey="t1"
+      organizationId="org-1"
       organizationLabel="Org One"
       selectedCount={8}
       heldRoleCounts={null}
@@ -111,6 +112,14 @@ describe("BulkRolesDialog — add", () => {
       .forEach((box) => expect(box.getAttribute("disabled")).toBeNull());
   });
 
+  it("scopes the role list to the organization the change targets", () => {
+    // Roles live under an organization key. Listing another organization's would
+    // offer slugs that do not exist where they are about to be written.
+    renderDialog({ organizationId: "org-1" });
+
+    expect(h.lastRolesQuery?.organizationId).toBe("org-1");
+  });
+
   it("searches and paginates the ordinary role list", () => {
     h.totalCount = 40;
     renderDialog();
@@ -160,6 +169,15 @@ describe("BulkRolesDialog — remove", () => {
     expect(screen.getByTestId("bulk-roles-counts-unavailable").textContent).toContain(
       "Counts are unavailable",
     );
+  });
+
+  it("scopes the held-slug lookup to the same organization", () => {
+    // Without this the slugs resolve against the default organization and come back
+    // empty, so the dialog lists nothing to remove.
+    renderDialog({ mode: "remove", organizationId: "org-1", heldRoleCounts: { member: 8 } });
+
+    expect(h.lastRolesQuery?.organizationId).toBe("org-1");
+    expect((h.lastRolesQuery?.filter as { slugs?: string[] }).slugs).toEqual(["member"]);
   });
 
   it("issues no extra request to work out the held roles", () => {

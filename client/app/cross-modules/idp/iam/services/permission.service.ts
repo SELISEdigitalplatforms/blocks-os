@@ -21,7 +21,12 @@ export class PermissionService {
   getPermissions(
     payload: IGetPermissionsPayload,
   ): Promise<IAPIResponse<IPermission[]> & { totalCount: number }> {
-    return http.post(PERMISSION_ENDPOINTS.GET_PERMISSIONS, payload, undefined, {
+    // Same reasoning as roleService.getRoles: IAM's request model has no
+    // `projectKey`, so it was dropped on arrival. `organizationId` is the field
+    // that actually scopes the query.
+    const { projectKey: _cacheScope, ...request } = payload;
+
+    return http.post(PERMISSION_ENDPOINTS.GET_PERMISSIONS, request, undefined, {
       absoluteUrl: true,
     });
   }
