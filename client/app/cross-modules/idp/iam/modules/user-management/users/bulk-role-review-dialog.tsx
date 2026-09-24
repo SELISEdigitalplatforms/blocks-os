@@ -62,20 +62,24 @@ export const BulkRoleReviewDialog = ({
         {/* affectedCount, not matchedCount, is the headline: matched is the larger
             and more alarming number but includes users nothing happens to. Both are
             shown so the operator can reconcile them rather than wonder. */}
-        <div className="rounded-lg border bg-muted/40 px-4 py-3">
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-4 py-3">
           <p data-testid="bulk-review-headline" className="text-2xl font-bold text-high-emphasis">
             {affectedCount}{" "}
             <span className="text-base font-medium text-muted-foreground">
               users will be updated
             </span>
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">in {organizationLabel}</p>
+          <p className="mt-1 break-words text-sm text-muted-foreground">in {organizationLabel}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-medium text-high-emphasis">
               {isRemove ? "Removing" : "Adding"}
             </span>
             {roleSlugs.map((slug) => (
-              <Badge key={slug} variant={isRemove ? "error" : "info"}>
+              <Badge
+                key={slug}
+                variant={isRemove ? "error" : "info"}
+                className="max-w-full break-all"
+              >
                 {slug}
               </Badge>
             ))}
@@ -85,20 +89,33 @@ export const BulkRoleReviewDialog = ({
           </p>
         </div>
 
-        <div className="rounded-lg border px-4 py-3">
+        {/* min-w-0 on the card and on every value cell: DialogContent is a
+            fixed-width grid, and a grid or flex child defaults to min-width:auto,
+            so one long unbreakable value would push the whole card past the
+            dialog's edge instead of wrapping inside it. */}
+        <div className="min-w-0 rounded-lg border px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Who was matched
           </p>
           <dl className="mt-2 space-y-1 text-sm">
-            <div className="flex items-center justify-between gap-4">
-              <dt className="text-muted-foreground">Matched</dt>
-              <dd data-testid="bulk-review-matched" className="font-medium text-high-emphasis">
+            <div className="flex items-start justify-between gap-4">
+              <dt className="shrink-0 text-muted-foreground">Matched</dt>
+              <dd
+                data-testid="bulk-review-matched"
+                className="min-w-0 text-right font-medium text-high-emphasis"
+              >
                 {matchedCount} users
               </dd>
             </div>
-            <div className="flex items-center justify-between gap-4">
-              <dt className="text-muted-foreground">By</dt>
-              <dd className="max-w-[60%] truncate text-right font-medium text-high-emphasis">
+            <div className="flex items-start justify-between gap-4">
+              <dt className="shrink-0 text-muted-foreground">By</dt>
+              {/* Wrapped, not truncated: this line is the whole point of the
+                  summary -- it says which filter produced the number above, so
+                  clipping it to "Asif ..." hides the thing being reconciled. */}
+              <dd
+                data-testid="bulk-review-matched-by"
+                className="min-w-0 break-words text-right font-medium text-high-emphasis"
+              >
                 {matchedBy}
               </dd>
             </div>

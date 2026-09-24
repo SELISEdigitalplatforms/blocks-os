@@ -105,3 +105,54 @@ describe("BulkRoleReviewDialog", () => {
     expect((screen.getByText("Back") as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+// ── Long values must not burst the dialog ─────────────────────────────────────
+// jsdom does no layout, so these cannot assert pixels. What they pin is the rule
+// that made the dialog overflow in the first place: DialogContent is a fixed-width
+// grid, and a grid or flex child defaults to min-width:auto, so any descendant that
+// refuses to wrap reports its full string as a minimum and pushes the card past the
+// dialog's edge. A percentage max-width does not clamp that minimum -- only a
+// definite one does -- which is why `max-w-[60%] truncate` looked safe and was not.
+
+describe("BulkRoleReviewDialog — long values", () => {
+  const longMatchedBy =
+    "Everything matching the current filter in Asif Hossain Rafeen Organization";
+
+  it("renders the whole matched-by summary rather than clipping it", () => {
+    // This line says which filter produced the number above it, so truncating it to
+    // "Asif ..." hides exactly the thing the operator is meant to reconcile.
+    renderDialog({ matchedBy: longMatchedBy });
+
+    expect(screen.getByTestId("bulk-review-matched-by").textContent).toBe(longMatchedBy);
+  });
+
+  it("lets every value cell shrink and wrap instead of forcing the card wider", () => {
+    renderDialog({ matchedBy: longMatchedBy });
+
+    const matchedBy = screen.getByTestId("bulk-review-matched-by");
+    expect(matchedBy.className).toContain("min-w-0");
+    expect(matchedBy.className).toContain("break-words");
+    expect(matchedBy.className).not.toContain("truncate");
+
+    expect(screen.getByTestId("bulk-review-matched").className).toContain("min-w-0");
+  });
+
+  it("keeps the counts readable beside a long summary", () => {
+    // The count sat at the card's right edge, which had been pushed outside the
+    // dialog -- so the visible symptom of the overflow was a chopped "12 users".
+    renderDialog({ matchedBy: longMatchedBy });
+
+    expect(screen.getByTestId("bulk-review-matched").textContent).toBe("312 users");
+  });
+
+  it("wraps a long organization name and a long role slug", () => {
+    renderDialog({
+      organizationLabel: "Asif Hossain Rafeen Organization",
+      roleSlugs: ["an-extremely-long-role-slug-that-will-not-break-on-its-own"],
+    });
+
+    expect(
+      screen.getByText("an-extremely-long-role-slug-that-will-not-break-on-its-own").className,
+    ).toContain("break-all");
+  });
+});
