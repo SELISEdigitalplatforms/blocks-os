@@ -2,6 +2,7 @@
 using Blocks.Genesis;
 using Blocks.Secrets;
 using BlocksOs.Api;
+using BlocksOs.Api.Middleware;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using Configuration.DomainService.Shared.Utilities;
@@ -71,6 +72,64 @@ await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 var app = builder.Build();
 
+// Browser-facing security headers for the SPA and static assets (ZAP DAST bar: 0 alerts).
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "no-referrer";
+        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+        // Runtime config is an external /runtime-config.js (no inline script). Explicit hosts avoid CSP wildcards that ZAP flags.
+        var connectHosts =
+            "https://dev-iam.blocksdevelopers.com " +
+            "https://dev-api.blocksdevelopers.com " +
+            "https://dev-construct.blocksdevelopers.com " +
+            "https://dev-localization.blocksdevelopers.com " +
+            "https://dev-agents.blocksdevelopers.com " +
+            "https://dev-data.blocksdevelopers.com " +
+            "https://dev-utilities.blocksdevelopers.com " +
+            "https://dev-logic.blocksdevelopers.com " +
+            "https://dev-monitor.blocksdevelopers.com " +
+            "https://dev-release.blocksdevelopers.com " +
+            "https://dev-studio.blocksdevelopers.com " +
+            "https://dev-os.blocksdevelopers.com " +
+            "https://code.selise.biz";
+        headers["Content-Security-Policy"] =
+            "default-src 'self'; " +
+            "script-src 'self'; " +
+            "style-src 'self'; " +
+            "img-src 'self' data: blob:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' " + connectHosts + "; " +
+            "frame-ancestors 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self' https://dev-iam.blocksdevelopers.com https://dev-os.blocksdevelopers.com";
+
+        var path = context.Request.Path.Value ?? "";
+        if (path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith("runtime-config.js", StringComparison.OrdinalIgnoreCase) ||
+            !Path.HasExtension(path))
+        {
+            // HTML / SPA routes / runtime config: do not cache so previews pick up header/config changes.
+            headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+            headers["Pragma"] = "no-cache";
+        }
+        else if (path.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            // Content-hashed Vite assets are immutable.
+            headers["Cache-Control"] = "public, max-age=31536000, immutable";
+        }
+
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -78,9 +137,24 @@ var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
 
 if (File.Exists(indexHtml))
 {
-    app.MapFallbackToFile("/index.html");
+    // SPA fallback must not 200 for VCS / backup probes — MapFallbackToFile would
+    // serve index.html for /BitKeeper, /.git, etc. and OWASP ZAP flags "Hidden File Found".
+    app.MapFallback(async context =>
+    {
+        if (SpaFallbackGuard.IsHiddenOrVcsProbe(context.Request.Path.Value))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(indexHtml);
+    });
 }
 
+
+// IAM access cookie is named after the OIDC redirect host; JwtBearer needs Authorization.
+app.UseMiddleware<HostAccessCookieBearerMiddleware>();
 
 ApplicationConfigurations.ConfigureMiddleware(app);
 

@@ -10,10 +10,20 @@ function oidcPasswordField(page: Page) {
   return page.locator("#oidc-password").or(page.getByRole("textbox", { name: "Password" }))
 }
 
+// Empty-console "Welcome to SELISE Blocks" is also shown before OIDC completes
+// on preview, so it must NOT count as authenticated. Prefer the projects list
+// heading, or the signed-in user menu.
 const consoleHeading = (page: Page) =>
-  page.getByRole("heading", {
-    name: /Your Blocks Projects|Welcome to SELISE Blocks/,
-  })
+  page.getByRole("heading", { name: /Your Blocks Projects/i })
+
+const signedInChrome = (page: Page) =>
+  page.getByRole("button", { name: /Open user menu|User menu/i })
+
+async function isAuthenticatedConsole(page: Page): Promise<boolean> {
+  if (await consoleHeading(page).isVisible({ timeout: 1_500 }).catch(() => false)) return true
+  if (await signedInChrome(page).isVisible({ timeout: 1_500 }).catch(() => false)) return true
+  return false
+}
 
 /** True when the page is the product login gate or OIDC credential form. */
 export async function isLoginSurface(page: Page): Promise<boolean> {
@@ -56,7 +66,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
   await page.goto(loginPath, { waitUntil: "domcontentloaded" })
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (await consoleHeading(page).isVisible({ timeout: 3_000 }).catch(() => false)) {
+    if (await isAuthenticatedConsole(page)) {
       return
     }
 
@@ -65,7 +75,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
       try {
         await loginButton.click({ timeout: 8_000 })
       } catch {
-        if (await consoleHeading(page).isVisible({ timeout: 3_000 }).catch(() => false)) return
+        if (await isAuthenticatedConsole(page)) return
         await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
         continue
       }
@@ -77,7 +87,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
         page.waitForURL(/\/app\/console/, { timeout: 30_000 }),
       ]).catch(() => {})
 
-      if (await consoleHeading(page).isVisible().catch(() => false)) {
+      if (await isAuthenticatedConsole(page)) {
         return
       }
 
@@ -95,7 +105,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
   }
 
   await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
-  await expect(consoleHeading(page)).toBeVisible({ timeout: 30_000 })
+  await expect(signedInChrome(page).or(consoleHeading(page)).first()).toBeVisible({ timeout: 30_000 })
 }
 
 /**
@@ -106,12 +116,12 @@ export async function ensureAuthenticated(page: Page) {
   const base = e2eBaseUrl()
   await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
 
-  if (await consoleHeading(page).isVisible({ timeout: 15_000 }).catch(() => false)) {
+  if (await isAuthenticatedConsole(page)) {
     return
   }
 
   await loginThroughOidc(page)
-  await expect(consoleHeading(page)).toBeVisible({ timeout: 30_000 })
+  await expect(signedInChrome(page).or(consoleHeading(page)).first()).toBeVisible({ timeout: 30_000 })
 }
 
 /** Force a full OIDC login (ignores any saved session). */

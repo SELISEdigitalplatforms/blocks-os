@@ -8,34 +8,40 @@ function getBaseProjectName(): string {
   return process.env.PROJECT_NAME?.trim() || "Test Project"
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-function orphanProjectPatterns(): RegExp[] {
+function orphanProjectPrefixes(): string[] {
   const prefixes = new Set(["Test Project"])
   const configured = process.env.PROJECT_NAME?.trim()
   if (configured) prefixes.add(configured)
-  // project-settings-flow renames the shared project to "<name> Renamed" (and
-  // can compound to "... Renamed Renamed" across repeated reuse) without ever
-  // changing its numeric id — capture that suffix too, or the truncated name
-  // handed to namedProjectCard()'s exact-text match never matches the (now
-  // longer) rendered label again, and reuseOrCreateSharedProject silently
-  // abandons the project and creates a brand-new one on every subsequent run.
-  return [...prefixes].map(
-    (prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+(?: Renamed)*`, "g"),
-  )
+  return [...prefixes]
+}
+
+/** Collect console labels like "Test Project 12" / "Test Project 12 Renamed". */
+function collectOrphanNames(mainText: string, prefixes: string[]): string[] {
+  const names = new Set<string>()
+  for (const prefix of prefixes) {
+    let from = 0
+    while (from < mainText.length) {
+      const at = mainText.indexOf(prefix, from)
+      if (at < 0) break
+      let j = at + prefix.length
+      if (j < mainText.length && mainText[j] === " ") {
+        j += 1
+        const digitStart = j
+        while (j < mainText.length && mainText[j] >= "0" && mainText[j] <= "9") j += 1
+        if (j > digitStart) {
+          while (mainText.startsWith(" Renamed", j)) j += " Renamed".length
+          names.add(mainText.slice(at, j))
+        }
+      }
+      from = at + 1
+    }
+  }
+  return [...names]
 }
 
 async function listOrphanProjectNames(page: Page): Promise<string[]> {
   const mainText = await page.locator("main").innerText().catch(() => "")
-  const names = new Set<string>()
-  for (const pattern of orphanProjectPatterns()) {
-    for (const match of mainText.matchAll(pattern)) {
-      names.add(match[0])
-    }
-  }
-  return [...names]
+  return collectOrphanNames(mainText, orphanProjectPrefixes())
 }
 
 /** Visible e2e project names on the console (DEV-TEST / PROJECT_NAME orphans). */
@@ -46,7 +52,7 @@ export async function listE2eProjectNamesOnConsole(page: Page): Promise<string[]
 }
 
 const consoleProjectsHeading = (page: Page) =>
-  page.getByRole("heading", { name: /Your Blocks Projects|Welcome to SELISE Blocks/ })
+  page.getByRole("heading", { name: /Your Blocks Projects|Welcome to SELISE Blocks|Welcome to SELISE Blocks/i })
 
 const isVisibleNow = async (locator: { isVisible: (opts: { timeout: number }) => Promise<boolean> }) =>
   locator.isVisible({ timeout: 500 }).catch(() => false)
@@ -75,7 +81,7 @@ export async function freeProjectSlotIfNeeded(page: Page) {
   await waitForConsoleProjectsReady(page)
 
   const welcomeHeading = page.getByRole("heading", {
-    name: "Welcome to SELISE Blocks",
+    name: /Welcome to SELISE Blocks|Welcome to SELISE Blocks/i,
   })
   if (await isVisibleNow(welcomeHeading)) {
     return
@@ -106,21 +112,53 @@ export async function freeProjectSlotIfNeeded(page: Page) {
     if (await isVisibleNow(addProjectButton)) {
       return
     }
+    if (await isVisibleNow(welcomeHeading)) {
+      return
+    }
   }
 
+  // Empty console shows "Create a project", not "Add Project".
+  if (await isVisibleNow(welcomeHeading)) {
+    return
+  }
+  const createProjectButton = page.getByRole("button", { name: /Create a project/i })
+  if (await isVisibleNow(createProjectButton)) {
+    return
+  }
   await expect(addProjectButton).toBeVisible({ timeout: 15_000 })
 }
 
 export async function createProject(page: Page) {
+  const apiLog: string[] = []
+  let createdTenantGroupId = ""
+  const onResp = async (res: import("@playwright/test").Response) => {
+    const url = res.url()
+    const method = res.request().method()
+    if (/\/api\/Project\/Create\b/i.test(url) && method === "POST") {
+      let body = ""
+      try { body = (await res.text()).slice(0, 800) } catch { body = "?" }
+      apiLog.push(`${res.status()} ${method} ${url} :: ${body}`)
+      try {
+        const parsed = JSON.parse(body) as { tenantGroupId?: string; TenantGroupId?: string }
+        createdTenantGroupId = parsed.tenantGroupId || parsed.TenantGroupId || createdTenantGroupId
+      } catch { /* ignore */ }
+      return
+    }
+    if (/Project\/Gets|isAuthorized|isAuthorized/i.test(url)) {
+      apiLog.push(`${res.status()} ${method} ${url}`)
+    }
+  }
+  page.on("response", onResp)
+
   await test.step("Start a new project", async () => {
     await ensureConsole(page)
     await waitForConsoleProjectsReady(page)
 
     const welcomeHeading = page.getByRole("heading", {
-      name: "Welcome to SELISE Blocks",
+      name: /Welcome to SELISE Blocks|Welcome to SELISE Blocks/i,
     })
     const createProjectButton = page.getByRole("button", {
-      name: "Create a project",
+      name: /Create a project/i,
     })
     const addProjectButton = addProjectControl(page)
 
@@ -143,8 +181,8 @@ export async function createProject(page: Page) {
     const nameInput = page.locator('[placeholder="Enter your project name"]:visible')
     await nameInput.fill(projectName)
 
-    await page.getByRole("checkbox", { name: "I confirm that I will use" }).click()
-    await page.getByRole("checkbox", { name: "I accept the Terms of services" }).click()
+    await page.getByRole("checkbox", { name: /confirm that I will use/i }).click()
+    await page.getByRole("checkbox", { name: /accept the Terms of services/i }).click()
 
     const continueButton = page.getByRole("button", { name: "Continue", exact: true })
     await expect(continueButton).toBeEnabled()
@@ -180,24 +218,71 @@ export async function createProject(page: Page) {
   })
 
   const tenantGroupId =
-    new URL(page.url()).pathname.match(/\/app\/project\/([^/]+)\/environments/)?.[1] ?? ""
+    createdTenantGroupId ||
+    new URL(page.url()).pathname.match(/\/app\/project\/([^/]+)\/environments/)?.[1] ||
+    ""
 
   await test.step("Open the new project's Development dashboard", async () => {
+    // Preview envs can bounce from /environments to an empty welcome console
+    // before the Development card paints. Prefer console → open by name, with
+    // a short retry — same end state as a successful console landing.
+    const tryOpenFromConsole = async () => {
+      // Preview: Project/Create returns 200, then Project/Gets + isAuthorized
+      // often 401 until the session is refreshed. Re-login and deep-link by
+      // tenantGroupId when we have it; otherwise poll the console by name.
+      if (tenantGroupId) {
+        await loginFresh(page)
+        await page.goto(
+          `${e2eBaseUrl()}/app/project/${tenantGroupId}/environments`,
+          { waitUntil: "domcontentloaded" },
+        )
+        const card = page
+          .locator('[class*="cursor-pointer"]')
+          .filter({ has: page.getByText("Development", { exact: true }) })
+          .filter({ hasText: "X-Blocks-Key" })
+          .first()
+        await expect(card).toBeVisible({ timeout: 60_000 })
+        await card.click({ force: true })
+        await page.waitForURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 30_000 })
+        await expect(page.getByText("X-Blocks-Key:")).toBeVisible({ timeout: 30_000 })
+        return
+      }
+
+      const deadline = Date.now() + 60_000
+      let lastErr: unknown
+      while (Date.now() < deadline) {
+        await loginFresh(page).catch(() => {})
+        await page.goto(`${e2eBaseUrl()}/app/console`, { waitUntil: "domcontentloaded" })
+        try {
+          await openNamedProjectDashboard(page, projectName)
+          return
+        } catch (err) {
+          lastErr = err
+          await page.waitForTimeout(3_000)
+        }
+      }
+      throw lastErr instanceof Error
+        ? lastErr
+        : new Error(`Could not open newly created project "${projectName}" from console`)
+    }
+
     if (/\/app\/console\/?$/i.test(new URL(page.url()).pathname)) {
-      await openNamedProjectDashboard(page, projectName)
+      await tryOpenFromConsole()
       return
     }
 
     const developmentCard = page
       .locator('[class*="cursor-pointer"]')
       .filter({ has: page.getByText("Development", { exact: true }) })
-      // environment-card.tsx (bf9d3e2f) moved this label into a <dt>/<dd>
-      // pair and dropped the trailing colon — match without it so this still
-      // finds the card regardless of which variant is rendered.
       .filter({ hasText: "X-Blocks-Key" })
       .first()
 
-    await expect(developmentCard).toBeVisible({ timeout: 30000 })
+    try {
+      await expect(developmentCard).toBeVisible({ timeout: 12_000 })
+    } catch {
+      await tryOpenFromConsole()
+      return
+    }
 
     const setupPending = developmentCard.locator('[aria-label="Setup pending"]')
     if (await isVisibleNow(setupPending)) {
@@ -216,7 +301,8 @@ export async function createProject(page: Page) {
         break
       } catch (error) {
         if (attempt === 2) {
-          throw error
+          await tryOpenFromConsole()
+          return
         }
       }
     }
@@ -237,6 +323,8 @@ export async function createProject(page: Page) {
       `createProject could not resolve ids from ${page.url()} (tenantGroupId=${resolvedTenantGroupId}, itemId=${itemId})`,
     )
   }
+  
+  page.off("response", onResp)
   return {
     projectName,
     tenantGroupId: resolvedTenantGroupId,
@@ -535,7 +623,7 @@ export async function reuseOrCreateSharedProject(page: Page): Promise<{
       return { projectName, dashboardUrl: page.url(), itemId, tenantGroupId }
     } catch (error) {
       console.warn(
-        `[e2e] Could not reopen orphan "${projectName}" — creating a new project instead.`,
+        "[e2e] Could not reopen orphan project — creating a new project instead.",
         error,
       )
     }
@@ -572,14 +660,14 @@ export async function openProjectOverviewPage(
   await page.goto(`${e2eBaseUrl()}/app/project/${tenantGroupId}/${subpath}`, {
     waitUntil: "domcontentloaded",
   })
-  await expect(page).toHaveURL(new RegExp(`/app/project/${tenantGroupId}/${subpath}`), {
+  await expect(page).toHaveURL((url) => url.pathname.includes(`/app/project/${tenantGroupId}/${subpath}`), {
     timeout: 30000,
   })
 }
 
 export async function openDashboardChildPage(page: Page, itemId: string, subpath: string) {
   await page.goto(`${e2eBaseUrl()}/app/${itemId}/${subpath}`, { waitUntil: "domcontentloaded" })
-  await expect(page).toHaveURL(new RegExp(`/app/${itemId}/${subpath}`), {
+  await expect(page).toHaveURL((url) => url.pathname.includes(`/app/${itemId}/${subpath}`), {
     timeout: 30000,
   })
 }

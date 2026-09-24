@@ -21,6 +21,8 @@ export interface IProject {
   environment: string;
   tenantGroupId: string;
   tenantSlug: string;
+  /** Gates Genesis third-party token trust for this tenant (Phase 1 Project/Get). */
+  isThirdPartyJwtEnabled: boolean;
 }
 
 export interface IResource {

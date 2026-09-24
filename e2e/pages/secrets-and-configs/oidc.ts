@@ -387,13 +387,13 @@ export async function rotateClientSecretFlow(page: Page, clientRow: Locator, cli
   if (
     await page
       .getByText(
-        new RegExp(`Do you want to rotate the client secret for.*${escapeRegex(clientName)}`),
+        `Do you want to rotate the client secret for ${clientName}`,
       )
       .isVisible()
   ) {
     await expect(
       page.getByText(
-        new RegExp(`Do you want to rotate the client secret for.*${escapeRegex(clientName)}`),
+        `Do you want to rotate the client secret for ${clientName}`,
       ),
     ).toBeVisible();
   }
@@ -445,7 +445,7 @@ export async function deleteOidcClientFlow(page: Page, clientRow: Locator, clien
   await deleteButton.click();
   await expect(page.getByRole("heading", { name: "Delete OIDC Client" })).toBeVisible();
   await expect(
-    page.getByText(new RegExp(`delete.*${escapeRegex(clientName)}`)),
+    page.getByText(`delete.*${escapeRegex(clientName)}`, { exact: false }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).last().click();
   if (
