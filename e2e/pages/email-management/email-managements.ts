@@ -315,7 +315,7 @@ export async function templatesFlow(page: Page) {
   await expect(page.getByRole("heading", { name: "Confirmation", exact: true })).toBeVisible({
     timeout: 10_000,
   });
-  await expect(page.getByText(new RegExp(`clone the ${sourceName} template`, "i"))).toBeVisible({
+  await expect(page.getByText(`clone the ${sourceName} template`, { exact: false })).toBeVisible({
     timeout: 10_000,
   });
   await page.getByRole("button", { name: "Yes", exact: true }).click();

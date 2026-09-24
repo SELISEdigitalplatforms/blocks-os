@@ -13,16 +13,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
+import { Label } from "@/components/ui-kits/label/label";
+import { Switch } from "@/components/ui-kits/switch/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
+import { useGetProject } from "@/hooks/use-project";
 import { useProjectStore } from "@seliseblocks/genesis-os";
 import { providers as providerCatalogue } from "@blocks-idp/authentication/constants/authentication.constant";
 import {
   useDeleteThirdPartyJwtProvider,
   useGetThirdPartyJwtProviders,
   useSaveThirdPartyJwtProvider,
+  useUpdateThirdPartyJwtEnabled,
 } from "@blocks-idp/authentication/hooks/use-third-party-jwt-provider";
 import {
   requiresIdpHeader,
@@ -196,11 +200,87 @@ function Detail({
   );
 }
 
+type TrustToggleProps = {
+  checked: boolean;
+  canEnable: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  isPending: boolean;
+  onToggle: (next: boolean) => void;
+};
+
+/**
+ * Tenant-scoped trust switch. Renders server state only — never an optimistic mirror —
+ * and stays disabled when enable would be rejected (no active provider).
+ */
+function TrustToggle({
+  checked,
+  canEnable,
+  isLoading,
+  isError,
+  isPending,
+  onToggle,
+}: Readonly<TrustToggleProps>) {
+  const disabled = isLoading || isPending || isError || (!checked && !canEnable);
+  const helper =
+    !isLoading && !isError && !checked && !canEnable
+      ? "Add an active provider to enable third-party token trust."
+      : null;
+
+  if (isError) {
+    return (
+      <div
+        className="flex flex-col gap-1 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2"
+        role="alert"
+      >
+        <p className="text-sm font-medium text-destructive">
+          Could not load third-party token trust state
+        </p>
+        <p className="text-xs text-muted-foreground">
+          The provider list below is unaffected. Reload the page to try again.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="space-y-0.5">
+        <Label htmlFor="external-idp-trust" className="text-sm font-medium">
+          Accept tokens from external identity providers
+        </Label>
+        {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
+        {isLoading ? <Skeleton className="h-3 w-48" /> : null}
+      </div>
+      <Switch
+        id="external-idp-trust"
+        size="sm"
+        checked={checked}
+        disabled={disabled}
+        aria-label="Accept tokens from external identity providers"
+        onCheckedChange={(next) => {
+          if (disabled) return;
+          onToggle(next);
+        }}
+      />
+    </div>
+  );
+}
+
 export const Certificates = () => {
   const projectKey = useProjectStore().selectedProject?.tenantId ?? "";
-  const { data: providers, isLoading } = useGetThirdPartyJwtProviders(projectKey);
+  const {
+    data: projectResponse,
+    isLoading: isProjectLoading,
+    isError: isProjectError,
+  } = useGetProject();
+  const {
+    data: providers,
+    isLoading: isProvidersLoading,
+  } = useGetThirdPartyJwtProviders(projectKey);
   const { mutateAsync: deleteProvider } = useDeleteThirdPartyJwtProvider();
   const { mutateAsync: saveProvider, isPending: isTogglingActive } = useSaveThirdPartyJwtProvider();
+  const { mutateAsync: updateTrust, isPending: isTrustPending } = useUpdateThirdPartyJwtEnabled();
 
   const [isFormOpen, setIsFormOpen] = useQueryState(
     "editExternalIdp",
@@ -214,6 +294,23 @@ export const Certificates = () => {
   const [openItemId, setOpenItemId] = useQueryState("provider", parseAsString);
 
   const list = providers ?? [];
+  const trustEnabled = projectResponse?.data?.isThirdPartyJwtEnabled === true;
+  const activeProviderCount = list.filter((p) => p.isActive).length;
+  const canEnable = activeProviderCount > 0;
+
+  const toggleTrust = async (next: boolean) => {
+    // Server state only — do not flip local UI ahead of the response (A1).
+    const result = await updateTrust(next);
+    if (!result.isSuccess) {
+      showErrorToast({ errors: result.errors ?? "Could not update third-party token trust" });
+      return;
+    }
+    showSuccessToast({
+      description: next
+        ? "External identity provider trust enabled"
+        : "External identity provider trust disabled",
+    });
+  };
 
   const openAdd = () => {
     setEditing(null);
@@ -268,11 +365,32 @@ export const Certificates = () => {
     showSuccessToast({ description: `Removed ${provider.key}` });
   };
 
-  if (isLoading) return <LoadingSkeleton />;
+  const trustToggle = (
+    <TrustToggle
+      checked={trustEnabled}
+      canEnable={canEnable}
+      isLoading={isProjectLoading || isProvidersLoading}
+      isError={isProjectError}
+      isPending={isTrustPending}
+      onToggle={(next) => {
+        void toggleTrust(next);
+      }}
+    />
+  );
+
+  if (isProvidersLoading) {
+    return (
+      <div className="space-y-4">
+        {trustToggle}
+        <LoadingSkeleton />
+      </div>
+    );
+  }
 
   if (!list.length) {
     return (
-      <>
+      <div className="space-y-4">
+        {trustToggle}
         <EmptyConfiguration onAdd={openAdd} />
         <ProviderFormModal
           open={isFormOpen}
@@ -280,11 +398,11 @@ export const Certificates = () => {
           existing={null}
           projectKey={projectKey}
         />
-      </>
+      </div>
     );
   }
 
-  const ambiguous = list.filter((p) => p.isActive && requiresIdpHeader(p, list));
+    const ambiguous = list.filter((p) => p.isActive && requiresIdpHeader(p, list));
   const opened = openItemId ? list.find((p) => p.itemId === openItemId) : undefined;
 
   const modals = (
@@ -376,6 +494,8 @@ export const Certificates = () => {
 
   return (
     <div className="space-y-4">
+      {trustToggle}
+
       {ambiguous.length > 0 && (
         <Banner variant="warning">
           {ambiguous.length} provider{ambiguous.length > 1 ? "s" : ""} share an issuer and audience

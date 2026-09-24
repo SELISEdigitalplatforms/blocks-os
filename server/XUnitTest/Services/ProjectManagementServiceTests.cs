@@ -304,6 +304,7 @@ namespace XUnitTest.Services
                 TenantGroupId = "grp",
                 Environment = "dev",
                 Name = "Proj",
+                IsThirdPartyJwtEnabled = true,
                 Applications = new List<Applications> { new() { CookieDomain = "example.com", IsDomainVerified = true } }
             };
             _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
@@ -314,6 +315,7 @@ namespace XUnitTest.Services
             response.Data.Name.Should().Be("Proj");
             response.Data.TenantSlug.Should().Be("dxyz"); // env 'dev' => 'd' + encoded
             response.Data.IsDomainVerified.Should().BeTrue();
+            response.Data.IsThirdPartyJwtEnabled.Should().BeTrue();
         }
 
         [Fact]

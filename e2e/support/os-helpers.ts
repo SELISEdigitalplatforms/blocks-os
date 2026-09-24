@@ -132,7 +132,7 @@ export async function openProjectOverview(
     await reseedThenGoto(page, targetUrl, fixture.projectName, dashboardUrl)
   }
 
-  await expect(page).toHaveURL(new RegExp(`/app/project/${fixture.tenantGroupId}/${subpath}`), {
+  await expect(page).toHaveURL((url) => url.pathname.includes(`/app/project/${fixture.tenantGroupId}/${subpath}`), {
     timeout: 30_000,
   })
   await expect(

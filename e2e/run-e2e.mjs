@@ -50,7 +50,7 @@ function main() {
       // nothing and the call fails with ENOENT. Delegate to the OS shell so
       // it can find npx.cmd. All args are hard-coded spec paths or trusted
       // forwarded flags, so the shell-injection warning does not apply.
-      shell: true,
+      shell: false,
     },
   )
 
