@@ -376,7 +376,7 @@ describe("OidcBrandingForm", { timeout: 15_000 }, () => {
       pages: {
         ...DEFAULT_OIDC_UI_TEMPLATE.pages,
         signup: { ...DEFAULT_OIDC_UI_TEMPLATE.pages.signup, heading: "Join Acme" },
-        shared: { footerText: "Acme {year}" },
+        shared: { ...DEFAULT_OIDC_UI_TEMPLATE.pages.shared, footerText: "Acme {year}" },
       },
     });
     expect(Object.keys(payload.theme.light)).toHaveLength(12);

@@ -96,7 +96,9 @@ namespace XUnitTest.Services
                     { "KbtclIdentifier", ".blocks.dev" },
                     { "IamDomain", "https://iam.blocks.dev" },
                     { "IamCookieDomain", "blocks.dev" },
-                    { "CertificateStorageType", "Azure" }
+                    { "CertificateStorageType", "Azure" },
+                    // Required for project create after #606 — without it SaveProjectAsync fails closed.
+                    { "FrontendRuntime:BLOCKS_IAM_BASE_URL", "https://dev-iam.blocksdevelopers.com" }
                 })
                 .Build();
 
@@ -1636,6 +1638,275 @@ namespace XUnitTest.Services
                 .Select(a => a.Domain)
                 .Should().BeEquivalentTo(new[] { "https://iam.blocks.dev" },
                     "IAM is the same host in every tenant's list; Studio is absent from this configuration");
+        }
+
+        // --- #606 JWT issuer on project creation ---
+
+        private static IConfiguration WithIamBaseUrl(string? url)
+        {
+            var values = new Dictionary<string, string?>
+            {
+                { "KbtclIdentifier", ".blocks.dev" },
+                { "IamDomain", "https://iam.blocks.dev" },
+                { "IamCookieDomain", "blocks.dev" },
+                { "CertificateStorageType", "Azure" }
+            };
+            if (url is not null)
+            {
+                values["FrontendRuntime:BLOCKS_IAM_BASE_URL"] = url;
+            }
+
+            return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_StoresIssuerAsIamBaseUrlPlusTenantId()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            var response = await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+            });
+
+            response.IsSuccess.Should().BeTrue();
+            inserted.Should().NotBeNull();
+            inserted!.TenantId.Should().StartWith("D");
+            inserted.JwtTokenParameters.Issuer.Should().Be(
+                "https://dev-iam.blocksdevelopers.com/" + inserted.TenantId);
+            // Sibling JWT fields stay on their existing defaults (H7-adjacent).
+            inserted.JwtTokenParameters.Subject.Should().Be(IdentifierConstants.Subject);
+            inserted.JwtTokenParameters.CertificateStorageType.Should().Be(CertificateStorageType.Azure);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_TrimsTrailingSlashesFromIamBaseUrl()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service(WithIamBaseUrl("https://iam.seliseblocks.com/")).SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                applicationContexts = [new() { Environment = "prod", Domain = "https://example.com" }]
+            });
+
+            inserted!.JwtTokenParameters.Issuer.Should().Be(
+                "https://iam.seliseblocks.com/" + inserted.TenantId);
+            inserted.JwtTokenParameters.Issuer.Should().NotContain("//" + inserted.TenantId);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_EnvVarOverrideWinsOverConfiguration()
+        {
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, "https://stg-iam.override.test");
+            try
+            {
+                Tenant? inserted = null;
+                _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                     .Callback<Tenant>(t => inserted = t)
+                     .Returns(Task.CompletedTask);
+
+                await Service(WithIamBaseUrl("https://stg-iam.blocksdevelopers.com")).SaveProjectAsync(
+                    new CreateProjectRequest
+                    {
+                        Name = "Proj",
+                        applicationContexts = [new() { Environment = "stg", Domain = "https://stg.example.com" }]
+                    });
+
+                inserted!.JwtTokenParameters.Issuer.Should().Be(
+                    "https://stg-iam.override.test/" + inserted.TenantId);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_PreservesTenantIdCaseInIssuer()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+            });
+
+            // Leading environment letter uppercase; GUID remainder lowercase (not lowercased as a whole).
+            inserted!.TenantId[0].Should().Be('D');
+            inserted.TenantId[1..].Should().Be(inserted.TenantId[1..].ToLowerInvariant());
+            inserted.JwtTokenParameters.Issuer.Should().EndWith("/" + inserted.TenantId);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_LeavesIamDomainApplicationUnchanged()
+        {
+            using var _ = new BlocksTestContext();
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service().SaveProjectAsync(new CreateProjectRequest
+            {
+                Name = "Proj",
+                Resources = [RepositoryNamed("repo-1")],
+                applicationContexts = [new() { Environment = "dev" }]
+            });
+
+            inserted!.Applications.Should().Contain(a =>
+                a.Domain == "https://iam.blocks.dev" && a.DomainType == DomainType.PlatformDefault);
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_MissingIamBaseUrl_FailsWithoutInserting()
+        {
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, null);
+            try
+            {
+                var response = await Service(WithIamBaseUrl(null)).SaveProjectAsync(new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+                });
+
+                response.IsSuccess.Should().BeFalse();
+                response.Errors.Should().ContainKey("iam_configuration");
+                response.Errors["iam_configuration"].Should().Contain("not configured");
+                _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Never);
+                _repo.Verify(r => r.UpdateTenantAssetAsync(It.IsAny<TenantAsset>()), Times.Never);
+                _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
+                _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<Tenant>>()), Times.Never);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Theory]
+        [InlineData("dev-iam.blocksdevelopers.com")]
+        [InlineData("https://dev-iam.blocksdevelopers.com/?x=1")]
+        [InlineData("https://dev-iam.blocksdevelopers.com/#frag")]
+        [InlineData("ftp://dev-iam.blocksdevelopers.com")]
+        public async Task SaveProjectAsync_InvalidIamBaseUrl_FailsWithoutInserting(string badUrl)
+        {
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, null);
+            try
+            {
+                var response = await Service(WithIamBaseUrl(badUrl)).SaveProjectAsync(new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    applicationContexts = [new() { Environment = "dev", Domain = "https://dev.example.com" }]
+                });
+
+                response.IsSuccess.Should().BeFalse();
+                response.Errors.Should().ContainKey("iam_configuration");
+                response.Errors["iam_configuration"].Should().Contain("absolute http or https");
+                _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_MultiEnvironment_FailsPreflightBeforeAnyInsert()
+        {
+            // Blank IAM base URL fails the whole multi-env request during pre-flight (C3).
+            using var _ = new BlocksTestContext();
+            const string envKey = "FrontendRuntime__BLOCKS_IAM_BASE_URL";
+            var previous = Environment.GetEnvironmentVariable(envKey);
+            Environment.SetEnvironmentVariable(envKey, "   ");
+            try
+            {
+                var response = await Service(WithIamBaseUrl(null)).SaveProjectAsync(new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    applicationContexts =
+                    [
+                        new() { Environment = "dev", Domain = "https://dev.example.com" },
+                        new() { Environment = "stg", Domain = "https://stg.example.com" }
+                    ]
+                });
+
+                response.IsSuccess.Should().BeFalse();
+                response.Errors.Should().ContainKey("iam_configuration");
+                _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Never);
+                _repo.Verify(r => r.InsertPeopleAsync(It.IsAny<ProjectPeople>()), Times.Never);
+                _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<Tenant>>()), Times.Never);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envKey, previous);
+            }
+        }
+
+        [Fact]
+        public void BuildJwtIssuer_EmptyTenantId_Throws()
+        {
+            // C4: refuse a host-only issuer. Method is private; invoke via reflection.
+            var service = Service();
+            var method = typeof(ProjectManagementService).GetMethod(
+                "BuildJwtIssuer",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            method.Should().NotBeNull();
+            var act = () => method!.Invoke(service, new object[] { "" });
+            act.Should().Throw<System.Reflection.TargetInvocationException>()
+               .WithInnerException<InvalidOperationException>()
+               .WithMessage("*TenantId is required*");
+        }
+
+        [Fact]
+        public async Task SaveProjectAsync_AddingEnvironment_UsesCallerBaseUrlAndLeavesOthersUntouched()
+        {
+            // H5: new env tenant gets this process's base URL + its own TenantId; we never rewrite
+            // existing tenants (no repository Update of siblings).
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("existing-group"))
+                 .ReturnsAsync(new TenantAsset { Resources = new List<Resource>() });
+
+            Tenant? inserted = null;
+            _repo.Setup(r => r.InsertProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => inserted = t)
+                 .Returns(Task.CompletedTask);
+
+            await Service(WithIamBaseUrl("https://stg-iam.blocksdevelopers.com")).SaveProjectAsync(
+                new CreateProjectRequest
+                {
+                    Name = "Proj",
+                    TenantGroupId = "existing-group",
+                    applicationContexts = [new() { Environment = "stg", Domain = "https://stg.example.com" }]
+                });
+
+            inserted!.TenantId.Should().StartWith("S");
+            inserted.JwtTokenParameters.Issuer.Should().Be(
+                "https://stg-iam.blocksdevelopers.com/" + inserted.TenantId);
+            _repo.Verify(r => r.InsertProjectAsync(It.IsAny<Tenant>()), Times.Once);
         }
 
         [Theory]
