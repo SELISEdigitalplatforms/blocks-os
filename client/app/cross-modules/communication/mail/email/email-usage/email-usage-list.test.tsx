@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useParams } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,16 +8,33 @@ const h = vi.hoisted(() => ({
   data: undefined as { data: IEmailUsage[]; totalCount: number } | undefined,
   isLoading: false,
   setQueryParams: vi.fn(),
-  queryParams: { page: 0, pageSize: 10, search: "", status: "", startDate: "", endDate: "" },
+  queryParams: { page: 0, pageSize: 10, search: "", status: "", startDate: "", endDate: "", configurationId: "" },
+  usageArgs: [] as unknown[],
+  configs: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock("@seliseblocks/genesis-os/hooks", () => ({ useScopedPath: () => (p: string) => `/s/${p}` }));
 vi.mock("@blocks-communication/mail/hooks/use-email-usage", () => ({
-  useGetEmailUsage: () => ({ data: h.data, isLoading: h.isLoading }),
+  useGetEmailUsage: (...args: unknown[]) => {
+    h.usageArgs = args;
+    return { data: h.data, isLoading: h.isLoading };
+  },
+}));
+vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
+  useGetEmailConfigs: () => ({ data: h.configs }),
 }));
 vi.mock("@blocks-communication/mail/email/email-usage/email-usage-filter-toolbar", () => ({
-  EmailUsageFilterToolbar: ({ isInbound }: { isInbound: boolean }) => (
-    <div data-testid="usage-filter">{String(isInbound)}</div>
+  EmailUsageFilterToolbar: ({
+    isInbound,
+    configurations = [],
+  }: {
+    isInbound: boolean;
+    configurations?: Array<{ itemId: string; name: string }>;
+  }) => (
+    <>
+      <div data-testid="usage-filter">{String(isInbound)}</div>
+      <div data-testid="usage-filter-configs">{configurations.map((c) => c.name).join(",")}</div>
+    </>
   ),
   useEmailUsageFilterQueryParams: () => ({
     queryParams: h.queryParams,
@@ -53,7 +70,9 @@ describe("EmailUsageList", () => {
     vi.clearAllMocks();
     h.data = { data: [row()], totalCount: 1 };
     h.isLoading = false;
-    h.queryParams = { page: 0, pageSize: 10, search: "", status: "", startDate: "", endDate: "" };
+    h.queryParams = { page: 0, pageSize: 10, search: "", status: "", startDate: "", endDate: "", configurationId: "" };
+    h.usageArgs = [];
+    h.configs = [];
   });
 
   it("shows the loading skeleton while fetching", () => {
@@ -106,6 +125,44 @@ describe("EmailUsageList", () => {
     expect(screen.getByText("momen@gmail.com")).toBeTruthy();
     expect(screen.getByText("AM")).toBeTruthy();
     expect(screen.getByText("Test Inbound link")).toBeTruthy();
+  });
+
+  it("names the inbound configuration that read the mail in the Mailbox column", () => {
+    h.configs = [
+      { itemId: "cfg-1", name: "Support inbox", isInbound: true, mailboxAddress: "support@contoso.com" },
+    ];
+    h.data = {
+      data: [row({ to: '"A list" <list@noreply.github.com>', mailServerConfigurationId: "cfg-1" })],
+      totalCount: 1,
+    };
+    renderList(true);
+    const table = within(screen.getByRole("table"));
+    expect(table.getByText("Support inbox")).toBeTruthy();
+    expect(table.getByText("support@contoso.com")).toBeTruthy();
+    expect(screen.queryByText("list@noreply.github.com")).toBeNull();
+  });
+
+  it("falls back to the To address when the configuration is unknown", () => {
+    h.data = { data: [row({ to: "b@x.com", mailServerConfigurationId: "cfg-gone" })], totalCount: 1 };
+    renderList(true);
+    expect(screen.getByText("b@x.com")).toBeTruthy();
+  });
+
+  it("offers only inbound configurations to the filter, and sends the selected one", () => {
+    h.configs = [
+      { itemId: "cfg-in", name: "Inbound one", isInbound: true },
+      { itemId: "cfg-out", name: "Outbound one", isInbound: false },
+    ];
+    h.queryParams = { ...h.queryParams, configurationId: "cfg-in" };
+    renderList(true);
+    expect(screen.getByTestId("usage-filter-configs").textContent).toBe("Inbound one");
+    expect(h.usageArgs[7]).toBe("cfg-in");
+  });
+
+  it("does not filter outbound mail by configuration", () => {
+    h.queryParams = { ...h.queryParams, configurationId: "cfg-in" };
+    renderList(false);
+    expect(h.usageArgs[7]).toBeUndefined();
   });
 
   it("opens the details page by item id, not the dotted message id, when a row is clicked", async () => {

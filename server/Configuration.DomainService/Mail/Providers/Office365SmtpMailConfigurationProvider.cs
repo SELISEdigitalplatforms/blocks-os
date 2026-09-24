@@ -9,18 +9,21 @@ namespace Configuration.DomainService.Mail.Providers
 {
     /// <summary>
     /// Exchange Online. Outbound through Microsoft Graph with OAuth client credentials, or over
-    /// SMTP with a mailbox username/password; inbound over IMAP with OAuth client credentials only.
+    /// SMTP with a mailbox username/password; inbound through Microsoft Graph with OAuth client
+    /// credentials only.
     /// </summary>
     /// <remarks>
     /// This definition captures and guards the configuration contract; it does not send or
-    /// receive. Token acquisition and its scopes, Graph <c>sendMail</c>, SMTP STARTTLS and IMAP
-    /// implicit TLS with SASL XOAUTH2 belong to blocks-logic, which reads
+    /// receive. Token acquisition and its scopes, Graph <c>sendMail</c>, the Graph inbox delta read
+    /// and SMTP STARTTLS belong to blocks-logic, which reads
     /// <see cref="MailServerConfiguration.ClientSecretReference"/> and resolves the value at use
-    /// time. An outbound OAuth record still carries the SMTP host and port set below; blocks-logic
-    /// sends it through Graph regardless, so the stored shape did not change when the transport did.
+    /// time. OAuth records in both directions still carry the SMTP or IMAP host and port set below;
+    /// blocks-logic goes through Graph regardless, so the stored shape did not change when the
+    /// transport did. The Entra app needs <c>Mail.Send</c> for outbound and <c>Mail.Read</c> for
+    /// inbound, as application permissions with admin consent.
     /// <para>
-    /// Inbound has no password mode because Exchange Online has retired basic authentication for
-    /// IMAP: a username/password configuration would save and then never connect.
+    /// Inbound has no password mode because Graph takes no mailbox password: a username/password
+    /// configuration would save and then never connect.
     /// </para>
     /// </remarks>
     public sealed class Office365SmtpMailConfigurationProvider : IMailConfigurationProvider

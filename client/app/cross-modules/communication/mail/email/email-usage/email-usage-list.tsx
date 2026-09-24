@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { cn } from "@/lib/utils";
 import { useGetEmailUsage } from "@blocks-communication/mail/hooks/use-email-usage";
+import { useGetEmailConfigs } from "@blocks-communication/mail/hooks/use-email-config";
 import { StatusBadge } from "@blocks-communication/mail/email/email-usage/status-badge";
 import { IEmailUsage } from "@blocks-communication/mail/models/email";
 import {
@@ -94,7 +95,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
   const scoped = useScopedPath();
   const navigate = useNavigate();
   const { queryParams, setQueryParams } = useEmailUsageFilterQueryParams();
-  const { page, pageSize, search, status, startDate, endDate } = queryParams;
+  const { page, pageSize, search, status, startDate, endDate, configurationId } = queryParams;
   const { data, isLoading } = useGetEmailUsage(
     page,
     pageSize,
@@ -103,6 +104,17 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
     status,
     startDate,
     endDate,
+    isInbound ? configurationId : undefined,
+  );
+
+  const { data: emailConfigsData } = useGetEmailConfigs(0, 100);
+  const inboundConfigs = useMemo(
+    () => (Array.isArray(emailConfigsData) ? emailConfigsData.filter((config) => config.isInbound) : []),
+    [emailConfigsData],
+  );
+  const configsById = useMemo(
+    () => new Map(inboundConfigs.map((config) => [config.itemId, config])),
+    [inboundConfigs],
   );
 
   // Keyed by item id, not Message-ID: "...@mail.gmail.com" ends the path in a dotted segment, which
@@ -140,6 +152,20 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
         accessorKey: isInbound ? "to" : "from",
         header: isInbound ? "Mailbox" : "From",
         cell: ({ row }) => {
+          // Inbound, the configuration that read the mail: a mail's To can name a list or
+          // another recipient entirely, and two configurations can share an address.
+          const config = isInbound
+            ? configsById.get(row.original.mailServerConfigurationId ?? "")
+            : undefined;
+          if (config) {
+            const address = config.mailboxAddress || config.senderUserName || config.senderAddress;
+            return (
+              <div className="min-w-0" title={address ? `${config.name} (${address})` : config.name}>
+                <p className="truncate text-sm text-high-emphasis">{config.name}</p>
+                {address && <p className="truncate text-xs text-muted-foreground">{address}</p>}
+              </div>
+            );
+          }
           const raw = isInbound ? row.original.to : row.original.from;
           const [first, ...rest] = parseAddressList(raw);
           return (
@@ -204,7 +230,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
     // An inbound mail's status is always "Received", so the column says nothing.
     return isInbound ? allColumns.filter((col) => col.header !== "Status") : allColumns;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInbound, scoped, navigate]);
+  }, [isInbound, scoped, navigate, configsById]);
 
   const table = useReactTable({
     data: data?.data || [],
@@ -219,7 +245,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <EmailUsageFilterToolbar isInbound={isInbound} />
+      <EmailUsageFilterToolbar isInbound={isInbound} configurations={inboundConfigs} />
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
@@ -279,7 +305,7 @@ export const EmailUsageList = ({ isInbound }: { isInbound: boolean }) => {
                         </div>
                         <p className="text-sm font-medium text-high-emphasis">No results.</p>
                         <p className="text-xs text-muted-foreground">
-                          {search || status || startDate || endDate
+                          {search || status || startDate || endDate || (isInbound && configurationId)
                             ? "No mail matches the current filters."
                             : isInbound
                               ? "Mail received by an inbound configuration will appear here."
