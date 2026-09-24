@@ -191,6 +191,83 @@
         <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
         </member>
+        <member name="T:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware">
+            <summary>
+            IAM's OIDC callback sets an httpOnly access-token cookie named after the
+            redirect host (e.g. <c>dev-os-612.blocksdevelopers.com</c> on PR previews,
+            <c>dev-os.blocksdevelopers.com</c> on the shared dev host). JwtBearer auth
+            in Blocks.Genesis reads the <c>Authorization</c> header (and a fixed cookie
+            key that does not track preview hosts), so API calls from the SPA — which
+            only send <c>credentials: include</c> — arrive unauthenticated on previews.
+            Promote the host-named cookie into <c>Authorization: Bearer …</c> when the
+            header is absent so preview and main hosts both authenticate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate)">
+            <summary>
+            IAM's OIDC callback sets an httpOnly access-token cookie named after the
+            redirect host (e.g. <c>dev-os-612.blocksdevelopers.com</c> on PR previews,
+            <c>dev-os.blocksdevelopers.com</c> on the shared dev host). JwtBearer auth
+            in Blocks.Genesis reads the <c>Authorization</c> header (and a fixed cookie
+            key that does not track preview hosts), so API calls from the SPA — which
+            only send <c>credentials: include</c> — arrive unauthenticated on previews.
+            Promote the host-named cookie into <c>Authorization: Bearer …</c> when the
+            header is absent so preview and main hosts both authenticate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Invokes the middleware.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.PromoteHostAccessCookie(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Promote host-named IAM access cookie to Authorization when missing.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.SpaFallbackGuard">
+            <summary>
+            Paths that must not be served by the SPA <c>index.html</c> fallback.
+            Returning 200 for VCS/backup probes makes OWASP ZAP report "Hidden File Found".
+            </summary>
+        </member>
+        <member name="T:BlocksOs.Api.Security.ContentSecurityPolicy">
+            <summary>
+            Builds the SPA's Content-Security-Policy from configuration.
+            <para>
+            The origins are derived from the same <c>FrontendRuntime</c> section that fills the
+            SPA's runtime config, so the policy describes whatever environment the host is
+            actually running in. They used to be a hardcoded list of <c>dev-*</c> hosts, which
+            meant the policy was correct on dev and would have blocked the SPA from reaching its
+            own IAM and API everywhere else.
+            </para>
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.ConnectOriginKeys">
+            <summary>
+            <c>FrontendRuntime</c> keys holding an origin the SPA makes requests to. Anything
+            not derivable from these (a CDN, a third-party service) goes in
+            <c>Csp:ExtraConnectSrc</c> / <c>Csp:ExtraImgSrc</c> rather than back into code.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.FormActionOriginKeys">
+            <summary>Where a login POST may be sent: the identity host and the SPA's own host.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.BuildPolicy(System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            The policy itself, separated from configuration so it can be asserted directly.
+            Public rather than internal because the test project has no InternalsVisibleTo.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Normalize(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Reduce configured values to distinct, sorted origins.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToOrigin(System.String)">
+            <summary>
+            A CSP source is an origin, so any path, query or trailing slash is dropped. A value
+            that is not an absolute http(s) URL is ignored rather than emitted verbatim, so a
+            malformed secret cannot inject a directive.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Split(System.String)">
+            <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.
