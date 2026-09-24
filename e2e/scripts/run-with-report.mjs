@@ -31,7 +31,7 @@ const specArgs = hasSpecFilter ? [] : orderedSuiteSpecs()
 const playwrightRun = spawnSync("npx", ["playwright", "test", ...forwardedArgs, ...projectArgs, ...specArgs], {
   cwd: e2eDir,
   stdio: "inherit",
-  shell: process.platform === "win32",
+  shell: false,
 })
 
 console.log("")

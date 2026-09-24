@@ -8,34 +8,40 @@ function getBaseProjectName(): string {
   return process.env.PROJECT_NAME?.trim() || "Test Project"
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-function orphanProjectPatterns(): RegExp[] {
+function orphanProjectPrefixes(): string[] {
   const prefixes = new Set(["Test Project"])
   const configured = process.env.PROJECT_NAME?.trim()
   if (configured) prefixes.add(configured)
-  // project-settings-flow renames the shared project to "<name> Renamed" (and
-  // can compound to "... Renamed Renamed" across repeated reuse) without ever
-  // changing its numeric id — capture that suffix too, or the truncated name
-  // handed to namedProjectCard()'s exact-text match never matches the (now
-  // longer) rendered label again, and reuseOrCreateSharedProject silently
-  // abandons the project and creates a brand-new one on every subsequent run.
-  return [...prefixes].map(
-    (prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+(?: Renamed)*`, "g"),
-  )
+  return [...prefixes]
+}
+
+/** Collect console labels like "Test Project 12" / "Test Project 12 Renamed". */
+function collectOrphanNames(mainText: string, prefixes: string[]): string[] {
+  const names = new Set<string>()
+  for (const prefix of prefixes) {
+    let from = 0
+    while (from < mainText.length) {
+      const at = mainText.indexOf(prefix, from)
+      if (at < 0) break
+      let j = at + prefix.length
+      if (j < mainText.length && mainText[j] === " ") {
+        j += 1
+        const digitStart = j
+        while (j < mainText.length && mainText[j] >= "0" && mainText[j] <= "9") j += 1
+        if (j > digitStart) {
+          while (mainText.startsWith(" Renamed", j)) j += " Renamed".length
+          names.add(mainText.slice(at, j))
+        }
+      }
+      from = at + 1
+    }
+  }
+  return [...names]
 }
 
 async function listOrphanProjectNames(page: Page): Promise<string[]> {
   const mainText = await page.locator("main").innerText().catch(() => "")
-  const names = new Set<string>()
-  for (const pattern of orphanProjectPatterns()) {
-    for (const match of mainText.matchAll(pattern)) {
-      names.add(match[0])
-    }
-  }
-  return [...names]
+  return collectOrphanNames(mainText, orphanProjectPrefixes())
 }
 
 /** Visible e2e project names on the console (DEV-TEST / PROJECT_NAME orphans). */
@@ -535,7 +541,7 @@ export async function reuseOrCreateSharedProject(page: Page): Promise<{
       return { projectName, dashboardUrl: page.url(), itemId, tenantGroupId }
     } catch (error) {
       console.warn(
-        `[e2e] Could not reopen orphan "${projectName}" — creating a new project instead.`,
+        "[e2e] Could not reopen orphan project — creating a new project instead.",
         error,
       )
     }
@@ -572,14 +578,14 @@ export async function openProjectOverviewPage(
   await page.goto(`${e2eBaseUrl()}/app/project/${tenantGroupId}/${subpath}`, {
     waitUntil: "domcontentloaded",
   })
-  await expect(page).toHaveURL(new RegExp(`/app/project/${tenantGroupId}/${subpath}`), {
+  await expect(page).toHaveURL((url) => url.pathname.includes(`/app/project/${tenantGroupId}/${subpath}`), {
     timeout: 30000,
   })
 }
 
 export async function openDashboardChildPage(page: Page, itemId: string, subpath: string) {
   await page.goto(`${e2eBaseUrl()}/app/${itemId}/${subpath}`, { waitUntil: "domcontentloaded" })
-  await expect(page).toHaveURL(new RegExp(`/app/${itemId}/${subpath}`), {
+  await expect(page).toHaveURL((url) => url.pathname.includes(`/app/${itemId}/${subpath}`), {
     timeout: 30000,
   })
 }

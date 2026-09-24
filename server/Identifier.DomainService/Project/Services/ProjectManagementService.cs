@@ -814,7 +814,8 @@ namespace DomainService.Projects
                 IsDisabled = tenant.IsDisabled,
                 Environment = tenant.Environment,
                 TenantGroupId = tenant.TenantGroupId,
-                TenantSlug = tenantSlug
+                TenantSlug = tenantSlug,
+                IsThirdPartyJwtEnabled = tenant.IsThirdPartyJwtEnabled
             };
 
             return new GetProjectResponse { Data = project };
@@ -1510,6 +1511,16 @@ namespace DomainService.Projects
 
             await _projectRepository.SaveThirdPartyJwtProviderAsync(provider);
 
+            var flagSync = await SyncThirdPartyJwtEnabledAfterProviderWriteAsync(tenantId, tenant);
+            if (!flagSync.IsSuccess)
+            {
+                return new SaveThirdPartyJwtProviderResponse
+                {
+                    IsSuccess = false,
+                    Errors = flagSync.Errors
+                };
+            }
+
             return new SaveThirdPartyJwtProviderResponse { IsSuccess = true, ItemId = provider.ItemId };
         }
 
@@ -1522,13 +1533,26 @@ namespace DomainService.Projects
 
             // The encrypted secret lives on the row, so deleting the row is what revokes it —
             // there is no separate vault entry left behind.
-            return deleted
-                ? new BaseResponse { IsSuccess = true }
-                : new BaseResponse
+            if (!deleted)
+            {
+                return new BaseResponse
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string> { { "provider_not_found", $"No provider found with id {request.ItemId}" } }
                 };
+            }
+
+            var tenant = await _projectRepository.GetByTenantIdAsync(tenantId);
+            if (tenant == null)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string> { { "project_not_found", $"No project found with id {tenantId}" } }
+                };
+            }
+
+            return await SyncThirdPartyJwtEnabledAfterProviderWriteAsync(tenantId, tenant);
         }
 
         public async Task<BaseResponse> UpdateThirdPartyJwtEnabledAsync(UpdateThirdPartyJwtEnabledRequest request)
@@ -1547,6 +1571,27 @@ namespace DomainService.Projects
                 };
             }
 
+            // Raising the flag requires at least one active provider. Lowering it is never guarded —
+            // an operator kill switch must always stick.
+            if (request.IsEnabled)
+            {
+                var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+                if (providers == null || !providers.Any(p => p.IsActive))
+                {
+                    return new BaseResponse
+                    {
+                        IsSuccess = false,
+                        Errors = new Dictionary<string, string>
+                        {
+                            {
+                                "no_active_provider",
+                                "This tenant has no active external identity provider, so third-party token trust cannot be enabled. Add or activate a provider first."
+                            }
+                        }
+                    };
+                }
+            }
+
             project.IsThirdPartyJwtEnabled = request.IsEnabled;
             project.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
             project.LastUpdatedDate = DateTime.UtcNow;
@@ -1563,6 +1608,54 @@ namespace DomainService.Projects
             });
 
             return new BaseResponse { IsSuccess = true };
+        }
+
+        /// <summary>
+        /// After a provider save or delete, lower <see cref="Tenant.IsThirdPartyJwtEnabled"/> when
+        /// no active provider remains. Never raises the flag — that stays a deliberate enable.
+        /// Evaluates the provider list as it stands after the write.
+        /// </summary>
+        private async Task<BaseResponse> SyncThirdPartyJwtEnabledAfterProviderWriteAsync(string tenantId, Tenant tenant)
+        {
+            var providers = await _projectRepository.GetThirdPartyJwtProvidersAsync(tenantId);
+            var activeCount = providers?.Count(p => p.IsActive) ?? 0;
+
+            if (activeCount > 0 || !tenant.IsThirdPartyJwtEnabled)
+            {
+                return new BaseResponse { IsSuccess = true };
+            }
+
+            try
+            {
+                tenant.IsThirdPartyJwtEnabled = false;
+                tenant.LastUpdatedBy = BlocksContext.GetContext()?.UserId;
+                tenant.LastUpdatedDate = DateTime.UtcNow;
+
+                await _projectRepository.UpdateProjectAsync(tenant);
+
+                await _tenants.UpdateTenantVersionAsync(new TenantCacheUpdateMessage
+                {
+                    Action = "upsert",
+                    TenantId = tenant.TenantId,
+                    Tenant = tenant
+                });
+
+                return new BaseResponse { IsSuccess = true };
+            }
+            catch (Exception)
+            {
+                return new BaseResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        {
+                            "third_party_flag_update_failed",
+                            "The provider change was saved, but third-party token trust could not be switched off. Retry the provider change."
+                        }
+                    }
+                };
+            }
         }
 
         /// <summary>
