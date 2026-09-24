@@ -105,7 +105,7 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
   }
 
   await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
-  await expect(signedInChrome(page).or(consoleHeading(page))).toBeVisible({ timeout: 30_000 })
+  await expect(signedInChrome(page).or(consoleHeading(page)).first()).toBeVisible({ timeout: 30_000 })
 }
 
 /**
@@ -121,7 +121,7 @@ export async function ensureAuthenticated(page: Page) {
   }
 
   await loginThroughOidc(page)
-  await expect(signedInChrome(page).or(consoleHeading(page))).toBeVisible({ timeout: 30_000 })
+  await expect(signedInChrome(page).or(consoleHeading(page)).first()).toBeVisible({ timeout: 30_000 })
 }
 
 /** Force a full OIDC login (ignores any saved session). */
