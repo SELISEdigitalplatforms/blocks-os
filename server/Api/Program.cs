@@ -2,6 +2,7 @@
 using Blocks.Genesis;
 using Blocks.Secrets;
 using BlocksOs.Api;
+using BlocksOs.Api.Middleware;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using Configuration.DomainService.Shared.Utilities;
@@ -139,6 +140,9 @@ if (File.Exists(indexHtml))
     app.MapFallbackToFile("/index.html");
 }
 
+
+// IAM access cookie is named after the OIDC redirect host; JwtBearer needs Authorization.
+app.UseMiddleware<HostAccessCookieBearerMiddleware>();
 
 ApplicationConfigurations.ConfigureMiddleware(app);
 
