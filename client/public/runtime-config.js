@@ -19,9 +19,10 @@ window.__BLOCKS_ENV__ = {
     BLOCKS_DATA_BASE_URL: "__BLOCKS_DATA_BASE_URL__",
     BLOCKS_DATA_CALLBACK_URL: "__BLOCKS_DATA_CALLBACK_URL__",
     BLOCKS_DATA_CLIENT_ID: "__BLOCKS_DATA_CLIENT_ID__",
-    // Derived from location.origin so PR previews call their own host.
+    // Derived from location.origin so PR previews call their own host and
+    // complete OIDC on the same origin (tokens land in this origin's storage).
     BLOCKS_OS_BASE_URL: window.location.origin,
-    BLOCKS_OS_CALLBACK_URL: "__BLOCKS_OS_CALLBACK_URL__",
+    BLOCKS_OS_CALLBACK_URL: window.location.origin + "/login/callback",
     BLOCKS_OS_CLIENT_ID: "__BLOCKS_OS_CLIENT_ID__",
     BLOCKS_UTILITIES_BASE_URL: "__BLOCKS_UTILITIES_BASE_URL__",
     BLOCKS_UTILITIES_CALLBACK_URL: "__BLOCKS_UTILITIES_CALLBACK_URL__",

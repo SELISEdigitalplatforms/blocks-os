@@ -12,7 +12,7 @@ function oidcPasswordField(page: Page) {
 
 const consoleHeading = (page: Page) =>
   page.getByRole("heading", {
-    name: /Your Blocks Projects|Welcome to SELISE Blocks/,
+    name: /Your Blocks Projects|Welcome to SELISE Blocks/i,
   })
 
 /** True when the page is the product login gate or OIDC credential form. */
