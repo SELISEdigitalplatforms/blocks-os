@@ -179,7 +179,7 @@ export async function verifyFormAsksNothingAboutClaimsFlow(page: Page) {
 
 export async function saveNewProviderFlow(page: Page) {
   await dialog(page).getByRole("button", { name: "Add provider" }).click();
-  await expect(page.getByText("Provider added")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Provider added", { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(dialog(page)).toBeHidden({ timeout: 10000 });
 }
 
