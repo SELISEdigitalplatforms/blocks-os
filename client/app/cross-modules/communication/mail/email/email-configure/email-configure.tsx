@@ -33,8 +33,10 @@ export function EmailConfiguration({
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
   const open = addConfigOpen !== undefined ? addConfigOpen : internalOpen;
   const setOpen = onAddConfigOpenChange || setInternalOpen;
-  const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  // The id of the one row whose dialog is open. Every row renders its own dialog, so a shared
+  // boolean opened all of them at once — and the last row's dialog, on top, was the one acted on.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const isMediumScreen = useMediaQuery(`(max-width: 1180px)`);
   const isMobileScreen = useMediaQuery(`(max-width: 768px)`);
   const { isLoading, data: secretData } = useGetEmailSecretConfigs();
@@ -80,7 +82,10 @@ export function EmailConfiguration({
                   <span>{config.name}</span>
                   <div className="flex gap-1">
                     {!config.isDefault && (
-                      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                      <Dialog
+                        open={editingId === config.itemId}
+                        onOpenChange={(isOpen) => setEditingId(isOpen ? config.itemId : null)}
+                      >
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <DialogTrigger asChild>
@@ -101,12 +106,15 @@ export function EmailConfiguration({
                           dialogTitle="Edit Configuration"
                           previousData={config}
                           isEdit={true}
-                          onClose={() => setIsEditOpen(false)}
+                          onClose={() => setEditingId(null)}
                         />
                       </Dialog>
                     )}
                     {!config.isDefault && (
-                      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+                      <Dialog
+                        open={deletingId === config.itemId}
+                        onOpenChange={(isOpen) => setDeletingId(isOpen ? config.itemId : null)}
+                      >
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <DialogTrigger asChild>
@@ -125,7 +133,7 @@ export function EmailConfiguration({
                         </Tooltip>
                         <DeleteEmailConfig
                           configId={config.itemId}
-                          onClose={() => setDeleteModalOpen(false)}
+                          onClose={() => setDeletingId(null)}
                         />
                       </Dialog>
                     )}
@@ -164,18 +172,7 @@ export function EmailConfiguration({
                     isMobileScreen && "grid-cols-1 gap-6",
                   )}
                 >
-                  {config.isInbound ? (
-                    <>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Username</p>
-                        <p className="text-base">{config.senderUserName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Account Password</p>
-                        <p className="trucate break-all text-base">*********************</p>
-                      </div>
-                    </>
-                  ) : (
+                  {!config.isInbound && (
                     <>
                       <div>
                         <p className="text-sm text-muted-foreground">Sender name</p>
@@ -192,52 +189,59 @@ export function EmailConfiguration({
                     <p className="text-base">{getMailProviderLabel(config.provider)}</p>
                   </div>
                 </div>
-                {!config.isInbound &&
-                  (usesPasswordAuthentication(config.provider, config.isInbound, config.authenticationType) ? (
-                    <div
-                      className={cn(
-                        "mt-5 grid grid-cols-3 space-y-2",
-                        isMediumScreen && "gap-12",
-                        isMobileScreen && "grid-cols-1 gap-6",
-                      )}
-                    >
-                      <div>
-                        <p className="text-sm text-muted-foreground">Sender username</p>
-                        <p className="text-base">{config.senderUserName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Account Password</p>
-                        <p className="trucate break-all text-base">*********************</p>
-                      </div>
+                {/* Credentials follow the authentication type in both directions: an Office 365
+                    inbound record signs in with OAuth and has no username or password to show. */}
+                {usesPasswordAuthentication(
+                  config.provider,
+                  config.isInbound,
+                  config.authenticationType,
+                ) ? (
+                  <div
+                    className={cn(
+                      "mt-5 grid grid-cols-3 space-y-2",
+                      isMediumScreen && "gap-12",
+                      isMobileScreen && "grid-cols-1 gap-6",
+                    )}
+                  >
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {config.isInbound ? "Username" : "Sender username"}
+                      </p>
+                      <p className="text-base">{config.senderUserName}</p>
                     </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        "mt-5 grid grid-cols-3 space-y-2",
-                        isMediumScreen && "gap-12",
-                        isMobileScreen && "grid-cols-1 gap-6",
-                      )}
-                    >
-                      <div>
-                        <p className="text-sm text-muted-foreground">Tenant ID</p>
-                        <p className="trucate break-all text-base">{config.tenantId}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Client ID</p>
-                        <p className="trucate break-all text-base">{config.clientId}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Mailbox Address</p>
-                        <p className="trucate break-all text-base">{config.mailboxAddress}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Client secret</p>
-                        <p className="text-base">
-                          {config.isClientSecretConfigured ? "Configured" : "Not configured"}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Account Password</p>
+                      <p className="trucate break-all text-base">*********************</p>
                     </div>
-                  ))}
+                  </div>
+                ) : (
+                  <div
+                    className={cn(
+                      "mt-5 grid grid-cols-3 space-y-2",
+                      isMediumScreen && "gap-12",
+                      isMobileScreen && "grid-cols-1 gap-6",
+                    )}
+                  >
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tenant ID</p>
+                      <p className="trucate break-all text-base">{config.tenantId}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Client ID</p>
+                      <p className="trucate break-all text-base">{config.clientId}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mailbox Address</p>
+                      <p className="trucate break-all text-base">{config.mailboxAddress}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Client secret</p>
+                      <p className="text-base">
+                        {config.isClientSecretConfigured ? "Configured" : "Not configured"}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </AccordionContent>
             </AccordionItem>
           ))}
