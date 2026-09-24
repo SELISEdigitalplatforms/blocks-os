@@ -168,7 +168,7 @@ export async function fillProviderFormFlow(
   await form.getByLabel("Key").fill(provider.key);
   await form.getByLabel("Issuer").fill(provider.issuer);
   await form.getByLabel("Audiences").fill(provider.audience);
-  await form.getByLabel("JWKS URL").fill("https://www.googleapis.com/oauth2/v3/certs");
+  await form.getByRole("textbox", { name: "JWKS URL" }).fill("https://www.googleapis.com/oauth2/v3/certs");
 }
 
 /** Claim mapping moved out of the create form: it is picked from a real token afterwards. */
