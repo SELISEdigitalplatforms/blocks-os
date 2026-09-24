@@ -49,6 +49,9 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 { nameof(MailBoxEntityResponse.Body), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.Body)}" } } },
                 { nameof(MailBoxEntityResponse.Error), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.Error)}" } } },
                 { nameof(MailBoxEntityResponse.IsInbound), new BsonDocument { { LastAccumulator, $"${nameof(MailBoxEntity.IsInbound)}" } } },
+                // $max rather than $last: it skips missing and null values and ranks "" lowest, so a
+                // group keeps the configuration any of its rows names, whichever row is newest.
+                { nameof(MailBoxEntityResponse.MailServerConfigurationId), new BsonDocument { { "$max", $"${nameof(MailBoxEntity.MailServerConfigurationId)}" } } },
             };
 
             var projection = new BsonDocument
@@ -75,12 +78,18 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
                 },
                 { nameof(MailBoxEntityResponse.Error), 1 },
                 { nameof(MailBoxEntityResponse.IsInbound), 1 },
+                { nameof(MailBoxEntityResponse.MailServerConfigurationId), 1 },
             };
 
             var typeMatch = new BsonDocument();
             if (request.IsInbound.HasValue)
             {
                 typeMatch.Add(nameof(MailBoxEntity.IsInbound), request.IsInbound.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.MailServerConfigurationId))
+            {
+                typeMatch.Add(nameof(MailBoxEntity.MailServerConfigurationId), request.MailServerConfigurationId);
             }
 
             var match = new BsonDocument();
