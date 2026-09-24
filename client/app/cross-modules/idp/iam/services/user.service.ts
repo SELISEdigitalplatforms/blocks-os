@@ -32,9 +32,16 @@ import {
   IGetSignUpSettingResponse,
   ISaveSignUpSettingPayload,
   ISaveSignUpSettingResponse,
+  IBulkRoleChangePayload,
+  IBulkRolePreviewResponse,
+  IBulkRoleSubmitResponse,
 } from "@blocks-idp/iam/models/user";
 import { UserAccountService } from "./account.service";
-import { PERMISSION_ENDPOINTS, ROLE_ENDPOINTS, USER_ENDPOINTS } from "../constants/endpoint.constant";
+import {
+  PERMISSION_ENDPOINTS,
+  ROLE_ENDPOINTS,
+  USER_ENDPOINTS,
+} from "../constants/endpoint.constant";
 import { mapSignUpSettingFromApi } from "../utils/normalize-tenant-config";
 import { toSignupSettingsSaveApiPayload } from "../utils/signup-settings-payload";
 import { UserDetails } from "@seliseblocks/genesis-os";
@@ -183,6 +190,27 @@ export class UserService {
     payload: IUpdateUserAccessControlPayload,
   ): Promise<IUpdateUserAccessControlResponse> {
     return http.post(USER_ENDPOINTS.ACCESS_CONTROL, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  /**
+   * Dry run: how many users the delta would match and how many would actually
+   * change. Writes nothing, so it is safe to call as often as the operator edits
+   * their choice.
+   */
+  previewBulkRoleChange(payload: IBulkRoleChangePayload): Promise<IBulkRolePreviewResponse> {
+    return http.post(USER_ENDPOINTS.BULK_ROLES_PREVIEW, payload, undefined, {
+      absoluteUrl: true,
+    });
+  }
+
+  /**
+   * Queue the delta. Resolves on a 202 -- accepted, not applied: the work runs on
+   * IAM's worker, which reports nothing back.
+   */
+  submitBulkRoleChange(payload: IBulkRoleChangePayload): Promise<IBulkRoleSubmitResponse> {
+    return http.post(USER_ENDPOINTS.BULK_ROLES, payload, undefined, {
       absoluteUrl: true,
     });
   }
