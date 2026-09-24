@@ -32,8 +32,12 @@ function sriForBuiltHtml() {
     closeBundle() {
       const outDir = path.resolve(__dirname, "../server/Api/wwwroot");
       const indexPath = path.join(outDir, "index.html");
-      if (!fs.existsSync(indexPath)) return;
-      let html = fs.readFileSync(indexPath, "utf8");
+      let html: string;
+      try {
+        html = fs.readFileSync(indexPath, "utf8");
+      } catch {
+        return; // build output not present
+      }
       html = html.replace(
         /<(script|link)\b([^>]*?)(src|href)="([^"]+)"([^>]*)>/g,
         (full, tag, pre, attr, url, post) => {
@@ -41,8 +45,12 @@ function sriForBuiltHtml() {
           if (url.includes("runtime-config.js")) return full; // placeholders rewritten at runtime
           if (full.includes("integrity=")) return full;
           const filePath = path.join(outDir, url.replace(/^\//, ""));
-          if (!fs.existsSync(filePath)) return full;
-          const buf = fs.readFileSync(filePath);
+          let buf: Buffer;
+          try {
+            buf = fs.readFileSync(filePath);
+          } catch {
+            return full;
+          }
           const hash = crypto.createHash("sha384").update(buf).digest("base64");
           const integrity = `sha384-${hash}`;
           if (tag === "script") {
