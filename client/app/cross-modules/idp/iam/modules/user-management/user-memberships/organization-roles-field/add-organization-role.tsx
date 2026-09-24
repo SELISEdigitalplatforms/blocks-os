@@ -65,6 +65,10 @@ export const AddOrganizationRole = ({
       page: filter.page,
       pageSize: filter.pageSize,
       projectKey: scopeKey,
+      // The field IAM actually reads. Without it the list falls back to the caller
+      // token's organization -- "default" for a tenant-wide admin -- and offered
+      // roles that do not exist in the organization being edited.
+      organizationId,
       sort: { property: "Name", isDescending: false },
       filter: {
         search: filter.search,

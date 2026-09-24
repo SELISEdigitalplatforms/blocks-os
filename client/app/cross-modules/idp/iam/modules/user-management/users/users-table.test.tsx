@@ -42,7 +42,7 @@ const user = (over: Record<string, unknown> = {}) =>
 const renderTable = (props: Partial<Parameters<typeof UsersTable>[0]> = {}) =>
   render(
     <MemoryRouter>
-      <UsersTable users={props.users ?? [user()]} isLoading={props.isLoading ?? false} />
+      <UsersTable {...props} users={props.users ?? [user()]} isLoading={props.isLoading ?? false} />
     </MemoryRouter>,
   );
 
@@ -151,5 +151,113 @@ describe("UsersTable", () => {
     renderTable({ users: [user({ itemId: "u9" })] });
     fireEvent.click(screen.getByText("Ada Lovelace"));
     expect(h.navigate).toHaveBeenCalledWith("/base/iam/user-detail/u9");
+  });
+});
+
+// ── Selection mode ────────────────────────────────────────────────────────────
+// Every assertion here has a twin in the "off" case below: the whole point of the
+// optional props is that a table rendered without them behaves exactly as it did
+// before bulk selection existed.
+
+describe("UsersTable — selection mode", () => {
+  const ada = user({ itemId: "u1" });
+  const grace = user({ itemId: "u2", firstName: "Grace", lastName: "Hopper" });
+
+  it("renders no checkboxes at all when selection mode is off", () => {
+    renderTable({ users: [ada, grace] });
+
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
+  it("renders a checkbox per row plus the header checkbox when selection mode is on", () => {
+    renderTable({ users: [ada, grace], selectionMode: true, selectedUserIds: new Set() });
+
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(3);
+    expect(screen.getByTestId("users-select-u1")).toBeTruthy();
+    expect(screen.getByTestId("users-select-u2")).toBeTruthy();
+  });
+
+  it("reports the header checkbox as indeterminate for a partial page selection", () => {
+    renderTable({
+      users: [ada, grace],
+      selectionMode: true,
+      selectedUserIds: new Set(["u1"]),
+    });
+
+    expect(screen.getByTestId("users-select-all-on-page").getAttribute("data-state")).toBe(
+      "indeterminate",
+    );
+  });
+
+  it("reports the header checkbox as checked when every row on the page is ticked", () => {
+    renderTable({
+      users: [ada, grace],
+      selectionMode: true,
+      selectedUserIds: new Set(["u1", "u2"]),
+    });
+
+    expect(screen.getByTestId("users-select-all-on-page").getAttribute("data-state")).toBe(
+      "checked",
+    );
+  });
+
+  it("reports the header checkbox as unchecked when nothing is ticked", () => {
+    renderTable({ users: [ada, grace], selectionMode: true, selectedUserIds: new Set() });
+
+    expect(screen.getByTestId("users-select-all-on-page").getAttribute("data-state")).toBe(
+      "unchecked",
+    );
+  });
+
+  it("reports a row tick and untick to the page", () => {
+    const onToggleUser = vi.fn();
+    renderTable({
+      users: [ada],
+      selectionMode: true,
+      selectedUserIds: new Set(),
+      onToggleUser,
+    });
+
+    fireEvent.click(screen.getByTestId("users-select-u1"));
+    expect(onToggleUser).toHaveBeenCalledWith("u1", true);
+  });
+
+  it("reports the header tick to the page", () => {
+    const onToggleAllOnPage = vi.fn();
+    renderTable({
+      users: [ada, grace],
+      selectionMode: true,
+      selectedUserIds: new Set(),
+      onToggleAllOnPage,
+    });
+
+    fireEvent.click(screen.getByTestId("users-select-all-on-page"));
+    expect(onToggleAllOnPage).toHaveBeenCalledWith(true);
+  });
+
+  it("does not navigate when a row is clicked while selecting", () => {
+    // Navigating away mid-selection would throw away everything the operator has
+    // ticked, with no way to get it back.
+    renderTable({ users: [ada], selectionMode: true, selectedUserIds: new Set() });
+
+    fireEvent.click(screen.getByText("Ada Lovelace"));
+    expect(h.navigate).not.toHaveBeenCalled();
+  });
+
+  it("still navigates on a row click when selection mode is off", () => {
+    renderTable({ users: [ada] });
+
+    fireEvent.click(screen.getByText("Ada Lovelace"));
+    expect(h.navigate).toHaveBeenCalledWith("/base/iam/user-detail/u1");
+  });
+
+  it("keeps the skeleton and the empty state untouched in selection mode", () => {
+    const { unmount } = renderTable({ users: [], isLoading: true, selectionMode: true });
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    unmount();
+
+    renderTable({ users: [], isLoading: false, selectionMode: true });
+    expect(screen.getByText("No users found.")).toBeTruthy();
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 });

@@ -9,11 +9,29 @@ import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { checkValidDate, formatDate, parseDateString } from "@/lib/utils";
 import { getUserDisplayName, getUserInitials } from "@blocks-idp/iam/utils/user-display-name";
 import { Users as UsersIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
+import { cn } from "@/lib/utils";
 
 type UserTableProps = {
   users: User[];
   isLoading: boolean;
+  /** When off, every prop below is ignored and the table behaves exactly as before. */
+  selectionMode?: boolean;
+  selectedUserIds?: Set<string>;
+  onToggleUser?: (itemId: string, checked: boolean) => void;
+  onToggleAllOnPage?: (checked: boolean) => void;
 };
+
+// One extra leading column while selecting, so the header and the rows stay aligned
+// without either of them knowing why the other shifted.
+const GRID_COLUMNS = "md:grid-cols-[200px_minmax(0,1fr)_90px_130px_140px]";
+const GRID_COLUMNS_SELECTING = "md:grid-cols-[32px_200px_minmax(0,1fr)_90px_130px_140px]";
+
+// Radix renders the same tick for "mixed" as for "checked", which would read as
+// "everything is selected" when only some rows are. The tick is hidden in that state
+// and replaced with a dash drawn on the box itself, so no new primitive is needed.
+const INDETERMINATE_BOX =
+  "relative data-[state=indeterminate]:border-blocks-primary-500 data-[state=indeterminate]:bg-blocks-primary-500 data-[state=indeterminate]:text-primary-foreground [&[data-state=indeterminate]_svg]:hidden after:absolute after:left-1/2 after:top-1/2 after:hidden after:h-[2px] after:w-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-current data-[state=indeterminate]:after:block";
 
 const LoadingSkelton = () => (
   <div className="flex flex-col gap-3">
@@ -23,14 +41,34 @@ const LoadingSkelton = () => (
   </div>
 );
 
-export const UsersTable = ({ users, isLoading }: UserTableProps) => {
+export const UsersTable = ({
+  users,
+  isLoading,
+  selectionMode = false,
+  selectedUserIds,
+  onToggleUser,
+  onToggleAllOnPage,
+}: UserTableProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const { sortQueryParams, setSortQueryParams } = useUsersSortQueryParams();
 
   const handleRowClick = (itemId: string) => {
+    // Navigating mid-selection would throw away what the operator has ticked, so
+    // while selecting the row is inert and only its checkbox responds.
+    if (selectionMode) return;
     navigate(scoped(`iam/user-detail/${itemId}`));
   };
+
+  const selectedCountOnPage = selectionMode
+    ? users.filter((user) => selectedUserIds?.has(user.itemId)).length
+    : 0;
+  const headerChecked: boolean | "indeterminate" =
+    selectedCountOnPage === 0
+      ? false
+      : selectedCountOnPage === users.length
+        ? true
+        : "indeterminate";
 
   if (isLoading) return <LoadingSkelton />;
 
@@ -46,7 +84,23 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
   return (
     <div className="scrollbar-hidden-x overflow-x-hidden md:overflow-x-auto">
       <div className="flex flex-col gap-3 md:min-w-[940px]">
-        <div className="hidden grid-cols-[200px_minmax(0,1fr)_90px_130px_140px] items-center gap-4 px-4 md:grid">
+        <div
+          className={cn(
+            "hidden items-center gap-4 px-4 md:grid",
+            selectionMode ? GRID_COLUMNS_SELECTING : GRID_COLUMNS,
+          )}
+        >
+          {selectionMode && (
+            <div className="shrink-0">
+              <Checkbox
+                aria-label="Select all users on this page"
+                data-testid="users-select-all-on-page"
+                className={INDETERMINATE_BOX}
+                checked={headerChecked}
+                onCheckedChange={(value) => onToggleAllOnPage?.(value === true)}
+              />
+            </div>
+          )}
           <div className="min-w-0">
             <FilterControls.SortHeader
               id="FirstName"
@@ -103,8 +157,27 @@ export const UsersTable = ({ users, isLoading }: UserTableProps) => {
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") handleRowClick(user.itemId);
               }}
-              className="group flex cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary/30 md:grid md:grid-cols-[200px_minmax(0,1fr)_90px_130px_140px] md:items-center md:gap-4"
+              className={cn(
+                "group flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors md:grid md:items-center md:gap-4",
+                selectionMode ? "cursor-default" : "cursor-pointer hover:border-primary/30",
+                selectionMode ? GRID_COLUMNS_SELECTING : GRID_COLUMNS,
+              )}
             >
+              {selectionMode && (
+                <div
+                  className="shrink-0"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                  role="presentation"
+                >
+                  <Checkbox
+                    aria-label={`Select ${fullName}`}
+                    data-testid={`users-select-${user.itemId}`}
+                    checked={selectedUserIds?.has(user.itemId) ?? false}
+                    onCheckedChange={(value) => onToggleUser?.(user.itemId, value === true)}
+                  />
+                </div>
+              )}
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                   {getUserInitials(user)}
