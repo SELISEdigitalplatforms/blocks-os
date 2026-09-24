@@ -101,7 +101,7 @@ app.Use(async (context, next) =>
             "default-src 'self'; " +
             "script-src 'self'; " +
             "style-src 'self'; " +
-            "img-src 'self' data: https:; " +
+            "img-src 'self' data: blob:; " +
             "font-src 'self' data:; " +
             "connect-src 'self' " + connectHosts + "; " +
             "frame-ancestors 'none'; " +
