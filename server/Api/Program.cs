@@ -82,25 +82,45 @@ app.Use(async (context, next) =>
         headers["Referrer-Policy"] = "no-referrer";
         headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
         headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
-        // SPA needs 'unsafe-inline' for the runtime env bootstrap script; APIs and OIDC live on *.blocksdevelopers.com.
+        // Runtime config is an external /runtime-config.js (no inline script). Explicit hosts avoid CSP wildcards that ZAP flags.
+        var connectHosts =
+            "https://dev-iam.blocksdevelopers.com " +
+            "https://dev-api.blocksdevelopers.com " +
+            "https://dev-construct.blocksdevelopers.com " +
+            "https://dev-localization.blocksdevelopers.com " +
+            "https://dev-agents.blocksdevelopers.com " +
+            "https://dev-data.blocksdevelopers.com " +
+            "https://dev-utilities.blocksdevelopers.com " +
+            "https://dev-logic.blocksdevelopers.com " +
+            "https://dev-monitor.blocksdevelopers.com " +
+            "https://dev-release.blocksdevelopers.com " +
+            "https://dev-studio.blocksdevelopers.com " +
+            "https://dev-os.blocksdevelopers.com " +
+            "https://code.selise.biz";
         headers["Content-Security-Policy"] =
             "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline'; " +
-            "style-src 'self' 'unsafe-inline'; " +
+            "script-src 'self'; " +
+            "style-src 'self'; " +
             "img-src 'self' data: https:; " +
             "font-src 'self' data:; " +
-            "connect-src 'self' https://*.blocksdevelopers.com https://*.seliseblocks.com; " +
+            "connect-src 'self' " + connectHosts + "; " +
             "frame-ancestors 'none'; " +
             "base-uri 'self'; " +
-            "form-action 'self' https://*.blocksdevelopers.com";
+            "form-action 'self' https://dev-iam.blocksdevelopers.com https://dev-os.blocksdevelopers.com";
 
         var path = context.Request.Path.Value ?? "";
         if (path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith("runtime-config.js", StringComparison.OrdinalIgnoreCase) ||
             !Path.HasExtension(path))
         {
-            // HTML / SPA routes: do not cache so previews pick up header/config changes.
-            headers["Cache-Control"] = "no-store, max-age=0";
+            // HTML / SPA routes / runtime config: do not cache so previews pick up header/config changes.
+            headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
             headers["Pragma"] = "no-cache";
+        }
+        else if (path.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            // Content-hashed Vite assets are immutable.
+            headers["Cache-Control"] = "public, max-age=31536000, immutable";
         }
 
         return Task.CompletedTask;

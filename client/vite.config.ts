@@ -38,6 +38,7 @@ function sriForBuiltHtml() {
         /<(script|link)\b([^>]*?)(src|href)="([^"]+)"([^>]*)>/g,
         (full, tag, pre, attr, url, post) => {
           if (url.startsWith("http") || url.startsWith("//")) return full;
+          if (url.includes("runtime-config.js")) return full; // placeholders rewritten at runtime
           if (full.includes("integrity=")) return full;
           const filePath = path.join(outDir, url.replace(/^\//, ""));
           if (!fs.existsSync(filePath)) return full;
