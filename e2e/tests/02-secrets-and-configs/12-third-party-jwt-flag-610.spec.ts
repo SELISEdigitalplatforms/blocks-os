@@ -9,16 +9,13 @@ import {
   verifyEmptyStateFlow,
   verifyProviderCardFlow,
 } from "../../pages/secrets-and-configs/external-idp";
-import { e2eBaseUrl } from "../../support/env";
 
 /**
  * #610 Phase 1 — provider-derived deactivation + guarded enable for
  * Tenant.IsThirdPartyJwtEnabled (backend). UI toggle is Phase 2 (#611).
  *
- * Live preview APIs with the authenticated browser session:
- * create an active provider → enable flag → Project/Get shows true →
- * delete last provider → flag drops to false → enable with zero actives
- * returns no_active_provider.
+ * API calls run inside the page via fetch() so they reuse the SPA session
+ * (cookies + captured Authorization / x-blocks-key from live Project traffic).
  */
 
 type ApiHeaders = Record<string, string>;
@@ -27,10 +24,10 @@ function pickApiHeaders(req: Request): ApiHeaders | null {
   if (!/\/api\/Project\//i.test(req.url())) return null;
   const h = req.headers();
   const out: ApiHeaders = { "content-type": "application/json" };
-  for (const key of ["authorization", "x-blocks-key", "cookie", "x-requested-with"]) {
+  for (const key of ["authorization", "x-blocks-key", "x-requested-with"]) {
     if (h[key]) out[key] = h[key];
   }
-  if (!out.authorization && !out["x-blocks-key"] && !out.cookie) return null;
+  if (!out.authorization && !out["x-blocks-key"]) return null;
   return out;
 }
 
@@ -57,17 +54,34 @@ async function captureProjectApiHeaders(page: Page): Promise<ApiHeaders> {
   return headers;
 }
 
+/** Same-origin fetch inside the page so cookies travel with the SPA session. */
+async function pageApi<T>(
+  page: Page,
+  headers: ApiHeaders,
+  method: "GET" | "POST",
+  path: string,
+  body?: unknown,
+): Promise<{ status: number; json: T }> {
+  return page.evaluate(
+    async ({ method, path, headers, body }) => {
+      const res = await fetch(path, {
+        method,
+        credentials: "include",
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const json = (await res.json().catch(() => ({}))) as T;
+      return { status: res.status, json };
+    },
+    { method, path, headers, body },
+  );
+}
+
 type ProjectGetBody = {
   isThirdPartyJwtEnabled?: boolean;
   IsThirdPartyJwtEnabled?: boolean;
   data?: Record<string, unknown>;
 };
-
-async function projectGet(page: Page, headers: ApiHeaders): Promise<ProjectGetBody> {
-  const res = await page.request.get(`${e2eBaseUrl()}/api/Project/Get`, { headers });
-  expect(res.ok(), `Project/Get HTTP ${res.status()}`).toBeTruthy();
-  return res.json();
-}
 
 function readFlag(body: ProjectGetBody): boolean {
   if (typeof body.isThirdPartyJwtEnabled === "boolean") return body.isThirdPartyJwtEnabled;
@@ -89,22 +103,6 @@ type UpdateBody = {
   Errors?: Record<string, string>;
 };
 
-async function updateFlag(
-  page: Page,
-  headers: ApiHeaders,
-  isEnabled: boolean,
-): Promise<UpdateBody> {
-  const res = await page.request.post(`${e2eBaseUrl()}/api/Project/UpdateThirdPartyJwtEnabled`, {
-    headers,
-    data: { isEnabled },
-  });
-  expect(
-    res.ok() || res.status() === 400,
-    `UpdateThirdPartyJwtEnabled HTTP ${res.status()}`,
-  ).toBeTruthy();
-  return res.json();
-}
-
 type ProviderRow = {
   itemId?: string;
   ItemId?: string;
@@ -114,19 +112,21 @@ type ProviderRow = {
   IsActive?: boolean;
 };
 
-async function listProviders(page: Page, headers: ApiHeaders): Promise<ProviderRow[]> {
-  const res = await page.request.get(`${e2eBaseUrl()}/api/Project/GetThirdPartyJwtProviders`, {
-    headers,
-  });
-  expect(res.ok(), `GetThirdPartyJwtProviders HTTP ${res.status()}`).toBeTruthy();
-  const body = await res.json();
-  if (Array.isArray(body)) return body;
-  if (Array.isArray(body?.data)) return body.data;
-  return [];
-}
-
 function providerItemId(row: ProviderRow): string | undefined {
   return row.itemId || row.ItemId;
+}
+
+async function listProviders(page: Page, headers: ApiHeaders): Promise<ProviderRow[]> {
+  const { status, json } = await pageApi<ProviderRow[] | { data?: ProviderRow[] }>(
+    page,
+    headers,
+    "GET",
+    "/api/Project/GetThirdPartyJwtProviders",
+  );
+  expect(status, `GetThirdPartyJwtProviders HTTP ${status}`).toBe(200);
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json?.data)) return json.data;
+  return [];
 }
 
 async function deleteProviderById(
@@ -134,11 +134,32 @@ async function deleteProviderById(
   headers: ApiHeaders,
   itemId: string,
 ): Promise<void> {
-  const res = await page.request.post(`${e2eBaseUrl()}/api/Project/DeleteThirdPartyJwtProvider`, {
-    headers,
-    data: { itemId },
+  const { status } = await pageApi(page, headers, "POST", "/api/Project/DeleteThirdPartyJwtProvider", {
+    itemId,
   });
-  expect(res.ok(), `DeleteThirdPartyJwtProvider HTTP ${res.status()}`).toBeTruthy();
+  expect(status, `DeleteThirdPartyJwtProvider HTTP ${status}`).toBeLessThan(300);
+}
+
+async function projectGet(page: Page, headers: ApiHeaders): Promise<ProjectGetBody> {
+  const { status, json } = await pageApi<ProjectGetBody>(page, headers, "GET", "/api/Project/Get");
+  expect(status, `Project/Get HTTP ${status}`).toBe(200);
+  return json;
+}
+
+async function updateFlag(
+  page: Page,
+  headers: ApiHeaders,
+  isEnabled: boolean,
+): Promise<UpdateBody> {
+  const { status, json } = await pageApi<UpdateBody>(
+    page,
+    headers,
+    "POST",
+    "/api/Project/UpdateThirdPartyJwtEnabled",
+    { isEnabled },
+  );
+  expect([200, 400].includes(status), `UpdateThirdPartyJwtEnabled HTTP ${status}`).toBeTruthy();
+  return json;
 }
 
 test.describe("third-party JWT flag derivation (#610)", () => {
@@ -147,7 +168,7 @@ test.describe("third-party JWT flag derivation (#610)", () => {
 
     const headers = await captureProjectApiHeaders(page);
 
-    await test.step("Clear any leftover providers so the suite owns the active set", async () => {
+    await test.step("Clear leftover providers so the suite owns the active set", async () => {
       const existing = await listProviders(page, headers);
       for (const row of existing) {
         const id = providerItemId(row);
