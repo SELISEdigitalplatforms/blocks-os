@@ -137,7 +137,19 @@ var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
 
 if (File.Exists(indexHtml))
 {
-    app.MapFallbackToFile("/index.html");
+    // SPA fallback must not 200 for VCS / backup probes — MapFallbackToFile would
+    // serve index.html for /BitKeeper, /.git, etc. and OWASP ZAP flags "Hidden File Found".
+    app.MapFallback(async context =>
+    {
+        if (SpaFallbackGuard.IsHiddenOrVcsProbe(context.Request.Path.Value))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(indexHtml);
+    });
 }
 
 
