@@ -53,8 +53,8 @@ export enum MailServiceProvider {
   /** Zoho Mail transactional API. */
   Zoho = 1,
   /**
-   * Exchange Online. Outbound SMTP with OAuth client credentials or a mailbox
-   * password; inbound IMAP with OAuth client credentials only.
+   * Exchange Online. Outbound through Microsoft Graph with OAuth client credentials,
+   * or SMTP with a mailbox password; inbound IMAP with OAuth client credentials only.
    */
   Office365Smtp = 2,
   /** Gmail / Google Workspace with an App Password, outbound and inbound. */
