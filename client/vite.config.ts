@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import crypto from "node:crypto";
 import fs from "fs";
 import path from "path";
 import react from "@vitejs/plugin-react";
@@ -22,6 +23,42 @@ function resolveDevHttps(): { cert: Buffer; key: Buffer } | undefined {
   return { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
 }
 
+
+function sriForBuiltHtml() {
+  return {
+    name: "sri-for-built-html",
+    apply: "build" as const,
+    enforce: "post" as const,
+    closeBundle() {
+      const outDir = path.resolve(__dirname, "../server/Api/wwwroot");
+      const indexPath = path.join(outDir, "index.html");
+      if (!fs.existsSync(indexPath)) return;
+      let html = fs.readFileSync(indexPath, "utf8");
+      html = html.replace(
+        /<(script|link)\b([^>]*?)(src|href)="([^"]+)"([^>]*)>/g,
+        (full, tag, pre, attr, url, post) => {
+          if (url.startsWith("http") || url.startsWith("//")) return full;
+          if (full.includes("integrity=")) return full;
+          const filePath = path.join(outDir, url.replace(/^\//, ""));
+          if (!fs.existsSync(filePath)) return full;
+          const buf = fs.readFileSync(filePath);
+          const hash = crypto.createHash("sha384").update(buf).digest("base64");
+          const integrity = `sha384-${hash}`;
+          if (tag === "script") {
+            return `<script${pre}${attr}="${url}" integrity="${integrity}" crossorigin="anonymous"${post}>`;
+          }
+          // only stylesheet links need SRI
+          if (!/\brel=["']stylesheet["']/.test(full) && !/\brel=stylesheet\b/.test(full)) {
+            return full;
+          }
+          return `<link${pre}${attr}="${url}" integrity="${integrity}" crossorigin="anonymous"${post}>`;
+        },
+      );
+      fs.writeFileSync(indexPath, html);
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "BLOCKS_");
 
@@ -32,7 +69,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     envPrefix: ["BLOCKS_"],
-    plugins: [react()],
+    plugins: [react(), sriForBuiltHtml()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./app"),

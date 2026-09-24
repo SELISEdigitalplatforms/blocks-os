@@ -71,6 +71,44 @@ await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 var app = builder.Build();
 
+// Browser-facing security headers for the SPA and static assets (ZAP DAST bar: 0 alerts).
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "no-referrer";
+        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+        // SPA needs 'unsafe-inline' for the runtime env bootstrap script; APIs and OIDC live on *.blocksdevelopers.com.
+        headers["Content-Security-Policy"] =
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: https:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' https://*.blocksdevelopers.com https://*.seliseblocks.com; " +
+            "frame-ancestors 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self' https://*.blocksdevelopers.com";
+
+        var path = context.Request.Path.Value ?? "";
+        if (path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
+            !Path.HasExtension(path))
+        {
+            // HTML / SPA routes: do not cache so previews pick up header/config changes.
+            headers["Cache-Control"] = "no-store, max-age=0";
+            headers["Pragma"] = "no-cache";
+        }
+
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
