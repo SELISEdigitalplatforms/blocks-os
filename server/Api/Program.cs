@@ -3,6 +3,7 @@ using Blocks.Genesis;
 using Blocks.Secrets;
 using BlocksOs.Api;
 using BlocksOs.Api.Middleware;
+using BlocksOs.Api.Security;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using Configuration.DomainService.Shared.Utilities;
@@ -72,6 +73,9 @@ await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 var app = builder.Build();
 
+// Built once: the policy is derived from configuration, which does not change per request.
+var contentSecurityPolicy = ContentSecurityPolicy.Build(app.Configuration);
+
 // Browser-facing security headers for the SPA and static assets (ZAP DAST bar: 0 alerts).
 app.Use(async (context, next) =>
 {
@@ -83,31 +87,9 @@ app.Use(async (context, next) =>
         headers["Referrer-Policy"] = "no-referrer";
         headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
         headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
-        // Runtime config is an external /runtime-config.js (no inline script). Explicit hosts avoid CSP wildcards that ZAP flags.
-        var connectHosts =
-            "https://dev-iam.blocksdevelopers.com " +
-            "https://dev-api.blocksdevelopers.com " +
-            "https://dev-construct.blocksdevelopers.com " +
-            "https://dev-localization.blocksdevelopers.com " +
-            "https://dev-agents.blocksdevelopers.com " +
-            "https://dev-data.blocksdevelopers.com " +
-            "https://dev-utilities.blocksdevelopers.com " +
-            "https://dev-logic.blocksdevelopers.com " +
-            "https://dev-monitor.blocksdevelopers.com " +
-            "https://dev-release.blocksdevelopers.com " +
-            "https://dev-studio.blocksdevelopers.com " +
-            "https://dev-os.blocksdevelopers.com " +
-            "https://code.selise.biz";
-        headers["Content-Security-Policy"] =
-            "default-src 'self'; " +
-            "script-src 'self'; " +
-            "style-src 'self'; " +
-            "img-src 'self' data: blob:; " +
-            "font-src 'self' data:; " +
-            "connect-src 'self' " + connectHosts + "; " +
-            "frame-ancestors 'none'; " +
-            "base-uri 'self'; " +
-            "form-action 'self' https://dev-iam.blocksdevelopers.com https://dev-os.blocksdevelopers.com";
+        // Runtime config is an external /runtime-config.js (no inline script), so script-src
+        // stays strict. The hosts come from configuration -- see ContentSecurityPolicy.
+        headers["Content-Security-Policy"] = contentSecurityPolicy;
 
         var path = context.Request.Path.Value ?? "";
         if (path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||

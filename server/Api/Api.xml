@@ -227,6 +227,47 @@
             Returning 200 for VCS/backup probes makes OWASP ZAP report "Hidden File Found".
             </summary>
         </member>
+        <member name="T:BlocksOs.Api.Security.ContentSecurityPolicy">
+            <summary>
+            Builds the SPA's Content-Security-Policy from configuration.
+            <para>
+            The origins are derived from the same <c>FrontendRuntime</c> section that fills the
+            SPA's runtime config, so the policy describes whatever environment the host is
+            actually running in. They used to be a hardcoded list of <c>dev-*</c> hosts, which
+            meant the policy was correct on dev and would have blocked the SPA from reaching its
+            own IAM and API everywhere else.
+            </para>
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.ConnectOriginKeys">
+            <summary>
+            <c>FrontendRuntime</c> keys holding an origin the SPA makes requests to. Anything
+            not derivable from these (a CDN, a third-party service) goes in
+            <c>Csp:ExtraConnectSrc</c> / <c>Csp:ExtraImgSrc</c> rather than back into code.
+            </summary>
+        </member>
+        <member name="F:BlocksOs.Api.Security.ContentSecurityPolicy.FormActionOriginKeys">
+            <summary>Where a login POST may be sent: the identity host and the SPA's own host.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.BuildPolicy(System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            The policy itself, separated from configuration so it can be asserted directly.
+            Public rather than internal because the test project has no InternalsVisibleTo.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Normalize(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Reduce configured values to distinct, sorted origins.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.ToOrigin(System.String)">
+            <summary>
+            A CSP source is an origin, so any path, query or trailing slash is dropped. A value
+            that is not an absolute http(s) URL is ignored rather than emitted verbatim, so a
+            malformed secret cannot inject a directive.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Security.ContentSecurityPolicy.Split(System.String)">
+            <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.
