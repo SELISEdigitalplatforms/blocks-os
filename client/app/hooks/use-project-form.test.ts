@@ -55,6 +55,7 @@ describe("useProjectForm", () => {
     h.formData = [
       {
         name: "My Project",
+        projectType: "template",
         isAcceptBlocksTerms: true,
         isUseBlocksExclusively: false,
       },
@@ -91,6 +92,7 @@ describe("useProjectForm", () => {
     expect(h.createProject.mock.calls[0][0]).toEqual(
       expect.objectContaining({
         name: "My Project",
+        projectType: "template",
         isAcceptBlocksTerms: true,
         isUseBlocksExclusively: false,
         resources: [

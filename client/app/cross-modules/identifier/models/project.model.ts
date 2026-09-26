@@ -43,6 +43,12 @@ export interface IProjectGroup {
   tenantGroupId: string;
   projects: IProject[];
 }
+/**
+ * `template` projects get Connect set up in every environment without anyone running setup.
+ * Chosen once for a new project; environments added later keep the project's type.
+ */
+export type ProjectType = "regular" | "template";
+
 export interface ICreateProjectPayload {
   name: string;
   isAcceptBlocksTerms: boolean;
@@ -54,6 +60,8 @@ export interface ICreateProjectPayload {
     cookieDomain: string;
   }[];
   tenantGroupId?: string;
+  /** Read for a new project only; blank is `regular`. */
+  projectType?: ProjectType;
 }
 export interface IGetProjectResponse {
   data: IProject;

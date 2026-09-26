@@ -9,7 +9,12 @@ import {
   FormMessage,
 } from "@/components/ui-kits/form/form";
 import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
-import { createProjectNamingFormDefaultValue, createProjectNamingFormSchema } from "./utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
+import {
+  createProjectNamingFormDefaultValue,
+  createProjectNamingFormSchema,
+  PROJECT_TYPE_OPTIONS,
+} from "./utils";
 import { Button } from "@/components/ui-kits/button/button";
 import { useStepper } from "@/components/stepper/stepper-provider";
 import { useCreateProjectFormState } from "../../utils";
@@ -52,6 +57,44 @@ export const CreateProjectNamingForm = () => {
                 </FormItem>
               )}
             />
+            <div className="mt-8">
+              <FormField
+                control={form.control}
+                name="projectType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Project type</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        className="mt-2 flex flex-col gap-3"
+                      >
+                        {PROJECT_TYPE_OPTIONS.map((option) => (
+                          <label
+                            key={option.value}
+                            htmlFor={`project-type-${option.value}`}
+                            className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3"
+                          >
+                            <RadioGroupItem
+                              id={`project-type-${option.value}`}
+                              value={option.value}
+                              className="mt-0.5"
+                            />
+                            <span className="flex flex-col gap-0.5">
+                              <span className="text-sm font-medium">{option.label}</span>
+                              <span className="text-xs text-medium-emphasis">
+                                {option.description}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </RadioGroup>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
             <div className="mt-10">
               <FormField
                 control={form.control}

@@ -19,6 +19,7 @@ import {
   Mail,
   Network,
   Package,
+  Plug,
   ScrollText,
   Settings,
   ShieldAlert,
@@ -204,6 +205,14 @@ export const navigationMenus: Menu[] = [
         desc: "AI model integrations",
         type: "menu",
         disabled: true, // Temporarily disabled
+      },
+      {
+        id: "connect",
+        name: "Connect",
+        path: "/app/secret-management/connect",
+        icon: Plug,
+        desc: "Set up Connect",
+        type: "menu",
       },
     ],
   },

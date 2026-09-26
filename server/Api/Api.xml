@@ -50,6 +50,16 @@
              </para>
              </remarks>
         </member>
+        <member name="T:BlocksOs.Api.Controllers.ConnectController">
+            <summary>
+            Connect setup endpoints. Routing only; the rules live in <see cref="T:Configuration.DomainService.Connect.Services.IConnectService"/>.
+            </summary>
+            <remarks>
+            Protected by their own permissions, like Storage and Notification, so access to Connect can
+            be granted apart from Secrets. Neither permission is seeded from this repository: both must
+            exist in IAM for the blocks-os tenant and be assigned to roles, or every call is refused.
+            </remarks>
+        </member>
         <member name="M:BlocksOs.Api.Controllers.LogAndTraceRestoreController.CancelRestoreProcess(Cloud.LmtService.Models.ColdRestore.CancelRestoreRequest)">
             <summary>
             Cancels an unfinished cold or archive restore and discards whatever it had restored so
@@ -190,6 +200,42 @@
         </member>
         <member name="M:BlocksOs.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
             <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware">
+            <summary>
+            IAM's OIDC callback sets an httpOnly access-token cookie named after the
+            redirect host (e.g. <c>dev-os-612.blocksdevelopers.com</c> on PR previews,
+            <c>dev-os.blocksdevelopers.com</c> on the shared dev host). JwtBearer auth
+            in Blocks.Genesis reads the <c>Authorization</c> header (and a fixed cookie
+            key that does not track preview hosts), so API calls from the SPA — which
+            only send <c>credentials: include</c> — arrive unauthenticated on previews.
+            Promote the host-named cookie into <c>Authorization: Bearer …</c> when the
+            header is absent so preview and main hosts both authenticate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate)">
+            <summary>
+            IAM's OIDC callback sets an httpOnly access-token cookie named after the
+            redirect host (e.g. <c>dev-os-612.blocksdevelopers.com</c> on PR previews,
+            <c>dev-os.blocksdevelopers.com</c> on the shared dev host). JwtBearer auth
+            in Blocks.Genesis reads the <c>Authorization</c> header (and a fixed cookie
+            key that does not track preview hosts), so API calls from the SPA — which
+            only send <c>credentials: include</c> — arrive unauthenticated on previews.
+            Promote the host-named cookie into <c>Authorization: Bearer …</c> when the
+            header is absent so preview and main hosts both authenticate.
+            </summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Invokes the middleware.</summary>
+        </member>
+        <member name="M:BlocksOs.Api.Middleware.HostAccessCookieBearerMiddleware.PromoteHostAccessCookie(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Promote host-named IAM access cookie to Authorization when missing.</summary>
+        </member>
+        <member name="T:BlocksOs.Api.Middleware.SpaFallbackGuard">
+            <summary>
+            Paths that must not be served by the SPA <c>index.html</c> fallback.
+            Returning 200 for VCS/backup probes makes OWASP ZAP report "Hidden File Found".
+            </summary>
         </member>
         <member name="T:Program">
             <summary>

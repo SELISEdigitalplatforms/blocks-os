@@ -20,6 +20,9 @@ using Configuration.DomainService.Captcha.Services;
 using Configuration.DomainService.Captcha.Validators;
 using Configuration.DomainService.Mail.Providers;
 using Configuration.DomainService.Mail.Services;
+using Configuration.DomainService.Connect.RequestModel;
+using Configuration.DomainService.Connect.Services;
+using Configuration.DomainService.Connect.Validators;
 
 namespace Configuration.DomainService.Shared.Utilities
 {
@@ -33,6 +36,8 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IMailTemplateRepository, MailTemplateRepository>();
             serviceCollection.AddSingleton<IMailboxService, MailboxService>();
             serviceCollection.AddSingleton<IMailboxRepository, MailboxRepository>();
+            serviceCollection.AddSingleton<IConnectService, ConnectService>();
+            serviceCollection.AddSingleton<IConnectRepository, ConnectRepository>();
 
             // Scoped, unlike the services above: it depends on Blocks.Secrets' ISecretService/
             // ISecretAuditService/ISecretAuthorizationService, which are themselves Scoped
@@ -57,6 +62,7 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
             serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();
+            serviceCollection.AddSingleton<IValidator<SaveConnectSetupRequest>, SaveConnectSetupRequestValidator>();
         }
     }
 }

@@ -84,5 +84,20 @@ describe("CreateProjectNamingForm", () => {
     await user.click(continueBtn);
     expect(h.nextStep).toHaveBeenCalledTimes(1);
     expect(useCreateProjectFormState.getState().formData[0].name).toBe("My Project");
+    expect(useCreateProjectFormState.getState().formData[0].projectType).toBe("regular");
+  });
+
+  it("stores the template project type when it is chosen", async () => {
+    const user = userEvent.setup();
+    render(<CreateProjectNamingForm />);
+
+    await user.type(screen.getByPlaceholderText("Enter your project name"), "My Project");
+    await user.click(screen.getByRole("radio", { name: /Template project/ }));
+    const [exclusive, terms] = screen.getAllByRole("checkbox");
+    await user.click(exclusive);
+    await user.click(terms);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(useCreateProjectFormState.getState().formData[0].projectType).toBe("template");
   });
 });

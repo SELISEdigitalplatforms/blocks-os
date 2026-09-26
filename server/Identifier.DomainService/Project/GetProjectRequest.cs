@@ -18,5 +18,8 @@ namespace DomainService.Projects
         /// UpdateThirdPartyJwtEnabled when at least one active provider exists.
         /// </summary>
         public bool IsThirdPartyJwtEnabled { get; set; }
+
+        /// <summary>The group's <see cref="ProjectTypes"/> value; regular when none was stored.</summary>
+        public string ProjectType { get; set; } = ProjectTypes.Regular;
     }
 }

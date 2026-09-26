@@ -11,6 +11,13 @@ namespace DomainService.Projects
         public string? TenantGroupId { get; set; }
         public List<Resource>? Resources { get; set; }
         public List<ApplicationContext> applicationContexts { get; set; }
+
+        /// <summary>
+        /// <see cref="ProjectTypes.Regular"/> or <see cref="ProjectTypes.Template"/>; blank is regular.
+        /// Only read for a new group. An environment added to an existing group keeps the type the
+        /// group was created with.
+        /// </summary>
+        public string? ProjectType { get; set; }
     }
 
     public class ApplicationContext

@@ -141,6 +141,33 @@ namespace XUnitTest.Services
             _messageClient.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<Tenant>>()), Times.Once);
         }
 
+        [Theory]
+        [InlineData("template", "template")]
+        [InlineData("Template", "template")]
+        [InlineData(null, "regular")]
+        public async Task SaveProjectAsync_NewGroup_StoresTheProjectTypeOnTheGroup(string? requested, string stored)
+        {
+            using var _ = new BlocksTestContext();
+            TenantAsset? saved = null;
+            _repo.Setup(r => r.UpdateTenantAssetAsync(It.IsAny<TenantAsset>()))
+                 .Callback<TenantAsset>(a => saved = a)
+                 .Returns(Task.CompletedTask);
+            var request = new CreateProjectRequest
+            {
+                Name = "Proj",
+                ProjectType = requested,
+                applicationContexts = new List<ApplicationContext>
+                {
+                    new() { Environment = "dev", Domain = "https://dev.example.com" }
+                }
+            };
+
+            await Service().SaveProjectAsync(request);
+
+            saved.Should().NotBeNull();
+            saved!.ProjectType.Should().Be(stored);
+        }
+
         [Fact]
         public async Task SaveProjectAsync_NewGroup_RecordsTheCreatorBeforeQueueingTheProject()
         {
@@ -335,6 +362,28 @@ namespace XUnitTest.Services
             var response = await Service().GetAsync();
 
             response.Data.TenantSlug.Should().BeEmpty();
+        }
+
+        [Theory]
+        [InlineData("template", "template")]
+        [InlineData(null, "regular")]
+        public async Task GetAsync_ReturnsTheGroupsProjectType(string? storedType, string expected)
+        {
+            using var _ = new BlocksTestContext();
+            var tenant = new Tenant
+            { DbConnectionString = "mongodb://x", JwtTokenParameters = new JwtTokenParameters { IssueDate = System.DateTime.UtcNow, PrivateCertificatePassword = "pwd" },
+                TenantGroupId = "grp",
+                Environment = "dev",
+                Name = "Proj",
+                Applications = new List<Applications>()
+            };
+            _repo.Setup(r => r.GetByTenantIdAsync(It.IsAny<string>())).ReturnsAsync(tenant);
+            _repo.Setup(r => r.GetTenantAssetByGroupIdAsync("grp"))
+                 .ReturnsAsync(new TenantAsset { TenantGroupId = "grp", Resources = [], ProjectType = storedType });
+
+            var response = await Service().GetAsync();
+
+            response.Data.ProjectType.Should().Be(expected);
         }
 
         [Fact]

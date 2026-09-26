@@ -1,5 +1,6 @@
 import { DomainAction } from "@/pages/dashboard/components/domain";
 import type { IProject as IPackageProject } from "@seliseblocks/genesis-os/models";
+import type { ProjectType } from "@blocks-identifier/models/project.model";
 
 /**
  * How a domain came to be on a project.
@@ -39,6 +40,8 @@ export type IProject = Omit<IPackageProject, "applications"> & {
   applications: IDomain[];
   /** Gates Genesis third-party token trust for this tenant (Phase 1 Project/Get). */
   isThirdPartyJwtEnabled: boolean;
+  /** The project's type. Only `Project/Get` returns it; project lists leave it out. */
+  projectType?: ProjectType;
 };
 
 export interface IProjectGroup {

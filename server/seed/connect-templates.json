@@ -1,0 +1,56 @@
+[
+    {
+        "_id": "connect-template-localization",
+        "CreatedDate": {
+            "$date": "2026-09-25T00:00:00.000Z"
+        },
+        "LastUpdatedDate": {
+            "$date": "2026-09-25T00:00:00.000Z"
+        },
+        "CreatedBy": null,
+        "Language": null,
+        "LastUpdatedBy": null,
+        "OrganizationId": "default",
+        "Tags": [
+            "connect"
+        ],
+        "Key": "localization",
+        "DisplayName": "Blocks Localization",
+        "Description": "Lets an external app read and manage this project's localization keys, languages and modules.",
+        "RoleName": "Localization Connect",
+        "RoleSlug": "localization-connect",
+        "RoleDescription": "Created by Connect setup. Grants the Blocks Localization permissions used by the Connect client credential.",
+        "Permissions": [
+            "blocks-localization::config::savewebhook",
+            "blocks-localization::key::save",
+            "blocks-localization::key::savekeys",
+            "blocks-localization::key::gets",
+            "blocks-localization::key::getkeysbykeynames",
+            "blocks-localization::key::gettimeline",
+            "blocks-localization::key::get",
+            "blocks-localization::key::delete",
+            "blocks-localization::key::deletekeys",
+            "blocks-localization::key::generateuilmfile",
+            "blocks-localization::key::translateall",
+            "blocks-localization::key::uilmimport",
+            "blocks-localization::key::uilmexport",
+            "blocks-localization::key::deletecollections",
+            "blocks-localization::key::getuilmexportedfiles",
+            "blocks-localization::key::getlanguagefilegenerationhistory",
+            "blocks-localization::key::rollback",
+            "blocks-localization::language::save",
+            "blocks-localization::language::delete",
+            "blocks-localization::language::setdefault",
+            "blocks-localization::module::save",
+            "blocks-localization::module::tagglossary",
+            "blocks-localization::glossary::save",
+            "blocks-localization::glossary::delete",
+            "blocks-localization::assistant::getTranslationsuggestion",
+            "blocks-localization::key::translatekey",
+            "blocks-localization::key::translatekeys"
+        ],
+        "ClientCredentialName": "Blocks Localization Connect",
+        "AccessTokenValidForNumberMinutes": 60,
+        "IsActive": true
+    }
+]

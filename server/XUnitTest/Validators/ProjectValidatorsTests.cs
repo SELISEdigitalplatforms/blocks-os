@@ -37,6 +37,37 @@ namespace XUnitTest.Validators
         }
 
         [Theory]
+        [InlineData(null)]
+        [InlineData("regular")]
+        [InlineData("template")]
+        [InlineData("Template")]
+        public async Task Validate_SupportedProjectType_IsValid(string? projectType)
+        {
+            _repo.Setup(r => r.IsExistingEnviroment(It.IsAny<List<string>>(), It.IsAny<string>()))
+                 .ReturnsAsync(false);
+            var request = ValidRequest();
+            request.ProjectType = projectType;
+
+            var result = await CreateValidator().ValidateAsync(request);
+
+            result.IsValid.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Validate_UnknownProjectType_IsInvalid()
+        {
+            _repo.Setup(r => r.IsExistingEnviroment(It.IsAny<List<string>>(), It.IsAny<string>()))
+                 .ReturnsAsync(false);
+            var request = ValidRequest();
+            request.ProjectType = "sample";
+
+            var result = await CreateValidator().ValidateAsync(request);
+
+            result.IsValid.Should().BeFalse();
+            result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateProjectRequest.ProjectType));
+        }
+
+        [Theory]
         [InlineData("")]
         [InlineData("ab")]
         public async Task Validate_ShortOrEmptyName_Fails(string name)
