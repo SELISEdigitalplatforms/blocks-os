@@ -55,13 +55,20 @@ export const ManageOrganizationDialog = ({
   const hydratedKeyRef = useRef("");
 
   const { data: userData } = useGetUserById({ id: userId, projectKey: tenantId }, { enabled: open });
+  // Scoped to the organization being edited, not the tenant: what is picked here is
+  // written into that organization's key, so listing another organization's roles
+  // would let the operator assign something that does not exist there. Before an
+  // organization is chosen this is "default", the one every account belongs to.
+  const scopedOrganizationId = selectedOrgId || DEFAULT_ORGANIZATION_ID;
+
   const { data: rolesData } = useGetRoles(
     {
       page: 0,
       pageSize: 1000,
       sort: { property: "Name", isDescending: false },
       filter: { search: "" },
-      projectKey: tenantId,
+      projectKey: scopedOrganizationId,
+      organizationId: scopedOrganizationId,
     },
     // Don't fetch roles/permissions until the dialog is opened. They aren't
     // needed otherwise, and this avoids a tenant-scoped duplicate call on
@@ -70,7 +77,8 @@ export const ManageOrganizationDialog = ({
   );
   const { data: permissionsData } = useGetPermissions(
     {
-      projectKey: tenantId,
+      projectKey: scopedOrganizationId,
+      organizationId: scopedOrganizationId,
       page: 0,
       pageSize: 1000,
       search: "",
@@ -264,10 +272,15 @@ export const ManageOrganizationDialog = ({
                 </p>
               ) : (
                 <div className="animate-in fade-in-0 slide-in-from-top-1 flex flex-col gap-5 pt-0.5 duration-300">
-                  <OrganizationRolesField roles={selectedRoles} onChange={setSelectedRoles} />
+                  <OrganizationRolesField
+                    roles={selectedRoles}
+                    onChange={setSelectedRoles}
+                    organizationId={scopedOrganizationId}
+                  />
                   <OrganizationPermissionsField
                     permissions={selectedPermissions}
                     onChange={setSelectedPermissions}
+                    organizationId={scopedOrganizationId}
                   />
                 </div>
               )}

@@ -204,7 +204,7 @@ export function escapeForRegex(value: string) {
 
 export function findInvitedUserRowFlow(page: Page, inviteEmail: string) {
   return page.getByRole("button", {
-    name: new RegExp(escapeForRegex(inviteEmail)),
+    name: inviteEmail,
   });
 }
 

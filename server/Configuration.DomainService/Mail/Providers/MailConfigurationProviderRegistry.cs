@@ -111,6 +111,7 @@ namespace Configuration.DomainService.Mail.Providers
                 MailServiceProvider.Office365Smtp => "SMTP Office 365",
                 MailServiceProvider.AmazonSes => "Amazon SES",
                 MailServiceProvider.Zoho => "Zoho",
+                MailServiceProvider.Gmail => "Gmail",
                 _ => provider.ToString()
             };
 

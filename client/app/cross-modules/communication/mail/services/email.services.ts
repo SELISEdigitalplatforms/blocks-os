@@ -2,6 +2,7 @@ import {
   IEmailConfig,
   IEmailTemplate,
   IEmailUsageResponse,
+  IGetMailBoxMailAttachmentResponse,
   IGetMailBoxMailResponse,
 } from "../models/email";
 import { http } from "@/lib/http/http-client";
@@ -91,6 +92,7 @@ class EmailService {
     status?: string,
     startDate?: string,
     endDate?: string,
+    mailServerConfigurationId?: string,
   ): Promise<IEmailUsageResponse> => {
     const params = new URLSearchParams({
       PageNumber: pageNumber.toString(),
@@ -110,14 +112,27 @@ class EmailService {
     if (endDate) {
       params.append("SendDateRange.EndDate", endDate);
     }
+    if (mailServerConfigurationId) {
+      params.append("MailServerConfigurationId", mailServerConfigurationId);
+    }
 
     return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, {
       absoluteUrl: true,
     });
   };
 
-  getMailBoxMail = (messageId: string): Promise<IGetMailBoxMailResponse> => {
-    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=${messageId}`, undefined, {
+  getMailBoxMailAttachment = (
+    messageId: string,
+    index: number,
+  ): Promise<IGetMailBoxMailAttachmentResponse> => {
+    const params = new URLSearchParams({ MessageId: messageId, Index: String(index) });
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL_ATTACHMENT}?${params.toString()}`, undefined, {
+      absoluteUrl: true,
+    });
+  };
+
+  getMailBoxMail = (itemId: string): Promise<IGetMailBoxMailResponse> => {
+    return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=${encodeURIComponent(itemId)}`, undefined, {
       absoluteUrl: true,
     });
   };

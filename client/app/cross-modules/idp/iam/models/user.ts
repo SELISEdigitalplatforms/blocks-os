@@ -74,6 +74,47 @@ export interface IGetUsersPayload {
   };
   projectKey: string;
 }
+/**
+ * Who a bulk role change applies to. Exactly one form is sent.
+ *
+ * The filter form carries the same shape the user list already posts, so the set
+ * the operator saw on screen and the set the server acts on are computed from one
+ * input rather than enumerated client-side and re-resolved server-side.
+ */
+export type IBulkRoleTarget =
+  | { userIds: string[]; filter?: never }
+  | { filter: NonNullable<IGetUsersPayload["filter"]>; userIds?: never };
+
+/**
+ * A role delta inside ONE organization: roles are stored per organization
+ * (`User.roles` is `Record<organizationId, string[]>`), so a change has no meaning
+ * without one. Add and remove rather than replace, so a bulk caller never has to
+ * know what each target already holds.
+ */
+export interface IBulkRoleChangePayload {
+  organizationId: string;
+  addRoles: string[];
+  removeRoles: string[];
+  target: IBulkRoleTarget;
+}
+
+/** Dry run. `matchedCount === affectedCount + unchangedCount`; there is no skip category. */
+export interface IBulkRolePreviewResponse {
+  errors: unknown;
+  isSuccess: boolean;
+  matchedCount: number;
+  affectedCount: number;
+  unchangedCount: number;
+}
+
+/** Accepted and queued, not applied. `batchId` correlates worker logs; it is not pollable. */
+export interface IBulkRoleSubmitResponse {
+  errors: unknown;
+  isSuccess: boolean;
+  batchId: string;
+  matchedCount: number;
+}
+
 export interface IGetUsersResponse {
   errors: unknown;
   data: User[];

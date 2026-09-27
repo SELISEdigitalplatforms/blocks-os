@@ -52,8 +52,13 @@ export enum MailServiceProvider {
   AmazonSes = 0,
   /** Zoho Mail transactional API. */
   Zoho = 1,
-  /** Exchange Online SMTP with OAuth client credentials. Outbound only. */
+  /**
+   * Exchange Online. Outbound through Microsoft Graph with OAuth client credentials,
+   * or SMTP with a mailbox password; inbound through Microsoft Graph with OAuth client credentials only.
+   */
   Office365Smtp = 2,
+  /** Gmail / Google Workspace with an App Password, outbound and inbound. */
+  Gmail = 3,
 }
 
 /** Mirrors the backend `MailAuthenticationType`. `Password` is the zero default. */
@@ -78,25 +83,40 @@ export enum MailSecurityMode {
  * render "Office365Smtp" — so a reverse lookup is not a display contract. The
  * server stays authoritative; this drives presentation and early validation.
  */
+export interface IMailTransport {
+  host: string;
+  port: number;
+  securityMode: MailSecurityMode;
+  enableSSL: boolean;
+}
+
 export interface IMailProviderCapability {
   value: MailServiceProvider;
   /** Exactly what the user sees, everywhere the provider is named. */
   label: string;
   supportsOutbound: boolean;
   supportsInbound: boolean;
-  authentication: MailAuthenticationType;
   /**
-   * Fixed transport for providers where it is a property of the integration
-   * rather than a tenant choice. Present means the host and port fields are
-   * read-only and prefilled from here.
+   * The authentication methods offered per direction. The first entry is the
+   * default; more than one means the form lets the user choose.
+   */
+  authentication: {
+    outbound: readonly MailAuthenticationType[];
+    inbound: readonly MailAuthenticationType[];
+  };
+  /**
+   * Fixed transport per direction, for providers where it is a property of the
+   * integration rather than a tenant choice. Present means the host and port
+   * fields are read-only and prefilled from here.
    */
   transport?: {
-    host: string;
-    port: number;
-    securityMode: MailSecurityMode;
-    enableSSL: boolean;
+    outbound?: IMailTransport;
+    inbound?: IMailTransport;
   };
 }
+
+const PASSWORD_ONLY = [MailAuthenticationType.Password] as const;
+const OAUTH_ONLY = [MailAuthenticationType.OAuthClientCredentials] as const;
 
 export const MAIL_PROVIDERS: readonly IMailProviderCapability[] = [
   {
@@ -104,33 +124,90 @@ export const MAIL_PROVIDERS: readonly IMailProviderCapability[] = [
     label: "Amazon SES",
     supportsOutbound: true,
     supportsInbound: false,
-    authentication: MailAuthenticationType.Password,
+    authentication: { outbound: PASSWORD_ONLY, inbound: PASSWORD_ONLY },
   },
   {
     value: MailServiceProvider.Zoho,
     label: "Zoho",
     supportsOutbound: true,
     supportsInbound: true,
-    authentication: MailAuthenticationType.Password,
+    authentication: { outbound: PASSWORD_ONLY, inbound: PASSWORD_ONLY },
   },
   {
     value: MailServiceProvider.Office365Smtp,
-    label: "SMTP Office 365",
+    label: "Office 365",
     supportsOutbound: true,
-    supportsInbound: false,
-    authentication: MailAuthenticationType.OAuthClientCredentials,
+    supportsInbound: true,
+    authentication: {
+      outbound: [MailAuthenticationType.OAuthClientCredentials, MailAuthenticationType.Password],
+      // Inbound reads through Microsoft Graph, which takes no mailbox password.
+      inbound: OAUTH_ONLY,
+    },
     transport: {
-      host: "smtp.office365.com",
-      port: 587,
-      securityMode: MailSecurityMode.StartTls,
-      enableSSL: false,
+      outbound: {
+        host: "smtp.office365.com",
+        port: 587,
+        securityMode: MailSecurityMode.StartTls,
+        enableSSL: false,
+      },
+      inbound: {
+        host: "outlook.office365.com",
+        port: 993,
+        securityMode: MailSecurityMode.SslOnConnect,
+        enableSSL: true,
+      },
+    },
+  },
+  {
+    value: MailServiceProvider.Gmail,
+    label: "Gmail",
+    supportsOutbound: true,
+    supportsInbound: true,
+    authentication: { outbound: PASSWORD_ONLY, inbound: PASSWORD_ONLY },
+    transport: {
+      outbound: {
+        host: "smtp.gmail.com",
+        port: 587,
+        securityMode: MailSecurityMode.StartTls,
+        enableSSL: false,
+      },
+      inbound: {
+        host: "imap.gmail.com",
+        port: 993,
+        securityMode: MailSecurityMode.SslOnConnect,
+        enableSSL: true,
+      },
     },
   },
 ] as const;
 
+export const MAIL_AUTHENTICATION_LABELS: Record<MailAuthenticationType, string> = {
+  [MailAuthenticationType.OAuthClientCredentials]: "OAuth (Client credentials)",
+  [MailAuthenticationType.Password]: "Username & Password",
+};
+
 export const getMailProvider = (
   provider: MailServiceProvider,
 ): IMailProviderCapability | undefined => MAIL_PROVIDERS.find((p) => p.value === provider);
+
+export const getAuthenticationOptions = (
+  provider: MailServiceProvider,
+  isInbound: boolean,
+): readonly MailAuthenticationType[] => {
+  const capability = getMailProvider(provider);
+  if (!capability) {
+    return PASSWORD_ONLY;
+  }
+  return isInbound ? capability.authentication.inbound : capability.authentication.outbound;
+};
+
+export const getFixedTransport = (
+  provider: MailServiceProvider,
+  isInbound: boolean,
+): IMailTransport | undefined => {
+  const transport = getMailProvider(provider)?.transport;
+  return isInbound ? transport?.inbound : transport?.outbound;
+};
 
 /**
  * The provider's display name, or the raw numeric value for one this client
@@ -143,8 +220,18 @@ export const getMailProviderLabel = (provider: MailServiceProvider): string =>
 export const getMailProvidersFor = (isInbound: boolean): IMailProviderCapability[] =>
   MAIL_PROVIDERS.filter((p) => (isInbound ? p.supportsInbound : p.supportsOutbound));
 
-export const usesPasswordAuthentication = (provider: MailServiceProvider): boolean =>
-  getMailProvider(provider)?.authentication !== MailAuthenticationType.OAuthClientCredentials;
+/**
+ * Whether a configuration authenticates with a username and password. The
+ * record's own authentication type wins; without one, the provider's default
+ * for the direction decides.
+ */
+export const usesPasswordAuthentication = (
+  provider: MailServiceProvider,
+  isInbound = false,
+  authenticationType?: MailAuthenticationType,
+): boolean =>
+  (authenticationType ?? getAuthenticationOptions(provider, isInbound)[0]) ===
+  MailAuthenticationType.Password;
 
 export interface IEmailConfig {
   configurationId: string;
@@ -197,6 +284,8 @@ export enum MailStatus {
 }
 
 export interface IEmailUsage {
+  /** Id of one stored status row; the details route uses it (a Message-ID ends in a dotted domain). */
+  itemId: string;
   messageId: string;
   subject: string;
   from: string;
@@ -205,8 +294,27 @@ export interface IEmailUsage {
   status: string;
   error: string;
   date: string;
-  rawMime: string | null;
+  /** Only on the details read; list rows omit it. */
+  rawMime?: string | null;
   isInbound?: boolean;
+  /** The inbound configuration that read the mail. Empty for outbound mail. */
+  mailServerConfigurationId?: string | null;
+  /** Parsed from the stored MIME on the details read. Absent for outbound mail. */
+  content?: IMailBoxMailContent | null;
+}
+
+export interface IMailBoxMailAttachment {
+  fileName: string;
+  contentType: string;
+  size?: number | null;
+}
+
+export interface IMailBoxMailContent {
+  htmlBody?: string | null;
+  textBody?: string | null;
+  cc?: string | null;
+  replyTo?: string | null;
+  attachments: IMailBoxMailAttachment[];
 }
 
 export interface IEmailUsageResponse {
@@ -216,8 +324,15 @@ export interface IEmailUsageResponse {
   isSuccess: boolean;
 }
 
+export interface IGetMailBoxMailAttachmentResponse {
+  attachment?: { fileName: string; contentType: string; contentBase64: string } | null;
+  errors: Record<string, unknown> | null;
+  isSuccess: boolean;
+}
+
 export interface IGetMailBoxMailResponse {
   mail: IEmailUsage;
+  content?: IMailBoxMailContent | null;
   errors: Record<string, unknown> | null;
   isSuccess: boolean;
 }

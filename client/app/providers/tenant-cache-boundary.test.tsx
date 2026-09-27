@@ -12,13 +12,18 @@ const h = vi.hoisted(() => {
     originalTenantId: "console-tenant" as string | null,
   };
   const listeners = new Set<() => void>();
+  let version = 0;
   return {
     state,
+    getVersion: () => version,
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    emit: () => listeners.forEach((listener) => listener()),
+    emit: () => {
+      version += 1;
+      listeners.forEach((listener) => listener());
+    },
   };
 });
 
@@ -26,12 +31,10 @@ vi.mock("@seliseblocks/genesis-os/store", async () => {
   const { useSyncExternalStore } = await import("react");
   return {
     useImpersonateStore: Object.assign(
-      (selector: (state: typeof h.state) => unknown) =>
-        useSyncExternalStore(
-          h.subscribe,
-          () => selector(h.state),
-          () => selector(h.state),
-        ),
+      (selector?: (state: typeof h.state) => unknown) => {
+        useSyncExternalStore(h.subscribe, h.getVersion, h.getVersion);
+        return selector ? selector(h.state) : h.state;
+      },
       { getState: () => h.state },
     ),
   };

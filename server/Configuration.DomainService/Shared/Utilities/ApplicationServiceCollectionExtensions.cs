@@ -13,6 +13,8 @@ using Configuration.DomainService.Mail.Template.Validators;
 using Configuration.DomainService.Mail.Validators;
 using Configuration.DomainService.Storage.RequestModel;
 using Configuration.DomainService.Storage.Validators;
+using Configuration.DomainService.DataGateway.RequestModel;
+using Configuration.DomainService.DataGateway.Validators;
 using Configuration.DomainService.Captcha.RequestModel;
 using Configuration.DomainService.Captcha.Services;
 using Configuration.DomainService.Captcha.Validators;
@@ -45,11 +47,13 @@ namespace Configuration.DomainService.Shared.Utilities
             serviceCollection.AddScoped<IMailConfigurationProvider, AmazonSesMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProvider, ZohoMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProvider, Office365SmtpMailConfigurationProvider>();
+            serviceCollection.AddScoped<IMailConfigurationProvider, GmailMailConfigurationProvider>();
             serviceCollection.AddScoped<IMailConfigurationProviderRegistry, MailConfigurationProviderRegistry>();
             serviceCollection.AddScoped<IMailConfigurationService, MailConfigurationService>();
 
             serviceCollection.AddSingleton<IValidator<SaveNotificationConfigurationRequest>, NotificationConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveStorageConfigurationRequest>, StorageConfigurationValidator>();
+            serviceCollection.AddSingleton<IValidator<SaveDataGatewayConfigurationRequest>, DataGatewayConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<MailConfiguration>, MailConfigurationValidator>();
             serviceCollection.AddSingleton<IValidator<SaveMailTemplateRequest>, MailTemplateValidator>();
             serviceCollection.AddSingleton<IValidator<SaveCaptchaConfigRequest>, CaptchaConfigValidator>();

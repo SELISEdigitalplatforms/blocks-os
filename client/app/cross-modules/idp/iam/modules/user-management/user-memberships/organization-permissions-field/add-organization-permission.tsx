@@ -73,6 +73,9 @@ export const AddOrganizationPermission = ({
     {
       ...filter,
       projectKey: scopeKey,
+      // See the matching note in add-organization-role: projectKey is a cache
+      // discriminator, organizationId is what scopes the query.
+      organizationId,
     },
     { enabled: open && !!scopeKey },
   );

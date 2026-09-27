@@ -17,6 +17,11 @@ export const USER_ENDPOINTS = {
 
   UPDATE_ME: `${API_BASES.IAM}${IAM_SUBPATH}/me`,
   ACCESS_CONTROL: `${API_BASES.IAM}${IAM_SUBPATH}/users/access`,
+  // Bulk role delta. The preview is read-only and answers how many users would
+  // change; the submit queues the work on IAM's background worker and returns 202
+  // before anything has been written.
+  BULK_ROLES_PREVIEW: `${API_BASES.IAM}${IAM_SUBPATH}/users/roles/bulk/preview`,
+  BULK_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/users/roles/bulk`,
   REVOKE_ACCESS: `${API_BASES.IAM}${IAM_SUBPATH}/users/revoke-access`,
   EXISTS: `${API_BASES.IAM}${IAM_SUBPATH}/users/exists`,
 

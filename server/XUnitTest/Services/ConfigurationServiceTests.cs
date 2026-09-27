@@ -8,6 +8,7 @@ using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Shared.Services;
 using Configuration.DomainService.Storage.Entities;
 using Configuration.DomainService.Storage.RequestModel;
+using Configuration.DomainService.DataGateway.RequestModel;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
@@ -22,6 +23,7 @@ namespace XUnitTest.Services
         private readonly Mock<IConfigurationRepository> _repo = new();
         private readonly Mock<IValidator<SaveNotificationConfigurationRequest>> _notifValidator = new();
         private readonly Mock<IValidator<SaveStorageConfigurationRequest>> _storageValidator = new();
+        private readonly Mock<IValidator<SaveDataGatewayConfigurationRequest>> _dataGatewayValidator = new();
         private readonly Mock<IMessageClient> _messageClient = new();
         private readonly Mock<ILogger<ConfigurationService>> _logger = new();
 
@@ -29,6 +31,7 @@ namespace XUnitTest.Services
             _repo.Object,
             _notifValidator.Object,
             _storageValidator.Object,
+            _dataGatewayValidator.Object,
             _messageClient.Object,
             _logger.Object);
 

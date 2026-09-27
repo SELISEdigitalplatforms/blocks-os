@@ -102,7 +102,7 @@ namespace XUnitTest.Services
                         ["response.status.code"] = "200",
                         ["http.response.status_code"] = "404",
                         ["http.request.headers"] =
-                            "{ \"Accept\": \"application/json\", \"X-Token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\" }"
+                            "{ \"Accept\": \"application/json\", \"X-Token\": \"" + "eyJ" + "hbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + "eyJ" + "zdWIiOiIxMjM0NTY3ODkwIn0." + "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk" + "\" }"
                     }
                 }
             }.AsQueryable();

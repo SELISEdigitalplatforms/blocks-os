@@ -49,7 +49,14 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
 
         public async Task<GetMailBoxMailResponse> GetMailBoxMailAsync(GetMailBoxMailRequest request)
         {
-            var mail = await _mailboxRepository.GetMailBoxMailAsync(request.MessageId);
+            // An item id names one status row; resolve it to the message so the read still merges
+            // every row of that mail (latest status, body backfilled from the Sent row).
+            var messageId = !string.IsNullOrEmpty(request.ItemId)
+                ? await _mailboxRepository.GetMessageIdByItemIdAsync(request.ItemId)
+                : request.MessageId;
+            var mail = string.IsNullOrEmpty(messageId)
+                ? null
+                : await _mailboxRepository.GetMailBoxMailAsync(messageId);
             if (mail == null)
             {
                 return new GetMailBoxMailResponse
@@ -65,7 +72,32 @@ namespace Configuration.DomainService.Mail.Mailbox.Services
             return new GetMailBoxMailResponse
             {
                 IsSuccess = true,
-                Mail = mail
+                Mail = mail,
+                Content = MailContentParser.Parse(mail.RawMime)
+            };
+        }
+
+        public async Task<GetMailBoxMailAttachmentResponse> GetMailBoxMailAttachmentAsync(GetMailBoxMailAttachmentRequest request)
+        {
+            var mail = await _mailboxRepository.GetMailBoxMailAsync(request.MessageId);
+            var attachment = MailContentParser.ExtractAttachment(mail?.RawMime, request.Index);
+
+            if (attachment is null)
+            {
+                return new GetMailBoxMailAttachmentResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { mail is null ? "MessageId" : "Index", mail is null ? "Mail not found" : "Attachment not found" }
+                    }
+                };
+            }
+
+            return new GetMailBoxMailAttachmentResponse
+            {
+                IsSuccess = true,
+                Attachment = attachment
             };
         }
     }
