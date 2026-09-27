@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Pencil, Trash, Mail } from "lucide-react";
 import DeleteEmailConfig from "@blocks-communication/mail/components/email-service/modals/delete-email-config/delete-email-config";
 import NewConfiguration from "@blocks-communication/mail/components/email-service/modals/new-configuration/new-configuration";
+import EditDefaultSenderName from "@blocks-communication/mail/components/email-service/modals/edit-default-sender-name/edit-default-sender-name";
 import {
   Accordion,
   AccordionContent,
@@ -81,7 +82,9 @@ export function EmailConfiguration({
                 <div className="flex items-center justify-between w-full pr-8">
                   <span>{config.name}</span>
                   <div className="flex gap-1">
-                    {!config.isDefault && (
+                    {/* The default record is editable only in its sender name, which an
+                        inbound record does not have. */}
+                    {(!config.isDefault || !config.isInbound) && (
                       <Dialog
                         open={editingId === config.itemId}
                         onOpenChange={(isOpen) => setEditingId(isOpen ? config.itemId : null)}
@@ -102,12 +105,19 @@ export function EmailConfiguration({
                           </TooltipTrigger>
                           <TooltipContent>Edit</TooltipContent>
                         </Tooltip>
-                        <NewConfiguration
-                          dialogTitle="Edit Configuration"
-                          previousData={config}
-                          isEdit={true}
-                          onClose={() => setEditingId(null)}
-                        />
+                        {config.isDefault ? (
+                          <EditDefaultSenderName
+                            config={config}
+                            onClose={() => setEditingId(null)}
+                          />
+                        ) : (
+                          <NewConfiguration
+                            dialogTitle="Edit Configuration"
+                            previousData={config}
+                            isEdit={true}
+                            onClose={() => setEditingId(null)}
+                          />
+                        )}
                       </Dialog>
                     )}
                     {!config.isDefault && (

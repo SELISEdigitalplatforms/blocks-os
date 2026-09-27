@@ -47,6 +47,19 @@ vi.mock(
     };
   },
 );
+vi.mock(
+  "@blocks-communication/mail/components/email-service/modals/edit-default-sender-name/edit-default-sender-name",
+  async () => {
+    const { DialogContent, DialogTitle } = await import("@/components/ui-kits/dialog/dialog");
+    return {
+      default: ({ config }: { config: { name: string } }) => (
+        <DialogContent aria-describedby={undefined}>
+          <DialogTitle>{`Edit Sender Name: ${config.name}`}</DialogTitle>
+        </DialogContent>
+      ),
+    };
+  },
+);
 vi.mock("@blocks-communication/mail/hooks/use-email-config", () => ({
   useGetEmailSecretConfigs: () => h.config,
 }));
@@ -120,6 +133,20 @@ describe("EmailConfiguration", () => {
     expect(screen.getByText("Server Name")).toBeTruthy();
     expect(screen.queryByLabelText("Edit")).toBeNull();
     expect(screen.queryByLabelText("Delete")).toBeNull();
+  });
+
+  it("lets a default outbound configuration edit only its sender name", () => {
+    h.config = {
+      isLoading: false,
+      data: { configurations: [{ ...outbound, name: "Default", isDefault: true }] },
+    };
+    render(<EmailConfiguration />);
+
+    expect(screen.queryByLabelText("Delete")).toBeNull();
+    fireEvent.click(screen.getByLabelText("Edit"));
+
+    expect(screen.getByText("Edit Sender Name: Default")).toBeTruthy();
+    expect(screen.queryByText(/^Edit Configuration/)).toBeNull();
   });
 
   describe("with several configurations", () => {
