@@ -1,16 +1,16 @@
 import { expect, type Page } from "@playwright/test"
 
 /**
- * The SMTP Office 365 configuration flows.
+ * The Office 365 configuration flows.
  *
  * Browser-observable only, and deliberately so: the suite has no authenticated
  * API-request helper, and the Duplicate endpoint has no UI at all. The raw-API
- * parts of the contract — inbound rejection, a missing tenant id, duplicate
+ * parts of the contract — a missing tenant id, duplicate
  * without a new secret, and the compensation paths — are covered by the server
  * test suite, where the vault can be faked.
  */
 
-const OFFICE_365 = "SMTP Office 365"
+const OFFICE_365 = "Office 365"
 
 function dialogProviderSelect(page: Page) {
   return page.getByRole("dialog").getByRole("combobox").nth(1)
@@ -20,8 +20,8 @@ function dialogTypeSelect(page: Page) {
   return page.getByRole("dialog").getByRole("combobox").first()
 }
 
-/** H1 / C1: offered for outbound, absent for inbound. */
-export async function verifyOffice365OfferedForOutboundOnlyFlow(page: Page) {
+/** Offered for outbound and for inbound. */
+export async function verifyOffice365OfferedForBothDirectionsFlow(page: Page) {
   await dialogProviderSelect(page).click()
   await expect(page.getByRole("option", { name: OFFICE_365 })).toBeVisible()
   await expect(page.getByRole("option", { name: "Amazon SES" })).toBeVisible()
@@ -32,7 +32,7 @@ export async function verifyOffice365OfferedForOutboundOnlyFlow(page: Page) {
   await page.getByRole("option", { name: "Inbound" }).click()
 
   await dialogProviderSelect(page).click()
-  await expect(page.getByRole("option", { name: OFFICE_365 })).toHaveCount(0)
+  await expect(page.getByRole("option", { name: OFFICE_365 })).toBeVisible()
   await page.keyboard.press("Escape")
 
   await dialogTypeSelect(page).click()

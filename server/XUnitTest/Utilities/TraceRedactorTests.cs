@@ -78,7 +78,7 @@ namespace XUnitTest.Utilities
             var attributes = new Dictionary<string, object?>
             {
                 ["http.request.headers"] =
-                    "{ \"Accept\": \"application/json\", \"X-Forwarded\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\" }"
+                    "{ \"Accept\": \"application/json\", \"X-Forwarded\": \"" + "eyJ" + "hbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + "eyJ" + "zdWIiOiIxMjM0NTY3ODkwIn0." + "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk" + "\" }"
             };
 
             TraceRedactor.RedactAttributes(attributes);

@@ -250,6 +250,18 @@ describe("EmailService", () => {
       );
     });
 
+    it("should include optional mail server configuration parameter", async () => {
+      vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
+
+      await service.getMailBoxMails(0, 10, true, undefined, undefined, undefined, undefined, "cfg-1");
+
+      expect(http.get).toHaveBeenCalledWith(
+        expect.stringContaining("MailServerConfigurationId=cfg-1"),
+        ABSOLUTE_OPTIONS,
+        ABSOLUTE_FLAGS,
+      );
+    });
+
     it("should include optional date range parameters", async () => {
       vi.mocked(http.get).mockResolvedValue(mockEmailUsageResponse);
 
@@ -289,13 +301,13 @@ describe("EmailService", () => {
   });
 
   describe("getMailBoxMail", () => {
-    it("should call correct endpoint with messageId", async () => {
+    it("should call correct endpoint with itemId", async () => {
       vi.mocked(http.get).mockResolvedValue(mockGetMailBoxMailResponse);
 
       const result = await service.getMailBoxMail("msg-123");
 
       expect(http.get).toHaveBeenCalledWith(
-        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?MessageId=msg-123`,
+        `${MAIL_ENDPOINTS.GET_MAILBOX_MAIL}?ItemId=msg-123`,
         ABSOLUTE_OPTIONS,
         ABSOLUTE_FLAGS,
       );

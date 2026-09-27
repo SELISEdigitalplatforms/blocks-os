@@ -51,7 +51,7 @@ export async function createNewGroupFlow(page: Page, groupName: string) {
   await expect(groupSearchInput).toBeVisible({ timeout: 10_000 });
   await groupSearchInput.fill(groupName);
   const createGroupOption = page.getByRole("option", {
-    name: new RegExp(`Create group.*${groupName}`),
+    name: `Create group.*${groupName}`,
   });
   await expect(createGroupOption).toBeVisible({ timeout: 10_000 });
   await createGroupOption.click();

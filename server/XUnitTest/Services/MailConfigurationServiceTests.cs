@@ -38,6 +38,8 @@ namespace XUnitTest.Services
                  .Returns(Task.CompletedTask);
             _repo.Setup(r => r.DeleteMailConfigurationAsync(It.IsAny<string>()))
                  .Returns(Task.CompletedTask);
+            _repo.Setup(r => r.UpdateMailSenderNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string>()))
+                 .Returns(Task.CompletedTask);
             _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync("secret-1");
         }
@@ -231,6 +233,78 @@ namespace XUnitTest.Services
             _secrets.VerifyNoOtherCalls();
         }
 
+        private static MailServerConfiguration StoredDefault() => new()
+        {
+            ItemId = "default-1",
+            Name = "Default",
+            IsDefault = true,
+            Provider = MailServiceProvider.AmazonSes,
+            IsInbound = false,
+            Host = "email-smtp.eu-central-1.amazonaws.com",
+            Port = 587,
+            SenderName = "Selise Blocks",
+            SenderAddress = "blocks@selise.io",
+            SenderUserName = "ses-user",
+            AccountPassword = "ses-password"
+        };
+
+        [Fact]
+        public async Task Save_EditOfDefault_ChangesOnlyTheSenderName()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("default-1")).ReturnsAsync(StoredDefault());
+
+            // Everything but the sender name is either changed or blank, as a browser that never
+            // received the password would send it.
+            var result = await Service().SaveAsync(new MailConfiguration
+            {
+                ConfigurationId = "default-1",
+                ConfigurationName = "Renamed",
+                Provider = MailServiceProvider.Zoho,
+                Host = "smtp.other.example",
+                Port = 25,
+                SenderName = "  Contoso Mailer  ",
+                SenderAddress = "other@contoso.com",
+                SenderUserName = "",
+                AccountPassword = ""
+            });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            result.Response.ItemId.Should().Be("default-1");
+
+            // Only the sender name is written, as a field update; the document is never replaced.
+            _repo.Verify(
+                r => r.UpdateMailSenderNameAsync("default-1", "Contoso Mailer", It.IsAny<DateTime>(), It.IsAny<string>()),
+                Times.Once);
+            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("  ")]
+        [InlineData("ab")]
+        public async Task Save_EditOfDefaultWithInvalidSenderName_IsRejected(string? senderName)
+        {
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("default-1")).ReturnsAsync(StoredDefault());
+
+            var result = await Service().SaveAsync(new MailConfiguration
+            {
+                ConfigurationId = "default-1",
+                ConfigurationName = "Default",
+                Host = "email-smtp.eu-central-1.amazonaws.com",
+                Port = 587,
+                SenderName = senderName
+            });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Invalid);
+            result.Response.Errors.Should().ContainKey("SenderName");
+            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+            _repo.Verify(
+                r => r.UpdateMailSenderNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
         [Fact]
         public async Task Save_EditChangingProvider_IsRejectedBeforeAnyCredentialWork()
         {
@@ -254,18 +328,129 @@ namespace XUnitTest.Services
         // ---------- C1 / C2: rejections ----------
 
         [Fact]
-        public async Task Save_Office365Inbound_IsRejectedWithNoWrites()
+        public async Task Save_AmazonSesInbound_IsRejectedWithNoWrites()
         {
             var request = Office365Request();
+            request.Provider = MailServiceProvider.AmazonSes;
             request.IsInbound = true;
 
             var result = await Service().SaveAsync(request);
 
             result.Outcome.Should().Be(MailConfigurationOutcome.Invalid);
             result.Response.Errors.Should().Contain(new KeyValuePair<string, string>(
-                "IsInbound", "SMTP Office 365 supports outbound configurations only."));
+                "IsInbound", "Amazon SES supports outbound configurations only."));
             _secrets.VerifyNoOtherCalls();
             _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+        }
+
+        // ---------- Office 365 inbound and password mode ----------
+
+        [Fact]
+        public async Task Save_Office365Inbound_UsesImapTransportAndOAuth()
+        {
+            using var _ = new BlocksTestContext();
+            MailServerConfiguration? saved = null;
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .Callback<MailServerConfiguration>(m => saved = m)
+                 .Returns(Task.CompletedTask);
+
+            var request = Office365Request();
+            request.IsInbound = true;
+            request.SenderName = null;
+            request.SenderAddress = null;
+
+            var result = await Service().SaveAsync(request);
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            saved!.Host.Should().Be("outlook.office365.com");
+            saved.Port.Should().Be(993);
+            saved.SecurityMode.Should().Be(MailSecurityMode.SslOnConnect);
+            saved.EnableSSL.Should().BeTrue();
+            saved.AuthenticationType.Should().Be(MailAuthenticationType.OAuthClientCredentials);
+            saved.ClientSecretReference.Should().Be("secret-1");
+        }
+
+        [Fact]
+        public async Task Save_Office365InboundWithPasswordOnly_IsRejected()
+        {
+            var request = new MailConfiguration
+            {
+                ConfigurationId = "",
+                ConfigurationName = "Microsoft 365 Inbox",
+                Provider = MailServiceProvider.Office365Smtp,
+                IsInbound = true,
+                AuthenticationType = MailAuthenticationType.Password,
+                SenderUserName = "support@contoso.com",
+                AccountPassword = "password1"
+            };
+
+            var result = await Service().SaveAsync(request);
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Invalid);
+            result.Response.Errors.Should().Contain(new KeyValuePair<string, string>(
+                "AccountPassword", "Office 365 inbound does not accept password authentication. Use OAuth client credentials."));
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Save_Office365OutboundWithPassword_StoresThePasswordAndNoSecret()
+        {
+            using var _ = new BlocksTestContext();
+            MailServerConfiguration? saved = null;
+            _repo.Setup(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()))
+                 .Callback<MailServerConfiguration>(m => saved = m)
+                 .Returns(Task.CompletedTask);
+
+            var request = new MailConfiguration
+            {
+                ConfigurationId = "",
+                ConfigurationName = "Microsoft 365 Basic",
+                Provider = MailServiceProvider.Office365Smtp,
+                IsInbound = false,
+                AuthenticationType = MailAuthenticationType.Password,
+                SenderName = "Contoso Support",
+                SenderAddress = "support@contoso.com",
+                SenderUserName = "support@contoso.com",
+                AccountPassword = "password1",
+                Host = "smtp.contoso.example",
+                Port = 25
+            };
+
+            var result = await Service().SaveAsync(request);
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            saved!.Host.Should().Be("smtp.office365.com");
+            saved.Port.Should().Be(587);
+            saved.SecurityMode.Should().Be(MailSecurityMode.StartTls);
+            saved.AuthenticationType.Should().Be(MailAuthenticationType.Password);
+            saved.SenderUserName.Should().Be("support@contoso.com");
+            saved.AccountPassword.Should().Be("password1");
+            saved.ClientSecretReference.Should().BeNull();
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task Save_Office365EditChangingAuthenticationMethod_IsRejected()
+        {
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("cfg-1")).ReturnsAsync(StoredOffice365());
+
+            var request = new MailConfiguration
+            {
+                ConfigurationId = "cfg-1",
+                ConfigurationName = "Microsoft 365 Primary",
+                Provider = MailServiceProvider.Office365Smtp,
+                AuthenticationType = MailAuthenticationType.Password,
+                SenderName = "Contoso Notifications",
+                SenderAddress = "notifications@contoso.com",
+                SenderUserName = "notifications@contoso.com",
+                AccountPassword = "password1"
+            };
+
+            var result = await Service().SaveAsync(request);
+
+            result.Response.Errors.Should().Contain(new KeyValuePair<string, string>(
+                "AuthenticationType", "The authentication method of an existing Office 365 configuration cannot be changed."));
+            _secrets.VerifyNoOtherCalls();
         }
 
         [Fact]

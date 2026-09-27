@@ -2,6 +2,8 @@
 using Blocks.Genesis;
 using Blocks.Secrets;
 using BlocksOs.Api;
+using BlocksOs.Api.Middleware;
+using BlocksOs.Api.Security;
 using Cloud.DomainService.Utilities;
 using Cloud.LmtService.Utilities;
 using Configuration.DomainService.Shared.Utilities;
@@ -71,6 +73,45 @@ await services.RegisterBlocksReleaseServicesAsync(vaultType);
 
 var app = builder.Build();
 
+// Built once: the policy is derived from configuration, which does not change per request.
+var contentSecurityPolicy = ContentSecurityPolicy.Build(app.Configuration);
+
+// Browser-facing security headers for the SPA and static assets (ZAP DAST bar: 0 alerts).
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "no-referrer";
+        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+        // Runtime config is an external /runtime-config.js (no inline script), so script-src
+        // stays strict. The hosts come from configuration -- see ContentSecurityPolicy.
+        headers["Content-Security-Policy"] = contentSecurityPolicy;
+
+        var path = context.Request.Path.Value ?? "";
+        if (path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith("runtime-config.js", StringComparison.OrdinalIgnoreCase) ||
+            !Path.HasExtension(path))
+        {
+            // HTML / SPA routes / runtime config: do not cache so previews pick up header/config changes.
+            headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+            headers["Pragma"] = "no-cache";
+        }
+        else if (path.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            // Content-hashed Vite assets are immutable.
+            headers["Cache-Control"] = "public, max-age=31536000, immutable";
+        }
+
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -78,9 +119,24 @@ var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
 
 if (File.Exists(indexHtml))
 {
-    app.MapFallbackToFile("/index.html");
+    // SPA fallback must not 200 for VCS / backup probes — MapFallbackToFile would
+    // serve index.html for /BitKeeper, /.git, etc. and OWASP ZAP flags "Hidden File Found".
+    app.MapFallback(async context =>
+    {
+        if (SpaFallbackGuard.IsHiddenOrVcsProbe(context.Request.Path.Value))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(indexHtml);
+    });
 }
 
+
+// IAM access cookie is named after the OIDC redirect host; JwtBearer needs Authorization.
+app.UseMiddleware<HostAccessCookieBearerMiddleware>();
 
 ApplicationConfigurations.ConfigureMiddleware(app);
 

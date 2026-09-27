@@ -106,6 +106,47 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task GetTraces_List_WithoutStartDate_DefaultsToLast24Hours()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var now = DateTime.UtcNow;
+            await SeedAsync(tenant,
+                Trace("t-recent", "GET /recent", "svc", now.AddHours(-23), parentId: ""),
+                Trace("t-old", "GET /old", "svc", now.AddHours(-25), parentId: ""));
+
+            using var _ = new IntegrationContext(tenant);
+            var (traces, count) = await NewRepository().GetTraces(new GetTracesRequest
+            {
+                Page = 0,
+                PageSize = 10
+            });
+
+            count.Should().Be(1);
+            traces.Single().TraceId.Should().Be("t-recent");
+        }
+
+        [Fact]
+        public async Task GetTraces_List_WithOnlyEndDate_Defaults24HoursBeforeEnd()
+        {
+            var tenant = MongoIntegrationFixture.NewTenantId();
+            var end = DateTime.UtcNow.AddDays(-3);
+            await SeedAsync(tenant,
+                Trace("t-in-window", "GET /in", "svc", end.AddHours(-23), parentId: ""),
+                Trace("t-before-window", "GET /before", "svc", end.AddHours(-25), parentId: ""));
+
+            using var _ = new IntegrationContext(tenant);
+            var (traces, count) = await NewRepository().GetTraces(new GetTracesRequest
+            {
+                Page = 0,
+                PageSize = 10,
+                Filter = new GetTracesRequestFilter { EndDate = end }
+            });
+
+            count.Should().Be(1);
+            traces.Single().TraceId.Should().Be("t-in-window");
+        }
+
+        [Fact]
         public async Task GetTraces_List_FiltersBySearchServicesAndStatusCodes()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();

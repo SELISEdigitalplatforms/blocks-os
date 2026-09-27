@@ -20,7 +20,28 @@ const cases: Array<{
   {
     label: "Signup",
     Component: OidcSignupPreview,
-    copy: () => Object.values(DEFAULT_OIDC_UI_TEMPLATE.pages.signup),
+    copy: () => {
+      const page = DEFAULT_OIDC_UI_TEMPLATE.pages.signup;
+      return [
+        page.heading,
+        page.firstNameLabel,
+        page.lastNameLabel,
+        page.emailLabel,
+        page.organizationNameLabel,
+        page.termsPrefix,
+        page.termsLinkText,
+        page.termsConjunction,
+        page.privacyLinkText,
+        page.submitButton,
+        page.ssoSeparatorText,
+        page.loginPrompt,
+        page.loginLink,
+        page.successTitle,
+        page.successSubtitle,
+        page.emailSentTitle,
+        page.emailSentSubtitle,
+      ];
+    },
     update: (template) => {
       template.pages.signup.heading = "Join Acme";
     },
@@ -28,7 +49,18 @@ const cases: Array<{
   {
     label: "Forgot Password",
     Component: OidcForgotPasswordPreview,
-    copy: () => Object.values(DEFAULT_OIDC_UI_TEMPLATE.pages.forgotPassword),
+    copy: () => {
+      const page = DEFAULT_OIDC_UI_TEMPLATE.pages.forgotPassword;
+      return [
+        page.heading,
+        page.introText,
+        page.emailLabel,
+        page.submitButton,
+        page.backToLoginButton,
+        page.successTitle,
+        page.successSubtitle,
+      ];
+    },
     update: (template) => {
       template.pages.forgotPassword.heading = "Recover Acme access";
     },
@@ -36,7 +68,21 @@ const cases: Array<{
   {
     label: "Reset Password",
     Component: OidcResetPasswordPreview,
-    copy: () => Object.values(DEFAULT_OIDC_UI_TEMPLATE.pages.resetPassword),
+    copy: () => {
+      const page = DEFAULT_OIDC_UI_TEMPLATE.pages.resetPassword;
+      return [
+        page.heading,
+        page.passwordLabel,
+        page.confirmPasswordLabel,
+        page.logoutFromDevicesLabel,
+        page.submitButton,
+        page.backToLoginButton,
+        page.missingCodeMessage,
+        page.requestNewLinkButton,
+        page.successTitle,
+        page.successSubtitle,
+      ];
+    },
     update: (template) => {
       template.pages.resetPassword.heading = "Choose an Acme password";
     },
@@ -44,7 +90,19 @@ const cases: Array<{
   {
     label: "Activation",
     Component: OidcActivationPreview,
-    copy: () => Object.values(DEFAULT_OIDC_UI_TEMPLATE.pages.activation),
+    copy: () => {
+      const page = DEFAULT_OIDC_UI_TEMPLATE.pages.activation;
+      return [
+        page.heading,
+        page.firstNameLabel,
+        page.lastNameLabel,
+        page.passwordLabel,
+        page.confirmPasswordLabel,
+        page.submitButton,
+        page.successTitle,
+        page.successSubtitle,
+      ];
+    },
     update: (template) => {
       template.pages.activation.heading = "Activate Acme";
     },

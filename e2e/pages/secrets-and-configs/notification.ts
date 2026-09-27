@@ -150,7 +150,7 @@ export async function deleteNotificationConfigFlow(page: Page, configRow: Locato
   await expect(page.getByRole("heading", { name: "Confirmation" })).toBeVisible();
   await expect(
     page.getByText(
-      new RegExp(`delete the ${escapeRegex(configName)} configuration`),
+      `delete the ${configName} configuration`,
     ),
   ).toBeVisible();
   await page.getByRole("button", { name: "Yes", exact: true }).click();

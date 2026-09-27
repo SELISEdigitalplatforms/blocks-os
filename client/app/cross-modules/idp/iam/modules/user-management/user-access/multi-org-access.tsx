@@ -141,9 +141,11 @@ export const MultiOrgAccess = ({ userId, projectKey }: MultiOrgAccessProps) => {
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
     projectKey: organizationIdForQueries,
+    organizationId: organizationIdForQueries,
   });
   const { data: permissionsData } = useGetPermissions({
     projectKey: organizationIdForQueries,
+    organizationId: organizationIdForQueries,
     page: 0,
     pageSize: 1000,
     search: "",

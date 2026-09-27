@@ -36,13 +36,29 @@ describe("PermissionService", () => {
 
       const result = await service.getPermissions(mockGetPermissionsPayload);
 
+      const { projectKey: _dropped, ...expectedBody } = mockGetPermissionsPayload;
       expect(http.post).toHaveBeenCalledWith(
         PERMISSION_ENDPOINTS.GET_PERMISSIONS,
-        mockGetPermissionsPayload,
+        expectedBody,
         undefined,
         { absoluteUrl: true },
       );
       expect(result).toEqual(mockPermissionsResponse);
+    });
+
+    it("sends organizationId and drops projectKey", async () => {
+      // Same contract as roleService.getRoles: projectKey is a cache discriminator
+      // the API has no field for; organizationId is what scopes the query.
+      vi.mocked(http.post).mockResolvedValue(mockPermissionsResponse);
+
+      await service.getPermissions({
+        ...mockGetPermissionsPayload,
+        organizationId: "org-1",
+      });
+
+      const body = vi.mocked(http.post).mock.calls[0][1] as Record<string, unknown>;
+      expect(body).not.toHaveProperty("projectKey");
+      expect(body.organizationId).toBe("org-1");
     });
 
     it("should throw when the API call fails", async () => {

@@ -5,6 +5,7 @@ using Configuration.DomainService.Notification.Entities;
 using Configuration.DomainService.Notification.RequestModel;
 using Configuration.DomainService.Notification.ResponseModel;
 using Configuration.DomainService.Storage.Entities;
+using Configuration.DomainService.DataGateway.Entities;
 using System.Linq.Expressions;
 
 namespace Configuration.DomainService.Shared.Services
@@ -35,10 +36,24 @@ namespace Configuration.DomainService.Shared.Services
         #region Mail
 
         Task SaveMailConfigurationAsync(MailServerConfiguration configuration);
+
+        /// <summary>
+        /// Sets the sender name and audit fields of one configuration in place, leaving every other
+        /// field of the stored document untouched — including any the entity does not map.
+        /// </summary>
+        Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy);
         Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
         Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
         Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();
         Task DeleteMailConfigurationAsync(string configurationId);
+
+        #endregion
+
+        #region DataGateway
+
+        Task SaveDataGatewayConfigurationAsync(DataGatewayConfiguration configuration);
+        Task<DataGatewayConfiguration> GetDataGatewayConfigurationAsync();
+        Task<DataGatewayConfiguration> GetDataGatewayConfigurationByIdAsync(string itemId);
 
         #endregion
 

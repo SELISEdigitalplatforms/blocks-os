@@ -21,7 +21,8 @@ namespace XUnitTest.Services
                 {
                     new AmazonSesMailConfigurationProvider(),
                     new ZohoMailConfigurationProvider(),
-                    new Office365SmtpMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>())
+                    new Office365SmtpMailConfigurationProvider(Mock.Of<Blocks.Secrets.ISecretService>()),
+                    new GmailMailConfigurationProvider()
                 });
 
         [Theory]
@@ -29,6 +30,9 @@ namespace XUnitTest.Services
         [InlineData(MailServiceProvider.Zoho, false)]
         [InlineData(MailServiceProvider.Zoho, true)]
         [InlineData(MailServiceProvider.Office365Smtp, false)]
+        [InlineData(MailServiceProvider.Office365Smtp, true)]
+        [InlineData(MailServiceProvider.Gmail, false)]
+        [InlineData(MailServiceProvider.Gmail, true)]
         public void TryResolve_SupportedCombination_ResolvesTheDefinition(MailServiceProvider provider, bool isInbound)
         {
             Registry().TryResolve(provider, isInbound, out var definition, out _).Should().BeTrue();
@@ -37,12 +41,12 @@ namespace XUnitTest.Services
         }
 
         [Fact]
-        public void TryResolve_Office365Inbound_ReportsTheDirectionError()
+        public void TryResolve_AmazonSesInbound_ReportsTheDirectionError()
         {
-            Registry().TryResolve(MailServiceProvider.Office365Smtp, isInbound: true, out _, out var error).Should().BeFalse();
+            Registry().TryResolve(MailServiceProvider.AmazonSes, isInbound: true, out _, out var error).Should().BeFalse();
 
             error.Key.Should().Be("IsInbound");
-            error.Value.Should().Be("SMTP Office 365 supports outbound configurations only.");
+            error.Value.Should().Be("Amazon SES supports outbound configurations only.");
         }
 
         [Fact]
@@ -62,7 +66,7 @@ namespace XUnitTest.Services
             // its secret retired.
             Registry().TryGet(MailServiceProvider.Office365Smtp, out var definition).Should().BeTrue();
 
-            definition.SupportedDirections.Should().Be(MailDirections.Outbound);
+            definition.SupportedDirections.Should().Be(MailDirections.Both);
         }
 
         [Fact]
@@ -70,8 +74,8 @@ namespace XUnitTest.Services
         {
             Registry().TryGet(MailServiceProvider.Office365Smtp, out var definition);
 
-            definition.SupportedDirections.Should().Be(MailDirections.Outbound);
-            definition.InboundMode.Should().Be(MailInboundMode.None);
+            definition.SupportedDirections.Should().Be(MailDirections.Both);
+            definition.InboundMode.Should().Be(MailInboundMode.Poll);
             definition.DuplicateInheritsDefault.Should().BeFalse();
         }
 
@@ -95,6 +99,34 @@ namespace XUnitTest.Services
             var response = new MailConfigurationResponse();
             definition.ProjectResponse(new MailServerConfiguration(), response);
             response.AccountPassword.Should().Be("********");
+        }
+
+        [Theory]
+        [InlineData(false, "smtp.gmail.com", 587, MailSecurityMode.StartTls, false)]
+        [InlineData(true, "imap.gmail.com", 993, MailSecurityMode.SslOnConnect, true)]
+        public void Gmail_FixesTransportPerDirection(
+            bool isInbound, string host, int port, MailSecurityMode securityMode, bool enableSsl)
+        {
+            var definition = new GmailMailConfigurationProvider();
+            var request = new MailConfiguration
+            {
+                IsInbound = isInbound,
+                Host = "smtp.example.com",
+                Port = 25,
+                SenderUserName = " someone@gmail.com ",
+                AccountPassword = "abcd efgh ijkl mnop"
+            };
+
+            definition.Normalize(request);
+
+            request.Host.Should().Be(host);
+            request.Port.Should().Be(port);
+            request.SecurityMode.Should().Be(securityMode);
+            request.EnableSSL.Should().Be(enableSsl);
+            request.AuthenticationType.Should().Be(MailAuthenticationType.Password);
+            request.SenderUserName.Should().Be("someone@gmail.com");
+            request.AccountPassword.Should().Be("abcdefghijklmnop");
+            definition.Validate(request, null).Should().BeEmpty();
         }
 
         [Fact]

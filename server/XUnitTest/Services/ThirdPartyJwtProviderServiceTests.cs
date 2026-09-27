@@ -847,8 +847,9 @@ namespace XUnitTest.Services
         public async Task EnablingTheFlag_PublishesATenantCacheUpdate()
         {
             // The flag rides on the cached Tenant, so a bare write would take effect only whenever
-            // that cache happened to expire.
+            // that cache happened to expire. Enable also requires at least one active provider.
             using var _ = new BlocksTestContext(TenantId);
+            ExistingProviders(ActiveProvider("p1"));
 
             Tenant? updated = null;
             _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>()))
@@ -862,6 +863,265 @@ namespace XUnitTest.Services
             updated!.IsThirdPartyJwtEnabled.Should().BeTrue();
             _tenants.Verify(t => t.UpdateTenantVersionAsync(
                 It.Is<TenantCacheUpdateMessage>(m => m.TenantId == TenantId)), Times.Once);
+        }
+
+        // ─── provider-derived flag + guarded enable (#610) ─────────────────────────
+
+        private static ThirdPartyJwtProvider ActiveProvider(string id, string key = "auth0-a") => new()
+        {
+            ItemId = id,
+            TenantId = TenantId,
+            Key = key,
+            ProviderName = "Auth0",
+            IsActive = true,
+            Issuer = Auth0,
+            Audiences = ["api-a"],
+            Algorithms = [JwtSigningAlgorithm.RS256],
+            JwksUrl = "https://example.com/.well-known/jwks.json",
+            ClaimsMapping = new ThirdPartyClaimsMapping { UserId = "sub" }
+        };
+
+        private void SeedTenantFlag(bool enabled)
+        {
+            _repo.Setup(r => r.GetByTenantIdAsync(TenantId))
+                 .ReturnsAsync(new Tenant
+                 {
+                     ItemId = TenantId,
+                     TenantId = TenantId,
+                     TenantSalt = Salt,
+                     DbConnectionString = "mongodb://localhost",
+                     IsThirdPartyJwtEnabled = enabled,
+                     JwtTokenParameters = new JwtTokenParameters
+                     {
+                         PrivateCertificatePassword = string.Empty,
+                         IssueDate = DateTime.UtcNow
+                     }
+                 });
+        }
+
+        [Fact]
+        public async Task Save_DeactivatingLastActiveProvider_LowersFlagAndBroadcasts()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: true);
+
+            var existing = ActiveProvider("p1");
+            var after = ActiveProvider("p1");
+            after.IsActive = false;
+            _repo.SetupSequence(r => r.GetThirdPartyJwtProvidersAsync(TenantId))
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { existing })
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { after });
+
+            Tenant? updated = null;
+            _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => updated = t)
+                 .Returns(Task.CompletedTask);
+
+            var request = Request(jwksUrl: "https://example.com/.well-known/jwks.json");
+            request.ItemId = "p1";
+            request.IsActive = false;
+            request.Key = "auth0-a";
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeTrue();
+            updated!.IsThirdPartyJwtEnabled.Should().BeFalse();
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(
+                It.Is<TenantCacheUpdateMessage>(m => m.TenantId == TenantId)), Times.Once);
+        }
+
+        [Fact]
+        public async Task Save_DeactivatingNonLastActiveProvider_LeavesFlagUntouched()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: true);
+
+            var a = ActiveProvider("p1");
+            var b = ActiveProvider("p2", key: "auth0-b");
+            var aInactive = ActiveProvider("p1");
+            aInactive.IsActive = false;
+
+            _repo.SetupSequence(r => r.GetThirdPartyJwtProvidersAsync(TenantId))
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { a, b })
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { aInactive, b });
+
+            var request = Request(jwksUrl: "https://example.com/.well-known/jwks.json");
+            request.ItemId = "p1";
+            request.IsActive = false;
+            request.Key = "auth0-a";
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Delete_WhenTenantMissingAfterDelete_ReturnsProjectNotFound()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            _repo.Setup(r => r.DeleteThirdPartyJwtProviderAsync(TenantId, "p1")).ReturnsAsync(true);
+            _repo.Setup(r => r.GetByTenantIdAsync(TenantId)).ReturnsAsync((Tenant?)null);
+
+            var result = await Service().DeleteThirdPartyJwtProviderAsync(
+                new DeleteThirdPartyJwtProviderRequest { ItemId = "p1" });
+
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().ContainKey("project_not_found");
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Delete_LastActiveProvider_LowersFlagAndBroadcasts()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: true);
+            _repo.Setup(r => r.DeleteThirdPartyJwtProviderAsync(TenantId, "p1")).ReturnsAsync(true);
+            ExistingProviders(); // post-delete: empty
+
+            Tenant? updated = null;
+            _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => updated = t)
+                 .Returns(Task.CompletedTask);
+
+            var result = await Service().DeleteThirdPartyJwtProviderAsync(
+                new DeleteThirdPartyJwtProviderRequest { ItemId = "p1" });
+
+            result.IsSuccess.Should().BeTrue();
+            updated!.IsThirdPartyJwtEnabled.Should().BeFalse();
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(
+                It.Is<TenantCacheUpdateMessage>(m => m.TenantId == TenantId)), Times.Once);
+        }
+
+        [Fact]
+        public async Task Save_NeverRaisesFlag_WhenProvidersRemainActive()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: false);
+
+            var a = ActiveProvider("p1");
+            var b = ActiveProvider("p2", key: "auth0-b");
+            _repo.SetupSequence(r => r.GetThirdPartyJwtProvidersAsync(TenantId))
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { a, b })
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { a, b });
+
+            var request = Request(jwksUrl: "https://example.com/.well-known/jwks.json");
+            request.ItemId = "p1";
+            request.ProviderName = "Renamed";
+            request.Key = "auth0-a";
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Enable_WithNoActiveProvider_ReturnsNoActiveProvider()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: false);
+            var inactive = ActiveProvider("p1");
+            inactive.IsActive = false;
+            ExistingProviders(inactive);
+
+            var result = await Service().UpdateThirdPartyJwtEnabledAsync(
+                new UpdateThirdPartyJwtEnabledRequest { IsEnabled = true });
+
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().ContainKey("no_active_provider");
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Disable_IsNeverGuarded()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: true);
+            ExistingProviders(ActiveProvider("p1"), ActiveProvider("p2", key: "auth0-b"));
+
+            Tenant? updated = null;
+            _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>()))
+                 .Callback<Tenant>(t => updated = t)
+                 .Returns(Task.CompletedTask);
+
+            var result = await Service().UpdateThirdPartyJwtEnabledAsync(
+                new UpdateThirdPartyJwtEnabledRequest { IsEnabled = false });
+
+            result.IsSuccess.Should().BeTrue();
+            updated!.IsThirdPartyJwtEnabled.Should().BeFalse();
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(
+                It.Is<TenantCacheUpdateMessage>(m => m.TenantId == TenantId)), Times.Once);
+        }
+
+        [Fact]
+        public async Task Save_WhenFlagAlreadyFalseAndCountZero_SkipsTenantWrite()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: false);
+
+            var request = Request(jwksUrl: "https://example.com/.well-known/jwks.json");
+            request.IsActive = false;
+
+            // post-write still zero actives (new inactive provider)
+            var inactiveNew = ActiveProvider("new");
+            inactiveNew.IsActive = false;
+            _repo.SetupSequence(r => r.GetThirdPartyJwtProvidersAsync(TenantId))
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider>())
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { inactiveNew });
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Save_FirstActiveProvider_LeavesFlagFalse()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: false);
+            _repo.SetupSequence(r => r.GetThirdPartyJwtProvidersAsync(TenantId))
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider>())
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { ActiveProvider("new") });
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(
+                Request(jwksUrl: "https://example.com/.well-known/jwks.json"));
+
+            result.IsSuccess.Should().BeTrue();
+            _repo.Verify(r => r.UpdateProjectAsync(It.IsAny<Tenant>()), Times.Never);
+            _tenants.Verify(t => t.UpdateTenantVersionAsync(It.IsAny<TenantCacheUpdateMessage>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Save_WhenFlagUpdateThrows_ReturnsThirdPartyFlagUpdateFailed()
+        {
+            using var _ = new BlocksTestContext(TenantId);
+            SeedTenantFlag(enabled: true);
+            var existing = ActiveProvider("p1");
+            var after = ActiveProvider("p1");
+            after.IsActive = false;
+            _repo.SetupSequence(r => r.GetThirdPartyJwtProvidersAsync(TenantId))
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { existing })
+                 .ReturnsAsync(new List<ThirdPartyJwtProvider> { after });
+
+            _repo.Setup(r => r.UpdateProjectAsync(It.IsAny<Tenant>()))
+                 .ThrowsAsync(new InvalidOperationException("root db unavailable"));
+
+            var request = Request(jwksUrl: "https://example.com/.well-known/jwks.json");
+            request.ItemId = "p1";
+            request.IsActive = false;
+            request.Key = "auth0-a";
+
+            var result = await Service().SaveThirdPartyJwtProviderAsync(request);
+
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().ContainKey("third_party_flag_update_failed");
+            _saved.Should().ContainSingle(); // provider write committed
         }
 
         // ─── certificate metadata, read at save ────────────────────────────────────

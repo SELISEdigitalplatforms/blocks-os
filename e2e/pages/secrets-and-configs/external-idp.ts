@@ -168,7 +168,7 @@ export async function fillProviderFormFlow(
   await form.getByLabel("Key").fill(provider.key);
   await form.getByLabel("Issuer").fill(provider.issuer);
   await form.getByLabel("Audiences").fill(provider.audience);
-  await form.getByLabel("JWKS URL").fill("https://www.googleapis.com/oauth2/v3/certs");
+  await form.getByRole("textbox", { name: "JWKS URL" }).fill("https://www.googleapis.com/oauth2/v3/certs");
 }
 
 /** Claim mapping moved out of the create form: it is picked from a real token afterwards. */
@@ -179,7 +179,7 @@ export async function verifyFormAsksNothingAboutClaimsFlow(page: Page) {
 
 export async function saveNewProviderFlow(page: Page) {
   await dialog(page).getByRole("button", { name: "Add provider" }).click();
-  await expect(page.getByText("Provider added")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Provider added", { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(dialog(page)).toBeHidden({ timeout: 10000 });
 }
 
@@ -235,7 +235,7 @@ export async function editProviderAndSaveFlow(page: Page, key: string, newIssuer
   await dialog(page).getByLabel("Issuer").fill(newIssuer);
   await dialog(page).getByRole("button", { name: "Save changes" }).click();
 
-  await expect(page.getByText("Provider updated")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Provider updated", { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(page.getByText(newIssuer)).toBeVisible({ timeout: 15000 });
 }
 
@@ -248,7 +248,7 @@ export async function openEditProviderAndCloseFlow(page: Page, key: string) {
 
 export async function deleteProviderFlow(page: Page, key: string) {
   await page.getByRole("button", { name: `Delete ${maskKey(key)}` }).click();
-  await expect(page.getByText(`Removed ${maskKey(key)}`)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText(`Removed ${maskKey(key)}`, { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(page.getByRole("button", { name: `Delete ${maskKey(key)}` })).toBeHidden({
     timeout: 15000,
   });
@@ -310,7 +310,7 @@ export async function verifyEditFormLeavesTheKeyBlankFlow(page: Page, key: strin
 
   // Saving without touching it must not clear or rename the key.
   await dialog(page).getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Provider updated")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Provider updated", { exact: true })).toBeVisible({ timeout: 20000 });
   await expect(page.getByText(maskKey(key), { exact: true }).first()).toBeVisible();
 }
 
