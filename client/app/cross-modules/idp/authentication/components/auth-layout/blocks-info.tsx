@@ -23,7 +23,7 @@ export const BlockInfo = () => {
             </Button>
             <div className="flex items-center gap-2 text-blue-700 md:justify-between">
               <Link
-                to="https://www.npmjs.com/package/@seliseblocks/cli"
+                to="https://www.npmjs.com/package/@seliseblocks/cli-os"
                 className="text-primary"
                 target="_blank"
               >
