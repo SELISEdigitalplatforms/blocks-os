@@ -14,7 +14,10 @@ import { Link, Outlet, useLocation } from "react-router";
 import { useScopedPath } from "@seliseblocks/genesis-os/hooks";
 import { PrimaryButton } from "@/components/action-buttons/primary-button";
 import { AddRole } from "@blocks-idp/iam/modules/role-management";
-import { AddConfigurationHeader } from "@blocks-idp/iam/modules/signup-link-management";
+import {
+  ActivityRefreshHeader,
+  AddConfigurationHeader,
+} from "@blocks-idp/iam/modules/signup-link-management";
 import {
   AddOrganization,
   OrganizationConfig,
@@ -71,6 +74,7 @@ export const AuthenticationConfigLayout = () => {
       )}
       {currentPath === "roles" && <AddRole />}
       {currentPath === "signup-link-configurations" && <AddConfigurationHeader />}
+      {currentPath === "signup-link-activity" && <ActivityRefreshHeader />}
       {currentPath === "permissions" && (
         <Link to={scoped("iam/permission-detail/new")}>
           <PrimaryButton label="Add Permission" />

@@ -28,6 +28,7 @@ vi.mock("@blocks-idp/iam/modules/user-management", () => ({
 }));
 vi.mock("@blocks-idp/iam/modules/signup-link-management", () => ({
   AddConfigurationHeader: () => <div data-testid="add-configuration" />,
+  ActivityRefreshHeader: () => <div data-testid="activity-refresh" />,
 }));
 vi.mock("@/components/action-buttons/primary-button", () => ({
   PrimaryButton: ({ label }: { label: string }) => <button>{label}</button>,
@@ -62,6 +63,13 @@ describe("AuthenticationConfigLayout", () => {
     render(<AuthenticationConfigLayout />);
     expect(screen.getByTestId("add-configuration")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Signup Link Configurations" })).toBeTruthy();
+  });
+
+  it("shows the Refresh action on the signup-link-activity path", () => {
+    h.pathname = "/app/auth/signup-link-activity";
+    render(<AuthenticationConfigLayout />);
+    expect(screen.getByTestId("activity-refresh")).toBeTruthy();
+    expect(screen.queryByTestId("add-configuration")).toBeNull();
   });
 
   it("shows the Add Permission action on the permissions path", () => {
