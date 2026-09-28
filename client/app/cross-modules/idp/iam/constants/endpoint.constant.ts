@@ -91,6 +91,12 @@ export const ORGANIZATION_ENDPOINTS = {
 
 // ─── IAM configuration endpoints (configuration.service) ───────────────────
 
+export const SIGNUP_LINK_CONFIGURATION_ENDPOINTS = {
+  // Collection root. Create is POST here; query is POST to /query (filter in body), same as roles.
+  BASE: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations`,
+  QUERY: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations/query`,
+} as const;
+
 export const IAM_CONFIGURATION_ENDPOINTS = {
   GET: `${API_BASES.IAM}${IAM_SUBPATH}/config`,
   SAVE: `${API_BASES.IAM}${IAM_SUBPATH}/config`,

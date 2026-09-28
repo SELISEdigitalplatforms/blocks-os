@@ -1,4 +1,4 @@
-import { Building2, FileCode, ShieldCheck, Lock, SlidersHorizontal, Users } from "lucide-react";
+import { Building2, FileCode, ShieldCheck, Lock, SlidersHorizontal, Ticket, Users } from "lucide-react";
 import { NavItem, NavGroup } from "@/constants/secret-management-nav";
 
 export type { NavItem, NavGroup };
@@ -58,6 +58,18 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
         value: "permissions",
         icon: Lock,
         desc: "Define and manage granular permissions for access control",
+      },
+    ],
+  },
+  {
+    label: "One-Click Signup",
+    items: [
+      {
+        id: "signup-link-configurations",
+        label: "Signup Link Configurations",
+        value: "signup-link-configurations",
+        icon: Ticket,
+        desc: "Create and manage configurations that one-click signup links are generated from",
       },
     ],
   },
