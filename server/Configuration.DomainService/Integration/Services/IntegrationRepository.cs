@@ -33,17 +33,22 @@ namespace Configuration.DomainService.Integration.Services
             return await (await Templates().FindAsync(filter)).FirstOrDefaultAsync();
         }
 
-        public async Task<IntegrationSetup?> GetSetupAsync()
-        {
-            var filter = Builders<IntegrationSetup>.Filter.Eq(s => s.ItemId, IntegrationSetup.SingletonId);
-            return await (await Setups().FindAsync(filter)).FirstOrDefaultAsync();
-        }
+        public async Task<IntegrationSetup?> GetSetupAsync() =>
+            await (await Setups().FindAsync(FilterDefinition<IntegrationSetup>.Empty)).FirstOrDefaultAsync();
 
         public async Task<bool> TryInsertSetupAsync(IntegrationSetup setup)
         {
+            var setups = Setups();
+
+            // Each tenant has its own database, so there is no startup hook to build this in; it
+            // is ensured on the (rare) write path instead. Idempotent when it already exists.
+            await setups.Indexes.CreateOneAsync(new CreateIndexModel<IntegrationSetup>(
+                Builders<IntegrationSetup>.IndexKeys.Ascending(s => s.TemplateKey),
+                new CreateIndexOptions { Name = "TemplateKey_unique", Unique = true }));
+
             try
             {
-                await Setups().InsertOneAsync(setup);
+                await setups.InsertOneAsync(setup);
                 return true;
             }
             catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)

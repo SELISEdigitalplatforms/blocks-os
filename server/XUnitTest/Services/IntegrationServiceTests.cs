@@ -59,7 +59,7 @@ namespace XUnitTest.Services
         public async Task GetSetup_Impersonated_ReturnsTheTenantsRecord()
         {
             using var _ = new BlocksTestContext(tenantId: "tenant-1", impersonated: true);
-            var record = new IntegrationSetup { ItemId = IntegrationSetup.SingletonId, TemplateKey = "localization" };
+            var record = new IntegrationSetup { ItemId = "setup-1", TemplateKey = "localization" };
             _repo.Setup(r => r.GetSetupAsync()).ReturnsAsync(record);
 
             var response = await Service().GetSetupAsync();
@@ -105,9 +105,9 @@ namespace XUnitTest.Services
             var response = await Service().SaveSetupAsync(ValidRequest());
 
             response.IsSuccess.Should().BeTrue();
-            response.ItemId.Should().Be(IntegrationSetup.SingletonId);
             saved.Should().NotBeNull();
-            saved!.ItemId.Should().Be(IntegrationSetup.SingletonId);
+            Guid.TryParse(saved!.ItemId, out var _id).Should().BeTrue();
+            response.ItemId.Should().Be(saved.ItemId);
             saved.TemplateKey.Should().Be("localization");
             saved.TemplateDisplayName.Should().Be("Blocks Localization");
             saved.RoleSlug.Should().Be("localization-integration");

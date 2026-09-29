@@ -50,7 +50,7 @@ namespace Configuration.DomainService.Integration.Services
             var context = BlocksContext.GetContext();
             var setup = new IntegrationSetup
             {
-                ItemId = IntegrationSetup.SingletonId,
+                ItemId = Guid.NewGuid().ToString(),
                 TemplateKey = template.Key,
                 TemplateDisplayName = template.DisplayName,
                 RoleId = request.RoleId,
