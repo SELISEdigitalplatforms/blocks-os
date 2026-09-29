@@ -75,7 +75,90 @@ vi.mock("@/components/filter-toolbar", () => ({
   },
 }));
 
+
+// Radix Select needs these in jsdom; without them the trigger never opens.
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false;
+}
+if (!Element.prototype.releasePointerCapture) {
+  Element.prototype.releasePointerCapture = () => {};
+}
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
+vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
+  useGetAuthOidcCredentials: () => ({
+    data: {
+      oIDCClientCredentials: [
+        {
+          itemId: "partner-portal",
+          clientDisplayName: "Partner Portal",
+          redirectUris: ["https://partner.example.com/callback"],
+          isActive: true,
+          isDeviceFlowClient: false,
+        },
+        // Filtered out: a signup link has to land on a browser redirect.
+        {
+          itemId: "device-client",
+          clientDisplayName: "Device",
+          redirectUris: [],
+          isActive: true,
+          isDeviceFlowClient: true,
+        },
+      ],
+    },
+    isLoading: false,
+  }),
+}));
+
+// The roles/permissions sections are covered by their own suites; here they stand in as
+// simple buttons so these tests stay about the dialog and its payload.
+vi.mock(
+  "@blocks-idp/authentication/components/create-client-credential/client-credential-roles-section",
+  () => ({
+    ClientCredentialRolesSection: ({
+      onChange,
+      selectedSlugs,
+    }: {
+      onChange: (v: string[]) => void;
+      selectedSlugs: string[];
+    }) => (
+      <button type="button" onClick={() => onChange([...(selectedSlugs || []), "partner-user"])}>
+        Roles
+      </button>
+    ),
+  }),
+);
+
+vi.mock(
+  "@blocks-idp/authentication/components/create-client-credential/client-credential-permissions-section",
+  () => ({
+    ClientCredentialPermissionsSection: ({
+      onChange,
+      selectedResources,
+    }: {
+      onChange: (v: string[]) => void;
+      selectedResources: string[];
+    }) => (
+      <button type="button" onClick={() => onChange([...(selectedResources || []), "read:project"])}>
+        Permissions
+      </button>
+    ),
+  }),
+);
+
 import { AddConfiguration } from "./add-configuration";
+
+
+/**
+ * Picks the one eligible client. Its single registered redirect URI is then filled in
+ * automatically, which is the behaviour being relied on here.
+ */
+const selectClient = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByTestId("client-select"));
+  await user.click(await screen.findByRole("option", { name: "Partner Portal" }));
+};
 
 describe("AddConfiguration", () => {
   beforeEach(() => {
@@ -98,11 +181,7 @@ describe("AddConfiguration", () => {
     render(<AddConfiguration />);
     await user.click(screen.getByRole("button", { name: "Add Configuration" }));
     await user.type(screen.getByPlaceholderText("Partner onboarding"), "Partner onboarding");
-    await user.type(screen.getByPlaceholderText("OIDC client id"), "partner-portal");
-    await user.type(
-      screen.getByPlaceholderText("https://example.com/callback"),
-      "https://partner.example.com/callback",
-    );
+    await selectClient(user);
     await user.click(screen.getByRole("button", { name: "Roles" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -129,11 +208,7 @@ describe("AddConfiguration", () => {
     render(<AddConfiguration />);
     await user.click(screen.getByRole("button", { name: "Add Configuration" }));
     await user.type(screen.getByPlaceholderText("Partner onboarding"), "Partner onboarding");
-    await user.type(screen.getByPlaceholderText("OIDC client id"), "partner-portal");
-    await user.type(
-      screen.getByPlaceholderText("https://example.com/callback"),
-      "https://partner.example.com/callback",
-    );
+    await selectClient(user);
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     expect(
@@ -153,11 +228,7 @@ describe("AddConfiguration", () => {
     render(<AddConfiguration />);
     await user.click(screen.getByRole("button", { name: "Add Configuration" }));
     await user.type(screen.getByPlaceholderText("Partner onboarding"), "Partner onboarding");
-    await user.type(screen.getByPlaceholderText("OIDC client id"), "partner-portal");
-    await user.type(
-      screen.getByPlaceholderText("https://example.com/callback"),
-      "https://partner.example.com/callback",
-    );
+    await selectClient(user);
     await user.click(screen.getByRole("button", { name: "Create" }));
     expect((await screen.findByTestId("form-level-error")).textContent).toContain("Unexpected rejection");
   });
