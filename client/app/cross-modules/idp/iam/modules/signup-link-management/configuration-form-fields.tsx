@@ -6,6 +6,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui-kits/form/form";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import { Input } from "@/components/ui-kits/input/input";
 import {
   Select,
@@ -35,6 +36,7 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
   const tenantId = useProjectStore().selectedProject?.tenantId || "";
   const mode = form.watch("mode");
   const selectedClientId = form.watch("clientId");
+  const credentialMode = form.watch("credentialMode");
 
   const { data: oidcData, isLoading: clientsLoading } = useGetAuthOidcCredentials({
     projectKey: tenantId,
@@ -278,7 +280,7 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
             </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger data-testid="credential-mode-select">
                   <SelectValue placeholder="Select credential mode" />
                 </SelectTrigger>
               </FormControl>
@@ -291,6 +293,43 @@ export const ConfigurationFormFields = ({ form, formLevelError }: Props) => {
           </FormItem>
         )}
       />
+
+      {credentialMode === "PasswordRequired" && (
+        <FormField
+          name="signInAfterActivation"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>After activation</FormLabel>
+              <div className="flex items-start gap-2">
+                <FormControl>
+                  <Checkbox
+                    id="signInAfterActivation"
+                    className="mt-0.5 shrink-0"
+                    data-testid="sign-in-after-activation"
+                    checked={!!field.value}
+                    onCheckedChange={(checked) => field.onChange(!!checked)}
+                  />
+                </FormControl>
+                <label
+                  htmlFor="signInAfterActivation"
+                  className="cursor-pointer text-sm text-high-emphasis"
+                >
+                  Sign the invitee in once they set their password
+                </label>
+              </div>
+              <FormDescription>
+                Otherwise they finish on the sign-in screen and type the password they just
+                chose.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {/* Offered only for PasswordRequired: Passwordless issues no activation key, so there
+          is no activation for this to act on and the server rejects it. */}
 
       <FormField
         name="defaultLifetimeMinutes"

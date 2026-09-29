@@ -66,7 +66,7 @@ export const AUTHENTICATION_NAV_GROUPS: NavGroup[] = [
     items: [
       {
         id: "signup-link-configurations",
-        label: "Signup Link Configurations",
+        label: "One-Click Signup",
         value: "signup-link-configurations",
         icon: Ticket,
         desc: "Create and manage configurations that one-click signup links are generated from",

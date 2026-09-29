@@ -19,6 +19,7 @@ export interface ISignupLinkConfiguration {
   credentialMode: CredentialMode;
   mode: SignupLinkMode;
   joinUrl: string | null;
+  signInAfterActivation: boolean;
   defaultLifetimeMinutes: number;
   defaultMaxRedemptions: number | null;
   isActive: boolean;
@@ -59,6 +60,11 @@ export interface ISignupLinkConfigurationCreatePayload {
   credentialMode: CredentialMode;
   mode: SignupLinkMode;
   joinUrl?: string;
+  /**
+   * PasswordRequired only — the server refuses it on a Passwordless configuration, which
+   * mints no activation key for it to act on. toModePayload forces it false there.
+   */
+  signInAfterActivation?: boolean;
   defaultLifetimeMinutes?: number;
   defaultMaxRedemptions?: number | null;
 }
@@ -80,6 +86,7 @@ export const SIGNUP_LINK_CONFIGURATION_FIELD_ERROR_MAP: Record<
   | "credentialMode"
   | "mode"
   | "joinUrl"
+  | "signInAfterActivation"
   | "defaultLifetimeMinutes"
 > = {
   Name: "name",
@@ -92,5 +99,6 @@ export const SIGNUP_LINK_CONFIGURATION_FIELD_ERROR_MAP: Record<
   CredentialMode: "credentialMode",
   Mode: "mode",
   JoinUrl: "joinUrl",
+  SignInAfterActivation: "signInAfterActivation",
   DefaultLifetimeMinutes: "defaultLifetimeMinutes",
 };

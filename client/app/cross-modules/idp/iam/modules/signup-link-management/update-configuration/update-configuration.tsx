@@ -39,6 +39,7 @@ const toFormValues = (
   joinUrl: configuration.joinUrl ?? "",
   defaultForwardedTo: configuration.defaultForwardedTo ?? "",
   credentialMode: configuration.credentialMode,
+  signInAfterActivation: configuration.signInAfterActivation ?? false,
   defaultLifetimeMinutes: configuration.defaultLifetimeMinutes,
   defaultRoles: configuration.defaultRoles ?? [],
   defaultPermissions: configuration.defaultPermissions ?? [],
@@ -92,6 +93,14 @@ export const UpdateConfiguration = ({
       delete patch.redirectUri;
     } else {
       delete patch.joinUrl;
+    }
+
+    // Only when the credential mode itself moved away from PasswordRequired. The server
+    // validates the flag against the mode the document ends up in, so a stored true left
+    // behind by that switch would be rejected — and the field is hidden by then, so the
+    // author would have no way to see why. Unrelated edits stay out of it.
+    if (dirtyFields.credentialMode && data.credentialMode !== "PasswordRequired") {
+      patch.signInAfterActivation = false;
     }
 
     try {

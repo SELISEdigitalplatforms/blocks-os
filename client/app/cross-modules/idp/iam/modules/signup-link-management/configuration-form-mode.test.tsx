@@ -141,6 +141,20 @@ describe("ConfigurationFormFields mode", () => {
     expect(screen.getByRole("option", { name: "https://partner.example.com/alt" })).toBeTruthy();
   });
 
+  it("offers sign-in-after-activation only for PasswordRequired, and defaults it on", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    // Passwordless mints no activation key, so the server rejects the flag outright.
+    expect(screen.queryByTestId("sign-in-after-activation")).toBeNull();
+
+    await user.click(screen.getByTestId("credential-mode-select"));
+    await user.click(await screen.findByRole("option", { name: "Password required" }));
+
+    const checkbox = await screen.findByTestId("sign-in-after-activation");
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+  });
+
   it("marks the mandatory fields", () => {
     render(<Harness />);
     // Name, Mode, Client, Credential mode, Lifetime -- roles are deliberately not required.

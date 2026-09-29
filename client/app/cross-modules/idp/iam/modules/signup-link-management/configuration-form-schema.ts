@@ -60,6 +60,9 @@ export const signupLinkConfigurationFormSchema = z
     credentialMode: z.enum(["Passwordless", "PasswordRequired"], {
       required_error: "Credential mode is required",
     }),
+    // Defaulted rather than required: it is a preference, not an answer the author
+    // has to give, and an omitted one should mean the recommended ending.
+    signInAfterActivation: z.boolean().default(true),
     defaultLifetimeMinutes: z.coerce
       .number({ invalid_type_error: "Must be between 5 and 10080" })
       .int("Must be between 5 and 10080")
@@ -119,6 +122,10 @@ export const signupLinkConfigurationFormDefaults: SignupLinkConfigurationFormVal
   joinUrl: "",
   defaultForwardedTo: "",
   credentialMode: "Passwordless",
+  // On by default, so choosing PasswordRequired gives the invitee the better ending
+  // without anyone having to know the option exists. Forced false while Passwordless,
+  // where the server refuses it — see toModePayload.
+  signInAfterActivation: true,
   defaultLifetimeMinutes: 1440,
   defaultRoles: [],
   defaultPermissions: [],
@@ -140,5 +147,13 @@ export const toModePayload = <T extends Partial<SignupLinkConfigurationFormValue
   } else {
     delete next.joinUrl;
   }
+
+  // Passwordless never mints an activation key, so the server rejects the flag outright
+  // rather than storing it inert. The form defaults it on, which would make every
+  // Passwordless save a 400 if it were sent as-is.
+  if (next.credentialMode !== undefined && next.credentialMode !== "PasswordRequired") {
+    next.signInAfterActivation = false;
+  }
+
   return next;
 };

@@ -62,7 +62,7 @@ describe("AuthenticationConfigLayout", () => {
     h.pathname = "/app/auth/signup-link-configurations";
     render(<AuthenticationConfigLayout />);
     expect(screen.getByTestId("add-configuration")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Signup Link Configurations" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "One-Click Signup" })).toBeTruthy();
   });
 
   it("shows the Refresh action on the signup-link-activity path", () => {
