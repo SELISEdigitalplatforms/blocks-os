@@ -44,6 +44,7 @@ const NEEDS_DOM = [
   "app/cross-modules/devops/services/providers.service.test.ts",
   "app/cross-modules/idp/api-settings/utils/service-swagger.test.ts",
   "app/cross-modules/utilities/utils/url.util.test.ts",
+  "app/lib/deep-link.test.ts",
   "app/lib/get-api-path.test.ts",
   "app/lib/resolve-env.test.ts",
   "app/lib/runtime-env.test.ts",

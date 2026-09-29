@@ -1,8 +1,9 @@
 import { AuthResolver, ProtectedGuard, PublicGuard } from "@seliseblocks/genesis-os/guards";
 import { ConsoleLayout, DashboardRoute } from "@seliseblocks/genesis-os/layouts";
 import { CallbackPage, ConsolePage, LoginPage, ProfilePage } from "@seliseblocks/genesis-os/pages";
-import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router";
+import { createBrowserRouter, matchRoutes, Navigate, Outlet, useLocation } from "react-router";
 import { navigationMenus } from "@/constants/navigation-menus";
+import { DeepLinkRedirect } from "@/components/deep-link-redirect/deep-link-redirect";
 // Temporarily disabled
 // import { AIModels } from "./cross-modules/ai/pages/ai-models";
 import { EmailConfigurationPage, NewCommunication } from "@/cross-modules/communication/mail";
@@ -83,6 +84,12 @@ function LegacyIdpRedirect() {
   const target = location.pathname.replace(/\/idp(\/|$)/, "/iam$1") + location.search;
   return <Navigate to={target} replace />;
 }
+
+// Read at render time, after `router` below is initialised. The catch-all `*` is not a route.
+const isAppRoute = (pathname: string): boolean => {
+  const matches = matchRoutes(router.routes, pathname);
+  return !!matches && matches[matches.length - 1].route.path !== "*";
+};
 
 export const router = createBrowserRouter([
   // ── Public invitation accept flow (no auth guard) ──
@@ -210,7 +217,12 @@ export const router = createBrowserRouter([
                   },
                   {
                     path: "dashboard",
-                    element: <DashboardOverview />,
+                    element: (
+                      <>
+                        <DeepLinkRedirect isRoute={isAppRoute} />
+                        <DashboardOverview />
+                      </>
+                    ),
                   },
                   {
                     path: "secret-management",
