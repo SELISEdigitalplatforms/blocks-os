@@ -33,8 +33,10 @@ const toFormValues = (
 ): SignupLinkConfigurationFormValues => ({
   name: configuration.name,
   description: configuration.description ?? "",
+  mode: configuration.mode ?? "Oidc",
   clientId: configuration.clientId,
   redirectUri: configuration.redirectUri,
+  joinUrl: configuration.joinUrl ?? "",
   defaultForwardedTo: configuration.defaultForwardedTo ?? "",
   credentialMode: configuration.credentialMode,
   defaultLifetimeMinutes: configuration.defaultLifetimeMinutes,
@@ -68,7 +70,10 @@ export const UpdateConfiguration = ({
   const onSubmit: SubmitHandler<SignupLinkConfigurationFormValues> = async (data) => {
     setFormLevelError(null);
     // PATCH only changed fields (H4).
-    const patch: Record<string, unknown> = { itemId: configuration.itemId };
+    // Mode rides along whenever anything else changed: the server validates client,
+    // redirect and joinUrl against the mode the document ends up in, so a PATCH that omits
+    // it would be judged against the stored one.
+    const patch: Record<string, unknown> = { itemId: configuration.itemId, mode: data.mode };
     (Object.keys(dirtyFields) as (keyof SignupLinkConfigurationFormValues)[]).forEach((key) => {
       const value = data[key];
       if (key === "description" && value === "") {
@@ -81,6 +86,13 @@ export const UpdateConfiguration = ({
       }
       patch[key] = value;
     });
+
+    if (data.mode === "Embedded") {
+      delete patch.clientId;
+      delete patch.redirectUri;
+    } else {
+      delete patch.joinUrl;
+    }
 
     try {
       const response = await mutateAsync(

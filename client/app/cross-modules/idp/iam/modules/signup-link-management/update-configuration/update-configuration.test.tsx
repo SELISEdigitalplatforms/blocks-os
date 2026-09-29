@@ -63,6 +63,48 @@ vi.mock("@/components/filter-toolbar", () => ({
 }));
 
 import { UpdateConfiguration } from "./update-configuration";
+
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false;
+}
+if (!Element.prototype.releasePointerCapture) {
+  Element.prototype.releasePointerCapture = () => {};
+}
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
+vi.mock("@blocks-idp/authentication/hooks/use-auth-oidc", () => ({
+  useGetAuthOidcCredentials: () => ({
+    data: {
+      oIDCClientCredentials: [
+        {
+          itemId: "partner-portal",
+          clientDisplayName: "Partner Portal",
+          redirectUris: ["https://partner.example.com/callback"],
+          isActive: true,
+          isDeviceFlowClient: false,
+        },
+      ],
+    },
+    isLoading: false,
+  }),
+}));
+
+vi.mock(
+  "@blocks-idp/authentication/components/create-client-credential/client-credential-roles-section",
+  () => ({
+    ClientCredentialRolesSection: () => <button type="button">Roles</button>,
+  }),
+);
+
+vi.mock(
+  "@blocks-idp/authentication/components/create-client-credential/client-credential-permissions-section",
+  () => ({
+    ClientCredentialPermissionsSection: () => <button type="button">Permissions</button>,
+  }),
+);
+
 import { ISignupLinkConfiguration } from "@blocks-idp/iam/models/signup-link-configuration";
 
 const configuration: ISignupLinkConfiguration = {
@@ -71,6 +113,8 @@ const configuration: ISignupLinkConfiguration = {
   description: "old",
   defaultRoles: ["partner-user"],
   defaultPermissions: [],
+  mode: "Oidc",
+  joinUrl: null,
   clientId: "partner-portal",
   redirectUri: "https://partner.example.com/callback",
   defaultForwardedTo: null,
@@ -105,6 +149,7 @@ describe("UpdateConfiguration", () => {
     await waitFor(() => expect(h.mutateAsync).toHaveBeenCalledTimes(1));
     expect(h.mutateAsync).toHaveBeenCalledWith({
       itemId: "cfg-1",
+      mode: "Oidc",
       description: "new description only",
     });
     expect(h.showSuccessToast).toHaveBeenCalledWith({ description: "Configuration updated" });

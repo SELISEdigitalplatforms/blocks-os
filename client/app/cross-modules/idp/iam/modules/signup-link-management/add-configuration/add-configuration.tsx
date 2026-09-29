@@ -22,6 +22,7 @@ import {
   signupLinkConfigurationFormDefaults,
   signupLinkConfigurationFormSchema,
   SignupLinkConfigurationFormValues,
+  toModePayload,
 } from "../configuration-form-schema";
 import { applyServerFieldErrors } from "../apply-server-field-errors";
 
@@ -55,17 +56,24 @@ export const AddConfiguration = ({ triggerLabel = "Add Configuration" }: AddConf
       Number.isNaN(data.defaultLifetimeMinutes)
         ? 1440
         : data.defaultLifetimeMinutes;
-    const payload = {
-      name: data.name,
-      description: data.description || undefined,
-      defaultRoles: data.defaultRoles,
-      defaultPermissions: data.defaultPermissions,
-      clientId: data.clientId,
-      redirectUri: data.redirectUri,
-      defaultForwardedTo: data.defaultForwardedTo || undefined,
-      credentialMode: data.credentialMode,
-      defaultLifetimeMinutes: lifetime,
-    };
+    // toModePayload drops the fields the chosen mode forbids, so a value left behind by
+    // switching the mode mid-edit is never sent and bounced by the server.
+    const payload = toModePayload(
+      {
+        name: data.name,
+        description: data.description || undefined,
+        defaultRoles: data.defaultRoles,
+        defaultPermissions: data.defaultPermissions,
+        mode: data.mode,
+        clientId: data.clientId,
+        redirectUri: data.redirectUri,
+        joinUrl: data.joinUrl || undefined,
+        defaultForwardedTo: data.defaultForwardedTo || undefined,
+        credentialMode: data.credentialMode,
+        defaultLifetimeMinutes: lifetime,
+      },
+      data.mode,
+    );
     try {
       const response = await mutateAsync(payload);
       if (response?.isSuccess === false && response.errors) {
