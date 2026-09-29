@@ -49,8 +49,12 @@ export interface ISignupLinkConfigurationCreatePayload {
   description?: string;
   defaultRoles: string[];
   defaultPermissions: string[];
-  clientId: string;
-  redirectUri: string;
+  /**
+   * OIDC mode only. Omitted entirely for an embedded configuration, which the server
+   * rejects if either is present — see toModePayload.
+   */
+  clientId?: string;
+  redirectUri?: string;
   defaultForwardedTo?: string;
   credentialMode: CredentialMode;
   mode: SignupLinkMode;
