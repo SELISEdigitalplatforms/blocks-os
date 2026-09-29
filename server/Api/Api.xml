@@ -50,12 +50,12 @@
              </para>
              </remarks>
         </member>
-        <member name="T:BlocksOs.Api.Controllers.ConnectController">
+        <member name="T:BlocksOs.Api.Controllers.IntegrationController">
             <summary>
-            Connect setup endpoints. Routing only; the rules live in <see cref="T:Configuration.DomainService.Connect.Services.IConnectService"/>.
+            Integration setup endpoints. Routing only; the rules live in <see cref="T:Configuration.DomainService.Integration.Services.IIntegrationService"/>.
             </summary>
             <remarks>
-            Protected by their own permissions, like Storage and Notification, so access to Connect can
+            Protected by their own permissions, like Storage and Notification, so access to Integration can
             be granted apart from Secrets. Neither permission is seeded from this repository: both must
             exist in IAM for the blocks-os tenant and be assigned to roles, or every call is refused.
             </remarks>

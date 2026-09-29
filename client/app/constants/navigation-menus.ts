@@ -207,11 +207,11 @@ export const navigationMenus: Menu[] = [
         disabled: true, // Temporarily disabled
       },
       {
-        id: "connect",
-        name: "Connect",
-        path: "/app/secret-management/connect",
+        id: "integration",
+        name: "Integrations",
+        path: "/app/secret-management/integration",
         icon: Plug,
-        desc: "Set up Connect",
+        desc: "Set up this project's Blocks services for external plugins and apps",
         type: "menu",
       },
     ],

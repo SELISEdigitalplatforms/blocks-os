@@ -461,7 +461,6 @@ namespace DomainService.Projects
                 ItemId = Guid.NewGuid().ToString(),
                 TenantGroupId = groupId,
                 Resources = createProjectRequest.Resources ?? [],
-                ProjectType = ProjectTypes.Normalize(createProjectRequest.ProjectType),
                 CreatedDate = DateTime.UtcNow,
                 LastUpdatedDate = DateTime.UtcNow,
                 CreatedBy = BlocksContext.GetContext()?.UserId,
@@ -797,7 +796,6 @@ namespace DomainService.Projects
             // ProjectPeople.IsCreator — CreatedBy is a creation-time audit stamp, not the
             // current owner. See docs/specs/transfer-ownership-createdby-decoupling.md.
             var ownerUserId = await _projectRepository.GetOwnerUserIdAsync(tenant.TenantId);
-            var asset = await _projectRepository.GetTenantAssetByGroupIdAsync(tenant.TenantGroupId);
 
             var project = new GetProjectResponseData
             {
@@ -817,8 +815,7 @@ namespace DomainService.Projects
                 Environment = tenant.Environment,
                 TenantGroupId = tenant.TenantGroupId,
                 TenantSlug = tenantSlug,
-                IsThirdPartyJwtEnabled = tenant.IsThirdPartyJwtEnabled,
-                ProjectType = ProjectTypes.Normalize(asset?.ProjectType)
+                IsThirdPartyJwtEnabled = tenant.IsThirdPartyJwtEnabled
             };
 
             return new GetProjectResponse { Data = project };

@@ -28,10 +28,6 @@ namespace DomainService.Projects
                .Equal(true)
                .WithMessage("You must accept the Blocks Terms to proceed.");
 
-            RuleFor(x => x.ProjectType)
-                .Must(ProjectTypes.IsSupported)
-                .WithMessage("Project type must be either regular or template.");
-
             RuleFor(x => x.applicationContexts)
                 .Cascade(CascadeMode.Stop)
                 .NotEmpty()

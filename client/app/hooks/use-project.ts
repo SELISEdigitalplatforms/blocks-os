@@ -263,7 +263,6 @@ export const useProjectForm = () => {
         name: formData[0].name,
         isAcceptBlocksTerms: formData[0].isAcceptBlocksTerms,
         isUseBlocksExclusively: formData[0].isUseBlocksExclusively,
-        projectType: formData[0].projectType,
         resources: assets.map((asset) => ({
           name: asset.full_name,
           link: asset.html_url,

@@ -56,8 +56,7 @@ import LmtTraceDetailsRedirect from "@/pages/lmt/lmt-trace-details";
 // import MagicUrlDetailsPage from "@/pages/dashboard/magic-url-details";
 import LmtLayout from "@/layouts/lmt/lmt-layout";
 import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
-import ConnectPage from "@/pages/connect/connect";
-import { ConnectAutoSetup } from "@/cross-modules/connect/components/connect-auto-setup";
+import IntegrationPage from "@/pages/integration/integration";
 import MyServicesPage from "@/pages/my-services/my-services";
 import OidcBrandingPage from "@/pages/auth/oidc/oidc-branding";
 import SecretManagementLayout from "@/pages/secret-management/secret-management";
@@ -201,11 +200,7 @@ export const router = createBrowserRouter([
               {
                 path: ":itemId",
                 element: (
-                  <>
-                    {/* Sets up Connect for template projects; renders nothing. */}
-                    <ConnectAutoSetup />
-                    <DashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
-                  </>
+                  <DashboardRoute redirectPaths={redirectPaths} navigationMenus={navigationMenus} />
                 ),
                 children: [
                   {
@@ -306,8 +301,8 @@ export const router = createBrowserRouter([
                         element: <Certificates />,
                       },
                       {
-                        path: "connect",
-                        element: <ConnectPage />,
+                        path: "integration",
+                        element: <IntegrationPage />,
                       },
                       // Temporarily disabled
                       // {
