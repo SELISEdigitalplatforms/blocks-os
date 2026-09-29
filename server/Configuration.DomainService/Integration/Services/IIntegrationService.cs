@@ -17,7 +17,7 @@ namespace Configuration.DomainService.Integration.Services
     {
         Task<List<IntegrationTemplate>> GetTemplatesAsync();
 
-        Task<IntegrationSetup?> GetSetupAsync();
+        Task<BaseQueryResponse<IntegrationSetup>> GetSetupAsync();
 
         Task<BaseMutationResponse> SaveSetupAsync(SaveIntegrationSetupRequest request);
     }

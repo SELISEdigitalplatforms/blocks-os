@@ -18,10 +18,19 @@ namespace Configuration.DomainService.Integration.Services
 
         public Task<List<IntegrationTemplate>> GetTemplatesAsync() => _integrationRepository.GetActiveTemplatesAsync();
 
-        public Task<IntegrationSetup?> GetSetupAsync() => _integrationRepository.GetSetupAsync();
+        public async Task<BaseQueryResponse<IntegrationSetup>> GetSetupAsync()
+        {
+            if (!IsInProject())
+                return new BaseQueryResponse<IntegrationSetup> { Errors = NotInProjectErrors() };
+
+            return new BaseQueryResponse<IntegrationSetup> { Data = await _integrationRepository.GetSetupAsync() };
+        }
 
         public async Task<BaseMutationResponse> SaveSetupAsync(SaveIntegrationSetupRequest request)
         {
+            if (!IsInProject())
+                return new BaseMutationResponse { IsSuccess = false, Errors = NotInProjectErrors() };
+
             var validationResult = await _validator.ValidateAsync(request);
             if (!validationResult.IsValid)
             {
@@ -58,6 +67,14 @@ namespace Configuration.DomainService.Integration.Services
 
             return new BaseMutationResponse { IsSuccess = true, ItemId = setup.ItemId };
         }
+
+        // The setup lives in the tenant's own database, resolved from the request token. Outside
+        // impersonation that token names the root tenant, whose database is the shared
+        // BlocksConfiguration, so the record would land next to the templates instead.
+        private static bool IsInProject() => BlocksContext.GetContext()?.Impersonated == true;
+
+        private static Dictionary<string, string> NotInProjectErrors() =>
+            new() { { "project", "Open a project environment to manage its integrations." } };
 
         private static BaseMutationResponse Failure(string key, string message) =>
             new() { IsSuccess = false, Errors = new Dictionary<string, string> { { key, message } } };

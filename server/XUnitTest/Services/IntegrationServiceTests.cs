@@ -31,8 +31,47 @@ namespace XUnitTest.Services
         };
 
         [Fact]
+        public async Task SaveSetup_NotImpersonated_FailsAndWritesNothing()
+        {
+            using var _ = new BlocksTestContext(tenantId: "root-tenant", impersonated: false);
+
+            var response = await Service().SaveSetupAsync(ValidRequest());
+
+            response.IsSuccess.Should().BeFalse();
+            response.Errors.Should().ContainKey("project");
+            _repo.Verify(r => r.GetActiveTemplateByKeyAsync(It.IsAny<string>()), Times.Never);
+            _repo.Verify(r => r.TryInsertSetupAsync(It.IsAny<IntegrationSetup>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetSetup_NotImpersonated_ReturnsErrorWithoutReading()
+        {
+            using var _ = new BlocksTestContext(tenantId: "root-tenant", impersonated: false);
+
+            var response = await Service().GetSetupAsync();
+
+            response.Data.Should().BeNull();
+            response.Errors.Should().ContainKey("project");
+            _repo.Verify(r => r.GetSetupAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetSetup_Impersonated_ReturnsTheTenantsRecord()
+        {
+            using var _ = new BlocksTestContext(tenantId: "tenant-1", impersonated: true);
+            var record = new IntegrationSetup { ItemId = IntegrationSetup.SingletonId, TemplateKey = "localization" };
+            _repo.Setup(r => r.GetSetupAsync()).ReturnsAsync(record);
+
+            var response = await Service().GetSetupAsync();
+
+            response.Errors.Should().BeNull();
+            response.Data.Should().BeSameAs(record);
+        }
+
+        [Fact]
         public async Task SaveSetup_Invalid_ReturnsErrorsAndWritesNothing()
         {
+            using var _ = new BlocksTestContext(impersonated: true);
             var response = await Service().SaveSetupAsync(new SaveIntegrationSetupRequest());
 
             response.IsSuccess.Should().BeFalse();
@@ -43,6 +82,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task SaveSetup_UnknownTemplate_Fails()
         {
+            using var _ = new BlocksTestContext(impersonated: true);
             _repo.Setup(r => r.GetActiveTemplateByKeyAsync("localization")).ReturnsAsync((IntegrationTemplate?)null);
 
             var response = await Service().SaveSetupAsync(ValidRequest());
@@ -55,7 +95,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task SaveSetup_Valid_InsertsSingletonRecord()
         {
-            using var _ = new BlocksTestContext(tenantId: "tenant-1", userId: "u1");
+            using var _ = new BlocksTestContext(tenantId: "tenant-1", userId: "u1", impersonated: true);
             IntegrationSetup? saved = null;
             _repo.Setup(r => r.GetActiveTemplateByKeyAsync("localization")).ReturnsAsync(Template());
             _repo.Setup(r => r.TryInsertSetupAsync(It.IsAny<IntegrationSetup>()))
@@ -78,6 +118,7 @@ namespace XUnitTest.Services
         [Fact]
         public async Task SaveSetup_AlreadyConfigured_Fails()
         {
+            using var _ = new BlocksTestContext(impersonated: true);
             _repo.Setup(r => r.GetActiveTemplateByKeyAsync("localization")).ReturnsAsync(Template());
             _repo.Setup(r => r.TryInsertSetupAsync(It.IsAny<IntegrationSetup>())).ReturnsAsync(false);
 

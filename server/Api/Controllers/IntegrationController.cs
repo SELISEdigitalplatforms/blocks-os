@@ -31,8 +31,11 @@ namespace BlocksOs.Api.Controllers
 
         [HttpGet]
         [ProtectedEndPoint("blocks-os::integration::gets")]
-        public async Task<BaseQueryResponse<IntegrationSetup>> GetSetup() =>
-            new() { Data = await _integrationService.GetSetupAsync() };
+        public async Task<ActionResult<BaseQueryResponse<IntegrationSetup>>> GetSetup()
+        {
+            var result = await _integrationService.GetSetupAsync();
+            return result.Errors is null ? Ok(result) : BadRequest(result);
+        }
 
         [HttpPost]
         [ProtectedEndPoint("blocks-os::integration::save")]
