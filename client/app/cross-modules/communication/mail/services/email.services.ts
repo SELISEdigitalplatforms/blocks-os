@@ -92,6 +92,7 @@ class EmailService {
     status?: string,
     startDate?: string,
     endDate?: string,
+    mailServerConfigurationId?: string,
   ): Promise<IEmailUsageResponse> => {
     const params = new URLSearchParams({
       PageNumber: pageNumber.toString(),
@@ -110,6 +111,9 @@ class EmailService {
     }
     if (endDate) {
       params.append("SendDateRange.EndDate", endDate);
+    }
+    if (mailServerConfigurationId) {
+      params.append("MailServerConfigurationId", mailServerConfigurationId);
     }
 
     return http.get(`${MAIL_ENDPOINTS.GET_MAILBOX_MAILS}?${params.toString()}`, undefined, {

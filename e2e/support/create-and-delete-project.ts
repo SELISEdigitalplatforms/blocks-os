@@ -68,10 +68,12 @@ function addProjectControl(page: Page) {
 async function waitForConsoleProjectsReady(page: Page) {
   // Do not use locator.or() + toBeVisible — when both sides match, Playwright
   // strict mode fails ("resolved to 2 elements").
+  // Empty console shows "Create a project" + Welcome, not "Add Project".
   await Promise.race([
     addProjectControl(page).waitFor({ state: "visible", timeout: 20_000 }),
     page.getByRole("button", { name: ENV_BUTTON }).first().waitFor({ state: "visible", timeout: 20_000 }),
     consoleProjectsHeading(page).waitFor({ state: "visible", timeout: 20_000 }),
+    page.getByRole("button", { name: /Create a project/i }).waitFor({ state: "visible", timeout: 20_000 }),
   ])
 }
 
@@ -164,7 +166,12 @@ export async function createProject(page: Page) {
 
     await freeProjectSlotIfNeeded(page)
 
-    if (await welcomeHeading.isVisible().catch(() => false)) {
+    // Prefer the empty-console CTA when present; fall back to Add Project on a populated console.
+    if (
+      (await createProjectButton.isVisible().catch(() => false)) ||
+      (await welcomeHeading.isVisible().catch(() => false))
+    ) {
+      await expect(createProjectButton).toBeVisible({ timeout: 15_000 })
       await createProjectButton.click()
     } else {
       await expect(addProjectButton).toBeVisible({ timeout: 15_000 })

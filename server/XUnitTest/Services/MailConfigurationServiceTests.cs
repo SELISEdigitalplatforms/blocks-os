@@ -38,6 +38,8 @@ namespace XUnitTest.Services
                  .Returns(Task.CompletedTask);
             _repo.Setup(r => r.DeleteMailConfigurationAsync(It.IsAny<string>()))
                  .Returns(Task.CompletedTask);
+            _repo.Setup(r => r.UpdateMailSenderNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string>()))
+                 .Returns(Task.CompletedTask);
             _secrets.Setup(s => s.SetAsync(It.IsAny<SetSecretRequest>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync("secret-1");
         }
@@ -229,6 +231,78 @@ namespace XUnitTest.Services
             result.Response.Errors.Should().Contain(new KeyValuePair<string, string>("ConfigurationId", "Configuration not found"));
             _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
             _secrets.VerifyNoOtherCalls();
+        }
+
+        private static MailServerConfiguration StoredDefault() => new()
+        {
+            ItemId = "default-1",
+            Name = "Default",
+            IsDefault = true,
+            Provider = MailServiceProvider.AmazonSes,
+            IsInbound = false,
+            Host = "email-smtp.eu-central-1.amazonaws.com",
+            Port = 587,
+            SenderName = "Selise Blocks",
+            SenderAddress = "blocks@selise.io",
+            SenderUserName = "ses-user",
+            AccountPassword = "ses-password"
+        };
+
+        [Fact]
+        public async Task Save_EditOfDefault_ChangesOnlyTheSenderName()
+        {
+            using var _ = new BlocksTestContext();
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("default-1")).ReturnsAsync(StoredDefault());
+
+            // Everything but the sender name is either changed or blank, as a browser that never
+            // received the password would send it.
+            var result = await Service().SaveAsync(new MailConfiguration
+            {
+                ConfigurationId = "default-1",
+                ConfigurationName = "Renamed",
+                Provider = MailServiceProvider.Zoho,
+                Host = "smtp.other.example",
+                Port = 25,
+                SenderName = "  Contoso Mailer  ",
+                SenderAddress = "other@contoso.com",
+                SenderUserName = "",
+                AccountPassword = ""
+            });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Success);
+            result.Response.ItemId.Should().Be("default-1");
+
+            // Only the sender name is written, as a field update; the document is never replaced.
+            _repo.Verify(
+                r => r.UpdateMailSenderNameAsync("default-1", "Contoso Mailer", It.IsAny<DateTime>(), It.IsAny<string>()),
+                Times.Once);
+            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+            _secrets.VerifyNoOtherCalls();
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("  ")]
+        [InlineData("ab")]
+        public async Task Save_EditOfDefaultWithInvalidSenderName_IsRejected(string? senderName)
+        {
+            _repo.Setup(r => r.GetMailConfigurationByIdAsync("default-1")).ReturnsAsync(StoredDefault());
+
+            var result = await Service().SaveAsync(new MailConfiguration
+            {
+                ConfigurationId = "default-1",
+                ConfigurationName = "Default",
+                Host = "email-smtp.eu-central-1.amazonaws.com",
+                Port = 587,
+                SenderName = senderName
+            });
+
+            result.Outcome.Should().Be(MailConfigurationOutcome.Invalid);
+            result.Response.Errors.Should().ContainKey("SenderName");
+            _repo.Verify(r => r.SaveMailConfigurationAsync(It.IsAny<MailServerConfiguration>()), Times.Never);
+            _repo.Verify(
+                r => r.UpdateMailSenderNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string>()),
+                Times.Never);
         }
 
         [Fact]

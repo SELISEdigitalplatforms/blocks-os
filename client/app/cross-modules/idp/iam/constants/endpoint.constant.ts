@@ -17,6 +17,11 @@ export const USER_ENDPOINTS = {
 
   UPDATE_ME: `${API_BASES.IAM}${IAM_SUBPATH}/me`,
   ACCESS_CONTROL: `${API_BASES.IAM}${IAM_SUBPATH}/users/access`,
+  // Bulk role delta. The preview is read-only and answers how many users would
+  // change; the submit queues the work on IAM's background worker and returns 202
+  // before anything has been written.
+  BULK_ROLES_PREVIEW: `${API_BASES.IAM}${IAM_SUBPATH}/users/roles/bulk/preview`,
+  BULK_ROLES: `${API_BASES.IAM}${IAM_SUBPATH}/users/roles/bulk`,
   REVOKE_ACCESS: `${API_BASES.IAM}${IAM_SUBPATH}/users/revoke-access`,
   EXISTS: `${API_BASES.IAM}${IAM_SUBPATH}/users/exists`,
 
@@ -91,7 +96,23 @@ export const ORGANIZATION_ENDPOINTS = {
 
 // ─── IAM configuration endpoints (configuration.service) ───────────────────
 
+export const SIGNUP_LINK_CONFIGURATION_ENDPOINTS = {
+  // Collection root. Create is POST here; query is POST to /query (filter in body), same as roles.
+  BASE: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations`,
+  QUERY: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/configurations/query`,
+} as const;
+
 export const IAM_CONFIGURATION_ENDPOINTS = {
   GET: `${API_BASES.IAM}${IAM_SUBPATH}/config`,
   SAVE: `${API_BASES.IAM}${IAM_SUBPATH}/config`,
+} as const;
+
+// ─── Signup link activity (portal summary only) ─────────────────────────────
+
+export const SIGNUP_LINK_ENDPOINTS = {
+  // The portal's ONLY signup-link endpoint. Generation, listing and revocation are
+  // permission-protected API surfaces for the calling service, not portal actions --
+  // a generated link is a bearer credential and this console is not in its delivery
+  // path. Do not add BASE / QUERY / REVOKE here.
+  SUMMARY: `${API_BASES.IAM}${IAM_SUBPATH}/signup-links/summary`,
 } as const;

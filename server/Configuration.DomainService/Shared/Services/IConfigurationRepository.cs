@@ -36,6 +36,12 @@ namespace Configuration.DomainService.Shared.Services
         #region Mail
 
         Task SaveMailConfigurationAsync(MailServerConfiguration configuration);
+
+        /// <summary>
+        /// Sets the sender name and audit fields of one configuration in place, leaving every other
+        /// field of the stored document untouched — including any the entity does not map.
+        /// </summary>
+        Task UpdateMailSenderNameAsync(string configurationId, string senderName, DateTime lastUpdatedDate, string lastUpdatedBy);
         Task<MailServerConfiguration> GetMailConfigurationByIdAsync(string configurationId);
         Task<MailServerConfiguration> GetMailConfigurationByNameAsync(string configurationName);
         Task<List<MailServerConfiguration>> GetAllMailConfigurationsAsync();

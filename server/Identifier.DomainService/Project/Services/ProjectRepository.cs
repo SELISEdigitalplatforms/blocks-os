@@ -702,7 +702,7 @@ namespace DomainService.Projects
             };
         }
 
-        public async Task<long> GetProjectCountAsync()
+        public async Task<long> GetOwnedProjectGroupCountAsync()
         {
             var ownedTenantIds = await GetOwnedTenantIdsAsync(BlocksContext.GetContext()?.UserId);
 
@@ -711,7 +711,11 @@ namespace DomainService.Projects
             var filter = Builders<Project>.Filter.And(Builders<Project>.Filter.In(mc => mc.TenantId, ownedTenantIds),
                                                       Builders<Project>.Filter.Eq(mc => mc.IsDisabled, false));
 
-            return await collection.CountDocumentsAsync(filter);
+            // A project is its group, not each environment in it: one project with dev, stg and
+            // prod is one project, which is what the console counts and shows.
+            using var cursor = await collection.DistinctAsync(mc => mc.TenantGroupId, filter);
+            var groupIds = await cursor.ToListAsync();
+            return groupIds.Count(id => !string.IsNullOrEmpty(id));
         }
 
         public async Task<bool> IsExistingEnviroment(List<string> enviroments, string tenantGroupId)

@@ -11,6 +11,7 @@ export const useGetEmailUsage = (
   status?: string,
   startDate?: string,
   endDate?: string,
+  mailServerConfigurationId?: string,
 ) => {
   const tenantId = useProjectStore()?.selectedProject?.tenantId || "";
 
@@ -24,6 +25,7 @@ export const useGetEmailUsage = (
       status,
       startDate,
       endDate,
+      mailServerConfigurationId,
       tenantId,
     ],
     queryFn: async () => {
@@ -36,6 +38,7 @@ export const useGetEmailUsage = (
         status,
         startDate,
         endDate,
+        mailServerConfigurationId,
       );
       return {
         data: response.mails,

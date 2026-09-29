@@ -173,21 +173,29 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task GetProjectCountAsync_CountsOwnNonDisabledProjects()
+        public async Task GetOwnedProjectGroupCountAsync_CountsOwnNonDisabledGroups()
         {
             var tenant = MongoIntegrationFixture.NewTenantId();
             var user = UserOf(tenant);
             using var _ = new IntegrationContext(tenant);
             var repo = NewRepository();
             await InsertProjectsAsync(
-                new Project { ItemId = "p1-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g", TenantId = "t1-" + tenant },
-                new Project { ItemId = "p2-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g", TenantId = "t2-" + tenant },
-                new Project { ItemId = "p3-" + tenant, CreatedBy = user, IsDisabled = true, TenantGroupId = "g", TenantId = "t3-" + tenant });
+                // g1: two live environments — one project.
+                new Project { ItemId = "p1-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g1-" + tenant, TenantId = "t1-" + tenant },
+                new Project { ItemId = "p2-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g1-" + tenant, TenantId = "t2-" + tenant },
+                // g2: one live environment.
+                new Project { ItemId = "p3-" + tenant, CreatedBy = user, IsDisabled = false, TenantGroupId = "g2-" + tenant, TenantId = "t3-" + tenant },
+                // g3: only disabled environments — not counted.
+                new Project { ItemId = "p4-" + tenant, CreatedBy = user, IsDisabled = true, TenantGroupId = "g3-" + tenant, TenantId = "t4-" + tenant },
+                // g4: shared with the user, owned by someone else — not counted.
+                new Project { ItemId = "p5-" + tenant, CreatedBy = "other", IsDisabled = false, TenantGroupId = "g4-" + tenant, TenantId = "t5-" + tenant });
             await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp1-" + tenant, UserId = user, TenantId = "t1-" + tenant, IsCreator = true });
             await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp2-" + tenant, UserId = user, TenantId = "t2-" + tenant, IsCreator = true });
             await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp3-" + tenant, UserId = user, TenantId = "t3-" + tenant, IsCreator = true });
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp4-" + tenant, UserId = user, TenantId = "t4-" + tenant, IsCreator = true });
+            await repo.InsertPeopleAsync(new ProjectPeople { ItemId = "pp5-" + tenant, UserId = user, TenantId = "t5-" + tenant, IsCreator = false, IsInvitationConfirmed = true });
 
-            var count = await repo.GetProjectCountAsync();
+            var count = await repo.GetOwnedProjectGroupCountAsync();
 
             count.Should().Be(2);
         }

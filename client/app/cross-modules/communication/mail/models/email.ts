@@ -54,7 +54,7 @@ export enum MailServiceProvider {
   Zoho = 1,
   /**
    * Exchange Online. Outbound through Microsoft Graph with OAuth client credentials,
-   * or SMTP with a mailbox password; inbound IMAP with OAuth client credentials only.
+   * or SMTP with a mailbox password; inbound through Microsoft Graph with OAuth client credentials only.
    */
   Office365Smtp = 2,
   /** Gmail / Google Workspace with an App Password, outbound and inbound. */
@@ -140,7 +140,7 @@ export const MAIL_PROVIDERS: readonly IMailProviderCapability[] = [
     supportsInbound: true,
     authentication: {
       outbound: [MailAuthenticationType.OAuthClientCredentials, MailAuthenticationType.Password],
-      // Exchange Online no longer accepts a password over IMAP.
+      // Inbound reads through Microsoft Graph, which takes no mailbox password.
       inbound: OAUTH_ONLY,
     },
     transport: {
@@ -297,6 +297,8 @@ export interface IEmailUsage {
   /** Only on the details read; list rows omit it. */
   rawMime?: string | null;
   isInbound?: boolean;
+  /** The inbound configuration that read the mail. Empty for outbound mail. */
+  mailServerConfigurationId?: string | null;
   /** Parsed from the stored MIME on the details read. Absent for outbound mail. */
   content?: IMailBoxMailContent | null;
 }

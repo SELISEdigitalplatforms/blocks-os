@@ -27,9 +27,14 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
     sort: { property: "Name", isDescending: false },
     filter: { search: "" },
     projectKey,
+    // Stated rather than left to the fallback. This screen only ever edits the
+    // "default" organization -- that is what makes it the single-org editor -- and
+    // the fallback happens to agree today only because the caller is tenant-wide.
+    organizationId: DEFAULT_ORG_ID,
   });
   const { data: permissionsData, isLoading: isPermissionsLoading } = useGetPermissions({
     projectKey,
+    organizationId: DEFAULT_ORG_ID,
     page: 0,
     pageSize: 1000,
     search: "",
@@ -175,6 +180,7 @@ export const SingleOrgAccess = ({ userId, projectKey }: SingleOrgAccessProps) =>
       rolesDescription="Roles assigned to you."
       permissionsDescription="Permissions assigned to you."
       onSave={onSave}
+      organizationId={DEFAULT_ORG_ID}
     />
   );
 };

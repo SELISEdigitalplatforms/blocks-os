@@ -21,6 +21,7 @@ export const useGetPermissions = (
         page: options.page,
         pageSize: options.pageSize,
         projectKey: options.projectKey,
+        organizationId: options.organizationId,
         roles: options.roles,
         ...(options.sort && {
           sort: { property: options.sort.property, isDescending: options.sort.isDescending },

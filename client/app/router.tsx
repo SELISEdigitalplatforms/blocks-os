@@ -24,6 +24,7 @@ import { ConfigureCaptcha } from "@blocks-idp/captcha/pages/configure-captcha";
 import { Organizations } from "@blocks-idp/iam/modules/organization-management";
 import { Permissions } from "@blocks-idp/iam/modules/permission-management";
 import { Roles } from "@blocks-idp/iam/modules/role-management";
+import { SignupLinkActivity, SignupLinkConfigurations } from "@blocks-idp/iam/modules/signup-link-management";
 import { Users } from "@blocks-idp/iam/modules/user-management";
 import { ConfigureMFA } from "@blocks-idp/mfa/pages/configure-mfa/configure-mfa";
 import { IdpSettingsPage } from "@blocks-idp/settings/pages/settings-page";
@@ -388,6 +389,14 @@ export const router = createBrowserRouter([
                       {
                         path: "permissions",
                         element: <Permissions />,
+                      },
+                      {
+                        path: "signup-link-configurations",
+                        element: <SignupLinkConfigurations />,
+                      },
+                      {
+                        path: "signup-link-activity",
+                        element: <SignupLinkActivity />,
                       },
                       {
                         path: "permission",

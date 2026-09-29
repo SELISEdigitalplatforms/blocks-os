@@ -21,7 +21,7 @@ namespace DomainService.Projects
         Task SaveStatusTracerAsync(ProjectStatusTracer statusTrace);
         Task<List<ProjectStatusTracer>> GetAllUnfinishedProjectAsync();
         Task CreateDefaultConfigurationAsync(ProjectStatusTracer statusTrace, Tenant project);
-        Task<long> GetProjectCountAsync();
+        Task<long> GetOwnedProjectGroupCountAsync();
         Task<string?> GetOwnerUserIdAsync(string tenantId);
 
         /// <summary>

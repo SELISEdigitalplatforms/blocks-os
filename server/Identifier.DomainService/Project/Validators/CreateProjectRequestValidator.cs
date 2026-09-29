@@ -5,6 +5,10 @@ namespace DomainService.Projects
 {
     public class CreateProjectRequestValidator : AbstractValidator<CreateProjectRequest>
     {
+       // Projects shared with the caller are someone else's and do not count. Keep in step with
+       // MAX_OWNED_PROJECT_GROUPS in @seliseblocks/genesis-os, which hides the console's add action.
+       public const int MaxOwnedProjectGroups = 10;
+
        private readonly IProjectRepository _projectRepository;
 
         public CreateProjectRequestValidator(IProjectRepository projectRepository)
@@ -48,11 +52,13 @@ namespace DomainService.Projects
                
 
 
-            // Validation to restrict users from creating more than 5 projects
-            //RuleFor(x => x)
-            //    .Cascade(CascadeMode.Stop)
-            //    .MustAsync(HasNotExceededProjectLimit)
-            //    .WithMessage("You are not allowed to create more than 5 projects.");
+            // Only a brand-new project counts toward the limit. With a TenantGroupId this call
+            // appends an environment to an existing group, which ProjectPolicy(OwnerOnly) has
+            // already restricted to that group's owner.
+            RuleFor(x => x)
+                .MustAsync(HasNotExceededProjectLimit)
+                .WithMessage($"You are not allowed to create more than {MaxOwnedProjectGroups} projects.")
+                .When(x => string.IsNullOrWhiteSpace(x.TenantGroupId));
         }
 
         private static bool IsValidCookieDomain(List<ApplicationContext> applicationContexts)
@@ -120,8 +126,8 @@ namespace DomainService.Projects
 
         private async Task<bool> HasNotExceededProjectLimit(object _, CancellationToken cancellationToken)
         {
-            var projectCount = await _projectRepository.GetProjectCountAsync();
-            return projectCount < 5;
+            var projectCount = await _projectRepository.GetOwnedProjectGroupCountAsync();
+            return projectCount < MaxOwnedProjectGroups;
         }
     }
 }

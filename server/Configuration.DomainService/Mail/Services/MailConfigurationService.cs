@@ -58,6 +58,14 @@ namespace Configuration.DomainService.Mail.Services
                     _logger.LogInformation("Saving mail configuration end -- Configuration not found");
                     return MailConfigurationMutationResult.Invalid("ConfigurationId", ConfigurationNotFound);
                 }
+
+                // The default record is platform-provisioned and its credentials are never sent to
+                // the browser, so a full edit could only blank them. The sender name is the one
+                // field a project may change; everything else on the request is ignored.
+                if (existing.IsDefault)
+                {
+                    return await SaveDefaultSenderNameAsync(existing, configuration.SenderName).ConfigureAwait(false);
+                }
             }
 
             if (!_providers.TryResolve(configuration.Provider, configuration.IsInbound, out var definition, out var providerError))
@@ -272,6 +280,44 @@ namespace Configuration.DomainService.Mail.Services
 
             _logger.LogInformation("Duplicating mail configuration end -- Success");
             return MailConfigurationMutationResult.Success(newConfig.ItemId);
+        }
+
+        /// <summary>
+        /// Updates the sender name of the default configuration and nothing else.
+        /// </summary>
+        private async Task<MailConfigurationMutationResult> SaveDefaultSenderNameAsync(
+            MailServerConfiguration existing,
+            string? senderName)
+        {
+            if (existing.IsInbound)
+            {
+                _logger.LogInformation("Saving mail configuration end -- Default inbound configuration is read-only");
+                return MailConfigurationMutationResult.Invalid(
+                    "ConfigurationId",
+                    "The default configuration cannot be changed.");
+            }
+
+            senderName = senderName?.Trim();
+            if (string.IsNullOrEmpty(senderName) || senderName.Length < 3 || senderName.Length > 100)
+            {
+                _logger.LogInformation("Saving mail configuration end -- Validation Error");
+                return MailConfigurationMutationResult.Invalid(
+                    nameof(MailConfiguration.SenderName),
+                    "Sender name must be between 3 and 100 characters.");
+            }
+
+            // A targeted update rather than a replace: the entity ignores unmapped elements on read,
+            // so writing it back whole would drop anything provisioning stored that it does not map.
+            await _configurationRepository
+                .UpdateMailSenderNameAsync(
+                    existing.ItemId,
+                    senderName,
+                    DateTime.UtcNow,
+                    BlocksContext.GetContext()?.UserId ?? "")
+                .ConfigureAwait(false);
+
+            _logger.LogInformation("Saving mail configuration end -- Success");
+            return MailConfigurationMutationResult.Success(existing.ItemId);
         }
 
         /// <summary>

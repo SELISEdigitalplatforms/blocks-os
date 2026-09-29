@@ -114,6 +114,44 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
+        public async Task GetMailBoxAggregatedMailsAsync_ReturnsEachRowsConfiguration_AndFiltersByIt()
+        {
+            var token = "TKN" + Guid.NewGuid().ToString("N");
+            var now = DateTime.UtcNow;
+            var first = Mail("c1-" + token, "In " + token, MailStatus.Received, now.AddMinutes(-2), inbound: true);
+            first.MailServerConfigurationId = "cfg-1";
+            var second = Mail("c2-" + token, "In " + token, MailStatus.Received, now.AddMinutes(-1), inbound: true);
+            second.MailServerConfigurationId = "cfg-2";
+            await SeedAsync(first, second);
+
+            var (all, _) = await NewRepository().GetMailBoxAggregatedMailsAsync(new GetMailBoxMailsRequest
+            {
+                SearchText = token,
+                IsInbound = true,
+                PageNumber = 0,
+                PageSize = 10
+            });
+
+            all.Select(m => (m.MessageId, m.MailServerConfigurationId)).Should().BeEquivalentTo(new[]
+            {
+                ("c1-" + token, "cfg-1"),
+                ("c2-" + token, "cfg-2")
+            });
+
+            var (filtered, total) = await NewRepository().GetMailBoxAggregatedMailsAsync(new GetMailBoxMailsRequest
+            {
+                SearchText = token,
+                IsInbound = true,
+                MailServerConfigurationId = "cfg-2",
+                PageNumber = 0,
+                PageSize = 10
+            });
+
+            total.Should().Be(1);
+            filtered.Single().MessageId.Should().Be("c2-" + token);
+        }
+
+        [Fact]
         public async Task GetMailBoxMailAsync_ReturnsLatestAndFallsBackToSentBody()
         {
             var messageId = "single-" + Guid.NewGuid().ToString("N");
