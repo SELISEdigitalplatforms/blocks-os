@@ -14,7 +14,7 @@ using Renci.SshNet;
 
 namespace DomainService.Shared
 {
-    public class DomainManagementService : IDomainManagementService
+    public partial class DomainManagementService : IDomainManagementService
     {
         private readonly ILogger<DomainManagementService> _logger;
         private readonly IBlocksSecret _blocksSecret;

@@ -2,14 +2,20 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mutateAsync, showErrorToast, showSuccessToast } = vi.hoisted(() => ({
+const { mutateAsync, showErrorToast, showSuccessToast, setupGuide } = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
   showErrorToast: vi.fn(),
   showSuccessToast: vi.fn(),
+  setupGuide: {
+    current: { applications: [] as Array<Record<string, unknown>> },
+  },
 }));
 
 vi.mock("@/hooks/use-project", () => ({
   useUpdateProject: () => ({ mutateAsync, isPending: false }),
+}));
+vi.mock("@/hooks/use-domain-setup", () => ({
+  useDomainSetupGuide: () => ({ data: setupGuide.current, isLoading: false }),
 }));
 vi.mock("@seliseblocks/genesis-os/utils", () => ({ showErrorToast, showSuccessToast }));
 vi.mock("@seliseblocks/genesis-os/components", () => ({
@@ -32,9 +38,22 @@ vi.mock("./domain-form-dialog", () => ({
     <div data-testid="domain-form" data-open={String(open)} />
   ),
 }));
-vi.mock("../cname/dialog", () => ({
-  CnameValidatorDialog: ({ open, domain }: { open: boolean; domain?: { domain: string } }) => (
-    <div data-testid="cname-dialog" data-open={String(open)} data-domain={domain?.domain ?? ""} />
+vi.mock("../domain-setup", () => ({
+  DomainSetupDialog: ({
+    open,
+    domain,
+    guide,
+  }: {
+    open: boolean;
+    domain?: { domain: string };
+    guide?: { apiBaseUrl: string };
+  }) => (
+    <div
+      data-testid="setup-dialog"
+      data-open={String(open)}
+      data-domain={domain?.domain ?? ""}
+      data-api={guide?.apiBaseUrl ?? ""}
+    />
   ),
 }));
 
@@ -47,7 +66,10 @@ const domains = [
 ] as unknown as IDomain[];
 
 describe("DomainTable", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupGuide.current = { applications: [] };
+  });
 
   it("renders a row per domain with status badges", () => {
     render(<DomainTable data={domains} />);
@@ -96,17 +118,52 @@ describe("DomainTable", () => {
     await user.type(screen.getByPlaceholderText("Search domains..."), "pending");
     await waitFor(() => expect(visibleDomains()).toEqual(["pending.com"]));
 
-    await user.click(screen.getByTitle("Validate CNAME"));
-    expect(screen.getByTestId("cname-dialog").getAttribute("data-domain")).toBe("pending.com");
+    await user.click(screen.getByTitle("Set up domain"));
+    expect(screen.getByTestId("setup-dialog").getAttribute("data-domain")).toBe("pending.com");
   });
 
-  it("only shows configure and CNAME actions for unverified domains", () => {
+  it("shows configure and set up for unverified domains, connect app for verified ones", () => {
     render(<DomainTable data={domains} />);
-    // one Configure and one Validate CNAME (for pending.com only)
+    // configure and set up for pending.com only
     expect(screen.getAllByTitle("Configure domain")).toHaveLength(1);
-    expect(screen.getAllByTitle("Validate CNAME")).toHaveLength(1);
+    expect(screen.getAllByTitle("Set up domain")).toHaveLength(1);
+    // connect app for verified.com only
+    expect(screen.getAllByTitle("Connect app")).toHaveLength(1);
     // both rows have a delete button
     expect(screen.getAllByTitle("Delete domain")).toHaveLength(2);
+  });
+
+  it("opens the setup dialog in connect mode for a verified domain", async () => {
+    setupGuide.current = {
+      applications: [{ domain: "verified.com", apiBaseUrl: "https://dev-blocksapi.verified.com" }],
+    };
+    const user = userEvent.setup();
+    render(<DomainTable data={domains} />);
+    await user.click(screen.getByTitle("Connect app"));
+    const dialog = screen.getByTestId("setup-dialog");
+    expect(dialog.getAttribute("data-domain")).toBe("verified.com");
+    expect(dialog.getAttribute("data-api")).toBe("https://dev-blocksapi.verified.com");
+  });
+
+  it("shows the API base URL only once a domain is verified", () => {
+    setupGuide.current = {
+      applications: [
+        { domain: "verified.com", apiBaseUrl: "https://dev-blocksapi.verified.com" },
+        { domain: "pending.com", apiBaseUrl: "https://dev-blocksapi.pending.com" },
+      ],
+    };
+    render(<DomainTable data={domains} />);
+    expect(screen.getByText("https://dev-blocksapi.verified.com")).toBeTruthy();
+    expect(screen.queryByText("https://dev-blocksapi.pending.com")).toBeNull();
+    expect(screen.getByText("Available after verification")).toBeTruthy();
+  });
+
+  it("marks the platform default domain", () => {
+    setupGuide.current = {
+      applications: [{ domain: "verified.com", apiBaseUrl: "x", isPlatformDomain: true }],
+    };
+    render(<DomainTable data={domains} />);
+    expect(screen.getByText("Default")).toBeTruthy();
   });
 
   it("opens the edit dialog when configure is clicked", async () => {
@@ -116,12 +173,12 @@ describe("DomainTable", () => {
     expect(screen.getByTestId("domain-form").getAttribute("data-open")).toBe("true");
   });
 
-  it("opens the CNAME dialog with the resolved domain", async () => {
+  it("opens the setup dialog with the resolved domain", async () => {
     const user = userEvent.setup();
     render(<DomainTable data={domains} />);
-    await user.click(screen.getByTitle("Validate CNAME"));
-    expect(screen.getByTestId("cname-dialog").getAttribute("data-open")).toBe("true");
-    expect(screen.getByTestId("cname-dialog").getAttribute("data-domain")).toBe("pending.com");
+    await user.click(screen.getByTitle("Set up domain"));
+    expect(screen.getByTestId("setup-dialog").getAttribute("data-open")).toBe("true");
+    expect(screen.getByTestId("setup-dialog").getAttribute("data-domain")).toBe("pending.com");
   });
 
   it("deletes a domain after confirmation and shows a success toast", async () => {
@@ -400,7 +457,7 @@ describe("DomainTable pagination", () => {
     await user.click(navButtons().next);
     // First visible row on page 2 is the sixth domain — an action wired to the raw
     // data array instead of the row model would open the first one.
-    await user.click(screen.getAllByTitle("Validate CNAME")[0]);
-    expect(screen.getByTestId("cname-dialog").getAttribute("data-domain")).toBe("domain-6.com");
+    await user.click(screen.getAllByTitle("Set up domain")[0]);
+    expect(screen.getByTestId("setup-dialog").getAttribute("data-domain")).toBe("domain-6.com");
   });
 });
