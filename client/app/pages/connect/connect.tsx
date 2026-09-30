@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@seliseblocks/genesis-os/store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui-kits/badge/badge";
+import { ArrowRight, Loader2, Plug } from "lucide-react";
 import { Banner } from "@/components/ui-kits/banner/banner";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
@@ -40,7 +39,7 @@ const PROJECTS_QUERY_KEY = ["identifier", "projects", "connect"] as const;
  */
 export default function ConnectPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const queryClient = useQueryClient();
 
@@ -48,20 +47,27 @@ export default function ConnectPage() {
   const [requestId, setRequestId] = useState<string | null>(searchParams.get("request"));
   const [entryError, setEntryError] = useState<string | null>(null);
   const entryStarted = useRef(false);
+  const queryEntryError = useMemo(() => {
+    const redirectUri = searchParams.get("redirect_uri");
+    if (redirectUri) {
+      try {
+        new URL(redirectUri);
+      } catch {
+        return "We could not start the connection request. Go back to your site and click Connect again.";
+      }
+      return null;
+    }
+    return searchParams.get("request") ? null : "This page is missing its connection details. Go back to your site and click Connect again.";
+  }, [searchParams]);
 
   useEffect(() => {
     if (entryStarted.current) return;
     entryStarted.current = true;
+    if (queryEntryError) return;
 
     const fromQuery = searchParams.get("redirect_uri");
     if (fromQuery) {
-      let redirectHost: string;
-      try {
-        redirectHost = new URL(fromQuery).host;
-      } catch {
-        setEntryError("We could not start the connection request. Go back to your site and click Connect again.");
-        return;
-      }
+      const redirectHost = new URL(fromQuery).host;
       const payload = {
         family: searchParams.get("app") || "localization",
         redirectUri: fromQuery,
@@ -93,14 +99,12 @@ export default function ConnectPage() {
       return;
     }
     if (searchParams.get("request")) return;
-    // Neither a fresh CMS redirect nor a resumed request: nothing to do here.
-    setEntryError("This page is missing its connection details. Go back to your site and click Connect again.");
-  }, [isAuthenticated, searchParams]);
+  }, [isAuthenticated, queryEntryError, searchParams]);
 
   // A resumed link can outlive the session. Save it again before redirecting so login can
   // return to this request instead of dropping the user at the console.
   useEffect(() => {
-    if (!entryStarted.current || entryError || requestId === null) return;
+    if (!entryStarted.current || entryError || queryEntryError || requestId === null) return;
     if (!isAuthenticated) {
       try {
         savePendingConnectRequest({
@@ -112,7 +116,7 @@ export default function ConnectPage() {
       }
       navigate("/login");
     }
-  }, [entryError, requestId, isAuthenticated, navigate]);
+  }, [entryError, queryEntryError, requestId, isAuthenticated, navigate]);
 
   // ── Request view + approval state (P3-13) ──
   const { data: request, error: requestError, isError: requestFailed, isLoading: requestLoading } = useConnectRequest(requestId);
@@ -129,24 +133,17 @@ export default function ConnectPage() {
   const groups = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
 
   const [selectedTenantGroupId, setSelectedTenantGroupId] = useState<string | null>(null);
+  const effectiveSelectedGroupId = selectedTenantGroupId ?? groups[0]?.tenantGroupId ?? null;
   const [selectedEnvironment, setSelectedEnvironment] = useState<{ itemId: string; tenantId: string; environment: string } | null>(null);
-  const [templateKey, setTemplateKey] = useState<string>("");
+  const [templateKey, setTemplateKey] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
 
-  useEffect(() => {
-    if (!selectedTenantGroupId && groups.length > 0) setSelectedTenantGroupId(groups[0].tenantGroupId);
-  }, [groups, selectedTenantGroupId]);
-
-  useEffect(() => {
-    if (!templateKey && request) setTemplateKey(request.suggestedTemplateKey || request.templates[0]?.key || "");
-  }, [request, templateKey]);
-
   const readiness = useReadinessWait(
-    templateKey || null,
+    templateKey,
     selectedEnvironment?.tenantId ?? null,
   );
 
-  // Start the readiness wait as soon as both choices exist.
+  // A template is chosen by its Connect button, then checked in the selected environment.
   const startedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!selectedEnvironment || !templateKey) return;
@@ -159,15 +156,44 @@ export default function ConnectPage() {
 
   const approve = useApproveConnectRequest();
   const cancel = useCancelConnectRequest();
+  const approvalStartedFor = useRef<string | null>(null);
 
-  const handleApprove = async () => {
-    if (!request || !templateKey) return;
+  const handleApprove = useCallback(async (selectedTemplateKey: string) => {
+    if (!request || !selectedEnvironment || approve.isPending) return;
+    const selection = `${selectedEnvironment.tenantId}:${selectedTemplateKey}`;
+    if (approvalStartedFor.current === selection) return;
+    approvalStartedFor.current = selection;
     try {
-      const result = await approve.mutateAsync({ requestId: request.requestId, templateKey });
+      const result = await approve.mutateAsync({ requestId: request.requestId, templateKey: selectedTemplateKey });
       clearPendingConnectRequest();
       window.location.assign(result.redirectUrl);
     } catch {
       // Toast already shown by the hook.
+    }
+  }, [approve, request, selectedEnvironment]);
+
+  useEffect(() => {
+    if (readiness.state.phase !== "ready" || !selectedEnvironment || !templateKey) return;
+    if (readiness.state.templateKey !== templateKey || readiness.state.environmentTenantId !== selectedEnvironment.tenantId) return;
+    void handleApprove(templateKey);
+  }, [handleApprove, readiness.state, selectedEnvironment, templateKey]);
+
+  const handleConnect = (selectedTemplateKey: string) => {
+    if (!selectedEnvironment || approve.isPending) return;
+    if (readiness.state.phase === "ready" && readiness.state.templateKey === selectedTemplateKey && readiness.state.environmentTenantId === selectedEnvironment.tenantId) {
+      // A failed approval stays on this screen; a deliberate second click retries it.
+      approvalStartedFor.current = null;
+      void handleApprove(selectedTemplateKey);
+      return;
+    }
+    readiness.reset();
+    startedFor.current = null;
+    approvalStartedFor.current = null;
+    if (templateKey === selectedTemplateKey) {
+      startedFor.current = `${selectedEnvironment.tenantId}:${selectedTemplateKey}`;
+      void readiness.begin();
+    } else {
+      setTemplateKey(selectedTemplateKey);
     }
   };
 
@@ -183,8 +209,8 @@ export default function ConnectPage() {
   };
 
   // ── Render ──
-  if (entryError) {
-    return <ConnectShell title="Connection problem">{entryError}</ConnectShell>;
+  if (entryError || queryEntryError) {
+    return <ConnectShell title="Connection problem">{entryError || queryEntryError}</ConnectShell>;
   }
 
   if (!requestId) {
@@ -250,30 +276,12 @@ export default function ConnectPage() {
     );
   }
 
-  if (readiness.state.phase === "timeout") {
-    return (
-      <ConnectShell title="Setting up your environment…">
-        <p>Your environment is taking longer than expected to become ready.</p>
-        <div className="mt-4 flex gap-2">
-          <Button size="sm" onClick={() => void readiness.retry()}>
-            Retry
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-        </div>
-      </ConnectShell>
-    );
-  }
-
-  if (readiness.state.phase === "permissionDenied") {
-    return <ConnectShell title="Integration permission required">You don&apos;t have permission to set up integrations in this environment.</ConnectShell>;
-  }
-
-  const waiting = readiness.state.phase !== "idle" && readiness.state.phase !== "ready";
+  const waiting = readiness.state.phase === "checking" || readiness.state.phase === "waiting";
+  const busy = waiting || approve.isPending;
 
   return (
-    <ConnectShell title="Step 2 of 3">
+    <ConnectShell title="Connect to Blocks">
+      <p className="text-xs font-medium uppercase tracking-wide text-medium-emphasis">Step 2 of 3 · Choose a connection</p>
       <Banner variant="info" title={`${request.redirectHost} wants access to Blocks Localization`} compact={false}>
         {request.siteName && request.siteName !== request.redirectHost ? (
           <span className="text-xs">{request.siteName}</span>
@@ -292,13 +300,18 @@ export default function ConnectPage() {
       ) : (
         <div className="space-y-6">
           <section>
-            <h2 className="mb-2 text-sm font-semibold">Project</h2>
+            <label htmlFor="connect-project" className="mb-2 block text-sm font-medium text-high-emphasis">Project</label>
             <select
-              className="w-full rounded border border-border bg-background px-3 py-2 text-sm"
-              value={selectedTenantGroupId ?? ""}
+              id="connect-project"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={effectiveSelectedGroupId ?? ""}
               onChange={(e) => {
                 setSelectedTenantGroupId(e.target.value);
                 setSelectedEnvironment(null);
+                setTemplateKey(null);
+                startedFor.current = null;
+                approvalStartedFor.current = null;
+                readiness.reset();
               }}
             >
               {groups.map((g) => (
@@ -309,7 +322,7 @@ export default function ConnectPage() {
             </select>
             <button
               type="button"
-              className="mt-2 text-xs text-primary underline"
+              className="mt-2 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => setShowCreateProject(true)}
             >
               Create new project
@@ -317,12 +330,12 @@ export default function ConnectPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-sm font-semibold">Environment</h2>
+            <h2 className="mb-2 text-sm font-medium text-high-emphasis">Environment</h2>
             <RadioGroup
               value={selectedEnvironment?.tenantId ?? ""}
               onValueChange={(value) => {
                 const project = groups
-                  .find((g) => g.tenantGroupId === selectedTenantGroupId)
+                  .find((g) => g.tenantGroupId === effectiveSelectedGroupId)
                   ?.projects.find((p) => p.tenantId === value);
                 if (project) {
                   setSelectedEnvironment({
@@ -330,17 +343,24 @@ export default function ConnectPage() {
                     tenantId: project.tenantId,
                     environment: project.environment,
                   });
+                  setTemplateKey(null);
+                  startedFor.current = null;
+                  approvalStartedFor.current = null;
                   readiness.reset();
                 }
               }}
             >
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {groups
-                  .find((g) => g.tenantGroupId === selectedTenantGroupId)
+                  .find((g) => g.tenantGroupId === effectiveSelectedGroupId)
                   ?.projects.map((p) => (
                     <label
                       key={p.tenantId}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border border-border p-3 text-sm"
+                      className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 text-sm transition-colors ${
+                        selectedEnvironment?.tenantId === p.tenantId
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background hover:border-primary/50 hover:bg-accent/40"
+                      }`}
                     >
                       <RadioGroupItem value={p.tenantId} />
                       {p.environment}
@@ -350,61 +370,61 @@ export default function ConnectPage() {
             </RadioGroup>
           </section>
 
-          <section>
-            <h2 className="mb-2 text-sm font-semibold">Access level</h2>
-            <RadioGroup value={templateKey} onValueChange={setTemplateKey}>
-              <div className="space-y-2">
-                {request.templates.map((t) => (
-                  <label
-                    key={t.key}
-                    className="flex cursor-pointer gap-3 rounded-md border border-border p-3 text-xs"
-                  >
-                    <RadioGroupItem value={t.key} className="mt-0.5" />
-                    <span className="space-y-1">
-                      <span className="block font-medium text-high-emphasis">
-                        {t.displayName} <Badge variant="outline">{t.permissionCount} permissions</Badge>
-                      </span>
-                      {t.description && <span className="block text-medium-emphasis">{t.description}</span>}
-                    </span>
-                  </label>
-                ))}
+          {selectedEnvironment && (
+            <section aria-labelledby="connect-options-heading" className="space-y-3">
+              <div>
+                <h2 id="connect-options-heading" className="text-sm font-medium text-high-emphasis">Connect options</h2>
+                <p className="mt-1 text-xs text-medium-emphasis">Choose the access your site needs in {selectedEnvironment.environment}.</p>
               </div>
-            </RadioGroup>
-          </section>
-
-          {waiting && (
-            <Banner variant="info" compact={false} title="Setting up your environment…">
-              This usually takes under a minute for an existing environment.
-            </Banner>
+              <div className="space-y-2">
+                {request.templates.map((template) => {
+                  const isCurrent = templateKey === template.key;
+                  return (
+                    <div key={template.key} className={`rounded-lg border bg-card p-4 transition-colors ${isCurrent && busy ? "border-primary/60" : "border-border hover:border-primary/40"}`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-primary/10 text-primary"><Plug className="h-4 w-4" aria-hidden="true" /></span>
+                          <h3 className="text-sm font-semibold text-high-emphasis">{template.displayName}</h3>
+                        </div>
+                        <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => handleConnect(template.key)} disabled={busy} aria-label={`Connect ${template.displayName}`}>
+                          {isCurrent && busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                          {isCurrent && busy ? (approve.isPending ? "Connecting…" : "Checking…") : "Connect"}
+                        </Button>
+                      </div>
+                      {template.description && <p className="mt-2 text-xs leading-relaxed text-medium-emphasis">{template.description}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+              {waiting && <p role="status" className="text-xs text-medium-emphasis">Checking that this environment is ready. This can take a minute after project creation.</p>}
+              {readiness.state.phase === "timeout" && (
+                <Banner variant="warning" title="This environment is taking longer to set up" compact={false}>
+                  <span>Try the readiness check again. </span>
+                  <button type="button" className="font-semibold underline" onClick={() => void readiness.retry()}>Retry</button>
+                </Banner>
+              )}
+              {readiness.state.phase === "permissionDenied" && (
+                <Banner variant="destructive" title="Integration permission required" compact={false}>
+                  You don&apos;t have permission to set up integrations in this environment. Choose another environment or ask an administrator for access.
+                </Banner>
+              )}
+            </section>
           )}
-
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={handleCancel} disabled={approve.isPending || cancel.isPending}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleApprove}
-              disabled={
-                !selectedEnvironment ||
-                !templateKey ||
-                readiness.state.phase !== "ready" ||
-                approve.isPending
-              }
-            >
-              {approve.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Approve
-            </Button>
-          </div>
         </div>
       )}
+      <div className="border-t border-border pt-4">
+        <Button variant="outline" size="sm" onClick={handleCancel} disabled={approve.isPending || cancel.isPending}>
+          Cancel
+        </Button>
+      </div>
     </ConnectShell>
   );
 }
 
 const ConnectShell = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="flex min-h-screen items-center justify-center bg-background p-6">
-    <div className="w-full max-w-lg space-y-4 rounded-lg border border-border bg-card p-8">
-      <h1 className="text-lg font-semibold">{title}</h1>
+  <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 sm:px-6">
+    <div className="w-full max-w-xl space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm sm:p-8">
+      <h1 className="text-lg font-semibold text-high-emphasis">{title}</h1>
       {children}
     </div>
   </div>
@@ -430,7 +450,7 @@ const ExpiredScreen = ({ backUrl }: { backUrl: string | null }) => {
 /**
  * P3-14: the inline project-creation branch for users with no project yet. Uses the same
  * payload builder and terms/environment components as the wizard (AC3.4) but does not
- * navigate after success.
+ * navigate after success. Its environment choice uses the compact variant of the shared list.
  */
 const CreateProjectBranch = ({
   onCreated,
@@ -477,34 +497,43 @@ const CreateProjectBranch = ({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="mb-2 text-sm font-semibold">You don&apos;t have a project yet</h2>
-        <p className="text-xs text-medium-emphasis">
-          Create your first project to continue connecting your site.
-        </p>
+        <h2 className="text-sm font-semibold text-high-emphasis">{onChooseExisting ? "Create a project" : "You don't have a project yet"}</h2>
+        <p className="mt-1 text-xs text-medium-emphasis">Create a project to continue connecting your site.</p>
       </div>
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Project name"
-        maxLength={100}
-      />
-      <ProjectTermsCheckboxes
-        isAcceptBlocksTerms={isAcceptBlocksTerms}
-        isUseBlocksExclusively={isUseBlocksExclusively}
-        onAcceptBlocksTermsChange={setIsAcceptBlocksTerms}
-        onUseBlocksExclusivelyChange={setIsUseBlocksExclusively}
-      />
-      <ProjectEnvironmentCheckboxes
-        selected={environments}
-        onToggle={(environment, checked) =>
-          setEnvironments((current) =>
-            checked ? [...current, environment] : current.filter((e) => e !== environment),
-          )
-        }
-      />
-      <div className="flex justify-between">
+      <div>
+        <label htmlFor="connect-project-name" className="mb-2 block text-sm font-medium text-high-emphasis">Project name</label>
+        <Input
+          id="connect-project-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Enter a project name"
+          maxLength={100}
+        />
+      </div>
+      <div>
+        <h3 className="mb-1 text-sm font-medium text-high-emphasis">Environments</h3>
+        <p className="mb-3 text-xs text-medium-emphasis">Select at least one. Each chip shows the matching Git branch.</p>
+        <ProjectEnvironmentCheckboxes
+          variant="compact"
+          selected={environments}
+          onToggle={(environment, checked) =>
+            setEnvironments((current) =>
+              checked ? [...current, environment] : current.filter((e) => e !== environment),
+            )
+          }
+        />
+      </div>
+      <div className="border-t border-border pt-4">
+        <ProjectTermsCheckboxes
+          isAcceptBlocksTerms={isAcceptBlocksTerms}
+          isUseBlocksExclusively={isUseBlocksExclusively}
+          onAcceptBlocksTermsChange={setIsAcceptBlocksTerms}
+          onUseBlocksExclusivelyChange={setIsUseBlocksExclusively}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {onChooseExisting ? (
-          <Button variant="outline" onClick={onChooseExisting} disabled={isPending}>
+          <Button variant="ghost" size="sm" onClick={onChooseExisting} disabled={isPending}>
             Choose an existing project
           </Button>
         ) : (

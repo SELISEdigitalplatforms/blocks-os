@@ -2,10 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStartImpersonation } from "@seliseblocks/genesis-os/hooks";
 import { showErrorToast } from "@/hooks/use-toast";
-import {
-  IConnectRequestView,
-  integrationConnectService,
-} from "@/cross-modules/integration/services/integration-connect.service";
+import { integrationConnectService } from "@/cross-modules/integration/services/integration-connect.service";
 
 export const integrationConnectQueryKeys = {
   request: (requestId: string) => ["integration-connect", "request", requestId] as const,
@@ -50,7 +47,7 @@ export type ReadinessState =
   | { phase: "idle" }
   | { phase: "checking" }
   | { phase: "waiting"; sinceMs: number }
-  | { phase: "ready" }
+  | { phase: "ready"; templateKey: string; environmentTenantId: string }
   | { phase: "timeout" }
   | { phase: "permissionDenied" };
 
@@ -65,10 +62,13 @@ export const useReadinessWait = (templateKey: string | null, environmentTenantId
   const [attempt, setAttempt] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedAt = useRef(0);
+  const generation = useRef(0);
 
   const reset = useCallback(() => {
+    generation.current += 1;
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
+    setAttempt(0);
     setState({ phase: "idle" });
   }, []);
 
@@ -78,23 +78,27 @@ export const useReadinessWait = (templateKey: string | null, environmentTenantId
 
   const check = useCallback(async () => {
     if (!templateKey || !environmentTenantId) return;
+    const currentGeneration = generation.current;
     setState({ phase: "checking" });
     try {
       await startImpersonation({ targeted_tenant_id: environmentTenantId });
     } catch {
       // Impersonation itself can fail while provisioning finishes; treat like not-ready.
     }
+    if (currentGeneration !== generation.current) return;
     try {
       const result = await integrationConnectService.checkReadiness(templateKey);
+      if (currentGeneration !== generation.current) return;
       if (result.error === "permission_denied") {
         setState({ phase: "permissionDenied" });
         return;
       }
       if (result.ready) {
-        setState({ phase: "ready" });
+        setState({ phase: "ready", templateKey, environmentTenantId });
         return;
       }
     } catch (error) {
+      if (currentGeneration !== generation.current) return;
       if (String(error).includes("permission_denied")) {
         setState({ phase: "permissionDenied" });
         return;
@@ -112,12 +116,17 @@ export const useReadinessWait = (templateKey: string | null, environmentTenantId
     }, READINESS_INTERVAL_MS);
   }, [startImpersonation, templateKey, environmentTenantId]);
 
-  // (attempt changes re-run check below via the page calling check; kept explicit for retries)
+  // Poll on the next tick so an effect never synchronously updates React state.
   useEffect(() => {
-    if (attempt > 0) void check();
+    if (attempt === 0) return;
+    const nextCheck = setTimeout(() => void check(), 0);
+    return () => clearTimeout(nextCheck);
   }, [attempt, check]);
 
   const begin = useCallback(async () => {
+    generation.current += 1;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
     startedAt.current = Date.now();
     setAttempt(0);
     await check();

@@ -121,7 +121,7 @@ describe("ConnectPage error states (P3-16)", () => {
     expect(screen.getByText("Something went wrong")).toBeTruthy();
   });
 
-  it("enables approval after readiness changes from not ready to ready", async () => {
+  it("shows Connect cards after choosing an environment and connects the selected option when ready", async () => {
     mocks.requestQueryResult = {
       data: {
         requestId: "req-1",
@@ -131,7 +131,10 @@ describe("ConnectPage error states (P3-16)", () => {
         status: "pending",
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
         suggestedTemplateKey: "localization-read",
-        templates: [{ key: "localization-read", displayName: "Read", accessLevel: "read", permissionCount: 3 }],
+        templates: [
+          { key: "localization-read", displayName: "Localization Read", description: "Read translations.", accessLevel: "read", permissionCount: 3 },
+          { key: "localization-full", displayName: "Localization Full", description: "Manage translations.", accessLevel: "full", permissionCount: 7 },
+        ],
       },
     };
     mocks.projectsQueryResult = {
@@ -145,15 +148,19 @@ describe("ConnectPage error states (P3-16)", () => {
       .mockResolvedValueOnce({ ready: true, missingPermissions: [] });
 
     mount();
+    expect(screen.queryByText("Connect options")).toBeNull();
     fireEvent.click(screen.getByText("dev"));
+    expect(screen.getByText("Connect options")).toBeTruthy();
+    expect(screen.getByText("Read translations.")).toBeTruthy();
+    expect(screen.getByText("Manage translations.")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /^Connect Localization/ })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
 
-    const approveButton = screen.getByRole("button", { name: "Approve" });
-    expect((approveButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Connect Localization Full" }));
+    await waitFor(() => expect(mocks.checkReadiness).toHaveBeenCalledTimes(1));
+    expect((screen.getByRole("button", { name: "Connect Localization Read" }) as HTMLButtonElement).disabled).toBe(true);
     await waitFor(() => expect(mocks.checkReadiness).toHaveBeenCalledTimes(2), { timeout: 4_000 });
-    await waitFor(() => expect((approveButton as HTMLButtonElement).disabled).toBe(false));
-
-    fireEvent.click(approveButton);
-    await waitFor(() => expect(mocks.approve).toHaveBeenCalledWith("req-1", "localization-read"));
+    await waitFor(() => expect(mocks.approve).toHaveBeenCalledWith("req-1", "localization-full"));
   }, 5_000);
 
 });
